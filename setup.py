@@ -61,7 +61,7 @@ except:
 print 'Installing ANNarchy on your system'
 setup(  name='ANNarchy4',
 		version='4.0.0-alpha',
-		license='GPLv2',
+		license='GPLv2 or later',
 		platforms='GNU/Linux, Windows',
 		description='Artificial Neural Networks architect',
 		long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed mean-rate neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
