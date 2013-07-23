@@ -1,13 +1,14 @@
 #include "Projection.h"
 
-Projection::Projection(Population* pre, Population* post, int post_rank) {
+Projection::Projection(Population* pre, Population* post, int post_rank, int target) {
 #ifdef _DEBUG
-        std::cout << "Connect (C1) pre="<<pre<<" with post=" <<post<< std::endl;
+    std::cout << "Connect (C1) pre="<<pre->getName()<<" with post=" <<post->getName()<< std::endl;
 #endif
 
-
-	pre_population_ = pre;
+    pre_population_ = pre;
 	post_population_ = post;
+
+	target_ = target;
 	post_neuron_rank_= post_rank;
 
 	sum_ =0.0;
@@ -22,13 +23,18 @@ Projection::Projection(Population* pre, Population* post, int post_rank) {
 
 //
 // called from cython
-Projection::Projection(int pre, int post, int post_rank) {
+//
+// TODO: 	maybe restructure the call structure, that only the population pointer are taken and then
+//			Projection(Population* pre, Population* post, int post_rank, int target)
+//			is called.
+Projection::Projection(int pre, int post, int post_rank, int target) {
 #ifdef _DEBUG
-	std::cout << "Connect (C2) pre="<<pre<<" with post=" <<post<< std::endl;
+	std::cout << "Connect (C2) pre="<<pre<<" with post=" <<post<< " and target=" << target << std::endl;
 #endif
 	pre_population_ = Network::instance()->getPopulation(pre);
-        post_population_ = Network::instance()->getPopulation(post);
+    post_population_ = Network::instance()->getPopulation(post);
 
+    target_ = target;
 	post_neuron_rank_ = post_rank;
 
 	sum_ = 0.0;
@@ -41,7 +47,7 @@ Projection::Projection(int pre, int post, int post_rank) {
 
 	//
 	// need to register on post population
-        post_population_->addProjection(post_rank, this);
+    post_population_->addProjection(post_rank, this);
 }
 
 void Projection::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay){

@@ -52,7 +52,7 @@ def genProjClass():
     def genAddCases():
         code = ''
         for p in generatedProj_:
-            code += '\t\tcase '+str(p['ID'])+':\n'+ '\t\t\treturn new '+p['name']+'(pre, post, postNeuronRank);\n\n'
+            code += '\t\tcase '+str(p['ID'])+':\n'+ '\t\t\treturn new '+p['name']+'(pre, post, postNeuronRank, target);\n\n'
 
         return code
 
@@ -60,10 +60,10 @@ def genProjClass():
 public:
 	createProjInstance() {};
 
-	Projection* getInstanceOf(int ID, Population *pre, Population *post, int postNeuronRank) {
+	Projection* getInstanceOf(int ID, Population *pre, Population *post, int postNeuronRank, int target) {
 		switch(ID) {
 		case 0:
-			return new Projection(pre, post, postNeuronRank);
+			return new Projection(pre, post, postNeuronRank, target);
 %(case)s
 
 		default:
@@ -130,7 +130,7 @@ def Compile(cppStandAlone=False, debugBuild=False):
         shutil.copy(sources_dir+'/cpp/'+f, annarchy_dir+'/build/'+f)
     for f in os.listdir(sources_dir+'/pyx'):
         shutil.copy(sources_dir+'/pyx/'+f, annarchy_dir+'/pyx/'+f)
-       
+
     sys.path.append(annarchy_dir)
 
     #
@@ -154,6 +154,11 @@ def Compile(cppStandAlone=False, debugBuild=False):
     if sys.platform.startswith('linux'):
         import subprocess
         os.chdir(annarchy_dir)
+
+        #
+        # apply +x lost by copy
+        os.system('chmod +x compile*')
+
         if not debugBuild:
             p = subprocess.Popen(['./compile.sh'])
         else:
@@ -168,12 +173,11 @@ def Compile(cppStandAlone=False, debugBuild=False):
         for p in populations_:
             p.cyInstance = eval('ANNarchyCython.py'+p.name.capitalize()+'()')
 
+        #
+        # instantiate projections
         for p in projections_:
-	    #
-            # TODO: type of connector user defined
-            #
             conn = p.connector.instantiateConnector(p.connector.type)          
-            p.cyInstance = conn.connect(p.pre, p.post, p.connector.weights)
+            p.cyInstance = conn.connect(p.pre, p.post, p.connector.weights, p.post.targets.index(p.target), p.connector.parameters)
 
     else:
         print 'automated compilation and cython/python binding only available under linux currently.'

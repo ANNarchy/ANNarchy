@@ -32,7 +32,8 @@ DATA_TYPE Population::sum(int neur, int typeID) {
 	DATA_TYPE sum=0.0;
 
 	for(int i=0; i< projections_[neur].size(); i++)
-		sum += projections_[neur][i]->getSum();
+		if(projections_[neur][i]->getTarget() == typeID)
+			sum += projections_[neur][i]->getSum();
 
 	return sum;
 }

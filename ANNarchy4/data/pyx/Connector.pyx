@@ -30,14 +30,14 @@ cdef class One2OneConnector:
 
         return ranks
 
-    def connect(self, pre, post, distribution):
+    def connect(self, pre, post, distribution, target, parameters):
         self.postSize = post.getSize()
 
         if (pre.getSize() != self.postSize):
             return None
 
         r = self.genRanks()
-        Proj = pyProjection(pre.id, post.id, self.postSize)
+        Proj = pyProjection(pre.id, post.id, self.postSize, target)
 
         for p in xrange(self.postSize):
             v = distribution.getValue()
@@ -93,7 +93,7 @@ cdef class All2AllConnector:
 
         return ranks
 
-    def connect(self, pre, post, distribution):
+    def connect(self, pre, post, distribution, target, parameters):
         cdef int preID, postID
 
         self.preSize = pre.getSize()
@@ -104,7 +104,7 @@ cdef class All2AllConnector:
 
         r = self.genRanks()
         
-        Proj = pyProjection(self.preID, self.postID, self.postSize)
+        Proj = pyProjection(self.preID, self.postID, self.postSize, target)
 
         for p in xrange(self.postSize):
             if(self.allowSelfConnections and (pre==post)):
@@ -172,16 +172,21 @@ cdef class DoGConnector:
         
         return ranks, values
 
-    def connect(self, pre, post, distribution):
+    def connect(self, pre, post, distribution, target, parameters):
         self.preSize = pre.getSize()
         self.postSize = post.getSize()
         self.pre = pre
         self.post = post
 
+        self.sigma_pos = parameters['sigma_pos']
+        self.sigma_neg = parameters['sigma_neg']
+        self.amp_pos = parameters['amp_pos']
+        self.amp_neg = parameters['amp_neg']
+
         if (pre.getSize() != self.postSize):
             return None
 
-        Proj = pyProjection(pre.id, post.id, self.postSize)
+        Proj = pyProjection(pre.id, post.id, self.postSize, target)
 
         for p in xrange(self.postSize):
             r, v = self.genRanksAndValues(p)

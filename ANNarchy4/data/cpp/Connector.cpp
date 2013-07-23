@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-Projection* Connector::instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID ) {
-	return createProjInstance().getInstanceOf(projectionID, prePopulation, postPopulation, postID);
+Projection* Connector::instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID, int target ) {
+	return createProjInstance().getInstanceOf(projectionID, prePopulation, postPopulation, postID, target);
 }
 
 All2AllConnector::All2AllConnector(bool allowSelfConnections, Distribution<DATA_TYPE> *weight, Distribution<int> *delay) {
@@ -25,7 +25,7 @@ All2AllConnector::~All2AllConnector() {
 	delete delay_;
 }
 
-void All2AllConnector::connect(Population *prePopulation, Population *postPopulation, int projectionID) {
+void All2AllConnector::connect(Population *prePopulation, Population *postPopulation, int projectionID, int target) {
 #ifdef _DEBUG
 	std::cout << "All2AllConnector" << std::endl;
 	std::cout << "	PreLayer -" << prePopulation->getName() << prePopulation->getNeuronCount() << std::endl;
@@ -46,7 +46,7 @@ void All2AllConnector::connect(Population *prePopulation, Population *postPopula
 			}
 
 			// add projection
-			Projection *proj = instantiateProj(projectionID, prePopulation, postPopulation, postID);
+			Projection *proj = instantiateProj(projectionID, prePopulation, postPopulation, postID, target);
 			if(delay_)
 				proj->initValues(ranks, weight_->getValues(prePopulation->getNeuronCount()-1), delay_->getValues(prePopulation->getNeuronCount()-1));
 			else
@@ -62,7 +62,7 @@ void All2AllConnector::connect(Population *prePopulation, Population *postPopula
 
 		// add projection
 		for(int postID=0; postID<postPopulation->getNeuronCount(); postID++) {
-			Projection *proj = instantiateProj(projectionID, prePopulation, postPopulation, postID);
+			Projection *proj = instantiateProj(projectionID, prePopulation, postPopulation, postID, target);
 			if(delay_)
 				proj->initValues(ranks, weight_->getValues(prePopulation->getNeuronCount()), delay_->getValues(prePopulation->getNeuronCount()));
 			else
@@ -85,7 +85,7 @@ One2OneConnector::~One2OneConnector() {
 	delete delay_;
 }
 
-void One2OneConnector::connect(Population *prePopulation, Population *postPopulation, int projectionID) {
+void One2OneConnector::connect(Population *prePopulation, Population *postPopulation, int projectionID, int target) {
 #ifdef _DEBUG
 	std::cout << "One2OneConnector" << std::endl;
 	std::cout << "	PreLayer -" << prePopulation->getName() << prePopulation->getNeuronCount() << std::endl;
@@ -104,7 +104,7 @@ void One2OneConnector::connect(Population *prePopulation, Population *postPopula
 		ranks.push_back(postID);
 
 		// add projection
-		Projection *proj = instantiateProj(projectionID, prePopulation, postPopulation, postID);
+		Projection *proj = instantiateProj(projectionID, prePopulation, postPopulation, postID, target);
 		if(delay_)
 			proj->initValues(ranks, weight_->getValues(1), delay_->getValues(1));
 		else

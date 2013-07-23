@@ -24,7 +24,7 @@ public:
 	 */
 	virtual void connect(Population *pre, Population *post, int projectionID)=0;
 
-	class Projection* instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID );
+	class Projection* instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID, int target );
 };
 
 /**
@@ -36,7 +36,7 @@ public:
 
 	~All2AllConnector();
 
-	void connect(Population *pre, Population *post, int projectionID);
+	void connect(Population *pre, Population *post, int projectionID, int target);
 private:
 	bool allowSelfConnections_;
 	Distribution<DATA_TYPE>* weight_;
@@ -52,7 +52,7 @@ public:
 
 	~One2OneConnector();
 
-	void connect(Population *pre, Population *post, int projectionID);
+	void connect(Population *pre, Population *post, int projectionID, int target);
 private:
 	bool allowSelfConnections_;
 	Distribution<DATA_TYPE>* weight_;

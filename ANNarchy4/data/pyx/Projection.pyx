@@ -6,7 +6,7 @@ from libc.stdlib cimport malloc
 # c++ class
 cdef extern from "../build/Projection.h":
         cdef cppclass Projection:
-                Projection(int preLayer, int postLayer, int postNeuronRank)
+                Projection(int preLayer, int postLayer, int postNeuronRank, int target)
 
                 vector[int] getRank()
 
@@ -20,8 +20,8 @@ cdef class LocalProjection:
 
         cdef Projection* cInstance
 
-        def __cinit__(self, preID, postID, rank):
-             self.cInstance = new Projection(preID, postID, rank)
+        def __cinit__(self, preID, postID, rank, target):
+             self.cInstance = new Projection(preID, postID, rank, target)
 
         def init(self, ranks, values):
              self.cInstance.initValues(ranks, values)
@@ -41,12 +41,14 @@ cdef class LocalProjection:
 # bundles all connections of all neurons within population
 cdef class pyProjection:
         cdef local
+        cdef int target
 
-        def __init__(self, pre, post, nbNeurons):
+        def __init__(self, pre, post, nbNeurons, target):
             self.local = []
+            self.target= target
 
             for n in xrange(nbNeurons):
-                self.local.append(LocalProjection(pre, post, n))
+                self.local.append(LocalProjection(pre, post, n, target))
 
         def getLocal(self, id):
             return self.local[id]

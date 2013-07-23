@@ -3,10 +3,11 @@ from Random import *
 #
 # simple data storage
 class Connector:
-    def __init__(self, type, weights, delays=RandomDistribution('constant', [0])):
+    def __init__(self, type, weights, delays=RandomDistribution('constant', [0]), **keyValueArgs):
         self.weights = weights
         self.delays = delays
         self.type = type        
+        self.parameters = keyValueArgs
 
     def genCPPCall(self):
         if self.type == 'All2All':
@@ -17,7 +18,7 @@ class Connector:
             return '&(One2OneConnector(new ' + self.weights.genCPP() +'))'
 
         else:
-            print 'ERROR: called unregistered connector.'
+            print 'ERROR: no c++ equivalent registered.'
             return 'UnregisteredConnector'
 
     def instantiateConnector(self,type):

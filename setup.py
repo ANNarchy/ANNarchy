@@ -69,6 +69,6 @@ setup(  name='ANNarchy4',
 		author_email='julien.vitay@informatik.tu-chemnitz.de',
 		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy4': ['data/compile.sh', 'data/compiled.sh', 'data/cpp/*', 'data/pyx/*']},
+        package_data={'ANNarchy4': ['data/compile.sh', 'data/compiled.sh', 'data/setup.py', 'data/cpp/*', 'data/pyx/*']},
  )
 

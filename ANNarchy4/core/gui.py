@@ -43,10 +43,18 @@ class PlotThread(threading.Thread):
         Tk.mainloop()
         
     def create_matrix(self, id):       
-        pd = getattr(self.plotData[id]['pop'].cyInstance, self.plotData[id]['var'])
+        if 'pop' in self.plotData[id].keys():
+            pd = getattr(self.plotData[id]['pop'].cyInstance, self.plotData[id]['var'])
 
-        geo = self.plotData[id]['pop'].geometry
-	return pd.reshape((geo[0], geo[1]))
+            geo = self.plotData[id]['pop'].geometry
+            return pd.reshape((geo[0], geo[1]))
+        else:
+            r = self.plotData[id]['proj'].cyInstance.getLocal(0).rank
+            v = self.plotData[id]['proj'].cyInstance.getLocal(0).value
+            
+            m = np.zeros((20*20*1))
+            m[r[:]] = v[:] 
+            return m.reshape((20,20))    #TODO: more flexible
         
     def create_figure(self):
 	h = []

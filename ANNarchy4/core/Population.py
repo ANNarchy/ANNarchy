@@ -131,10 +131,14 @@ class Population(object):
                     tmp = eq.split('RandomDistribution')
                     
                     for t in tmp:
+                        if t.find('sum(') != -1:
+                            continue
+
                         phrase = re.findall('\(.*?\)', t) # find the shortest term within to brackets
                         if phrase != []:
-                            neurVars.append({'name':'_rand_'+str(i), 'init': phrase[0]})
-                            eq = eq.replace('RandomDistribution'+phrase[0], '_rand_'+str(i))
+                            for p in phrase:
+                                neurVars.append({'name':'_rand_'+str(i), 'init': p})
+                                eq = eq.replace('RandomDistribution'+p, '_rand_'+str(i))
                             i += 1
 
                     v['var'].eq = eq
@@ -198,8 +202,6 @@ class Population(object):
                 call = ('RandomDistribution'+v['init'].split('=')[1]).replace(';','')
                 meta += '\t'+v['name']+'= '+eval(call+'.genCPP()')+'.getValues(nbNeurons_);\n'
 
-	#meta += '''for(int i=0; i<nbNeurons_; i++)\n\tprintf("%0.2f ", _rand_0[i]);\nprintf("\\n");\n'''
-	#meta += '''for(int i=0; i<nbNeurons_; i++)\n\tprintf("%0.2f ", baseline[i]);\nprintf("\\n");\n'''
         loop += '\tfor(int i=0; i<nbNeurons_; i++) {\n'
 
         if self.neuron.order == []:

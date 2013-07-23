@@ -5,9 +5,9 @@
 
 class Projection{
 public:
-	Projection(Population* pre, Population* post, int post_rank);
+	Projection(Population* pre, Population* post, int post_rank, int target);
 
-	Projection(int pre, int post, int post_rank);
+	Projection(int pre, int post, int post_rank, int target);
 
 	int getWeightCount() { return (int)rank_.size(); }
 
@@ -19,15 +19,18 @@ public:
 
 	class Population* getPrePopulation() { return pre_population_; }
 
+	int getTarget() { return target_; }
+
 	DATA_TYPE getSum() { return sum_; }
 
-        std::vector<int> getRank() { return rank_; }
+	std::vector<int> getRank() { return rank_; }
 
 	std::vector<DATA_TYPE> getValue() { return value_; }
 protected:
 	Population* pre_population_;
 	Population* post_population_;
 	int post_neuron_rank_;
+	int target_;
 
 	std::vector<int> rank_;
 	std::vector<int> delay_;
