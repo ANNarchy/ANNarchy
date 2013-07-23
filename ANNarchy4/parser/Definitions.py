@@ -6,8 +6,12 @@ MULT = '*'
 DIV = '/'
 POW = '^'
 IF = ['if', 'IF']
+THEN = ['then', 'THEN']
+ELSE = ['else', 'ELSE']
 # EQUAL
 EQUAL = '='
+GREATER = ['>']
+SMALLER = ['<']
 # FUNCTIONS
 COS = ['cos', 'Cos', 'COS', 'Cosinus', 'cosinus', 'COSINUS']
 SIN = ['sin', 'Sin', 'SIN', 'Sinus', 'sinus', 'SINUS']
@@ -28,9 +32,11 @@ LOG = ['log', 'ln']
 LOG2 = ['log2']
 POS = ['pos', 'positive']
 NEG = ['neg', 'negative']
-SUMS = ['psp', 'sum']
+SUMS = ['sum']
 # CONSTANTS
 PI = ['pi', 'PI', 'Pi']
+TRUE = ['True', 'true', 'TRUE']
+FALSE = ['False', 'false', 'FALSE']
 # BRACKETS
 BRACKET_LEFT = '('
 BRACKET_RIGHT = ')'
@@ -40,8 +46,10 @@ POST_VAR = ['post.']
 
 # GROUPS
 OPERATORS = (PLUS, MINUS, MULT, DIV, POW)
-FUNCTIONS = (COS, SIN, TAN, ACOS, ASIN, ATAN, COSH, SINH, TANH, ACOSH, ASINH, ATANH, EXP, ABS, SQRT, LOG, LOG2, POS, NEG, IF)
-CONSTANTS = (PI)
+FUNCTIONS = (COS, SIN, TAN, ACOS, ASIN, ATAN, COSH, SINH, TANH, ACOSH, ASINH, ATANH, EXP, ABS, SQRT, LOG, LOG2, POS, NEG)
+TERNARY = (IF, THEN, ELSE)
+CONSTANTS = (PI, TRUE, FALSE)
+COMPARATORS = (GREATER, SMALLER)
 BRACKETS = (BRACKET_LEFT, BRACKET_RIGHT)
 
 # C++ EQUIVALENTS
@@ -61,6 +69,8 @@ cpp_equivalents = { 'cos': COS,
                     'fabs': ABS,
                     'sqrt': SQRT,
                     'M_PI': PI,
+                    'true': TRUE,
+                    'false': FALSE,
                     'log': LOG,
                     'log2': LOG2,
                     'positive': POS,

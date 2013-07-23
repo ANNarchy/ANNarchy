@@ -29,8 +29,9 @@ class Node:
         return self.cpp()
 
     def hierarchize(self, side):
-        if len(side)==1:
-            if isinstance(side[0], Group):
+        """ Create a hierarchy using the recognized nodes. """
+        if len(side)==1: # The group has only one item
+            if isinstance(side[0], Group): # A term between brackets.
                 newside = self.hierarchize(side[0])
                 newside.parent= self
                 return newside
@@ -39,6 +40,21 @@ class Node:
                 newside.parent= self
                 return newside
         found = False
+        for i in range(len(side)): # if
+            if isinstance(side[i], If):
+                newside = If(self.machine, value = 'if', child=(side[i+1:]) )
+                newside.parent= self
+                found=True
+                return newside
+        for i in range(len(side)): # comparator
+            if isinstance(side[i], Comparator):
+                newside = Comparator(self.machine, 
+                                    value=side[i],
+                                    left=(side[:i]), 
+                                    right=(side[i+1:]) )
+                newside.parent= self
+                found=True
+                return newside
         for i in range(len(side)): # add
             if isinstance(side[i], PlusOperator):
                 newside = PlusOperator(self.machine, 
@@ -156,6 +172,8 @@ class Constant(Leaf):
     def cpp(self):
         if self.value in PI:
             return ' ' + cpp_equivalent(self.value) + ' '
+        elif self.value in TRUE:
+            return ' ' + cpp_equivalent(self.value) + ' '
         elif self.value == '': # case of negative numbers
             return ''
         return ' ' + str(float(self.value)) + ' '
@@ -269,13 +287,11 @@ class Operator(Node):
         self.value = value
         self.left= left
         self.right=right
-        if self.left != None:
-            if hierarchize:
-                self.left = self.hierarchize(self.left)
+        if self.left != None and  hierarchize:
+            self.left = self.hierarchize(self.left)
             self.left.parent = self
-        if self.right != None:
-            if hierarchize:
-                self.right = self.hierarchize(self.right)
+        if self.right != None and hierarchize:
+            self.right = self.hierarchize(self.right)
             self.right.parent = self
     
     def cpp(self):
@@ -284,29 +300,79 @@ class Operator(Node):
         return ' (' + str(self.value) + ') '
 
 # Ternary operator        
-class Conditional(Node):
-    def __init__(self, machine, value, left=None, right=None, cond=None, hierarchize=True):
+class If(Node):
+    def __init__(self, machine, value, child=None, hierarchize=True):
         self.machine = machine
         self.value = value
-        id_if = self.value.index('if')
-        id_else = self.value.index('else')
-        self.left= Group(self.machine, self.value[:id_if])
-        self.right = Group(self.machine, self.value[id_if+1:id_else])
-        self.cond=self.value[id_else+1]
-        if self.left != None:
-            if hierarchize:
-                self.left = self.hierarchize(self.left)
-            self.left.parent = self
-        if self.right != None:
-            if hierarchize:
-                self.right = self.hierarchize(self.right)
-            self.right.parent = self
+        self.child = child
+        if self.child is not None and hierarchize:
+            id_then = -1
+            id_else = -1
+            for rk, item in enumerate(self.child):
+                if isinstance(item, Then):
+                    id_then =  rk
+                elif isinstance(item, Else):
+                    id_else =  rk
+            if id_then is -1 or id_else is -1:
+                print 'Error in analysing', self.machine.expr
+                print 'The conditional should use the (if A then B else C) structure.'
+                exit(0)
+            self.cond = self.hierarchize(self.child[:id_then])
+            self.then = self.hierarchize(self.child[id_then+1: id_else])
+            self.elsestatement = self.hierarchize(self.child[id_else+1:])
             
     def cpp(self):
-        return 'IF ' + str(self.cond)+ ' THEN' + (self.left.cpp()) + ' ELSE ' +   (self.right.cpp())  
+        if self.child:
+            return '(' +  self.cond.cpp() + '? ' + self.then.cpp() + ' : ' + self.elsestatement.cpp() + ')'
+        else: 
+            return ' if ' 
+    def latex(self):
+        return ''      
+        
+class Then(Node):
+    def __init__(self, machine, value, child=None, hierarchize=True):
+        self.machine = machine
+        self.value = value
+        self.child = child
+            
+    def cpp(self):
+        return ' then ' 
+    def latex(self):
+        return ''   
+           
+class Else(Node):
+    def __init__(self, machine, value, child=None, hierarchize=True):
+        self.machine = machine
+        self.value = value
+        self.child = child
+            
+    def cpp(self):
+        return ' else ' 
     def latex(self):
         return ''          
-    
+
+# Comparators
+class Comparator(Operator):
+    def __init__(self, machine, value='<', left=None, right=None, hierarchize=True):
+        Operator.__init__(self, machine, value, left, right, hierarchize)
+        
+    def cpp(self):
+        if self.left is not None:
+            return self.left.cpp() + str(self.value) + self.right.cpp() 
+        return str(self.value)
+            
+    def latex(self):
+        if self.value is '>':
+            return '{>}'
+        elif self.value is '>=':
+            return '{\geq}'
+        elif self.value is '<':
+            return '{<}'
+        elif self.value is '<=':
+            return '{\leq}'
+        return '{' + str(self.value) + '}'
+
+# Binary operators    
 class PlusOperator(Operator):   
     def __init__(self, machine, value='+', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -413,13 +479,7 @@ class Group(Node):
             
     def analyse(self):
         items=[]
-        # Check if it is a ternary operator
-        for ifs in IF:
-            if ifs in self.items:
-                items.append(Conditional(self.machine, value=self.items))
-                self.items=items
-                return
-        # Turn the rest into objects
+        # Turn the items into objects
         iter_items = iter(self.items)
         for item in iter_items:
             found = False
@@ -445,6 +505,19 @@ class Group(Node):
                 for func in FUNCTIONS:
                     if item in func:
                         items.append(Function(self.machine, item))
+                        found = True
+                # Check if it is a ternary operator
+                for func in IF:
+                    if item in func:
+                        items.append(If(self.machine, item))
+                        found = True
+                for func in THEN:
+                    if item in func:
+                        items.append(Then(self.machine, item))
+                        found = True
+                for func in ELSE:
+                    if item in func:
+                        items.append(Else(self.machine, item))
                         found = True
                 # Check if it is a weighted sum
                 for sums in SUMS:
@@ -484,7 +557,12 @@ class Group(Node):
                     found=True  
                 if item == POW:
                     items.append(PowOperator(self.machine, item))
-                    found=True                  
+                    found=True  
+                # Check if it is a comparator
+                for const in COMPARATORS:
+                    if item in const:
+                        items.append(Comparator(self.machine, item))
+                        found = True                
             # Check if it is a subgroup
             elif isinstance(item, Group):
                 item.analyse()
