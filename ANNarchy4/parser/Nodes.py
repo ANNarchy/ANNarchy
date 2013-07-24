@@ -53,6 +53,13 @@ class Node:
                                     right=(side[i+1:]) )
                 newside.parent= self
                 return newside
+        for i in range(len(side)): # not operator
+            if isinstance(side[i], Not):
+                newside = Not(self.machine,
+                                value = side[i].value,
+                                child = side[i+1:] )
+                newside.parent= self
+                return newside
         for i in range(len(side)): # comparator
             if isinstance(side[i], Comparator):
                 newside = Comparator(self.machine, 
@@ -286,6 +293,26 @@ class Function(Node):
             else:
                 return '{' + latex_equivalent(self.value)+'{('+self.child.latex()+')}}'  
         return '{\\text{'+str(self.value)+'}()}'
+        
+# Not operator    
+class Not(Node):
+    def __init__(self, machine, value, child=None, hierarchize=True):
+        Node.__init__(self, machine)
+        self.machine = machine
+        self.value = value
+        self.child = child
+        print self.child
+        if self.child != None and hierarchize:
+            self.child = self.hierarchize(self.child)
+            self.child.parent=self
+            
+    def cpp(self):
+        if self.child != None:
+            return str(cpp_equivalent(self.value))+'('+self.child.cpp()+')'  
+        return str(self.value)+'()'
+        
+    def latex(self):
+        return '{\\bar{'+str(self.value)+'}}'
         
 # Operator
 class Operator(Node):
@@ -590,6 +617,10 @@ class Group(Node):
                 # Check if it is a logical operator
                 if belongs_to(item, LOGICALS):
                     items.append(Logical(self.machine, item))
+                    found = True  
+                # Check if it is a not operator
+                if belongs_to(item, NOT):
+                    items.append(Not(self.machine, item))
                     found = True                
             # Check if it is a subgroup
             elif isinstance(item, Group):

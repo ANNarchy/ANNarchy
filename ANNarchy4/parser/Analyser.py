@@ -67,9 +67,9 @@ class NeuronAnalyser:
                      'cpp' : '' } )
                      
                      
-#        for cpp in self.analysed_neuron:
-#            print cpp['cpp']
-#            
+        for cpp in self.analysed_neuron:
+            print cpp['cpp']
+            
         return self.analysed_neuron
                 
     def def_parameter(self, name):

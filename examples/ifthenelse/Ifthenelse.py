@@ -20,10 +20,10 @@ Focus = Neuron( tau = 20.0,
                 tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline 
                                         + noise * (2 * RandomDistribution('uniform', [0,1]) - 1) """),
                 rate = Variable(eq = """
-                rate = if mp <= 0  
+                rate = if not mp > 0  
                             then 0
                             else 
-                                if mp <1 
+                                if mp < 1 
                                     then mp 
                                     else 1 
                         """, init = 0.0),

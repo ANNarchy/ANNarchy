@@ -57,7 +57,7 @@ FUNCTIONS = [COS, SIN, TAN, ACOS, ASIN, ATAN, COSH, SINH, TANH, ACOSH, ASINH, AT
 TERNARY = [IF, THEN, ELSE]
 CONSTANTS = [PI, TRUE, FALSE]
 COMPARATORS = [GREATER, SMALLER, GREATER_EQUAL, SMALLER_EQUAL, DIFFERENT, SAME]
-LOGICALS = [AND, OR, NOT]
+LOGICALS = [AND, OR]
 BRACKETS = [BRACKET_LEFT, BRACKET_RIGHT]
 
 # C++ EQUIVALENTS
@@ -86,6 +86,7 @@ cpp_equivalents = { 'cos': COS,
                     '&&': AND,
                     '||': OR,
                     '==': SAME,
+                    '!': NOT,
                     '!=': DIFFERENT,
                     '<': SMALLER,
                     '>': GREATER,
