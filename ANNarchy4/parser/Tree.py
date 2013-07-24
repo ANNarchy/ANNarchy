@@ -44,6 +44,9 @@ class Tree:
             self.simplifiedtree.order = 0
         
     def expand_whitespaces(self, expr):
+        # remove carriage returns
+        expr=expr.replace('\n', ' ')
+        # Split arounf the operators
         for op in OPERATORS:
             expr=expr.replace(op, ' '+op+' ')
         for op in BRACKETS:
