@@ -374,7 +374,7 @@ class Comparator(Operator):
         
     def cpp(self): # comparators are already in C++
         if self.left is not None:
-            return self.left.cpp() + str(self.value) + self.right.cpp() 
+            return self.left.cpp() + cpp_equivalent(self.value) + self.right.cpp() 
         return str(self.value)
             
     def latex(self):

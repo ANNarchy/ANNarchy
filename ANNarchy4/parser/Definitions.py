@@ -13,10 +13,12 @@ AND = ['and', 'AND', '&&']
 OR = ['or', 'OR', '||']
 NOT = ['not']
 EQUAL = '='
-GREATER = ['>', '>=']
-SMALLER = ['<', '<=']
+GREATER = ['>']
+SMALLER = ['<']
+GREATER_EQUAL = ['>=', 'geq']
+SMALLER_EQUAL = ['<=', 'leq']
 DIFFERENT = ['!=']
-SAME = ['==']
+SAME = ['==', 'is']
 # FUNCTIONS
 COS = ['cos', 'Cos', 'COS', 'Cosinus', 'cosinus', 'COSINUS']
 SIN = ['sin', 'Sin', 'SIN', 'Sinus', 'sinus', 'SINUS']
@@ -54,7 +56,7 @@ OPERATORS = [PLUS, MINUS, MULT, DIV, POW]
 FUNCTIONS = [COS, SIN, TAN, ACOS, ASIN, ATAN, COSH, SINH, TANH, ACOSH, ASINH, ATANH, EXP, ABS, SQRT, LOG, LOG2, POS, NEG]
 TERNARY = [IF, THEN, ELSE]
 CONSTANTS = [PI, TRUE, FALSE]
-COMPARATORS = [GREATER, SMALLER, DIFFERENT, SAME]
+COMPARATORS = [GREATER, SMALLER, GREATER_EQUAL, SMALLER_EQUAL, DIFFERENT, SAME]
 LOGICALS = [AND, OR, NOT]
 BRACKETS = [BRACKET_LEFT, BRACKET_RIGHT]
 
@@ -82,7 +84,13 @@ cpp_equivalents = { 'cos': COS,
                     'positive': POS,
                     'negative': NEG,
                     '&&': AND,
-                    '||': OR}
+                    '||': OR,
+                    '==': SAME,
+                    '!=': DIFFERENT,
+                    '<': SMALLER,
+                    '>': GREATER,
+                    '<=': SMALLER_EQUAL,
+                    '>=': GREATER_EQUAL,}
 
 # LATEX EQUIVALENTS
 latex_equivalents = { '\\cos': COS,
