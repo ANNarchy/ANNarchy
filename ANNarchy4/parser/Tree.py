@@ -47,8 +47,21 @@ class Tree:
         for op in OPERATORS:
             expr=expr.replace(op, ' '+op+' ')
         for op in BRACKETS:
-            expr=expr.replace(op, ' '+op+' ')        
-        expr=expr.replace(EQUAL, ' '+EQUAL+' ')
+            expr=expr.replace(op, ' '+op+' ')  
+        # COMPARATORS:
+        import re
+        expr=expr.replace('<=', ' <= ') 
+        expr=expr.replace('>=', ' >= ')  
+        expr=expr.replace('!=', ' != ')
+        expr=expr.replace('==', ' == ') 
+        expr = re.sub('<(?P<post>[^=])', ' < \g<post>', expr) # Avoid splitting the comparators
+        expr = re.sub('>(?P<post>[^=])', ' > \g<post>', expr) # Avoid splitting the comparators
+        code = re.split('([^<>!=])=([^=])', expr) # Avoid splitting the comparators
+        if len(code) != 4:
+            print code
+            print 'Error while analysing', expr, ': There should be only one equal sign in the equation.'
+            exit(0)
+        expr=code[0] + code[1] + ' = ' + code[2] + code[3]
         return expr
     
     def cpp(self):       

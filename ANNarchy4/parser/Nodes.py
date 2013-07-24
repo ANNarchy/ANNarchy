@@ -356,7 +356,7 @@ class Comparator(Operator):
     def __init__(self, machine, value='<', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
         
-    def cpp(self):
+    def cpp(self): # comparators are already in C++
         if self.left is not None:
             return self.left.cpp() + str(self.value) + self.right.cpp() 
         return str(self.value)
@@ -370,6 +370,8 @@ class Comparator(Operator):
             return '{<}'
         elif self.value is '<=':
             return '{\leq}'
+        elif self.value is '!=':
+            return '{\neq}'
         return '{' + str(self.value) + '}'
 
 # Binary operators    
@@ -485,10 +487,9 @@ class Group(Node):
             found = False
             if isinstance(item, str):
                 # Check if it is a constant
-                for const in CONSTANTS:
-                    if item in const:
-                        items.append(Constant(self.machine, item))
-                        found = True
+                if belongs_to(item, CONSTANTS):
+                    items.append(Constant(self.machine, item))
+                    found = True
                 # Check if it is an integer or float
                 if Tree.isFloat(item) or Tree.isInt(item):
                     items.append(Constant(self.machine, item))
@@ -502,28 +503,23 @@ class Group(Node):
                     items.append(Variable(self.machine, item))
                     found=True
                 # Check if it is a function
-                for func in FUNCTIONS:
-                    if item in func:
-                        items.append(Function(self.machine, item))
-                        found = True
+                if belongs_to(item, FUNCTIONS):
+                    items.append(Function(self.machine, item))
+                    found = True
                 # Check if it is a ternary operator
-                for func in IF:
-                    if item in func:
-                        items.append(If(self.machine, item))
-                        found = True
-                for func in THEN:
-                    if item in func:
-                        items.append(Then(self.machine, item))
-                        found = True
-                for func in ELSE:
-                    if item in func:
-                        items.append(Else(self.machine, item))
-                        found = True
+                if belongs_to(item, IF):
+                    items.append(If(self.machine, item))
+                    found = True
+                if belongs_to(item, THEN):
+                    items.append(Then(self.machine, item))
+                    found = True
+                if belongs_to(item, ELSE):
+                    items.append(Else(self.machine, item))
+                    found = True
                 # Check if it is a weighted sum
-                for sums in SUMS:
-                    if not item.find(sums) == -1:
-                        items.append(PSP(self.machine, iter_items.next()))
-                        found = True
+                if belongs_to(item, SUMS):
+                    items.append(PSP(self.machine, iter_items.next()))
+                    found = True
                 # Check if it is a pre variable
                 if not item.find('pre.') == -1:
                     items.append(PreVariable(self.machine, item))
@@ -543,26 +539,25 @@ class Group(Node):
                         exit(0)
                     found=True
                 # Check if it is an operator
-                if item == PLUS:
+                if belongs_to(item, PLUS):
                     items.append(PlusOperator(self.machine, item))
                     found=True
-                if item == MINUS:
+                if belongs_to(item, MINUS):
                     items.append(MinusOperator(self.machine, item))
                     found=True
-                if item == MULT:
+                if belongs_to(item, MULT):
                     items.append(MultOperator(self.machine, item))
                     found=True
-                if item == DIV:
+                if belongs_to(item, DIV):
                     items.append(DivOperator(self.machine, item))
                     found=True  
-                if item == POW:
+                if belongs_to(item, POW):
                     items.append(PowOperator(self.machine, item))
                     found=True  
                 # Check if it is a comparator
-                for const in COMPARATORS:
-                    if item in const:
-                        items.append(Comparator(self.machine, item))
-                        found = True                
+                if belongs_to(item, COMPARATORS):
+                    items.append(Comparator(self.machine, item))
+                    found = True                
             # Check if it is a subgroup
             elif isinstance(item, Group):
                 item.analyse()

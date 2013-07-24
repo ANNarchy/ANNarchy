@@ -17,7 +17,7 @@ Focus = Neuron( tau = 20.0,
                 threshold_min = 0.0,
                 threshold_max = 1.0,
                 mp = Variable(eq = "tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise * (2 * RandomDistribution('uniform', [0,1]) - 1) "),
-                rate = Variable(eq = "rate =  if mp < 0 then 0 else (if mp < 1 then mp else 1)", init = 0.0),
+                rate = Variable(eq = "rate = if (mp<= 0) then 0 else (if mp<=1 then mp else 1)", init = 0.0),
                 order = ['mp', 'rate']
 	       )
 		

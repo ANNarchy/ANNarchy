@@ -5,13 +5,18 @@ MINUS = '-'
 MULT = '*'
 DIV = '/'
 POW = '^'
+# LOGICAL OPERATORS
 IF = ['if', 'IF']
 THEN = ['then', 'THEN']
 ELSE = ['else', 'ELSE']
-# EQUAL
+AND = ['and', 'AND', '&&']
+OR = ['or', 'OR', '||']
+NOT = ['not']
 EQUAL = '='
-GREATER = ['>']
-SMALLER = ['<']
+GREATER = ['>', '>=']
+SMALLER = ['<', '<=']
+DIFFERENT = ['!=']
+SAME = ['==']
 # FUNCTIONS
 COS = ['cos', 'Cos', 'COS', 'Cosinus', 'cosinus', 'COSINUS']
 SIN = ['sin', 'Sin', 'SIN', 'Sinus', 'sinus', 'SINUS']
@@ -45,12 +50,13 @@ PRE_VAR = ['pre.']
 POST_VAR = ['post.']
 
 # GROUPS
-OPERATORS = (PLUS, MINUS, MULT, DIV, POW)
-FUNCTIONS = (COS, SIN, TAN, ACOS, ASIN, ATAN, COSH, SINH, TANH, ACOSH, ASINH, ATANH, EXP, ABS, SQRT, LOG, LOG2, POS, NEG)
-TERNARY = (IF, THEN, ELSE)
-CONSTANTS = (PI, TRUE, FALSE)
-COMPARATORS = (GREATER, SMALLER)
-BRACKETS = (BRACKET_LEFT, BRACKET_RIGHT)
+OPERATORS = [PLUS, MINUS, MULT, DIV, POW]
+FUNCTIONS = [COS, SIN, TAN, ACOS, ASIN, ATAN, COSH, SINH, TANH, ACOSH, ASINH, ATANH, EXP, ABS, SQRT, LOG, LOG2, POS, NEG]
+TERNARY = [IF, THEN, ELSE]
+CONSTANTS = [PI, TRUE, FALSE]
+COMPARATORS = [GREATER, SMALLER, DIFFERENT, SAME]
+LOGICALS = [AND, OR, NOT]
+BRACKETS = [BRACKET_LEFT, BRACKET_RIGHT]
 
 # C++ EQUIVALENTS
 cpp_equivalents = { 'cos': COS,
@@ -107,6 +113,22 @@ def latex_equivalent(string):
         if string in val:
             return key
     return '\\text{'+string+ '}'
+    
+def belongs_to(word, groups):
+    if not isinstance(groups, list): # A single string
+        if word == groups:
+            return True
+        else:
+            return False
+    for group in groups:
+        if isinstance(group, list): # List of lists
+            for item in group:
+                if word == item:
+                    return True
+        else: # Single list
+            if word == group:
+                return True
+    return False
 
 # DATA TYPE
 DATA_TYPE = 'DATA_TYPE'
