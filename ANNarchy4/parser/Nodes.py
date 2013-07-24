@@ -40,20 +40,26 @@ class Node:
                 newside.parent= self
                 return newside
         found = False
-        for i in range(len(side)): # if
+        for i in range(len(side)): # if then else
             if isinstance(side[i], If):
                 newside = If(self.machine, value = 'if', child=(side[i+1:]) )
                 newside.parent= self
-                found=True
+                return newside
+        for i in range(len(side)): # logical operator
+            if isinstance(side[i], Logical):
+                newside = Logical(self.machine, 
+                                    value=side[i].value,
+                                    left=(side[:i]), 
+                                    right=(side[i+1:]) )
+                newside.parent= self
                 return newside
         for i in range(len(side)): # comparator
             if isinstance(side[i], Comparator):
                 newside = Comparator(self.machine, 
-                                    value=side[i],
+                                    value=side[i].value,
                                     left=(side[:i]), 
                                     right=(side[i+1:]) )
                 newside.parent= self
-                found=True
                 return newside
         for i in range(len(side)): # add
             if isinstance(side[i], PlusOperator):
@@ -173,6 +179,8 @@ class Constant(Leaf):
         if self.value in PI:
             return ' ' + cpp_equivalent(self.value) + ' '
         elif self.value in TRUE:
+            return ' ' + cpp_equivalent(self.value) + ' '
+        elif self.value in FALSE:
             return ' ' + cpp_equivalent(self.value) + ' '
         elif self.value == '': # case of negative numbers
             return ''
@@ -373,6 +381,19 @@ class Comparator(Operator):
         elif self.value is '!=':
             return '{\neq}'
         return '{' + str(self.value) + '}'
+        
+# Logical operator
+class Logical(Operator):
+    def __init__(self, machine, value='and', left=None, right=None, hierarchize=True):
+        Operator.__init__(self, machine, value, left, right, hierarchize)
+        
+    def cpp(self): # comparators are already in C++
+        if self.left != None:
+            return ' (' + self.left.cpp() + ') ' + str(cpp_equivalent(self.value)) + ' (' + self.right.cpp() + ') '
+        return str(self.value)
+            
+    def latex(self):
+        return "\\text{and}"
 
 # Binary operators    
 class PlusOperator(Operator):   
@@ -557,6 +578,10 @@ class Group(Node):
                 # Check if it is a comparator
                 if belongs_to(item, COMPARATORS):
                     items.append(Comparator(self.machine, item))
+                    found = True  
+                # Check if it is a logical operator
+                if belongs_to(item, LOGICALS):
+                    items.append(Logical(self.machine, item))
                     found = True                
             # Check if it is a subgroup
             elif isinstance(item, Group):

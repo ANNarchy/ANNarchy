@@ -66,6 +66,10 @@ class NeuronAnalyser:
                      'def': self.def_parameter(value['name']),
                      'cpp' : '' } )
                      
+                     
+        for cpp in self.analysed_neuron:
+            print cpp['cpp']
+            
         return self.analysed_neuron
                 
     def def_parameter(self, name):
@@ -173,7 +177,7 @@ class LearningRuleAnalyser:
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
                      'cpp' : '' } )
-                     
+                         
         return self.analysed_neuron
         
         

@@ -80,7 +80,9 @@ cpp_equivalents = { 'cos': COS,
                     'log': LOG,
                     'log2': LOG2,
                     'positive': POS,
-                    'negative': NEG}
+                    'negative': NEG,
+                    '&&': AND,
+                    '||': OR}
 
 # LATEX EQUIVALENTS
 latex_equivalents = { '\\cos': COS,
