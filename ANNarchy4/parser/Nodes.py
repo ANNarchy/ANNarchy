@@ -316,18 +316,26 @@ class If(Node):
         if self.child is not None and hierarchize:
             id_then = -1
             id_else = -1
+            nb_if = 0
             for rk, item in enumerate(self.child):
-                if isinstance(item, Then):
-                    id_then =  rk
-                elif isinstance(item, Else):
-                    id_else =  rk
+                if isinstance(item, If):
+                    nb_if += 1
+                elif isinstance(item, Then):
+                    if nb_if == 0:
+                        id_then =  rk
+                elif isinstance(item, Else):                    
+                    if nb_if == 0:
+                        id_else =  rk
+                    else:
+                        nb_if -= 1
+                    
             if id_then is -1 or id_else is -1:
                 print 'Error in analysing', self.machine.expr
                 print 'The conditional should use the (if A then B else C) structure.'
                 exit(0)
-            self.cond = self.hierarchize(self.child[:id_then])
-            self.then = self.hierarchize(self.child[id_then+1: id_else])
-            self.elsestatement = self.hierarchize(self.child[id_else+1:])
+            self.cond = self.hierarchize(Group(self.machine, self.child[:id_then]))
+            self.then = self.hierarchize(Group(self.machine, self.child[id_then+1: id_else]))
+            self.elsestatement = self.hierarchize(Group(self.machine, self.child[id_else+1:]))
             
     def cpp(self):
         if self.child:
