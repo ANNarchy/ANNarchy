@@ -1,5 +1,5 @@
 from Master import Master
-import parser
+from ANNarchy4 import parser
 
 class Synapse(Master):
     def __init__(self, debug=False, order=[], **keyValueArgs):
