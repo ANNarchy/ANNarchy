@@ -6,7 +6,8 @@ from ANNarchy4 import *
 Input = Neuron(   tau = 1.0,
                   noise = 0.5,
                   baseline = Variable(init = 0.0),
-                  mp = Variable(eq = "tau * dmp / dt + mp = baseline + noise * (2 * RandomDistribution('uniform', [0,1]) - 1)"),
+                  mp = Variable(eq = """
+                  tau * dmp/dt + mp = baseline + noise * RandomDistribution('uniform', [-1,1]) """),
                   rate = Variable(eq = "rate = pos(mp)"),
                   order = ['mp','rate'] 
                )
@@ -17,8 +18,8 @@ Focus = Neuron( tau = 20.0,
                 threshold_min = 0.0,
                 threshold_max = 1.0,
                 mp = Variable(eq = """
-                tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline 
-                                        + noise * (2 * RandomDistribution('uniform', [0,1]) - 1) """),
+                tau * dmp/dt + mp = sum(exc) - sum(inh) + baseline 
+                                        + noise * RandomDistribution('uniform', [-1,1])"""),
                 rate = Variable(eq = """
                 rate = if not mp > 0  
                             then 0
