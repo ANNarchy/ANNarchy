@@ -228,8 +228,6 @@ class Population(object):
         # replace all _rand_.. by _rand_..[i]
 	loop = re.sub('_rand_[0-9]+', lambda m: m.group(0)+'[i]', loop)
 
-        # replace all sum(typeID) by 
-	loop = loop.replace('sum(', 'sum(i,')
 
 	code = meta + loop
         return code

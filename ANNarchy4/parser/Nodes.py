@@ -240,7 +240,7 @@ class PSP(Leaf):
             print self.machine.expr
             print 'Error: the target', self.value, 'does not exist on this neuron. The sum will be 0.0.'
             return ' 0.0 '
-        return ' sum(' + str(self.machine.targets.index(self.value))+') '
+        return ' sum(i, ' + str(self.machine.targets.index(self.value))+') '
     def latex(self):
         return '{\\sum_{i}^{'+str(self.value)+'} w_{i} \\cdot \\text{rate}_{i}}'
         
