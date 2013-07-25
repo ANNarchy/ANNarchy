@@ -1,1 +1,1 @@
-from Analyser import NeuronAnalyser, LearningRuleAnalyser
+from Analyser import NeuronAnalyser, SynapseAnalyser

@@ -8,7 +8,7 @@ class Synapse(Master):
 
         Master.__init__(self, debug, order, keyValueArgs)
 
-        self.parser = parser.LearningRuleAnalyser(self.variables)
+        self.parser = parser.SynapseAnalyser(self.variables)
         self.parsedVariables = self.parser.parse()
 
         

@@ -3,6 +3,7 @@ import Tree
 import re
 
 from ANNarchy4.core.Random import RandomDistribution
+from ANNarchy4.core.Variable import *
 
 # Main analyser class for neurons
 class NeuronAnalyser:
@@ -96,41 +97,43 @@ class NeuronAnalyser:
             code += '    ' + tree.latex() + '\n\n'
         return code
 
-# Main analyser class for learning rules
-class LearningRuleAnalyser:
+# Main analyser class for synapses
+class SynapseAnalyser:
     
-    def __init__(self, learning_rule):
+    def __init__(self, synapse):
     
-        self.learning_rule = learning_rule 
+        self.synapse = synapse 
         self.analysed_neuron = []
         self.parameters_names = []
         self.variables_names = []
         self.targets=None
+        self.targetIDs=None
         self.trees = []
         
     def parse(self):
     
         # Determine parameters and variables
-        for value in self.learning_rule:
+        for value in self.synapse:
             if not 'name' in value.keys():
                 print 'Error: dictionary must have a name attribute.'
                 exit(0)
-            if 'eq' in value.keys(): # A variable which needs to be analysed
-                self.variables_names.append(value['name'])
-            else: # A parameter
-                self.parameters_names.append(value['name'])
+            if 'var' in value.keys(): # A variable which needs to be analysed
+                if isinstance(value['var'], Variable):
+                    self.variables_names.append(value['name'])
+                else: # A parameter
+                    self.parameters_names.append(value['name'])
                 
         # Identify the local variables (synapse-specific) from the global ones (neuron-specific)
         dependencies={}
-        for value in self.learning_rule:
+        for value in self.synapse:
             if value['name'] in self.variables_names: # only variables count
                 dep = []
-                if not value['eq'].find('pre.') == -1: # directly depends on pre
+                if not value['var'].eq.find('pre.') == -1: # directly depends on pre
                     dep.append('pre')
                 else:
                     for ovar in self.variables_names: # check indirect dependencies
                         if ovar != value['name']: # self-dependencies do not count
-                            code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+ovar+'(?P<post>[^\_a-zA-Z0-9])', value['eq'])
+                            code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+ovar+'(?P<post>[^\_a-zA-Z0-9])', value['var'].eq)
                             if len(code) > 0: # wont work
                                 dep.append(ovar)
                     
@@ -141,13 +144,14 @@ class LearningRuleAnalyser:
         
                      
         # Perform the analysis
-        for value in self.learning_rule:
+        for value in self.synapse:
             if value['name'] in self.local_variables_names: # A variable which needs to be analysed
-                if 'init' in value.keys():
-                    init_value = value['init']
+                if value['var'].init != None:
+                    init_value = value['var'].init
                 else:
                     init_value = 0.0
-                tree = Tree.Tree(self, value['name'], value['eq'])
+                    
+                tree = Tree.Tree(self, value['name'], value['var'].eq)
                 self.trees.append(tree)
                 self.analysed_neuron.append( 
                     {'name': value['name'],
@@ -155,11 +159,12 @@ class LearningRuleAnalyser:
                      'init': self.init_local_variable(value['name'], init_value),
                      'cpp' : tree.cpp() +';'} )
             elif value['name'] in self.global_variables_names:
-                if 'init' in value.keys():
-                    init_value = value['init']
+                if value['var'].init != None:
+                    init_value = value['var'].init
                 else:
                     init_value = 0.0
-                tree = Tree.Tree(self, value['name'], value['eq'])
+
+                tree = Tree.Tree(self, value['name'], value['var'].eq)
                 self.trees.append(tree)
                 self.analysed_neuron.append( 
                     {'name': value['name'],
@@ -183,13 +188,13 @@ class LearningRuleAnalyser:
         
         
     def init_parameter(self, name, value):
-        return DATA_TYPE + ' ' + name + ' = ' + str(value) + ';';
+        return name + '_ = ' + str(value) + ';';
         
     def init_local_variable(self, name, value):
-        return 'vector<' + DATA_TYPE + '> ' + name + '(nbSynapses_, '+str(value)+');'
-        
+        return name +'_ = std::vector< '+DATA_TYPE+' >(post_population_->nbNeurons(), '+str(value)+');\n' 
+            
     def init_global_variable(self, name, value):
-        return 'vector<' + DATA_TYPE + '> ' + name + '(pre_->nbNeurons_(), '+str(value)+');'
+        return name + '_ = '+str(value)+';'
                 
     def latex(self):
         code =""

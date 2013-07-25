@@ -14,6 +14,7 @@ except:
     raise ImportError
 
 import numpy as np
+import math
 import threading
 
 class PlotThread(threading.Thread):
@@ -49,12 +50,38 @@ class PlotThread(threading.Thread):
             geo = self.plotData[id]['pop'].geometry
             return pd.reshape((geo[0], geo[1]))
         else:
-            r = self.plotData[id]['proj'].cyInstance.getLocal(0).rank
-            v = self.plotData[id]['proj'].cyInstance.getLocal(0).value
-            
-            m = np.zeros((20*20*1))
-            m[r[:]] = v[:] 
-            return m.reshape((20,20))    #TODO: more flexible
+            #
+            # TODO: correct dimensions
+            if 'ranks' in self.plotData[id]:
+                w = math.ceil(math.sqrt(len(self.plotData[id]['ranks'])))
+                
+                mat = []
+                row = []
+                for r in self.plotData[id]['ranks']:
+                    if r % w == 0:
+                        if row != []:
+                            if mat == []:
+                                mat = row
+                            else:
+                                mat = np.concatenate((mat, row), axis=0)
+                        row = []
+                            
+                    rank = self.plotData[id]['proj'].cyInstance.getLocal(r).rank
+                    value = self.plotData[id]['proj'].cyInstance.getLocal(r).value
+                    
+                    m = np.ones((20*20*1))*0.5
+                    m[rank[:]] = 1.0 #value[:]
+                    
+                    if row==[]:
+                        row=m.reshape((20,20))
+                    else:
+                        row = np.concatenate((row, m.reshape((20,20))), axis=1)
+                        
+                return mat
+            else: 
+                #
+                # TODO:
+                return np.zeros((1))
         
     def create_figure(self):
 	h = []
@@ -66,7 +93,7 @@ class PlotThread(threading.Thread):
 	for p in range(nY):
             ax=self.fig.add_subplot(gs[0,p])
             
-            d = ax.imshow(self.create_matrix(p), interpolation='nearest', cmap=matplotlib.cm.hot, vmin=0.0, vmax=1.0)
+            d = ax.imshow(self.create_matrix(p), interpolation='nearest', cmap=matplotlib.cm.gray, vmin=0.0, vmax=1.0)
             if 'name' in self.plotData[p]:
                ax.set_title(self.plotData[p]['name'])
             else:

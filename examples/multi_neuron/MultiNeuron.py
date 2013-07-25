@@ -23,18 +23,25 @@ Layer2 = Neuron(   tau = 10.0,
                    order = ['mp','rate']
               )
 
+Oja = Synapse(tau = 5000,
+              alpha = Variable(init=0.1, eq = "alpha = post.rate"),
+              value = Variable(init=0.0, eq = "dvalue / dt = alpha * (pre.rate*post.rate - post.rate*post.rate*value)"),
+              psp = Variable(eq = "psp=(1-pre.rate)*value")
+
+              )
+
 InputPop = Population("Input", (8,8,1), Input)
 Layer1Pop = Population("Layer1", (8,8,1), Layer1)
 Layer2Pop = Population("Layer2", (6,5,1), Layer2)
 
 Proj_In_L1 = Projection(pre="Input", post="Layer1", target='exc', connector=Connector('One2One', weights=RandomDistribution('constant', [1.0])))
-Proj_L1_L2 = Projection(pre="Layer1", post="Layer2", target='exc', connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,0.1])))
+Proj_L1_L2 = Projection(pre="Layer1", post="Layer2", target='exc', synapse=Oja, connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,0.1])))
 Proj_L2_L2 = Projection(pre="Layer2", post="Layer2", target='inh', connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,0.1])))
 
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-Compile(debugBuild=False)
+Compile()
 
 import math
 import numpy as np

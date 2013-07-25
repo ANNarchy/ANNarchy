@@ -22,7 +22,7 @@ Focus = Neuron( tau = 20.0,
                 threshold_min = 0.0,
                 threshold_max = 1.0,
                 mp = Variable(eq = "tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise * (2 * RandomDistribution('uniform', [0,1]) - 1) "),
-                rate = Variable(eq = "rate = mp", init = 0.0),
+                rate = Variable(eq = "rate = if mp > threshold_max then threshold_max else pos(mp)", init = 0.0),
                 order = ['mp', 'rate']
 	       )
 		
@@ -36,7 +36,7 @@ Proj2 = Projection( pre = "Focus", post = "Focus", target = 'inh', connector = C
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-Compile(debugBuild=True)
+Compile()
 
 import math
 import numpy as np
@@ -45,10 +45,10 @@ import numpy as np
 # Main program
 #
 if __name__ == "__main__":
-    from ANNarchy import *
 
-    plotData = [{'pop': InputPop, 'var': 'rate', 'name':'input.rate'}, {'pop': FocusPop, 'var': 'rate', 'name': 'focus.rate'}]#, {'proj': Proj2, 'name': 'Proj2'}]
- 
+    plotData = [{'pop': InputPop, 'var': 'rate', 'name':'input.rate'}, {'pop': FocusPop, 'var': 'rate', 'name': 'focus.rate'}]
+    #plotData = [{'proj': Proj2, 'ranks': np.arange(0,10), 'name': 'Proj2'}]
+    
     w = 20
     h = 20
     data = np.zeros((1,w*h))
