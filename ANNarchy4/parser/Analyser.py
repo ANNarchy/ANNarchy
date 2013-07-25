@@ -183,6 +183,11 @@ class SynapseAnalyser:
                      'init': self.init_parameter(value['name'], init_value),
                      'cpp' : '' } )
                          
+                         
+        
+        for cpp in self.analysed_neuron:
+            print cpp['cpp']
+            
         return self.analysed_neuron
         
         

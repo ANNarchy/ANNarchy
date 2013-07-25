@@ -250,7 +250,7 @@ class PreVariable(Leaf):
         self.value = value
     def cpp(self):
         variable =  self.value.split('.')[1]
-        return ' pre->get'+variable.capitalize()+'(j) '
+        return ' pre_population_->get'+variable.capitalize()+'(j) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
         
@@ -260,7 +260,7 @@ class PostVariable(Leaf):
         self.value = value
     def cpp(self):
         variable =  self.value.split('.')[1]
-        return ' post->get'+variable.capitalize()+'(i) '
+        return ' post_population_->get'+variable.capitalize()+'(i) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
 
@@ -366,7 +366,7 @@ class If(Node):
             
     def cpp(self):
         if self.child:
-            return '(' +  self.cond.cpp() + '? ' + self.then.cpp() + ' : ' + self.elsestatement.cpp() + ')'
+            return '( (' +  self.cond.cpp() + ') ? ' + self.then.cpp() + ' : ' + self.elsestatement.cpp() + ')'
         else: 
             return ' if ' 
     def latex(self):

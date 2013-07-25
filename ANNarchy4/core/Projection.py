@@ -51,7 +51,6 @@ class Projection:
             Global.generatedProj_.append( { 'name': name, 'ID': id } )
             self.projClass = { 'class': 'Projection', 'ID': id }
 
-            self.generate()
         else:
             self.projClass = { 'class': 'Projection', 'ID': 0 }
 
