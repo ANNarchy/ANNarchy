@@ -218,7 +218,7 @@ class Parameter(Leaf):
         self.machine = machine
         self.value = value
     def cpp(self):
-        return ' ' + str(self.value)
+        return str(self.value)
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
         
@@ -250,7 +250,9 @@ class PreVariable(Leaf):
         self.value = value
     def cpp(self):
         variable =  self.value.split('.')[1]
-        return ' pre_population_->get'+variable.capitalize()+'(j) '
+        if variable=='rate':
+            return ' pre_rates_ [ rank_ [i] ] '
+        return ' pre_population_->get'+variable.capitalize()+'( rank_[i] ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
         
@@ -260,7 +262,9 @@ class PostVariable(Leaf):
         self.value = value
     def cpp(self):
         variable =  self.value.split('.')[1]
-        return ' post_population_->get'+variable.capitalize()+'(i) '
+        if variable=='rate':
+            return ' post_rates_ [ post_neuron_rank_ ] '
+        return ' post_population_->get'+variable.capitalize()+'( post_neuron_rank_ ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
 

@@ -10,5 +10,7 @@ class Synapse(Master):
 
         self.parser = parser.SynapseAnalyser(self.variables)
         self.parsedVariables = self.parser.parse()
+        
+        print self.parsedVariables
 
         
