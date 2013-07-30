@@ -3,6 +3,8 @@ import os, sys
 from Master import Master
 import Functions
 
+from ANNarchy4 import parser
+
 class Projection:
     """
     Definition of a projection.
@@ -50,6 +52,9 @@ class Projection:
 
             Global.generatedProj_.append( { 'name': name, 'ID': id } )
             self.projClass = { 'class': 'Projection', 'ID': id }
+            
+            synapseParser = parser.SynapseAnalyser(self.synapse.variables)
+            self.parsedSynapseVariables = synapseParser.parse()
 
         else:
             self.projClass = { 'class': 'Projection', 'ID': 0 }
@@ -58,7 +63,7 @@ class Projection:
 
     def generateMemberDef(self):
         code = ''
-        for v in self.synapse.parsedVariables:
+        for v in self.parsedSynapseVariables:
             if v['name']== 'psp':
                 continue
 
@@ -74,7 +79,7 @@ class Projection:
     def generateInit(self):
         code = ''
         if self.synapse:
-            for v in self.synapse.parsedVariables:
+            for v in self.parsedSynapseVariables:
                 if v['init'] and v['type']=='parameter':
                     code += "\t"+v['init']+"\n"
                 elif v['init'] and v['type']=='global':
@@ -88,24 +93,59 @@ class Projection:
         # check if 'psp' is contained in variable set
         pspCode= ''
         
-        for v in self.synapse.variables:
+        for v in self.parsedSynapseVariables:
             if v['name'] == 'psp':
-                pspCode = v['var'].eq.split('=')[1]
-                pspCode = pspCode.replace('pre.rate', '(*pre_rates_)[i]')
+                pspCode = v['cpp'].split('=')[1]
 
-                for v2 in self.synapse.variables:
-                    pspCode = pspCode.replace(v2['name'], v2['name']+'_[i]')
+                for v2 in self.parsedSynapseVariables:
+                    pspCode = pspCode.replace(v2['name'], v2['name']+'_')
                 
         if len(pspCode) > 0:
             code = '\tDATA_TYPE psp = 0.0;\n'
             code+= '\tfor(int i=0; i<(int)value_.size();i++) {\n'
-            code+= '\t\tpsp +='+pspCode+';\n' 
+            code+= '\t\tpsp +='+pspCode+'\n' 
             code+= '\t}\n'
             code+= '\tsum_ = psp;\n'
         else:
             code = 'Projection::computeSums()'
 
-        return code;
+        return code
+    
+    def generateLocalLearn(self):
+
+        code= ''
+        loop= ''
+        
+        for v in self.parsedSynapseVariables:
+            if v['name']=='psp':
+                continue
+
+            if len(v['cpp'])>0:
+                loop +='\t\t'+v['cpp']+'\n' 
+
+        #
+        # add underscore to variables
+        for v2 in self.parsedSynapseVariables:
+            if not v2['name']+'_' in loop:
+                loop = loop.replace(v2['name'], v2['name']+'_')
+
+        code = '\tfor(int i=0; i<(int)value_.size();i++) {\n'
+        code += loop
+        code += '\t}\n'
+        return code
+
+    def generateGlobalLearn(self):
+
+        code= ''
+        
+        for v in self.parsedSynapseVariables:
+            if v['name']=='psp':
+                continue
+            
+            if len(v['cpp'])>0:
+                print v
+
+        return code
 
     def generate(self):
         if self.synapse:
@@ -118,19 +158,17 @@ class Projection:
 
 class %(name)s : public Projection {
 public:
-%(name)s(Population* pre, Population* post, int postRank, int target) : Projection(pre, post, postRank, target) {
+%(name)s(Population* pre, Population* post, int postRank, int target);
 
-}
-
-~%(name)s() {
-
-}
+~%(name)s();
 
 void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
 
 void computeSum();
 
-void learn();
+void globalLearn();
+
+void localLearn();
 
 private:
 %(synapseMember)s
@@ -139,22 +177,32 @@ private:
 ''' % { 'name': name, 'synapseMember':self.generateMemberDef() }
 
             body = '''#include "%(name)s.h"
+%(name)s::%(name)s(Population* pre, Population* post, int postRank, int target) : Projection(pre, post, postRank, target) {
+%(init)s
+}
+
+%(name)s::~%(name)s() {
+
+}
 
 void %(name)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
     Projection::initValues(rank, value, delay);
 
-%(init)s
 }
 
 void %(name)s::computeSum() {
 %(sum)s
 }
 
-void %(name)s::learn() {
-
+void %(name)s::localLearn() {
+%(local)s
 }
 
-''' % { 'name': name, 'init':self.generateInit(), 'sum':self.generateComputeSum() }
+void %(name)s::globalLearn() {
+%(global)s
+}
+
+''' % { 'name': name, 'init':self.generateInit(), 'sum':self.generateComputeSum(), 'local': self.generateLocalLearn(), 'global': self.generateGlobalLearn() }
 
             with open(self.hFile, mode = 'w') as w_file:
                 w_file.write(header)

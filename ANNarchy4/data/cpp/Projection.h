@@ -15,7 +15,9 @@ public:
 
 	virtual void computeSum();
 
-	virtual void learn() {}
+	virtual void globalLearn() {}
+
+	virtual void localLearn() {}
 
 	class Population* getPrePopulation() { return pre_population_; }
 

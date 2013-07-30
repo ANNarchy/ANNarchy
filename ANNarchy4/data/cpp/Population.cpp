@@ -94,10 +94,21 @@ void Population::metaStep() {
 
 void Population::metaLearn() {
 
-	#pragma omp parallel for schedule(static, 10)
-	for(int n=0; n<nbNeurons_; n++) {
-		for(int p=0; p< (int)projections_[n].size();p++) {
-			projections_[n][p]->learn();
-		}
-	}
+    //
+    // projection update for post neuron based variables
+    #pragma omp parallel for schedule(dynamic, 10)
+    for(int n=0; n<nbNeurons_; n++) {
+        for(int p=0; p< (int)projections_[n].size();p++) {
+            projections_[n][p]->globalLearn();
+        }
+    }
+
+    //
+    // projection update for every single synapse
+    for(int n=0; n<nbNeurons_; n++) {
+        for(int p=0; p< (int)projections_[n].size();p++) {
+            projections_[n][p]->localLearn();
+        }
+    }
+
 }

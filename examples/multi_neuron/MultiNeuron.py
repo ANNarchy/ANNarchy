@@ -24,7 +24,8 @@ Layer2 = Neuron(   tau = 10.0,
               )
 
 Oja = Synapse(tau = 5000,
-              alpha = Variable(init=0.1, eq = "alpha = post.rate"),
+              dt = Parameter(init=1),
+              alpha = Parameter(init=0.1, eq = "alpha = post.rate"),
               value = Variable(init=0.0, eq = "dvalue / dt = alpha * (pre.rate*post.rate - post.rate*post.rate*value)"),
               psp = Variable(eq = "psp=(1-pre.rate)*value")
 

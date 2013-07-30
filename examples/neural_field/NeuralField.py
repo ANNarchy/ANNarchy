@@ -25,7 +25,10 @@ Focus = Neuron( tau = 20.0,
                 rate = Variable(eq = "rate = if mp > threshold_max then threshold_max else pos(mp)", init = 0.0),
                 order = ['mp', 'rate']
 	       )
-		
+
+ReversedSynapse = Synapse( value = Variable(init=0.0),
+			   psp = Variable(eq ="psp=(1 - pre.rate)*value") 
+			)
 				
 InputPop = Population("Input", (20,20,1), Input)
 FocusPop = Population("Focus", (20,20,1), Focus)

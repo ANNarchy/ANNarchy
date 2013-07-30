@@ -345,14 +345,23 @@ void %(class)s::metaStep() {
 }
 
 void %(class)s::metaLearn() {
-
+    
+    // 
+    // projection update for post neuron based variables
     #pragma omp parallel for schedule(dynamic, 10)
     for(int n=0; n<nbNeurons_; n++) {
         for(int p=0; p< (int)projections_[n].size();p++) {
-            projections_[n][p]->learn();
+            projections_[n][p]->globalLearn();
         }
     }
-    
+
+    // 
+    // projection update for every single synapse
+    for(int n=0; n<nbNeurons_; n++) {
+        for(int p=0; p< (int)projections_[n].size();p++) {
+            projections_[n][p]->localLearn();
+        }
+    }    
 }
 """ % { 'class': self.name, 'construct': self.genConstructor(), 'metaStep': self.genMetaStep() } 
 

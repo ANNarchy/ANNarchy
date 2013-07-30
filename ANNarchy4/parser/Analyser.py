@@ -128,6 +128,9 @@ class SynapseAnalyser:
         for value in self.synapse:
             if value['name'] in self.variables_names: # only variables count
                 dep = []
+                if value['var'].eq == None:
+                    continue 
+                
                 if not value['var'].eq.find('pre.') == -1: # directly depends on pre
                     dep.append('pre')
                 else:
@@ -142,7 +145,6 @@ class SynapseAnalyser:
 
         self.local_variables_names, self.global_variables_names = self.sort_dependencies(dependencies)
         
-                     
         # Perform the analysis
         for value in self.synapse:
             if value['name'] in self.local_variables_names: # A variable which needs to be analysed
@@ -193,7 +195,10 @@ class SynapseAnalyser:
         
         
     def init_parameter(self, name, value):
-        return name + '_ = ' + str(value) + ';';
+        if isinstance(value, Parameter): 
+            return name + '_ = ' + str(value.init) + ';';
+        else:
+            return name + '_ = ' + str(value) + ';';
         
     def init_local_variable(self, name, value):
         return name +'_ = std::vector< '+DATA_TYPE+' >(post_population_->nbNeurons(), '+str(value)+');\n' 
