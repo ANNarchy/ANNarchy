@@ -19,10 +19,7 @@ def createIncludes():
     for p in generatedProj_:
         header += '#include "'+ p['name'] +'.h"\n'
 
-    header += '\n//Main simulator file\n'
-    header += '#include "ANNarchy.h"\n'
-    header += '\n#endif'
-
+    header += '#endif'
     with open(headerFile, mode = 'w') as w_file:
         w_file.write(header)
 
@@ -44,7 +41,7 @@ def genProjAdd():
         if(p.connector == None):
             print '\tWARNING: no connector object provided.'
         else:
-            code += 'net_->connect('+str(p.pre.id)+', '+str(p.post.id)+', '+p.connector.genCPPCall() +', '+ str(p.projClass['ID'])+');\n'
+            code += 'net_->connect('+str(p.pre.id)+', '+str(p.post.id)+', '+p.connector.genCPPCall() +', '+ str(p.projClass['ID'])+', '+ str(p.post.targets.index(p.target)) +');\n'
 
     return code
 

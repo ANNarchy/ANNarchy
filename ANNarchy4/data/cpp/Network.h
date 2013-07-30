@@ -31,7 +31,7 @@ public:
 
 	std::vector<DATA_TYPE> getRates(int populationID, std::vector<int> delays, std::vector<int> ranks);
 
-	void connect(int prePopulationID, int postPopulationID, class Connector *connector, int projectionID);
+	void connect(int prePopulationID, int postPopulationID, class Connector *connector, int projectionID, int target);
 
 	void disconnect(int prePopulationID, int postPopulationID);
 

@@ -22,7 +22,7 @@ public:
 	 *	\brief		Connects the two populations pre and post with each other. <br>
 	 *				The derived function implements the algorithm, how the two populations are connected.
 	 */
-	virtual void connect(Population *pre, Population *post, int projectionID)=0;
+	virtual void connect(Population *pre, Population *post, int projectionID, int target)=0;
 
 	class Projection* instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID, int target );
 };
@@ -44,7 +44,7 @@ private:
 };
 
 /**
- *	\brief		All2All pattern
+ *	\brief		One2One pattern
  */
 class One2OneConnector: public Connector {
 public:
@@ -54,7 +54,6 @@ public:
 
 	void connect(Population *pre, Population *post, int projectionID, int target);
 private:
-	bool allowSelfConnections_;
 	Distribution<DATA_TYPE>* weight_;
 	Distribution<int>* delay_;
 };

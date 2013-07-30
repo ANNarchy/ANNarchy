@@ -1,5 +1,6 @@
 #include "Connector.h"
 #include "Includes.h"
+#include "ANNarchy.h"
 
 #include <iostream>
 
