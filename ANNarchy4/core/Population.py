@@ -116,6 +116,7 @@ class Population(object):
         #
         #   replace all RandomDistribution by rand variables with continous numbers
         #   and stores the corresponding call as local variable
+        self.rand_objects=[]
         i = 0
         for v in neurVars:
             if 'var' not in v.keys():
@@ -127,7 +128,7 @@ class Population(object):
                 if eq == None:
                     continue
 
-                if eq.find('RandomDistribution') != -1:
+                if eq.find('RandomDistribution') != -1: # Found a RD object in the equation
                     tmp = eq.split('RandomDistribution')
                     
                     for t in tmp:
@@ -139,10 +140,11 @@ class Population(object):
                             for p in phrase:
                                 neurVars.append( {'name': '_rand_'+str(i), 'var': Variable(init = p) })
                                 eq = eq.replace('RandomDistribution'+p, '_rand_'+str(i))
+                                self.rand_objects.append(p)
                             i += 1
 
                     v['var'].eq = eq
-                          
+                        
         #
         #   parse neuron
         self.neuronParser = parser.NeuronAnalyser(neurVars, self.targets);
@@ -200,9 +202,16 @@ class Population(object):
                 #        cmd = call+'.genCPP()'
                 #        v2['cpp'] = v2['cpp'].replace(v['name'], eval(cmd)+'.getValue()')
                 
-                
-                call = ('RandomDistribution'+v['init'].split('(nbNeurons_, ')[1]).replace(');','')
-                meta += '\t'+v['name']+'_= '+eval(call+'.genCPP()')+'.getValues(nbNeurons_);\n'
+                idx = int(v['name'].split('_rand_')[1])
+                parameters = self.rand_objects[idx]
+                call = 'RandomDistribution' + parameters + '.genCPP()'
+                try:
+                    random_cpp = eval(call)
+                except Exception, e:
+                    print e
+                    print 'Error in', v['eq'], ': the RandomDistribution bject is not correctly defined.'
+                    exit(0) 
+                meta += '\t'+v['name']+'_= '+random_cpp+'.getValues(nbNeurons_);\n'
 
         loop += '\tfor(int i=0; i<nbNeurons_; i++) {\n'
 
