@@ -4,7 +4,7 @@ Population::Population(std::string name, int nbNeurons) {
 	name_ = std::move(name);
 
 	nbNeurons_ = nbNeurons;
-	rate = std::vector<DATA_TYPE>(nbNeurons_, 2.0);
+	rate_ = std::vector<DATA_TYPE>(nbNeurons_, 2.0);
 	projections_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
 	
 	maxDelay_ = 0;
@@ -13,7 +13,7 @@ Population::Population(std::string name, int nbNeurons) {
 }
 
 Population::~Population() {
-	rate.clear();
+	rate_.clear();
 	for(int n=0; n<nbNeurons_; n++) {
 		projections_[n].erase(projections_[n].begin(), projections_[n].end());
 	}
@@ -21,7 +21,7 @@ Population::~Population() {
 
 void Population::printRates() {
 	for(int n=0; n<nbNeurons_; n++) {
-		printf("%.02f ", rate[n]);
+		printf("%.02f ", rate_[n]);
 		if((n>0)&&(n%10==0))
 			printf("\n");
 	}

@@ -43,6 +43,7 @@ protected:
 	std::vector<DATA_TYPE>* post_rates_;
 
 	DATA_TYPE tau_;
+	DATA_TYPE dt_;
 
 	bool constDelay_;
 	int maxDelay_;

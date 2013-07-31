@@ -137,7 +137,7 @@ class Population(object):
                         phrase = re.findall('\(.*?\)', t) # find the shortest term within to brackets
                         if phrase != []:
                             for p in phrase:
-                                neurVars.append({'name':'_rand_'+str(i), 'init': p})
+                                neurVars.append( {'name': '_rand_'+str(i), 'var': Variable(init = p) })
                                 eq = eq.replace('RandomDistribution'+p, '_rand_'+str(i))
                             i += 1
 
@@ -178,7 +178,7 @@ class Population(object):
         
         for v in self.parsedNeuron:
             if '_rand_' in v['name']:   # skip local member
-                member += '\tstd::vector<DATA_TYPE> '+v['name']+';\n'
+                member += '\tstd::vector<DATA_TYPE> '+v['name']+'_;\n'
                 continue
             if 'rate' == v['name']:
                 continue
@@ -188,8 +188,8 @@ class Population(object):
         return member
 
     def genMetaStep(self):
-	meta = ''
-	loop = ''
+        meta = ''
+        loop = ''
 
         for v in self.parsedNeuron:
             if '_rand_' in v['name']:   # skip local member
@@ -199,14 +199,16 @@ class Population(object):
                 #        call = call.split(';')[0]
                 #        cmd = call+'.genCPP()'
                 #        v2['cpp'] = v2['cpp'].replace(v['name'], eval(cmd)+'.getValue()')
-                call = ('RandomDistribution'+v['init'].split('=')[1]).replace(';','')
-                meta += '\t'+v['name']+'= '+eval(call+'.genCPP()')+'.getValues(nbNeurons_);\n'
+                
+                
+                call = ('RandomDistribution'+v['init'].split('(nbNeurons_, ')[1]).replace(');','')
+                meta += '\t'+v['name']+'_= '+eval(call+'.genCPP()')+'.getValues(nbNeurons_);\n'
 
         loop += '\tfor(int i=0; i<nbNeurons_; i++) {\n'
 
         if self.neuron.order == []:
             # order does not play an important role        
- 	    for v in self.parsedNeuron:
+            for v in self.parsedNeuron:
                 if '_rand_' in v['name']:   # skip local member
                     continue
 
@@ -224,12 +226,10 @@ class Population(object):
 
             loop+= '\t}'
 
-	import re
+        import re
         # replace all _rand_.. by _rand_..[i]
-	loop = re.sub('_rand_[0-9]+', lambda m: m.group(0)+'[i]', loop)
-
-
-	code = meta + loop
+        #loop = re.sub('_rand_[0-9]+\_', lambda m: m.group(0)+'[i]', loop)
+        code = meta + loop
         return code
 
     def genAccess(self):
@@ -241,12 +241,12 @@ class Population(object):
 
             if v['type'] == 'variable':
                 #getter
-                access += '\tvoid set'+v['name'].capitalize()+'(std::vector<DATA_TYPE> '+v['name']+') { this->'+v['name']+'='+v['name']+'; }\n'
-                access += '\tstd::vector<DATA_TYPE> get'+v['name'].capitalize()+'() { return this->'+v['name']+'; }\n'
+                access += '\tvoid set'+v['name'].capitalize()+'(std::vector<DATA_TYPE> '+v['name']+') { this->'+v['name']+'_='+v['name']+'; }\n'
+                access += '\tstd::vector<DATA_TYPE> get'+v['name'].capitalize()+'() { return this->'+v['name']+'_; }\n'
             else:
                 #setter
-                access += '\tvoid set'+v['name'].capitalize()+'(DATA_TYPE '+v['name']+') { this->'+v['name']+'='+v['name']+'; }\n'
-                access += '\tDATA_TYPE get'+v['name'].capitalize()+'() { return this->'+v['name']+'; }\n'
+                access += '\tvoid set'+v['name'].capitalize()+'(DATA_TYPE '+v['name']+') { this->'+v['name']+'_='+v['name']+'; }\n'
+                access += '\tDATA_TYPE get'+v['name'].capitalize()+'() { return this->'+v['name']+'_; }\n'
 
         return access
 

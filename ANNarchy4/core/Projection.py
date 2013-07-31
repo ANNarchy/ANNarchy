@@ -96,9 +96,6 @@ class Projection:
         for v in self.parsedSynapseVariables:
             if v['name'] == 'psp':
                 pspCode = v['cpp'].split('=')[1]
-
-                for v2 in self.parsedSynapseVariables:
-                    pspCode = pspCode.replace(v2['name'], v2['name']+'_')
                 
         if len(pspCode) > 0:
             code = '\tDATA_TYPE psp = 0.0;\n'
@@ -119,15 +116,12 @@ class Projection:
         for v in self.parsedSynapseVariables:
             if v['name']=='psp':
                 continue
+            if v['type'] == 'global':
+                continue
 
             if len(v['cpp'])>0:
                 loop +='\t\t'+v['cpp']+'\n' 
 
-        #
-        # add underscore to variables
-        for v2 in self.parsedSynapseVariables:
-            if not v2['name']+'_' in loop:
-                loop = loop.replace(v2['name'], v2['name']+'_')
 
         code = '\tfor(int i=0; i<(int)value_.size();i++) {\n'
         code += loop
@@ -137,14 +131,17 @@ class Projection:
     def generateGlobalLearn(self):
 
         code= ''
-        
+        loop = ''
         for v in self.parsedSynapseVariables:
             if v['name']=='psp':
                 continue
+            if v['type'] == 'local':
+                continue
             
             if len(v['cpp'])>0:
-                print v
+                loop +='\t\t'+v['cpp']+'\n'
 
+        code += loop
         return code
 
     def generate(self):

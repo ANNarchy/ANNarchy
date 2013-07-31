@@ -1,4 +1,5 @@
 from Definitions import *
+import Analyser
 import Tree
             
 ## Nodes
@@ -203,22 +204,38 @@ class Variable(Leaf):
         self.machine = machine
         self.value = value
     def cpp(self):
+        if isinstance(self.machine.analyser, Analyser.SynapseAnalyser):
+            if str(self.value) in self.machine.analyser.local_variables_names:
+                suffix = '[i] '
+            else:
+                suffix = ' '
+        else:
+            suffix = '[i] '
         if self.value == 't':
             return ' time_ '
-        return ' ' + str(self.value)+'[i] '
+        return ' ' + str(self.value)+'_'+suffix
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
         
 class MainVariable(Variable):
     def __init__(self, machine, value):
         Variable.__init__(self, machine, value)
+    def cpp(self):
+        if isinstance(self.machine.analyser, Analyser.SynapseAnalyser):
+            if str(self.value) in self.machine.analyser.local_variables_names:
+                suffix = '[i] '
+            else:
+                suffix = ' '
+        else:
+            suffix = '[i] '
+        return ' ' + str(self.value)+'_'+suffix
         
 class Parameter(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
         self.value = value
     def cpp(self):
-        return str(self.value)
+        return ' ' + str(self.value) + '_'
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
         
@@ -227,7 +244,14 @@ class Gradient(Leaf):
         self.machine = machine
         self.value = value
     def cpp(self):
-        return ' ' + str(self.value)+'[i] '
+        if isinstance(self.machine.analyser, Analyser.SynapseAnalyser):
+            if str(self.value) in self.machine.analyser.local_variables_names:
+                suffix = '[i] '
+            else:
+                suffix = ' '
+        else:
+            suffix = '[i] '
+        return ' ' + str(self.value)+'_'+suffix
     def latex(self):
         return '{\\frac{d\\text{'+str(self.value) + '}}{dt}}'
         
@@ -305,7 +329,6 @@ class Not(Node):
         self.machine = machine
         self.value = value
         self.child = child
-        print self.child
         if self.child != None and hierarchize:
             self.child = self.hierarchize(self.child)
             self.child.parent=self

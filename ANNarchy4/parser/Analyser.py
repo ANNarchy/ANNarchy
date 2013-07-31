@@ -68,28 +68,28 @@ class NeuronAnalyser:
                      'cpp' : '' } )
                      
                      
-        for cpp in self.analysed_neuron:
-            print cpp['cpp']
+#        for cpp in self.analysed_neuron:
+#            print cpp['cpp']
             
         return self.analysed_neuron
                 
     def def_parameter(self, name):
-        return DATA_TYPE +' '+ name+';'
+        return DATA_TYPE +' '+ name+'_;'
 
     def def_variable(self, name):
-        return 'std::vector<'+DATA_TYPE+'> '+ name+';'
+        return 'std::vector<'+DATA_TYPE+'> '+ name+'_;'
 
     def init_parameter(self, name, value):
         if isinstance(value, RandomDistribution):
-            return name + ' = ('+ value.genCPP() +').getValue();'
+            return name + '_ = ('+ value.genCPP() +').getValue();'
         else:
-            return name + ' = ' + str(value) + ';'
+            return name + '_ = ' + str(value) + ';'
         
     def init_variable(self, name, value):
         if isinstance(value, RandomDistribution):
-            return name+' = ('+ value.genCPP() +').getValues(nbNeurons_);' # after this call the instantiation object still remains in memory -_-
+            return name+'_ = ('+ value.genCPP() +').getValues(nbNeurons_);' # after this call the instantiation object still remains in memory -_-
         else:
-            return name+' = std::vector<' + DATA_TYPE + '> ' +  '(nbNeurons_, '+str(value)+');'
+            return name+'_ = std::vector<' + DATA_TYPE + '> ' +  '(nbNeurons_, '+str(value)+');'
         
     def latex(self):
         code =""
@@ -184,11 +184,6 @@ class SynapseAnalyser:
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
                      'cpp' : '' } )
-                         
-                         
-        
-        for cpp in self.analysed_neuron:
-            print cpp['cpp']
             
         return self.analysed_neuron
         

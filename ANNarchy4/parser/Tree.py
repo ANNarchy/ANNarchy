@@ -1,5 +1,6 @@
 from Definitions import *
 from Nodes import *
+import Analyser
 import copy
 
 # State machine for a single expression
@@ -18,6 +19,15 @@ class Tree:
             if not n == self.name:
                 self.other_variables.append(n)
         self.other_variables.append('t') # time can be used by default
+        
+        # Synapse analysers may need value or psp without defining it
+        if isinstance(self.analyser, Analyser.SynapseAnalyser):
+            if not 'psp' in self.other_variables:
+                if not self.name == 'psp':
+                    self.other_variables.append('psp')
+            if not 'value' in self.other_variables:
+                if not self.name == 'value':
+                    self.other_variables.append('value')
         
         # Perform the analysis
         self.analyse()

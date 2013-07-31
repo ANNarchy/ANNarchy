@@ -13,6 +13,7 @@ Projection::Projection(Population* pre, Population* post, int post_rank, int tar
 
 	sum_ =0.0;
 	tau_ =10.0;
+	dt_ = 1.0;
 
 	//
 	//	TODO:	check the case that the referenced addresses

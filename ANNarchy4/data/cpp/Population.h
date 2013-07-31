@@ -31,7 +31,7 @@ public:
 	DATA_TYPE sum(int neur, int type);
 
 	std::vector<DATA_TYPE>* getRates() {
-		return &rate;
+		return &rate_;
 	}
 
 	std::vector<DATA_TYPE>* getRates(int delay) {
@@ -50,7 +50,7 @@ protected:
 	int maxDelay_;
 	DATA_TYPE dt_;
 
-	std::vector<DATA_TYPE>	rate;
+	std::vector<DATA_TYPE>	rate_;
 	std::vector< std::vector<DATA_TYPE>	> delayedRates_;
 	std::vector<std::vector<class Projection*> > projections_;	// first dimension, neuron wise
 };
