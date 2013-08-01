@@ -21,7 +21,7 @@ class Connector:
             print 'ERROR: no c++ equivalent registered.'
             return 'UnregisteredConnector'
 
-    def instantiateConnector(self,type):
+    def init_connector(self,type):
         import ANNarchyCython
         conn = None
 

@@ -49,7 +49,7 @@ Proj2 = Projection( pre = "Focus", post = "Focus", target = 'inh',
 if __name__ == "__main__":
 
     # Analyse and compile everything, initialize the parameters/variables...
-    Compile()
+    compile()
     
     import pyximport; pyximport.install()
     import BubbleWorld
