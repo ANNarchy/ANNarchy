@@ -98,6 +98,9 @@ class Population(object):
     def getID(self):
         return self.id
 
+    def generate_cpp_add(self):
+        return '\t\t'+self.name.capitalize()+'* '+self.name.lower()+' = new '+self.name.capitalize()+'("'+self.name.capitalize()+'", '+str(self.getSize())+');\n'
+        
     def generate(self):
         print '\tGenerate files for '+ self.__class__.__name__
 

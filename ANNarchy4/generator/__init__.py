@@ -1,1 +1,1 @@
-from Generator import compile
+from Generator import compile, simulate

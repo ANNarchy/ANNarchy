@@ -42,15 +42,15 @@ Proj_L2_L2 = Projection(pre="Layer2", post="Layer2", target='inh', connector=Con
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-Compile()
+compile()
 
 import math
 import numpy as np
 
 if __name__ == '__main__':
 
-    plotData = [{'pop': InputPop, 'var': 'rate', 'name':'input.rate'}, {'pop': Layer1Pop, 'var': 'rate', 'name':'layer1.rate'}]
-    PlotThread(plotData, True)
+    #plotData = [{'pop': InputPop, 'var': 'rate', 'name':'input.rate'}, {'pop': Layer1Pop, 'var': 'rate', 'name':'layer1.rate'}]
+    #PlotThread(plotData, True)
 
     print 'Running the simulation'
 
@@ -67,5 +67,7 @@ if __name__ == '__main__':
                bars[i,:] = 1.0
 
         InputPop.cyInstance.rate = bars.reshape(8*8)
+       
+        simulate(1000)
 
-        Simulate(1000)
+        print Layer1Pop.cyInstance.rate

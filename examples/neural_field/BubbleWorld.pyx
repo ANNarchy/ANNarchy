@@ -35,6 +35,6 @@ def run(InputPop, FocusPop):
 
         InputPop.cyInstance.baseline = data
         
-        Simulate(1)
+        simulate(1)
         t_end = datetime.now()
         print t_end-t_start

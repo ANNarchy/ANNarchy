@@ -49,7 +49,6 @@ Proj2 = Projection( pre = "Focus", post = "Focus", target = 'inh', connector = C
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-Compile(debugBuild=True)
+compile(debug_build=True)
 
-
-Simulate(10)
+simulate(10)
