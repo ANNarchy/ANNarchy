@@ -1,9 +1,3 @@
-# compile
-from Functions import *
-
-# interface
-from gui import *
-
 # object classes
 from Neuron import *
 from Synapse import *

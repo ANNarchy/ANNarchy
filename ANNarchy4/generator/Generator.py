@@ -6,7 +6,6 @@ import shutil
 
 # ANNarchy core informations
 import ANNarchy4.core.Global as Global
-import ANNarchy4.core.Functions as Functions
 
 def create_includes():
     """

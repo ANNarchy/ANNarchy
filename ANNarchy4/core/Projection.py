@@ -1,7 +1,6 @@
 import Global
 import os, sys
-from Master import Master
-import Functions
+import Master
 
 from ANNarchy4 import parser
 
@@ -47,8 +46,8 @@ class Projection:
             id   = len(Global.generatedProj_)+1
             name = 'Projection'+str(id)
 
-            self.hFile = Functions.annarchy_dir+'/build/'+name+'.h'
-            self.cppFile = Functions.annarchy_dir+'/build/'+name+'.cpp'
+            self.hFile = Global.annarchy_dir+'/build/'+name+'.h'
+            self.cppFile = Global.annarchy_dir+'/build/'+name+'.cpp'
 
             Global.generatedProj_.append( { 'name': name, 'ID': id } )
             self.projClass = { 'class': 'Projection', 'ID': id }

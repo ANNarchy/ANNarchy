@@ -4,7 +4,6 @@ from ANNarchy4 import parser
 import re
 from Random import *
 from Variable import *
-import Functions
 
 class Population(object):
     def __init__(self, name, geometry, neuron, debug=False):
@@ -14,9 +13,9 @@ class Population(object):
         self.id = len(populations_)
         self.targets = []
 
-        self.header = Functions.annarchy_dir+'/build/'+self.name+'.h'
-        self.body = Functions.annarchy_dir+'/build/'+self.name+'.cpp'
-        self.pyx = Functions.annarchy_dir+'/pyx/'+self.name+'.pyx'
+        self.header = annarchy_dir+'/build/'+self.name+'.h'
+        self.body = annarchy_dir+'/build/'+self.name+'.cpp'
+        self.pyx = annarchy_dir+'/pyx/'+self.name+'.pyx'
 
         populations_.append(self)
 
