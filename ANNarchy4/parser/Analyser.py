@@ -3,7 +3,7 @@ import Tree
 import re
 
 from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.Variable import *
+from ANNarchy4.core.Variable import Variable
 
 # Main analyser class for neurons
 class NeuronAnalyser:
@@ -32,6 +32,7 @@ class NeuronAnalyser:
                      
         # Perform the analysis
         for value in self.neuron:
+
             if 'var' in value.keys(): # A variable which needs to be analysed
                 if value['var'].init != None:
                     init_value = value['var'].init
@@ -60,13 +61,13 @@ class NeuronAnalyser:
                     init_value = value['init']
                 else:
                     init_value = 0.0
+                    
                 self.analysed_neuron.append( 
                     {'name': value['name'],
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
                      'def': self.def_parameter(value['name']),
-                     'cpp' : '' } )
-                     
+                     'cpp' : '' } ) #TODO: why a parameter should have no update rule
                      
 #        for cpp in self.analysed_neuron:
 #            print cpp['cpp']
@@ -118,10 +119,9 @@ class SynapseAnalyser:
                 print 'Error: dictionary must have a name attribute.'
                 exit(0)
             if 'var' in value.keys(): # A variable which needs to be analysed
-                if isinstance(value['var'], Variable):
-                    self.variables_names.append(value['name'])
-                else: # A parameter
-                    self.parameters_names.append(value['name'])
+                self.variables_names.append(value['name'])
+            else: # A parameter
+                self.parameters_names.append(value['name'])
                 
         # Identify the local variables (synapse-specific) from the global ones (neuron-specific)
         dependencies={}
@@ -187,13 +187,8 @@ class SynapseAnalyser:
             
         return self.analysed_neuron
         
-        
-        
     def init_parameter(self, name, value):
-        if isinstance(value, Parameter): 
-            return name + '_ = ' + str(value.init) + ';';
-        else:
-            return name + '_ = ' + str(value) + ';';
+        return name + '_ = ' + str(value) + ';';
         
     def init_local_variable(self, name, value):
         return name +'_ = std::vector< '+DATA_TYPE+' >(post_population_->nbNeurons(), '+str(value)+');\n' 

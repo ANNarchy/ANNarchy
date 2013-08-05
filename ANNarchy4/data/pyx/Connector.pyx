@@ -31,9 +31,9 @@ cdef class One2OneConnector:
         return ranks
 
     def connect(self, pre, post, distribution, target, parameters):
-        self.postSize = post.getSize()
+        self.postSize = post.size()
 
-        if (pre.getSize() != self.postSize):
+        if (pre.size() != self.postSize):
             return None
 
         r = self.genRanks()
@@ -96,8 +96,8 @@ cdef class All2AllConnector:
     def connect(self, pre, post, distribution, target, parameters):
         cdef int preID, postID
 
-        self.preSize = pre.getSize()
-        self.postSize = post.getSize()
+        self.preSize = pre.size()
+        self.postSize = post.size()
 
         self.preID = pre.id
         self.postID = post.id
@@ -159,11 +159,11 @@ cdef class DoGConnector:
         ranks.clear()
         values.clear()
 
-        normPost = self.post.getNormalizedCoordinateFromRank(postRank)
+        normPost = self.post.normalized_coordinates_from_rank(postRank)
 
         for j in range(self.preSize):
              if (not selfConnection or (self.pre != self.post)):
-                 normPre = self.pre.getNormalizedCoordinateFromRank(j)
+                 normPre = self.pre.normalized_coordinates_from_rank(j)
                  dist = self.compDist(normPre, normPost)
                  value = self.amp_pos*exp(-dist/2.0/self.sigma_pos/self.sigma_pos) - self.amp_neg*exp(-dist/2.0/self.sigma_neg/self.sigma_neg)
                  if (abs(value) > self.limit*abs(self.amp_pos-self.amp_neg)):
@@ -173,8 +173,8 @@ cdef class DoGConnector:
         return ranks, values
 
     def connect(self, pre, post, distribution, target, parameters):
-        self.preSize = pre.getSize()
-        self.postSize = post.getSize()
+        self.preSize = pre.size()
+        self.postSize = post.size()
         self.pre = pre
         self.post = post
 
@@ -183,7 +183,7 @@ cdef class DoGConnector:
         self.amp_pos = parameters['amp_pos']
         self.amp_neg = parameters['amp_neg']
 
-        if (pre.getSize() != self.postSize):
+        if (pre.size() != self.postSize):
             return None
 
         Proj = pyProjection(pre.id, post.id, self.postSize, target)

@@ -4,7 +4,7 @@ from Synapse import *
 from Variable import *
 
 # structure classes
-from Population import Population
+#from Population import Population
 from Projection import Projection
 from Connector import Connector
 

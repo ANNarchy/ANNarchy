@@ -23,19 +23,19 @@ class Projection:
         # in case of string, we need to search for the corresponding object 
         if isinstance(pre, str):
             for p in Global.populations_:
-                if p.getName() == pre:
+                if p.name == pre:
                     self.pre = p
         else:
             self.pre = pre
                                  
         if isinstance(post, str):
             for p in Global.populations_:
-                if p.getName() == post:
+                if p.name == post:
                     self.post = p
         else:
             self.post= post
             
-        self.post.addTarget(target)
+        self.post.generator.add_target(target)
         self.target = target
         self.connector = connector
         self.synapse = synapse

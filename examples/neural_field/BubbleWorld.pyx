@@ -2,6 +2,7 @@ from NeuralField import *
 import numpy as np
 cimport numpy as np
 from datetime import datetime
+import math
 
 def run(InputPop, FocusPop):
 

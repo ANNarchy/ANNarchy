@@ -8,7 +8,7 @@ from Variable import *
 #
 class Master:
     """
-    Intern base class.
+    Internal base class.
     """
     def __init__(self, debug, order, keyValueArgs):
         """
@@ -21,15 +21,10 @@ class Master:
         #
         # sort out all initialization values                
         for key in keyValueArgs:
-            alreadyContained, v = self.keyAlreadyContained(key)
+            alreadyContained, v = self.keyAlreadyContained(key, keyValueArgs[key])
 
             if not alreadyContained:
                 self.variables.append(v)
-
-            if isinstance(keyValueArgs[key], Variable):
-                v['var'] = keyValueArgs[key]
-            else:
-                v['init'] = keyValueArgs[key]
         
         # debug
         if debug:
@@ -37,11 +32,21 @@ class Master:
             pprint.pprint(self.variables)
 
     def set(self, keyValueArgs):
+        """
+        update variable/parameter locally.
+        """        
         print keyValueArgs
 
-    def keyAlreadyContained(self, key):
+    def keyAlreadyContained(self, key, value):
+        """
+        check if a variable/parameter already stored locally.
+        If the value is not listed a new object is returned.
+        """        
         for v in self.variables:
             if v['name'] == key:
                 return True, v
 
-        return False, {'name': key, 'init': None, 'var': None}
+        if isinstance(value, Variable):
+            return False, {'name': key, 'var': value }
+        else:
+            return False, {'name': key, 'init': value }

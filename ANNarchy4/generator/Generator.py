@@ -50,7 +50,7 @@ def update_annarchy_header(cpp_stand_alone):
             elif a_line.find('//AddPopulation') != -1:
                 if(cpp_stand_alone):
                     for pop in Global.populations_:
-                        code += pop.generate_cpp_add()
+                        code += pop.generator.generate_cpp_add()
                         
             elif a_line.find('//createProjInstance') != -1:
                 code += a_line
@@ -154,7 +154,7 @@ def code_generation(cpp_stand_alone):
     """
     print '\nGenerate files\n'
     for pop in Global.populations_:
-        pop.generate()
+        pop.generator.generate()
 
     for proj in Global.projections_:
         proj.generate()
@@ -215,7 +215,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
             proj.cyInstance = conn.connect(proj.pre,
                                         proj.post,
                                         proj.connector.weights,
-                                        proj.post.targets.index(proj.target),
+                                        proj.post.generator.targets.index(proj.target),
                                         proj.connector.parameters
                                         )
 

@@ -20,7 +20,7 @@ Input = Neuron(
 Focus = Neuron( 
     tau = 20.0,
     noise = 0.0,
-    baseline = 0.0,
+    baseline = Variable(init=0.0),
     threshold_min = 0.0,
     threshold_max = 1.0,
     mp = Variable(eq = "tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise * (2 * RandomDistribution('uniform', [0,1]) - 1) "),
