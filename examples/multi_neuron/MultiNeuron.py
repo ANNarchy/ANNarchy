@@ -42,7 +42,7 @@ Proj_L2_L2 = Projection(pre="Layer2", post="Layer2", target='inh', connector=Con
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-compile()
+compile(cpp_stand_alone=True)
 
 import math
 import numpy as np

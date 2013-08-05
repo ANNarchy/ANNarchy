@@ -211,7 +211,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         #
         # instantiate projections
         for proj in Global.projections_:
-            conn = proj.connector.init_connector(proj.connector.type)          
+            conn = proj.connector.init_connector()          
             proj.cyInstance = conn.connect(proj.pre,
                                         proj.post,
                                         proj.connector.weights,

@@ -101,7 +101,7 @@ class Population(object):
                       self.population.name.lower()+' = new '+
                       self.population.name.capitalize()+'("'+
                       self.population.name.capitalize()+'", '+
-                      str(self.population.getSize())+');\n')
+                      str(self.population.size())+');\n')
 
     def add_target(self, target):
         """

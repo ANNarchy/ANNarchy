@@ -62,7 +62,13 @@ class Projection:
 
     def generate_cpp_add(self):
         if self.connector != None:
-            return 'net_->connect('+str(self.pre.id)+', '+str(self.post.id)+', '+self.connector.genCPPCall() +', '+ str(self.projClass['ID'])+', '+ str(self.post.targets.index(self.target)) +');\n'
+            return ('net_->connect('+
+                str(self.pre.id)+', '+
+                str(self.post.id)+', '+
+                self.connector.cpp_call() +', '+ 
+                str(self.projClass['ID'])+', '+ 
+                str(self.post.generator.targets.index(self.target)) +
+                ');\n')
         else:
             print '\tWARNING: no connector object provided.'
             return ''
