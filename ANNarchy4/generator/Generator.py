@@ -175,7 +175,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         
     after this we instantiate the cythonized objects. 
     """
-    print Global.version, 'on', os.name
+    print Global.version, 'on', sys.platform, '(', os.name,')'
     
     folder_management()
     
@@ -183,7 +183,8 @@ def compile(cpp_stand_alone=False, debug_build=False):
     
     #
     # create ANNarchyCore.so and py extensions
-    print '\nStart compilation ...\n'
+    print 'Start compilation ...'
+    
     if sys.platform.startswith('linux'):
         import subprocess
         os.chdir(Global.annarchy_dir)
@@ -193,32 +194,36 @@ def compile(cpp_stand_alone=False, debug_build=False):
         os.system('chmod +x compile*')
 
         if not debug_build:
-            proc = subprocess.Popen(['./compile.sh'])
+            proc = subprocess.Popen(['./compile.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
             proc.wait()
         else:
-            proc = subprocess.Popen(['./compiled.sh'])
+            proc = subprocess.Popen(['./compiled.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
             proc.wait()
         
         os.chdir('..')
 
-        #
-        # bind the py extensions to the corresponding python objects
-        import ANNarchyCython
-        for pop in Global.populations_:
-            pop.cyInstance = eval('ANNarchyCython.py'+
-                                  pop.name.capitalize()+'()')
-
-        #
-        # instantiate projections
-        for proj in Global.projections_:
-            conn = proj.connector.init_connector()          
-            proj.cyInstance = conn.connect(proj.pre,
-                                        proj.post,
-                                        proj.connector.weights,
-                                        proj.post.generator.targets.index(proj.target),
-                                        proj.connector.parameters
-                                        )
-
+        if not cpp_stand_alone:
+            #
+            # bind the py extensions to the corresponding python objects
+            import ANNarchyCython
+            for pop in Global.populations_:
+                pop.cyInstance = eval('ANNarchyCython.py'+
+                                      pop.name.capitalize()+'()')
+    
+            #
+            # instantiate projections
+            for proj in Global.projections_:
+                conn = proj.connector.init_connector()          
+                proj.cyInstance = conn.connect(proj.pre,
+                                            proj.post,
+                                            proj.connector.weights,
+                                            proj.post.generator.targets.index(proj.target),
+                                            proj.connector.parameters
+                                            )
+        else:
+            #abort the application after compile ANNarchyCPP
+            exit(0)
+            
     else:
         error = """automated compilation and cython/python binding 
         only available under linux currently."""

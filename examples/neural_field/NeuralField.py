@@ -38,18 +38,19 @@ InputPop = Population("Input", (20,20,1), Input)
 FocusPop = Population("Focus", (20,20,1), Focus)
 
 Proj1 = Projection( pre = InputPop, post = "Focus", target = 'exc', 
-                    connector = Connector( type='One2One', weights=RandomDistribution('constant', [1.0]) ) ,    
+                    connector = Connector( conn_type='One2One', weights=RandomDistribution('constant', [1.0]) ) ,    
                     synapse=ReversedSynapse)
                     
 Proj2 = Projection( pre = "Focus", post = "Focus", target = 'inh', 
-                    connector = Connector( type='DoG', weights=RandomDistribution('uniform', [0,1]), 
+                    connector = Connector( conn_type='DoG', weights=RandomDistribution('uniform', [0,1]), 
                                            amp_pos=0.2, sigma_pos=0.1, amp_neg=0.1, sigma_neg=0.7 ) )
 
 # Main program
 if __name__ == "__main__":
 
     # Analyse and compile everything, initialize the parameters/variables...
-    compile()
+    compile()    
+    #compile(cpp_stand_alone=True)
     
     import pyximport; pyximport.install()
     import BubbleWorld
