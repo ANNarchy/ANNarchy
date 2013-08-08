@@ -6,8 +6,8 @@ import math
 
 def run(InputPop, FocusPop):
 
-    cdef int w = 20
-    cdef int h = 20
+    cdef int w = InputPop.width()
+    cdef int h = InputPop.height()
     
     cdef float angle = 0.0
     cdef float radius = 0.5
