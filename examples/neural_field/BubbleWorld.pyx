@@ -3,6 +3,7 @@ import numpy as np
 cimport numpy as np
 from datetime import datetime
 import math
+from ANNarchy4.visualization import Visualization
 
 def run(InputPop, FocusPop):
 
@@ -18,6 +19,8 @@ def run(InputPop, FocusPop):
     cdef float cw, ch, dist, value
 
     cdef np.ndarray data = np.zeros(w*h)
+    
+    vis = Visualization( [ { 'pop':InputPop, 'var': 'baseline', 'max': 0.5, 'cmap': 'get' }, { 'pop': FocusPop, 'var': 'rate' } ] )
 
     for i in xrange (10000):
         t_start = datetime.now()
@@ -35,6 +38,8 @@ def run(InputPop, FocusPop):
                 data[idx] = value
 
         InputPop.cyInstance.baseline = data
+
+        vis.render(250)
         
         simulate(1)
         t_end = datetime.now()

@@ -51,7 +51,7 @@ if __name__ == "__main__":
     # Analyse and compile everything, initialize the parameters/variables...
     compile()    
     #compile(cpp_stand_alone=True)
-    
+        
     import pyximport; pyximport.install()
     import BubbleWorld
     
