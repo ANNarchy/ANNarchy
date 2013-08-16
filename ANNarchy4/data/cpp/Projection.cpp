@@ -30,7 +30,7 @@ Projection::Projection(Population* pre, Population* post, int post_rank, int tar
 //			is called.
 Projection::Projection(int pre, int post, int post_rank, int target) {
 #ifdef _DEBUG
-	std::cout << "Connect (C2) pre="<<pre<<" with post=" <<post<< " and target=" << target << std::endl;
+	std::cout << "Connect (C2) pre="<<pre<<" with post=" <<post<< " and: target=" << target << " rank=" << post_rank<< " ptr="<< this << std::endl;
 #endif
 	pre_population_ = Network::instance()->getPopulation(pre);
     post_population_ = Network::instance()->getPopulation(post);
@@ -52,7 +52,10 @@ Projection::Projection(int pre, int post, int post_rank, int target) {
 }
 
 void Projection::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay){
-	rank_ = rank;
+#ifdef _DEBUG
+	std::cout << "update projection: ptr="<< this << " r=" << rank.size() << " v=" << value.size() <<" d=" << delay.size() <<std::endl;
+#endif	
+    rank_ = rank;
 	value_= value;
 	delay_= delay;
 	constDelay_ = true;

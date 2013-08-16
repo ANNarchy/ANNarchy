@@ -28,18 +28,17 @@ Focus = Neuron(
     order = ['mp', 'rate']
 )
 
-ReversedSynapse = Synapse( 
-    alpha = Variable(eq="dalpha/dt = post.rate - alpha", init=1.0),
-    value = Variable(eq="dvalue/dt = pre.rate * post.rate - alpha"),
-    psp = Variable(eq ="psp=(1 - pre.rate) * value") 
-)
+#ReversedSynapse = Synapse( 
+#    psp = Variable(eq ="psp=(1 - pre.rate) * value") 
+#)
 				
 InputPop = Population("Input", (20,20,1), Input)
 FocusPop = Population("Focus", (20,20,1), Focus)
 
 Proj1 = Projection( pre = InputPop, post = "Focus", target = 'exc', 
-                    connector = Connector( conn_type='One2One', weights=RandomDistribution('constant', [1.0]) ) ,    
-                    synapse=ReversedSynapse)
+                    connector = Connector( conn_type='One2One', weights=RandomDistribution('constant', [1.0]) ) #,
+                    #synapse=ReversedSynapse
+		    )
                     
 Proj2 = Projection( pre = "Focus", post = "Focus", target = 'inh', 
                     connector = Connector( conn_type='DoG', weights=RandomDistribution('uniform', [0,1]), 

@@ -69,11 +69,22 @@ def generate_proj_instance_class():
     to the given ID.
     """
     # single cases
-    cases = ''
+    cases_ptr = ''
     for proj in Global.generatedProj_:
-        cases += """
+        cases_ptr += """
         case %(id)s:
             return new %(name)s(pre, post, postNeuronRank, target);
+
+""" % { 'id': proj['ID'], 'name': proj['name']}
+
+    cases_id = ''
+    for proj in Global.generatedProj_:
+        cases_id += """
+        case %(id)s:
+        #ifdef _DEBUG
+            std::cout << "Instantiate name=%(name)s and id=%(id)s" << std::endl;
+        #endif
+            return new %(name)s(preID, postID, postNeuronRank, target);
 
 """ % { 'id': proj['ID'], 'name': proj['name']}
 
@@ -86,14 +97,26 @@ public:
         switch(ID) {
             case 0:
                 return new Projection(pre, post, postNeuronRank, target);
-%(case)s
+%(case1)s
             default:
                 std::cout << "Unknown typeID" << std::endl;
                 return NULL;
         }
     }
+
+    Projection* getInstanceOf(int ID, int preID, int postID, int postNeuronRank, int target) {
+        switch(ID) {
+            case 0:
+                return new Projection(preID, postID, postNeuronRank, target);
+%(case2)s
+            default:
+                std::cout << "Unknown typeID" << std::endl;
+                return NULL;
+        }
+    }
+
 };
-""" % { 'case': cases }
+""" % { 'case1': cases_ptr, 'case2': cases_id }
     return code
 
 def generate_py_extension():
@@ -213,7 +236,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #
             # instantiate projections
             for proj in Global.projections_:
-                conn = proj.connector.init_connector()          
+                conn = proj.connector.init_connector(proj.projClass['ID'])          
                 proj.cyInstance = conn.connect(proj.pre,
                                             proj.post,
                                             proj.connector.weights,

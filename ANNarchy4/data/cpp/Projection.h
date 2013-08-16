@@ -9,7 +9,7 @@ public:
 
 	Projection(int pre, int post, int post_rank, int target);
 
-	int getWeightCount() { return (int)rank_.size(); }
+	int getSynapseCount() { return (int)rank_.size(); }
 
 	virtual void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
 

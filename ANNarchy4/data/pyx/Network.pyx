@@ -5,7 +5,7 @@ cdef extern from "../build/Network.h":
 		int getTime()
 
 		void run(int nbSteps)
-
+		
 cdef extern from "../build/Network.h" namespace "Network":
 	cdef Network* instance()
 

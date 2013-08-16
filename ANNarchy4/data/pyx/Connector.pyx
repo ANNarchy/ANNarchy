@@ -4,16 +4,20 @@ from libcpp.vector cimport vector
 from libc.stdlib cimport malloc
 from libc.math cimport exp, abs
 
-cdef class One2OneConnector:
+cdef class Connector:
+    cdef proj_type
+    
+    def __cinit__(self, proj_type):
+        print 'ProjClass:', proj_type
+        self.proj_type = proj_type
+        
+cdef class One2OneConnector(Connector):
 
-    cdef weights
-    cdef delays
     cdef postSize
 
-    def __cinit__(self, weights=RandomDistribution('constant',[0.0]), delays=None):
-        self.weights = weights
-        self.delays = delays
-
+    def __cinit__(self, proj_type):
+        Connector.__init__(proj_type)
+        
     cdef genRanks(self):
         cdef int i
         cdef vector[int] tmp
@@ -37,89 +41,81 @@ cdef class One2OneConnector:
             return None
 
         r = self.genRanks()
-        Proj = pyProjection(pre.id, post.id, self.postSize, target)
+        Proj = pyProjection(self.proj_type, pre, post, self.postSize, target)
 
         for p in xrange(self.postSize):
             v = distribution.getValue()
 
-            Proj.getLocal(p).init(r[p], v)            
+            Proj.initLocal(p, r[p], v)            
 
         return Proj    
 
-cdef class All2AllConnector:
+cdef class All2AllConnector(Connector):
 
-    cdef weights
-    cdef delays
     cdef allowSelfConnections
     cdef preID
     cdef postID
     cdef preSize
     cdef postSize
+    cdef vector[vector[int]] ranks
 
-    def __cinit__(self, allow_self_connections = False, weights=RandomDistribution('constant',[0.0]), delays=None):
-        self.weights = weights
-        self.delays = delays
-
-        self.allowSelfConnections = allow_self_connections
+    def __cinit__(self, proj_type):
+        Connector.__init__(proj_type)
 
     cdef genRanks(self):
         cdef int i
         cdef int j
         cdef vector[int] tmp
-        cdef vector[vector[int]] ranks
         
-        ranks.clear()
+        self.ranks = vector[vector[int]]()
         if (self.preID == self.postID) and not self.allowSelfConnections:
-            tmp.clear()
 
-            instance()
             for i in range(self.postSize):
-
+                tmp.clear()
                 j = 0
+    
                 while j < self.preSize:
                     if( i != j):
                         tmp.push_back(j)
                     j = j+1
 
-                ranks.push_back(tmp)
-                i=i+1
+                self.ranks.push_back(tmp)
+
         else:
-             tmp.clear()
-             for i in xrange(self.preSize):
-                 tmp.push_back(i)
+            tmp.clear()
+            for i in xrange(self.preSize):
+                tmp.push_back(i)
 
-             for j in xrange(self.postSize):
-                 ranks.push_back(tmp)
-
-        return ranks
-
+            for j in xrange(self.postSize):
+                self.ranks.push_back(tmp)
+    
     def connect(self, pre, post, distribution, target, parameters):
         cdef int preID, postID
 
         self.preSize = pre.size()
         self.postSize = post.size()
 
-        self.preID = pre.id
-        self.postID = post.id
+        if 'allowSelfConnections' in parameters.keys():
+            self.allowSelfConnections = parameters['allowSelfConnections']
+        else:
+            self.allowSelfConnections = False
 
-        r = self.genRanks()
+        self.genRanks()
         
-        Proj = pyProjection(self.preID, self.postID, self.postSize, target)
+        Proj = pyProjection(self.proj_type, pre, post, self.postSize, target)
 
         for p in xrange(self.postSize):
-            if(self.allowSelfConnections and (pre==post)):
+            if not self.allowSelfConnections and (pre==post):
                 v = distribution.getValues(self.preSize-1)
             else:
                 v = distribution.getValues(self.preSize)
-
-            Proj.getLocal(p).init(r[p], v)            
+            
+            Proj.initLocal(p, self.ranks[p], v)
 
         return Proj
 
-cdef class DoGConnector:
+cdef class DoGConnector(Connector):
 
-    cdef weights
-    cdef delays
     cdef preSize
     cdef postSize
     cdef pre
@@ -130,14 +126,8 @@ cdef class DoGConnector:
     cdef sigma_neg
     cdef limit
 
-    def __cinit__(self, weights=RandomDistribution('constant',[0.0]), delays=None):
-        self.weights = weights
-        self.delays = delays
-        self.amp_pos = 1.0
-        self.amp_neg = 1.0
-        self.sigma_pos = 1.0
-        self.sigma_neg = 1.0
-        self.limit = 0.1
+    def __cinit__(self, proj_type):
+        Connector.__init__(proj_type)
       
     cdef compDist(self, pre, post):
         cdef float res = 0.0
@@ -183,15 +173,20 @@ cdef class DoGConnector:
         self.amp_pos = parameters['amp_pos']
         self.amp_neg = parameters['amp_neg']
 
+        if 'limit' in parameters.keys():
+            self.limit = parameters['limit']
+        else:
+            self.limit = 0.01
+
         if (pre.size() != self.postSize):
             return None
 
-        Proj = pyProjection(pre.id, post.id, self.postSize, target)
+        Proj = pyProjection(self.proj_type, pre, post, self.postSize, target)
 
         for p in xrange(self.postSize):
             r, v = self.genRanksAndValues(p)
 
-            Proj.getLocal(p).init(r, v)
+            Proj.initLocal(p, r, v)
 
         return Proj
 

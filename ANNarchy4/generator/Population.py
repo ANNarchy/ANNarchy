@@ -166,11 +166,7 @@ class %(class)s: public Population
 public:
     %(class)s(std::string name, int nbNeurons);
     
-    void metaSum();
-    
     void metaStep();
-    
-    void metaLearn();
     
 %(access)s
 private:
@@ -276,35 +272,8 @@ private:
     Network::instance()->addPopulation(this);
 }
 
-void %(class)s::metaSum() {
-
-    #pragma omp parallel for schedule(dynamic, 10)
-    for(int n=0; n<nbNeurons_; n++) {
-        for(int p=0; p< (int)projections_[n].size();p++) {
-            projections_[n][p]->computeSum();
-        }
-    }
-    
-}
-
 void %(class)s::metaStep() {
 %(metaStep)s    
-}
-
-void %(class)s::metaLearn() {
-    
-    #pragma omp parallel for schedule(dynamic, 10)
-    for(int n=0; n<nbNeurons_; n++) {
-        for(int p=0; p< (int)projections_[n].size();p++) {
-            projections_[n][p]->globalLearn();
-        }
-    }
-
-    for(int n=0; n<nbNeurons_; n++) {
-        for(int p=0; p< (int)projections_[n].size();p++) {
-            projections_[n][p]->localLearn();
-        }
-    }    
 }
 """ % { 'class': self.population.name, 
         'construct': constructor(self.parsed_neuron), 

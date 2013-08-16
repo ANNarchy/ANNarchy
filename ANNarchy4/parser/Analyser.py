@@ -191,7 +191,7 @@ class SynapseAnalyser:
         return name + '_ = ' + str(value) + ';';
         
     def init_local_variable(self, name, value):
-        return name +'_ = std::vector< '+DATA_TYPE+' >(post_population_->nbNeurons(), '+str(value)+');\n' 
+        return name +'_ = std::vector< '+DATA_TYPE+' >(post_population_->getNeuronCount(), '+str(value)+');\n' 
             
     def init_global_variable(self, name, value):
         return name + '_ = '+str(value)+';'
