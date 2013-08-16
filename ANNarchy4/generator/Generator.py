@@ -6,6 +6,7 @@ import shutil
 
 # ANNarchy core informations
 import ANNarchy4.core.Global as Global
+from datetime import datetime
 
 def create_includes():
     """
@@ -254,10 +255,13 @@ def compile(cpp_stand_alone=False, debug_build=False):
 
     print '\nCompilation process done.\n'
     
-def simulate(duration):
+def simulate(duration, show_time=False):
     """
     simulate #duration steps
     """    
     import ANNarchyCython
+    t_start = datetime.now()
     ANNarchyCython.pyNetwork().Run(duration)
-    
+    t_stop = datetime.now()
+    if show_time:
+        print 'Simulation:\t', t_stop - t_start, '(', duration, 'steps)'

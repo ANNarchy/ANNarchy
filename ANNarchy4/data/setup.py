@@ -10,6 +10,7 @@ if sys.platform.startswith('linux'):
                                  sources=["pyx/ANNarchyCython.pyx"], 
                                  libraries=["ANNarchyCore"], 
                                  runtime_library_dirs=["./annarchy"],
+                                 extra_compile_args=["-fopenmp"],
                                  language="c++")]
     )
 else:

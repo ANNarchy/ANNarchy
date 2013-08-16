@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export CFLAGS="-fpermissive -std=c++0x -L. -I. -Ibuild"
+export CFLAGS="-fopenmp -fpermissive -std=c++0x -L. -I. -Ibuild"
 
 rm -f pyx/*.cpp
 rm -f ANNarchyCore.so
@@ -15,10 +15,10 @@ fi
 
 if [ $alone == "True" ]; then
     echo compile ANNarchy as stand alone library
-    g++ -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCPP.so
+    g++ -O2 -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCPP.so
     
 else
-    g++ -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCore.so
+    g++ -O2 -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCore.so
 
     python setup.py build_ext --inplace
 fi

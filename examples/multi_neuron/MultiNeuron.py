@@ -27,7 +27,7 @@ Layer2 = Neuron(   tau = 10.0,
 
 Oja = Synapse(tau = 5000,
               dt = 1.0,
-              alpha = 8,
+              alpha = 16,
               value = Variable(init=0.0, eq = "tau * dvalue / dt = pre.rate*post.rate - alpha * post.rate^2 *value"),
               )
 
@@ -39,9 +39,9 @@ AntiHebb = Synapse(tau = 5000,
                    order = ['w','value']
                   )
 
-InputPop = Population("Input", (8,8,1), Input)
-Layer1Pop = Population("Layer1", (8,8,1), Layer1)
-Layer2Pop = Population("Layer2", (6,5,1), Layer2)
+InputPop = Population("Input", (16,16,1), Input)
+Layer1Pop = Population("Layer1", (16,16,1), Layer1)
+Layer2Pop = Population("Layer2", (10,7,1), Layer2)
 
 Proj_In_L1 = Projection(pre="Input", post="Layer1", target='exc', connector=Connector('One2One', weights=RandomDistribution('constant', [1.0])))
 Proj_L1_L2 = Projection(pre="Layer1", post="Layer2", target='exc', synapse=Oja, connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,0.1])))
@@ -58,33 +58,26 @@ import numpy as np
 if __name__ == '__main__':
 
     vis = Visualization( [ { 'pop':InputPop, 'var': 'rate' }, 
-                           { 'pop': Layer1Pop, 'var': 'rate' }, 
                            { 'pop': Layer2Pop, 'var': 'rate' }, 
-                           { 'proj': Proj_L1_L2, 'var': 'value', 'max': 0.3 } ] )
+                           { 'proj': Proj_L1_L2, 'var': 'value', 'max': 0.2 } ] )
 
     print 'Running the simulation'
 
-    for trial in range(5000):
-        t_start = datetime.now()
-        bars = np.zeros((8,8))
+    for trial in range(50000):
+        bars = np.zeros((16,16))
         
-        for i in xrange(8):
+        for i in xrange(16):
             # appears a horizontal bar?
-            if np.random.rand(1) < 1.0/8.0:
+            if np.random.rand(1) < 1.0/16.0:
                bars[:,i] = 1.0
 
             # appears a vertical bar?
-            if np.random.rand(1) < 1.0/8.0:
+            if np.random.rand(1) < 1.0/16.0:
                bars[i,:] = 1.0
 
-        InputPop.cyInstance.rate = bars.reshape(8*8)
+        InputPop.cyInstance.rate = bars.reshape(16*16)
 
-        simulate(100)
-        t_stop = datetime.now()
-        print 'simulation:', stop-start
+        simulate(100, True)
         
-        t_start = datetime.now()
-        vis.render()
-        t_stop = datetime.now()
-        print 'simulation:', stop-start
+        vis.render(show_time=True)
 

@@ -13,7 +13,9 @@ if matplotlib.__version__ < 1.0:
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+
 from math import ceil, sqrt
+from datetime import datetime 
 
 class Render:
     """
@@ -87,12 +89,13 @@ class Visualization:
         plt.ion()   #interactive mode
         plt.show()  
         
-    def render(self, interval=1):
+    def render(self, interval=1, show_time=False):
         """
         * Render all plots.
         *
         * interval      all plots are updated each #interval steps.
         """
+        t_start = datetime.now()
         if interval == 1:            
             for plot in self.plots:
                 plot.update()
@@ -105,6 +108,10 @@ class Visualization:
             self.figure.canvas.draw()
             plt.draw()
 
+        t_stop = datetime.now()
+        if show_time:
+            print 'Visualization:\t', t_stop-t_start
+            
         self.time += 1
         
 class VisualizePopulationVar(Render):

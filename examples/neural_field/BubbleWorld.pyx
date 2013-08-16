@@ -1,7 +1,6 @@
 from NeuralField import *
 import numpy as np
 cimport numpy as np
-from datetime import datetime
 import math
 from ANNarchy4.visualization import Visualization
 
@@ -20,11 +19,11 @@ def run(InputPop, FocusPop):
 
     cdef np.ndarray data = np.zeros(w*h)
     
-    vis = Visualization( [ { 'pop':InputPop, 'var': 'baseline', 'max': 0.5, 'cmap': 'get' }, { 'pop': FocusPop, 'var': 'rate' } ] )
+    vis = Visualization( [ { 'pop':InputPop, 'var': 'baseline', 'max': 0.5, 'cmap': 'get' }, 
+                           { 'pop': FocusPop, 'var': 'rate' } ] 
+                       )
 
     for i in xrange (10000):
-        t_start = datetime.now()
-
         angle += 1.0/5000.0
 
         cw = w / 2.0 * ( 1.0 + radius * np.cos(2 * math.pi * angle ) )
@@ -39,8 +38,7 @@ def run(InputPop, FocusPop):
 
         InputPop.cyInstance.baseline = data
 
-        vis.render(250)
+        simulate(1, show_time=True)
+
+        vis.render(interval=250, show_time=True)
         
-        simulate(1)
-        t_end = datetime.now()
-        print t_end-t_start
