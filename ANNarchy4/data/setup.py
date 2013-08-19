@@ -16,5 +16,10 @@ if sys.platform.startswith('linux'):
 else:
     setup(
         cmdclass = { 'build_ext' : build_ext },
-        ext_modules = [ Extension("ANNarchyCython", ["pyx/ANNarchy.pyx"], libraries=["annarchy-3.1d"], language="c++")]
+        ext_modules = [ Extension("ANNarchyCython", 
+                                 sources=["pyx/ANNarchyCython.pyx"], 
+                                 libraries=["ANNarchyCore"], 
+                                 extra_compile_args=["/EHsc", "/I.", "/DEBUG"],
+                                 extra_link_args=["/LIBPATH:annarchy", "/DEBUG"],
+                                 language="c++")]
     )

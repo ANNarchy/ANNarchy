@@ -2,6 +2,7 @@
 Generator.py
 """
 import os, sys
+import subprocess
 import shutil
 
 # ANNarchy core informations
@@ -208,11 +209,9 @@ def compile(cpp_stand_alone=False, debug_build=False):
     #
     # create ANNarchyCore.so and py extensions
     print 'Start compilation ...'
+    os.chdir(Global.annarchy_dir)
     
     if sys.platform.startswith('linux'):
-        import subprocess
-        os.chdir(Global.annarchy_dir)
-
         #
         # apply +x lost by copy
         os.system('chmod +x compile*')
@@ -231,13 +230,50 @@ def compile(cpp_stand_alone=False, debug_build=False):
             # bind the py extensions to the corresponding python objects
             import ANNarchyCython
             for pop in Global.populations_:
+                try:
+                    pop.cyInstance = eval('ANNarchyCython.py'+
+                                      pop.name.capitalize()+'()')
+                except:
+                    print 'Error on instantiation of ANNarchyCython.py'+pop.name.capitalize()+'()'
+    
+            #
+            # instantiate projections
+            for proj in Global.projections_:
+                try:
+                    conn = proj.connector.init_connector()          
+                    proj.cyInstance = conn.connect(proj.pre,
+                                            proj.post,
+                                            proj.connector.weights,
+                                            proj.post.generator.targets.index(proj.target),
+                                            proj.connector.parameters
+                                            )
+                except:
+                    print 'Error on instantiation of projection'
+                    
+
+        else:
+            #abort the application after compile ANNarchyCPP
+            exit(0)
+            
+    else:
+        #
+        # TODO: 
+        # implement multiple compilation modes
+        proc = subprocess.Popen(['compile.bat'], shell=True)
+        proc.wait()
+
+        if not cpp_stand_alone:
+            #
+            # bind the py extensions to the corresponding python objects
+            import ANNarchyCython
+            for pop in Global.populations_:
                 pop.cyInstance = eval('ANNarchyCython.py'+
                                       pop.name.capitalize()+'()')
     
             #
             # instantiate projections
             for proj in Global.projections_:
-                conn = proj.connector.init_connector(proj.generator.proj_class['ID'])          
+                conn = proj.connector.init_connector()          
                 proj.cyInstance = conn.connect(proj.pre,
                                             proj.post,
                                             proj.connector.weights,
@@ -247,12 +283,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         else:
             #abort the application after compile ANNarchyCPP
             exit(0)
-            
-    else:
-        error = """automated compilation and cython/python binding 
-        only available under linux currently."""
-        print error
-
+        
     print '\nCompilation process done.\n'
     
 def simulate(duration, show_time=False):
