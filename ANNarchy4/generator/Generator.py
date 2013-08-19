@@ -47,7 +47,7 @@ def update_annarchy_header(cpp_stand_alone):
             if a_line.find('//AddProjection') != -1:
                 if(cpp_stand_alone):
                     for proj in Global.projections_:
-                        code += proj.generate_cpp_add()
+                        code += proj.generator.generate_cpp_add()
             elif a_line.find('//AddPopulation') != -1:
                 if(cpp_stand_alone):
                     for pop in Global.populations_:
@@ -237,7 +237,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #
             # instantiate projections
             for proj in Global.projections_:
-                conn = proj.connector.init_connector(proj.generator.projClass['ID'])          
+                conn = proj.connector.init_connector(proj.generator.proj_class['ID'])          
                 proj.cyInstance = conn.connect(proj.pre,
                                             proj.post,
                                             proj.connector.weights,

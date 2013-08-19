@@ -1,7 +1,8 @@
-import Global
-import os, sys
-import Master
+"""
+Projection class.
+"""
 
+import Global
 from ANNarchy4 import generator
 
 class Projection:
@@ -20,40 +21,22 @@ class Projection:
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object 
         if isinstance(pre, str):
-            for p in Global.populations_:
-                if p.name == pre:
-                    self.pre = p
+            for pop in Global.populations_:
+                if pop.name == pre:
+                    self.pre = pop
         else:
             self.pre = pre
                                  
         if isinstance(post, str):
-            for p in Global.populations_:
-                if p.name == post:
-                    self.post = p
+            for pop in Global.populations_:
+                if pop.name == post:
+                    self.post = pop
         else:
-            self.post= post
+            self.post = post
             
         self.post.generator.add_target(target)
         self.target = target
         self.connector = connector
         self.synapse = synapse
-
-        self.projClass = None
-
-        self.generator = generator.Projection(synapse)
-        Global.projections_.append(self)        
-
-    def generate_cpp_add(self):
-        if self.connector != None:
-            return ('net_->connect('+
-                str(self.pre.id)+', '+
-                str(self.post.id)+', '+
-                self.connector.cpp_call() +', '+ 
-                str(self.projClass['ID'])+', '+ 
-                str(self.post.generator.targets.index(self.target)) +
-                ');\n')
-        else:
-            print '\tWARNING: no connector object provided.'
-            return ''
-        
-
+        self.generator = generator.Projection(self, synapse)
+        Global.projections_.append(self)
