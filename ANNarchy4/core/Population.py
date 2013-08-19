@@ -2,10 +2,7 @@
 Population.py
 """
 
-# core packages
 import Global 
-
-# others
 from ANNarchy4 import generator
 
 class Population(object):

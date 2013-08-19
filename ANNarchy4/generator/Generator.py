@@ -181,7 +181,7 @@ def code_generation(cpp_stand_alone):
         pop.generator.generate()
 
     for proj in Global.projections_:
-        proj.generate()
+        proj.generator.generate()
 
     create_includes()
 
@@ -237,7 +237,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #
             # instantiate projections
             for proj in Global.projections_:
-                conn = proj.connector.init_connector(proj.projClass['ID'])          
+                conn = proj.connector.init_connector(proj.generator.projClass['ID'])          
                 proj.cyInstance = conn.connect(proj.pre,
                                             proj.post,
                                             proj.connector.weights,

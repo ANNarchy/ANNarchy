@@ -5,7 +5,7 @@ from Variable import *
 
 # structure classes
 #from Population import Population
-from Projection import Projection
+#from Projection import Projection
 from Connector import Connector
 
 from Random import *
