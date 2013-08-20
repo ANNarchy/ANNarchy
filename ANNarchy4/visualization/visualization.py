@@ -73,6 +73,7 @@ class Visualization:
             for x in xrange(num_col):
                     
                 if i >= len(data):
+                    self.figure.delaxes(self.handles[y][x])
                     continue # no data
                     
                 if 'pop' in data[i].keys():

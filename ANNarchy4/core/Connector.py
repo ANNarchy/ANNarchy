@@ -5,17 +5,46 @@ from Random import RandomDistribution
 
 class Connector:
     """
-    Manage all information and operations related to connection patterns.
+    The connector class manages all information and operations related to connection patterns.
     """
-    def __init__(self, conn_type, weights, delays=RandomDistribution('constant', [0]), **keyValueArgs):
+
+    def __init__(self, conn_type, weights, delays=RandomDistribution('constant', [0]), **parameters):
+        """
+        Initialize a connection object.
+        
+        * conn_type: name of connection class (One2One, All2All, DoG, ...)
+        * weights: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.
+        * delays: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.
+        * parameters: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
+        """
         self.weights = weights
         self.delays = delays
         self.conn_type = conn_type        
-        self.parameters = keyValueArgs
+        self.parameters = parameters
+
+    def init_connector(self, proj_type):
+        """
+        Returns a connector object (instance of python extension class). 
+        
+        proj_type   ID of projection class (zero for standard projection)
+        """
+        import ANNarchyCython
+        conn = None
+
+        if self.conn_type == 'All2All':
+            conn = ANNarchyCython.All2AllConnector(proj_type)
+        elif self.conn_type == 'One2One':
+            conn = ANNarchyCython.One2OneConnector(proj_type)
+        elif self.conn_type == 'DoG':
+            conn = ANNarchyCython.DoGConnector(proj_type)
+        else:
+            print 'Called unregistered connector.'
+
+        return conn
 
     def cpp_call(self):
         """
-        Generate connector initializatuion in ANNarchy.h. 
+        Generate connector initialization in ANNarchy.h. 
         HINT: only used if cpp_stand_alone=True provided to compile()
         """
         if self.conn_type == 'All2All':
@@ -33,24 +62,4 @@ class Connector:
         else:
             print 'ERROR: no c++ equivalent registered.'
             return 'UnregisteredConnector'
-
-    def init_connector(self, proj_type):
-        """
-        * Returns a connector object (instance of python extension class). 
-        *
-        *   proj_type   ID of projection class (zero for standard projection)
-        """
-        import ANNarchyCython
-        conn = None
-
-        if self.conn_type == 'All2All':
-            conn = ANNarchyCython.All2AllConnector(proj_type)
-        elif self.conn_type == 'One2One':
-            conn = ANNarchyCython.One2OneConnector(proj_type)
-        elif self.conn_type == 'DoG':
-            conn = ANNarchyCython.DoGConnector(proj_type)
-        else:
-            print 'Called unregistered connector.'
-
-        return conn
 
