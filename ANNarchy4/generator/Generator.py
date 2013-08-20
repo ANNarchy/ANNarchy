@@ -239,16 +239,16 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #
             # instantiate projections
             for proj in Global.projections_:
-                try:
-                    conn = proj.connector.init_connector(proj.generator.proj_class['ID'])          
-                    proj.cyInstance = conn.connect(proj.pre,
-                                            proj.post,
-                                            proj.connector.weights,
-                                            proj.post.generator.targets.index(proj.target),
-                                            proj.connector.parameters
-                                            )
-                except:
-                    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
+                #try:
+                conn = proj.connector.init_connector(proj.generator.proj_class['ID'])          
+                proj.cyInstance = conn.connect(proj.pre,
+                                        proj.post,
+                                        proj.connector.weights,
+                                        proj.post.generator.targets.index(proj.target),
+                                        proj.connector.parameters
+                                        )
+                #except:
+                #    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
                     
 
         else:
@@ -273,7 +273,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #
             # instantiate projections
             for proj in Global.projections_:
-                conn = proj.connector.init_connector()          
+                conn = proj.connector.init_connector(proj.generator.proj_class['ID'])          
                 proj.cyInstance = conn.connect(proj.pre,
                                             proj.post,
                                             proj.connector.weights,

@@ -46,7 +46,7 @@ cdef class One2OneConnector(Connector):
         for p in xrange(self.postSize):
             v = distribution.getValue()
 
-            Proj.initLocal(p, r[p], v)            
+            Proj.init_local(p, r[p], v)            
 
         return Proj    
 
@@ -110,7 +110,7 @@ cdef class All2AllConnector(Connector):
             else:
                 v = distribution.getValues(self.preSize)
             
-            Proj.initLocal(p, self.ranks[p], v)
+            Proj.init_local(p, self.ranks[p], v)
 
         return Proj
 
@@ -186,7 +186,7 @@ cdef class DoGConnector(Connector):
         for p in xrange(self.postSize):
             r, v = self.genRanksAndValues(p)
 
-            Proj.initLocal(p, r, v)
+            Proj.init_local(p, r, v)
 
         return Proj
 

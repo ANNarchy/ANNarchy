@@ -131,9 +131,9 @@ cdef class pyProjection:
         def size(self, id):
             return self.local[id].size()
         
-        def initLocal(self, id, r, v):
+        def init_local(self, id, r, v):
             self.local[id].init(r,v)
             
-        def getLocal(self, id):
+        def get_local(self, id):
             return self.local[id]
 
