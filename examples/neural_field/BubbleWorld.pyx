@@ -19,7 +19,7 @@ def run(InputPop, FocusPop):
 
     cdef np.ndarray data = np.zeros(w*h)
     
-    vis = Visualization( [ { 'pop':InputPop, 'var': 'baseline', 'max': 0.5, 'cmap': 'get' }, 
+    vis = Visualization( [ { 'pop': InputPop, 'var': 'rate' }, 
                            { 'pop': FocusPop, 'var': 'rate' } ] 
                        )
 

@@ -68,8 +68,8 @@ cdef class All2AllConnector(Connector):
         cdef vector[int] tmp
         
         self.ranks = vector[vector[int]]()
+        
         if (self.preID == self.postID) and not self.allowSelfConnections:
-
             for i in range(self.postSize):
                 tmp.clear()
                 j = 0
@@ -80,7 +80,6 @@ cdef class All2AllConnector(Connector):
                     j = j+1
 
                 self.ranks.push_back(tmp)
-
         else:
             tmp.clear()
             for i in xrange(self.preSize):
@@ -90,8 +89,9 @@ cdef class All2AllConnector(Connector):
                 self.ranks.push_back(tmp)
     
     def connect(self, pre, post, distribution, target, parameters):
-        cdef int preID, postID
 
+        self.preID = pre.id
+        self.postID = post.id        
         self.preSize = pre.size()
         self.postSize = post.size()
 

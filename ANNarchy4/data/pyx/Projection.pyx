@@ -84,19 +84,22 @@ cdef class pyProjection:
                        
                     # same geometry as pre layer
                     if m_row == None:
-                        m_row = m.reshape(self.pre.width(),self.pre.height())
+                        m_row = np.ma.concatenate( [ np.zeros((self.pre.height(), 1)), m.reshape(self.pre.height(), self.pre.width()) ], axis=1)
                     else:
-                        m_row = np.ma.concatenate([m_row, m.reshape(self.pre.width(),self.pre.height())])    
+                        m_row = np.ma.concatenate( [ m_row, m.reshape(self.pre.height(), self.pre.width()) ] , axis=1)  
+                    m_row = np.ma.concatenate( [ m_row, np.zeros((self.pre.height(), 1)) ], axis=1)
                     
                     # next neuron
                     i+=1
                 
                 if m_ges == None:
-                    m_ges = m_row
+                    m_ges = np.zeros((1, self.post.width()*self.pre.width() + self.post.width() +1))
+                    m_ges = np.ma.concatenate( [ m_ges, m_row ])
                 else: 
-                    m_ges = np.ma.concatenate((m_ges, m_row), axis=1)
-             
-            return m_ges.T
+                    m_ges = np.ma.concatenate( [m_ges, m_row] )
+                m_ges = np.ma.concatenate( [m_ges, np.zeros((1,self.post.width()*self.pre.width() + self.post.width() +1))] )
+                
+            return m_ges
 
         def values(self, ranks):
             m_ges = None

@@ -59,25 +59,30 @@ if __name__ == '__main__':
 
     vis = Visualization( [ { 'pop':InputPop, 'var': 'rate' }, 
                            { 'pop': Layer2Pop, 'var': 'rate' }, 
-                           { 'proj': Proj_L1_L2, 'var': 'value', 'max': 0.3 } ] )
+                           { 'proj': Proj_L1_L2, 'var': 'value', 'max': 0.3, 'title': 'Layer1->Layer2 : exc' } ] )
 
     print 'Running the simulation'
 
     for trial in range(50000):
         bars = np.zeros((8,8))
         
+        # appears a vertical bar?
         for i in xrange(8):
-            # appears a horizontal bar?
             if np.random.rand(1) < 1.0/8.0:
                bars[:,i] = 1.0
 
-            # appears a vertical bar?
+        # appears a horizontal bar?
+        for i in xrange(8):
             if np.random.rand(1) < 1.0/8.0:
                bars[i,:] = 1.0
 
+        InputPop.cyInstance.rate.size
         InputPop.cyInstance.rate = bars.reshape(8*8)
 
-        simulate(100, True)
-        
-        vis.render(show_time=True)
+        simulate(100)
+        vis.render()
+
+
+        #simulate(100, True)
+        #vis.render(show_time=True)
 

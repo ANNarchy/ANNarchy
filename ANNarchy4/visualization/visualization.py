@@ -43,7 +43,9 @@ class Render:
                 self.p_map = cm.hot
         else:
             self.p_map = cm.hot
-
+            
+        self.title = plot_data['title']
+            
     def update(self):
         """
         * Update current plot.
@@ -75,11 +77,17 @@ class Visualization:
                 if i >= len(data):
                     self.figure.delaxes(self.handles[y][x])
                     continue # no data
-                    
+                                        
                 if 'pop' in data[i].keys():
+                    if not 'title' in data[i].keys():
+                        data[i].update( { 'title': eval("(data[i]['pop']).name") } )
+
                     self.plots.append(VisualizePopulationVar(self.handles[y][x], data[i]))
                     i += 1
                 elif 'proj' in data[i].keys():
+                    if not 'title' in data[i].keys():
+                        data[i].update( { 'title': 'Projection' } )
+
                     self.plots.append(VisualizeProjectionVar(self.handles[y][x], data[i]))
                     i += 1
                 else:
@@ -136,13 +144,17 @@ class VisualizePopulationVar(Render):
         # TODO: maybe a better solution?
         self.w = self.pop.width()
         self.h = self.pop.height()
-        self.cmd = 'self.pop.cyInstance.'+self.var+'.reshape('+str(self.w)+','+str(self.h)+')'
         
+        # matrix are designed as [ y, x ]
+        self.cmd = 'self.pop.cyInstance.'+self.var+'.reshape('+str(self.h)+','+str(self.w)+')'
+        
+        self.handle.set_title(self.title)
         self.image = self.handle.imshow(eval(self.cmd), 
                                         cmap= self.p_map, 
                                         interpolation='nearest', 
                                         vmin= self.p_min, 
                                         vmax = self.p_max)
+        
         
     def update(self):
         """
@@ -170,6 +182,7 @@ class VisualizeProjectionVar(Render):
             self.ranks = plot_data['ranks']
         
         self.cmd = 'self.proj.cyInstance.values_all()'
+        self.handle.set_title(self.title)
         self.image = self.handle.imshow(eval(self.cmd), 
                                         cmap= self.p_map, 
                                         interpolation='nearest', 
