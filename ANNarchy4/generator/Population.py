@@ -361,7 +361,7 @@ cdef class py%(cname)s:
 
 ''' % { 'name':self.population.name, 
         'cname':self.population.name, 
-        'neuron_count': self.population.size(), 
+        'neuron_count': self.population.size, 
         'cFunction': pyx_func(self.parsed_neuron), 
         'pyFunction': py_func(self.parsed_neuron) 
     }

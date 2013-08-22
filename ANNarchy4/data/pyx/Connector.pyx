@@ -36,9 +36,9 @@ cdef class One2OneConnector(Connector):
         return ranks
 
     def connect(self, pre, post, distribution, target, parameters):
-        self.postSize = post.size()
+        self.postSize = post.size
 
-        if (pre.size() != self.postSize):
+        if (pre.size != self.postSize):
             return None
 
         r = self.genRanks()
@@ -97,8 +97,8 @@ cdef class All2AllConnector(Connector):
 
         self.preID = pre.id
         self.postID = post.id        
-        self.preSize = pre.size()
-        self.postSize = post.size()
+        self.preSize = pre.size
+        self.postSize = post.size
 
         if 'allowSelfConnections' in parameters.keys():
             self.allowSelfConnections = parameters['allowSelfConnections']
@@ -170,8 +170,8 @@ cdef class DoGConnector(Connector):
         return ranks, values
 
     def connect(self, pre, post, distribution, target, parameters):
-        self.preSize = pre.size()
-        self.postSize = post.size()
+        self.preSize = pre.size
+        self.postSize = post.size
         self.pre = pre
         self.post = post
 
@@ -185,7 +185,7 @@ cdef class DoGConnector(Connector):
         else:
             self.limit = 0.01
 
-        if (pre.size() != self.postSize):
+        if (self.preSize != self.postSize):
             return None
 
         Proj = []

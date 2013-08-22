@@ -6,8 +6,8 @@ from ANNarchy4.visualization import Visualization
 
 def run(InputPop, FocusPop):
 
-    cdef int w = InputPop.width()
-    cdef int h = InputPop.height()
+    cdef int w = InputPop.width
+    cdef int h = InputPop.height
     
     cdef float angle = 0.0
     cdef float radius = 0.5
@@ -40,7 +40,3 @@ def run(InputPop, FocusPop):
 
         simulate(1)
         vis.render(interval=250)
-
-        #simulate(1, show_time=True)
-        #vis.render(interval=250, show_time=True)
-        

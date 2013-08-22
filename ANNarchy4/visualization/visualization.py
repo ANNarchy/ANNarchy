@@ -142,8 +142,8 @@ class VisualizePopulationVar(Render):
         
         # variable access
         # TODO: maybe a better solution?
-        self.w = self.pop.width()
-        self.h = self.pop.height()
+        self.w = self.pop.width
+        self.h = self.pop.height
         
         # matrix are designed as [ y, x ]
         self.cmd = 'self.pop.'+self.var+'.reshape('+str(self.h)+','+str(self.w)+')'

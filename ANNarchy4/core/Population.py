@@ -21,9 +21,10 @@ class Population(Descriptor):
         Global.populations_.append(self)
         self.generator = generator.Population(self)
 
+    @property
     def size(self):
         """
-        Returns number of neurons in the population.
+        number of neurons in the population.
         """
         size = 1
 
@@ -32,29 +33,32 @@ class Population(Descriptor):
 
         return size
 
+    @property
     def width(self):
         """
-        Returns width of the population.
+        width of the population.
         """
         return self.geometry[0]
 
+    @property
     def height(self):
         """
-        Returns height of the population.
+        height of the population.
         """
         return self.geometry[1]    
 
+    @property
     def depth(self):
         """
-        Returns depth of the population.
+        depth of the population.
         """        
         return self.geometry[2]
 
-    def rank_from_coordinates(self, width, height, depth=0):
+    def rank_from_coordinates(self, w, h, d=0):
         """
         Returns rank corresponding to (w, h, d) coordinates. The depth d is 0 by default.
         """
-        return depth*self.geometry[0]*self.geometry[1] + self.geometry[0] * height + width
+        return d*self.width*self.height + h * self.width + w
 
     def coordinates_from_rank(self, rank):
         """
@@ -62,46 +66,46 @@ class Population(Descriptor):
         """
         coord = [0, 0, 0]
 
-        if(self.geometry[2]==1):
-            if(self.geometry[1]==1):
+        if(self.depth==1):
+            if(self.height==1):
                 coord[0] = rank
             else:
-                coord[1] = rank / self.geometry[0]
-                coord[0] = rank - coord[1]*self.geometry[1]
+                coord[1] = rank / self.width
+                coord[0] = rank - coord[1]*self.height
         else:
-            coord[2] = rank / ( self.geometry[0] * self.geometry[1] )
+            coord[2] = rank / ( self.width * self.height )
 
-            plane_rank = rank - coord[2] * ( self.geometry[0] * self.geometry[1] )
-            coord[1] = plane_rank / self.geometry[0]
-            coord[0] = plane_rank - coord[1]*self.geometry[1]
+            plane_rank = rank - coord[2] * ( self.width * self.height )
+            coord[1] = plane_rank / self.width
+            coord[0] = plane_rank - coord[1]*self.height
 
         return coord
 
     def normalized_coordinates_from_rank(self, rank, norm=1):
         """
-        Returns (width, height, depth) coordinates normalized to norm corresponding to rank.
+        Returns (w, h, d) coordinates normalized to norm corresponding to rank.
         """
         
         coord = [0, 0, 0]
 
-        if(self.geometry[2]==1):
-            if(self.geometry[1]==1):
+        if(self.depth==1):
+            if(self.height==1):
                 coord[0] = rank/(self.size()-norm)
             else:
-                width = rank / self.geometry[0]
-                height = rank - coord[1]*self.geometry[1]
-                coord[0] = width / (self.width()-norm)
-                coord[1] = height / (self.height()-norm)
+                w = rank / self.width
+                h = rank - coord[1]*self.geometry[1]
+                coord[0] = w / (self.width-norm)
+                coord[1] = h / (self.height-norm)
         else:
-            depth = rank / ( self.geometry[0] * self.geometry[1] )
+            d = rank / ( self.width * self.height )
             #coord in plane
-            pRank = rank - coord[2] * ( self.geometry[0] * self.geometry[1] )
-            height = pRank / self.geometry[0]
-            width = pRank - coord[1]*self.geometry[1]
+            pRank = rank - coord[2] * ( self.width * self.height )
+            h = pRank / self.width
+            w = pRank - coord[1]*self.height
 
-            coord[0] = width / (self.width()-norm)
-            coord[1] = height / (self.height()-norm)
-            coord[2] = depth / (self.depth()-norm)
+            coord[0] = w / (self.width-norm)
+            coord[1] = h / (self.height-norm)
+            coord[2] = d / (self.depth-norm)
 
         return coord
 
