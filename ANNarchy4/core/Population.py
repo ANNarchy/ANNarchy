@@ -87,6 +87,20 @@ class Population(Descriptor):
         else:
             print 'Error: variable',variable,'does not exist in this population.'
             print traceback.print_stack()
+
+    def get_parameter(self, parameter):
+        """
+        Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
+        
+        The argument should be a string representing the variables's name.
+
+        """
+        
+        if hasattr(self, parameter):
+            return eval('self.'+parameter)
+        else:
+            print 'Error: parameter',parameter,'does not exist in this population.'
+            print traceback.print_stack()
     
     def rank_from_coordinates(self, w, h, d=0):
         """

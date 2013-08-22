@@ -68,7 +68,7 @@ class Projection(object):
         List of all local projections.
         """
         return self.local_proj        
-            
+
     def connect(self):
         self.connector.init_connector(self.generator.proj_class['ID'])          
         tmp = self.connector.cyInstance.connect(self.pre,
@@ -81,7 +81,7 @@ class Projection(object):
         self.local_proj = []
         for i in xrange(len(tmp)):
             self.local_proj.append(LocalProjection(tmp[i], self))
-        
+
     def gather_data(self, variable):
         blank_col=np.zeros((self.pre.height, 1))
         blank_row=np.zeros((1,self.post.width*self.pre.width+self.post.width +1))
@@ -92,11 +92,8 @@ class Projection(object):
             m_row = None
             
             for x in xrange(self.post.width):
-                m = np.zeros(self.pre.width * self.pre.height)
-                if i < len(self.local_proj):
-                    m[self.local_proj[i].rank[:]] = self.local_proj[i].value[:]
-
-                # apply pre layer geometry
+                m = self.local_proj[i].get_variable(variable)
+                
                 if m_row == None:
                     m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.height, self.pre.width) ], axis = 1 )
                 else:
@@ -120,11 +117,56 @@ class LocalProjection(Descriptor):
     def __init__(self, cyInstance, proj):
         self.cyInstance = cyInstance
         self.proj = proj
-
+        self.pre = proj.pre
+        
         #
         # base variables
         self.value = Attribute('value')
         self.rank = Attribute('rank')
         self.delay = Attribute('delay')
         
+    def get_variable(self, variable):
+        """
+        Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
+        
+        The argument should be a string representing the variables's name.
+        """
+        
+        if hasattr(self, variable):
+            var = eval('self.'+variable)
+
+            m = np.zeros(self.pre.width * self.pre.height)
+            m[self.rank[:]] = var[:]
+
+            return self._reshape_vector(var)
+        else:
+            print 'Error: variable',variable,'does not exist in this projection.'
+            print traceback.print_stack()
+
+    def get_parameter(self, parameter):
+        """
+        Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
+        
+        The argument should be a string representing the variables's name.
+
+        """
+        
+        if hasattr(self, parameter):
+            return eval('self.'+parameter)
+        else:
+            print 'Error: parameter',parameter,'does not exist in this projection.'
+            print traceback.print_stack()
+
+    def _reshape_vector(self, vector):
+        """
+        Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
+        """
+        vec = np.array(vector) # if list transform to vec
+        
+        if self.pre.dimension == 1:
+            return vec
+        elif self.pre.dimension == 2:
+            return vec.reshape(self.pre.height, self.pre.width)
+        elif self.pre.dimension == 3:
+            return vec.reshape(self.pre.depth, self.pre.height, self.pre.width)
 
