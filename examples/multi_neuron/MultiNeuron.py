@@ -80,8 +80,3 @@ if __name__ == '__main__':
 
         simulate(100)
         vis.render()
-
-
-        #simulate(100, True)
-        #vis.render(show_time=True)
-

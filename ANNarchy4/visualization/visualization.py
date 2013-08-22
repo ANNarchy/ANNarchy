@@ -127,27 +127,18 @@ class VisualizePopulationVar(Render):
     """
     Render a population varibale to the given plot.
     """
-
     def __init__(self, handle, plot_data):
         """
-        * Constructor
-        *
-        * handle    handle of the plot.
-        * init_data dictionary contain all plot data
+        Constructor
+        
+        handle    handle of the plot.
+        init_data dictionary contain all plot data
         """
         Render.__init__(self, handle, plot_data)
-        print self.handle
         self.pop = plot_data['pop']
         self.var = plot_data['var']
         
-        # variable access
-        # TODO: maybe a better solution?
-        self.w = self.pop.width
-        self.h = self.pop.height
-        
-        # matrix are designed as [ y, x ]
-        self.cmd = 'self.pop.'+self.var+'.reshape('+str(self.h)+','+str(self.w)+')'
-        
+        self.cmd ='self.pop.get_variable(self.var)'
         self.handle.set_title(self.title)
         self.image = self.handle.imshow(eval(self.cmd), 
                                         cmap= self.p_map, 
@@ -168,10 +159,10 @@ class VisualizeProjectionVar(Render):
     """
     def __init__(self, handle, plot_data):
         """
-        * Constructor
-        *
-        * handle    handle of the plot.
-        * init_data dictionary contain all plot data
+        Constructor
+        
+        handle    handle of the plot.
+        init_data dictionary contain all plot data
         """
         Render.__init__(self, handle, plot_data)
         

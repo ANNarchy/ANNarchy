@@ -3,6 +3,7 @@ Population.py
 """
 
 import Global 
+import numpy as np
 from ANNarchy4 import generator
 from ANNarchy4.core.Variable import Descriptor
 
@@ -13,7 +14,7 @@ class Population(Descriptor):
 
     def __init__(self, name, geometry, neuron, debug=False):
         self.debug = debug
-        self.geometry = geometry
+        self.pop_geometry = geometry
         self.neuron = neuron
         self.name = name
         self.id = len(Global.populations_)
@@ -24,36 +25,69 @@ class Population(Descriptor):
     @property
     def size(self):
         """
-        number of neurons in the population.
+        Number of neurons in the population.
         """
         size = 1
 
-        for i in xrange(len(self.geometry)):
-            size *= self.geometry[i]
+        for i in xrange(len(self.pop_geometry)):
+            size *= self.pop_geometry[i]
 
         return size
 
     @property
     def width(self):
         """
-        width of the population.
+        Width of the population.
         """
-        return self.geometry[0]
+        return self.pop_geometry[0]
 
     @property
     def height(self):
         """
-        height of the population.
+        Height of the population.
         """
-        return self.geometry[1]    
+        return self.pop_geometry[1]    
 
     @property
     def depth(self):
         """
-        depth of the population.
+        Depth of the population.
         """        
-        return self.geometry[2]
+        return self.pop_geometry[2]
 
+    @property
+    def geometry(self):
+        """
+        Geometry of the population as tuple (w, h, d).
+        """
+        return self.pop_geometry
+
+    @property
+    def dimension(self):
+        """
+        Dimension of the population (1, 2 or 3)
+        """
+        if self.depth != 1:
+            return 3
+        if self.height != 1:
+            return 2
+        else: 
+            return 1
+        
+    def get_variable(self, variable):
+        """
+        Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
+        
+        The argument should be a string representing the variables's name.
+        """
+        
+        if hasattr(self, variable):
+            var = eval('self.'+variable)
+            return self._reshape_vector(var)
+        else:
+            print 'Error: variable',variable,'does not exist in this population.'
+            print traceback.print_stack()
+    
     def rank_from_coordinates(self, w, h, d=0):
         """
         Returns rank corresponding to (w, h, d) coordinates. The depth d is 0 by default.
@@ -93,7 +127,7 @@ class Population(Descriptor):
                 coord[0] = rank/(self.size()-norm)
             else:
                 w = rank / self.width
-                h = rank - coord[1]*self.geometry[1]
+                h = rank - coord[1]*self.height
                 coord[0] = w / (self.width-norm)
                 coord[1] = h / (self.height-norm)
         else:
@@ -114,3 +148,17 @@ class Population(Descriptor):
         update neuron variable/parameter definition
         """
         self.neuron.set(keyValueArgs)
+        
+    def _reshape_vector(self, vector):
+        """
+        Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
+        """
+        vec = np.array(vector) # if list transform to vec
+        
+        if self.dimension == 1:
+            return vec
+        elif self.dimension == 2:
+            return vec.reshape(self.height, self.width)
+        elif self.dimension == 3:
+            return vec.reshape(self.depth, self.height, self.width)
+
