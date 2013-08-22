@@ -4,10 +4,11 @@ Generator.py
 import os, sys
 import subprocess
 import shutil
+from datetime import datetime
 
 # ANNarchy core informations
 import ANNarchy4.core.Global as Global
-from datetime import datetime
+from ANNarchy4.core.Variable import Attribute
 
 def create_includes():
     """
@@ -226,6 +227,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         os.chdir('..')
 
         if not cpp_stand_alone:
+
             #
             # bind the py extensions to the corresponding python objects
             import ANNarchyCython
@@ -233,6 +235,15 @@ def compile(cpp_stand_alone=False, debug_build=False):
                 try:
                     pop.cyInstance = eval('ANNarchyCython.py'+
                                       pop.name.capitalize()+'()')
+                    
+                    #
+                    #   extend the population by all cythonized variables
+                    for var in pop.generator.neuron_variables:
+                        if not '_rand_' in var['name']:
+                            cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
+                            print cmd
+                            exec(cmd)
+
                 except:
                     print 'Error on instantiation of ANNarchyCython.py'+pop.name.capitalize()+'()'
     
@@ -240,13 +251,20 @@ def compile(cpp_stand_alone=False, debug_build=False):
             # instantiate projections
             for proj in Global.projections_:
                 #try:
-                conn = proj.connector.init_connector(proj.generator.proj_class['ID'])          
-                proj.cyInstance = conn.connect(proj.pre,
-                                        proj.post,
-                                        proj.connector.weights,
-                                        proj.post.generator.targets.index(proj.target),
-                                        proj.connector.parameters
-                                        )
+                    proj.connect()                        
+                    #
+                    #   extend the projection by all cythonized variables
+                    #for var in proj.generator.parsed_synapse_variables:
+                    #    if '_rand_' in var['name']:
+                    #        continue
+                         
+                    #    if 'psp' in var['name']:
+                    #        continue
+                            
+                    #    cmd = 'proj.'+var['name']+' = ProjectionAttribute(\''+var['name']+'\')'
+                    #    print cmd
+                    #    exec(cmd)
+
                 #except:
                 #    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
                     

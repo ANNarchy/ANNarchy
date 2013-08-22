@@ -4,8 +4,9 @@ Population.py
 
 import Global 
 from ANNarchy4 import generator
+from ANNarchy4.core.Variable import Descriptor
 
-class Population(object):
+class Population(Descriptor):
     """
     Represents a neural network population
     """

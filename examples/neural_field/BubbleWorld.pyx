@@ -19,7 +19,7 @@ def run(InputPop, FocusPop):
 
     cdef np.ndarray data = np.zeros(w*h)
     
-    vis = Visualization( [ { 'pop': InputPop, 'var': 'rate' }, 
+    vis = Visualization( [ { 'pop': InputPop, 'var': 'baseline' }, 
                            { 'pop': FocusPop, 'var': 'rate' } ] 
                        )
 
@@ -38,7 +38,9 @@ def run(InputPop, FocusPop):
 
         InputPop.cyInstance.baseline = data
 
-        simulate(1, show_time=True)
+        simulate(1)
+        vis.render(interval=250)
 
-        vis.render(interval=250, show_time=True)
+        #simulate(1, show_time=True)
+        #vis.render(interval=250, show_time=True)
         

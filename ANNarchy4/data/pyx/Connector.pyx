@@ -1,4 +1,5 @@
 from ANNarchy4.core.Random import *
+import ANNarchy4.core.Projection as PyProjection
 
 from libcpp.vector cimport vector 
 from libc.stdlib cimport malloc
@@ -41,12 +42,16 @@ cdef class One2OneConnector(Connector):
             return None
 
         r = self.genRanks()
-        Proj = pyProjection(self.proj_type, pre, post, self.postSize, target)
 
+        Proj = []
+        
         for p in xrange(self.postSize):
+            local = LocalProjection(self.proj_type, pre.id, post.id, p, target)
             v = distribution.getValue()
 
-            Proj.init_local(p, r[p], v)            
+            local.init(r[p], v)            
+            
+            Proj.append(local)
 
         return Proj    
 
@@ -102,15 +107,17 @@ cdef class All2AllConnector(Connector):
 
         self.genRanks()
         
-        Proj = pyProjection(self.proj_type, pre, post, self.postSize, target)
+        Proj = []
 
         for p in xrange(self.postSize):
+            local = LocalProjection(self.proj_type, pre.id, post.id, p, target)
             if not self.allowSelfConnections and (pre==post):
                 v = distribution.getValues(self.preSize-1)
             else:
                 v = distribution.getValues(self.preSize)
             
-            Proj.init_local(p, self.ranks[p], v)
+            local.init(self.ranks[p], v)
+            Proj.append(local)            
 
         return Proj
 
@@ -181,12 +188,15 @@ cdef class DoGConnector(Connector):
         if (pre.size() != self.postSize):
             return None
 
-        Proj = pyProjection(self.proj_type, pre, post, self.postSize, target)
+        Proj = []
 
         for p in xrange(self.postSize):
+            local = LocalProjection(self.proj_type, pre.id, post.id, p, target)
+            
             r, v = self.genRanksAndValues(p)
 
-            Proj.init_local(p, r, v)
+            local.init(r, v)
+            Proj.append(local)
 
         return Proj
 

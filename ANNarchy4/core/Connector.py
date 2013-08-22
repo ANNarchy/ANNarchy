@@ -29,19 +29,17 @@ class Connector:
         proj_type   ID of projection class (zero for standard projection)
         """
         import ANNarchyCython
-        conn = None
+        self.cyInstance = None
 
         if self.conn_type == 'All2All':
-            conn = ANNarchyCython.All2AllConnector(proj_type)
+            self.cyInstance = ANNarchyCython.All2AllConnector(proj_type)
         elif self.conn_type == 'One2One':
-            conn = ANNarchyCython.One2OneConnector(proj_type)
+            self.cyInstance = ANNarchyCython.One2OneConnector(proj_type)
         elif self.conn_type == 'DoG':
-            conn = ANNarchyCython.DoGConnector(proj_type)
+            self.cyInstance = ANNarchyCython.DoGConnector(proj_type)
         else:
             print 'Called unregistered connector.'
-
-        return conn
-
+           
     def cpp_call(self):
         """
         Generate connector initialization in ANNarchy.h. 

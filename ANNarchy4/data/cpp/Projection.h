@@ -25,9 +25,17 @@ public:
 
 	DATA_TYPE getSum() { return sum_; }
 
+	std::vector<int> getDelay() { return delay_; }
+
+    void setDelay(std::vector<int> delay) { delay_ = delay; }
+    	
 	std::vector<int> getRank() { return rank_; }
 
+    void setRank(std::vector<int> rank) { rank_ = rank; }
+    
 	std::vector<DATA_TYPE> getValue() { return value_; }
+	
+	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
 protected:
 	Population* pre_population_;
 	Population* post_population_;

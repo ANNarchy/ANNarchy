@@ -146,7 +146,7 @@ class VisualizePopulationVar(Render):
         self.h = self.pop.height()
         
         # matrix are designed as [ y, x ]
-        self.cmd = 'self.pop.cyInstance.'+self.var+'.reshape('+str(self.h)+','+str(self.w)+')'
+        self.cmd = 'self.pop.'+self.var+'.reshape('+str(self.h)+','+str(self.w)+')'
         
         self.handle.set_title(self.title)
         self.image = self.handle.imshow(eval(self.cmd), 
@@ -181,7 +181,7 @@ class VisualizeProjectionVar(Render):
         if 'ranks' in plot_data.keys():
             self.ranks = plot_data['ranks']
         
-        self.cmd = 'self.proj.cyInstance.values_all()'
+        self.cmd = 'self.proj.gather_data(\''+self.var+'\')'
         self.handle.set_title(self.title)
         self.image = self.handle.imshow(eval(self.cmd), 
                                         cmap= self.p_map, 

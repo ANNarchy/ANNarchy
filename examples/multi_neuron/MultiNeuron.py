@@ -76,8 +76,7 @@ if __name__ == '__main__':
             if np.random.rand(1) < 1.0/8.0:
                bars[i,:] = 1.0
 
-        InputPop.cyInstance.rate.size
-        InputPop.cyInstance.rate = bars.reshape(8*8)
+        InputPop.rate = bars.reshape(8*8)
 
         simulate(100)
         vis.render()
