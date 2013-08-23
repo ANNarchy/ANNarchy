@@ -9,7 +9,7 @@ cdef class Connector:
     cdef proj_type
     
     def __cinit__(self, proj_type):
-        print 'ProjClass:', proj_type
+        #print 'ProjClass:', proj_type
         self.proj_type = proj_type
         
 cdef class One2OneConnector(Connector):

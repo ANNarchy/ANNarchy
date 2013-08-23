@@ -241,7 +241,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
                     for var in pop.generator.neuron_variables:
                         if not '_rand_' in var['name']:
                             cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
-                            print cmd
+                            #print cmd
                             exec(cmd)
 
                 except:
@@ -250,23 +250,11 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #
             # instantiate projections
             for proj in Global.projections_:
-                #try:
+                try:
                     proj.connect()                        
-                    #
-                    #   extend the projection by all cythonized variables
-                    #for var in proj.generator.parsed_synapse_variables:
-                    #    if '_rand_' in var['name']:
-                    #        continue
-                         
-                    #    if 'psp' in var['name']:
-                    #        continue
-                            
-                    #    cmd = 'proj.'+var['name']+' = ProjectionAttribute(\''+var['name']+'\')'
-                    #    print cmd
-                    #    exec(cmd)
 
-                #except:
-                #    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
+                except:
+                    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
                     
 
         else:
@@ -287,17 +275,24 @@ def compile(cpp_stand_alone=False, debug_build=False):
             for pop in Global.populations_:
                 pop.cyInstance = eval('ANNarchyCython.py'+
                                       pop.name.capitalize()+'()')
+
+                #
+                #   extend the population by all cythonized variables
+                for var in pop.generator.neuron_variables:
+                    if not '_rand_' in var['name']:
+                        cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
+                        #print cmd
+                        exec(cmd)
     
             #
             # instantiate projections
             for proj in Global.projections_:
-                conn = proj.connector.init_connector(proj.generator.proj_class['ID'])          
-                proj.cyInstance = conn.connect(proj.pre,
-                                            proj.post,
-                                            proj.connector.weights,
-                                            proj.post.generator.targets.index(proj.target),
-                                            proj.connector.parameters
-                                            )
+                try:
+                    proj.connect()                        
+
+                except:
+                    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
+
         else:
             #abort the application after compile ANNarchyCPP
             exit(0)

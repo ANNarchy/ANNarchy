@@ -60,6 +60,12 @@ class Visualization:
     Later extended by complete config or a GUI to configure.
     """
     def __init__(self, data):
+        """
+        Constructor
+        
+        Parameter:
+        * data      list of dictionary describing the single plots.
+        """
         #
         # currently we assume a squared order of visualization fields
         num_row = int(ceil(sqrt(len(data))))
@@ -106,9 +112,12 @@ class Visualization:
         
     def render(self, interval=1, show_time=False):
         """
-        * Render all plots.
-        *
+        Render all plots.
+        
+        Parameters:
+        
         * interval      all plots are updated each #interval steps.
+        * show_time     how long the visualition
         """
         t_start = datetime.now()
         if interval == 1:            

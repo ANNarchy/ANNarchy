@@ -3,7 +3,6 @@
 #
 #
 from ANNarchy4 import *
-from ANNarchy4.visualization import Visualization
 from datetime import datetime
 
 #

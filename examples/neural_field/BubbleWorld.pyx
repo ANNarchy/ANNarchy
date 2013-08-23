@@ -2,7 +2,6 @@ from NeuralField import *
 import numpy as np
 cimport numpy as np
 import math
-from ANNarchy4.visualization import Visualization
 
 def run(InputPop, FocusPop):
 
@@ -36,7 +35,7 @@ def run(InputPop, FocusPop):
                 idx = x+y*w
                 data[idx] = value
 
-        InputPop.cyInstance.baseline = data
+        InputPop.baseline = data
 
         simulate(1)
         vis.render(interval=250)

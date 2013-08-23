@@ -130,7 +130,9 @@ class LocalProjection(Descriptor):
         """
         Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
         
-        The argument should be a string representing the variables's name.
+        Parameters:
+        
+        * variable:    a string representing the variable's name.
         """
         if hasattr(self, variable):
             var = eval('self.'+variable)
@@ -147,7 +149,9 @@ class LocalProjection(Descriptor):
         """
         Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
         
-        The argument should be a string representing the variables's name.
+        Parameters:
+        
+        * parameter:    a string representing the parameter's name.
         """
         if hasattr(self, parameter):
             return eval('self.'+parameter)
@@ -157,13 +161,23 @@ class LocalProjection(Descriptor):
 
     def add_synapse(self, rank, value, delay=0):
         """
-        Adds a synapse with the neuron of rank with the synaptic strength value. The parameter delay is optional, by default set to zero.
+        Adds a synapse to the local projection.
+        
+        Parameters:
+        
+        * rank:     rank of the presynaptic neuron
+        * value:    synaptic weight
+        * delay:    delay of the synapse
         """
         self.cyInstance.add_synapse(rank, value, delay)
     
     def remove_synapse(self, rank):
         """
-        Removes the synapse with the presynaptic neuron indiced by the rank.
+        Removes the synapse.
+        
+        Parameters:
+        
+        * rank:     rank of the presynaptic neuron
         """
         self.cyInstance.remove_synapse(rank)
 
