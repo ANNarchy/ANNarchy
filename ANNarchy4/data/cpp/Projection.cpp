@@ -75,6 +75,47 @@ void Projection::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value,
 	}
 }
 
+int Projection::addSynapse(int rank, DATA_TYPE value, int delay) {
+    bool found = false;
+    for(unsigned int i=0; i < rank_.size(); i++) {
+        if(rank_[i] == rank ) {
+            found = true;
+            continue;
+        }
+    }
+    
+    if(!found){
+        rank_.push_back(rank);
+        value_.push_back(value);
+        delay_.push_back(delay);
+        return 0;
+    }else{
+        return -1;
+    }
+}
+	
+int Projection::removeSynapse(int rank) {
+#ifdef _DEBUG
+    std::cout << "suppress synapse - pre = "<<rank<<std::endl;
+    std::cout << "check "<<rank_.size()<<" synapses."<< std::endl;
+#endif
+
+    for(unsigned int i=0; i < rank_.size(); i++) {
+        if(rank_[i] == rank ) {
+           std::cout << "found the synapse at: "<< i <<std::endl;
+           rank_.erase(rank_.begin()+i);    
+           value_.erase(value_.begin()+i);
+           
+           if (delay_.size() > 1)
+               delay_.erase(delay_.begin()+i);
+               
+           return 0;
+        }
+    }
+    
+    return -1;
+}
+
 void Projection::computeSum() {
 	sum_ =0.0;
 

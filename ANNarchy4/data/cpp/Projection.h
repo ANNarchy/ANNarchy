@@ -36,6 +36,23 @@ public:
 	std::vector<DATA_TYPE> getValue() { return value_; }
 	
 	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
+	
+	/**
+	 *  \brief      Add synapse.
+	 *  \param[IN]  rank    rank of the presynaptic neuron
+	 *  \param[IN]  value   synaptic weight
+	 *  \param[IN]  delay   delay
+	 *  \return     error code: 0 (success), -1 (already existant)
+	 */
+	virtual int addSynapse(int rank, DATA_TYPE value, int delay);
+	
+	/**
+	 *  \brief      Remove synapse.
+	 *  \param[IN]  rank    rank of the presynaptic neuron
+	 *  \return     error code: 0 (success), -1 (not existant)
+	 */
+    virtual int removeSynapse(int rank);
+    
 protected:
 	Population* pre_population_;
 	Population* post_population_;

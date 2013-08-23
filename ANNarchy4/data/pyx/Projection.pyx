@@ -24,7 +24,10 @@ cdef extern from "../build/Projection.h":
         void initValues(vector[int] rank, vector[float] value)
         
         int getSynapseCount()
+        
+        int addSynapse(int rank, float value, int delay)
 
+        int removeSynapse(int rank)
 #
 # c++ class
 cdef extern from "../build/ANNarchy.h":
@@ -48,6 +51,17 @@ cdef class LocalProjection:
     def size(self):
         return self.cInstance.getSynapseCount()
         
+    def add_synapse(self, rank, value, delay=0):
+        err = self.cInstance.addSynapse(rank, value, delay)
+        if err == -1:
+            print 'Synapse already exist.'
+    
+    def remove_synapse(self, rank):
+        err = self.cInstance.removeSynapse(rank)
+        if err == -1:
+            print 'Synapse not exist.'
+        
+
     property value:
         def __get__(self):
             return np.array(self.cInstance.getValue())
@@ -61,4 +75,8 @@ cdef class LocalProjection:
 
         def __set__(self, rank):
             self.cInstance.setRank(rank)
+            
+    property size:
+        def __get__(self):
+            return self.cInstance.getSynapseCount()
 

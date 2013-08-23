@@ -3,6 +3,7 @@ Projection.py
 """
 
 import numpy as np
+import traceback
 
 import Global
 from Variable import Descriptor, Attribute
@@ -131,7 +132,6 @@ class LocalProjection(Descriptor):
         
         The argument should be a string representing the variables's name.
         """
-        
         if hasattr(self, variable):
             var = eval('self.'+variable)
 
@@ -148,25 +148,38 @@ class LocalProjection(Descriptor):
         Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
         
         The argument should be a string representing the variables's name.
-
         """
-        
         if hasattr(self, parameter):
             return eval('self.'+parameter)
         else:
             print 'Error: parameter',parameter,'does not exist in this projection.'
             print traceback.print_stack()
 
+    def add_synapse(self, rank, value, delay=0):
+        """
+        Adds a synapse with the neuron of rank with the synaptic strength value. The parameter delay is optional, by default set to zero.
+        """
+        self.cyInstance.add_synapse(rank, value, delay)
+    
+    def remove_synapse(self, rank):
+        """
+        Removes the synapse with the presynaptic neuron indiced by the rank.
+        """
+        self.cyInstance.remove_synapse(rank)
+
     def _reshape_vector(self, vector):
         """
         Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
         """
         vec = np.array(vector) # if list transform to vec
-        
-        if self.pre.dimension == 1:
-            return vec
-        elif self.pre.dimension == 2:
-            return vec.reshape(self.pre.height, self.pre.width)
-        elif self.pre.dimension == 3:
-            return vec.reshape(self.pre.depth, self.pre.height, self.pre.width)
-
+        try:
+            if self.pre.dimension == 1:
+                return vec
+            elif self.pre.dimension == 2:
+                return vec.reshape(self.pre.height, self.pre.width)
+            elif self.pre.dimension == 3:
+                return vec.reshape(self.pre.depth, self.pre.height, self.pre.width)
+        except ValueError:
+            print 'Mismatch between pop: (',self.pre.width,',',self.pre.height,',',self.pre.depth,')'
+            print 'and data vector (',type(vector),': (',vec.size,')'
+            print traceback.print_stack()            
