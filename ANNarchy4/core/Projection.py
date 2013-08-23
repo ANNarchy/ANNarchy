@@ -125,6 +125,20 @@ class LocalProjection(Descriptor):
         self.value = Attribute('value')
         self.rank = Attribute('rank')
         self.delay = Attribute('delay')
+    
+    @property
+    def size(self):
+        """
+        Number of synapses.
+        """
+        return self.cyInstance.get_size()
+        
+    @property
+    def target(self):
+        """
+        Connection type id.
+        """
+        return self.cyInstance.get_target()
         
     def get_variable(self, variable):
         """

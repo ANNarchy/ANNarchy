@@ -27,6 +27,8 @@ import numpy as np
 
 if __name__ == '__main__':
 
+    print 'target:',Proj.local_projections[0].target
+
     #
     #   synapse removal
     print Proj.local_projections[0].rank
