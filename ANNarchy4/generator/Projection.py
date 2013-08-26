@@ -64,11 +64,7 @@ class Projection:
             """
             code = ''
             for var in parsed_variables:
-                if var['name'] == 'psp':
-                    continue
-                    
-                pre_def = ['dt', 'tau', 'value']
-                if var['name'] in pre_def:
+                if var['name'] in Global.pre_def_synapse:
                     continue
                     
                 if var['type'] == 'parameter':
@@ -183,9 +179,7 @@ class Projection:
             access = ''
     
             for value in synapse_values:
-                pre_def = ['psp','value','dt','tau']
-
-                if value['name'] in pre_def:
+                if value['name'] in Global.pre_def_synapse:
                     continue
     
                 if value['type'] == 'parameter':
@@ -288,11 +282,8 @@ void %(name)s::globalLearn() {
             code = ''
     
             for value in parsed_synapse:
-                pre_def = ['psp','value','dt','tau']
-                
-                if value['name'] in pre_def:
+                if value['name'] in Global.pre_def_synapse:
                     continue
-
    
                 if value['type'] == 'parameter':
                     code += '        float get'+value['name'].capitalize()+'()\n\n'
@@ -311,9 +302,7 @@ void %(name)s::globalLearn() {
             code = ''
             
             for value in parsed_synapse:
-                pre_def = ['psp','value','dt','tau']
-                
-                if value['name'] in pre_def:
+                if value['name'] in Global.pre_def_synapse:
                     continue
     
                 code += '    property '+value['name']+':\n'

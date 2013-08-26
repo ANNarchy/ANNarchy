@@ -1,3 +1,5 @@
+# cython: embedsignature=True
+
 cdef extern from "../build/Network.h":
 	cdef cppclass Network:
 		Network()

@@ -1,3 +1,5 @@
+# cython: embedsignature=True
+
 from ANNarchy4.core.Random import *
 
 from libcpp.vector cimport vector

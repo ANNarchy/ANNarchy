@@ -1,3 +1,5 @@
+# cython: embedsignature=True
+
 from ANNarchy4.core.Random import *
 import ANNarchy4.core.Projection as PyProjection
 
@@ -34,7 +36,7 @@ cdef class One2One(PyxConnector):
     cdef postSize
 
     def __cinit__(self, proj_type):
-        Connector.__init__(proj_type)
+        PyxConnector.__init__(proj_type)
         
     cdef genRanks(self):
         cdef int i
@@ -93,7 +95,7 @@ cdef class All2All(PyxConnector):
     
         * proj_type:    unique ID of the projection (base projection = 0)
         """
-        Connector.__init__(proj_type)
+        PyxConnector.__init__(proj_type)
 
     def connect(self, pre, post, weights, target, parameters):
         """
@@ -188,7 +190,7 @@ cdef class DoG(PyxConnector):
     
         * proj_type:    unique ID of the projection (base projection = 0)
         """
-        Connector.__init__(proj_type)
+        PyxConnector.__init__(proj_type)
       
     def connect(self, pre, post, distribution, target, parameters):
         """

@@ -55,20 +55,20 @@ class Projection(object):
                 
     def dendrite_by_coordinates(self, w, h, d=0):
         """
-        Returns the local projection of a postsynaptic neuron according to its coordinate
+        Returns the dendrite of a postsynaptic neuron according to its coordinate
         """
         return self._dendrites[self.post.rank_from_coordinates(w, h, d)]
             
     def dendrite_by_rank(self, rank):
         """
-        Returns the local projection of a postsynaptic neuron according to its rank
+        Returns the dendrite of a postsynaptic neuron according to its rank
         """
         return self._dendrites[rank]
 
     @property
     def dendrites(self):
         """
-        List of all local projections.
+        List of dendrites corresponding to this projection.
         """
         return self._dendrites
 

@@ -1,3 +1,5 @@
+# cython: embedsignature=True
+
 from libcpp.vector cimport vector
 
 # import c++ class
