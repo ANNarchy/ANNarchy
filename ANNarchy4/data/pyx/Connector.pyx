@@ -55,6 +55,21 @@ cdef class One2One(PyxConnector):
         return ranks
 
     def connect(self, pre, post, distribution, target, parameters):
+        """
+        Create the connection informations and instantiate the c++ classes.
+        
+        Parameters:
+        
+            * *pre*: the presynaptic population (python Population instance)            
+            * *post*: the postsynaptic population (python Population instance)            
+            * *weights*: synaptic weights as an instance of RandomDistribution            
+            * *target*: string describing the connection type            
+            * *parameters*: pattern specific parameters
+        
+        Specific parameters:
+        
+            * None for this pattern.
+        """
         self.postSize = post.size
 
         if (pre.size != self.postSize):
@@ -103,15 +118,15 @@ cdef class All2All(PyxConnector):
         
         Parameters:
         
-        * pre: the presynaptic population (python Population instance)
-        * post: the postsynaptic population (python Population instance)
-        * weights: synaptic weights as an instance of RandomDistribution
-        * target: string describing the connection type.
-        * parameters: pattern specific parameters
+            * *pre*: the presynaptic population (python Population instance)            
+            * *post*: the postsynaptic population (python Population instance)            
+            * *weights*: synaptic weights as an instance of RandomDistribution            
+            * *target*: string describing the connection type.            
+            * *parameters*: pattern specific parameters
         
         Specific parameters:
         
-        * allow_self_connections: if self-connections are allowed or not (default = False) 
+            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """
         self.preID = pre.id
         self.postID = post.id        
@@ -198,20 +213,20 @@ cdef class DoG(PyxConnector):
         
         Parameters:
         
-        * pre: the presynaptic population (python Population instance)
-        * post: the postsynaptic population (python Population instance)
-        * weights: synaptic weights as an instance of RandomDistribution
-        * target: string describing the connection type.
-        * parameters: pattern specific parameters
+            * *pre*: the presynaptic population (python Population instance)            
+            * *post*: the postsynaptic population (python Population instance)            
+            * *weights*: synaptic weights as an instance of RandomDistribution            
+            * *target*: string describing the connection type.            
+            * *parameters*: pattern specific parameters
         
         Specific parameters:
         
-        * amp_pos: the maximal value of the positive gaussian distribution for the connection weights.
-        * sigma_pos: the standard deviation of the positive gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
-        * amp_pos: the maximal value of the negative gaussian distribution for the connection weights.
-        * sigma_pos: the standard deviation of the negative gaussian distribution (normalized by the number of neurons)
-        * limit: percentage of ``amp_pos - amp_neg`` below which the connection is not created (default = 0.01)
-        * allow_self_connections: if self-connections are allowed or not (default = False) 
+            * *amp_pos*: the maximal value of the positive gaussian distribution for the connection weights.
+            * *sigma_pos*: the standard deviation of the positive gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
+            * *amp_pos*: the maximal value of the negative gaussian distribution for the connection weights.
+            * *sigma_pos*: the standard deviation of the negative gaussian distribution (normalized by the number of neurons)
+            * *limit*: percentage of ``amp_pos - amp_neg`` below which the connection is not created (default = 0.01)
+            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """        
         self.preSize = pre.size
         self.postSize = post.size

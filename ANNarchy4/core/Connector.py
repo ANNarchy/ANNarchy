@@ -11,11 +11,13 @@ class Connector:
     def __init__(self, conn_type, weights, delays=RandomDistribution('constant', [0]), **parameters):
         """
         Initialize a connection object.
-        
-        * conn_type: name of connection class (One2One, All2All, DoG, ...)
-        * weights: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.
-        * delays: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.
-        * parameters: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
+
+        Parameters:
+                
+            * *conn_type*: name of connection class (One2One, All2All, DoG, ...)
+            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.
+            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.
+            * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
         """
         self.weights = weights
         self.delays = delays
