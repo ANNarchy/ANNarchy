@@ -3,7 +3,6 @@
 #
 #
 from ANNarchy4 import *
-from datetime import datetime
 
 #
 # Define the neuron classes

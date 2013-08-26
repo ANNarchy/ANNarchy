@@ -5,11 +5,20 @@ from libcpp.vector cimport vector
 from libc.stdlib cimport malloc
 from libc.math cimport exp, abs
 
-cdef class Connector:
+cdef class PyxConnector:
+    """
+    Base class for all connection patterns implemented as python extension.
+    """
     cdef proj_type
     
     def __cinit__(self, proj_type):
-        #print 'ProjClass:', proj_type
+        """
+        Constructor
+        
+        Parameter:
+        
+        * proj_type:    unique ID of the projection (base projection = 0) 
+        """
         self.proj_type = proj_type
         
     cdef create_local_proj(self, proj_type, pre_id, post_id, proj, target):
@@ -18,8 +27,10 @@ cdef class Connector:
         else:
             return eval('LocalProjection'+str(proj_type)+'(proj_type, pre_id, post_id, proj, target)')
         
-cdef class One2One(Connector):
-
+cdef class One2One(PyxConnector):
+    """
+    
+    """
     cdef postSize
 
     def __cinit__(self, proj_type):
@@ -61,8 +72,12 @@ cdef class One2One(Connector):
 
         return Proj    
 
-cdef class All2All(Connector):
-
+cdef class All2All(PyxConnector):
+    """
+    All2All projection between two populations. Each neuron in the postsynaptic 
+    population is connected to all neurons of the presynaptic population.
+    
+    """
     cdef allowSelfConnections
     cdef preID
     cdef postID
@@ -71,8 +86,57 @@ cdef class All2All(Connector):
     cdef vector[vector[int]] ranks
 
     def __cinit__(self, proj_type):
+        """
+        Constructor.
+        
+        Parameters:
+    
+        * proj_type:    unique ID of the projection (base projection = 0)
+        """
         Connector.__init__(proj_type)
 
+    def connect(self, pre, post, weights, target, parameters):
+        """
+        Create the connection informations and instantiate the c++ classes.
+        
+        Parameters:
+        
+        * pre: the presynaptic population (python Population instance)
+        * post: the postsynaptic population (python Population instance)
+        * weights: synaptic weights as an instance of RandomDistribution
+        * target: string describing the connection type.
+        * parameters: pattern specific parameters
+        
+        Specific parameters:
+        
+        * allow_self_connections: if self-connections are allowed or not (default = False) 
+        """
+        self.preID = pre.id
+        self.postID = post.id        
+        self.preSize = pre.size
+        self.postSize = post.size
+
+        if 'allowSelfConnections' in parameters.keys():
+            self.allowSelfConnections = parameters['allowSelfConnections']
+        else:
+            self.allowSelfConnections = False
+
+        self.genRanks()
+        
+        Proj = []
+
+        for p in xrange(self.postSize):
+            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
+            if not self.allowSelfConnections and (pre==post):
+                v = weights.getValues(self.preSize-1)
+            else:
+                v = weights.getValues(self.preSize)
+            
+            local.init(self.ranks[p], v)
+            Proj.append(local)            
+
+        return Proj
+    
     cdef genRanks(self):
         cdef int i
         cdef int j
@@ -98,37 +162,14 @@ cdef class All2All(Connector):
 
             for j in xrange(self.postSize):
                 self.ranks.push_back(tmp)
+
+cdef class DoG(PyxConnector):
+    """
+    Difference-of-gaussians projection between to populations.
     
-    def connect(self, pre, post, distribution, target, parameters):
-
-        self.preID = pre.id
-        self.postID = post.id        
-        self.preSize = pre.size
-        self.postSize = post.size
-
-        if 'allowSelfConnections' in parameters.keys():
-            self.allowSelfConnections = parameters['allowSelfConnections']
-        else:
-            self.allowSelfConnections = False
-
-        self.genRanks()
-        
-        Proj = []
-
-        for p in xrange(self.postSize):
-            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
-            if not self.allowSelfConnections and (pre==post):
-                v = distribution.getValues(self.preSize-1)
-            else:
-                v = distribution.getValues(self.preSize)
-            
-            local.init(self.ranks[p], v)
-            Proj.append(local)            
-
-        return Proj
-
-cdef class DoG(Connector):
-
+    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+    the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+    """
     cdef preSize
     cdef postSize
     cdef pre
@@ -140,8 +181,66 @@ cdef class DoG(Connector):
     cdef limit
 
     def __cinit__(self, proj_type):
+        """
+        Constructor.
+        
+        Parameters:
+    
+        * proj_type:    unique ID of the projection (base projection = 0)
+        """
         Connector.__init__(proj_type)
       
+    def connect(self, pre, post, distribution, target, parameters):
+        """
+        Create the connection informations and instantiate the c++ classes.
+        
+        Parameters:
+        
+        * pre: the presynaptic population (python Population instance)
+        * post: the postsynaptic population (python Population instance)
+        * weights: synaptic weights as an instance of RandomDistribution
+        * target: string describing the connection type.
+        * parameters: pattern specific parameters
+        
+        Specific parameters:
+        
+        * amp_pos: the maximal value of the positive gaussian distribution for the connection weights.
+        * sigma_pos: the standard deviation of the positive gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
+        * amp_pos: the maximal value of the negative gaussian distribution for the connection weights.
+        * sigma_pos: the standard deviation of the negative gaussian distribution (normalized by the number of neurons)
+        * limit: percentage of ``amp_pos - amp_neg`` below which the connection is not created (default = 0.01)
+        * allow_self_connections: if self-connections are allowed or not (default = False) 
+        """        
+        self.preSize = pre.size
+        self.postSize = post.size
+        self.pre = pre
+        self.post = post
+
+        self.sigma_pos = parameters['sigma_pos']
+        self.sigma_neg = parameters['sigma_neg']
+        self.amp_pos = parameters['amp_pos']
+        self.amp_neg = parameters['amp_neg']
+
+        if 'limit' in parameters.keys():
+            self.limit = parameters['limit']
+        else:
+            self.limit = 0.01
+
+        if (self.preSize != self.postSize):
+            return None
+
+        Proj = []
+
+        for p in xrange(self.postSize):
+            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
+            
+            r, v = self.genRanksAndValues(p)
+
+            local.init(r, v)
+            Proj.append(local)
+
+        return Proj
+
     cdef compDist(self, pre, post):
         cdef float res = 0.0
         cdef int i = 0
@@ -174,35 +273,3 @@ cdef class DoG(Connector):
                      values.push_back(value)
         
         return ranks, values
-
-    def connect(self, pre, post, distribution, target, parameters):
-        self.preSize = pre.size
-        self.postSize = post.size
-        self.pre = pre
-        self.post = post
-
-        self.sigma_pos = parameters['sigma_pos']
-        self.sigma_neg = parameters['sigma_neg']
-        self.amp_pos = parameters['amp_pos']
-        self.amp_neg = parameters['amp_neg']
-
-        if 'limit' in parameters.keys():
-            self.limit = parameters['limit']
-        else:
-            self.limit = 0.01
-
-        if (self.preSize != self.postSize):
-            return None
-
-        Proj = []
-
-        for p in xrange(self.postSize):
-            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
-            
-            r, v = self.genRanksAndValues(p)
-
-            local.init(r, v)
-            Proj.append(local)
-
-        return Proj
-

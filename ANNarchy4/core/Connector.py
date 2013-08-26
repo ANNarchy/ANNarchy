@@ -24,23 +24,15 @@ class Connector:
 
     def init_connector(self, proj_type):
         """
-        Returns a connector object (instance of python extension class). 
+        Returns a connector object (instance of python extension class). Will be called after compilation of ANNarchy py extension library.
         
         proj_type   ID of projection class (zero for standard projection)
         """
         import ANNarchyCython
-        self.cyInstance = None
+        self.cyInstance = eval('ANNarchyCython.'+self.conn_type+'(proj_type)')
 
-        #try:
         print 'ANNarchyCython.'+self.conn_type+'(proj_type)'
         
-        self.cyInstance = eval('ANNarchyCython.'+self.conn_type+'(proj_type)')
-        #except:
-        #    print 'Called unregistered connector.'
-
-        #
-        #TODO: python instance?            
-           
     def cpp_call(self):
         """
         Generate connector initialization in ANNarchy.h. 
