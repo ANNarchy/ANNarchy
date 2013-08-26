@@ -1,4 +1,5 @@
 from ANNarchy4.core.Random import *
+
 from libcpp.vector cimport vector
 from libc.stdlib cimport malloc
 cimport numpy as np
@@ -37,16 +38,16 @@ cdef extern from "../build/ANNarchy.h":
         createProjInstance()
         
         Projection* getInstanceOf(int id, int pre, int post, int postNeuronRank, int target)
-                
+
 #
 # wrapper to c++ class, contains connection data of one neuron
 cdef class LocalProjection:
 
     cdef Projection* cInstance
-
+    
     def __cinit__(self, proj_type, preID, postID, rank, target):
         self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target)
-
+        
     def init(self, ranks, values):
         self.cInstance.initValues(ranks, values)
 

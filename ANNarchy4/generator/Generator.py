@@ -132,12 +132,22 @@ def generate_py_extension():
     for pop in Global.populations_:
         pop_include += 'include \"'+pop.name+'.pyx\"\n'
 
+    proj_include = ''
+    for proj in Global.projections_:
+        if proj.generator.proj_class['name'].find('Projection0') == -1:
+            proj_include += 'include \"'+proj.generator.proj_class['name']+'.pyx\"\n'
+
     code = """include "Network.pyx"
 include "Simulation.pyx"
+
+%(pop_inc)s  
+
 include "Projection.pyx"
+%(proj_inc)s  
+
 include "Connector.pyx"
-%(inc)s    
-""" % { 'inc': pop_include }
+""" % { 'pop_inc': pop_include,
+        'proj_inc': proj_include }
 
     with open(Global.annarchy_dir+'/pyx/ANNarchyCython.pyx', mode='w') as w_file:
         w_file.write(code)
@@ -250,11 +260,11 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #
             # instantiate projections
             for proj in Global.projections_:
-                try:
-                    proj.connect()                        
+                #try:
+                proj.connect()                        
 
-                except:
-                    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
+                #except:
+                #    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
                     
 
         else:

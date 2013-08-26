@@ -125,6 +125,18 @@ class LocalProjection(Descriptor):
         self.value = Attribute('value')
         self.rank = Attribute('rank')
         self.delay = Attribute('delay')
+        self.dt = Attribute('dt')
+        self.tau = Attribute('tau')
+
+        #
+        # synapse variables                
+        pre_def = ['value', 'rank', 'delay', 'dt', 'tau']
+        for value in self.proj.generator.parsed_synapse_variables:
+            if value['name'] in pre_def:
+                continue
+             
+            cmd = 'self.'+value['name']+' = Attribute(\''+value['name']+'\')'   
+            exec(cmd)
     
     @property
     def size(self):

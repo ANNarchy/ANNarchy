@@ -31,14 +31,15 @@ class Connector:
         import ANNarchyCython
         self.cyInstance = None
 
-        if self.conn_type == 'All2All':
-            self.cyInstance = ANNarchyCython.All2AllConnector(proj_type)
-        elif self.conn_type == 'One2One':
-            self.cyInstance = ANNarchyCython.One2OneConnector(proj_type)
-        elif self.conn_type == 'DoG':
-            self.cyInstance = ANNarchyCython.DoGConnector(proj_type)
-        else:
-            print 'Called unregistered connector.'
+        #try:
+        print 'ANNarchyCython.'+self.conn_type+'(proj_type)'
+        
+        self.cyInstance = eval('ANNarchyCython.'+self.conn_type+'(proj_type)')
+        #except:
+        #    print 'Called unregistered connector.'
+
+        #
+        #TODO: python instance?            
            
     def cpp_call(self):
         """

@@ -12,7 +12,13 @@ cdef class Connector:
         #print 'ProjClass:', proj_type
         self.proj_type = proj_type
         
-cdef class One2OneConnector(Connector):
+    cdef create_local_proj(self, proj_type, pre_id, post_id, proj, target):
+        if proj_type == 0:
+            return LocalProjection(proj_type, pre_id, post_id, proj, target)
+        else:
+            return eval('LocalProjection'+str(proj_type)+'(proj_type, pre_id, post_id, proj, target)')
+        
+cdef class One2One(Connector):
 
     cdef postSize
 
@@ -46,7 +52,7 @@ cdef class One2OneConnector(Connector):
         Proj = []
         
         for p in xrange(self.postSize):
-            local = LocalProjection(self.proj_type, pre.id, post.id, p, target)
+            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
             v = distribution.getValue()
 
             local.init(r[p], v)            
@@ -55,7 +61,7 @@ cdef class One2OneConnector(Connector):
 
         return Proj    
 
-cdef class All2AllConnector(Connector):
+cdef class All2All(Connector):
 
     cdef allowSelfConnections
     cdef preID
@@ -110,7 +116,7 @@ cdef class All2AllConnector(Connector):
         Proj = []
 
         for p in xrange(self.postSize):
-            local = LocalProjection(self.proj_type, pre.id, post.id, p, target)
+            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
             if not self.allowSelfConnections and (pre==post):
                 v = distribution.getValues(self.preSize-1)
             else:
@@ -121,7 +127,7 @@ cdef class All2AllConnector(Connector):
 
         return Proj
 
-cdef class DoGConnector(Connector):
+cdef class DoG(Connector):
 
     cdef preSize
     cdef postSize
@@ -191,7 +197,7 @@ cdef class DoGConnector(Connector):
         Proj = []
 
         for p in xrange(self.postSize):
-            local = LocalProjection(self.proj_type, pre.id, post.id, p, target)
+            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
             
             r, v = self.genRanksAndValues(p)
 

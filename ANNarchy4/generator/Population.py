@@ -128,13 +128,11 @@ class Population(object):
                     continue
     
                 if value['type'] == 'variable':
-                    #getter
-                    access += '\tvoid set'+value['name'].capitalize()+'(std::vector<DATA_TYPE> '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n'
-                    access += '\tstd::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n'
+                    access += 'void set'+value['name'].capitalize()+'(std::vector<DATA_TYPE> '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
+                    access += 'std::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
                 else:
-                    #setter
-                    access += '\tvoid set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n'
-                    access += '\tDATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n'
+                    access += 'void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
+                    access += 'DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
     
             return access
     
@@ -340,27 +338,25 @@ void %(class)s::metaStep() {
 from libcpp.string cimport string
 import numpy as np
 
-cdef extern from "../build/Input.h":
+cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(string name, int N)
 
 %(cFunction)s
         string getName()
 
-cdef class py%(cname)s:
+cdef class py%(name)s:
 
     cdef %(name)s* cInstance
 
     def __cinit__(self):
-        print 'Instantiate %(name)s'
         self.cInstance = new %(name)s('%(name)s', %(neuron_count)s)
 
 %(pyFunction)s
     def name(self):
         return self.cInstance.getName()
 
-''' % { 'name':self.population.name, 
-        'cname':self.population.name, 
+''' % { 'name':self.population.name,  
         'neuron_count': self.population.size, 
         'cFunction': pyx_func(self.parsed_neuron), 
         'pyFunction': py_func(self.parsed_neuron) 
