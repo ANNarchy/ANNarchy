@@ -40,6 +40,10 @@ LOG2 = ['log2']
 POS = ['pos', 'positive']
 NEG = ['neg', 'negative']
 SUMS = ['sum']
+# GLOBAL FUNCTIONS
+MEAN = ['mean', 'MEAN']
+MIN = ['min', 'MIN']
+MAX = ['max', 'MAX']
 # CONSTANTS
 PI = ['pi', 'PI', 'Pi']
 TRUE = ['True', 'true', 'TRUE']
@@ -59,6 +63,7 @@ CONSTANTS = [PI, TRUE, FALSE]
 COMPARATORS = [GREATER, SMALLER, GREATER_EQUAL, SMALLER_EQUAL, DIFFERENT, SAME]
 LOGICALS = [AND, OR]
 BRACKETS = [BRACKET_LEFT, BRACKET_RIGHT]
+GLOBAL_FUNCTIONS = [MEAN, MIN, MAX]
 
 # C++ EQUIVALENTS
 cpp_equivalents = { 'cos': COS,

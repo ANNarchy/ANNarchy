@@ -1,10 +1,10 @@
 from Definitions import *
-from Nodes import *
+import Nodes
 import Analyser
 import copy
 
 # State machine for a single expression
-class Tree:
+class Tree(object):
 
     def __init__(self, analyser, name, expr):
     
@@ -43,14 +43,14 @@ class Tree:
             print 'Error in the evaluation of', self.name, '(', self.expr, '): there is no equal sign.'
             exit(0)
         # Start the recursive analysis
-        self.tree = TreeBuilder(self, self.expr_list).build()
+        self.tree = Nodes.TreeBuilder(self, self.expr_list).build()
         # Move the tree so that only the target variabe is on the left.
         # Search for the gradient on the left side if any
-        if lookup(self.tree.left, Gradient) != None:
-            self.simplifiedtree = simplify(copy.copy(self.tree), Gradient)
+        if lookup(self.tree.left, Nodes.Gradient) != None:
+            self.simplifiedtree = simplify(copy.copy(self.tree), Nodes.Gradient)
             self.simplifiedtree.order = 1
-        elif lookup(self.tree.left, MainVariable) != None:
-            self.simplifiedtree = simplify(copy.copy(self.tree), MainVariable)
+        elif lookup(self.tree.left, Nodes.MainVariable) != None:
+            self.simplifiedtree = simplify(copy.copy(self.tree), Nodes.MainVariable)
             self.simplifiedtree.order = 0
         
     def expand_whitespaces(self, expr):
@@ -130,45 +130,45 @@ def lookup(obj, Type):
 def simplify(tree, target):
     if isinstance(tree.left, target):
         return tree
-    if isinstance(tree.left, PlusOperator):
+    if isinstance(tree.left, Nodes.PlusOperator):
         if tree.left.left.has_target: # the left branch has the target
-            tree.right = MinusOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
+            tree.right = Nodes.MinusOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
             tree.left = tree.left.left
         else:
-            tree.right = MinusOperator(tree.machine, left=tree.right, right=tree.left.left, hierarchize=False)
+            tree.right = Nodes.MinusOperator(tree.machine, left=tree.right, right=tree.left.left, hierarchize=False)
             tree.left = tree.left.right
-    elif isinstance(tree.left, MinusOperator):
+    elif isinstance(tree.left, Nodes.MinusOperator):
         if tree.left.left.has_target: # the left branch has the target
-            tree.right = PlusOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
+            tree.right = Nodes.PlusOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
             tree.left = tree.left.left
         else:
-            tree.right = MinusOperator(tree.machine, left=tree.left.left, right=tree.right, hierarchize=False)
+            tree.right = Nodes.MinusOperator(tree.machine, left=tree.left.left, right=tree.right, hierarchize=False)
             tree.left = tree.left.right
             
-    elif isinstance(tree.left, MultOperator):
+    elif isinstance(tree.left, Nodes.MultOperator):
         if tree.left.left.has_target: # the left branch has the target
-            tree.right = DivOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
+            tree.right = Nodes.DivOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
             tree.left = tree.left.left
         else:
-            tree.right = DivOperator(tree.machine, left=tree.right, right=tree.left.left, hierarchize=False)
+            tree.right = Nodes.DivOperator(tree.machine, left=tree.right, right=tree.left.left, hierarchize=False)
             tree.left = tree.left.right
         
-    elif isinstance(tree.left, DivOperator):
+    elif isinstance(tree.left, Nodes.DivOperator):
         if tree.left.left.has_target: # the left branch has the target
-            tree.right = MultOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
+            tree.right = Nodes.MultOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
             tree.left = tree.left.left
         else:
-            tree.right = DivOperator(tree.machine, left=tree.left.left, right=tree.right, hierarchize=False)
+            tree.right = Nodes.DivOperator(tree.machine, left=tree.left.left, right=tree.right, hierarchize=False)
             tree.left = tree.left.right
         
-    elif isinstance(tree.left, PowOperator):
+    elif isinstance(tree.left, Nodes.PowOperator):
         if tree.left.left.has_target: # the left branch has the target
             if not float(tree.left.right.value) == 2.0:
-                tree.right = PowOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
+                tree.right = Nodes.PowOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
                 tree.right.right.value = str(1.0/float(tree.right.right.value))
                 tree.left = tree.left.left
             else:
-                tree.right = Function(tree.machine, value = 'sqrt', child=tree.right, hierarchize=False)
+                tree.right = Nodes.Function(tree.machine, value = 'sqrt', child=tree.right, hierarchize=False)
                 tree.left = tree.left.left                
         else:
             print 'Error: can not solve a^x = b yet.'

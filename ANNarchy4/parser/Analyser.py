@@ -6,7 +6,7 @@ from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.Variable import Variable
 
 # Main analyser class for neurons
-class NeuronAnalyser:
+class NeuronAnalyser(object):
     
     def __init__(self, neuron, targets):
     
@@ -99,7 +99,7 @@ class NeuronAnalyser:
         return code
 
 # Main analyser class for synapses
-class SynapseAnalyser:
+class SynapseAnalyser(object):
     
     def __init__(self, synapse):
     
@@ -184,7 +184,7 @@ class SynapseAnalyser:
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
                      'cpp' : '' } )
-            
+        print self.analysed_neuron    
         return self.analysed_neuron
         
     def init_parameter(self, name, value):

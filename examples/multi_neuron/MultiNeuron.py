@@ -38,6 +38,12 @@ AntiHebb = Synapse(tau = 5000,
                    order = ['w','value']
                   )
 
+Covariance = Synapse(tau = 5000,
+              dt = 1.0,
+              alpha = 8.0,
+              value = Variable(init=0.0, eq = "tau * dvalue / dt = (pre.rate - max(post.rate)) * post.rate - alpha * post.rate^2 *value"),
+              )                  
+
 InputPop = Population("Input", (8,8,1), Input)
 Layer1Pop = Population("Layer1", (8,8,1), Layer1)
 Layer2Pop = Population("Layer2", (6,5,1), Layer2)
@@ -49,6 +55,7 @@ Proj_L2_L2 = Projection(pre="Layer2", post="Layer2", target='inh', synapse=AntiH
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
+print 'Compiling'
 compile()
 
 import math
