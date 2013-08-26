@@ -265,7 +265,6 @@ def compile(cpp_stand_alone=False, debug_build=False):
 
                 #except:
                 #    print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
-                    
 
         else:
             #abort the application after compile ANNarchyCPP
