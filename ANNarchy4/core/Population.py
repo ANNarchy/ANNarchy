@@ -5,7 +5,7 @@ Population.py
 import Global 
 import numpy as np
 from ANNarchy4 import generator
-from ANNarchy4.core.Variable import Descriptor
+from ANNarchy4.core.Variable import Descriptor, Variable
 
 class Population(Descriptor):
     """
@@ -22,6 +22,34 @@ class Population(Descriptor):
         Global.populations_.append(self)
         self.generator = generator.Population(self)
 
+    @property
+    def variables(self):
+        """
+        Returns a list of all variable names.
+        """
+        neur_var = self.generator.neuron_variables
+        ret_var=[] 
+        
+        for var in neur_var:
+            if 'var' in var.keys():
+                ret_var.append(var['name'])
+        
+        return ret_var
+
+    @property
+    def parameter(self):
+        """
+        Returns a list of all parameter names.
+        """
+        neur_var = self.generator.neuron_variables
+        ret_par=[] 
+        
+        for var in neur_var:
+            if not 'var' in var.keys():
+                ret_par.append(var['name'])
+        
+        return ret_par
+        
     @property
     def size(self):
         """
@@ -78,7 +106,9 @@ class Population(Descriptor):
         """
         Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
         
-        The argument should be a string representing the variables's name.
+        Parameter:
+        
+            * *variable*: should be a string representing the variables's name.
         """
         
         if hasattr(self, variable):
@@ -92,8 +122,9 @@ class Population(Descriptor):
         """
         Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
         
-        The argument should be a string representing the variables's name.
-
+        Parameter:
+        
+            * *parameter*: should be a string representing the variables's name.
         """
         
         if hasattr(self, parameter):
@@ -110,7 +141,7 @@ class Population(Descriptor):
 
     def coordinates_from_rank(self, rank):
         """
-        Returns (w, h, d) coordinates corresponding to rank.
+        Returns a tuple (w, h, d) represents the spatial coordinates corresponding to rank.
         """
         coord = [0, 0, 0]
 

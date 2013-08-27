@@ -7,7 +7,9 @@
 *       provided as plot_data to Visualization
 """
 import matplotlib
-if matplotlib.__version__ < 1.0:
+from pkg_resources import parse_version
+
+if parse_version(matplotlib.__version__) < parse_version('1.0'):
     print 'Insufficient matplotlib version.'
     exit(0)
 

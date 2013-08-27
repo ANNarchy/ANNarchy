@@ -51,7 +51,7 @@ class Dendrite(Descriptor):
         
         Parameters:
         
-        * variable:    a string representing the variable's name.
+            * *variable*:    a string representing the variable's name.
         """
         if hasattr(self, variable):
             var = eval('self.'+variable)
@@ -70,7 +70,7 @@ class Dendrite(Descriptor):
         
         Parameters:
         
-        * parameter:    a string representing the parameter's name.
+            * *parameter*:    a string representing the parameter's name.
         """
         if hasattr(self, parameter):
             return eval('self.'+parameter)
@@ -84,9 +84,9 @@ class Dendrite(Descriptor):
         
         Parameters:
         
-        * rank:     rank of the presynaptic neuron
-        * value:    synaptic weight
-        * delay:    delay of the synapse
+            * *rank*:     rank of the presynaptic neuron
+            * *value*:    synaptic weight
+            * *delay*:    additional delay of the synapse (as default a delay of 1ms is assumed)
         """
         self.cyInstance.add_synapse(rank, value, delay)
     
@@ -96,7 +96,7 @@ class Dendrite(Descriptor):
         
         Parameters:
         
-        * rank:     rank of the presynaptic neuron
+            * *rank*:     rank of the presynaptic neuron
         """
         self.cyInstance.remove_synapse(rank)
 
