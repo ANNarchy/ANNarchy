@@ -32,6 +32,32 @@ class Dendrite(Descriptor):
             exec(cmd)
     
     @property
+    def variables(self):
+        """
+        Returns a list of all variable names.
+        """
+        ret_var=[] 
+        
+        for var in self.proj.generator.parsed_synapse_variables:
+            if not var['type'] == 'parameter':
+                ret_var.append(var['name'])
+        
+        return ret_var
+
+    @property
+    def parameter(self):
+        """
+        Returns a list of all parameter names.
+        """
+        ret_par=[] 
+        
+        for var in self.proj.generator.parsed_synapse_variables:
+            if var['type'] == 'parameter':
+                ret_par.append(var['name'])
+        
+        return ret_par
+    
+    @property
     def size(self):
         """
         Number of synapses.
@@ -61,7 +87,7 @@ class Dendrite(Descriptor):
 
             return self._reshape_vector(m)
         else:
-            print 'Error: variable',variable,'does not exist in this projection.'
+            print 'Error: variable',variable,'does not exist in this dendrite.'
             print traceback.print_stack()
 
     def get_parameter(self, parameter):
@@ -75,7 +101,7 @@ class Dendrite(Descriptor):
         if hasattr(self, parameter):
             return eval('self.'+parameter)
         else:
-            print 'Error: parameter',parameter,'does not exist in this projection.'
+            print 'Error: parameter',parameter,'does not exist in this dendrite.'
             print traceback.print_stack()
 
     def add_synapse(self, rank, value, delay=0):
