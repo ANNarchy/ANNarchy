@@ -1,6 +1,20 @@
 class Variable:
+    """
+    Variable representation in ANNarchy.
+    """
     def __init__(self,  **keyValueArgs):
-
+        """
+        Set of key-value pairs defining this variable.
+        
+        Possible keys are:
+        
+            * *eq*: variable equation
+            * *init*: initialization
+            * *min*: minimal value for this variable
+            * *max*: maximal value for this variable            
+            
+        other keys will be rejected.
+        """
         self.eq = None
         self.init = None
         self.min = None

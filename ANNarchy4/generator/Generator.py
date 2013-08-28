@@ -200,13 +200,18 @@ def code_generation(cpp_stand_alone):
    
 def compile(cpp_stand_alone=False, debug_build=False):
     """
-    compilation consists of 3 steps:
+    compilation consists roughly of 3 steps:
     
         a) generate user defined classes and cython wrapper
         b) compile ANNarchyCore
         c) compile ANNarchyCython
         
-    after this we instantiate the cythonized objects. 
+    after this the cythonized objects are instantiated and available for the user. 
+    
+    Parameter:
+    
+    * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
+    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
     """
     print Global.version, 'on', sys.platform, '(', os.name,')'
     

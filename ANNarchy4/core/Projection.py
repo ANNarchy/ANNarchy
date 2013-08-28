@@ -18,11 +18,11 @@ class Projection(object):
 
         Parameters:
                 
-            * pre: pre synaptic layer (either name or Population object)
-            * post: post synaptic layer (either name or Population object)
-            * target: connection type
-            * connector: connection pattern object
-            * synapse: synapse object
+            * *pre*: pre synaptic layer (either name or Population object)
+            * *post*: post synaptic layer (either name or Population object)
+            * *target*: connection type
+            * *connector*: connection pattern object
+            * *synapse*: synapse object
         """
         
         # the user provide either a string or a population object

@@ -24,8 +24,10 @@ def setup(**keyValueArgs):
     """
     takes various optional arguments: 
 
-    * *dt*:    discretization constant
+    Parameter:
     
+        * *dt*:    discretization constant
+        
     **Note**: use this function before any other functions of ANNarchy
     """
     for key in keyValueArgs:
@@ -35,7 +37,12 @@ def setup(**keyValueArgs):
 
 def simulate(duration, show_time=False):
     """
-    simulate #duration steps
+    Run the simulation.
+    
+    Parameter:
+        
+        * *duration*: number of time steps simulated in ANNarchy ( 1 time steps is normally equal to 1 ms )
+        * *show_time*: how long the simulation took (cpu-time). Might be used for an assumption of whole computation time.
     """    
     import ANNarchyCython
     t_start = datetime.now()
