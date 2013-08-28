@@ -39,23 +39,35 @@ class NeuronAnalyser:
                 else:
                     init_value = 0.0
 
+                #
+                # basic stuff
+                neur = {}
+                neur['name'] = value['name']
+                neur['type'] = 'variable'
+                
+                #
+                # eq stuff
                 if value['var'].eq != None:
                     tree = Tree.Tree(self, value['name'], value['var'].eq)
                     self.trees.append(tree)
-                    self.analysed_neuron.append( 
-                        {'name': value['name'],
-                            'type': 'variable',
-                            'init': self.init_variable(value['name'], init_value),
-                            'def': self.def_variable(value['name']),
-                            'cpp' : tree.cpp() +';'} )
+                    
+                    neur['init'] = self.init_variable(value['name'], init_value)
+                    neur['def'] = self.def_variable(value['name'])
+                    neur['cpp'] = tree.cpp() + ';'
                 else:
-                    self.analysed_neuron.append( 
-                        {'name': value['name'],
-                            'type': 'variable',
-                            'init': self.init_variable(value['name'], init_value),
-                            'def': self.def_variable(value['name']),
-                            'cpp' : ''} )
+                    neur['init'] = self.init_variable(value['name'], init_value)
+                    neur['def'] = self.def_variable(value['name'])
+                    neur['cpp'] = ''
 
+                #
+                # min, max
+                if value['var'].min != None:
+                    neur['min'] = value['var'].min
+                    
+                if value['var'].max != None:
+                    neur['max'] = value['var'].max                     
+                
+                self.analysed_neuron.append( neur )
             else: # A parameter
                 if 'init' in value.keys():
                     init_value = value['init']
@@ -104,7 +116,7 @@ class SynapseAnalyser:
     def __init__(self, synapse):
     
         self.synapse = synapse 
-        self.analysed_neuron = []
+        self.analysed_synapse = []
         self.parameters_names = []
         self.variables_names = []
         self.targets=None
@@ -155,11 +167,23 @@ class SynapseAnalyser:
                     
                 tree = Tree.Tree(self, value['name'], value['var'].eq)
                 self.trees.append(tree)
-                self.analysed_neuron.append( 
-                    {'name': value['name'],
-                     'type': 'local',
-                     'init': self.init_local_variable(value['name'], init_value),
-                     'cpp' : tree.cpp() +';'} )
+                
+                #
+                # base description
+                synapse = {'name': value['name'],
+                           'type': 'local',
+                           'init': self.init_local_variable(value['name'], init_value),
+                           'cpp' : tree.cpp() +';'
+                           }
+                #
+                # extend by optional parameters
+                if value['var'].min != None:
+                    synapse['min'] = value['var'].min
+                    
+                if value['var'].max != None:
+                    synapse['max'] = value['var'].max                     
+                
+                self.analysed_synapse.append(synapse)                
             elif value['name'] in self.global_variables_names:
                 if value['var'].init != None:
                     init_value = value['var'].init
@@ -168,24 +192,37 @@ class SynapseAnalyser:
 
                 tree = Tree.Tree(self, value['name'], value['var'].eq)
                 self.trees.append(tree)
-                self.analysed_neuron.append( 
-                    {'name': value['name'],
-                     'type': 'global',
-                     'init': self.init_global_variable(value['name'], init_value),
-                     'cpp' : tree.cpp() +';'} )
+                
+                #
+                # base description
+                synapse = {'name': value['name'],
+                           'type': 'global',
+                           'init': self.init_global_variable(value['name'], init_value),
+                           'cpp' : tree.cpp() +';'
+                           } 
+                
+                #
+                # extend by optional parameters
+                if value['var'].min != None:
+                    synapse['min'] = value['var'].min
+                    
+                if value['var'].max != None:
+                    synapse['max'] = value['var'].max                     
+                
+                self.analysed_synapse.append(synapse)
             else: # A parameter
                 if 'init' in value.keys():
                     init_value = value['init']
                 else:
                     init_value = 0.0
 
-                self.analysed_neuron.append( 
+                self.analysed_synapse.append( 
                     {'name': value['name'],
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
                      'cpp' : '' } )
             
-        return self.analysed_neuron
+        return self.analysed_synapse
         
     def init_parameter(self, name, value):
         return name + '_ = ' + str(value) + ';';
