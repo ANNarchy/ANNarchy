@@ -9,9 +9,10 @@
 import matplotlib
 from pkg_resources import parse_version
 
+enable_vis = True
 if parse_version(matplotlib.__version__) < parse_version('1.0'):
+    enable_vis = False
     print 'Insufficient matplotlib version.'
-    exit(0)
 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -68,6 +69,9 @@ class Visualization:
         Parameter:
         * data      list of dictionary describing the single plots.
         """
+        if not enable_vis:
+            return 
+    
         #
         # currently we assume a squared order of visualization fields
         num_row = int(ceil(sqrt(len(data))))
@@ -121,6 +125,9 @@ class Visualization:
         * interval      all plots are updated each #interval steps.
         * show_time     how long the visualition
         """
+        if not enable_vis:
+            return 
+
         t_start = datetime.now()
         if interval == 1:            
             for plot in self.plots:
