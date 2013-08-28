@@ -242,6 +242,11 @@ private:
                         continue
     
                     loop += '\t\t'+value['cpp']+'\n'
+                    if 'min' in value.keys():
+                        loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value['name'], 'border': value['min'] }
+                    if 'max' in value.keys():
+                        loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value['name'], 'border': value['max'] }
+                    
                 
             else:
                 for value in order:
@@ -251,6 +256,11 @@ private:
     
                         if value2['name'] == value:
                             loop += '\t\t'+value2['cpp']+'\n'
+    
+                            if 'min' in value2.keys():
+                                loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['min'] }
+                            if 'max' in value2.keys():
+                                loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['max'] }
     
             code = meta
             code += '\tfor(int i=0; i<nbNeurons_; i++) {\n'

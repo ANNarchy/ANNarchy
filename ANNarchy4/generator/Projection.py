@@ -119,8 +119,6 @@ class Projection:
             """
             generate synapse update per pre neuron
             """
-
-            code = ''
             loop = ''
 
             if self.synapse.order == []:
@@ -132,6 +130,11 @@ class Projection:
 
                     if len(var['cpp']) > 0:
                         loop += '\t\t'+var['cpp']+'\n'
+                        
+                        if 'min' in var.keys():
+                            loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var['name'], 'border': var['min'] }
+                        if 'max' in var.keys():
+                            loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var['name'], 'border': var['max'] }
                        
             else:
                 for var in self.synapse.order:
@@ -144,7 +147,12 @@ class Projection:
                         if var == var2['name']:
                             if len(var2['cpp']) > 0:
                                 loop += '\t\t'+var2['cpp']+'\n'
-            
+
+                                if 'min' in var2.keys():
+                                    loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var2['name'], 'border': var2['min'] }
+                                if 'max' in var2.keys():
+                                    loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var2['name'], 'border': var2['max'] }
+
 
             code = '\tfor(int i=0; i<(int)rank_.size();i++) {\n'
             code += loop
@@ -158,7 +166,6 @@ class Projection:
             """
             
             code = ''
-            loop = ''
             for var in parsed_variables:
                 if var['name'] == 'psp':
                     continue
@@ -166,9 +173,13 @@ class Projection:
                     continue
                 
                 if len(var['cpp']) > 0:
-                    loop += '\t\t'+var['cpp']+'\n'
+                    code += '\t\t'+var['cpp']+'\n'
+                    
+                    if 'min' in var.keys():
+                        code += '''\t\tif (%(name)s_ < %(border)s) \n\t\t\t%(name)s_ = %(border)s;\n''' % { 'name': var['name'], 'border': var['min'] }
+                    if 'max' in var.keys():
+                        code += '''\t\tif (%(name)s_ > %(border)s) \n\t\t\t%(name)s_ = %(border)s;\n''' % { 'name': var['name'], 'border': var['max'] }
 
-            code += loop
             return code
 
         def generate_accessor(synapse_values):
@@ -183,6 +194,9 @@ class Projection:
                     continue
     
                 if value['type'] == 'parameter':
+                    access += 'void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
+                    access += 'DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
+                elif value['type'] == 'global':
                     access += 'void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
                     access += 'DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
                 else:
