@@ -2,15 +2,26 @@
 Dendrite.py
 """
 from Variable import Descriptor, Attribute
-from Global import pre_def_synapse
+import Global
+
 import numpy as np
+import traceback
 
 class Dendrite(Descriptor):
     """
     A dendrite encapsulates all synapses of one neuron.
+    
+    *Hint*: this class will be created from projection class.
+    
+    Parameter:
+    
+    * *proj*: projection instance
+    * *post_rank*: rank of the postsynaptic neuron
+    * *cython_instance*: instance of the cythonized dendrite class.
     """
-    def __init__(self, cyInstance, proj):
-        self.cyInstance = cyInstance
+    def __init__(self, proj, post_rank, cython_instance):
+        self.cyInstance = cython_instance
+        self.post_rank = post_rank
         self.proj = proj
         self.pre = proj.pre
         
@@ -25,7 +36,7 @@ class Dendrite(Descriptor):
         #
         # synapse variables                
         for value in self.proj.generator.parsed_synapse_variables:
-            if value['name'] in pre_def_synapse:
+            if value['name'] in Global._pre_def_synapse:
                 continue
              
             cmd = 'self.'+value['name']+' = Attribute(\''+value['name']+'\')'   

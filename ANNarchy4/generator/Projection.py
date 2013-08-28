@@ -20,14 +20,14 @@ class Projection:
         #
         # for each synpase we create an own projection type
         if self.synapse:
-            sid   = len(Global.generatedProj_)+1
+            sid   = len(Global._proj_class_defs)+1
             name = 'Projection'+str(sid)
 
             self.h_file = Global.annarchy_dir+'/build/'+name+'.h'
             self.cpp_file = Global.annarchy_dir+'/build/'+name+'.cpp'
             self.pyx = Global.annarchy_dir+'/pyx/'+name+'.pyx'
 
-            Global.generatedProj_.append( { 'name': name, 'ID': sid, 'name': name } )
+            Global._proj_class_defs.append( { 'name': name, 'ID': sid, 'name': name } )
             self.proj_class = { 'class': 'Projection', 'ID': sid, 'name': name }
             
             synapse_parser = parser.SynapseAnalyser(self.synapse.variables)
@@ -64,7 +64,7 @@ class Projection:
             """
             code = ''
             for var in parsed_variables:
-                if var['name'] in Global.pre_def_synapse:
+                if var['name'] in Global._pre_def_synapse:
                     continue
                     
                 if var['type'] == 'parameter':
@@ -87,6 +87,7 @@ class Projection:
                         
                 code += "\t"+var['init']+"\n"
 
+            code += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return code
             
         def compute_sum(parsed_variables):
@@ -157,7 +158,6 @@ class Projection:
             code = '\tfor(int i=0; i<(int)rank_.size();i++) {\n'
             code += loop
             code += '\t}\n'
-
             return code
 
         def global_learn(parsed_variables):
@@ -190,7 +190,7 @@ class Projection:
             access = ''
     
             for value in synapse_values:
-                if value['name'] in Global.pre_def_synapse:
+                if value['name'] in Global._pre_def_synapse:
                     continue
     
                 if value['type'] == 'parameter':
@@ -296,7 +296,7 @@ void %(name)s::globalLearn() {
             code = ''
     
             for value in parsed_synapse:
-                if value['name'] in Global.pre_def_synapse:
+                if value['name'] in Global._pre_def_synapse:
                     continue
    
                 if value['type'] == 'parameter':
@@ -316,7 +316,7 @@ void %(name)s::globalLearn() {
             code = ''
             
             for value in parsed_synapse:
-                if value['name'] in Global.pre_def_synapse:
+                if value['name'] in Global._pre_def_synapse:
                     continue
     
                 code += '    property '+value['name']+':\n'

@@ -1,25 +1,36 @@
 """
 Population.py
 """
-
 import Global 
-import numpy as np
 from ANNarchy4 import generator
-from ANNarchy4.core.Variable import Descriptor, Variable
+from ANNarchy4.core.Variable import Descriptor
+
+import traceback
+import numpy as np
 
 class Population(Descriptor):
     """
-    Represents a neural network population
+    Represents a neural network population in ANNarchy.
     """
 
     def __init__(self, name, geometry, neuron, debug=False):
+        """
+        Constructor.
+        
+        Parameter:
+        
+        * *name*: unique name of the population.
+        * *geometry*: population geometry as tuple (width, height, depth)
+        * *neuron*: instance of ``ANNarchy4.Neuron``
+        * *debug*: print some debug information to standard out ( by default *False* )
+        """
         self.debug = debug
         self.pop_geometry = geometry
         self.neuron = neuron
         self.name = name
-        self.id = len(Global.populations_)
+        self.id = len(Global._populations)
 
-        Global.populations_.append(self)
+        Global._populations.append(self)
         self.generator = generator.Population(self)
 
     @property

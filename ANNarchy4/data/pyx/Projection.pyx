@@ -24,6 +24,12 @@ cdef extern from "../build/Projection.h":
 
         void setValue(vector[float] value)
         
+        float getDt()
+        
+        float getTau()
+        
+        void setTau(float tau)
+        
         void initValues(vector[int] rank, vector[float] value)
         
         int getSynapseCount()
@@ -46,8 +52,10 @@ cdef extern from "../build/ANNarchy.h":
 cdef class LocalProjection:
 
     cdef Projection* cInstance
+    cdef post_rank
     
     def __cinit__(self, proj_type, preID, postID, rank, target):
+        self.post_rank = rank
         self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target)
         
     def init(self, ranks, values):
@@ -73,6 +81,29 @@ cdef class LocalProjection:
         def __get__(self):
             return self.cInstance.getSynapseCount()
     
+    property post_rank:
+        """
+        Returns the rank of the neuron the dendrite belongs to.
+        """
+        def __get__(self):
+            return self.post_rank
+        def __set__(self, value):
+            print 'The post_rank is a read only value.'
+        
+    property dt:
+        def __get__(self):
+            return self.cInstance.getDt()
+
+        def __set__(self, value):
+            print 'The descritization constant is only modifiable globally.'
+
+    property tau:
+        def __get__(self):
+            return self.cInstance.getTau()
+
+        def __set__(self, value):
+            self.cInstance.setTau(value)
+        
     property value:
         def __get__(self):
             return np.array(self.cInstance.getValue())

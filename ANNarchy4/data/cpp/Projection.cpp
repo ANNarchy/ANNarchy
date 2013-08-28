@@ -40,6 +40,7 @@ Projection::Projection(int pre, int post, int post_rank, int target) {
 
 	sum_ = 0.0;
 	tau_ = 10.0;
+	dt_ = 1.0;
 
 	//
 	//	TODO as above^^

@@ -1,14 +1,10 @@
 """
 Projection.py
 """
-
 import numpy as np
-import traceback
 
 import Global
 from Dendrite import Dendrite
-
-from Variable import Descriptor, Attribute
 from ANNarchy4 import generator
 
 class Projection(object):
@@ -32,14 +28,14 @@ class Projection(object):
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object 
         if isinstance(pre, str):
-            for pop in Global.populations_:
+            for pop in Global._populations:
                 if pop.name == pre:
                     self.pre = pop
         else:
             self.pre = pre
                                  
         if isinstance(post, str):
-            for pop in Global.populations_:
+            for pop in Global._populations:
                 if pop.name == post:
                     self.post = pop
         else:
@@ -51,7 +47,9 @@ class Projection(object):
         self.synapse = synapse
         self.generator = generator.Projection(self, synapse)
         self._dendrites = []
-        Global.projections_.append(self)
+        self._post_ranks = []
+        
+        Global._projections.append(self)
                 
     def dendrite_by_coordinates(self, w, h, d=0):
         """
@@ -63,7 +61,7 @@ class Projection(object):
             * *h*:  column coordinate of the requested postsynaptic neuron
             * *d*:  plane coordinate of the requested postsynaptic neuron ( *default* = 0 )
         """
-        return self._dendrites[self.post.rank_from_coordinates(w, h, d)]
+        return self._dendrites[self._post_ranks.index(self.post.rank_from_coordinates(w, h, d))]
             
     def dendrite_by_rank(self, rank):
         """
@@ -73,7 +71,7 @@ class Projection(object):
 
             * *rank*:   rank of the requested postsynaptic neuron
         """
-        return self._dendrites[rank]
+        return self._dendrites[self._post_ranks.index(rank)]
 
     @property
     def dendrites(self):
@@ -92,7 +90,8 @@ class Projection(object):
                                           )
         
         for i in xrange(len(tmp)):
-            self._dendrites.append(Dendrite(tmp[i], self))
+            self._dendrites.append(Dendrite(self, tmp[i].post_rank, tmp[i]))
+            self._post_ranks.append(tmp[i].post_rank)
 
     def gather_data(self, variable):
         blank_col=np.zeros((self.pre.height, 1))

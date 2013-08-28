@@ -98,6 +98,7 @@ class Visualization:
                         self.plots.append(VisualizePopulationVar(self.handles[y][x], data[i]))
                     else:
                         self.plots.append(VisualizePopulationVar(self.handles, data[i]))
+                        
                     i += 1
                 elif 'proj' in data[i].keys():
                     if not 'title' in data[i].keys():
@@ -107,6 +108,7 @@ class Visualization:
                         self.plots.append(VisualizeProjectionVar(self.handles[y][x], data[i]))
                     else:
                         self.plots.append(VisualizeProjectionVar(self.handles, data[i]))
+                        
                     i += 1
                 else:
                     print 'Incorrect plot data.'

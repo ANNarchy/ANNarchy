@@ -1,5 +1,8 @@
 # IO
-from IO import save
+from IO import *
+
+# simulate, setup
+from Global import *
 
 # 
 from Variable import *

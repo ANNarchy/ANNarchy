@@ -198,6 +198,7 @@ private:
     
                 constructor += '\t'+value['init']+'\n'
     
+            constructor += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return constructor
         
         def replace_rand_(parsed_neuron, rand_objects):

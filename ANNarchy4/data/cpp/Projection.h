@@ -37,6 +37,14 @@ public:
 	
 	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
 	
+	DATA_TYPE getDt() { return dt_; }
+
+	void setDt(DATA_TYPE dt) { dt_ = dt; }
+
+	DATA_TYPE getTau() { return tau_; }
+
+	void setTau(DATA_TYPE tau) { tau_ = tau; }
+
 	/**
 	 *  \brief      Add synapse.
 	 *  \param[IN]  rank    rank of the presynaptic neuron
