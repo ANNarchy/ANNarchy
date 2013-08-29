@@ -13,7 +13,7 @@ class Population(Descriptor):
     Represents a neural network population in ANNarchy.
     """
 
-    def __init__(self, name, geometry, neuron, debug=False):
+    def __init__(self, geometry, neuron, name=None, debug=False):
         """
         Constructor.
         
@@ -27,8 +27,12 @@ class Population(Descriptor):
         self.debug = debug
         self.pop_geometry = geometry
         self.neuron = neuron
-        self.name = name
         self.id = len(Global._populations)
+        if name:
+            self.name = name
+        else:
+            self.name = 'Population_'+str(self.id)
+        
 
         Global._populations.append(self)
         self.generator = generator.Population(self)

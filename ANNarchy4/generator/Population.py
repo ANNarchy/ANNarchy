@@ -17,9 +17,12 @@ class Population(object):
     """
     
     def __init__(self, population):
-        self.header = Global.annarchy_dir+'/build/'+population.name+'.h'
-        self.body = Global.annarchy_dir+'/build/'+population.name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/pyx/'+population.name+'.pyx'
+        
+        self.class_name = 'Population'+str(population.id)
+        
+        self.header = Global.annarchy_dir+'/build/'+self.class_name+'.h'
+        self.body = Global.annarchy_dir+'/build/'+self.class_name+'.cpp'
+        self.pyx = Global.annarchy_dir+'/pyx/'+self.class_name+'.pyx'
         
         self.population = population
         
@@ -32,7 +35,8 @@ class Population(object):
         main function of population generator class.
         """
         
-        print '\tGenerate files for '+ self.__class__.__name__
+        print "\tGenerate "+self.class_name+" files for "+ self.population.name
+        
         self.neuron_variables = self.population.neuron.variables
 
         #
@@ -171,7 +175,7 @@ private:
 %(member)s
 };
 #endif
-""" % { 'class': self.population.name, 
+""" % { 'class': self.class_name, 
         'member': generate_member_definition(self.parsed_neuron), 
         'access' : generate_accessor(self.parsed_neuron) 
         } 
@@ -281,7 +285,7 @@ private:
 void %(class)s::metaStep() {
 %(metaStep)s    
 }
-""" % { 'class': self.population.name, 
+""" % { 'class': self.class_name, 
         'construct': constructor(self.parsed_neuron), 
         'metaStep': meta_step(self.parsed_neuron,
                               self.rand_objects,
@@ -364,7 +368,7 @@ cdef class py%(name)s:
     def name(self):
         return self.cInstance.getName()
 
-''' % { 'name':self.population.name,  
+''' % { 'name': self.class_name,  
         'neuron_count': self.population.size, 
         'cFunction': pyx_func(self.parsed_neuron), 
         'pyFunction': py_func(self.parsed_neuron) 

@@ -15,7 +15,7 @@ def create_includes():
     """
     pop_header  = ''
     for pop in Global._populations:
-        pop_header += '#include "'+pop.name+'.h"\n'
+        pop_header += '#include "'+pop.generator.class_name+'.h"\n'
 
     proj_header = ''
     for synapse in Global._synapses:
@@ -131,7 +131,7 @@ def generate_py_extension():
     """
     pop_include = ''
     for pop in Global._populations:
-        pop_include += 'include \"'+pop.name+'.pyx\"\n'
+        pop_include += 'include \"'+pop.generator.class_name+'.pyx\"\n'
 
     proj_include = ''
     for synapse in Global._synapses:
@@ -251,7 +251,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
             import ANNarchyCython
             for pop in Global._populations:
                 pop.cyInstance = eval('ANNarchyCython.py'+
-                                  pop.name.capitalize()+'()')
+                                  pop.generator.class_name+'()')
                 
                 #
                 #   extend the population by all cythonized variables
