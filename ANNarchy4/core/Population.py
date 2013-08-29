@@ -48,7 +48,7 @@ class Population(Descriptor):
         return ret_var
 
     @property
-    def parameter(self):
+    def parameters(self):
         """
         Returns a list of all parameter names.
         """

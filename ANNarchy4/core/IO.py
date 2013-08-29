@@ -110,7 +110,7 @@ def _net_description(variables, connections):
             pop_desc['variables'] = varias
                 
             params = {}
-            for par in pop.parameter:
+            for par in pop.parameters:
                 params[par] = pop.get_parameter(par)
             pop_desc['parameter'] = params
             
@@ -134,7 +134,7 @@ def _net_description(variables, connections):
                 dendrite_desc['variables'] = varias
                     
                 params = {}
-                for par in dendrite.parameter:
+                for par in dendrite.parameters:
                     params[par] = dendrite.get_parameter(par)
                 dendrite_desc['parameter'] = params
                 
