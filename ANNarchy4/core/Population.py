@@ -25,7 +25,13 @@ class Population(Descriptor):
         * *debug*: print some debug information to standard out ( by default *False* )
         """
         self.debug = debug
-        self.pop_geometry = geometry
+        if len(geometry) == 1:
+            self.pop_geometry = (geometry[0],1,1)
+        elif len(geometry) == 2:
+            self.pop_geometry = (geometry[0],geometry[1],1)
+        else:
+            self.pop_geometry = geometry
+            
         self.neuron = neuron
         self.id = len(Global._populations)
         if name:
