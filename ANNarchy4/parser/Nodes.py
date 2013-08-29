@@ -2,8 +2,8 @@ from Definitions import *
 import Analyser
 import Tree
             
-## Nodes
-class TreeBuilder:
+## Object transforming the expression into an ordered tree
+class TreeBuilder(object):
 
     def __init__(self, machine, expr_list):
         self.machine = machine
@@ -12,7 +12,8 @@ class TreeBuilder:
     def build(self):
         # Split the list around the equal sign
         id_equal = self.expr_list.index(EQUAL)
-        self.left_group, self.right_group = Group(self.machine, self.expr_list[:id_equal]), Group(self.machine, self.expr_list[id_equal+1:])
+        import Group
+        self.left_group, self.right_group = Group.Group(self.machine, self.expr_list[:id_equal]), Group.Group(self.machine, self.expr_list[id_equal+1:])
         # Start the group analysis
         for group in [self.left_group, self.right_group]:
             group.group()
@@ -22,7 +23,11 @@ class TreeBuilder:
         return tree
         
 # Node class
-class Node:
+class Node(object):
+    """Base node of the tree processing a group of expressions.
+    
+    The hierarchize() method analyses its content and adds unray/binary/ternary operators if needed.
+    """
     def __init__(self, machine):
         self.machine = machine
         
@@ -32,7 +37,8 @@ class Node:
     def hierarchize(self, side):
         """ Create a hierarchy using the recognized nodes. """
         if len(side)==1: # The group has only one item
-            if isinstance(side[0], Group): # A term between brackets.
+            import Group
+            if isinstance(side[0], Group.Group): # A term between brackets.
                 newside = self.hierarchize(side[0])
                 newside.parent= self
                 return newside
@@ -127,6 +133,13 @@ class Node:
                     newside.parent= self
                     found=True
                     break
+                elif isinstance(side[i], GlobalFunction):
+                    newside = GlobalFunction(self.machine,
+                                    value = side[i].value,
+                                    child = side[i].child )
+                    newside.parent= self
+                    found=True
+                    break
         if not found:
             print self.machine.expr
             print 'Error: could not analyse the expression'
@@ -135,6 +148,7 @@ class Node:
         
 # Equal object        
 class Equal(Node):
+    """ Top node of the hierarchy. There should be only one Equal object."""
     def __init__(self, machine, left, right):
         Node.__init__(self, machine)
         self.machine = machine
@@ -171,9 +185,13 @@ class Equal(Node):
         self.right = right
         self.right.parent= self
         return self
+
+#############################
+# Simple objects
+#############################
         
 # Leaf (no need to go further)
-class Leaf:
+class Leaf(object):
     def __repr__(self):
         return self.cpp()       
         
@@ -198,7 +216,12 @@ class Constant(Leaf):
         if self.value in PI:
             return '{\\pi}'
         return '{' + str(self.value) + '}'
-        
+
+##################################
+# Variables and parameters
+##################################
+
+# Variable of the neuron/synapse, but not the one updated here        
 class Variable(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -216,7 +239,8 @@ class Variable(Leaf):
         return ' ' + str(self.value)+'_'+suffix
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
-        
+
+# Main variable updated        
 class MainVariable(Variable):
     def __init__(self, machine, value):
         Variable.__init__(self, machine, value)
@@ -229,7 +253,8 @@ class MainVariable(Variable):
         else:
             suffix = '[i] '
         return ' ' + str(self.value)+'_'+suffix
-        
+
+# Parameter if the neuron/synapse        
 class Parameter(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -238,7 +263,8 @@ class Parameter(Leaf):
         return ' ' + str(self.value) + '_'
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
-        
+
+# Gradient on the main variable        
 class Gradient(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -254,7 +280,8 @@ class Gradient(Leaf):
         return ' ' + str(self.value)+'_'+suffix
     def latex(self):
         return '{\\frac{d\\text{'+str(self.value) + '}}{dt}}'
-        
+
+# Weighted sum of inputs        
 class PSP(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -267,7 +294,8 @@ class PSP(Leaf):
         return ' sum(i, ' + str(self.machine.targets.index(self.value))+') '
     def latex(self):
         return '{\\sum_{i}^{'+str(self.value)+'} w_{i} \\cdot \\text{rate}_{i}}'
-        
+
+# Presynaptic variable (e.g. pre.rate)        
 class PreVariable(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -279,7 +307,8 @@ class PreVariable(Leaf):
         return ' pre_population_->get'+variable.capitalize()+'( rank_[i] ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
-        
+      
+# Postsynaptic variable (e.g. post.rate)   
 class PostVariable(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -291,10 +320,12 @@ class PostVariable(Leaf):
         return ' post_population_->get'+variable.capitalize()+'( post_neuron_rank_ ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
-
-
         
-# Unitary operator    
+########################
+# Unitary operators
+########################
+        
+# Mathematical functions    
 class Function(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         Node.__init__(self, machine)
@@ -341,27 +372,39 @@ class Not(Node):
     def latex(self):
         return '{\\bar{'+str(self.value)+'}}'
         
-# Operator
-class Operator(Node):
-    def __init__(self, machine, value, left, right, hierarchize=True):
+        
+# Global function (mean, max, min)    
+class GlobalFunction(Node):
+    def __init__(self, machine, value, child=None, hierarchize=True):
         Node.__init__(self, machine)
         self.machine = machine
         self.value = value
-        self.left= left
-        self.right=right
-        if self.left != None and  hierarchize:
-            self.left = self.hierarchize(self.left)
-            self.left.parent = self
-        if self.right != None and hierarchize:
-            self.right = self.hierarchize(self.right)
-            self.right.parent = self
-    
+        self.child = child
+        if self.child != None and hierarchize:
+            if len(self.child) != 1:
+                print 'Error: only one term should be specified inside the', self.value, 'function.'
+                exit(0)
+            self.child=self.child[0]
+            self.pop = 'pre' if self.child.find('pre.') != -1 else 'post'
+            if self.child.find('.') == -1:
+                self.variable = self.child
+            else:
+                self.variable = self.child.split('.')[1]
+                
     def cpp(self):
-        if self.left != None and self.right != None:
-            return ' (' + self.left.cpp() + str(self.value) + self.right.cpp() + ') '
-        return ' (' + str(self.value) + ') '
+        if self.child != None:
+            # TODO: save which variables are called. neuron?
+            return ' ' + self.pop + '_population_->get' + self.value.capitalize() + self.variable.capitalize() + '() '  
+        return str(self.value)+'()'
+        
+    def latex(self):
+        return '{\\text{'+str(self.value)+'}{'+ str(self.child)+ '}}'
+        
+######################
+# Ternary operator    
+######################
 
-# Ternary operator        
+# IF node    
 class If(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         self.machine = machine
@@ -387,9 +430,9 @@ class If(Node):
                 print 'Error in analysing', self.machine.expr
                 print 'The conditional should use the (if A then B else C) structure.'
                 exit(0)
-            self.cond = self.hierarchize(Group(self.machine, self.child[:id_then]))
-            self.then = self.hierarchize(Group(self.machine, self.child[id_then+1: id_else]))
-            self.elsestatement = self.hierarchize(Group(self.machine, self.child[id_else+1:]))
+            self.cond = self.hierarchize(Group.Group(self.machine, self.child[:id_then]))
+            self.then = self.hierarchize(Group.Group(self.machine, self.child[id_then+1: id_else]))
+            self.elsestatement = self.hierarchize(Group.Group(self.machine, self.child[id_else+1:]))
             
     def cpp(self):
         if self.child:
@@ -399,6 +442,7 @@ class If(Node):
     def latex(self):
         return ''      
         
+# Then node        
 class Then(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         self.machine = machine
@@ -409,7 +453,8 @@ class Then(Node):
         return ' then ' 
     def latex(self):
         return ''   
-           
+
+# Else node           
 class Else(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         self.machine = machine
@@ -421,7 +466,31 @@ class Else(Node):
     def latex(self):
         return ''          
 
-# Comparators
+###########################
+# Binary operators
+###########################
+
+# Basic Operator
+class Operator(Node):
+    def __init__(self, machine, value, left, right, hierarchize=True):
+        Node.__init__(self, machine)
+        self.machine = machine
+        self.value = value
+        self.left= left
+        self.right=right
+        if self.left != None and  hierarchize:
+            self.left = self.hierarchize(self.left)
+            self.left.parent = self
+        if self.right != None and hierarchize:
+            self.right = self.hierarchize(self.right)
+            self.right.parent = self
+    
+    def cpp(self):
+        if self.left != None and self.right != None:
+            return ' (' + self.left.cpp() + str(self.value) + self.right.cpp() + ') '
+        return ' (' + str(self.value) + ') '
+ 
+# Comparators (< > <= >=)       
 class Comparator(Operator):
     def __init__(self, machine, value='<', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -444,7 +513,7 @@ class Comparator(Operator):
             return '{\neq}'
         return '{' + str(self.value) + '}'
         
-# Logical operator
+# Logical operator (and, or)
 class Logical(Operator):
     def __init__(self, machine, value='and', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -457,7 +526,7 @@ class Logical(Operator):
     def latex(self):
         return "\\text{and}"
 
-# Binary operators    
+# +    
 class PlusOperator(Operator):   
     def __init__(self, machine, value='+', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -469,7 +538,7 @@ class PlusOperator(Operator):
             else:
                 return ' {(' + self.left.latex() + str(self.value) + self.right.latex() + ')} '
         return ''
-    
+# -    
 class MinusOperator(Operator):   
     def __init__(self, machine, value='-', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -480,7 +549,8 @@ class MinusOperator(Operator):
             else:
                 return ' {(' + self.left.latex() + str(self.value) + self.right.latex() + ')} '
         return ''
-    
+
+# *    
 class MultOperator(Operator):   
     def __init__(self, machine, value='*', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -488,7 +558,8 @@ class MultOperator(Operator):
         if self.left != None and self.right != None:
             return ' {' + self.left.latex() + ' \cdot ' + self.right.latex() + '} '
         return ''
-        
+
+# /        
 class DivOperator(Operator):   
     def __init__(self, machine, value='/', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -496,7 +567,7 @@ class DivOperator(Operator):
         if self.left != None and self.right != None:
             return ' {\\frac{' + self.left.latex() + '}{' + self.right.latex() + '}} '
         return ''
-        
+# ^        
 class PowOperator(Operator):   
     def __init__(self, machine, value='^', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
@@ -507,157 +578,5 @@ class PowOperator(Operator):
     def latex(self):
         return ' {('+self.left.latex() + ')}^{' + self.right.latex()+'} '
 
-        
-# Group of expressions with parenthesis                
-class Group(Node):
 
-    def __init__(self, machine, items):
-        Node.__init__(self, machine)
-        self.machine = machine
-        self.items = items
-        
-    def __repr__(self):
-        return str(self.items)
-        
-    def cpp(self):
-        return str(self.items)
-        
-    def latex(self):
-        return str(self.items)
-        
-    def __len__(self):
-        return len(self.items)
-        
-    def __getitem__(self, k):
-        return self.items[k]
-        
-    def group(self):
-        complete = False
-        while not complete:
-            rk = 0
-            idx_left = idx_right = 0
-            complete=True
-            # Find first-level brackets
-            for idx in range(len(self.items)):
-                it = self.items[idx]
-                if it == BRACKET_LEFT:
-                    complete=False
-                    rk += 1
-                    if rk == 1: # first bracket
-                        idx_left = idx
-                elif it == BRACKET_RIGHT:
-                    rk -= 1
-                    if rk== 0: # found the last matching bracket
-                        idx_right = idx
-                        break
-            # Expand
-            if idx_right != idx_left:
-                subgroup = Group(self.machine, self.items[idx_left+1:idx_right])
-                items=[]
-                for i in range(idx_left):
-                    items.append(self.items[i])
-                items.append(subgroup)
-                for i in range(idx_right+1, len(self.items)):
-                    items.append(self.items[i])
-                subgroup.group()
-                self.items = items
-            
-    def analyse(self):
-        items=[]
-        # Turn the items into objects
-        iter_items = iter(self.items)
-        for item in iter_items:
-            found = False
-            if isinstance(item, str):
-                # Check if it is a constant
-                if belongs_to(item, CONSTANTS):
-                    items.append(Constant(self.machine, item))
-                    found = True
-                # Check if it is an integer or float
-                if Tree.isFloat(item) or Tree.isInt(item):
-                    items.append(Constant(self.machine, item))
-                    found=True
-                # Check if it is a parameter
-                if item in self.machine.parameters:
-                    items.append(Parameter(self.machine, item))
-                    found=True
-                # Check if it is a variable
-                if item in self.machine.other_variables:
-                    items.append(Variable(self.machine, item))
-                    found=True
-                # Check if it is a function
-                if belongs_to(item, FUNCTIONS):
-                    items.append(Function(self.machine, item))
-                    found = True
-                # Check if it is a ternary operator
-                if belongs_to(item, IF):
-                    items.append(If(self.machine, item))
-                    found = True
-                if belongs_to(item, THEN):
-                    items.append(Then(self.machine, item))
-                    found = True
-                if belongs_to(item, ELSE):
-                    items.append(Else(self.machine, item))
-                    found = True
-                # Check if it is a weighted sum
-                if belongs_to(item, SUMS):
-                    items.append(PSP(self.machine, iter_items.next()))
-                    found = True
-                # Check if it is a pre variable
-                if not item.find('pre.') == -1:
-                    items.append(PreVariable(self.machine, item))
-                    found = True
-                # Check if it is a post variable
-                if not item.find('post.') == -1:
-                    items.append(PostVariable(self.machine, item))
-                    found = True
-                # Check if it is the updated variable
-                if item == self.machine.name:
-                    items.append(MainVariable(self.machine, item))
-                    found=True
-                if item == 'd' + self.machine.name: # found the first item of a gradient
-                    items.append(Gradient(self.machine, self.machine.name))
-                    if not iter_items.next() == '/' or not iter_items.next() == 'dt':
-                        print 'Error: the gradient on', self.machine.name, 'is badly expressed, it should be', 'd'+self.machine.name+'/dt'
-                        exit(0)
-                    found=True
-                # Check if it is an operator
-                if belongs_to(item, PLUS):
-                    items.append(PlusOperator(self.machine, item))
-                    found=True
-                if belongs_to(item, MINUS):
-                    items.append(MinusOperator(self.machine, item))
-                    found=True
-                if belongs_to(item, MULT):
-                    items.append(MultOperator(self.machine, item))
-                    found=True
-                if belongs_to(item, DIV):
-                    items.append(DivOperator(self.machine, item))
-                    found=True  
-                if belongs_to(item, POW):
-                    items.append(PowOperator(self.machine, item))
-                    found=True  
-                # Check if it is a comparator
-                if belongs_to(item, COMPARATORS):
-                    items.append(Comparator(self.machine, item))
-                    found = True  
-                # Check if it is a logical operator
-                if belongs_to(item, LOGICALS):
-                    items.append(Logical(self.machine, item))
-                    found = True  
-                # Check if it is a not operator
-                if belongs_to(item, NOT):
-                    items.append(Not(self.machine, item))
-                    found = True                
-            # Check if it is a subgroup
-            elif isinstance(item, Group):
-                item.analyse()
-                items.append(item)
-                found = True          
-            # Else: don't know what to do with it...
-            if not found:
-                print self.machine.expr
-                print 'Error: the term', item, 'is neither part of the allowed vocabulary or a parameter of your model.'
-                exit(0)
-        self.items = items
 
