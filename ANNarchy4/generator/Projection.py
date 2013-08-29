@@ -81,8 +81,6 @@ class Projection:
             """
             code = ''
             for var in parsed_variables:
-                if var['name'] == 'value':
-                    continue
                 if var['name'] == 'psp':
                     continue
                         

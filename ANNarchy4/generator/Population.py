@@ -193,9 +193,6 @@ private:
                 if '_rand_' in value['name']:   # skip local member
                     continue
                     
-                if 'rate' == value['name']:
-                    continue
-    
                 constructor += '\t'+value['init']+'\n'
     
             constructor += '\tdt_ = ' + str(Global.config['dt']) + ';'
