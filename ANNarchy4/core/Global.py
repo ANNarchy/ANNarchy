@@ -1,12 +1,15 @@
 import os
 from datetime import datetime
 
-_populations = []       # created population instances
-_projections = []       # created projection instances
-_proj_class_defs = []   # user defined projection classes
+# objects
+_synapses = []          # synapse definitions
+
+# instances
+_populations = []       # created populations
+_projections = []       # created projections
 
 # predefined variables / parameters
-_pre_def_synapse = ['dt', 'tau', 'value', 'rank', 'delay']
+_pre_def_synapse = ['dt', 'tau', 'value', 'rank', 'delay', 'psp']
 _pre_def_neuron = ['dt', 'tau', 'rank', 'rate']
 
 # path to annarchy working directory

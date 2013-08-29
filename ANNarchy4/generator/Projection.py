@@ -1,40 +1,39 @@
 """
 Projection generator.
 """
-
-from ANNarchy4 import parser
 from ANNarchy4.core import Global
 
 class Projection:
     """
     Projection generator class.
     """
-    def __init__(self, projection, synapse):
+    def __init__(self, synapse):
         """
         Projection generator class constructor.
         """
-        self.projection = projection
         self.synapse = synapse
-        self.parsed_synapse_variables = []
+        self.parsed_variables = []
         
         #
         # for each synpase we create an own projection type
         if self.synapse:
-            sid   = len(Global._proj_class_defs)+1
-            name = 'Projection'+str(sid)
+            name = 'Projection'+str(self.synapse.type_id)
 
             self.h_file = Global.annarchy_dir+'/build/'+name+'.h'
             self.cpp_file = Global.annarchy_dir+'/build/'+name+'.cpp'
             self.pyx = Global.annarchy_dir+'/pyx/'+name+'.pyx'
 
-            Global._proj_class_defs.append( { 'name': name, 'ID': sid, 'name': name } )
-            self.proj_class = { 'class': 'Projection', 'ID': sid, 'name': name }
+            self.proj_class = { 
+                'ID': self.synapse.type_id, 
+                'name': name 
+            }
             
-            synapse_parser = parser.SynapseAnalyser(self.synapse.variables)
-            self.parsed_synapse_variables = synapse_parser.parse()
-
+            self.parsed_variables = self.synapse.parsed_variables
         else:
-            self.proj_class = { 'class': 'Projection', 'ID': 0, 'name': 'Projection0' }
+            self.proj_class = { 
+                'ID': 0, 
+                'name': 'Projection' 
+            }
             
 
     def generate_cpp_add(self):
@@ -83,6 +82,8 @@ class Projection:
             code = ''
             for var in parsed_variables:
                 if var['name'] == 'value':
+                    continue
+                if var['name'] == 'psp':
                     continue
                         
                 code += "\t"+var['init']+"\n"
@@ -207,8 +208,9 @@ class Projection:
 
         #
         # generate func body            
+        
         if self.synapse:
-            name = self.proj_class['class']+str(self.proj_class['ID'])
+            name = self.synapse.generator.proj_class['name']
 
             header = '''#ifndef __%(name)s_H__
 #define __%(name)s_H__
@@ -237,8 +239,8 @@ private:
 };
 #endif
 ''' % { 'name': name, 
-        'access': generate_accessor(self.parsed_synapse_variables),
-        'synapseMember': member_def(self.parsed_synapse_variables) }
+        'access': generate_accessor(self.parsed_variables),
+        'synapseMember': member_def(self.parsed_variables) }
 
             body = '''#include "%(name)s.h"
 %(name)s::%(name)s(Population* pre, Population* post, int postRank, int target) : Projection(pre, post, postRank, target) {
@@ -270,10 +272,10 @@ void %(name)s::globalLearn() {
 }
 
 ''' % { 'name': name, 
-        'init': init(self.parsed_synapse_variables), 
-        'sum': compute_sum(self.parsed_synapse_variables), 
-        'local': local_learn(self.parsed_synapse_variables), 
-        'global': global_learn(self.parsed_synapse_variables) }
+        'init': init(self.parsed_variables), 
+        'sum': compute_sum(self.parsed_variables), 
+        'local': local_learn(self.parsed_variables), 
+        'global': global_learn(self.parsed_variables) }
 
             with open(self.h_file, mode = 'w') as w_file:
                 w_file.write(header)
@@ -355,7 +357,7 @@ cdef class Local%(name)s(LocalProjection):
 %(pyFunction)s
 
 ''' % { 'name': self.proj_class['name'], 
-        'cFunction': pyx_func(self.parsed_synapse_variables), 
-        'pyFunction': py_func(self.parsed_synapse_variables) 
+        'cFunction': pyx_func(self.parsed_variables), 
+        'pyFunction': py_func(self.parsed_variables) 
     }
         return pyx

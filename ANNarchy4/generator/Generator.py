@@ -18,8 +18,8 @@ def create_includes():
         pop_header += '#include "'+pop.name+'.h"\n'
 
     proj_header = ''
-    for proj in Global._proj_class_defs:
-        proj_header += '#include "'+ proj['name'] +'.h"\n'
+    for synapse in Global._synapses:
+        proj_header += '#include "'+ synapse.generator.proj_class['name'] +'.h"\n'
 
     header = """#ifndef __ANNARCHY_INCLUDES_H__
 #define __ANNARCHY_INCLUDES_H__
@@ -70,15 +70,17 @@ def generate_proj_instance_class():
     """
     # single cases
     cases_ptr = ''
-    for proj in Global._proj_class_defs:
+    for synapse in Global._synapses:
         cases_ptr += """
         case %(id)s:
             return new %(name)s(pre, post, postNeuronRank, target);
 
-""" % { 'id': proj['ID'], 'name': proj['name']}
+""" % { 'id': synapse.generator.proj_class['ID'], 
+        'name': synapse.generator.proj_class['name']
+    }
 
     cases_id = ''
-    for proj in Global._proj_class_defs:
+    for synapse in Global._synapses:
         cases_id += """
         case %(id)s:
         #ifdef _DEBUG
@@ -86,7 +88,9 @@ def generate_proj_instance_class():
         #endif
             return new %(name)s(preID, postID, postNeuronRank, target);
 
-""" % { 'id': proj['ID'], 'name': proj['name']}
+""" % { 'id': synapse.generator.proj_class['ID'], 
+        'name': synapse.generator.proj_class['name']
+    }
 
     # complete code
     code = """class createProjInstance {
@@ -130,8 +134,8 @@ def generate_py_extension():
         pop_include += 'include \"'+pop.name+'.pyx\"\n'
 
     proj_include = ''
-    for proj_class in Global._proj_class_defs:
-        proj_include += 'include \"'+proj_class['name']+'.pyx\"\n'
+    for synapse in Global._synapses:
+        proj_include += 'include \"'+synapse.generator.proj_class['name']+'.pyx\"\n'
 
     code = """include "Network.pyx"
 include "Simulation.pyx"
@@ -188,8 +192,10 @@ def code_generation(cpp_stand_alone):
     for pop in Global._populations:
         pop.generator.generate()
 
-    for proj in Global._projections:
-        proj.generator.generate()
+    #
+    # create projection cpp class for each synapse
+    for synapse in Global._synapses:
+        synapse.generator.generate()
 
     create_includes()
 

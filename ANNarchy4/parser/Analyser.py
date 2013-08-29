@@ -260,9 +260,12 @@ class SynapseAnalyser:
                             stable = False
                             sorted_dependencies[name] = is_dep_pre
         
-        localvar = []
+        localvar = ['value']
         globalvar = []
         for name in dependencies.keys():
+            if name == 'value':
+                continue # already sorted in
+            
             if sorted_dependencies[name]:
                 localvar.append(name)
             else:

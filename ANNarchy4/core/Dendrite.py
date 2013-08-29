@@ -35,10 +35,10 @@ class Dendrite(Descriptor):
 
         #
         # synapse variables                
-        for value in self.proj.generator.parsed_synapse_variables:
+        for value in self.proj._parsed_variables():
             if value['name'] in Global._pre_def_synapse:
                 continue
-             
+ 
             cmd = 'self.'+value['name']+' = Attribute(\''+value['name']+'\')'   
             exec(cmd)
     
@@ -49,7 +49,7 @@ class Dendrite(Descriptor):
         """
         ret_var=[] 
         
-        for var in self.proj.generator.parsed_synapse_variables:
+        for var in self.proj._parsed_variables():
             if not var['type'] == 'parameter':
                 ret_var.append(var['name'])
         
@@ -62,7 +62,7 @@ class Dendrite(Descriptor):
         """
         ret_par=[] 
         
-        for var in self.proj.generator.parsed_synapse_variables:
+        for var in self.proj._parsed_variables():
             if var['type'] == 'parameter':
                 ret_par.append(var['name'])
         

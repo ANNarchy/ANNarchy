@@ -5,7 +5,6 @@ import numpy as np
 
 import Global
 from Dendrite import Dendrite
-from ANNarchy4 import generator
 
 class Projection(object):
     """
@@ -45,11 +44,12 @@ class Projection(object):
         self.target = target
         self.connector = connector
         self.synapse = synapse
-        self.generator = generator.Projection(self, synapse)
         self._dendrites = []
         self._post_ranks = []
-        
+
+        self.name = 'Projection'+str(len(Global._projections))
         Global._projections.append(self)
+        
                 
     def dendrite_by_coordinates(self, w, h, d=0):
         """
@@ -80,8 +80,22 @@ class Projection(object):
         """
         return self._dendrites
 
+    def _parsed_variables(self):
+        """
+        Returns parsed variables in case of an attached synapse.
+        """
+        if self.synapse:
+            return self.synapse.generator.parsed_variables
+        else:
+            return []
+
     def connect(self):
-        self.connector.init_connector(self.generator.proj_class['ID'])          
+        
+        if self.synapse:
+            self.connector.init_connector(self.synapse.generator.proj_class['ID'])
+        else:
+            self.connector.init_connector( 0 ) # use predefined projection class
+                      
         tmp = self.connector.cyInstance.connect(self.pre,
                                           self.post,
                                           self.connector.weights,
