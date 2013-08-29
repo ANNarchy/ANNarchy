@@ -53,3 +53,38 @@ def simulate(duration, show_time=False):
     t_stop = datetime.now()
     if show_time:
         print 'Simulation:\t', t_stop - t_start, '(', duration, 'steps)'
+
+def get_population(name):
+    """
+    Returns population corresponding to *name*.
+    
+    Parameter:
+    
+        * *name*: population name
+    """
+    for pop in _populations:
+        if pop.name == name:
+            return pop
+        
+    print "Error: no population with the name '"+name+"' found."
+    return None
+
+def get_projection(pre, post, target):
+    """
+    Returns projection corresponding to the arguments.
+    
+    Parameter:
+    
+        * *pre*: presynaptic population
+        * *post*: postsynaptic population
+        * *target*: connection type
+    """
+    for proj in _projections:
+        
+        if proj.post == post:
+            if proj.pre == pre:
+                if proj.target == target:
+                    return proj
+    
+    print "Error: no projection '"+pre.name+"'->'"+post.name+"' with target '"+target+"' found."
+    return None
