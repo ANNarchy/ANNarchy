@@ -430,6 +430,8 @@ class If(Node):
                 print 'Error in analysing', self.machine.expr
                 print 'The conditional should use the (if A then B else C) structure.'
                 exit(0)
+                
+            import Group
             self.cond = self.hierarchize(Group.Group(self.machine, self.child[:id_then]))
             self.then = self.hierarchize(Group.Group(self.machine, self.child[id_then+1: id_else]))
             self.elsestatement = self.hierarchize(Group.Group(self.machine, self.child[id_else+1:]))
