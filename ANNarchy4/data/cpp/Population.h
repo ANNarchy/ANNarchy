@@ -16,7 +16,7 @@ public:
 
 	std::string getName() { return name_; }
 
-	int getNeuronCount() { return nbNeurons_; }
+	virtual int getNeuronCount() { return nbNeurons_; }
 
 	class Projection* getProjection(int neuron, int type) { return projections_[neuron][type]; }
 

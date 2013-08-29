@@ -61,9 +61,6 @@ cdef class LocalProjection:
     def init(self, ranks, values):
         self.cInstance.initValues(ranks, values)
 
-    def size(self):
-        return self.cInstance.getSynapseCount()
-        
     def add_synapse(self, rank, value, delay=0):
         err = self.cInstance.addSynapse(rank, value, delay)
         if err == -1:
@@ -77,9 +74,11 @@ cdef class LocalProjection:
     def get_target(self):
         return self.cInstance.getTarget()
     
-    def get_size(self):
+    property size:
         def __get__(self):
             return self.cInstance.getSynapseCount()
+        def __set__(self, value):
+            print 'The dendrite size is a read-only value.'
     
     property post_rank:
         """
@@ -88,7 +87,7 @@ cdef class LocalProjection:
         def __get__(self):
             return self.post_rank
         def __set__(self, value):
-            print 'The post_rank is a read only value.'
+            print 'The post_rank is a read-only value.'
         
     property dt:
         def __get__(self):
@@ -109,9 +108,12 @@ cdef class LocalProjection:
             return np.array(self.cInstance.getValue())
 
         def __set__(self, value):
-            self.cInstance.setValue(value)
+            if isinstance(value, np.ndarray)==True:
+                self.cInstance.setValue(value)
+            else:
+                self.cInstance.setValue(np.ones(self.size)*value)
 
-    property rank:
+    property rank: # pre synaptic rank
         def __get__(self):
             return np.array(self.cInstance.getRank())
 

@@ -73,7 +73,7 @@ class Dendrite(Descriptor):
         """
         Number of synapses.
         """
-        return self.cyInstance.get_size()
+        return self.cyInstance.size
         
     @property
     def target(self):

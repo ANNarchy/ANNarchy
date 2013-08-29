@@ -320,18 +320,24 @@ void %(name)s::globalLearn() {
                     continue
     
                 code += '    property '+value['name']+':\n'
-                if value['type'] == 'variable':
+                if value['type'] == 'local':
                     #getter
                     code += '        def __get__(self):\n'
                     code += '            return np.array(self.cInhInstance.get'+value['name'].capitalize()+'())\n\n'
+
+                    code += '        def __set__(self, value):\n'
+                    code += '            if isinstance(value, np.ndarray)==True:\n'
+                    code += '                self.cInhInstance.set'+value['name'].capitalize()+'(value)\n'
+                    code += '            else:\n'
+                    code += '                self.cInhInstance.set'+value['name'].capitalize()+'(np.ones(self.size)*value)\n\n'    
     
                 else:
                     #getter
                     code += '        def __get__(self):\n'
                     code += '            return self.cInhInstance.get'+value['name'].capitalize()+'()\n\n'
                 
-                code += '        def __set__(self, value):\n'
-                code += '            self.cInhInstance.set'+value['name'].capitalize()+'(value)\n'
+                    code += '        def __set__(self, value):\n'
+                    code += '            self.cInhInstance.set'+value['name'].capitalize()+'(value)\n\n'
     
             return code
         

@@ -168,6 +168,8 @@ class %(class)s: public Population
 public:
     %(class)s(std::string name, int nbNeurons);
     
+    int getNeuronCount() { return nbNeurons_; }
+    
     void metaStep();
     
 %(access)s
@@ -332,17 +334,20 @@ void %(class)s::metaStep() {
     
                 code += '    property '+value['name']+':\n'
                 if value['type'] == 'variable':
-                    #getter
                     code += '        def __get__(self):\n'
                     code += '            return np.array(self.cInstance.get'+value['name'].capitalize()+'())\n\n'
     
+                    code += '        def __set__(self, value):\n'
+                    code += '            if isinstance(value, np.ndarray)==True:\n'
+                    code += '                self.cInstance.set'+value['name'].capitalize()+'(value)\n'
+                    code += '            else:\n'
+                    code += '                self.cInstance.set'+value['name'].capitalize()+'(np.ones(self.size)*value)\n\n'    
                 else:
-                    #getter
                     code += '        def __get__(self):\n'
                     code += '            return self.cInstance.get'+value['name'].capitalize()+'()\n\n'
                 
-                code += '        def __set__(self, value):\n'
-                code += '            self.cInstance.set'+value['name'].capitalize()+'(value)\n'
+                    code += '        def __set__(self, value):\n'
+                    code += '            self.cInstance.set'+value['name'].capitalize()+'(value)\n'
     
             return code
         
@@ -354,7 +359,10 @@ cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(string name, int N)
 
+        int getNeuronCount()
+        
 %(cFunction)s
+
         string getName()
 
 cdef class py%(name)s:
@@ -363,6 +371,10 @@ cdef class py%(name)s:
 
     def __cinit__(self):
         self.cInstance = new %(name)s('%(name)s', %(neuron_count)s)
+
+    property size:
+        def __get__(self):
+            return self.cInstance.getNeuronCount()
 
 %(pyFunction)s
     def name(self):
