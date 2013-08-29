@@ -74,5 +74,5 @@ if __name__ == '__main__':
 
         InputPop.rate = bars.reshape(8*8)
 
-        simulate(100)
+        simulate(50)
         vis.render()
