@@ -327,7 +327,11 @@ void %(name)s::globalLearn() {
 
                     code += '        def __set__(self, value):\n'
                     code += '            if isinstance(value, np.ndarray)==True:\n'
-                    code += '                self.cInhInstance.set'+value['name'].capitalize()+'(value)\n'
+                    code += '                if value.ndim==1:\n'
+                    code += '                    self.cInhInstance.setValue(value)\n'
+                    code += '                else:\n'
+                    code += '                    self.cInhInstance.setValue(value.reshape(self.size))\n'
+
                     code += '            else:\n'
                     code += '                self.cInhInstance.set'+value['name'].capitalize()+'(np.ones(self.size)*value)\n\n'    
     

@@ -289,7 +289,7 @@ class PSP(Leaf):
     def cpp(self):
         if not self.value in self.machine.targets:
             print self.machine.expr
-            print 'Error: the target', self.value, 'does not exist on this neuron. The sum will be 0.0.'
+            print 'Warning: the target', self.value, 'does not exist on this neuron. The sum will be 0.0.'
             return ' 0.0 '
         return ' sum(i, ' + str(self.machine.targets.index(self.value))+') '
     def latex(self):

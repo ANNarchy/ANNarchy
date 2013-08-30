@@ -209,12 +209,39 @@ class Population(Descriptor):
 
         return coord
 
-    def set(self, **keyValueArgs):
+    def set( self, value ):
         """
         update neuron variable/parameter definition
-        """
-        self.neuron.set(keyValueArgs)
         
+        Parameter:
+        
+            * *value*: value need to be update
+            
+                .. code-block:: python
+                
+                    set( 'tau' : 20, 'rate'= np.random.rand((8,8)) } )
+        """
+        for val_key in value.keys():
+            if hasattr(self, val_key):
+                exec('self.' + val_key +' = value[val_key]')
+            else:
+                print "Error: population does not contain value: '"+val_key+"'"
+        
+    def get(self, value):
+        """
+        Get current variable/parameter value
+        
+        Parameter:
+        
+            * *value*: value name as string
+        """
+        if value in self.variables:
+            return self.get_variable(value)
+        elif value in self.parameters:
+            return self.get_parameter(value)
+        else:
+            print "Error: population does not contain value: '"+value+"'"
+            
     def _reshape_vector(self, vector):
         """
         Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array

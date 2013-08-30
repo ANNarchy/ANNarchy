@@ -109,7 +109,10 @@ cdef class LocalProjection:
 
         def __set__(self, value):
             if isinstance(value, np.ndarray)==True:
-                self.cInstance.setValue(value)
+                if value.ndim==1:
+                    self.cInstance.setValue(value)
+                else:
+                    self.cInstance.setValue(value.reshape(self.size))
             else:
                 self.cInstance.setValue(np.ones(self.size)*value)
 

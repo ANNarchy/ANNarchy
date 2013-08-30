@@ -42,6 +42,39 @@ class Dendrite(Descriptor):
             cmd = 'self.'+value['name']+' = Attribute(\''+value['name']+'\')'   
             exec(cmd)
     
+    def set( self, value ):
+        """
+        Update dendrite variable/parameter.
+        
+        Parameter:
+        
+            * *value*: value need to be update
+            
+                .. code-block:: python
+                
+                    set( 'tau' : 20, 'value'= np.random.rand(8,8) } )
+        """
+        for val_key in value.keys():
+            if hasattr(self, val_key):
+                exec('self.' + val_key +' = value[val_key]')
+            else:
+                print "Error: population does not contain value: '"+val_key+"'"    
+                
+    def get(self, value):
+        """
+        Get current variable/parameter value
+        
+        Parameter:
+        
+            * *value*: value name as string
+        """
+        if value in self.variables:
+            return self.get_variable(value)
+        elif value in self.parameters:
+            return self.get_parameter(value)
+        else:
+            print "Error: population does not contain value: '"+value+"'"     
+               
     @property
     def variables(self):
         """
