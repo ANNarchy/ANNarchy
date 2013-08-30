@@ -51,27 +51,16 @@ class Projection(object):
         Global._projections.append(self)
         
                 
-    def dendrite_by_coordinates(self, w, h, d=0):
-        """
-        Returns the dendrite of a postsynaptic neuron according to its coordinate
-        
-        Parameters:
-        
-            * *w*:  row coordinate of the requested postsynaptic neuron
-            * *h*:  column coordinate of the requested postsynaptic neuron
-            * *d*:  plane coordinate of the requested postsynaptic neuron ( *default* = 0 )
-        """
-        return self._dendrites[self._post_ranks.index(self.post.rank_from_coordinates(w, h, d))]
-            
-    def dendrite_by_rank(self, rank):
+    def dendrite(self, pos):
         """
         Returns the dendrite of a postsynaptic neuron according to its rank
 
         Parameters:
 
-            * *rank*:   rank of the requested postsynaptic neuron
+            * *pos*: could be either rank or coordinate of the requested postsynaptic neuron
         """
-        return self._dendrites[self._post_ranks.index(rank)]
+        _rank = self.post.rank_from_coordinates( pos )
+        return self._dendrites[_rank]
 
     @property
     def dendrites(self):

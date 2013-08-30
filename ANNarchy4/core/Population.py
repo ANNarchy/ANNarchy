@@ -154,11 +154,23 @@ class Population(Descriptor):
             print 'Error: parameter',parameter,'does not exist in this population.'
             print traceback.print_stack()
     
-    def rank_from_coordinates(self, w, h, d=0):
+    def rank_from_coordinates(self, coord ):
         """
-        Returns rank corresponding to (w, h, d) coordinates. The depth d is 0 by default.
+        Returns rank corresponding to (w, h, d) coordinates.
+        
+        Parameter:
+        
+            * *coord*: coordinate tuple, can be either one-, two- or threedimensional.
         """
-        return d*self.width*self.height + h * self.width + w
+        if isinstance(coord, int):
+            return coord
+        elif isinstance(coord, tuple):
+            if len(coord) == 2:
+                return coord[1] * self.width + coord[0]
+            elif len(coord) == 3:
+                return coord[2]*self.width*self.height + coord[1] * self.width + coord[0]
+        else:
+            print 'rank_from_coordinates: int or tuple expected.'
 
     def coordinates_from_rank(self, rank):
         """
