@@ -390,6 +390,8 @@ class GlobalFunction(Node):
                 self.variable = self.child
             else:
                 self.variable = self.child.split('.')[1]
+            # Tell the parser that it should generate the corresponding functions
+            self.machine.analyser.global_operations[self.pop].append({'variable': self.variable, 'function': self.value})
                 
     def cpp(self):
         if self.child != None:

@@ -16,6 +16,7 @@ class NeuronAnalyser(object):
         self.parameters_names = []
         self.variables_names = []
         self.trees = []
+        self.global_operations = {'pre': [], 'post': []}
         
     def parse(self):
     
@@ -84,7 +85,10 @@ class NeuronAnalyser(object):
 #        for cpp in self.analysed_neuron:
 #            print cpp['cpp']
             
-        return self.analysed_neuron
+        # Process the global operations
+        self.global_operations = sort_global_operations(self.global_operations)
+        
+        return self.analysed_neuron, self.global_operations
                 
     def def_parameter(self, name):
         return DATA_TYPE +' '+ name+'_;'
@@ -122,6 +126,7 @@ class SynapseAnalyser(object):
         self.targets=None
         self.targetIDs=None
         self.trees = []
+        self.global_operations = {'pre': [], 'post': []}
         
     def parse(self):
     
@@ -221,8 +226,11 @@ class SynapseAnalyser(object):
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
                      'cpp' : '' } )
+                     
+        # Process the global operations
+        self.global_operations = sort_global_operations(self.global_operations)
 
-        return self.analysed_synapse
+        return self.analysed_synapse, self.global_operations
         
     def init_parameter(self, name, value):
         return name + '_ = ' + str(value) + ';';
@@ -272,4 +280,13 @@ class SynapseAnalyser(object):
                 globalvar.append(name)
         return localvar, globalvar
                 
-
+def sort_global_operations(operations):
+    global_operations = {'pre': [], 'post': []}
+    for ope in operations['pre']:
+        if not ope in global_operations['pre']: #does not already exist
+            global_operations['pre'].append(ope)
+    for ope in operations['post']:
+        if not ope in global_operations['post']: #does not already exist
+            global_operations['post'].append(ope)
+    
+    return global_operations

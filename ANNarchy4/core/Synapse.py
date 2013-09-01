@@ -37,7 +37,7 @@ class Synapse(Master):
         Master.__init__(self, debug, order, keyValueArgs)
 
         self.parser = parser.SynapseAnalyser(self.variables)
-        self.parsed_variables = self.parser.parse()
+        self.parsed_variables, self.global_operations = self.parser.parse()
         
         # that the type_id will begin with 1 is correct, 
         # as we want to reserve type 0 for standard synapse

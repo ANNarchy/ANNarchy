@@ -83,7 +83,7 @@ class Population(object):
             self.neuron_variables, 
             self.targets
         )
-        self.parsed_neuron = self.neuron_parser.parse()
+        self.parsed_neuron, self.global_operations = self.neuron_parser.parse()
 
         #
         #   generate files
