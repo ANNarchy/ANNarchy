@@ -1,6 +1,17 @@
 import numpy as np
 
-class RandomDistribution:
+class RandomDistribution(object):
+    """ Class returning values from a random distributoin.
+    
+    Distributions available:
+    
+    * constant
+    
+    * uniform
+    
+    * normal
+    """
+
     def __init__(self, distribution='uniform', parameters=[0,1], seed=-1):
         self.distribution = distribution
         self.parameters = parameters

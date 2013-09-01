@@ -6,7 +6,7 @@ from Variable import *
 #
 # maybe we find  a better name for this class
 #
-class Master:
+class Master(object):
     """
     Internal base class.
     """

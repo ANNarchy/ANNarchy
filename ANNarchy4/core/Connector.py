@@ -3,7 +3,7 @@ Connector.py
 """
 from Random import RandomDistribution
 
-class Connector:
+class Connector(object):
     """
     The connector class manages all information and operations related to connection patterns.
     """

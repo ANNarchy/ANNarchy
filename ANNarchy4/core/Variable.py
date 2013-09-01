@@ -1,4 +1,4 @@
-class Variable:
+class Variable(object):
     """
     Variable representation in ANNarchy.
     """

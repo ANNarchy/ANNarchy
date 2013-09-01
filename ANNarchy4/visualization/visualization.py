@@ -20,7 +20,7 @@ import matplotlib.cm as cm
 from math import ceil, sqrt
 from datetime import datetime 
 
-class Render:
+class Render(object):
     """
     base class for all render objects.
     """
@@ -57,7 +57,7 @@ class Render:
         """        
         print 'It is recommended to use derived objects.'
         
-class Visualization:
+class Visualization(object):
     """
     Visualization class. 
     Later extended by complete config or a GUI to configure.
