@@ -3,7 +3,7 @@ Projection generator.
 """
 from ANNarchy4.core import Global
 
-class Projection:
+class Projection(object):
     """
     Projection generator class.
     """
