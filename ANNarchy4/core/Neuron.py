@@ -7,7 +7,7 @@ class Neuron(Master):
     
     def __init__(self, debug=False, order=[], **keyValueArgs ):
         """ The user describes the initialization of variables / parameters as key-value pair 'variable'='value'. 
-        Neuron variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialzation value'.
+        Neuron variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialization value'.
         
         Parameters:
         

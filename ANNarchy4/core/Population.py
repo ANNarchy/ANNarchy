@@ -266,4 +266,49 @@ class Population(Descriptor):
             return vec.reshape(self.height, self.width)
         elif self.dimension == 3:
             return vec.reshape(self.depth, self.height, self.width)
+            
+    def __getitem__(self, *args):
+        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."
+        coords, = args
+        if isinstance(coords, tuple):
+            return self.get_neuron(*coords)
+        else:
+            return self.get_neuron(coords)
+            
+    def get_neuron(self, width, height=-1, depth=-1):  
+        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."  
+           
+        class IndividualNeuron(object):
+            def __init__(self, pop, rank):
+                self.__dict__['pop']  = pop
+                self.__dict__['rank']  = rank
+            def __getattr__(self, name):
+                if name in self.pop.variables:
+                    return eval('self.pop.cyInstance._get_single_'+name+'(self.rank)')
+                elif name in self.pop.parameters:
+                    return self.pop.__getattribute__(name)
+                
+            def __setattr__(self, name, val):
+                if hasattr(getattr(self.__class__, name, None), '__set__'):
+                    return object.__setattr__(self, name, val)
+                if name in self.pop.variables:
+                    eval('self.pop.cyInstance._set_single_'+name+'(self.rank, val)')
+                elif name in self.pop.parameters:
+                    print 'Warning: parameters are population-wide, this will affect all other neurons.'
+                    self.pop.__setattr__(name, val)
+    
+        # Transform arguments
+        if height==-1 and depth==-1:
+            rank = width
+        elif depth==-1:
+            rank = self.rank_from_coordinates( (width, height) )
+        else:
+            rank = self.rank_from_coordinates( (width, height, depth) )
+        # Return corresponding neuron
+        if rank < self.size:
+            return IndividualNeuron(self, rank)
+        else:
+            print 'Error: the population has only', self.size, 'neurons.'
+            return None
+            
 

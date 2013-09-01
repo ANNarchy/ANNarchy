@@ -132,11 +132,15 @@ class Population(object):
                     continue
     
                 if value['type'] == 'variable':
-                    access += 'void set'+value['name'].capitalize()+'(std::vector<DATA_TYPE> '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
-                    access += 'std::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
+                    # Array access
+                    access += '    void set'+value['name'].capitalize()+'(std::vector<DATA_TYPE> '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
+                    access += '    std::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
+                    # Individual access
+                    access += '    void setSingle'+value['name'].capitalize()+'(int rank, DATA_TYPE '+value['name']+') { this->'+value['name']+'_[rank] = '+value['name']+'; }\n\n'
+                    access += '    DATA_TYPE getSingle'+value['name'].capitalize()+'(int rank) { return this->'+value['name']+'_[rank]; }\n\n'
                 else:
-                    access += 'void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
-                    access += 'DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
+                    access += '    void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
+                    access += '    DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
     
             return access
     
@@ -315,6 +319,8 @@ void %(class)s::metaStep() {
                 if value['type'] == 'variable':
                     code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
                     code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
+                    code += '        float getSingle'+value['name'].capitalize()+'(int rank)\n\n'
+                    code += '        void setSingle'+value['name'].capitalize()+'(int rank, float values)\n\n'
                 else:
                     code += '        float get'+value['name'].capitalize()+'()\n\n'
                     code += '        void set'+value['name'].capitalize()+'(float value)\n\n'
@@ -345,7 +351,11 @@ void %(class)s::metaStep() {
                     code += '                    self.cInstance.set'+value['name'].capitalize()+'(value.reshape(self.size))\n'
 
                     code += '            else:\n'
-                    code += '                self.cInstance.set'+value['name'].capitalize()+'(np.ones(self.size)*value)\n\n'    
+                    code += '                self.cInstance.set'+value['name'].capitalize()+'(np.ones(self.size)*value)\n\n'  
+                    code += '    def _get_single_'+ value['name'] + '(self, rank):\n'   
+                    code += '        return self.cInstance.getSingle'+value['name'].capitalize()+'(rank)\n\n'  
+                    code += '    def _set_single_'+ value['name'] + '(self, rank, value):\n'   
+                    code += '        self.cInstance.setSingle'+value['name'].capitalize()+'(rank, value)\n\n' 
                 else:
                     code += '        def __get__(self):\n'
                     code += '            return self.cInstance.get'+value['name'].capitalize()+'()\n\n'
