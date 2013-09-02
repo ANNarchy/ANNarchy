@@ -312,7 +312,8 @@ class Population(Descriptor):
             
             
     def __getslice__(self, *args):
-        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."
+        " Returns a list of neurons according to a slice of ranks or coordinates."
+        print args
         res=[]
         for i in range(args[0], min(args[1], self.size)):
             res.append( self.neuron(i) )

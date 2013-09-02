@@ -66,3 +66,13 @@ class IndividualNeuron(object):
         elif name in self.pop.parameters:
             print 'Warning: parameters are population-wide, this will affect all other neurons.'
             self.pop.__setattr__(name, val)
+            
+    def __repr__(self):
+        desc = 'Neuron of the population ' + self.pop.name + ' with rank ' + str(self.rank) + ' (coordinates ' + str(self.pop.coordinates_from_rank(self.rank)) + ').\n'
+        desc += 'Parameters:\n'
+        for param in self.pop.parameters:
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param))
+        desc += '\nVariables:\n'
+        for param in self.pop.variables:
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param))
+        return desc
