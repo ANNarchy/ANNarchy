@@ -33,7 +33,7 @@ class Population(Descriptor):
         else:
             self.pop_geometry = geometry
             
-        self.neuron = neuron
+        self.neuron_type = neuron
         self.id = len(Global._populations)
         if name:
             self.name = name
@@ -268,15 +268,7 @@ class Population(Descriptor):
         elif self.dimension == 3:
             return vec.reshape(self.depth, self.height, self.width)
             
-    def __getitem__(self, *args):
-        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."
-        coords, = args
-        if isinstance(coords, tuple):
-            return self.get_neuron(*coords)
-        else:
-            return self.get_neuron(coords)
-            
-    def get_neuron(self, width, height=-1, depth=-1):  
+    def neuron(self, width, height=-1, depth=-1):  
         " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."  
     
         # Transform arguments
@@ -292,5 +284,42 @@ class Population(Descriptor):
         else:
             print 'Error: the population has only', self.size, 'neurons.'
             return None
+          
+    def neurons(self):
+        """ Returns iteratively each neuron in the population.
+        
+        For instance, if you want to iterate over all neurons of a population:
+        
+            >>> for neur in pop.neurons():
+            ...     print neur.rate
             
+        Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:
+        
+            >>> for neur in pop:
+            ...     print neur.rate               
+        """
+        for n in range(self.size):
+            yield self.neuron(n)
+            
+    # Iterators
+    def __getitem__(self, *args):
+        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."
+        coords, = args
+        if isinstance(coords, tuple):
+            return self.neuron(*coords)
+        else:
+            return self.neuron(coords)
+            
+            
+    def __getslice__(self, *args):
+        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."
+        res=[]
+        for i in range(args[0], min(args[1], self.size)):
+            res.append( self.neuron(i) )
+        return res
+            
+    def __iter__(self):
+        " Returns iteratively each neuron in the population."
+        for n in range(self.size):
+            yield self.neuron(n)  
 

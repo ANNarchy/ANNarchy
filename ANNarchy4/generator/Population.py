@@ -37,7 +37,7 @@ class Population(object):
         
         print "\tGenerate "+self.class_name+" files for "+ self.population.name
         
-        self.neuron_variables = self.population.neuron.variables
+        self.neuron_variables = self.population.neuron_type.variables
 
         #
         #   replace all RandomDistribution by rand variables with continous
@@ -295,7 +295,7 @@ void %(class)s::metaStep() {
         'construct': constructor(self.parsed_neuron), 
         'metaStep': meta_step(self.parsed_neuron,
                               self.rand_objects,
-                              self.population.neuron.order
+                              self.population.neuron_type.order
                               ) 
     } 
 

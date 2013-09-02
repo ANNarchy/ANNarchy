@@ -46,6 +46,9 @@ class IndividualNeuron(object):
     def __init__(self, pop, rank):
         self.__dict__['pop']  = pop
         self.__dict__['rank']  = rank
+        self.__dict__['__members__'] = pop.parameters + pop.variables
+        self.__dict__['__methods__'] = []
+        
     def __getattr__(self, name):
         if name in self.pop.variables:
             return eval('self.pop.cyInstance._get_single_'+name+'(self.rank)')
@@ -53,7 +56,8 @@ class IndividualNeuron(object):
             return self.pop.__getattribute__(name)
         print 'Error: population has no attribute called', name
         print 'Parameters:', self.pop.parameters
-        print 'Variables:', self.pop.variables                
+        print 'Variables:', self.pop.variables 
+                       
     def __setattr__(self, name, val):
         if hasattr(getattr(self.__class__, name, None), '__set__'):
             return object.__setattr__(self, name, val)
