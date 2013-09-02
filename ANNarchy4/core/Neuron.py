@@ -71,8 +71,8 @@ class IndividualNeuron(object):
         desc = 'Neuron of the population ' + self.pop.name + ' with rank ' + str(self.rank) + ' (coordinates ' + str(self.pop.coordinates_from_rank(self.rank)) + ').\n'
         desc += 'Parameters:\n'
         for param in self.pop.parameters:
-            desc += '  ' + param + ' = ' + str(self.__getattr__(param))
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + ';'
         desc += '\nVariables:\n'
         for param in self.pop.variables:
-            desc += '  ' + param + ' = ' + str(self.__getattr__(param))
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + ';'
         return desc
