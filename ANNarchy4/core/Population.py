@@ -3,7 +3,7 @@ Population.py
 """
 import Global 
 from ANNarchy4 import generator
-from ANNarchy4.core.Variable import Descriptor
+from ANNarchy4.core.Variable import Descriptor, ViewAttribute
 
 import traceback
 import numpy as np
@@ -267,3 +267,63 @@ class Population(Descriptor):
         elif self.dimension == 3:
             return vec.reshape(self.depth, self.height, self.width)
 
+class PopulationView(Descriptor):
+    
+    def __init__(self, parent, selector):
+        """
+        Create a view of a subset of neurons within a parent Population.
+        
+        Parameter:
+        
+            * *parent*: population object
+            * *selector: numpy mask array, contain all ranks of selected neurons.
+        """
+        self.parent = parent
+        self._ranks = selector
+        
+        for var in self.parent.variables + self.parent.parameters:
+            exec("self."+var+"= ViewAttribute('"+var+"', self._ranks)")
+        
+        
+    def get(self, value):
+        """
+        Get current variable/parameter value
+        
+        Parameter:
+        
+            * *value*: value name as string
+        """
+        if value in self.parent.variables:
+            all_val = eval('self.parent.'+value) #directly access the one-dimensional array
+            return all_val[self._ranks] 
+        elif value in self.parent.parameters:
+            return self.parent.get_parameter(value)
+        else:
+            print "Error: population does not contain value: '"+value+"'"
+        
+    def set( self, value ):
+        """
+        update neuron variable/parameter definition
+        
+        Parameter:
+        
+            * *value*: value need to be update
+            
+                .. code-block:: python
+                
+                    set( 'tau' : 20, 'rate'= np.random.rand((8,8)) } )
+        """
+        for val_key in value.keys():
+            if hasattr(self.parent, val_key):
+                val = eval('self.parent.'+val_key)
+                if isinstance(value[val_key], int) or isinstance(value[val_key], float): # one for all
+                    val[self._ranks[:]] = value[val_key]
+                elif self._ranks.size == value[val_key].size: # distinct
+                    val[self._ranks[:]] = value[val_key][:]
+                else:
+                    print 'Error: mismatch between amount of neurons in population view and given data.'
+                    return
+                
+                exec('self.parent.'+val_key+'= val')
+            else:
+                print "Error: population does not contain value: '"+val_key+"'"

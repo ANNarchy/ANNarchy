@@ -83,3 +83,35 @@ class Attribute(object):
 
     def __delete__(self, instance):
         exec('del(instance.cyInstance.'+self.variable+')')
+
+class ViewAttribute(object):
+    """
+    Descriptor object, needed to extend PopulationViews 
+    with new variables
+    """
+    def __init__(self, variable, ranks):
+        """
+        Initialise Attribute object.
+        
+        * *variable*: variable name as string
+        * *ranks*: participation neurons
+        """
+        self._variable = variable
+        self._ranks = ranks
+        
+    def __get__(self, instance):
+        if self._variable in instance.parent.variables:
+            return eval('instance.parent.cyInstance.' + self._variable+'[self._ranks]')
+        else:
+            return eval('instance.parent.cyInstance.' + self._variable)
+        
+    def __set__(self, instance, value):
+        if self._variable in instance.parent.variables:
+            val = eval('instance.parent.cyInstance.'+self._variable)
+            val[self._ranks[:]] = value[:]
+            exec('instance.parent.cyInstance.'+self._variable+' = val')
+        else:
+            exec('instance.parent.cyInstance.'+self._variable+' = value')
+            
+    def __delete__(self, instance):
+        exec('del(instance.parent.cyInstance.'+self._variable+')')
