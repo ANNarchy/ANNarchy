@@ -254,10 +254,14 @@ class Population(Descriptor):
         if isinstance(indices, int): # a single neuron
             return self.neuron(indices)
         elif isinstance(indices, slice): # a slice of ranks
+            start, stop, step = indices.start, indices.stop, indices.step
+            if indices.start is None:
+                start=0
+            if indices.stop is None:
+                stop=self.size
             if indices.step is None:
-                rk_range = list(range(indices.start, indices.stop))
-            else:
-                rk_range = list(range(indices.start, indices.stop, indices.step))
+                step=1
+            rk_range = list(range(start, stop, step))
             return PopulationView(self, rk_range)
         elif isinstance(indices, tuple): # a tuple
             slices = False
@@ -269,14 +273,19 @@ class Population(Descriptor):
             else: # Compute a list of ranks from the slices 
                 coords=[]
                 # Expand the slices
-                for idx in indices:
+                for rk in range(len(indices)):
+                    idx = indices[rk]
                     if isinstance(idx, int): # no slice
-                        coords.append(idx)
+                        coords.append([idx])
                     elif isinstance(idx, slice): # slice
+                        start, stop, step = idx.start, idx.stop, idx.step
+                        if idx.start is None:
+                            start=0
+                        if idx.stop is None:
+                            stop=self.geometry[rk]
                         if idx.step is None:
-                            rk_range = list(range(idx.start, idx.stop))
-                        else:
-                            rk_range = list(range(idx.start, idx.stop, idx.step))
+                            step=1
+                        rk_range = list(range(start, stop, step))
                         coords.append(rk_range)
                 # Generate all ranks from the indices
                 if self.dimension ==2:

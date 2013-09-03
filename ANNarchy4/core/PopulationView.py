@@ -62,6 +62,14 @@ class PopulationView(Descriptor):
                 print "Error: population does not contain value: '"+val_key+"'"
                 return
                 
+    def __add__(self, other):
+        """Allows to join two PopulationViews if they have the same population."""
+        if other.population == self.population:
+            return PopulationView(self.population, list(set(self.ranks + other.ranks)))
+        else:
+            print 'Error: can only add two PopulationViews of the same population.'
+            return None
+                
     def __repr__(self):
         """Defines the printing behaviour."""
         string ="PopulationView of " + str(self.population.name) + '\n'
