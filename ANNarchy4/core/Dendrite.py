@@ -58,7 +58,7 @@ class Dendrite(Descriptor):
             if hasattr(self, val_key):
                 exec('self.' + val_key +' = value[val_key]')
             else:
-                print "Error: population does not contain value: '"+val_key+"'"    
+                print "Error: dendrite does not contain value: '"+val_key+"'"    
                 
     def get(self, value):
         """
@@ -73,14 +73,14 @@ class Dendrite(Descriptor):
         elif value in self.parameters:
             return self.get_parameter(value)
         else:
-            print "Error: population does not contain value: '"+value+"'"     
+            print "Error: dendrite does not contain value: '"+value+"'"     
                
     @property
     def variables(self):
         """
         Returns a list of all variable names.
         """
-        ret_var=[] 
+        ret_var = Global._pre_def_synapse_var
         
         for var in self.proj._parsed_variables():
             if not var['type'] == 'parameter':
@@ -93,7 +93,7 @@ class Dendrite(Descriptor):
         """
         Returns a list of all parameter names.
         """
-        ret_par=[] 
+        ret_par = Global._pre_def_synapse_par 
         
         for var in self.proj._parsed_variables():
             if var['type'] == 'parameter':

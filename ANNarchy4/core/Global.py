@@ -7,7 +7,11 @@ _projections = []       # created projections
 
 # predefined variables / parameters
 _pre_def_synapse = ['dt', 'tau', 'value', 'rank', 'delay', 'psp']
+_pre_def_synapse_var = ['value', 'rank', 'delay']
+_pre_def_synapse_par = ['dt', 'tau']
+
 _pre_def_neuron = ['dt', 'tau', 'rank', 'rate']
+
 
 # path to annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
