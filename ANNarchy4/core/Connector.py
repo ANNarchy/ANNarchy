@@ -33,7 +33,7 @@ class Connector(object):
         import ANNarchyCython
         self.cyInstance = eval('ANNarchyCython.'+self.conn_type+'(proj_type)')
 
-        print 'ANNarchyCython.'+self.conn_type+'(proj_type)'
+        print '\tinstantiate ANNarchyCython.'+self.conn_type+'(proj_type)'
         
     def cpp_call(self):
         """

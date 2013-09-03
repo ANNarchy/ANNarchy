@@ -240,7 +240,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     
     #
     # create ANNarchyCore.so and py extensions
-    print 'Start compilation ...'
+    print '\nStart compilation ...\n'
     os.chdir(Global.annarchy_dir)
     
     if sys.platform.startswith('linux'):
@@ -256,6 +256,12 @@ def compile(cpp_stand_alone=False, debug_build=False):
             proc.wait()
         
         os.chdir('..')
+
+        try:
+            import ANNarchyCython
+            print '\tANNarchyCython library created.\n'
+        except:
+            print 'Error: ANNarchyCython library could not created.'
 
         if not cpp_stand_alone:
 
