@@ -125,11 +125,7 @@ class Dendrite(Descriptor):
         """
         if hasattr(self, variable):
             var = eval('self.'+variable)
-
-            m = np.zeros(self.pre.width * self.pre.height)
-            m[self.rank[:]] = var[:]
-
-            return self._reshape_vector(m)
+            return var.reshape(self.pre.geometry)
         else:
             print 'Error: variable',variable,'does not exist in this dendrite.'
             print traceback.print_stack()

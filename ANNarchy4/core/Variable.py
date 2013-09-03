@@ -1,3 +1,5 @@
+import numpy as np
+
 class Variable(object):
     """
     Variable representation in ANNarchy.
@@ -76,13 +78,17 @@ class Attribute(object):
         self.variable = variable
         
     def __get__(self, instance):
-        return eval('instance.cyInstance.' + self.variable)
+        val = getattr(instance.cyInstance, self.variable)
+        if isinstance(val, np.ndarray):
+            return val.reshape(instance.geometry)
+        else:
+            return val
         
     def __set__(self, instance, value):
-        exec('instance.cyInstance.'+self.variable+' = value')
+        setattr(instance.cyInstance, self.variable, value)
 
     def __delete__(self, instance):
-        exec('del(instance.cyInstance.'+self.variable+')')
+        pass
 
 class ViewAttribute(object):
     """
@@ -100,18 +106,17 @@ class ViewAttribute(object):
         self._ranks = ranks
         
     def __get__(self, instance):
-        if self._variable in instance.parent.variables:
-            return eval('instance.parent.cyInstance.' + self._variable+'[self._ranks]')
+        if self._variable in instance.population.variables:
+            return getattr(instance.population.cyInstance, self._variable)[self._ranks]
         else:
-            return eval('instance.parent.cyInstance.' + self._variable)
+            return None
         
     def __set__(self, instance, value):
-        if self._variable in instance.parent.variables:
-            val = eval('instance.parent.cyInstance.'+self._variable)
-            val[self._ranks[:]] = value[:]
-            exec('instance.parent.cyInstance.'+self._variable+' = val')
+        if self._variable in instance.population.variables:
+            instance.set({self._variable: value})
         else:
-            exec('instance.parent.cyInstance.'+self._variable+' = value')
+            print 'Error: the variable', self._variable, 'does not exist in population', instance.population.name+'.'
+            print instance.population.variables
             
     def __delete__(self, instance):
-        exec('del(instance.parent.cyInstance.'+self._variable+')')
+        pass

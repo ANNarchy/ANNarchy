@@ -96,22 +96,22 @@ class Projection(object):
             self._post_ranks.append(tmp[i].post_rank)
 
     def gather_data(self, variable):
-        blank_col=np.zeros((self.pre.height, 1))
-        blank_row=np.zeros((1,self.post.width*self.pre.width+self.post.width +1))
+        blank_col=np.zeros((self.pre.geometry[1], 1))
+        blank_row=np.zeros((1,self.post.geometry[0]*self.pre.geometry[0]+self.post.geometry[0] +1))
         
         m_ges = None
         i=0
         
-        for y in xrange(self.post.height):
+        for y in xrange(self.post.geometry[1]):
             m_row = None
             
-            for x in xrange(self.post.width):
+            for x in xrange(self.post.geometry[0]):
                 m = self._dendrites[i].get_variable(variable)
                 
                 if m_row == None:
-                    m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.height, self.pre.width) ], axis = 1 )
+                    m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
                 else:
-                    m_row = np.ma.concatenate( [ m_row, m.reshape(self.pre.height, self.pre.width) ], axis = 1 )
+                    m_row = np.ma.concatenate( [ m_row, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
                 m_row = np.ma.concatenate( [ m_row , blank_col], axis = 1 )
                 
                 i += 1

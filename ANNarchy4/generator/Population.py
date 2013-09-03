@@ -49,13 +49,9 @@ class Population(object):
     def generate(self):
         """
         main function of population generator class.
-        """
-        
-        print "\tGenerate "+self.class_name+" files for "+ self.population.name
-        
+        """        
         self.neuron_variables = self.population.neuron_type.variables
 
-        #
         #   replace all RandomDistribution by rand variables with continous
         #   numbers and stores the corresponding call as local variable
         i = 0
@@ -93,7 +89,6 @@ class Population(object):
                             self.rand_objects.append(part)
                         i += 1
 
-        #
         #   parse neuron
         self.neuron_parser = parser.NeuronAnalyser(
             self.neuron_variables, 
@@ -103,8 +98,7 @@ class Population(object):
         
         for g_op in global_operations['post']:
             self._add_global_oparation(g_op)
-        
-        #
+
         #   generate files
         with open(self.header, mode = 'w') as w_file:
             w_file.write(self.generate_header())

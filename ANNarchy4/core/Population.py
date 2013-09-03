@@ -5,6 +5,7 @@ import Global
 import Neuron
 from ANNarchy4 import generator
 from ANNarchy4.core.Variable import Descriptor, ViewAttribute
+from ANNarchy4.core.PopulationView import PopulationView
 
 import traceback
 import numpy as np
@@ -26,12 +27,11 @@ class Population(Descriptor):
         * *debug*: print some debug information to standard out ( by default *False* )
         """
         self.debug = debug
-        if len(geometry) == 1:
-            self.pop_geometry = (geometry[0],1,1)
-        elif len(geometry) == 2:
-            self.pop_geometry = (geometry[0],geometry[1],1)
-        else:
-            self.pop_geometry = geometry
+        
+        if isinstance(geometry, int): # 1D
+            self.geometry = (geometry, )
+        else: # a tuple is given
+            self.geometry = geometry
             
         self.neuron_type = neuron
         self.id = len(Global._populations)
@@ -82,51 +82,22 @@ class Population(Descriptor):
         Number of neurons in the population.
         """
         size = 1
-
-        for i in xrange(len(self.pop_geometry)):
-            size *= self.pop_geometry[i]
-
+        for i in xrange(len(self.geometry)):
+            size *= self.geometry[i]
         return size
-
-    @property
-    def width(self):
+        
+    def __len__(self):
         """
-        Width of the population.
+        Number of neurons in the population.
         """
-        return self.pop_geometry[0]
-
-    @property
-    def height(self):
-        """
-        Height of the population.
-        """
-        return self.pop_geometry[1]    
-
-    @property
-    def depth(self):
-        """
-        Depth of the population.
-        """        
-        return self.pop_geometry[2]
-
-    @property
-    def geometry(self):
-        """
-        Geometry of the population as tuple (w, h, d).
-        """
-        return self.pop_geometry
+        return self.size
 
     @property
     def dimension(self):
         """
         Dimension of the population (1, 2 or 3)
         """
-        if self.depth != 1:
-            return 3
-        if self.height != 1:
-            return 2
-        else: 
-            return 1
+        return len(self.geometry)
         
     def get_variable(self, variable):
         """
@@ -159,76 +130,49 @@ class Population(Descriptor):
             print 'Error: parameter',parameter,'does not exist in this population.'
             print traceback.print_stack()
     
-    def rank_from_coordinates(self, coord ):
+    def rank_from_coordinates(self, coord):
         """
-        Returns rank corresponding to (w, h, d) coordinates.
+        Returns rank corresponding to the given coordinates.
         
         Parameter:
         
-            * *coord*: coordinate tuple, can be either one-, two- or threedimensional.
+            * *coord*: coordinate tuple, can be multidimensional.
         """
-        if isinstance(coord, int):
-            return coord
-        elif isinstance(coord, tuple):
-            if len(coord) == 2:
-                return coord[1] * self.width + coord[0]
-            elif len(coord) == 3:
-                return coord[2]*self.width*self.height + coord[1] * self.width + coord[0]
-        else:
-            print 'rank_from_coordinates: int or tuple expected.'
+        # Check the coordinates
+        if not len(coord) == self.dimension:
+            print 'Error when accessing neuron', str(coord), ': the population', self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
+            return None
+        for d in range(len(coord)):
+            if not coord[d] < self.geometry[d]:
+                print 'Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
+                return None
+        # Return the rank
+        return np.ravel_multi_index( coord, self.geometry)
 
     def coordinates_from_rank(self, rank):
         """
         Returns a tuple (w, h, d) represents the spatial coordinates corresponding to rank.
         """
-        coord = [0, 0, 0]
-
-        if(self.depth==1):
-            if(self.height==1):
-                coord[0] = rank
-            else:
-                coord[1] = rank / self.width
-                coord[0] = rank - coord[1]*self.height
-        else:
-            coord[2] = rank / ( self.width * self.height )
-
-            plane_rank = rank - coord[2] * ( self.width * self.height )
-            coord[1] = plane_rank / self.width
-            coord[0] = plane_rank - coord[1]*self.height
-
+        # Check the rank
+        if not rank < self.size:
+            print 'Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.'
+            return None
+        coord = np.unravel_index(rank, self.geometry)
         return coord
 
-    def normalized_coordinates_from_rank(self, rank, norm=1):
+    def normalized_coordinates_from_rank(self, rank, norm=1.):
         """
-        Returns (w, h, d) coordinates normalized to norm corresponding to rank.
+        Returns a tuple of coordinates (w, h, d) corresponding to the rank, normalized between 0.0 and norm.
         """
         
-        coord = [0, 0, 0]
-
-        if(self.depth==1):
-            if(self.height==1):
-                coord[0] = rank/(self.size()-norm)
-            else:
-                w = rank / self.width
-                h = rank - coord[1]*self.height
-                coord[0] = w / (self.width-norm)
-                coord[1] = h / (self.height-norm)
-        else:
-            d = rank / ( self.width * self.height )
-            #coord in plane
-            pRank = rank - coord[2] * ( self.width * self.height )
-            h = pRank / self.width
-            w = pRank - coord[1]*self.height
-
-            coord[0] = w / (self.width-norm)
-            coord[1] = h / (self.height-norm)
-            coord[2] = d / (self.depth-norm)
-
+        coord = self.coordinates_from_rank(rank)
+        for dim in self.dimension:
+            coord[dim] = norm * float(coord[dim])/float(self.geometry[dim]-1)
         return coord
 
-    def set( self, value ):
+    def set(self, value):
         """
-        update neuron variable/parameter definition
+        Sets neuron variable/parameter values.
         
         Parameter:
         
@@ -240,13 +184,13 @@ class Population(Descriptor):
         """
         for val_key in value.keys():
             if hasattr(self, val_key):
-                exec('self.' + val_key +' = value[val_key]')
+                setattr(self, val_key, value[val_key])
             else:
                 print "Error: population does not contain value: '"+val_key+"'"
         
     def get(self, value):
         """
-        Get current variable/parameter value
+        Gets current variable/parameter values.
         
         Parameter:
         
@@ -263,31 +207,24 @@ class Population(Descriptor):
         """
         Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
         """
-        vec = np.array(vector) # if list transform to vec
-        
-        if self.dimension == 1:
-            return vec
-        elif self.dimension == 2:
-            return vec.reshape(self.height, self.width)
-        elif self.dimension == 3:
-            return vec.reshape(self.depth, self.height, self.width)
+        return np.array(vector).reshape(self.geometry)
             
-    def neuron(self, width, height=-1, depth=-1):  
-        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."  
+    def neuron(self, coord):  
+        " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  
     
         # Transform arguments
-        if height==-1 and depth==-1:
-            rank = width
-        elif depth==-1:
-            rank = self.rank_from_coordinates( (width, height) )
-        else:
-            rank = self.rank_from_coordinates( (width, height, depth) )
+        if isinstance(coord, int):
+            rank = coord
+            if not rank < self.size:
+                print 'Error when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
+                return None
+        else: # a tuple
+            rank = self.rank_from_coordinates( coord )
+            if rank == None:
+                return None
         # Return corresponding neuron
-        if rank < self.size:
-            return Neuron.IndividualNeuron(self, rank)
-        else:
-            print 'Error: the population has only', self.size, 'neurons.'
-            return None
+        return Neuron.IndividualNeuron(self, rank)
+        
           
     def neurons(self):
         """ Returns iteratively each neuron in the population.
@@ -306,85 +243,54 @@ class Population(Descriptor):
             yield self.neuron(n)
             
     # Iterators
-    def __getitem__(self, *args):
-        " Returns neuron of coordinates (width, height, depth) in the population. If only one argument is given, it is a rank."
-        coords, = args
-        if isinstance(coords, tuple):
-            return self.neuron(*coords)
-        else:
-            return self.neuron(coords)
-            
-            
-    def __getslice__(self, *args):
-        " Returns a list of neurons according to a slice of ranks or coordinates."
-        print args
-        res=[]
-        for i in range(args[0], min(args[1], self.size)):
-            res.append( self.neuron(i) )
-        return res
-            
+    def __getitem__(self, *args, **kwds):
+        """ Returns neuron of coordinates (width, height, depth) in the population. 
+        
+        If only one argument is given, it is a rank. 
+        
+        If slices are given, it returns a PopulationView object.
+        """
+        indices =  args[0]
+        if isinstance(indices, int): # a single neuron
+            return self.neuron(indices)
+        elif isinstance(indices, slice): # a slice of ranks
+            if indices.step is None:
+                rk_range = list(range(indices.start, indices.stop))
+            else:
+                rk_range = list(range(indices.start, indices.stop, indices.step))
+            return PopulationView(self, rk_range)
+        elif isinstance(indices, tuple): # a tuple
+            slices = False
+            for idx in indices: # check if there are slices in the coordinates
+                if isinstance(idx, slice): # there is at least one
+                    slices = True
+            if not slices: # return one neuron
+                return self.neuron(indices)
+            else: # Compute a list of ranks from the slices 
+                coords=[]
+                # Expand the slices
+                for idx in indices:
+                    if isinstance(idx, int): # no slice
+                        coords.append(idx)
+                    elif isinstance(idx, slice): # slice
+                        if idx.step is None:
+                            rk_range = list(range(idx.start, idx.stop))
+                        else:
+                            rk_range = list(range(idx.start, idx.stop, idx.step))
+                        coords.append(rk_range)
+                # Generate all ranks from the indices
+                if self.dimension ==2:
+                    ranks = [self.rank_from_coordinates((x, y)) for x in coords[0] for y in coords[1]]
+                elif self.dimension == 3:
+                    ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for y in coords[2]]
+                if not max(ranks) < self.size:
+                    print 'Error: indices do not match the geometry of the population', str(self.geometry)
+                    return 
+                return PopulationView(self, ranks)
+                
     def __iter__(self):
-        " Returns iteratively each neuron in the population."
+        " Returns iteratively each neuron in the population in ascending rank order."
         for n in range(self.size):
             yield self.neuron(n)  
 
-class PopulationView(Descriptor):
-    
-    def __init__(self, parent, selector):
-        """
-        Create a view of a subset of neurons within a parent Population.
-        
-        Parameter:
-        
-            * *parent*: population object
-            * *selector: numpy mask array, contain all ranks of selected neurons.
-        """
-        self.parent = parent
-        self._ranks = selector
-        
-        for var in self.parent.variables + self.parent.parameters:
-            exec("self."+var+"= ViewAttribute('"+var+"', self._ranks)")
-        
-        
-    def get(self, value):
-        """
-        Get current variable/parameter value
-        
-        Parameter:
-        
-            * *value*: value name as string
-        """
-        if value in self.parent.variables:
-            all_val = eval('self.parent.'+value) #directly access the one-dimensional array
-            return all_val[self._ranks] 
-        elif value in self.parent.parameters:
-            return self.parent.get_parameter(value)
-        else:
-            print "Error: population does not contain value: '"+value+"'"
-        
-    def set( self, value ):
-        """
-        update neuron variable/parameter definition
-        
-        Parameter:
-        
-            * *value*: value need to be update
-            
-                .. code-block:: python
-                
-                    set( 'tau' : 20, 'rate'= np.random.rand((8,8)) } )
-        """
-        for val_key in value.keys():
-            if hasattr(self.parent, val_key):
-                val = eval('self.parent.'+val_key)
-                if isinstance(value[val_key], int) or isinstance(value[val_key], float): # one for all
-                    val[self._ranks[:]] = value[val_key]
-                elif self._ranks.size == value[val_key].size: # distinct
-                    val[self._ranks[:]] = value[val_key][:]
-                else:
-                    print 'Error: mismatch between amount of neurons in population view and given data.'
-                    return
-                
-                exec('self.parent.'+val_key+'= val')
-            else:
-                print "Error: population does not contain value: '"+val_key+"'"
+

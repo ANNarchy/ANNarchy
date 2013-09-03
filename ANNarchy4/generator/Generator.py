@@ -184,7 +184,6 @@ def code_generation(cpp_stand_alone):
     
     After this the ANNarchy main header is expanded by the corresponding headers.
     """
-    print '\nGenerate files\n'
     for pop in Global._populations:
         pop.generator.generate()
 
@@ -217,7 +216,7 @@ def _update_global_operations():
     
 def compile(cpp_stand_alone=False, debug_build=False):
     """
-    compilation consists roughly of 3 steps:
+    The compilation procedure consists roughly of 3 steps:
     
         a) generate user defined classes and cython wrapper
         b) compile ANNarchyCore
@@ -225,7 +224,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         
     after this the cythonized objects are instantiated and available for the user. 
     
-    Parameter:
+    Parameters:
     
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
@@ -240,7 +239,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     
     #
     # create ANNarchyCore.so and py extensions
-    print '\nStart compilation ...\n'
+    print 'Compiling...',
     os.chdir(Global.annarchy_dir)
     
     if sys.platform.startswith('linux'):
@@ -259,9 +258,8 @@ def compile(cpp_stand_alone=False, debug_build=False):
 
         try:
             import ANNarchyCython
-            print '\tANNarchyCython library created.\n'
         except:
-            print 'Error: ANNarchyCython library could not created.'
+            print 'Error: ANNarchyCython library could not be created.'
 
         if not cpp_stand_alone:
 
@@ -305,7 +303,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         # TODO: 
         # implement multiple compilation modes
         # complete reimplement !!!!!
-        print 'compilation under windows currently not supported'
+        print 'Compilation under windows currently not supported'
         exit(0)
         
         #proc = subprocess.Popen(['compile.bat'], shell=True)
@@ -340,5 +338,5 @@ def compile(cpp_stand_alone=False, debug_build=False):
             #abort the application after compile ANNarchyCPP
         #    exit(0)
         
-    print '\nCompilation process done.\n'
+    print ' OK.'
     

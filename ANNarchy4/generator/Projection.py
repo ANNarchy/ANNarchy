@@ -238,9 +238,7 @@ class Projection(object):
                     
             return access
 
-        #
         # generate func body            
-        print "\tGenerate "+self.name+" files for synapse"
 
         header = '''#ifndef __%(name)s_H__
 #define __%(name)s_H__
