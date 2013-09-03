@@ -396,7 +396,11 @@ class GlobalFunction(Node):
     def cpp(self):
         if self.child != None:
             # TODO: save which variables are called. neuron?
-            return ' ' + self.pop + '_population_->get' + self.value.capitalize() + self.variable.capitalize() + '() '  
+            if isinstance(self.machine.analyser, Analyser.NeuronAnalyser):
+                return ' get' + self.value.capitalize() + self.variable.capitalize() + '()'
+            else:
+                return ' ' + self.pop + '_population_->get' + self.value.capitalize() + self.variable.capitalize() + '() '
+            
         return str(self.value)+'()'
         
     def latex(self):

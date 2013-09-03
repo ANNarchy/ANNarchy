@@ -1,9 +1,6 @@
 import os
 from datetime import datetime
 
-# objects
-_synapses = []          # synapse definitions
-
 # instances
 _populations = []       # created populations
 _projections = []       # created projections

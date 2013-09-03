@@ -2,7 +2,6 @@ from Master import Master
 import Global
 
 from ANNarchy4 import parser
-from ANNarchy4 import generator
 
 class Synapse(Master):
     """
@@ -38,10 +37,3 @@ class Synapse(Master):
 
         self.parser = parser.SynapseAnalyser(self.variables)
         self.parsed_variables, self.global_operations = self.parser.parse()
-        
-        # that the type_id will begin with 1 is correct, 
-        # as we want to reserve type 0 for standard synapse
-        Global._synapses.append(self)
-        self.type_id = len(Global._synapses) 
-        
-        self.generator = generator.Projection(self)

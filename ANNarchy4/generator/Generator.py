@@ -18,8 +18,8 @@ def create_includes():
         pop_header += '#include "'+pop.generator.class_name+'.h"\n'
 
     proj_header = ''
-    for synapse in Global._synapses:
-        proj_header += '#include "'+ synapse.generator.proj_class['name'] +'.h"\n'
+    for proj in Global._projections:
+        proj_header += '#include "'+ proj.generator.proj_class['name'] +'.h"\n'
 
     header = """#ifndef __ANNARCHY_INCLUDES_H__
 #define __ANNARCHY_INCLUDES_H__
@@ -45,11 +45,11 @@ def update_annarchy_header(cpp_stand_alone):
         for a_line in r_file:
             if a_line.find('//AddProjection') != -1:
                 if(cpp_stand_alone):
-                    for proj in Global.projections_:
+                    for proj in Global._projections:
                         code += proj.generator.generate_cpp_add()
             elif a_line.find('//AddPopulation') != -1:
                 if(cpp_stand_alone):
-                    for pop in Global.populations_:
+                    for pop in Global._populations:
                         code += pop.generator.generate_cpp_add()
                         
             elif a_line.find('//createProjInstance') != -1:
@@ -70,17 +70,17 @@ def generate_proj_instance_class():
     """
     # single cases
     cases_ptr = ''
-    for synapse in Global._synapses:
+    for proj in Global._projections:
         cases_ptr += """
         case %(id)s:
             return new %(name)s(pre, post, postNeuronRank, target);
 
-""" % { 'id': synapse.generator.proj_class['ID'], 
-        'name': synapse.generator.proj_class['name']
+""" % { 'id': proj.generator.proj_class['ID'], 
+        'name': proj.generator.proj_class['name']
     }
 
     cases_id = ''
-    for synapse in Global._synapses:
+    for proj in Global._projections:
         cases_id += """
         case %(id)s:
         #ifdef _DEBUG
@@ -88,8 +88,8 @@ def generate_proj_instance_class():
         #endif
             return new %(name)s(preID, postID, postNeuronRank, target);
 
-""" % { 'id': synapse.generator.proj_class['ID'], 
-        'name': synapse.generator.proj_class['name']
+""" % { 'id': proj.generator.proj_class['ID'], 
+        'name': proj.generator.proj_class['name']
     }
 
     # complete code
@@ -99,22 +99,18 @@ public:
 
     Projection* getInstanceOf(int ID, Population *pre, Population *post, int postNeuronRank, int target) {
         switch(ID) {
-            case 0:
-                return new Projection(pre, post, postNeuronRank, target);
 %(case1)s
             default:
-                std::cout << "Unknown typeID" << std::endl;
+                std::cout << "Unknown typeID: "<< ID << std::endl;
                 return NULL;
         }
     }
 
     Projection* getInstanceOf(int ID, int preID, int postID, int postNeuronRank, int target) {
         switch(ID) {
-            case 0:
-                return new Projection(preID, postID, postNeuronRank, target);
 %(case2)s
             default:
-                std::cout << "Unknown typeID" << std::endl;
+                std::cout << "Unknown typeID: "<< ID << std::endl;
                 return NULL;
         }
     }
@@ -134,8 +130,8 @@ def generate_py_extension():
         pop_include += 'include \"'+pop.generator.class_name+'.pyx\"\n'
 
     proj_include = ''
-    for synapse in Global._synapses:
-        proj_include += 'include \"'+synapse.generator.proj_class['name']+'.pyx\"\n'
+    for proj in Global._projections:
+        proj_include += 'include \"'+proj.generator.proj_class['name']+'.pyx\"\n'
 
     code = """include "Network.pyx"
 include "Simulation.pyx"
@@ -194,8 +190,8 @@ def code_generation(cpp_stand_alone):
 
     #
     # create projection cpp class for each synapse
-    for synapse in Global._synapses:
-        synapse.generator.generate()
+    for projection in Global._projections:
+        projection.generator.generate()
 
     create_includes()
 
@@ -203,7 +199,21 @@ def code_generation(cpp_stand_alone):
 
     generate_py_extension()
     
-   
+def _update_global_operations():
+    
+    for proj in Global._projections:
+        proj_dict = proj.synapse.global_operations
+        
+        # only post-synaptic variables are generated in populations
+        for entry in proj_dict['pre']:
+            #print 'Add to', proj.pre.name,'the item', entry
+            proj.pre.generator._add_global_oparation(entry) 
+        
+        for entry in proj_dict['post']:
+            #print 'Add to', proj.post.name,'the item', entry
+            proj.post.generator._add_global_oparation(entry)
+            
+    
 def compile(cpp_stand_alone=False, debug_build=False):
     """
     compilation consists roughly of 3 steps:
@@ -222,6 +232,8 @@ def compile(cpp_stand_alone=False, debug_build=False):
     print Global.version, 'on', sys.platform, '(', os.name,')'
     
     folder_management()
+    
+    _update_global_operations()
     
     code_generation(cpp_stand_alone)
     

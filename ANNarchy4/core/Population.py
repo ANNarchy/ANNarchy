@@ -44,6 +44,10 @@ class Population(Descriptor):
         self.generator = generator.Population(self)
 
     @property
+    def cpp_class(self):
+        return self.generator.class_name
+    
+    @property
     def variables(self):
         """
         Returns a list of all variable names.

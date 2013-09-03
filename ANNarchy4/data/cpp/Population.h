@@ -13,6 +13,7 @@ public:
 	virtual void metaSum();
 	virtual void metaStep();
 	virtual void metaLearn();
+	virtual void globalOperations();
 
 	std::string getName() { return name_; }
 

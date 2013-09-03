@@ -57,6 +57,9 @@ void Network::run(int steps) {
 		for(int p=0; p<(int)populations_.size(); p++)
 			populations_[p]->metaStep();
 
+		for(int p=0; p<(int)populations_.size(); p++)
+			populations_[p]->globalOperations();
+
 		for(int p=0; p<(int)populations_.size(); p++) {
 			populations_[p]->metaLearn();
 		}

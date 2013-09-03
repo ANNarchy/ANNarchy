@@ -109,3 +109,7 @@ void Population::metaLearn() {
     }
 
 }
+
+void Population::globalOperations() {
+
+}

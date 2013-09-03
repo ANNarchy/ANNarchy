@@ -2,40 +2,34 @@
 Projection generator.
 """
 from ANNarchy4.core import Global
+from ANNarchy4 import parser
 
 class Projection(object):
     """
     Projection generator class.
     """
-    def __init__(self, synapse):
+    def __init__(self, projection, synapse):
         """
         Projection generator class constructor.
         """
         self.synapse = synapse
-        self.parsed_variables = []
-        
-        #
-        # for each synpase we create an own projection type
         if self.synapse:
-            name = 'Projection'+str(self.synapse.type_id)
-
-            self.h_file = Global.annarchy_dir+'/build/'+name+'.h'
-            self.cpp_file = Global.annarchy_dir+'/build/'+name+'.cpp'
-            self.pyx = Global.annarchy_dir+'/pyx/'+name+'.pyx'
-
-            self.proj_class = { 
-                'ID': self.synapse.type_id, 
-                'name': name 
-            }
-            
-            self.parsed_variables = self.synapse.parsed_variables
+            self.parsed_variables = synapse.parsed_variables
         else:
-            self.proj_class = { 
-                'ID': 0, 
-                'name': 'Projection' 
-            }
+            self.parsed_variables = []
             
+        self.projection = projection
+        self.name = projection.name
 
+        self.h_file = Global.annarchy_dir+'/build/'+self.name+'.h'
+        self.cpp_file = Global.annarchy_dir+'/build/'+self.name+'.cpp'
+        self.pyx = Global.annarchy_dir+'/pyx/'+self.name+'.pyx'
+
+        self.proj_class = { 
+            'ID': len(Global._projections), 
+            'name': self.name 
+        }
+        
     def generate_cpp_add(self):
         """
         In case of cpp_stand_alone compilation, this function generates
@@ -80,6 +74,8 @@ class Projection(object):
             create variable/parameter constructor entries.
             """
             code = ''
+            
+           
             for var in parsed_variables:
                 if var['name'] == 'psp':
                     continue
@@ -88,7 +84,15 @@ class Projection(object):
 
             code += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return code
+        
+        def init_val(parsed_variables):
+            code ="""
+            Projection::initValues(rank, value, delay);
             
+            pre_population_->setMaxDelay(maxDelay_);
+            """
+            return code
+        
         def compute_sum(parsed_variables):
             """
             update the weighted sum code.
@@ -104,15 +108,40 @@ class Projection(object):
                 if var['name'] == 'psp':
                     psp_code = var['cpp'].split('=')[1]
                     
-            if len(psp_code) > 0:
-                code = '''\tDATA_TYPE psp = 0.0;
-\tfor(int i=0; i<(int)value_.size();i++) {
-\t\tpsp += %(pspCode)s
-\t}
-\tsum_ = psp;''' % { 'pspCode': psp_code } 
-            else:
-                code = 'Projection::computeSum();'
+            if len(psp_code) == 0:
+                psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
 
+            code = """\tsum_ =0.0;
+    
+    if(delay_.empty())    // no delay
+    {
+        for(int i=0; i<(int)rank_.size(); i++) {
+            sum_ += %(psp)s
+        }
+    }
+    else    // delayed connections
+    {
+        if(constDelay_) // one delay for all connections
+        {
+            pre_rates_ = pre_population_->getRates(delay_[0]);
+
+            for(int i=0; i<(int)rank_.size(); i++) {
+                sum_ += %(psp_const_delay)s
+            }
+        }
+        else    // different delays [0..maxDelay]
+        {
+            std::vector<DATA_TYPE> delayedRates = pre_population_->getRates(delay_, rank_);
+
+            for(int i=0; i<(int)rank_.size(); i++) {
+                sum_ += %(psp_dyn_delay)s
+            }
+        }
+    }
+""" % { 'psp': psp_code, 
+        'psp_const_delay': psp_code,
+        'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
+       }
             return code
             
         def local_learn(parsed_variables):
@@ -120,7 +149,9 @@ class Projection(object):
             generate synapse update per pre neuron
             """
             loop = ''
-
+            if self.synapse == None:
+                return ''
+            
             if self.synapse.order == []:
                 for var in parsed_variables:
                     if var['name'] == 'psp':
@@ -165,6 +196,9 @@ class Projection(object):
             """
             
             code = ''
+            if self.synapse == None:
+                return code
+            
             for var in parsed_variables:
                 if var['name'] == 'psp':
                     continue
@@ -206,14 +240,13 @@ class Projection(object):
 
         #
         # generate func body            
-        
-        if self.synapse:
-            name = self.synapse.generator.proj_class['name']
+        print "\tGenerate "+self.name+" files for synapse"
 
-            header = '''#ifndef __%(name)s_H__
+        header = '''#ifndef __%(name)s_H__
 #define __%(name)s_H__
 
 #include "Global.h"
+#include "Includes.h"
 
 class %(name)s : public Projection {
 public:
@@ -222,6 +255,8 @@ public:
 %(name)s(int preID, int postID, int postRank, int target);
 
 ~%(name)s();
+
+class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
 
 void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
 
@@ -234,18 +269,41 @@ void localLearn();
 %(access)s
 private:
 %(synapseMember)s
+
+%(pre_type)s* pre_population_;
+%(post_type)s* post_population_;
 };
 #endif
-''' % { 'name': name, 
+''' % { 'name': self.name, 
+        'pre_type': self.projection.pre.cpp_class,
+        'post_type': self.projection.post.cpp_class,
         'access': generate_accessor(self.parsed_variables),
         'synapseMember': member_def(self.parsed_variables) }
 
-            body = '''#include "%(name)s.h"
-%(name)s::%(name)s(Population* pre, Population* post, int postRank, int target) : Projection(pre, post, postRank, target) {
+        body = '''#include "%(name)s.h"
+%(name)s::%(name)s(Population* pre, Population* post, int postRank, int target) : Projection() {
+
+    pre_rates_ = pre_population_->getRates();
+    post_rates_ = post_population_->getRates();
+
+    target_ = target;
+    post_neuron_rank_ = postRank;
+
 %(init)s
 }
 
-%(name)s::%(name)s(int preID, int postID, int postRank, int target) : Projection(preID, postID, postRank, target) {
+%(name)s::%(name)s(int preID, int postID, int postRank, int target) : Projection() {
+    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
+    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
+
+    pre_rates_ = pre_population_->getRates();
+    post_rates_ = post_population_->getRates();
+
+    target_ = target;
+    post_neuron_rank_ = postRank;
+
+    post_population_->addProjection(postRank, this);
+    
 %(init)s
 }
 
@@ -254,10 +312,11 @@ private:
 }
 
 void %(name)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
-    Projection::initValues(rank, value, delay);
+%(init_val)s
 }
 
 void %(name)s::computeSum() {
+   
 %(sum)s
 }
 
@@ -269,20 +328,23 @@ void %(name)s::globalLearn() {
 %(global)s
 }
 
-''' % { 'name': name, 
+''' % { 'name': self.name,
+        'pre_type': self.projection.pre.cpp_class,
+        'post_type': self.projection.post.cpp_class,
         'init': init(self.parsed_variables), 
+        'init_val': init_val(self.parsed_variables),
         'sum': compute_sum(self.parsed_variables), 
         'local': local_learn(self.parsed_variables), 
         'global': global_learn(self.parsed_variables) }
 
-            with open(self.h_file, mode = 'w') as w_file:
-                w_file.write(header)
+        with open(self.h_file, mode = 'w') as w_file:
+            w_file.write(header)
 
-            with open(self.cpp_file, mode = 'w') as w_file:
-                w_file.write(body)
-                
-            with open(self.pyx, mode = 'w') as w_file:
-                w_file.write(self.generate_pyx())            
+        with open(self.cpp_file, mode = 'w') as w_file:
+            w_file.write(body)
+            
+        with open(self.pyx, mode = 'w') as w_file:
+            w_file.write(self.generate_pyx())            
 
     def generate_pyx(self):
         """
@@ -328,9 +390,9 @@ void %(name)s::globalLearn() {
                     code += '        def __set__(self, value):\n'
                     code += '            if isinstance(value, np.ndarray)==True:\n'
                     code += '                if value.ndim==1:\n'
-                    code += '                    self.cInhInstance.setValue(value)\n'
+                    code += '                    self.cInhInstance.set'+value['name'].capitalize()+'(value)\n'
                     code += '                else:\n'
-                    code += '                    self.cInhInstance.setValue(value.reshape(self.size))\n'
+                    code += '                    self.cInhInstance.set'+value['name'].capitalize()+'(value.reshape(self.size))\n'
 
                     code += '            else:\n'
                     code += '                self.cInhInstance.set'+value['name'].capitalize()+'(np.ones(self.size)*value)\n\n'    

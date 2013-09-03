@@ -29,7 +29,23 @@ class Population(object):
         self.rand_objects = []
         self.neuron_variables = []
         self.targets = []
+        self.global_operations = {'pre':[],'post':[]}
+             
+    def _add_global_oparation(self, global_op):
+        """
+        Add the global operation to the populations dictionary. Besides this 
+        function ensures the unique occurance of a variable/function pair.
+        """
+
+        if self.global_operations['post'] == []:
+            self.global_operations['post'].append(global_op)
+            
+        for g_op2 in self.global_operations['post']:
+            if global_op['variable'] == g_op2['variable'] and global_op['function'] == g_op2['function']:
+                return
                 
+        self.global_operations['post'].append(global_op)
+           
     def generate(self):
         """
         main function of population generator class.
@@ -83,8 +99,11 @@ class Population(object):
             self.neuron_variables, 
             self.targets
         )
-        self.parsed_neuron, self.global_operations = self.neuron_parser.parse()
-
+        self.parsed_neuron, global_operations = self.neuron_parser.parse()
+        
+        for g_op in global_operations['post']:
+            self._add_global_oparation(g_op)
+        
         #
         #   generate files
         with open(self.header, mode = 'w') as w_file:
@@ -120,7 +139,7 @@ class Population(object):
         Create population class header.
         """
         
-        def generate_accessor(neuron_values):
+        def generate_accessor(neuron_values, global_ops):
             """
             Creates for all variables/parameters of the neuron the 
             corresponding set and get methods. 
@@ -142,9 +161,12 @@ class Population(object):
                     access += '    void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
                     access += '    DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
     
+            for value in global_ops['post']:
+                access += '\tDATA_TYPE get'+value['function'].capitalize()+value['variable'].capitalize()+'() { return '+value['variable']+'_'+value['function']+'_; }\n\n'
+    
             return access
     
-        def generate_member_definition(neuron_values):
+        def generate_member_definition(neuron_values, global_ops):
             """
             Creates for all variables/parameters of the neuron the 
             corresponding definitions within the c++ class. 
@@ -160,8 +182,19 @@ class Population(object):
     
                 member += '\t'+value['def']+'\n'
             
-            return member
+            for value in global_ops['post']:
+                member += '\tDATA_TYPE '+ value['variable']+'_'+value['function']+'_;\n\n'
                 
+            return member
+            
+        def global_ops(global_ops):
+            code = ''
+            
+            for var in global_ops['post']:
+                code += '\tvoid compute_'+var['function']+'_'+var['variable']+'();\n\n'
+                
+            return code
+            
         header = """#ifndef __ANNarchy_%(class)s_H__
 #define __ANNarchy_%(class)s_H__
 
@@ -176,14 +209,21 @@ public:
     
     void metaStep();
     
+    void globalOperations();
+    
 %(access)s
 private:
+%(global_ops)s
+
 %(member)s
 };
 #endif
 """ % { 'class': self.class_name, 
-        'member': generate_member_definition(self.parsed_neuron), 
-        'access' : generate_accessor(self.parsed_neuron) 
+        'member': generate_member_definition(self.parsed_neuron, 
+                                             self.global_operations),
+        'global_ops': global_ops(self.global_operations), 
+        'access' : generate_accessor(self.parsed_neuron,
+                                     self.global_operations) 
         } 
 
         return header
@@ -232,6 +272,48 @@ private:
                     meta_code += '\t'+value['name']+'_= '+random_cpp+'.getValues(nbNeurons_);\n'
                     
             return meta_code
+        
+        def single_global_ops(class_name, global_ops):
+            code = ''
+            
+            for var in global_ops['post']:
+                if var['function'] == 'min':
+                    code+="""void %(class)s::compute_min_%(var)s() {
+    %(var)s_min_ = %(var)s_[0];
+    for(unsigned int i=1; i<%(var)s_.size();i++){
+        if(%(var)s_[i] < %(var)s_min_)
+            %(var)s_min_ = %(var)s_[i];
+    }
+}\n\n""" % { 'class': class_name, 'var': var['variable'] }
+                elif var['function'] == 'max':
+                    code += """void %(class)s::compute_max_%(var)s() {
+    %(var)s_max_ = %(var)s_[0];
+    for(unsigned int i=1; i<%(var)s_.size();i++){
+        if(%(var)s_[i] > %(var)s_max_)
+            %(var)s_max_ = %(var)s_[i];
+    }
+}\n\n"""  % { 'class': class_name, 'var': var['variable'] }
+                elif var['function'] == 'mean':
+                    code += """void %(class)s::compute_mean_%(var)s() {
+    %(var)s_mean_ = %(var)s_[0];
+    for(unsigned int i=1; i<%(var)s_.size();i++){
+        %(var)s_mean_ += %(var)s_[i];
+    }
+    
+    %(var)s_mean_ /= %(var)s_.size();
+}\n\n"""  % { 'class': class_name, 'var': var['variable'] }
+                else:
+                    print "Error: unknown operation - '"+var['function']+"'"
+                
+            return code
+        
+        def global_ops(global_ops):
+            code = ''
+            
+            for variable in global_ops['post']:
+                code += '\tcompute_'+variable['function']+'_'+variable['variable']+'();'
+                
+            return code
         
         def meta_step(parsed_neuron, rand_objects, order):
             """
@@ -291,12 +373,20 @@ private:
 void %(class)s::metaStep() {
 %(metaStep)s    
 }
+
+void %(class)s::globalOperations() {
+%(global_ops)s
+}
+
+%(single_global_ops)s
 """ % { 'class': self.class_name, 
         'construct': constructor(self.parsed_neuron), 
         'metaStep': meta_step(self.parsed_neuron,
                               self.rand_objects,
                               self.population.neuron.order
-                              ) 
+                              ),
+        'global_ops': global_ops(self.global_operations),
+        'single_global_ops': single_global_ops(self.class_name, self.global_operations)
     } 
 
         return body    
@@ -306,7 +396,7 @@ void %(class)s::metaStep() {
         Create population class python extension.
         """
         
-        def pyx_func(parsed_neuron):
+        def pyx_func(parsed_neuron, global_ops):
             """
             function calls to wrap the c++ accessors.
             """
@@ -327,7 +417,7 @@ void %(class)s::metaStep() {
     
             return code
     
-        def py_func(parsed_neuron):
+        def py_func(parsed_neuron, global_ops):
             """
             function calls to provide access from python
             to c++ data.
@@ -363,6 +453,7 @@ void %(class)s::metaStep() {
                     code += '        def __set__(self, value):\n'
                     code += '            self.cInstance.set'+value['name'].capitalize()+'(value)\n'
     
+                
             return code
         
         pyx = '''from libcpp.vector cimport vector
@@ -396,8 +487,10 @@ cdef class py%(name)s:
 
 ''' % { 'name': self.class_name,  
         'neuron_count': self.population.size, 
-        'cFunction': pyx_func(self.parsed_neuron), 
-        'pyFunction': py_func(self.parsed_neuron) 
+        'cFunction': pyx_func(self.parsed_neuron,
+                              self.global_operations), 
+        'pyFunction': py_func(self.parsed_neuron,
+                              self.global_operations) 
     }
         return pyx
 
