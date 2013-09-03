@@ -202,16 +202,17 @@ def code_generation(cpp_stand_alone):
 def _update_global_operations():
     
     for proj in Global._projections:
-        proj_dict = proj.synapse.global_operations
-        
-        # only post-synaptic variables are generated in populations
-        for entry in proj_dict['pre']:
-            #print 'Add to', proj.pre.name,'the item', entry
-            proj.pre.generator._add_global_oparation(entry) 
-        
-        for entry in proj_dict['post']:
-            #print 'Add to', proj.post.name,'the item', entry
-            proj.post.generator._add_global_oparation(entry)
+        if proj.synapse != None:
+            proj_dict = proj.synapse.global_operations
+            
+            # only post-synaptic variables are generated in populations
+            for entry in proj_dict['pre']:
+                #print 'Add to', proj.pre.name,'the item', entry
+                proj.pre.generator._add_global_oparation(entry) 
+            
+            for entry in proj_dict['post']:
+                #print 'Add to', proj.post.name,'the item', entry
+                proj.post.generator._add_global_oparation(entry)
             
     
 def compile(cpp_stand_alone=False, debug_build=False):
