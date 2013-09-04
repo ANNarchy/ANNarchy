@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from math import ceil
 
 # instances
 _populations = []       # created populations
@@ -50,10 +51,11 @@ def simulate(duration, show_time=False):
     """    
     import ANNarchyCython
     t_start = datetime.now()
-    ANNarchyCython.pyNetwork().Run(duration)
+    nb_steps = ceil(duration / config['dt'])
+    ANNarchyCython.pyNetwork().Run(nb_steps)
     t_stop = datetime.now()
     if show_time:
-        print 'Simulation:\t', t_stop - t_start, '(', duration, 'steps)'
+        print 'Simulation:\t', t_stop - t_start, '(', nb_steps, 'steps, '+duration+' ms)'
 
 def get_population(name):
     """
@@ -89,3 +91,19 @@ def get_projection(pre, post, target):
     
     print "Error: no projection '"+pre.name+"'->'"+post.name+"' with target '"+target+"' found."
     return None
+
+def current_time():
+    """
+    Returns current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    return ANNarchyCython.pyNetwork().Time() * config['dt']
+
+def current_step():
+    """
+    Returns current simulation time step.
+    """
+    import ANNarchyCython    
+    return ANNarchyCython.pyNetwork().Time()    

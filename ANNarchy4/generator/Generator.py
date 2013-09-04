@@ -134,7 +134,6 @@ def generate_py_extension():
         proj_include += 'include \"'+proj.generator.proj_class['name']+'.pyx\"\n'
 
     code = """include "Network.pyx"
-include "Simulation.pyx"
 
 %(pop_inc)s  
 
@@ -241,65 +240,59 @@ def compile(cpp_stand_alone=False, debug_build=False):
     # create ANNarchyCore.so and py extensions
     print 'Compiling...',
     os.chdir(Global.annarchy_dir)
-    
+
+    #
+    # apply +x lost by copy
     if sys.platform.startswith('linux'):
-        #
-        # apply +x lost by copy
         os.system('chmod +x compile*')
 
-        if not debug_build:
+    if not debug_build:
+        if sys.platform.startswith('linux'):
             proc = subprocess.Popen(['./compile.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
-            proc.wait()
         else:
-            proc = subprocess.Popen(['./compiled.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
-            proc.wait()
-        
-        os.chdir('..')
-
-        try:
-            import ANNarchyCython
-        except:
-            print 'Error: ANNarchyCython library could not be created.'
-
-        if not cpp_stand_alone:
-
-            #
-            # bind the py extensions to the corresponding python objects
-            import ANNarchyCython
-            for pop in Global._populations:
-                pop.cyInstance = eval('ANNarchyCython.py'+
-                                  pop.generator.class_name+'()')
-                
-                #
-                #   extend the population by all cythonized variables
-                pop.rate = Attribute('rate')
-                pop.rank = Attribute('rank')
-                pop.tau = Attribute('tau')
-                pop.dt = Attribute('dt')
-                
-                for var in pop.generator.neuron_variables:
-                    if var['name'] in Global._pre_def_neuron:
-                        continue
-                    
-                    cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
-                    #print cmd
-                    exec(cmd)
-    
-            #
-            # instantiate projections
-            for proj in Global._projections:
-                proj.connect()                        
-
-        else:
-            #abort the application after compile ANNarchyCPP
-            print '\nCompilation process of ANNarchyCPP completed successful.\n'
-            exit(0)
-    
-    #
-    #    compilation for windows based systems
-    #
+            proc = subprocess.Popen(['compile.bat'], shell=True)
+        proc.wait()
     else:
+        if sys.platform.startswith('linux'):
+            proc = subprocess.Popen(['./compiled.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
+        else:
+            proc = subprocess.Popen(['compile.bat'], shell=True)
+        proc.wait()
+    
+    os.chdir('..')
+
+    try:
+        import ANNarchyCython
+    except:
+        print 'Error: ANNarchyCython library could not be created.'
+
+
+    if not cpp_stand_alone:
+
         #
+        # bind the py extensions to the corresponding python objects
+        import ANNarchyCython
+        for pop in Global._populations:
+            pop.cyInstance = eval('ANNarchyCython.py'+
+                              pop.generator.class_name+'()')
+            
+            #
+            #   extend the population by all cythonized variables
+            pop.rate = Attribute('rate')
+            pop.rank = Attribute('rank')
+            pop.tau = Attribute('tau')
+            pop.dt = Attribute('dt')
+            
+            for var in pop.generator.neuron_variables:
+                if var['name'] in Global._pre_def_neuron:
+                    continue
+                
+                cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
+                #print cmd
+                exec(cmd)
+
+        #
+<<<<<<< HEAD
         # TODO: 
         # implement multiple compilation modes
         # complete reimplement !!!!!
@@ -308,35 +301,24 @@ def compile(cpp_stand_alone=False, debug_build=False):
         
         #proc = subprocess.Popen(['compile.bat'], shell=True)
         #proc.wait()
+=======
+        # instantiate projections
+        for proj in Global._projections:
+            proj.connect()                        
+>>>>>>> bugfix
 
-        #if not cpp_stand_alone:
-            #
-            # bind the py extensions to the corresponding python objects
-        #    import ANNarchyCython
-        #    for pop in Global.populations_:
-        #        pop.cyInstance = eval('ANNarchyCython.py'+
-        #                              pop.name.capitalize()+'()')
+    else:
+        #abort the application after compile ANNarchyCPP
+        print '\nCompilation process of ANNarchyCPP completed successful.\n'
+        exit(0)
 
-                #
-                #   extend the population by all cythonized variables
-        #        for var in pop.generator.neuron_variables:
-        #            if not '_rand_' in var['name']:
-        #                cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
-                        #print cmd
-        #                exec(cmd)
-    
-            #
-            # instantiate projections
-        #    for proj in Global.projections_:
-        #        try:
-        #            proj.connect()                        
-
-        #        except:
-        #            print 'Error on instantiation of projection'+str(proj.generator.proj_class['ID'])
-
+<<<<<<< HEAD
         #else:
             #abort the application after compile ANNarchyCPP
         #    exit(0)
         
     print ' OK.'
+=======
+    print '\nCompilation process done.\n'
+>>>>>>> bugfix
     

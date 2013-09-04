@@ -73,25 +73,49 @@ def test_pop_access_parameter_tau_with_get_parameter():
     assert (fabs(InputPop.get_parameter('tau') - NEUR_TAU) < EPSILON)
     
 def test_pop_direct_access_variable_rate():
-    assert (InputPop.rate == [1.0, 1.0, 1.0, 1.0]).all()
+    assert np.allclose(InputPop.rate, [1.0, 1.0, 1.0, 1.0])
 
 def test_pop_access_variable_rate_with_get():
-    assert (InputPop.get('rate') == np.ones((2,2))).all()
+    assert np.allclose(InputPop.get('rate'), np.ones((2,2)))
 
 def test_pop_access_variable_rate_with_get_variable():
-    assert (InputPop.get_variable('rate') == np.ones((2,2))).all()
+    assert np.allclose(InputPop.get_variable('rate'), np.ones((2,2)))
+
+def test_pop_direct_modify1_variable_rate():
+    InputPop.rate = 0.1
+    assert np.allclose(InputPop.rate, [0.1, 0.1, 0.1, 0.1])
+
+def test_pop_direct_modify2_variable_rate():
+    InputPop.rate = [0.2, 0.3, 0.4, 0.5]
+    assert np.allclose(InputPop.rate, [0.2, 0.3, 0.4, 0.5])
+
+def test_pop_direct_modify3_variable_rate():
+    InputPop.rate = np.ones(InputPop.geometry)
+    assert np.allclose(InputPop.rate, np.ones(InputPop.geometry))
 
 def test_pop_direct_access_variable_test_var():
     tmp = [0.1, 0.1, 0.1, 0.1]
-    assert (np.allclose(InputPop.test_var, tmp))
+    assert np.allclose(InputPop.test_var, tmp)
         
 def test_pop_access_variable_test_var_with_get():
     tmp = np.ones((2,2))*0.1
-    assert (np.allclose(InputPop.get('test_var'), tmp))
+    assert np.allclose(InputPop.get('test_var'), tmp)
 
 def test_pop_access_variable_test_var_with_get_variable():
     tmp = (np.ones((2,2)))*0.1
-    assert (np.allclose(InputPop.get_variable('test_var'), tmp))
+    assert np.allclose(InputPop.get_variable('test_var'), tmp)
+
+def test_pop_direct_modify1_variable_test_var():
+    InputPop.test_var = 0.1
+    assert np.allclose(InputPop.test_var, [0.1, 0.1, 0.1, 0.1])
+
+def test_pop_direct_modify2_variable_test_var():
+    InputPop.test_var = [0.2, 0.3, 0.4, 0.5]
+    assert np.allclose(InputPop.test_var, [0.2, 0.3, 0.4, 0.5])
+
+def test_pop_direct_modify3_variable_test_var():
+    InputPop.test_var = np.ones(InputPop.geometry)
+    assert np.allclose(InputPop.test_var, np.ones(InputPop.geometry))
 
 #
 #   Test projection functions
