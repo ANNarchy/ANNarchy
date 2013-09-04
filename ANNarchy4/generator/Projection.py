@@ -28,7 +28,8 @@ class Projection(object):
         self.proj_class = { 
             'ID': len(Global._projections), 
             'name': self.name 
-        }
+        }        
+
         
     def generate_cpp_add(self):
         """

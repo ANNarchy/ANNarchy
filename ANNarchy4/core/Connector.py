@@ -19,7 +19,10 @@ class Connector(object):
             * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.
             * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
         """
-        self.weights = weights
+        if isinstance(weights, float) or isinstance(weights, int):
+            self.weights = RandomDistribution('constant', [float(weights)])
+        else:
+            self.weights = weights
         self.delays = delays
         self.conn_type = conn_type        
         self.parameters = parameters

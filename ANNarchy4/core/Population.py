@@ -4,8 +4,9 @@ Population.py
 import Global 
 import Neuron
 from ANNarchy4 import generator
-from ANNarchy4.core.Variable import Descriptor, ViewAttribute
+from ANNarchy4.core.Variable import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
+from ANNarchy4.core.Random import RandomDistribution
 
 import traceback
 import numpy as np
@@ -108,9 +109,8 @@ class Population(Descriptor):
             * *variable*: should be a string representing the variables's name.
         """
         
-        if hasattr(self, variable):
-            var = eval('self.'+variable)
-            return self._reshape_vector(var)
+        if hasattr(self.cyInstance, variable):
+            return getattr(self.cyInstance, variable).reshape(self.geometry)
         else:
             print 'Error: variable',variable,'does not exist in this population.'
             print traceback.print_stack()
@@ -124,8 +124,8 @@ class Population(Descriptor):
             * *parameter*: should be a string representing the variables's name.
         """
         
-        if hasattr(self, parameter):
-            return eval('self.'+parameter)
+        if hasattr(self.cyInstance, parameter):
+            return getattr(self.cyInstance, parameter)
         else:
             print 'Error: parameter',parameter,'does not exist in this population.'
             print traceback.print_stack()
@@ -151,7 +151,7 @@ class Population(Descriptor):
 
     def coordinates_from_rank(self, rank):
         """
-        Returns a tuple (w, h, d) represents the spatial coordinates corresponding to rank.
+        Returns a tuple representing the spatial coordinates corresponding to the geometry of the population.
         """
         # Check the rank
         if not rank < self.size:
@@ -162,7 +162,7 @@ class Population(Descriptor):
 
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """
-        Returns a tuple of coordinates (w, h, d) corresponding to the rank, normalized between 0.0 and norm.
+        Returns a tuple of coordinates corresponding to the rank, normalized between 0.0 and norm in each dimension.
         """
         
         coord = self.coordinates_from_rank(rank)
@@ -184,9 +184,14 @@ class Population(Descriptor):
         """
         for val_key in value.keys():
             if hasattr(self, val_key):
-                setattr(self, val_key, value[val_key])
+                # Check the type of the data!!
+                if isinstance(value[val_key], RandomDistribution):
+                    val = value[val_key].getValues(self.size) 
+                else: 
+                    val = value[val_key] 
+                setattr(self.cyInstance, val_key, val)
             else:
-                print "Error: population does not contain value: '"+val_key+"'"
+                print "Error: population does not have the variable: " + val_key + "."
         
     def get(self, value):
         """

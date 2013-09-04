@@ -6,6 +6,7 @@ import numpy as np
 import Global
 from Dendrite import Dendrite
 from ANNarchy4 import generator
+from ANNarchy4.core.Random import RandomDistribution
 
 class Projection(object):
     """
@@ -55,15 +56,44 @@ class Projection(object):
                 
     def dendrite(self, pos):
         """
-        Returns the dendrite of a postsynaptic neuron according to its rank
+        Returns the dendrite of a postsynaptic neuron according to its rank.
 
         Parameters:
 
             * *pos*: could be either rank or coordinate of the requested postsynaptic neuron
         """
-        _rank = self.post.rank_from_coordinates( pos )
-        return self._dendrites[_rank]
-
+        if isinstance(pos, int):
+            rank = pos
+        else:
+            rank = self.post.rank_from_coordinates(pos)
+        if rank in self._post_ranks:
+            return self._dendrites[rank]
+        else:
+            print 'Error: neuron of rank', str(rank), 'has no synapse in this projection.'
+            return None
+    
+    # Iterators
+    def __getitem__(self, *args, **kwds):
+        """ Returns dendrite of the given position in the postsynaptic population. 
+        
+        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        """
+        return self.dendrite(args[0])
+        
+    def __iter__(self):
+        " Returns iteratively each dendrite in the population in ascending rank order."
+        for n in range(self.size):
+            yield self._dendrites(n)  
+        
+    @property
+    def size(self):
+        " Number of postsynaptic neurons receiving synapses in this projection."
+        return len(self._dendrites)
+        
+    def __len__(self):
+        " Number of postsynaptic neurons receiving synapses in this projection."
+        return len(self._dendrites)
+        
     @property
     def dendrites(self):
         """

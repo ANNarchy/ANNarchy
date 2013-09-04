@@ -3,6 +3,7 @@ Dendrite.py
 """
 from Variable import Descriptor, Attribute
 import Global
+from ANNarchy4.core.Random import RandomDistribution
 
 import numpy as np
 import traceback
@@ -24,23 +25,10 @@ class Dendrite(Descriptor):
         self.post_rank = post_rank
         self.proj = proj
         self.pre = proj.pre
-        
-        #
-        # base variables
-        self.value = Attribute('value')
-        self.rank = Attribute('rank')
-        self.delay = Attribute('delay')
-        self.dt = Attribute('dt')
-        self.tau = Attribute('tau')
 
-        #
-        # synapse variables                
-        for value in self.proj._parsed_variables():
-            if value['name'] in Global._pre_def_synapse:
-                continue
- 
-            cmd = 'self.'+value['name']+' = Attribute(\''+value['name']+'\')'   
-            exec(cmd)
+        # synapse variables           
+        for value in self.variables + self.parameters:
+            setattr(self, value, Attribute(value))   
     
     def set( self, value ):
         """
@@ -55,10 +43,16 @@ class Dendrite(Descriptor):
                     set( 'tau' : 20, 'value'= np.random.rand(8,8) } )
         """
         for val_key in value.keys():
-            if hasattr(self, val_key):
-                exec('self.' + val_key +' = value[val_key]')
+            if hasattr(self.cyInstance, val_key):
+                # Check the type of the data!!
+                if isinstance(value[val_key], RandomDistribution):
+                    val = value[val_key].getValues(self.size) 
+                else: 
+                    val = value[val_key]           
+                # Set the value
+                setattr(self.cyInstance, val_key, val)
             else:
-                print "Error: dendrite does not contain value: '"+val_key+"'"    
+                print "Error: dendrite has no parameter/variable called", val_key+"."    
                 
     def get(self, value):
         """
@@ -73,7 +67,7 @@ class Dendrite(Descriptor):
         elif value in self.parameters:
             return self.get_parameter(value)
         else:
-            print "Error: dendrite does not contain value: '"+value+"'"     
+            print "Error: dendrite has no parameter/variable called", value+"."     
                
     @property
     def variables(self):
@@ -83,7 +77,7 @@ class Dendrite(Descriptor):
         ret_var = Global._pre_def_synapse_var
         
         for var in self.proj._parsed_variables():
-            if not var['type'] == 'parameter':
+            if not var['type'] == 'parameter' and not var['name'] in ret_var:
                 ret_var.append(var['name'])
         
         return ret_var
@@ -96,13 +90,19 @@ class Dendrite(Descriptor):
         ret_par = Global._pre_def_synapse_par 
         
         for var in self.proj._parsed_variables():
-            if var['type'] == 'parameter':
+            if var['type'] == 'parameter' and not var['name'] in ret_par:
                 ret_par.append(var['name'])
         
         return ret_par
     
     @property
     def size(self):
+        """
+        Number of synapses.
+        """
+        return self.cyInstance.size
+    
+    def __len__(self):
         """
         Number of synapses.
         """
@@ -123,11 +123,10 @@ class Dendrite(Descriptor):
         
             * *variable*:    a string representing the variable's name.
         """
-        if hasattr(self, variable):
-            var = eval('self.'+variable)
-            return var.reshape(self.pre.geometry)
+        if hasattr(self.cyInstance, variable):
+            return getattr(self.cyInstance, variable)
         else:
-            print 'Error: variable',variable,'does not exist in this dendrite.'
+            print 'Error: variable', variable, 'does not exist in this dendrite.'
             print traceback.print_stack()
 
     def get_parameter(self, parameter):
@@ -138,8 +137,8 @@ class Dendrite(Descriptor):
         
             * *parameter*:    a string representing the parameter's name.
         """
-        if hasattr(self, parameter):
-            return eval('self.'+parameter)
+        if hasattr(self.cyInstance, parameter):
+            return getattr(self.cyInstance, parameter)
         else:
             print 'Error: parameter',parameter,'does not exist in this dendrite.'
             print traceback.print_stack()
@@ -166,18 +165,3 @@ class Dendrite(Descriptor):
         """
         self.cyInstance.remove_synapse(rank)
 
-    def _reshape_vector(self, vector):
-        """
-        Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
-        """
-        vec = np.array(vector) # if list transform to vec
-        try:
-            if self.pre.dimension == 1:
-                return vec
-            elif self.pre.dimension == 2:
-                return vec.reshape(self.pre.height, self.pre.width)
-            elif self.pre.dimension == 3:
-                return vec.reshape(self.pre.depth, self.pre.height, self.pre.width)
-        except ValueError:
-            print 'Mismatch between pop: (',self.pre.width,',',self.pre.height,',',self.pre.depth,')'
-            print 'and data vector (',type(vector),': (',vec.size,')'

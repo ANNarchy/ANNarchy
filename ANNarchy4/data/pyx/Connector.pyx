@@ -24,10 +24,7 @@ cdef class PyxConnector:
         self.proj_type = proj_type
         
     cdef create_local_proj(self, proj_type, pre_id, post_id, proj, target):
-        if proj_type == 0:
-            return LocalProjection(proj_type, pre_id, post_id, proj, target)
-        else:
-            return eval('LocalProjection'+str(proj_type)+'(proj_type, pre_id, post_id, proj, target)')
+        return eval('LocalProjection'+str(proj_type)+'(proj_type, pre_id, post_id, proj, target)')
         
 cdef class One2One(PyxConnector):
     """
@@ -81,7 +78,7 @@ cdef class One2One(PyxConnector):
         
         for p in xrange(self.postSize):
             local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
-            v = distribution.getValue()
+            v = distribution.get_value()
 
             local.init(r[p], v)            
             
@@ -145,9 +142,9 @@ cdef class All2All(PyxConnector):
         for p in xrange(self.postSize):
             local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
             if not self.allowSelfConnections and (pre==post):
-                v = weights.getValues(self.preSize-1)
+                v = weights.get_values(self.preSize-1)
             else:
-                v = weights.getValues(self.preSize)
+                v = weights.get_values(self.preSize)
             
             local.init(self.ranks[p], v)
             Proj.append(local)            

@@ -17,26 +17,20 @@ class RandomDistribution(object):
         self.parameters = parameters
         self.seed = seed
 
-    def getValues(self, shape):
+    def get_values(self, shape):
       
         if self.distribution == 'uniform':
             return np.random.uniform(self.parameters[0], self.parameters[1], shape)
         if self.distribution == 'normal':
             return np.random.normal(self.parameters[0], self.parameters[1], shape)
         if self.distribution == 'constant':
-            return np.array([self.parameters[0]])
+            return self.parameters[0] * np.ones(shape)
         else:
-            print 'Unknown distribution.'
+            print 'Unknown distribution', self.distribution
+            return None
 
-    def getValue(self):
-        if self.distribution == 'uniform':
-            return np.random.uniform(self.parameters[0], self.parameters[1], (1))
-        if self.distribution == 'normal':
-            return np.random.normal(self.parameters[0], self.parameters[1], (1))
-        if self.distribution == 'constant':
-            return np.array([self.parameters[0]])
-        else:
-            print 'Unknown distribution.'
+    def get_value(self):
+        return self.getValues((1))
 
     def genCPP(self):
         code = ''

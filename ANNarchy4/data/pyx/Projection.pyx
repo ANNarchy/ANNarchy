@@ -94,7 +94,7 @@ cdef class LocalProjection:
             return self.cInstance.getDt()
 
         def __set__(self, value):
-            print 'The descritization constant is only modifiable globally.'
+            print 'The discretization step is only modifiable globally.'
 
     property tau:
         def __get__(self):

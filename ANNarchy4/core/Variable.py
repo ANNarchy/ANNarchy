@@ -1,4 +1,5 @@
 import numpy as np
+import ANNarchy4
 
 class Variable(object):
     """
@@ -67,7 +68,7 @@ class Descriptor(object):
 class Attribute(object):
     """
     Descriptor object, needed to extend Population and 
-    Projection classes with new variables
+    Projection classes with attributes.
     """
     def __init__(self, variable):
         """
@@ -78,45 +79,12 @@ class Attribute(object):
         self.variable = variable
         
     def __get__(self, instance):
-        val = getattr(instance.cyInstance, self.variable)
-        if isinstance(val, np.ndarray):
-            return val.reshape(instance.geometry)
-        else:
-            return val
+        return instance.get(self.variable)
         
     def __set__(self, instance, value):
-        setattr(instance.cyInstance, self.variable, value)
+        instance.set({self.variable: value})
 
     def __delete__(self, instance):
         pass
 
-class ViewAttribute(object):
-    """
-    Descriptor object, needed to extend PopulationViews 
-    with new variables
-    """
-    def __init__(self, variable, ranks):
-        """
-        Initialise Attribute object.
-        
-        * *variable*: variable name as string
-        * *ranks*: participation neurons
-        """
-        self._variable = variable
-        self._ranks = ranks
-        
-    def __get__(self, instance):
-        if self._variable in instance.population.variables:
-            return getattr(instance.population.cyInstance, self._variable)[self._ranks]
-        else:
-            return None
-        
-    def __set__(self, instance, value):
-        if self._variable in instance.population.variables:
-            instance.set({self._variable: value})
-        else:
-            print 'Error: the variable', self._variable, 'does not exist in population', instance.population.name+'.'
-            print instance.population.variables
-            
-    def __delete__(self, instance):
-        pass
+
