@@ -235,13 +235,11 @@ def compile(cpp_stand_alone=False, debug_build=False):
     _update_global_operations()
     
     code_generation(cpp_stand_alone)
-    
-    #
+
     # create ANNarchyCore.so and py extensions
     print 'Compiling...',
     os.chdir(Global.annarchy_dir)
 
-    #
     # apply +x lost by copy
     if sys.platform.startswith('linux'):
         os.system('chmod +x compile*')
@@ -265,60 +263,31 @@ def compile(cpp_stand_alone=False, debug_build=False):
         import ANNarchyCython
     except:
         print 'Error: ANNarchyCython library could not be created.'
-
-
+        
     if not cpp_stand_alone:
-
-        #
         # bind the py extensions to the corresponding python objects
         import ANNarchyCython
         for pop in Global._populations:
-            pop.cyInstance = eval('ANNarchyCython.py'+
-                              pop.generator.class_name+'()')
-            
-            #
+            pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
             #   extend the population by all cythonized variables
             pop.rate = Attribute('rate')
             pop.rank = Attribute('rank')
             pop.tau = Attribute('tau')
             pop.dt = Attribute('dt')
-            
             for var in pop.generator.neuron_variables:
                 if var['name'] in Global._pre_def_neuron:
-                    continue
-                
+                    continue                
                 cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
                 #print cmd
                 exec(cmd)
-
-        #
-<<<<<<< HEAD
-        # TODO: 
-        # implement multiple compilation modes
-        # complete reimplement !!!!!
-        print 'Compilation under windows currently not supported'
-        exit(0)
-        
-        #proc = subprocess.Popen(['compile.bat'], shell=True)
-        #proc.wait()
-=======
         # instantiate projections
         for proj in Global._projections:
-            proj.connect()                        
->>>>>>> bugfix
+            proj.connect()  
+        print ' OK.'                      
 
     else:
         #abort the application after compile ANNarchyCPP
         print '\nCompilation process of ANNarchyCPP completed successful.\n'
         exit(0)
-
-<<<<<<< HEAD
-        #else:
-            #abort the application after compile ANNarchyCPP
-        #    exit(0)
-        
-    print ' OK.'
-=======
-    print '\nCompilation process done.\n'
->>>>>>> bugfix
+                
     
