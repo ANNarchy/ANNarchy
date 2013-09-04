@@ -134,7 +134,6 @@ def generate_py_extension():
         proj_include += 'include \"'+proj.generator.proj_class['name']+'.pyx\"\n'
 
     code = """include "Network.pyx"
-include "Simulation.pyx"
 
 %(pop_inc)s  
 
