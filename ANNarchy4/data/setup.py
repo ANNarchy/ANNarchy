@@ -2,6 +2,7 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import sys, os
+import numpy
 
 if sys.platform.startswith('linux'):
     setup(
@@ -18,8 +19,9 @@ else:
         cmdclass = { 'build_ext' : build_ext },
         ext_modules = [ Extension("ANNarchyCython", 
                                  sources=["pyx/ANNarchyCython.pyx"], 
+                                 include_dirs=[numpy.get_include()],
                                  libraries=["ANNarchyCore"], 
-                                 extra_compile_args=["/EHsc", "/I.", "/DEBUG"],
-                                 extra_link_args=["/LIBPATH:annarchy", "/DEBUG"],
+                                 extra_compile_args=["/EHsc", "/I."],
+                                 extra_link_args=["/LIBPATH:annarchy"],
                                  language="c++")]
     )
