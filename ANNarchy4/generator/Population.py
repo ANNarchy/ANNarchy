@@ -462,8 +462,6 @@ cdef extern from "../build/%(name)s.h":
         
         string getName()
         
-        float getDt()
-        
 %(cFunction)s
 
 
@@ -482,13 +480,6 @@ cdef class py%(name)s:
             return self.cInstance.getNeuronCount()
         def __set__(self, value):
             print "py%(name)s.size is a read-only attribute."
-
-    property dt:
-        def __get__(self):
-            return self.cInstance.getDt()
-
-        def __set__(self, value):
-            print "Update dt is only possible through setup(dt=...)"
             
 %(pyFunction)s
 

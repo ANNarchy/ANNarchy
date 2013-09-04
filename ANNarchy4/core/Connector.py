@@ -8,7 +8,7 @@ class Connector(object):
     The connector class manages all information and operations related to connection patterns.
     """
 
-    def __init__(self, conn_type, weights, delays=RandomDistribution('constant', [0]), **parameters):
+    def __init__(self, conn_type, weights, delays=0, **parameters):
         """
         Initialize a connection object.
 
@@ -23,7 +23,10 @@ class Connector(object):
             self.weights = RandomDistribution('constant', [float(weights)])
         else:
             self.weights = weights
-        self.delays = delays
+        if isinstance(delays, float) or isinstance(delays, int):
+            self.delays = RandomDistribution('constant', [int(delays)])
+        else:
+            self.delays = delays
         self.conn_type = conn_type        
         self.parameters = parameters
 

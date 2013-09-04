@@ -30,7 +30,7 @@ class Dendrite(Descriptor):
         for value in self.variables + self.parameters:
             setattr(self, value, Attribute(value))   
     
-    def set( self, value ):
+    def set(self, value):
         """
         Update dendrite variable/parameter.
         
@@ -74,12 +74,10 @@ class Dendrite(Descriptor):
         """
         Returns a list of all variable names.
         """
-        ret_var = Global._pre_def_synapse_var
-        
+        ret_var = Global._pre_def_synapse_var        
         for var in self.proj._parsed_variables():
             if not var['type'] == 'parameter' and not var['name'] in ret_var:
-                ret_var.append(var['name'])
-        
+                ret_var.append(var['name'])        
         return ret_var
 
     @property
@@ -87,12 +85,10 @@ class Dendrite(Descriptor):
         """
         Returns a list of all parameter names.
         """
-        ret_par = Global._pre_def_synapse_par 
-        
+        ret_par = Global._pre_def_synapse_par        
         for var in self.proj._parsed_variables():
             if var['type'] == 'parameter' and not var['name'] in ret_par:
-                ret_par.append(var['name'])
-        
+                ret_par.append(var['name'])        
         return ret_par
     
     @property

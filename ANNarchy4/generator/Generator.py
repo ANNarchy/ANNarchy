@@ -6,6 +6,7 @@ import subprocess
 import shutil
 
 # ANNarchy core informations
+import ANNarchy4
 import ANNarchy4.core.Global as Global
 from ANNarchy4.core.Variable import Attribute   
 
@@ -186,7 +187,6 @@ def code_generation(cpp_stand_alone):
     for pop in Global._populations:
         pop.generator.generate()
 
-    #
     # create projection cpp class for each synapse
     for projection in Global._projections:
         projection.generator.generate()
@@ -228,22 +228,20 @@ def compile(cpp_stand_alone=False, debug_build=False):
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
     """
-    print Global.version, 'on', sys.platform, '(', os.name,')'
-    
+    print 'ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')'
+    # Create the necessary subfolders and copy the source files
     folder_management()
-    
+    # Tell each population which global operation they should compute
     _update_global_operations()
-    
+    # Generate the code
     code_generation(cpp_stand_alone)
-
-    # create ANNarchyCore.so and py extensions
+    # Create ANNarchyCore.so and py extensions
     print 'Compiling...',
     os.chdir(Global.annarchy_dir)
-
-    # apply +x lost by copy
+    # Make sure the makefiles are executable
     if sys.platform.startswith('linux'):
         os.system('chmod +x compile*')
-
+    # Start the compilation depending on the platform
     if not debug_build:
         if sys.platform.startswith('linux'):
             proc = subprocess.Popen(['./compile.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
@@ -256,37 +254,29 @@ def compile(cpp_stand_alone=False, debug_build=False):
         else:
             proc = subprocess.Popen(['compile.bat'], shell=True)
         proc.wait()
-    
+    # Return to the current directory
     os.chdir('..')
-
+    # Import the libraries
     try:
         import ANNarchyCython
     except:
-        print 'Error: ANNarchyCython library could not be created.'
-        
+        print '\nError: the Cython library was not correctly compiled.'
+        exit(0)
+    # Create the Python objects    
     if not cpp_stand_alone:
         # bind the py extensions to the corresponding python objects
-        import ANNarchyCython
         for pop in Global._populations:
+            # Create the Cython instance
             pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
-            #   extend the population by all cythonized variables
-            pop.rate = Attribute('rate')
-            pop.rank = Attribute('rank')
-            pop.tau = Attribute('tau')
-            pop.dt = Attribute('dt')
-            for var in pop.generator.neuron_variables:
-                if var['name'] in Global._pre_def_neuron:
-                    continue                
-                cmd = 'pop.'+var['name']+' = Attribute(\''+var['name']+'\')'
-                #print cmd
-                exec(cmd)
+            # Create the attributes
+            pop._init_attributes()
         # instantiate projections
         for proj in Global._projections:
+            # Create the synapses
             proj.connect()  
-        print ' OK.'                      
-
+        print ' OK.'   
     else:
-        #abort the application after compile ANNarchyCPP
+        #abort the application after compiling ANNarchyCPP
         print '\nCompilation process of ANNarchyCPP completed successful.\n'
         exit(0)
                 

@@ -74,20 +74,11 @@ class Projection(object):
             """
             create variable/parameter constructor entries.
             """
-            code = ''
-            found_tau = False
-            
+            code = ''            
             for var in parsed_variables:
                 if var['name'] == 'psp':
                     continue
-                if var['name'] == 'tau':
-                    found_tau = True;
-                        
-                code += "\t"+var['init']+"\n"
-            
-            if not found_tau:
-                code += '\ttau_ = 1.0;' 
-                
+                code += "\t"+var['init']+"\n"               
             code += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return code
         

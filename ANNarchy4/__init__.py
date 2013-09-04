@@ -10,3 +10,6 @@ from core.Connector import Connector
 from core.Random import RandomDistribution
 from core.Variable import Variable
 from visualization import Visualization
+
+import numpy as np
+__version__ = '4.0.0'

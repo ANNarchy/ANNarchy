@@ -26,10 +26,6 @@ cdef extern from "../build/Projection.h":
         
         float getDt()
         
-        float getTau()
-        
-        void setTau(float tau)
-        
         void initValues(vector[int] rank, vector[float] value)
         
         int getSynapseCount()
@@ -95,13 +91,6 @@ cdef class LocalProjection:
 
         def __set__(self, value):
             print 'The discretization step is only modifiable globally.'
-
-    property tau:
-        def __get__(self):
-            return self.cInstance.getTau()
-
-        def __set__(self, value):
-            self.cInstance.setTau(value)
         
     property value:
         def __get__(self):

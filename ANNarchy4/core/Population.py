@@ -13,21 +13,20 @@ import numpy as np
 
 class Population(Descriptor):
     """
-    Represents a neural network population in ANNarchy.
+    Represents a population of neurons.
     """
 
-    def __init__(self, geometry, neuron, name=None, debug=False):
+    def __init__(self, geometry, neuron, name=None):
         """
-        Constructor.
+        Constructor of the population.
         
-        Parameter:
+        Parameters:
         
-        * *name*: unique name of the population.
-        * *geometry*: population geometry as tuple (width, height, depth)
+        * *name*: unique name of the population (optional).
+        * *geometry*: population geometry as tuple. If an integer is given, it is the size of the population.
         * *neuron*: instance of ``ANNarchy4.Neuron``
-        * *debug*: print some debug information to standard out ( by default *False* )
+        
         """
-        self.debug = debug
         
         if isinstance(geometry, int): # 1D
             self.geometry = (geometry, )
@@ -44,6 +43,12 @@ class Population(Descriptor):
 
         Global._populations.append(self)
         self.generator = generator.Population(self)
+        
+    def _init_attributes(self):
+        """ Method used after compilation to initialize the attributes."""
+        for var in self.variables + self.parameters:
+            setattr(self, var, Attribute(var))
+        setattr(self, 'rank', Attribute('rank'))
 
     @property
     def cpp_class(self):
@@ -176,7 +181,7 @@ class Population(Descriptor):
         
         Parameter:
         
-            * *value*: value need to be update
+            * *value*: dictionary of attributes to be updated
             
                 .. code-block:: python
                 
@@ -184,7 +189,7 @@ class Population(Descriptor):
         """
         for val_key in value.keys():
             if hasattr(self, val_key):
-                # Check the type of the data!!
+                # Check the type of the data
                 if isinstance(value[val_key], RandomDistribution):
                     val = value[val_key].getValues(self.size) 
                 else: 
@@ -208,11 +213,11 @@ class Population(Descriptor):
         else:
             print "Error: population does not contain value: '"+value+"'"
             
-    def _reshape_vector(self, vector):
-        """
-        Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
-        """
-        return np.array(vector).reshape(self.geometry)
+#    def _reshape_vector(self, vector):
+#        """
+#        Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
+#        """
+#        return np.array(vector).reshape(self.geometry)
             
     def neuron(self, coord):  
         " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  

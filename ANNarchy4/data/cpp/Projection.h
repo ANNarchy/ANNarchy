@@ -39,10 +39,6 @@ public:
 
 	void setDt(DATA_TYPE dt) { dt_ = dt; }
 
-	DATA_TYPE getTau() { return tau_; }
-
-	void setTau(DATA_TYPE tau) { tau_ = tau; }
-
 	/**
 	 *  \brief      Add synapse.
 	 *  \param[IN]  rank    rank of the presynaptic neuron
@@ -71,7 +67,6 @@ protected:
     std::vector<DATA_TYPE>* pre_rates_;
     std::vector<DATA_TYPE>* post_rates_;
 
-    DATA_TYPE tau_;
     DATA_TYPE dt_;
 
     bool constDelay_;

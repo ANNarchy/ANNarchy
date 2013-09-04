@@ -109,6 +109,28 @@ class Projection(object):
             return self.generator.parsed_variables
         else:
             return []
+            
+    @property
+    def variables(self):
+        """
+        Returns a list of all variable names.
+        """
+        ret_var = Global._pre_def_synapse_var        
+        for var in self._parsed_variables():
+            if not var['type'] == 'parameter' and not var['name'] in ret_var:
+                ret_var.append(var['name'])        
+        return ret_var
+
+    @property
+    def parameters(self):
+        """
+        Returns a list of all parameter names.
+        """
+        ret_par = Global._pre_def_synapse_par        
+        for var in self._parsed_variables():
+            if var['type'] == 'parameter' and not var['name'] in ret_par:
+                ret_par.append(var['name'])        
+        return ret_par
 
     def connect(self):
         
