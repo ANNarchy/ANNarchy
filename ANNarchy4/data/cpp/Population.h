@@ -44,6 +44,10 @@ public:
 
 	std::vector<DATA_TYPE> getRates(std::vector<int> delays, std::vector<int> ranks);
 
+	DATA_TYPE getDt() { return dt_;	}
+
+	void setDt(DATA_TYPE dt) { dt_ = dt; }
+
 protected:
 	// data
 	int nbNeurons_;
