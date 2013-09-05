@@ -4,14 +4,14 @@ Population.py
 import Global 
 import Neuron
 from ANNarchy4 import generator
-from ANNarchy4.core.Descriptor import PopulationDescriptor, Attribute
+from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
 
 import traceback
 import numpy as np
 
-class Population(PopulationDescriptor):
+class Population(Descriptor):
     """
     Represents a population of neurons.
     """
