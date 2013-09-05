@@ -7,7 +7,8 @@ import Global
 from Dendrite import Dendrite
 from ANNarchy4 import generator
 from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.Variable import Descriptor, Attribute
+from ANNarchy4.core.Variable import Variable
+from ANNarchy4.core.Descriptor import Descriptor, Attribute
 
 class Projection(Descriptor):
     """

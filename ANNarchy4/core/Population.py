@@ -4,14 +4,14 @@ Population.py
 import Global 
 import Neuron
 from ANNarchy4 import generator
-from ANNarchy4.core.Variable import Descriptor, Attribute
+from ANNarchy4.core.Descriptor import PopulationDescriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
 
 import traceback
 import numpy as np
 
-class Population(Descriptor):
+class Population(PopulationDescriptor):
     """
     Represents a population of neurons.
     """
@@ -27,7 +27,6 @@ class Population(Descriptor):
         * *neuron*: instance of ``ANNarchy4.Neuron``
         
         """
-        
         if isinstance(geometry, int): # 1D
             self.geometry = (geometry, )
         else: # a tuple is given
@@ -40,9 +39,10 @@ class Population(Descriptor):
         else:
             self.name = 'Population_'+str(self.id)
         
-
-        Global._populations.append(self)
         self.generator = generator.Population(self)
+        Global._populations.append(self)
+
+        self.initialized = True        
         
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""

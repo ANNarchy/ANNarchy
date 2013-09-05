@@ -8,7 +8,7 @@ import shutil
 # ANNarchy core informations
 import ANNarchy4
 import ANNarchy4.core.Global as Global
-from ANNarchy4.core.Variable import Attribute   
+from ANNarchy4.core.Descriptor import Attribute   
 
 def create_includes():
     """
@@ -235,6 +235,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     _update_global_operations()
     # Generate the code
     code_generation(cpp_stand_alone)
+    
     # Create ANNarchyCore.so and py extensions
     print 'Compiling...',
     os.chdir(Global.annarchy_dir)
@@ -254,6 +255,9 @@ def compile(cpp_stand_alone=False, debug_build=False):
         else:
             proc = subprocess.Popen(['compile.bat'], shell=True)
         proc.wait()
+        
+    Global._compiled = True
+    
     # Return to the current directory
     os.chdir('..')
     # Import the libraries

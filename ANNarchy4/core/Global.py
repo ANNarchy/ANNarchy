@@ -17,6 +17,8 @@ _pre_def_neuron = ['rank', 'rate']
 # path to annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
 
+_compiled = False   #I know it's evil
+
 # discretization timestamp
 config = dict(
        { 'dt' : 1.0 }

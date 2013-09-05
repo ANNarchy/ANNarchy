@@ -1,4 +1,4 @@
-from ANNarchy4.core.Variable import Descriptor, Attribute
+from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.Random import RandomDistribution
 import numpy as np
 

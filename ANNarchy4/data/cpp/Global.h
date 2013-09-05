@@ -30,6 +30,14 @@
 	#define positive(x) x > 0.0f ? x : 0.0f
 #endif
 
+#ifdef ANNAR_DOUBLE
+	#define DATA_TYPE double
+	#define negative(x) x < 0.0 ? x : 0.0
+#else
+	#define DATA_TYPE float
+	#define negative(x) x < 0.0f ? x : 0.0f
+#endif
+
 #include "Random.h"
 #include "Network.h"
 #include "Population.h"
