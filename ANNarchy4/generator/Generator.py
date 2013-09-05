@@ -260,8 +260,10 @@ def compile(cpp_stand_alone=False, debug_build=False):
     try:
         import ANNarchyCython
     except:
-        print '\nError: the Cython library was not correctly compiled.'
-        exit(0)
+        if not cpp_stand_alone:
+            print '\nError: the Cython library was not correctly compiled.'
+            exit(0)
+            
     # Create the Python objects    
     if not cpp_stand_alone:
         # bind the py extensions to the corresponding python objects
