@@ -51,7 +51,7 @@ cdef class One2One(PyxConnector):
 
         return ranks
 
-    def connect(self, pre, post, distribution, target, parameters):
+    def connect(self, pre, post, target, weights, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
         
@@ -59,8 +59,9 @@ cdef class One2One(PyxConnector):
         
             * *pre*: the presynaptic population (python Population instance)            
             * *post*: the postsynaptic population (python Population instance)            
+            * *target*: string describing the connection type
             * *weights*: synaptic weights as an instance of RandomDistribution            
-            * *target*: string describing the connection type            
+            * *delays*: synaptic delays as an instance of RandomDistribution                        
             * *parameters*: pattern specific parameters
         
         Specific parameters:
@@ -78,9 +79,10 @@ cdef class One2One(PyxConnector):
         
         for p in xrange(self.postSize):
             local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
-            v = distribution.get_value()
-
-            local.init(r[p], v)            
+            v = weights.get_value()
+            d = delays.get_value()
+            
+            local.init(r[p], v, d)
             
             Proj.append(local)
 
@@ -109,7 +111,7 @@ cdef class All2All(PyxConnector):
         """
         PyxConnector.__init__(proj_type)
 
-    def connect(self, pre, post, weights, target, parameters):
+    def connect(self, pre, post, target, weights, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
         
@@ -117,8 +119,9 @@ cdef class All2All(PyxConnector):
         
             * *pre*: the presynaptic population (python Population instance)            
             * *post*: the postsynaptic population (python Population instance)            
+            * *target*: string describing the connection type
             * *weights*: synaptic weights as an instance of RandomDistribution            
-            * *target*: string describing the connection type.            
+            * *delays*: synaptic delays as an instance of RandomDistribution                        
             * *parameters*: pattern specific parameters
         
         Specific parameters:
@@ -143,10 +146,12 @@ cdef class All2All(PyxConnector):
             local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
             if not self.allowSelfConnections and (pre==post):
                 v = weights.get_values(self.preSize-1)
+                d = delays.get_values(self.preSize-1)
             else:
                 v = weights.get_values(self.preSize)
+                d = delays.get_values(self.preSize)
             
-            local.init(self.ranks[p], v)
+            local.init(self.ranks[p], v, d)
             Proj.append(local)            
 
         return Proj
@@ -193,6 +198,7 @@ cdef class DoG(PyxConnector):
     cdef sigma_pos
     cdef sigma_neg
     cdef limit
+    cdef delay_dist
 
     def __cinit__(self, proj_type):
         """
@@ -204,7 +210,7 @@ cdef class DoG(PyxConnector):
         """
         PyxConnector.__init__(proj_type)
       
-    def connect(self, pre, post, distribution, target, parameters):
+    def connect(self, pre, post, target, weights, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
         
@@ -212,8 +218,9 @@ cdef class DoG(PyxConnector):
         
             * *pre*: the presynaptic population (python Population instance)            
             * *post*: the postsynaptic population (python Population instance)            
+            * *target*: string describing the connection type
             * *weights*: synaptic weights as an instance of RandomDistribution            
-            * *target*: string describing the connection type.            
+            * *delays*: synaptic weights as an instance of RandomDistribution                        
             * *parameters*: pattern specific parameters
         
         Specific parameters:
@@ -234,7 +241,9 @@ cdef class DoG(PyxConnector):
         self.sigma_neg = parameters['sigma_neg']
         self.amp_pos = parameters['amp_pos']
         self.amp_neg = parameters['amp_neg']
-
+        
+        self.delay_dist = delays
+        
         if 'limit' in parameters.keys():
             self.limit = parameters['limit']
         else:
@@ -248,9 +257,9 @@ cdef class DoG(PyxConnector):
         for p in xrange(self.postSize):
             local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
             
-            r, v = self.genRanksAndValues(p)
-
-            local.init(r, v)
+            r, v, d = self.genRanksAndValues(p)
+            
+            local.init(r, v, d)
             Proj.append(local)
 
         return Proj
@@ -269,21 +278,24 @@ cdef class DoG(PyxConnector):
         cdef float dist, value
         cdef vector[int] normPre, normPost
         cdef vector[int] ranks
+        cdef vector[int] delay
         cdef vector[float] values
         selfConnection = False
 
         ranks.clear()
         values.clear()
+        delay.clear()
 
         normPost = self.post.normalized_coordinates_from_rank(postRank)
 
         for j in range(self.preSize):
-             if (not selfConnection or (self.pre != self.post)):
-                 normPre = self.pre.normalized_coordinates_from_rank(j)
-                 dist = self.compDist(normPre, normPost)
-                 value = self.amp_pos*exp(-dist/2.0/self.sigma_pos/self.sigma_pos) - self.amp_neg*exp(-dist/2.0/self.sigma_neg/self.sigma_neg)
-                 if (abs(value) > self.limit*abs(self.amp_pos-self.amp_neg)):
-                     ranks.push_back(j)
-                     values.push_back(value)
-        
-        return ranks, values
+            if (not selfConnection or (self.pre != self.post)):
+                normPre = self.pre.normalized_coordinates_from_rank(j)
+                dist = self.compDist(normPre, normPost)
+                value = self.amp_pos*exp(-dist/2.0/self.sigma_pos/self.sigma_pos) - self.amp_neg*exp(-dist/2.0/self.sigma_neg/self.sigma_neg)
+                if (abs(value) > self.limit*abs(self.amp_pos-self.amp_neg)):
+                    ranks.push_back(j)
+                    values.push_back(value)
+                    delay.self.delay_dist.get_value()
+                    
+        return ranks, values, delay

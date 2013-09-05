@@ -26,7 +26,7 @@ cdef extern from "../build/Projection.h":
         
         float getDt()
         
-        void initValues(vector[int] rank, vector[float] value)
+        void initValues(vector[int] rank, vector[float] value, vector[int] delay)
         
         int getSynapseCount()
         
@@ -54,8 +54,8 @@ cdef class LocalProjection:
         self.post_rank = rank
         self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target)
         
-    def init(self, ranks, values):
-        self.cInstance.initValues(ranks, values)
+    def init(self, ranks, values, delays):
+        self.cInstance.initValues(ranks, values, delays)
 
     def add_synapse(self, rank, value, delay=0):
         err = self.cInstance.addSynapse(rank, value, delay)
@@ -104,6 +104,19 @@ cdef class LocalProjection:
                     self.cInstance.setValue(value.reshape(self.size))
             else:
                 self.cInstance.setValue(np.ones(self.size)*value)
+
+    property delay:
+        def __get__(self):
+            return np.array(self.cInstance.getDelay())
+
+        def __set__(self, value):
+            if isinstance(value, np.ndarray)==True:
+                if value.ndim==1:
+                    self.cInstance.setDelay(value)
+                else:
+                    self.cInstance.setDelay(value.reshape(self.size))
+            else:
+                self.cInstance.setDelay(np.ones(self.size)*value)
 
     property rank: # pre synaptic rank
         def __get__(self):

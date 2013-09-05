@@ -198,8 +198,9 @@ class Projection(Descriptor):
                       
         tmp = self.connector.cyInstance.connect(self.pre,
                                           self.post,
-                                          self.connector.weights,
                                           self.post.generator.targets.index(self.target),
+                                          self.connector.weights,
+                                          self.connector.delays,
                                           self.connector.parameters
                                           )
         
