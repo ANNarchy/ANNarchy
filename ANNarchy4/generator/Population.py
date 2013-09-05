@@ -114,11 +114,11 @@ class Population(object):
         generates population instantiation code for c++. 
         HINT: only used if cpp_stand_alone=True provided to generator.compile()
         """        
-        return ('\t\t'+self.population.name.capitalize()+'* '+
-                      self.population.name.lower()+' = new '+
-                      self.population.name.capitalize()+'("'+
-                      self.population.name.capitalize()+'", '+
-                      str(self.population.size())+');\n')
+        return ('\t\t'+self.population.generator.class_name+'* '+
+                      self.population.name+' = new '+
+                      self.population.generator.class_name+'("'+
+                      self.population.name+'", '+
+                      str(self.population.size)+');\n')
 
     def add_target(self, target):
         """
