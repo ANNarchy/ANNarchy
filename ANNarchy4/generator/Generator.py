@@ -276,6 +276,8 @@ def compile(cpp_stand_alone=False, debug_build=False):
         for proj in Global._projections:
             # Create the synapses
             proj.connect()  
+            # Create the attributes
+            proj._init_attributes()
         print ' OK.'   
     else:
         #abort the application after compiling ANNarchyCPP

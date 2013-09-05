@@ -7,8 +7,9 @@ import Global
 from Dendrite import Dendrite
 from ANNarchy4 import generator
 from ANNarchy4.core.Random import RandomDistribution
+from ANNarchy4.core.Variable import Descriptor, Attribute
 
-class Projection(object):
+class Projection(Descriptor):
     """
     Python class representing the projection between two populations.
     """
@@ -53,6 +54,58 @@ class Projection(object):
         self.generator = generator.Projection(self, self.synapse)
         Global._projections.append(self)
         
+    def _init_attributes(self):
+        """ Method used after compilation to initialize the attributes."""
+        for var in self.variables + self.parameters:
+            setattr(self, var, Attribute(var))
+            
+    def get(self, name):
+        """ Returns a list of parameters/variables values for each dendrite in the projection.
+        
+        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.
+        
+        """
+        ret=[]
+        for dendrite in self.dendrites:
+            ret.append(dendrite.get(name))        
+        return np.array(ret)
+            
+    def set(self, value):
+        """ Sets the parameters/variables values for each dendrite in the projection.
+        
+        For parameters, you can provide:
+        
+            * a single value, which will be the same for all dendrites.
+            
+            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
+            
+        For variables, you can provide:
+        
+            * a single value, which will be the same for all synapses of all dendrites.
+            
+            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will have the same value.
+            
+            * a list of lists or 2D numpy array representing for each connected postsynaptic neuron, the value to be taken by each synapse. The first dimension must be self.size, while the second must correspond to the number of synapses in each particular dendrite.
+            
+        .. hint::
+        
+            In the latter case, it would be less error-prone to iterate over all dendrites in the projection:
+            
+            .. code-block:: python
+            
+                for dendrite in proj.dendrites:
+                    dendrite.set( ... )    
+        
+        """
+        
+        for val_key in value.keys():
+            if isinstance(value[val_key], list) or isinstance(value[val_key], np.ndarray):
+                for rk in range(len(self._dendrites)):
+                    self._dendrites[rk].set({val_key: value[val_key][rk] })
+            else:
+                for dendrite in self._dendrites:
+                    dendrite.set({val_key: value[val_key] })
+            
                 
     def dendrite(self, pos):
         """
@@ -100,6 +153,13 @@ class Projection(object):
         List of dendrites corresponding to this projection.
         """
         return self._dendrites
+        
+    @property
+    def post_ranks(self):
+        """
+        List of postsynaptic neuron ranks having synapses in this projection.
+        """
+        return self._post_ranks
 
     def _parsed_variables(self):
         """
