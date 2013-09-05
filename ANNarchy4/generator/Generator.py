@@ -276,6 +276,8 @@ def compile(cpp_stand_alone=False, debug_build=False):
             pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
             # Create the attributes
             pop._init_attributes()
+            # Initialize their value
+            pop.generator._init_variables()
         # instantiate projections
         for proj in Global._projections:
             # Create the synapses

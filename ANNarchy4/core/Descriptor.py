@@ -37,14 +37,14 @@ class Descriptor(object):
         else:
             if hasattr(obj, '__set__'):
                 return obj.__set__(self, value)
-
         if not Global._compiled :
             if hasattr(self, 'initialized'):
                 if name in self.generator._variable_names():
                     self.generator._update_value(name, value)
+                    return None
                 else:
                     self.generator._add_value(name, value)
-        
+                    return None
         return object.__setattr__(self, name, value)
                 
 class Attribute(object):

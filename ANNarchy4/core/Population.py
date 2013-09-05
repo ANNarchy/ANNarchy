@@ -60,12 +60,10 @@ class Population(Descriptor):
         Returns a list of all variable names.
         """
         neur_var = self.generator.neuron_variables
-        ret_var=[] 
-        
+        ret_var=[]        
         for var in neur_var:
             if 'var' in var.keys():
-                ret_var.append(var['name'])
-        
+                ret_var.append(var['name'])      
         return ret_var
 
     @property
@@ -74,12 +72,10 @@ class Population(Descriptor):
         Returns a list of all parameter names.
         """
         neur_var = self.generator.neuron_variables
-        ret_par=[] 
-        
+        ret_par=[]        
         for var in neur_var:
             if not 'var' in var.keys():
                 ret_par.append(var['name'])
-        
         return ret_par
         
     @property
@@ -113,13 +109,16 @@ class Population(Descriptor):
         
             * *variable*: should be a string representing the variables's name.
         """
-        
-        if hasattr(self.cyInstance, variable):
-            return getattr(self.cyInstance, variable).reshape(self.geometry)
+        if hasattr(self, 'cyInstance'):
+            if hasattr(self.cyInstance, variable):
+                return getattr(self.cyInstance, variable).reshape(self.geometry)
+            else:
+                print 'Error: variable',variable,'does not exist in this population.'
+                print traceback.print_stack()
         else:
-            print 'Error: variable',variable,'does not exist in this population.'
+            print 'Error: the network is not compiled yet.'
             print traceback.print_stack()
-
+            
     def get_parameter(self, parameter):
         """
         Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
@@ -129,10 +128,14 @@ class Population(Descriptor):
             * *parameter*: should be a string representing the variables's name.
         """
         
-        if hasattr(self.cyInstance, parameter):
-            return getattr(self.cyInstance, parameter)
+        if hasattr(self, 'cyInstance'):
+            if hasattr(self.cyInstance, parameter):
+                return getattr(self.cyInstance, parameter)
+            else:
+                print 'Error: parameter',parameter,'does not exist in this population.'
+                print traceback.print_stack()
         else:
-            print 'Error: parameter',parameter,'does not exist in this population.'
+            print 'Error: the network is not compiled yet.'
             print traceback.print_stack()
     
     def rank_from_coordinates(self, coord):
@@ -193,16 +196,20 @@ class Population(Descriptor):
                 
                     set( 'tau' : 20, 'rate'= np.random.rand((8,8)) } )
         """
-        for val_key in value.keys():
-            if hasattr(self, val_key):
-                # Check the type of the data
-                if isinstance(value[val_key], RandomDistribution):
-                    val = value[val_key].getValues(self.size) 
-                else: 
-                    val = value[val_key] 
-                setattr(self.cyInstance, val_key, val)
-            else:
-                print "Error: population does not have the variable: " + val_key + "."
+        if hasattr(self, 'cyInstance'):
+            for val_key in value.keys():
+                if hasattr(self, val_key):
+                    # Check the type of the data
+                    if isinstance(value[val_key], RandomDistribution):
+                        val = value[val_key].getValues(self.size) 
+                    else: 
+                        val = value[val_key] 
+                    setattr(self.cyInstance, val_key, val)
+                else:
+                    print "Error: population does not have the variable: " + val_key + "."
+        else:
+            print 'Error: the network is not compiled yet.'
+            print traceback.print_stack()
         
     def get(self, value):
         """
@@ -212,12 +219,16 @@ class Population(Descriptor):
         
             * *value*: value name as string
         """
-        if value in self.variables:
-            return self.get_variable(value)
-        elif value in self.parameters:
-            return self.get_parameter(value)
+        if hasattr(self, 'cyInstance'):
+            if value in self.variables:
+                return self.get_variable(value)
+            elif value in self.parameters:
+                return self.get_parameter(value)
+            else:
+                print "Error: population does not contain value: '"+value+"'"         
         else:
-            print "Error: population does not contain value: '"+value+"'"
+            print 'Error: the network is not compiled yet.'
+            print traceback.print_stack()
             
 #    def _reshape_vector(self, vector):
 #        """

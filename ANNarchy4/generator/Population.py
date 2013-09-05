@@ -2,6 +2,7 @@
 Population.py
 """
 import re
+import numpy as np
 
 # ANNarchy core informations
 import ANNarchy4.core.Global as Global
@@ -29,13 +30,24 @@ class Population(object):
         self.targets = []
         self.neuron_variables = copy.deepcopy(self.population.neuron_type.variables)
         self.global_operations = {'pre':[],'post':[]}
+        self.post_compilation_init = {}
+        
+    def _init_variables(self):
+        """ Called after creation of the C++ objects to initialize variables with arrays."""
+        self.population.set(self.post_compilation_init)
              
     def _get_value(self, name):
         """ Returns init value """
+        if name in self.post_compilation_init.keys():
+            return self.post_compilation_init[name]
         for var in self.neuron_variables:
             if var['name']==name:
-                return var['init']
-        
+                if 'var' in var.keys(): # variable
+                    return var['var'].init
+                elif 'init' in var.keys(): # parameter
+                    return var['init']
+                else: # default
+                    return 0.0 
         return None
         
     def _variable_names(self):
@@ -64,14 +76,24 @@ class Population(object):
         values = next(( item for item in self.neuron_variables if item['name']==name ), None)
         if values:
             if 'var' in values.keys():
-                if isinstance(value, (int, float)):                
+                if isinstance(value, (int, float)):       
                     values['var'].init = float(value)
                 elif isinstance(value, Variable):
                     values['var'] = value
                 elif isinstance(value, RandomDistribution):
                     values['var'].init = value
+                elif isinstance(value, list):
+                    if len(value) == self.population.size:
+                        self.post_compilation_init[name] = value
+                    else:
+                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with a list of the same size', self.population.size                    
+                elif isinstance(value, np.ndarray): # will be assigned after the constrution of the c++ objects
+                    if value.shape == self.population.geometry or value.shape == (self.population.size, ):
+                        self.post_compilation_init[name] = value
+                    else:
+                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with an array of the same shape', self.population.geometry  
                 else:
-                    print "Error: can't assign ", value ,"(",type(value),") to "+name
+                    print "Error: can't assign ", value ,"(",type(value),") to the variable "+name
             else:
                 values['init'] = float(value)
         else:
