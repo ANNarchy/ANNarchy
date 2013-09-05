@@ -32,7 +32,6 @@ class Population(object):
              
     def _get_value(self, name):
         """ Returns init value """
-        print '_get_value', name
         for var in self.neuron_variables:
             if var['name']==name:
                 return var['init']

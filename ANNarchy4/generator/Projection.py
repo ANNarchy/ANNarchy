@@ -36,6 +36,14 @@ class Projection(object):
         }
         self.global_operations = []
 
+    def _get_value(self, name):
+        """ Returns init value """
+        for var in self.synapse_variables:
+            if var['name']==name:
+                return var['init']
+        
+        return None
+
     def _variable_names(self):
         return [var['name'] for var in self.synapse_variables ]
 
