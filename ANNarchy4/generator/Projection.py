@@ -110,7 +110,7 @@ class Projection(object):
 
             code = """\tsum_ =0.0;
     
-    if(delay_.empty())    // no delay
+    if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
         for(int i=0; i<(int)rank_.size(); i++) {
             sum_ += %(psp)s
