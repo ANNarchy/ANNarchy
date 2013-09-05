@@ -30,7 +30,7 @@ class RandomDistribution(object):
             return None
 
     def get_value(self):
-        return self.getValues((1))
+        return self.get_values((1))
 
     def genCPP(self):
         code = ''
