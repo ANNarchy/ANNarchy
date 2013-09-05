@@ -165,15 +165,21 @@ class Population(Descriptor):
         coord = np.unravel_index(rank, self.geometry)
         return coord
 
-    def normalized_coordinates_from_rank(self, rank, norm=1.):
+    def normalized_coordinates_from_rank(self, pos, norm=1.):
         """
-        Returns a tuple of coordinates corresponding to the rank, normalized between 0.0 and norm in each dimension.
+        Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
         """
-        
-        coord = self.coordinates_from_rank(rank)
-        for dim in self.dimension:
-            coord[dim] = norm * float(coord[dim])/float(self.geometry[dim]-1)
-        return coord
+        if isinstance(pos, int):
+            coord = self.coordinates_from_rank(pos)
+        else:
+            coord = pos
+        normal = tuple()
+        for dim in range(self.dimension):
+            if self.geometry[dim] > 1:
+                normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
+            else:
+                normal += (0.0,) # default?
+        return normal
 
     def set(self, value):
         """
