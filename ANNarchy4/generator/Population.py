@@ -30,6 +30,15 @@ class Population(object):
         self.neuron_variables = copy.deepcopy(self.population.neuron_type.variables)
         self.global_operations = {'pre':[],'post':[]}
              
+    def _get_value(self, name):
+        """ Returns init value """
+        print '_get_value', name
+        for var in self.neuron_variables:
+            if var['name']==name:
+                return var['init']
+        
+        return None
+        
     def _variable_names(self):
         return [var['name'] for var in self.neuron_variables ]
 

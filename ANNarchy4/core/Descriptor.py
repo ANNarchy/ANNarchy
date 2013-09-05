@@ -11,9 +11,19 @@ class Descriptor(object):
         """
         getter
         """
-        value = object.__getattribute__(self, name)
-        if hasattr(value, '__get__'):
-            value = value.__get__(self)
+        
+        try:
+            value = object.__getattribute__(self, name)
+        except AttributeError:
+            if not Global._compiled :
+                if name in object.__getattribute__(self, 'generator')._variable_names():
+                    tmp = object.__getattribute__(self, 'generator')._get_value(name)
+                    if tmp != None:
+                        value = tmp
+        else:
+            if hasattr(value, '__get__'):
+                value = value.__get__(self)
+        
         return value
 
     def __setattr__(self, name, value):
