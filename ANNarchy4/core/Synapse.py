@@ -35,5 +35,6 @@ class Synapse(Master):
 
         Master.__init__(self, debug, order, keyValueArgs)
 
-        self.parser = parser.SynapseAnalyser(self.variables)
-        self.parsed_variables, self.global_operations = self.parser.parse()
+    def _global_operations(self):
+        var, g_op = parser.SynapseAnalyser(self.variables).parse()        
+        return g_op

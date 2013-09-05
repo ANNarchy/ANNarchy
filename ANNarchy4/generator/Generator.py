@@ -201,7 +201,7 @@ def _update_global_operations():
     
     for proj in Global._projections:
         if proj.synapse != None:
-            proj_dict = proj.synapse.global_operations
+            proj_dict = proj.synapse._global_operations()
             
             # only post-synaptic variables are generated in populations
             for entry in proj_dict['pre']:

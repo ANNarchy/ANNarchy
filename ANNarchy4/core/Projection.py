@@ -8,9 +8,9 @@ from Dendrite import Dendrite
 from ANNarchy4 import generator
 from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.Variable import Variable
-from ANNarchy4.core.Descriptor import Descriptor, Attribute
+from ANNarchy4.core.Descriptor import PopulationDescriptor, Attribute
 
-class Projection(Descriptor):
+class Projection(PopulationDescriptor):
     """
     Python class representing the projection between two populations.
     """
@@ -54,6 +54,7 @@ class Projection(Descriptor):
         self.name = 'Projection'+str(len(Global._projections))
         self.generator = generator.Projection(self, self.synapse)
         Global._projections.append(self)
+        self.initialized = True
         
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
