@@ -7,6 +7,8 @@ class Projection{
 public:
 	Projection() {};
 
+      virtual ~Projection();
+
 	virtual void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
 
 	virtual void computeSum() {};

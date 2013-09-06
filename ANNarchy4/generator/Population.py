@@ -252,6 +252,8 @@ class %(class)s: public Population
 public:
     %(class)s(std::string name, int nbNeurons);
     
+    ~%(class)s();
+    
     int getNeuronCount() { return nbNeurons_; }
     
     void metaStep();
@@ -294,6 +296,23 @@ private:
     
             constructor += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return constructor
+        
+        def destructor(parsed_neuron):
+            """
+            generate population destructor implementation.
+            """
+            destructor = ''
+    
+            for value in parsed_neuron:
+                if '_rand_' in value['name']:   # skip local member
+                    continue
+                if 'rate' == value['name']:   # fire rate
+                    continue
+
+                if 'variable' == value['type']:                 
+                    destructor += '\t'+value['name']+'_.clear();\n'
+    
+            return destructor
         
         def replace_rand_(parsed_neuron, rand_objects):
             """
@@ -417,6 +436,16 @@ private:
     Network::instance()->addPopulation(this);
 }
 
+%(class)s::~%(class)s() {
+#ifdef _DEBUG
+    std::cout << "%(class)s::Destructor" << std::endl;
+#endif
+
+    std::cout << "%(class)s::Destructor" << std::endl;
+    
+%(destruct)s
+}
+
 void %(class)s::metaStep() {
 %(metaStep)s    
 }
@@ -427,7 +456,8 @@ void %(class)s::globalOperations() {
 
 %(single_global_ops)s
 """ % { 'class': self.class_name, 
-        'construct': constructor(self.parsed_neuron), 
+        'construct': constructor(self.parsed_neuron),
+        'destruct': destructor(self.parsed_neuron), 
         'metaStep': meta_step(self.parsed_neuron,
                               self.rand_objects,
                               self.population.neuron_type.order

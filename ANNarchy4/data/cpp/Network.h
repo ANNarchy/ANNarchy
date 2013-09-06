@@ -19,10 +19,14 @@ public:
 	class Population* getPopulation(std::string name);
 
 	class Population* getPopulation(unsigned int id) {
-		if ( id < populations_.size() )
+		if ( id < populations_.size() ) {
 			return populations_[id];
-		else
+		}else{
+           #ifdef _DEBUG
+                 std::cout << "Population id="<<id<<" not exist."<<std::endl;
+           #endif
 			return NULL;
+           }
 	}
 
 	std::vector<DATA_TYPE> getRates(int populationID);

@@ -29,8 +29,8 @@ All2AllConnector::~All2AllConnector() {
 void All2AllConnector::connect(Population *prePopulation, Population *postPopulation, int projectionID, int target) {
 #ifdef _DEBUG
 	std::cout << "All2AllConnector" << std::endl;
-	std::cout << "	PreLayer -" << prePopulation->getName() << prePopulation->getNeuronCount() << std::endl;
-	std::cout << "	PostLayer -" << prePopulation->getName() << postPopulation->getNeuronCount() << std::endl;
+	std::cout << "	PreLayer - '" << prePopulation->getName() << "' neurons: " << prePopulation->getNeuronCount() << std::endl;
+	std::cout << "	PostLayer - '" << postPopulation->getName() << "' neurons: " << postPopulation->getNeuronCount() << std::endl;
 #endif
 
 	std::vector<int> ranks;
@@ -89,8 +89,8 @@ One2OneConnector::~One2OneConnector() {
 void One2OneConnector::connect(Population *prePopulation, Population *postPopulation, int projectionID, int target) {
 #ifdef _DEBUG
 	std::cout << "One2OneConnector" << std::endl;
-	std::cout << "	PreLayer -" << prePopulation->getName() << prePopulation->getNeuronCount() << std::endl;
-	std::cout << "	PostLayer -" << prePopulation->getName() << postPopulation->getNeuronCount() << std::endl;
+	std::cout << "	PreLayer - '" << prePopulation->getName() << "' neurons: " << prePopulation->getNeuronCount() << std::endl;
+	std::cout << "	PostLayer - '" << postPopulation->getName() << "' neurons: " << postPopulation->getNeuronCount() << std::endl;
 #endif
 
 	std::vector<int> ranks;

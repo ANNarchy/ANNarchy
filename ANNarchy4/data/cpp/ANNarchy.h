@@ -24,6 +24,10 @@ public:
     void run(int nbSteps) {
         net_->run(nbSteps);
     }
+
+    Network* getNetwork() {
+        return net_;
+    }
 private:
     Network *net_;
 };

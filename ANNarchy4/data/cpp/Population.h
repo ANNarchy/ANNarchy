@@ -8,7 +8,7 @@ public:
 	// functions
 	Population(std::string name, int nbNeurons);
 
-	~Population();
+	virtual ~Population();
 
 	virtual void metaSum();
 	virtual void metaStep();

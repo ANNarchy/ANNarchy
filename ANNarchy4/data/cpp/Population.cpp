@@ -13,10 +13,19 @@ Population::Population(std::string name, int nbNeurons) {
 }
 
 Population::~Population() {
-	rate_.clear();
-	for(int n=0; n<nbNeurons_; n++) {
-		projections_[n].erase(projections_[n].begin(), projections_[n].end());
-	}
+    std::cout << "Population::Destructor" << std::endl;
+
+    rate_.erase(rate_.begin(), rate_.end());
+    for(auto it=delayedRates_.begin(); it<delayedRates_.end(); it++)
+        (*it).erase((*it).begin(), (*it).end());
+
+    for(int n=0; n<nbNeurons_; n++) {
+        while(!projections_[n].empty()){
+            delete projections_[n].back();
+            projections_[n].pop_back();
+        }
+        //projections_[n].erase(projections_[n].begin(), projections_[n].end());
+    }
 }
 
 void Population::printRates() {

@@ -119,6 +119,14 @@ class Projection(object):
                 code += "\t"+var['init']+"\n"               
             code += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return code
+
+        def destructor(parsed_variables):
+            """
+            create variable/parameter constructor entries.
+            """
+            code = ''            
+
+            return code
         
         def init_val(parsed_variables):
             code ="""
@@ -317,7 +325,9 @@ private:
 
         body = '''#include "%(name)s.h"
 %(name)s::%(name)s(Population* pre, Population* post, int postRank, int target) : Projection() {
-
+    pre_population_ = static_cast<%(pre_type)s*>(pre);
+    post_population_ = static_cast<%(post_type)s*>(post);
+    
     pre_rates_ = pre_population_->getRates();
     post_rates_ = post_population_->getRates();
 
@@ -343,7 +353,10 @@ private:
 }
 
 %(name)s::~%(name)s() {
-
+#ifdef _DEBUG
+    std::cout<<"%(name)s::Destructor"<<std::endl;
+#endif
+%(destruct)s
 }
 
 void %(name)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
@@ -364,6 +377,7 @@ void %(name)s::globalLearn() {
 }
 
 ''' % { 'name': self.name,
+        'destruct': destructor(self.parsed_variables),
         'pre_type': self.projection.pre.cpp_class,
         'post_type': self.projection.post.cpp_class,
         'init': init(self.parsed_variables), 

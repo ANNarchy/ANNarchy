@@ -1,5 +1,19 @@
 #include "Projection.h"
 
+Projection::~Projection() {
+#ifdef _DEBUG
+    std::cout<<"Projection::Destructor"<<std::endl;
+#endif
+    
+    if(!rank_.empty())
+        rank_.erase(rank_.begin(), rank_.end());
+    if(!value_.empty())
+        value_.erase(value_.begin(), value_.end());
+    if(!delay_.empty())
+        delay_.erase(delay_.begin(), delay_.end());
+
+}
+
 void Projection::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
 	rank_ = rank;
 	value_ = value;

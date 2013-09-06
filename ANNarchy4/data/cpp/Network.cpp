@@ -7,6 +7,9 @@ Network::Network() {
 }
 
 Network::~Network() {
+
+    std::cout << "Network destructor." << std::endl;
+
 	while(!populations_.empty()) {
 		delete populations_.back();
 		populations_.pop_back();
@@ -35,7 +38,10 @@ std::vector<DATA_TYPE> Network::getRates(int populationID, std::vector<int> dela
 }
 
 void Network::addPopulation(class Population* population) {
-	populations_.push_back(population);
+#ifdef _DEBUG
+    std::cout << "Added population '"<< population->getName()<<"' on place " << populations_.size()<<std::endl;
+#endif
+    populations_.push_back(population);
 }
 
 void Network::connect(int prePopulationID, int postPopulationID, Connector *connector, int projectionID, int targetID) {

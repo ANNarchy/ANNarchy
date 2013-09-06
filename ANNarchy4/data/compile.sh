@@ -15,10 +15,10 @@ fi
 
 if [ $alone == "True" ]; then
     echo compile ANNarchy as stand alone library
-    g++ -O2 -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCPP.so
+    g++ -g -O2 -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCPP.so
     
 else
-    g++ -O2 -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCore.so
+    g++ -g -O2 -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.cpp -o libANNarchyCore.so
 
     python setup.py build_ext --inplace
 fi > compile_stdout.log 2> compile_stderr.log
