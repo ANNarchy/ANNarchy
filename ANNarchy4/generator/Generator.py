@@ -8,7 +8,7 @@ import shutil
 # ANNarchy core informations
 import ANNarchy4
 import ANNarchy4.core.Global as Global
-from ANNarchy4.core.Variable import Attribute   
+from ANNarchy4.core.Descriptor import Attribute   
 
 def create_includes():
     """
@@ -201,7 +201,7 @@ def _update_global_operations():
     
     for proj in Global._projections:
         if proj.synapse != None:
-            proj_dict = proj.synapse.global_operations
+            proj_dict = proj.synapse._global_operations()
             
             # only post-synaptic variables are generated in populations
             for entry in proj_dict['pre']:
@@ -235,6 +235,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     _update_global_operations()
     # Generate the code
     code_generation(cpp_stand_alone)
+    
     # Create ANNarchyCore.so and py extensions
     print 'Compiling...',
     os.chdir(Global.annarchy_dir)
@@ -254,6 +255,9 @@ def compile(cpp_stand_alone=False, debug_build=False):
         else:
             proc = subprocess.Popen(['compile.bat'], shell=True)
         proc.wait()
+        
+    Global._compiled = True
+    
     # Return to the current directory
     os.chdir('..')
     # Import the libraries
@@ -272,10 +276,14 @@ def compile(cpp_stand_alone=False, debug_build=False):
             pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
             # Create the attributes
             pop._init_attributes()
+            # Initialize their value
+            pop.generator._init_variables()
         # instantiate projections
         for proj in Global._projections:
             # Create the synapses
             proj.connect()  
+            # Create the attributes
+            proj._init_attributes()
         print ' OK.'   
     else:
         #abort the application after compiling ANNarchyCPP

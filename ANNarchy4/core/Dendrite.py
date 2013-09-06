@@ -1,7 +1,7 @@
 """
 Dendrite.py
 """
-from Variable import Descriptor, Attribute
+from Descriptor import Descriptor, Attribute
 import Global
 from ANNarchy4.core.Random import RandomDistribution
 

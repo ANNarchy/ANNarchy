@@ -2,7 +2,11 @@
 Projection generator.
 """
 from ANNarchy4.core import Global
+from ANNarchy4.core.Variable import Variable
+from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4 import parser
+
+import copy
 
 class Projection(object):
     """
@@ -13,10 +17,11 @@ class Projection(object):
         Projection generator class constructor.
         """
         self.synapse = synapse
+        
         if self.synapse:
-            self.parsed_variables = synapse.parsed_variables
+            self.synapse_variables = copy.deepcopy(synapse.variables)
         else:
-            self.parsed_variables = []
+            self.synapse_variables = []
             
         self.projection = projection
         self.name = projection.name
@@ -28,8 +33,41 @@ class Projection(object):
         self.proj_class = { 
             'ID': len(Global._projections), 
             'name': self.name 
-        }        
+        }
+        self.global_operations = []
 
+    def _get_value(self, name):
+        """ Returns init value """
+        for var in self.synapse_variables:
+            if var['name']==name:
+                return var['init']
+        
+        return None
+
+    def _variable_names(self):
+        return [var['name'] for var in self.synapse_variables ]
+
+    def _add_value(self, name, value):
+        print "Error: it's not allowed to add new variables / parameters to projection object."
+
+    def _update_value(self, name, value):
+
+        values = next(( item for item in self.synapse_variables if item['name']==name ), None)
+        
+        if values:
+            if 'var' in values.keys():
+                if isinstance(value, (int, float)):                
+                    values['var'].init = float(value)
+                elif isinstance(value, Variable):
+                    values['var'] = value
+                elif isinstance(value, RandomDistribution):
+                    values['var'].init = value
+                else:
+                    print "Error: can't assign ", value ,"(",type(value),") to "+name
+            else:
+                values['init'] = float(value)
+        else:
+            print "Error: variable / parameter "+name+" does not exist in population object."
         
     def generate_cpp_add(self):
         """
@@ -236,6 +274,8 @@ class Projection(object):
             return access
 
         # generate func body            
+        self.parser = parser.SynapseAnalyser(self.synapse_variables)
+        self.parsed_variables, self.global_operations = self.parser.parse()
 
         header = '''#ifndef __%(name)s_H__
 #define __%(name)s_H__

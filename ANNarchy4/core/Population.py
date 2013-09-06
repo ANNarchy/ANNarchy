@@ -4,7 +4,7 @@ Population.py
 import Global 
 import Neuron
 from ANNarchy4 import generator
-from ANNarchy4.core.Variable import Descriptor, Attribute
+from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
 
@@ -27,7 +27,6 @@ class Population(Descriptor):
         * *neuron*: instance of ``ANNarchy4.Neuron``
         
         """
-        
         if isinstance(geometry, int): # 1D
             self.geometry = (geometry, )
         else: # a tuple is given
@@ -40,9 +39,10 @@ class Population(Descriptor):
         else:
             self.name = 'Population_'+str(self.id)
         
-
-        Global._populations.append(self)
         self.generator = generator.Population(self)
+        Global._populations.append(self)
+
+        self.initialized = True        
         
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -60,12 +60,10 @@ class Population(Descriptor):
         Returns a list of all variable names.
         """
         neur_var = self.generator.neuron_variables
-        ret_var=[] 
-        
+        ret_var=[]        
         for var in neur_var:
             if 'var' in var.keys():
-                ret_var.append(var['name'])
-        
+                ret_var.append(var['name'])      
         return ret_var
 
     @property
@@ -74,12 +72,10 @@ class Population(Descriptor):
         Returns a list of all parameter names.
         """
         neur_var = self.generator.neuron_variables
-        ret_par=[] 
-        
+        ret_par=[]        
         for var in neur_var:
             if not 'var' in var.keys():
                 ret_par.append(var['name'])
-        
         return ret_par
         
     @property
@@ -113,13 +109,16 @@ class Population(Descriptor):
         
             * *variable*: should be a string representing the variables's name.
         """
-        
-        if hasattr(self.cyInstance, variable):
-            return getattr(self.cyInstance, variable).reshape(self.geometry)
+        if hasattr(self, 'cyInstance'):
+            if hasattr(self.cyInstance, variable):
+                return getattr(self.cyInstance, variable).reshape(self.geometry)
+            else:
+                print 'Error: variable',variable,'does not exist in this population.'
+                print traceback.print_stack()
         else:
-            print 'Error: variable',variable,'does not exist in this population.'
+            print 'Error: the network is not compiled yet.'
             print traceback.print_stack()
-
+            
     def get_parameter(self, parameter):
         """
         Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
@@ -129,10 +128,14 @@ class Population(Descriptor):
             * *parameter*: should be a string representing the variables's name.
         """
         
-        if hasattr(self.cyInstance, parameter):
-            return getattr(self.cyInstance, parameter)
+        if hasattr(self, 'cyInstance'):
+            if hasattr(self.cyInstance, parameter):
+                return getattr(self.cyInstance, parameter)
+            else:
+                print 'Error: parameter',parameter,'does not exist in this population.'
+                print traceback.print_stack()
         else:
-            print 'Error: parameter',parameter,'does not exist in this population.'
+            print 'Error: the network is not compiled yet.'
             print traceback.print_stack()
     
     def rank_from_coordinates(self, coord):
@@ -165,15 +168,21 @@ class Population(Descriptor):
         coord = np.unravel_index(rank, self.geometry)
         return coord
 
-    def normalized_coordinates_from_rank(self, rank, norm=1.):
+    def normalized_coordinates_from_rank(self, pos, norm=1.):
         """
-        Returns a tuple of coordinates corresponding to the rank, normalized between 0.0 and norm in each dimension.
+        Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
         """
-        
-        coord = self.coordinates_from_rank(rank)
-        for dim in self.dimension:
-            coord[dim] = norm * float(coord[dim])/float(self.geometry[dim]-1)
-        return coord
+        if isinstance(pos, int):
+            coord = self.coordinates_from_rank(pos)
+        else:
+            coord = pos
+        normal = tuple()
+        for dim in range(self.dimension):
+            if self.geometry[dim] > 1:
+                normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
+            else:
+                normal += (0.0,) # default?
+        return normal
 
     def set(self, value):
         """
@@ -187,16 +196,20 @@ class Population(Descriptor):
                 
                     set( 'tau' : 20, 'rate'= np.random.rand((8,8)) } )
         """
-        for val_key in value.keys():
-            if hasattr(self, val_key):
-                # Check the type of the data
-                if isinstance(value[val_key], RandomDistribution):
-                    val = value[val_key].getValues(self.size) 
-                else: 
-                    val = value[val_key] 
-                setattr(self.cyInstance, val_key, val)
-            else:
-                print "Error: population does not have the variable: " + val_key + "."
+        if hasattr(self, 'cyInstance'):
+            for val_key in value.keys():
+                if hasattr(self, val_key):
+                    # Check the type of the data
+                    if isinstance(value[val_key], RandomDistribution):
+                        val = value[val_key].getValues(self.size) 
+                    else: 
+                        val = value[val_key] 
+                    setattr(self.cyInstance, val_key, val)
+                else:
+                    print "Error: population does not have the variable: " + val_key + "."
+        else:
+            print 'Error: the network is not compiled yet.'
+            print traceback.print_stack()
         
     def get(self, value):
         """
@@ -206,12 +219,16 @@ class Population(Descriptor):
         
             * *value*: value name as string
         """
-        if value in self.variables:
-            return self.get_variable(value)
-        elif value in self.parameters:
-            return self.get_parameter(value)
+        if hasattr(self, 'cyInstance'):
+            if value in self.variables:
+                return self.get_variable(value)
+            elif value in self.parameters:
+                return self.get_parameter(value)
+            else:
+                print "Error: population does not contain value: '"+value+"'"         
         else:
-            print "Error: population does not contain value: '"+value+"'"
+            print 'Error: the network is not compiled yet.'
+            print traceback.print_stack()
             
 #    def _reshape_vector(self, vector):
 #        """

@@ -2,14 +2,15 @@
 Population.py
 """
 import re
+import numpy as np
 
 # ANNarchy core informations
 import ANNarchy4.core.Global as Global
-import ANNarchy4.core.Random as ANNarRandom
+from ANNarchy4.core.Random import RandomDistribution
 
 from ANNarchy4.core.Variable import Variable
 from ANNarchy4 import parser
-
+import copy
 
 class Population(object):
     """
@@ -17,7 +18,6 @@ class Population(object):
     """
     
     def __init__(self, population):
-        
         self.class_name = 'Population'+str(population.id)
         
         self.header = Global.annarchy_dir+'/build/'+self.class_name+'.h'
@@ -27,10 +27,32 @@ class Population(object):
         self.population = population
         
         self.rand_objects = []
-        self.neuron_variables = []
         self.targets = []
+        self.neuron_variables = copy.deepcopy(self.population.neuron_type.variables)
         self.global_operations = {'pre':[],'post':[]}
+        self.post_compilation_init = {}
+        
+    def _init_variables(self):
+        """ Called after creation of the C++ objects to initialize variables with arrays."""
+        self.population.set(self.post_compilation_init)
              
+    def _get_value(self, name):
+        """ Returns init value """
+        if name in self.post_compilation_init.keys():
+            return self.post_compilation_init[name]
+        for var in self.neuron_variables:
+            if var['name']==name:
+                if 'var' in var.keys(): # variable
+                    return var['var'].init
+                elif 'init' in var.keys(): # parameter
+                    return var['init']
+                else: # default
+                    return 0.0 
+        return None
+        
+    def _variable_names(self):
+        return [var['name'] for var in self.neuron_variables ]
+
     def _add_global_oparation(self, global_op):
         """
         Add the global operation to the populations dictionary. Besides this 
@@ -46,11 +68,42 @@ class Population(object):
                 
         self.global_operations['post'].append(global_op)
            
+    def _add_value(self, name, value):
+        print "Error: it's not allowed to add new variables / parameters to population object."
+
+    def _update_value(self, name, value):
+
+        values = next(( item for item in self.neuron_variables if item['name']==name ), None)
+        if values:
+            if 'var' in values.keys():
+                if isinstance(value, (int, float)):       
+                    values['var'].init = float(value)
+                elif isinstance(value, Variable):
+                    values['var'] = value
+                elif isinstance(value, RandomDistribution):
+                    values['var'].init = value
+                elif isinstance(value, list):
+                    if len(value) == self.population.size:
+                        self.post_compilation_init[name] = value
+                    else:
+                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with a list of the same size', self.population.size                    
+                elif isinstance(value, np.ndarray): # will be assigned after the constrution of the c++ objects
+                    if value.shape == self.population.geometry or value.shape == (self.population.size, ):
+                        self.post_compilation_init[name] = value
+                    else:
+                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with an array of the same shape', self.population.geometry  
+                else:
+                    print "Error: can't assign ", value ,"(",type(value),") to the variable "+name
+            else:
+                values['init'] = float(value)
+        else:
+            print "Error: variable / parameter "+name+" does not exist in population object."
+            
     def generate(self):
         """
         main function of population generator class.
         """        
-        self.neuron_variables = self.population.neuron_type.variables
+        
 
         #   replace all RandomDistribution by rand variables with continous
         #   numbers and stores the corresponding call as local variable
@@ -256,7 +309,7 @@ private:
                     
                     idx = int(value['name'].split('_rand_')[1])
                     parameters = rand_objects[idx]
-                    call = 'ANNarRandom.RandomDistribution' + parameters + '.genCPP()'
+                    call = 'RandomDistribution' + parameters + '.genCPP()'
                     try:
                         random_cpp = eval(call)
                     except Exception, exception:
