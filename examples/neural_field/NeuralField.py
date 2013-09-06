@@ -28,8 +28,8 @@ Focus = Neuron(
     order = ['mp', 'rate']
 )
 
-InputPop = Population((20,20,1), Input)
-FocusPop = Population((20,20,1), Focus)
+InputPop = Population((20,20), Input)
+FocusPop = Population((20,20), Focus)
 
 Proj1 = Projection( 
     pre = InputPop, 

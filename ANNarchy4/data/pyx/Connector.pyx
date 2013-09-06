@@ -296,6 +296,6 @@ cdef class DoG(PyxConnector):
                 if (abs(value) > self.limit*abs(self.amp_pos-self.amp_neg)):
                     ranks.push_back(j)
                     values.push_back(value)
-                    delay.self.delay_dist.get_value()
+                    delay.push_back(self.delay_dist.get_value())
                     
         return ranks, values, delay
