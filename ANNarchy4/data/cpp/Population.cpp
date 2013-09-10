@@ -10,6 +10,24 @@ Population::Population(std::string name, int nbNeurons) {
 	maxDelay_ = 0;
 	dt_ = 1.0;
 	std::vector< std::vector<DATA_TYPE>	> delayedRates_ = std::vector< std::vector<DATA_TYPE> >();
+
+#ifdef ANNAR_PROFILE
+    char buffer[200];
+    try{
+        sprintf(buffer, "%s(%02i)_sum.txt", name_.c_str(), omp_get_max_threads());
+        cs = fopen(buffer, "w");
+        sprintf(buffer, "%s(%02i)_global.txt", name_.c_str(), omp_get_max_threads());
+        gl = fopen(buffer, "w");
+        sprintf(buffer, "%s(%02i)_local.txt", name_.c_str(), omp_get_max_threads());
+        ll = fopen(buffer, "w");
+    }catch(std::exception e){
+        std::cout << "Cannnot open file '"<<buffer<<"'" << std::endl;
+        std::cout << e.what() << std::endl;
+        cs = NULL;
+        gl = NULL;
+        ll = NULL;
+    }
+#endif
 }
 
 Population::~Population() {
@@ -26,6 +44,15 @@ Population::~Population() {
         }
         //projections_[n].erase(projections_[n].begin(), projections_[n].end());
     }
+
+#ifdef ANNAR_PROFILE
+    if(cs)
+        fclose(cs);
+    if(gl)
+        fclose(gl);
+    if(ll)
+        fclose(ll);
+#endif
 }
 
 void Population::printRates() {
@@ -88,35 +115,73 @@ void Population::removeProjection(Population* pre) {
 }
 
 void Population::metaSum() {
+#ifdef ANNAR_PROFILE
+    double start = omp_get_wtime();
+#endif
 
-	#pragma omp parallel for schedule(static, 10)
+	#pragma omp parallel for
 	for(int n=0; n<nbNeurons_; n++) {
 		for(int p=0; p< (int)projections_[n].size();p++) {
 			projections_[n][p]->computeSum();
 		}
 	}
+
+#ifdef ANNAR_PROFILE
+    double stop = omp_get_wtime();
+
+    if(cs)
+        fprintf(cs, "%f\n", (stop-start)*1000.0);
+#endif
 }
 
 void Population::metaStep() {
 
 }
 
+//
+// projection update for post neuron based variables
 void Population::metaLearn() {
+#ifdef ANNAR_PROFILE
+    double start = omp_get_wtime();
+#endif
 
-    //
-    // projection update for post neuron based variables
-    #pragma omp parallel for schedule(dynamic, 10)
+    #pragma omp parallel for
     for(int n=0; n<nbNeurons_; n++) {
     #ifdef _DEBUG
         std::cout << "n: "<< n << " "<< projections_[n].size()<< " projections."<< std::endl;
     #endif
         for(int p=0; p< (int)projections_[n].size();p++) {
             projections_[n][p]->globalLearn();
+        }
+    }
 
+#ifdef ANNAR_PROFILE
+    double stop = omp_get_wtime();
+
+    if(gl)
+        fprintf(gl, "%f\n", (stop-start)*1000.0);
+#endif
+
+#ifdef ANNAR_PROFILE
+    double start2 = omp_get_wtime();
+#endif
+
+    #pragma omp parallel for
+    for(int n=0; n<nbNeurons_; n++) {
+    #ifdef _DEBUG
+        std::cout << "n: "<< n << " "<< projections_[n].size()<< " projections."<< std::endl;
+    #endif
+        for(int p=0; p< (int)projections_[n].size();p++) {
             projections_[n][p]->localLearn();
         }
     }
 
+#ifdef ANNAR_PROFILE
+    double stop2 = omp_get_wtime();
+
+    if(ll)
+        fprintf(ll, "%f\n", (stop2-start2)*1000.0);
+#endif
 }
 
 void Population::globalOperations() {

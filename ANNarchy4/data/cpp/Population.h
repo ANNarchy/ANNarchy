@@ -47,7 +47,11 @@ public:
 	DATA_TYPE getDt() { return dt_;	}
 
 	void setDt(DATA_TYPE dt) { dt_ = dt; }
-
+#ifdef ANNAR_PROFILE
+    FILE *cs;
+    FILE *gl;
+    FILE *ll;
+#endif
 protected:
 	// data
 	int nbNeurons_;
