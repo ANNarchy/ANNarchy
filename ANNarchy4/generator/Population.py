@@ -108,6 +108,7 @@ class Population(object):
         #   replace all RandomDistribution by rand variables with continous
         #   numbers and stores the corresponding call as local variable
         i = 0
+
         for value in self.neuron_variables:
             if 'var' not in value.keys(): 
                 continue 
@@ -115,32 +116,18 @@ class Population(object):
             if value['var'].eq == None: 
                 continue 
 
-            # check, if a RD object in the equation
-            if value['var'].eq.find('RandomDistribution') != -1: 
-                eq_split = value['var'].eq.split('RandomDistribution')
+            phrase = re.findall('RandomDistribution\(.*?\)', value['var'].eq)
+            for p in phrase:
+                part = p.split('RandomDistribution')[1]
+                self.neuron_variables.append( 
+                    { 'name': '_rand_'+str(i), 
+                      'var': Variable(init = part) 
+                    }
+                )
                 
-                for tmp in eq_split:
-                    if tmp.find('sum(') != -1:
-                        continue
-
-                    # phrase contains an array of
-                    # shortest terms within two brackets
-                    phrase = re.findall('\(.*?\)', tmp) 
-
-                    if phrase != []:
-                        for part in phrase:
-                            self.neuron_variables.append( 
-                                { 'name': '_rand_'+str(i), 
-                                  'var': Variable(init = part) 
-                                }
-                            )
-                            
-                            value['var'].eq = value['var'].eq.replace(
-                                'RandomDistribution'+part, '_rand_'+str(i)
-                            )
-                            
-                            self.rand_objects.append(part)
-                        i += 1
+                value['var'].eq = value['var'].eq.replace(p, '_rand_'+str(i))
+                self.rand_objects.append(part)
+                i +=1
 
         #   parse neuron
         self.neuron_parser = parser.NeuronAnalyser(
