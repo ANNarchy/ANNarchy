@@ -38,7 +38,7 @@
 	#define negative(x) x < 0.0f ? x : 0.0f
 #endif
 
-#define ANNAR_PROFILE
+//#define ANNAR_PROFILE
 
 #include "Random.h"
 #include "Network.h"
