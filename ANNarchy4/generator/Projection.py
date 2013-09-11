@@ -410,7 +410,7 @@ void %(name)s::globalLearn() {
                 if value['name'] in Global._pre_def_synapse:
                     continue
    
-                if value['type'] == 'parameter':
+                if value['type'] == 'parameter' or value['type'] == 'global':
                     code += '        float get'+value['name'].capitalize()+'()\n\n'
                     code += '        void set'+value['name'].capitalize()+'(float value)\n\n'
                 else:
