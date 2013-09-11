@@ -304,7 +304,7 @@ class PreVariable(Leaf):
         variable =  self.value.split('.')[1]
         if variable=='rate':
             return ' (*pre_rates_) [ rank_ [i] ] '
-        return ' pre_population_->get'+variable.capitalize()+'( rank_[i] ) '
+        return ' pre_population_->getSingle'+variable.capitalize()+'( rank_[i] ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
       
@@ -317,7 +317,7 @@ class PostVariable(Leaf):
         variable =  self.value.split('.')[1]
         if variable=='rate':
             return ' (*post_rates_) [ post_neuron_rank_ ] '
-        return ' post_population_->get'+variable.capitalize()+'( post_neuron_rank_ ) '
+        return ' post_population_->getSingle'+variable.capitalize()+'( post_neuron_rank_ ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
         
