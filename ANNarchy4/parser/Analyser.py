@@ -146,18 +146,17 @@ class SynapseAnalyser(object):
             if value['name'] in self.variables_names: # only variables count
                 dep = []
                 if value['var'].eq == None:
-                    continue 
-                
+                    continue              
                 if not value['var'].eq.find('pre.') == -1: # directly depends on pre
                     dep.append('pre')
+                elif not value['var'].eq.find('value') == -1: # directly depends on pre
+                    dep.append('value')
                 else:
                     for ovar in self.variables_names: # check indirect dependencies
                         if ovar != value['name']: # self-dependencies do not count
                             code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+ovar+'(?P<post>[^\_a-zA-Z0-9])', value['var'].eq)
                             if len(code) > 0: # wont work
-                                dep.append(ovar)
-                    
-                        
+                                dep.append(ovar)                       
                 dependencies[value['name']] = dep
 
         self.local_variables_names, self.global_variables_names = self.sort_dependencies(dependencies)
@@ -249,12 +248,12 @@ class SynapseAnalyser(object):
         
     def sort_dependencies(self, dependencies):
         """ Inspects the dependencies between all variables to decide whether they are local or global."""
-    
+
         sorted_dependencies = {} 
         for name, deps in dependencies.items():
             sorted_dependencies[name] = False
         for name, deps in dependencies.items():
-            if 'pre' in deps:
+            if 'pre' in deps or 'value' in deps:
                 sorted_dependencies[name] = True
         stable = False
         while not stable:
@@ -262,7 +261,7 @@ class SynapseAnalyser(object):
             for name, deps in dependencies.items():
                 is_dep_pre = False
                 for dep in deps:
-                    if not dep == 'pre':
+                    if not dep == 'pre' and not dep == 'value':
                         is_dep_pre = is_dep_pre or sorted_dependencies[dep]
                         if not is_dep_pre == sorted_dependencies[name]:
                             stable = False
