@@ -37,7 +37,6 @@ class Neuron(Master):
         """
         Master.__init__(self, debug, order, keyValueArgs)
         
-        
 class IndividualNeuron(object):
     """Neuron object returned by the Population.neuron(rank) method.
     

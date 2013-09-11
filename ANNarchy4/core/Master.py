@@ -1,7 +1,6 @@
-import parser
 import pprint
-from Random import *
-from Variable import *
+from Variable import Variable
+from SpikeVariable import SpikeVariable
 
 #
 # maybe we find  a better name for this class
@@ -17,7 +16,8 @@ class Master(object):
         self.debug = debug
         self.variables = []
         self.order = order
-
+        self.spike_vars = 0
+        
         #
         # sort out all initialization values                
         for key in keyValueArgs:
@@ -46,7 +46,11 @@ class Master(object):
             if v['name'] == key:
                 return True, v
 
+        
         if isinstance(value, Variable):
+            return False, {'name': key, 'var': value }
+        elif isinstance(value, SpikeVariable):
+            self.spike_vars +=1
             return False, {'name': key, 'var': value }
         else:
             return False, {'name': key, 'init': value }

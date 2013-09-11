@@ -15,7 +15,6 @@
 #    author: hdin
 #
 EPSILON = 0.000001
-DT = 0.1
 SYN_TAU = 4.0
 NEUR_TAU = 10.0
 
@@ -26,7 +25,6 @@ import numpy as np
 #
 # global parameters
 #
-setup(dt = DT)
 
 #
 # Define some simple classes
@@ -52,15 +50,6 @@ InputProj = Projection(pre=InputPop,
 compile()
 
 #
-#   Test global parameters:
-#
-def test_pop_changed_dt_in_pop():
-    assert fabs(InputPop.dt - DT) < EPSILON
-
-def test_proj_changed_dt_in_dendrite():
-    assert fabs(InputProj.dendrites[0].dt - DT) < EPSILON
-    
-#
 #   Test population functions
 #
 def test_pop_direct_access_parameter_tau():
@@ -73,7 +62,7 @@ def test_pop_access_parameter_tau_with_get_parameter():
     assert (fabs(InputPop.get_parameter('tau') - NEUR_TAU) < EPSILON)
     
 def test_pop_direct_access_variable_rate():
-    assert np.allclose(InputPop.rate, [1.0, 1.0, 1.0, 1.0])
+    assert np.allclose(InputPop.rate, np.ones((2,2)))
 
 def test_pop_access_variable_rate_with_get():
     assert np.allclose(InputPop.get('rate'), np.ones((2,2)))
@@ -83,7 +72,7 @@ def test_pop_access_variable_rate_with_get_variable():
 
 def test_pop_direct_modify1_variable_rate():
     InputPop.rate = 0.1
-    assert np.allclose(InputPop.rate, [0.1, 0.1, 0.1, 0.1])
+    assert np.allclose(InputPop.rate, np.ones((2,2))*0.1)
 
 def test_pop_direct_modify2_variable_rate():
     InputPop.rate = [0.2, 0.3, 0.4, 0.5]
@@ -129,15 +118,6 @@ def test_proj_access_parameter_tau_with_get():
 def test_proj_access_parameter_tau_with_get_parameter():
     assert InputProj.dendrites[0].get_parameter('tau') == SYN_TAU
 
-def test_proj_direct_access_parameter_dt():
-    assert fabs(InputProj.dendrites[0].dt - DT) < EPSILON
-
-def test_proj_access_parameter_dt_with_get():
-    assert fabs(InputProj.dendrites[0].get('dt') - DT) < EPSILON
-
-def test_proj_access_parameter_dt_with_get_parameter():
-    assert fabs(InputProj.dendrites[0].get_parameter('dt') - DT) < EPSILON
-    
 def test_proj_direct_access_variable_value():
     assert np.allclose(InputProj.dendrites[0].value, [0.2])
 

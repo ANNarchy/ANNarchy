@@ -9,6 +9,7 @@ from core.Dendrite import Dendrite
 from core.Connector import Connector
 from core.Random import RandomDistribution
 from core.Variable import Variable
+from core.SpikeVariable import SpikeVariable
 from visualization import Visualization
 
 import numpy as np

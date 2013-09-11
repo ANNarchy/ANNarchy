@@ -39,7 +39,14 @@ class Population(Descriptor):
         else:
             self.name = 'Population_'+str(self.id)
         
-        self.generator = generator.Population(self)
+        if neuron.spike_vars == 0:
+            self.generator = generator.MeanPopulation(self)            
+        elif neuron.spike_vars == 1:
+            self.generator = generator.SpikePopulation(self)                        
+        else:
+            print 'Error: only one SpikeVariable is allowed per neuron'
+            exit(0)
+            
         Global._populations.append(self)
 
         self.initialized = True        
