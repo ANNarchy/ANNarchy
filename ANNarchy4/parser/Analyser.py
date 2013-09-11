@@ -146,11 +146,15 @@ class SynapseAnalyser(object):
             if value['name'] in self.variables_names: # only variables count
                 dep = []
                 if value['var'].eq == None:
-                    continue              
+                    continue
+                else:
+                    value['var'].eq += ' ' # in case a variable to be extracted is at the end...            
                 if not value['var'].eq.find('pre.') == -1: # directly depends on pre
                     dep.append('pre')
-                elif not value['var'].eq.find('value') == -1: # directly depends on pre
-                    dep.append('value')
+                elif not value['var'].eq.find('value') == -1: # depends on value, but maybe as part of the name
+                    code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])value(?P<post>[^\_a-zA-Z0-9])', value['var'].eq)
+                    if len(code) > 0:
+                        dep.append('value')
                 else:
                     for ovar in self.variables_names: # check indirect dependencies
                         if ovar != value['name']: # self-dependencies do not count
