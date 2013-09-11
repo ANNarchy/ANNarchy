@@ -2,6 +2,7 @@
 Connector.py
 """
 from Random import RandomDistribution
+from Dendrite import Dendrite
 
 class Connector(object):
     """
@@ -38,6 +39,24 @@ class Connector(object):
         """
         import ANNarchyCython
         self.cyInstance = eval('ANNarchyCython.'+self.conn_type+'(proj_type)')
+        
+    def connect(self):
+        self.init_connector(self.proj.generator.proj_class['ID'])
+                      
+        tmp = self.cyInstance.connect(self.proj.pre,
+                                          self.proj.post,
+                                          self.proj.post.generator.targets.index(self.proj.target),
+                                          self.weights,
+                                          self.delays,
+                                          self.parameters
+                                          )
+        dendrites = []
+        post_ranks = []
+        for i in xrange(len(tmp)):
+            dendrites.append(Dendrite(self.proj, tmp[i].post_rank, tmp[i]))
+            post_ranks.append(tmp[i].post_rank)
+
+        return dendrites, post_ranks
         
     def cpp_call(self):
         """

@@ -20,12 +20,30 @@ class Dendrite(Descriptor):
     * *post_rank*: rank of the postsynaptic neuron
     * *cython_instance*: instance of the cythonized dendrite class.
     """
-    def __init__(self, proj, post_rank, cython_instance):
-        self.cyInstance = cython_instance
+    def __init__(self, proj, post_rank, cython_instance=None, ranks=None, weights=None, delays=None):
         self.post_rank = post_rank
         self.proj = proj
         self.pre = proj.pre
 
+        if cython_instance != None:
+            self.cyInstance = cython_instance
+        else:
+            import ANNarchyCython
+            id = self.proj.generator.proj_class['ID']
+            self.cyInstance = eval('ANNarchyCython.LocalProjection'+str(id)+'('+
+                str(id) + ',' +
+                str(self.proj.pre.id) + ',' +
+                str(self.proj.post.id) + ',' +
+                str(post_rank) + ',' +
+                str(self.proj.post.generator.targets.index(self.proj.target))+
+                ')'
+            )
+             
+            self.cyInstance.rank = ranks
+            self.cyInstance.value = weights
+            if delays != None:
+                self.cyInstance.delay = delays
+            
         # synapse variables           
         for value in self.variables + self.parameters:
             setattr(self, value, Attribute(value))   

@@ -47,6 +47,7 @@ class Projection(Descriptor):
         self.post.generator.add_target(target)
         self.target = target
         self.connector = connector
+        self.connector.proj = self # set reference to projection
         self.synapse = synapse
         self._dendrites = []
         self._post_ranks = []
@@ -196,19 +197,7 @@ class Projection(Descriptor):
 
     def connect(self):
         
-        self.connector.init_connector(self.generator.proj_class['ID'])
-                      
-        tmp = self.connector.cyInstance.connect(self.pre,
-                                          self.post,
-                                          self.post.generator.targets.index(self.target),
-                                          self.connector.weights,
-                                          self.connector.delays,
-                                          self.connector.parameters
-                                          )
-        
-        for i in xrange(len(tmp)):
-            self._dendrites.append(Dendrite(self, tmp[i].post_rank, tmp[i]))
-            self._post_ranks.append(tmp[i].post_rank)
+        self._dendrites, self._post_ranks = self.connector.connect()
 
     def gather_data(self, variable):
         blank_col=np.zeros((self.pre.geometry[1], 1))
