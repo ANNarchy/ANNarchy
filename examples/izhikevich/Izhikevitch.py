@@ -12,8 +12,8 @@ Izhikevitch = Neuron(
     noise = 1.0,
     I = Variable(init=0.0, eq="I = noise * RandomDistribution('uniform', [0,1]) + sum(exc) - sum(inh)"),
     u = Variable(init=-65.*0.2, eq="u = a * (b*mp - u)"), # init should be b*baseline
-    mp = SpikeVariable(eq="dmp/dt = 0.04 * mp * mp + 5*mp + 140 -u +I", threshold=30.0, init=-65, reset={'mp':'c', 'u':'u+d'}),
-    order = ['I', 'mp', 'u', 'rate']
+    mp = SpikeVariable(eq="dmp/dt = 0.04 * mp * mp + 5*mp + 140 -u +I", threshold=30.0, init=-65, reset=['mp = c', 'u = u+d']),
+    order = ['I', 'mp', 'u']
 )
 
 # Create the populations

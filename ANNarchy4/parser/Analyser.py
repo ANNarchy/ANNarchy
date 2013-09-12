@@ -3,7 +3,7 @@ import Tree
 import re
 
 from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.Variable import Variable
+from ANNarchy4.core.SpikeVariable import SpikeVariable
 
 # Main analyser class for neurons
 class NeuronAnalyser(object):
@@ -68,6 +68,10 @@ class NeuronAnalyser(object):
                 if value['var'].max != None:
                     neur['max'] = value['var'].max                     
                 
+                if isinstance(value['var'],SpikeVariable):
+                    neur['threshold'] = value['var'].threshold
+                    neur['reset'] = value['var'].reset
+                    
                 self.analysed_neuron.append( neur )
             else: # A parameter
                 if 'init' in value.keys():
