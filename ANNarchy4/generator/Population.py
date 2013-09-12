@@ -35,7 +35,7 @@ class Population(object):
         """ Called after creation of the C++ objects to initialize variables with arrays."""
         self.population.set(self.post_compilation_init)
 
-    def add_target(self, target):
+    def _add_target(self, target):
         """
         Internal Function
         """

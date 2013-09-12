@@ -48,7 +48,7 @@ class Population(Descriptor):
             exit(0)
             
         Global._populations.append(self)
-
+        self._recorded_variables = []
         self.initialized = True        
         
     def _init_attributes(self):
@@ -107,6 +107,54 @@ class Population(Descriptor):
         Dimension of the population (1, 2 or 3)
         """
         return len(self.geometry)
+        
+    def start_record(self, variable):
+        """
+        Start recording the previous defined variables.
+        
+        Parameter:
+            
+            * *variable*: list of variable names.        
+        """
+        for var in variable:
+            try:
+                import ANNarchyCython
+                exec('self.cyInstance._start_record_'+var+'()')
+            except:
+                print 'start record of', var
+                print "Error: only possible after compilation."
+
+    def stop_record(self, variable):
+        """
+        Stops recording the previous defined variables.
+        """
+        for var in variable:
+            try:
+                import ANNarchyCython
+                exec('self.cyInstance._stop_record_'+var+'()')
+            except:
+                print 'stop record of', var
+                print "Error: only possible after compilation."
+
+    def get_record(self, variable):
+        """
+        Returns the recorded data as list of matrices. 
+        """
+        for var in variable:
+            try:
+                import ANNarchyCython
+                data = eval('self.cyInstance._get_recorded_'+var+'()')
+                
+                tmp = []
+                for i in xrange(data.shape[0]):
+                    tmp.append(data[i,:].reshape((8,8)))
+                 
+                return tmp
+                
+            except:
+                print 'get record of', var
+                print "Error: only possible after compilation."
+
         
     def get_variable(self, variable):
         """

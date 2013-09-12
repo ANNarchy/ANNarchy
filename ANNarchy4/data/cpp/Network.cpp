@@ -70,6 +70,10 @@ void Network::run(int steps) {
 			populations_[p]->metaLearn();
 		}
 
+		for(int p=0; p<(int)populations_.size(); p++) {
+			populations_[p]->record();
+		}
+
 		time_++;
 	}
 

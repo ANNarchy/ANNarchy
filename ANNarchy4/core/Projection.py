@@ -44,7 +44,7 @@ class Projection(Descriptor):
         else:
             self.post = post
             
-        self.post.generator.add_target(target)
+        self.post.generator._add_target(target)
         self.target = target
         self.connector = connector
         self.connector.proj = self # set reference to projection
