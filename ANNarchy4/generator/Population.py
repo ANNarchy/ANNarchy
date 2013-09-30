@@ -99,12 +99,18 @@ class Population(object):
         else:
             print "Error: variable / parameter "+name+" does not exist in population object."
             
-    def generate(self):
+    def generate(self, verbose):
         """
         main function of population generator class.
+        
+        *Parameters*:
+            
+            * *verbose*: details on console (by default False)
         """        
         
-
+        if verbose:
+            print "    for", self.class_name
+            
         #   replace all RandomDistribution by rand variables with continous
         #   numbers and stores the corresponding call as local variable
         i = 0

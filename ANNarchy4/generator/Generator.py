@@ -178,23 +178,31 @@ def folder_management():
 
     sys.path.append(Global.annarchy_dir)
 
-def code_generation(cpp_stand_alone):
+def code_generation(cpp_stand_alone, verbose):
     """
     code generation for each population respectively projection object the user defined. 
     
     After this the ANNarchy main header is expanded by the corresponding headers.
     """
+    if verbose:
+        print '\nGenerate code ...'
+
+    # create population cpp class for each neuron
     for pop in Global._populations:
-        pop.generator.generate()
+        pop.generator.generate(verbose)
 
     # create projection cpp class for each synapse
     for projection in Global._projections:
-        projection.generator.generate()
+        projection.generator.generate(verbose)
 
     create_includes()
 
+    if verbose:
+        print '\nUpdate ANNarchy header ...'
     update_annarchy_header(cpp_stand_alone)
 
+    if verbose:
+        print '\nGenerate py extensions ...'
     generate_py_extension()
     
 def _update_global_operations():
@@ -213,7 +221,7 @@ def _update_global_operations():
                 proj.post.generator._add_global_oparation(entry)
             
     
-def compile(cpp_stand_alone=False, debug_build=False):
+def compile(verbose=False, cpp_stand_alone=False, debug_build=False):
     """
     The compilation procedure consists roughly of 3 steps:
     
@@ -223,21 +231,24 @@ def compile(cpp_stand_alone=False, debug_build=False):
         
     after this the cythonized objects are instantiated and available for the user. 
     
-    Parameters:
-    
-    * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
-    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
+    *Parameters*:
+
+        * *verbose*: shows details about compilation process on console (by default False).
+        * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
+        * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
     """
     print 'ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')'
     # Create the necessary subfolders and copy the source files
+    if verbose:
+        print "\nCreate 'annarchy' subdirectory."
     folder_management()
     # Tell each population which global operation they should compute
     _update_global_operations()
     # Generate the code
-    code_generation(cpp_stand_alone)
+    code_generation(cpp_stand_alone, verbose)
     
     # Create ANNarchyCore.so and py extensions
-    print 'Compiling...',
+    print '\nCompiling...',
     os.chdir(Global.annarchy_dir)
     # Make sure the makefiles are executable
     if sys.platform.startswith('linux'):

@@ -86,7 +86,7 @@ class Projection(object):
             print '\tWARNING: no connector object provided.'
             return ''
 
-    def generate(self):
+    def generate(self, verbose):
         """
         generate projection c++ code.
         """
@@ -280,6 +280,9 @@ class Projection(object):
                     access += 'std::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
                     
             return access
+
+        if verbose:
+            print "    for", self.name
 
         # generate func body            
         self.parser = parser.SynapseAnalyser(self.synapse_variables)
