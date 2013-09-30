@@ -212,13 +212,13 @@ class Projection(object):
                        
             else:
                 for var in self.synapse.order:
-                    if var == 'psp':
-                        continue
-                    if var == 'global':
-                        continue
-
                     for var2 in parsed_variables:
                         if var == var2['name']:
+                            if var2['name'] == 'psp':
+                                continue
+                            if var2['type'] == 'global':
+                                continue
+
                             if len(var2['cpp']) > 0:
                                 loop += '\t\t'+var2['cpp']+'\n'
 
