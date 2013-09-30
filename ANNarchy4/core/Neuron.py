@@ -2,16 +2,16 @@ from Master import Master
 
 class Neuron(Master):
     """
-    Definition of an ANNarchy neuron.
+    Python definition of a neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
     """
     
-    def __init__(self, debug=False, order=[], **keyValueArgs ):
-        """ The user describes the initialization of variables / parameters as key-value pair 'variable'='value'. 
+    def __init__(self, debug=False, order=[], **key_value_args ):
+        """ The user describes the initialization of variables / parameters as *key-value pairs* 'variable'='value'. 
         Neuron variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialization value'.
         
-        Parameters:
+        *Parameters*:
         
-            * *keyValueArgs*: dictionary contain the variable / parameter declarations as key-value pairs. For example:
+            * *key_value_args*: dictionary contain the variable / parameter declarations as *key-value pairs*. For example:
 
                 .. code-block:: python
         
@@ -25,7 +25,11 @@ class Neuron(Master):
 
                 and variable ``rate`` bases on his excitory inputs.
 
-            * *order*: execution order of update rules. For exampple:
+                .. warning::
+                    
+                    Please note, that automatically all key-value pairs provided to the function, except ``debug`` and ``order``, are assigned to *key_value_args*.
+
+            * *order*: execution order of update rules. All variables of one neuron are stored in a dictionary but are not necessarily evaluated in the order how the designer may provide them to this object. If the equations depend on each other you may provide the right execution order. For example:
                 
                 .. code-block:: python
                 
@@ -33,9 +37,18 @@ class Neuron(Master):
               
                 leads to execution of the mp update and then the rate will updated.
                 
+                .. warning::
+                    
+                    if you use the order key, the value need to contain **all** variable names.
+            
             * *debug*: prints all defined variables/parameters to standard out (default = False)
+            
+                .. hint::            
+                    
+                    An experimental feature, currently not fully implemented.
+                
         """
-        Master.__init__(self, debug, order, keyValueArgs)
+        Master.__init__(self, debug, order, key_value_args)
         
 class IndividualNeuron(object):
     """Neuron object returned by the Population.neuron(rank) method.

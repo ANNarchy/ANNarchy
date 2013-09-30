@@ -22,10 +22,13 @@ class MeanPopulation(Population):
         
         Population.__init__(self, population)
         
-    def generate(self):
+    def generate(self, verbose):
         """
         main function of population generator class.
         """        
+        if verbose:
+            print '    for', self.class_name
+
         self._update_neuron_variables()
 
         #   generate files

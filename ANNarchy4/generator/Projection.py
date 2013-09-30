@@ -86,7 +86,7 @@ class Projection(object):
             print '\tWARNING: no connector object provided.'
             return ''
 
-    def generate(self):
+    def generate(self, verbose):
         """
         generate projection c++ code.
         """
@@ -212,13 +212,13 @@ class Projection(object):
                        
             else:
                 for var in self.synapse.order:
-                    if var == 'psp':
-                        continue
-                    if var == 'global':
-                        continue
-
                     for var2 in parsed_variables:
                         if var == var2['name']:
+                            if var2['name'] == 'psp':
+                                continue
+                            if var2['type'] == 'global':
+                                continue
+
                             if len(var2['cpp']) > 0:
                                 loop += '\t\t'+var2['cpp']+'\n'
 
@@ -280,6 +280,9 @@ class Projection(object):
                     access += 'std::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
                     
             return access
+
+        if verbose:
+            print "    for", self.name
 
         # generate func body            
         self.parser = parser.SynapseAnalyser(self.synapse_variables)

@@ -20,11 +20,13 @@ class Population(Descriptor):
         """
         Constructor of the population.
         
-        Parameters:
+        *Parameters*:
         
-        * *name*: unique name of the population (optional).
-        * *geometry*: population geometry as tuple. If an integer is given, it is the size of the population.
-        * *neuron*: instance of ``ANNarchy4.Neuron``
+            * *geometry*: population geometry as tuple. If an integer is given, it is the size of the population.
+
+            * *neuron*: instance of ``ANNarchy4.Neuron``
+
+            * *name*: unique name of the population (optional).
         
         """
         if isinstance(geometry, int): # 1D
