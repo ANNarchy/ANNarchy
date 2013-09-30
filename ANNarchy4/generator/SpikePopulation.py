@@ -49,6 +49,11 @@ class SpikePopulation(Population):
                     # Individual access
                     access += '    void setSingle'+value['name'].capitalize()+'(int rank, DATA_TYPE '+value['name']+') { this->'+value['name']+'_[rank] = '+value['name']+'; }\n\n'
                     access += '    DATA_TYPE getSingle'+value['name'].capitalize()+'(int rank) { return this->'+value['name']+'_[rank]; }\n\n'
+
+                    # Recording
+                    access += '    std::vector< std::vector<DATA_TYPE> >getRecorded'+value['name'].capitalize()+'() { return this->recorded_'+value['name']+'_; }\n\n'                    
+                    access += '    void startRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = true; }\n\n'
+                    access += '    void stopRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = false; }\n\n'    
                 else:
                     access += '    void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
                     access += '    DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
@@ -70,9 +75,17 @@ class SpikePopulation(Population):
                     member += '\tstd::vector<DATA_TYPE> '+value['name']+'_;\n'
                     continue
                 if 'rate' == value['name']:
+                    # rate recording
+                    member += '\t'+'bool record_rate_;\n'
+                    member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_rate_;\n'                                        
                     continue
     
                 member += '\t'+value['def']+'\n'
+            
+                #recording
+                if value['type']=='variable':
+                    member += '\t'+'bool record_'+value['name']+'_;\n'
+                    member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_'+value['name']+'_;\n'
             
             for value in global_ops['post']:
                 member += '\tDATA_TYPE '+ value['variable']+'_'+value['function']+'_;\n\n'
@@ -108,6 +121,8 @@ public:
     void propagateSpike();
     
     void reset();
+    
+    void record();
     
 %(access)s
 private:
@@ -165,6 +180,18 @@ private:
                     destructor += '\t'+value['name']+'_.clear();\n'
     
             return destructor
+
+        def record(parsed_neuron):
+            code = ''
+            
+            for var in parsed_neuron:
+                if '_rand_' in var['name']:
+                    continue
+                
+                if var['type'] == 'variable':
+                    code += '''\tif(record_%(var)s_)\n\t\trecorded_%(var)s_.push_back(%(var)s_);\n''' % { 'var': var['name'] }
+                
+            return code
         
         def replace_rand_(parsed_neuron, rand_objects):
             """
@@ -377,6 +404,10 @@ void %(class)s::globalOperations() {
 %(global_ops)s
 }
 
+void %(class)s::record() {
+%(record)s
+}
+
 %(single_global_ops)s
 """ % { 'class': self.class_name, 
         'construct': constructor(self.parsed_neuron),
@@ -387,6 +418,7 @@ void %(class)s::globalOperations() {
                               ),
         'reset': reset(self.parsed_neuron),
         'global_ops': global_ops(self.global_operations),
+        'record' : record(self.parsed_neuron),
         'single_global_ops': single_global_ops(self.class_name, self.global_operations)
     } 
 
