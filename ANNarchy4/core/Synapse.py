@@ -5,16 +5,16 @@ from ANNarchy4 import parser
 
 class Synapse(Master):
     """
-    Definition of an ANNarchy synapse.
+    Definition of a synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
 
-    def __init__(self, debug=False, order=[], **keyValueArgs):
-        """ The user describes the initialization of variables / parameters as key-value pair 'variable'='value'. 
+    def __init__(self, debug=False, order=[], **key_value_args):
+        """ The user describes the initialization of variables / parameters as *key-value pairs* 'variable'='value'. 
         Synapse variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialzation value'.
         
-        Parameters:
+        *Parameters*:
         
-            * *keyValueArgs*: dictionary contain the variable / parameter declarations as key-value pairs. For example:
+            * *key_value_args*: dictionary contain the variable / parameter declarations as key-value pairs. For example:
 
                 .. code-block:: python
         
@@ -27,13 +27,25 @@ class Synapse(Master):
                     value = Variable( init=0.0, rate="tau * drate / dt + value = pre.rate * 0.1" )
 
                 and a simple update of the synaptic weight.
+                
+                .. warning::
+                    
+                    Please note, that automatically all key-value pairs provided to the function, except ``debug`` and ``order``, are assigned to *key_value_args*.
 
             * *order*: execution order of update rules.
+
+                .. warning::
+                    
+                    if you use the order key, the value need to contain **all** variable names.
                             
             * *debug*: prints all defined variables/parameters to standard out (default = False)
-        """
 
-        Master.__init__(self, debug, order, keyValueArgs)
+                .. hint::            
+                    
+                    An experimental feature, currently not fully implemented.
+            
+        """
+        Master.__init__(self, debug, order, key_value_args)
 
     def _global_operations(self):
         var, g_op = parser.SynapseAnalyser(self.variables).parse()        
