@@ -178,10 +178,10 @@ def _load_pop_data(net_desc):
             pop_desc = net_desc[pop.name]
             
             for var in pop_desc['variables'].keys():
-                exec("pop."+var+" = pop_desc['variables']['"+var+"'].reshape(pop.size)")
+                setattr(pop, var, pop_desc['variables'][var].reshape(pop.size) )
                 
             for par in pop_desc['parameter'].keys():
-                exec("pop."+par+" = pop_desc['parameter']['"+par+"']")
+                setattr(pop, par, pop_desc['parameter'][par] )
     
 def _load_proj_data(net_desc):
     """
@@ -197,11 +197,11 @@ def _load_proj_data(net_desc):
             # over all stored dendrites
             for saved_dendrite in proj_desc['dendrites']:
                 
-                net_dendrite = net_proj.dendrite_by_rank(saved_dendrite['post_rank'])
+                net_dendrite = net_proj.dendrite(saved_dendrite['post_rank'])
                 
                 for var in saved_dendrite['variables'].keys():
-                    exec("net_dendrite."+var+" = saved_dendrite['variables']['"+var+"'].reshape(net_proj.pre.size)")
+                    setattr(net_dendrite, var, saved_dendrite['variables'][var])
                     
                 for par in saved_dendrite['parameter'].keys():
-                    exec("net_dendrite."+par+" = saved_dendrite['parameter']['"+par+"']")
+                    setattr(net_dendrite, par, saved_dendrite['parameter'][par])
                     
