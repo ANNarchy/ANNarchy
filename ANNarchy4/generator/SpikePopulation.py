@@ -35,7 +35,7 @@ class SpikePopulation(Population):
 
         Population.__init__(self, population)
         
-    def generate(self):
+    def generate(self, verbose):
         """
         Generates the cpp codes for the spike coded population.
         """        
