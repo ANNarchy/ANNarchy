@@ -1,3 +1,26 @@
+"""
+
+    SpikePopulation.py
+    
+    This file is part of ANNarchy.
+    
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+"""
 from ANNarchy4.core import Global
 from ANNarchy4.core.Random import RandomDistribution
 from Population import Population
@@ -13,7 +36,9 @@ class SpikePopulation(Population):
         Population.__init__(self, population)
         
     def generate(self):
-        
+        """
+        Generates the cpp codes for the spike coded population.
+        """        
         self._update_neuron_variables()
         
         #   generate files
@@ -80,10 +105,10 @@ class SpikePopulation(Population):
                     member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_rate_;\n'                                        
                     continue
     
-                member += '\t'+value['def']+'\n'
+                member += '\t' + value['def'] + '\n'
             
                 #recording
-                if value['type']=='variable':
+                if value['type'] == 'variable':
                     member += '\t'+'bool record_'+value['name']+'_;\n'
                     member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_'+value['name']+'_;\n'
             
@@ -93,6 +118,9 @@ class SpikePopulation(Population):
             return member
             
         def global_ops(global_ops):
+            """
+            Add the computation calls for min, max, mean, etc. operations.
+            """
             code = ''
             
             for var in global_ops['post']:
@@ -182,6 +210,9 @@ private:
             return destructor
 
         def record(parsed_neuron):
+            """
+            Generate the function body of the Population::record method.
+            """
             code = ''
             
             for var in parsed_neuron:
@@ -219,11 +250,14 @@ private:
             return meta_code
         
         def single_global_ops(class_name, global_ops):
+            """
+            Generate the implementation for requested attributes.
+            """
             code = ''
             
             for var in global_ops['post']:
                 if var['function'] == 'min':
-                    code+="""void %(class)s::compute_min_%(var)s() {
+                    code += """void %(class)s::compute_min_%(var)s() {
     %(var)s_min_ = %(var)s_[0];
     for(unsigned int i=1; i<%(var)s_.size();i++){
         if(%(var)s_[i] < %(var)s_min_)
@@ -252,7 +286,10 @@ private:
                 
             return code
         
-        def reset(parsed_neuron): 
+        def reset(parsed_neuron):
+            """
+            implementation of reset values.
+            """
             def find_val(parsed_neuron, name):
                 for var in parsed_neuron:
                     if var['name'].find(name)==0:
@@ -285,9 +322,9 @@ private:
                         for tval in values:
                             v_t = find_val(parsed_neuron, tval)['type']
                             if v_t == 'variable':
-                                val = val.replace(tval,tval+'_[(*it)]')
+                                val = val.replace(tval, tval+'_[(*it)]')
                             else:
-                                val = val.replace(tval,tval+'_')
+                                val = val.replace(tval, tval+'_')
                                 
                         loop +='''\t\t%(lside)s = %(rside)s;\n''' % { 'lside': lside, 'rside': val }
 

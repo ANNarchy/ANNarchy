@@ -1,5 +1,24 @@
 """
-Dendrite.py
+    Dendrite.py
+    
+    This file is part of ANNarchy.
+    
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
 """
 from Descriptor import Descriptor, Attribute
 import Global
@@ -92,22 +111,14 @@ class Dendrite(Descriptor):
         """
         Returns a list of all variable names.
         """
-        ret_var = Global._pre_def_synapse_var        
-        for var in self.proj._parsed_variables():
-            if not var['type'] == 'parameter' and not var['name'] in ret_var:
-                ret_var.append(var['name'])        
-        return ret_var
+        return self.proj.variables
 
     @property
     def parameters(self):
         """
         Returns a list of all parameter names.
         """
-        ret_par = Global._pre_def_synapse_par        
-        for var in self.proj._parsed_variables():
-            if var['type'] == 'parameter' and not var['name'] in ret_par:
-                ret_par.append(var['name'])        
-        return ret_par
+        return self.proj.parameters
     
     @property
     def size(self):

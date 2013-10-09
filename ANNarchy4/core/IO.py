@@ -1,5 +1,25 @@
 """
-IO.py
+
+    IO.py
+    
+    This file is part of ANNarchy.
+    
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
 """
 from ANNarchy4.core import Global 
 import os
@@ -158,10 +178,10 @@ def _load_pop_data(net_desc):
             pop_desc = net_desc[pop.name]
             
             for var in pop_desc['variables'].keys():
-                exec("pop."+var+" = pop_desc['variables']['"+var+"'].reshape(pop.size)")
+                setattr(pop, var, pop_desc['variables'][var].reshape(pop.size) )
                 
             for par in pop_desc['parameter'].keys():
-                exec("pop."+par+" = pop_desc['parameter']['"+par+"']")
+                setattr(pop, par, pop_desc['parameter'][par] )
     
 def _load_proj_data(net_desc):
     """
@@ -177,11 +197,11 @@ def _load_proj_data(net_desc):
             # over all stored dendrites
             for saved_dendrite in proj_desc['dendrites']:
                 
-                net_dendrite = net_proj.dendrite_by_rank(saved_dendrite['post_rank'])
+                net_dendrite = net_proj.dendrite(saved_dendrite['post_rank'])
                 
                 for var in saved_dendrite['variables'].keys():
-                    exec("net_dendrite."+var+" = saved_dendrite['variables']['"+var+"'].reshape(net_proj.pre.size)")
+                    setattr(net_dendrite, var, saved_dendrite['variables'][var])
                     
                 for par in saved_dendrite['parameter'].keys():
-                    exec("net_dendrite."+par+" = saved_dendrite['parameter']['"+par+"']")
+                    setattr(net_dendrite, par, saved_dendrite['parameter'][par])
                     
