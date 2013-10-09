@@ -70,7 +70,6 @@ class Population(Descriptor):
         """ Method used after compilation to initialize the attributes."""
         for var in self.variables + self.parameters:
             setattr(self, var, Attribute(var))
-        setattr(self, 'rank', Attribute('rank'))
 
     @property
     def cpp_class(self):
@@ -81,11 +80,14 @@ class Population(Descriptor):
         """
         Returns a list of all variable names.
         """
+        ret_var=[] #default        
+        
+        #check additional variables
         neur_var = self.generator.neuron_variables
-        ret_var=[]        
         for var in neur_var:
             if 'var' in var.keys():
                 ret_var.append(var['name'])      
+                
         return ret_var
 
     @property
@@ -228,7 +230,7 @@ class Population(Descriptor):
                         val = value[val_key] 
                     setattr(self.cyInstance, val_key, val)
                 else:
-                    print "Error: population does not have the variable: " + val_key + "."
+                    print "Error: population does not have the attribute: " + val_key + "."
         else:
             print 'Error: the network is not compiled yet.'
             print traceback.print_stack()
@@ -247,7 +249,7 @@ class Population(Descriptor):
             elif value in self.parameters:
                 return self.get_parameter(value)
             else:
-                print "Error: population does not contain value: '"+value+"'"         
+                print "Error: population does not contain attribute: '"+value+"'"   
         else:
             print 'Error: the network is not compiled yet.'
             print traceback.print_stack()
