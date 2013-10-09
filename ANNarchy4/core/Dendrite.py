@@ -111,22 +111,14 @@ class Dendrite(Descriptor):
         """
         Returns a list of all variable names.
         """
-        ret_var = Global._pre_def_synapse_var        
-        for var in self.proj._parsed_variables():
-            if not var['type'] == 'parameter' and not var['name'] in ret_var:
-                ret_var.append(var['name'])        
-        return ret_var
+        return self.proj.variables
 
     @property
     def parameters(self):
         """
         Returns a list of all parameter names.
         """
-        ret_par = Global._pre_def_synapse_par        
-        for var in self.proj._parsed_variables():
-            if var['type'] == 'parameter' and not var['name'] in ret_par:
-                ret_par.append(var['name'])        
-        return ret_par
+        return self.proj.parameters
     
     @property
     def size(self):
