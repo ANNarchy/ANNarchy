@@ -34,10 +34,9 @@ AntiHebb = Synapse(
 
 # Creating the populations
 nb_neurons = 16  
-input_pop = Population(name="input", geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
+input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 
-feature_pop = Population(name="feature", geometry=(15, 4), neuron=LeakyNeuron)
-feature_pop.tau = 15
+feature_pop = Population(geometry=(15, 4), neuron=LeakyNeuron)
 
 # Creating the projections
 input_feature = Projection(
