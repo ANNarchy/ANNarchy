@@ -138,21 +138,53 @@ class Population(Descriptor):
         
         Parameter:
             
-            * *variable*: list of variable names.        
+            * *variable*: single variable name or list of variable names.        
         """
-        for var in variable:
+        _variable = []
+        
+        if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print 'Error: variable must be either a string or list of strings.'
+        
+        for var in _variable:
+            
+            if not var in self.variables + self.parameters:
+                print var,'is not an attribute of',self.name
+                continue
+            
             try:
                 import ANNarchyCython
+                print 'start record of', var
                 exec('self.cyInstance._start_record_'+var+'()')
             except:
-                print 'start record of', var
                 print "Error: only possible after compilation."
 
     def stop_record(self, variable):
         """
         Stops recording the previous defined variables.
+
+        Parameter:
+            
+            * *variable*: single variable name or list of variable names.        
+
         """
-        for var in variable:
+        _variable = []
+        if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print 'Error: variable must be either a string or list of strings.'       
+        
+        for var in _variable:
+            
+            if not var in self.variables + self.parameters:
+                print var,'is not an attribute of',self.name
+                continue
+            
             try:
                 import ANNarchyCython
                 exec('self.cyInstance._stop_record_'+var+'()')
@@ -163,22 +195,43 @@ class Population(Descriptor):
     def get_record(self, variable):
         """
         Returns the recorded data as list of matrices. 
+
+        Parameter:
+            
+            * *variable*: single variable name or list of variable names.        
+        
         """
-        for var in variable:
+        _variable = []
+        if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print 'Error: variable must be either a string or list of strings.'
+        
+        data_dict = {}
+        
+        for var in _variable:
+
+            if not var in self.variables + self.parameters:
+                print var,'is not an attribute of',self.name
+                continue
+            
             try:
                 import ANNarchyCython
                 data = eval('self.cyInstance._get_recorded_'+var+'()')
                 
                 tmp = []
                 for i in xrange(data.shape[0]):
-                    tmp.append(data[i,:].reshape((8,8)))
+                    tmp.append(data[i,:].reshape(self.geometry))
                  
-                return tmp
+                data_dict[var] = tmp
                 
             except:
                 print 'get record of', var
                 print "Error: only possible after compilation."
 
+        return data_dict
         
     def get_variable(self, variable):
         """
