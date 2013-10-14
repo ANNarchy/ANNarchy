@@ -50,7 +50,9 @@ Proj_L2_L2 = Projection(pre=Layer2Pop, post=Layer2Pop, target='inh', synapse=Ant
 # Analyse and compile everything, initialize the parameters/variables...
 #
 ret = load_parameter('ssd.xml')
-
+for key in ret.keys():
+    print key,':',ret[key]
+    
 print 'Compiling'
 compile()
 

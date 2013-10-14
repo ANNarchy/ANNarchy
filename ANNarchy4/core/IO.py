@@ -25,15 +25,20 @@ from ANNarchy4.core import Global
 import os
 import cPickle
 from lxml import etree 
+import exceptions
 
 def load_parameter(in_file):
+    """
+    Load parameter set from xml file.
+    
+    Parameters:
+    
+        * *in_file*: xml file. if the location of the xml file differs from the base directory, you need to provide relative or absolute path.
+    """
     par = {}
     
     doc = etree.parse(in_file)
-    
     matches = doc.findall('parameter')
-    
-    print 'found', len(matches), 'parameters'
     
     for parameter in matches:
         childs = parameter.getchildren()
@@ -50,6 +55,14 @@ def load_parameter(in_file):
                 name = child.text
             elif child.tag == 'value':
                 value = child.text
+                try:
+                    value = int(value)
+                except exceptions.ValueError:
+                    try:
+                        value = float(value)
+                    except exceptions.ValueError:
+                        value = value
+                    
             else:
                 print 'Error: unexpected xml-tag', child.tag
         
