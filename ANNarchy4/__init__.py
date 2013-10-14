@@ -1,5 +1,5 @@
 from generator.Generator import compile
-from core.IO import save, load
+from core.IO import save, load, load_parameter
 from core.Global import *
 from core.Neuron import Neuron
 from core.Synapse import Synapse

@@ -24,7 +24,42 @@
 from ANNarchy4.core import Global 
 import os
 import cPickle
+from lxml import etree 
 
+def load_parameter(in_file):
+    par = {}
+    
+    doc = etree.parse(in_file)
+    
+    matches = doc.findall('parameter')
+    
+    print 'found', len(matches), 'parameters'
+    
+    for parameter in matches:
+        childs = parameter.getchildren()
+
+        #TODO: allways correct ???
+        if len(childs) != 2:
+            print 'Error: to much tags in parameter'
+
+        name=None
+        value=None
+        for child in childs:
+
+            if child.tag == 'name':
+                name = child.text
+            elif child.tag == 'value':
+                value = child.text
+            else:
+                print 'Error: unexpected xml-tag', child.tag
+        
+        if name == None or value == None:
+            print 'Error: not enough data on parameter.'
+        
+        par[name] = value
+        
+    return par
+    
 def save(in_file, pure_data=True, variables=True, connections=True):
     """
     Save the current network state
