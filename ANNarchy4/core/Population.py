@@ -79,6 +79,27 @@ class Population(Descriptor):
             setattr(self, var, Attribute(var))
 
     @property
+    def width(self):
+        if self.dimension >= 1:
+            return self.geometry[0]
+        else:
+            print 'insufficient dimension' 
+
+    @property
+    def height(self):
+        if self.dimension >= 2:
+            return self.geometry[1]
+        else:
+            print 'insufficient dimension' 
+
+    @property
+    def depth(self):
+        if self.dimension == 3:
+            return self.geometry[2]
+        else:
+            print 'insufficient dimension' 
+        
+    @property
     def cpp_class(self):
         return self.generator.class_name
     
