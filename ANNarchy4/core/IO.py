@@ -33,44 +33,75 @@ def load_parameter(in_file):
     
     Parameters:
     
-        * *in_file*: xml file. if the location of the xml file differs from the base directory, you need to provide relative or absolute path.
+    * *in_file*: either single or collection of strings. if the location of the xml file differs from the base directory, you need to provide relative or absolute path.
     """
     par = {}
+    damaged_pars = []   # for printout
     
-    doc = etree.parse(in_file)
-    matches = doc.findall('parameter')
+    files = []
+    if isinstance(in_file,str):
+        files.append(in_file)
+    else:
+        files = in_file
     
-    for parameter in matches:
-        childs = parameter.getchildren()
-
-        #TODO: allways correct ???
-        if len(childs) != 2:
-            print 'Error: to much tags in parameter'
-
-        name=None
-        value=None
-        for child in childs:
-
-            if child.tag == 'name':
-                name = child.text
-            elif child.tag == 'value':
-                value = child.text
-                try:
-                    value = int(value)
-                except exceptions.ValueError:
-                    try:
-                        value = float(value)
-                    except exceptions.ValueError:
-                        value = value
+    for file in files:
+        try:
+            doc = etree.parse(file)
+            
+        except exceptions.IOError:
+            print 'Error: file \'',file,'\' not found.'
+            continue
+        
+        matches = doc.findall('parameter')
+        
+        for parameter in matches:
+            childs = parameter.getchildren()
+    
+            #TODO: allways correct ???
+            if len(childs) != 2:
+                print 'Error: to much tags in parameter'
+    
+            name=None
+            value=None
+            for child in childs:
+    
+                if child.tag == 'name':
+                    name = child.text
+                elif child.tag == 'value':
+                    value = child.text
                     
+                    if value == None:
+                        print 'Error: no value defined for',name
+                        damaged_pars.append(name)
+                        value = 0
+                    else:
+                        try:
+                            value = int(value)
+                        except exceptions.ValueError:
+                            try:
+                                value = float(value)
+                            except exceptions.ValueError:
+                                value = value
+                        
+                else:
+                    print 'Error: unexpected xml-tag', child.tag
+            
+            if name == None:
+                print 'Error: no name in parameter set.'
+            elif value == None:
+                print 'Error: no value in parameter set.'
+                damaged_pars.append(name)
+            elif name in par.keys():
+                print 'Error: parameter \'',name,'\' already exists.'
+                damaged_pars.append(name)
             else:
-                print 'Error: unexpected xml-tag', child.tag
+                par[name] = value
         
-        if name == None or value == None:
-            print 'Error: not enough data on parameter.'
-        
-        par[name] = value
-        
+        #if len(damaged_pars) > 0:
+        #    print 'damaged parameters:'
+        #    for d_par in damaged_pars:
+        #        print '-',d_par
+             
     return par
     
 def save(in_file, pure_data=True, variables=True, connections=True):
