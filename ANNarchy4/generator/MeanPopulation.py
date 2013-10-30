@@ -172,6 +172,8 @@ public:
     
     int getNeuronCount() { return nbNeurons_; }
     
+    void resetToInit();
+    
     void metaStep();
     
     void globalOperations();
@@ -362,6 +364,16 @@ private:
             
             return code
 
+        def reset_to_init(parsed_neuron):
+            """
+            generate code for reset to initial values.
+            """
+            code = ''
+            for value in parsed_neuron:
+                code += '''\t\t%(name)s_ = %(init)s\n''' % { 'name': value['name'], 'init': value['init'] }
+
+            return code
+
         body = """#include "%(class)s.h"
 
 %(class)s::%(class)s(std::string name, int nbNeurons):Population(name, nbNeurons)
@@ -381,6 +393,10 @@ private:
     std::cout << "%(class)s::Destructor" << std::endl;
     
 %(destruct)s
+}
+
+void %(class)s::resetToInit() {
+%(resetToInit)s
 }
 
 void %(class)s::metaStep() {
@@ -403,6 +419,7 @@ void %(class)s::record() {
                               self.rand_objects,
                               self.population.neuron_type.order
                               ),
+        'resetToInit': reset_to_init(self.parsed_neuron),
         'global_ops': global_ops(self.global_operations),
         'record' : record(self.parsed_neuron),
         'single_global_ops': single_global_ops(self.class_name, self.global_operations)
@@ -496,6 +513,8 @@ cdef extern from "../build/%(name)s.h":
         
         string getName()
         
+        void resetToInit()
+        
 %(cFunction)s
 
 
@@ -508,6 +527,9 @@ cdef class py%(name)s:
 
     def name(self):
         return self.cInstance.getName()
+
+    def reset(self):
+        self.cInstance.resetToInit()
 
     property size:
         def __get__(self):

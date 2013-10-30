@@ -79,6 +79,23 @@ def simulate(duration, show_time=False):
     if show_time:
         print 'Simulation:\t', t_stop - t_start, '(', nb_steps, 'steps, '+duration+' ms)'
 
+def reset(populations=False, projections=False):
+    """
+    Reset the network to initial values.
+    
+    Parameter:
+    
+    * *populations*: reset the population values.
+    
+    * *projections*: reset the projection values.
+    """
+    if populations:
+        for pop in _populations:
+            pop.reset()
+            
+    if projections:
+        print 'currently not implemented'
+        
 def get_population(name):
     """
     Returns population corresponding to *name*.
