@@ -24,6 +24,7 @@
 import os, sys
 import subprocess
 import shutil
+import exceptions
 
 # ANNarchy core informations
 import ANNarchy4
@@ -209,8 +210,12 @@ def code_generation(cpp_stand_alone, verbose):
 
     # create population cpp class for each neuron
     for pop in Global._populations:
-        pop.generator.generate(verbose)
-
+        try:
+            pop.generator.generate(verbose)
+        except exceptions.TypeError:
+            print 'Error on code generation for',pop.name
+            return
+        
     # create projection cpp class for each synapse
     for projection in Global._projections:
         projection.generator.generate(verbose)

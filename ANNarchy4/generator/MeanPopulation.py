@@ -23,6 +23,7 @@
 """
 import re
 import numpy as np
+import exceptions
 
 # ANNarchy core informations
 import ANNarchy4.core.Global as Global
@@ -86,11 +87,17 @@ class MeanPopulation(Population):
             corresponding set and get methods. 
             """
             access = ''
+
+            for val in neuron_values:
+                for val2 in neuron_values:
+                    if val2 != val and val2['name'].capitalize() == val['name']:
+                        print 'Error: variable',val2['name'],'and',val['name'],'are not allowed.'
+                        raise exceptions.TypeError
     
             for value in neuron_values:
                 if '_rand_' in value['name']:
                     continue
-    
+                
                 if value['type'] == 'variable':
                     # Array access
                     access += '    void set'+value['name'].capitalize()+'(std::vector<DATA_TYPE> '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
