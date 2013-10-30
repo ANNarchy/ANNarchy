@@ -153,6 +153,15 @@ class Population(Descriptor):
         """
         return len(self.geometry)
         
+    def reset(self):
+        """
+        Reset the population variables to their initial values.
+        """
+        try:
+            self.cyInstance.reset()
+        except:
+            print 'reset population', self.name, 'failed.'
+        
     def start_record(self, variable):
         """
         Start recording the previous defined variables.

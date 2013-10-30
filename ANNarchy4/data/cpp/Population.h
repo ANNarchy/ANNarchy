@@ -35,7 +35,8 @@ public:
 	virtual void metaStep();
 	virtual void metaLearn();
 	virtual void globalOperations();
-	virtual void record() {};
+	virtual void record() {}
+	virtual void resetToInit() {}
 
 	std::string getName() { return name_; }
 

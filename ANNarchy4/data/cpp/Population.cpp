@@ -25,7 +25,7 @@ Population::Population(std::string name, int nbNeurons) {
 	name_ = std::move(name);
 
 	nbNeurons_ = nbNeurons;
-	rate_ = std::vector<DATA_TYPE>(nbNeurons_, 2.0);
+	rate_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
 	projections_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
 	
 	maxDelay_ = 0;
