@@ -211,8 +211,13 @@ private:
             for value in parsed_neuron:
                 if '_rand_' in value['name']:   # skip local member
                     continue
-                    
-                constructor += '\t'+value['init']+'\n'
+                
+                if 'True' in value['init']:
+                    constructor += '\t'+value['init'].replace('True',str(1.0))+'\n'
+                elif 'False' in value['init']:
+                    constructor += '\t'+value['init'].replace('False',str(0.0))+'\n'
+                else:
+                    constructor += '\t'+value['init']+'\n'
 
                 if value['type'] == 'variable':
                     constructor += '\trecord_'+value['name']+'_ = false;\n'
@@ -369,8 +374,17 @@ private:
             generate code for reset to initial values.
             """
             code = ''
+
             for value in parsed_neuron:
-                code += '''\t\t%(name)s_ = %(init)s\n''' % { 'name': value['name'], 'init': value['init'] }
+                if '_rand_' in value['name']:   # skip local member
+                    continue
+
+                if 'True' in value['init']:
+                    code += '\t'+value['init'].replace('True',str(1.0))+'\n'
+                elif 'False' in value['init']:
+                    code += '\t'+value['init'].replace('False',str(0.0))+'\n'
+                else:
+                    code += '\t'+value['init']+'\n'
 
             return code
 
