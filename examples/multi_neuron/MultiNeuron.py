@@ -49,7 +49,7 @@ Proj_L2_L2 = Projection(pre=Layer2Pop, post=Layer2Pop, target='inh', synapse=Ant
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-compile()
+compile(verbose=True)
 
 if __name__ == '__main__':
 

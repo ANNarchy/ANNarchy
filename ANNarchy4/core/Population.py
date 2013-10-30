@@ -59,7 +59,7 @@ class Population(Descriptor):
         if name:
             self.name = name
         else:
-            self.name = 'Population_'+str(self.id)
+            self.name = 'Population'+str(self.id)
         
         if neuron.spike_vars == 0:
             self.generator = generator.MeanPopulation(self)            

@@ -47,7 +47,10 @@ class MeanPopulation(Population):
         main function of population generator class.
         """        
         if verbose:
-            print '    for', self.class_name
+            if self.class_name != self.population.name:
+                print '    for', self.class_name, '(', self.population.name, ')' 
+            else:
+                print '    for', self.class_name
 
         self._update_neuron_variables()
 
