@@ -83,21 +83,24 @@ class Population(Descriptor):
         if self.dimension >= 1:
             return self.geometry[0]
         else:
-            print 'insufficient dimension' 
+            print 'WARNING: insufficient dimension'
+            return 1
 
     @property
     def height(self):
         if self.dimension >= 2:
             return self.geometry[1]
         else:
-            print 'insufficient dimension' 
+            print 'WARNING: insufficient dimension' 
+            return 1
 
     @property
     def depth(self):
         if self.dimension == 3:
             return self.geometry[2]
         else:
-            print 'insufficient dimension' 
+            print 'WARNING: insufficient dimension' 
+            return 1
         
     @property
     def cpp_class(self):
