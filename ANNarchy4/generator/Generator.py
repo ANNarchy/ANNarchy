@@ -24,7 +24,6 @@
 import os, sys
 import subprocess
 import shutil
-import exceptions
 
 # ANNarchy core informations
 import ANNarchy4
@@ -94,21 +93,13 @@ def generate_proj_instance_class():
     cases_ptr = ''
     for proj in Global._projections:
         cases_ptr += """
-        case %(id)s:
-            return new %(name)s(pre, post, postNeuronRank, target);
-
-""" % { 'id': proj.generator.proj_class['ID'], 
-        'name': proj.generator.proj_class['name']
-    }
-
-    cases_id = ''
-    for proj in Global._projections:
-        cases_id += """
-        case %(id)s:
-        #ifdef _DEBUG
-            std::cout << "Instantiate name=%(name)s and id=%(id)s" << std::endl;
-        #endif
-            return new %(name)s(preID, postID, postNeuronRank, target);
+            case %(id)s:
+                {
+            #ifdef _DEBUG
+                std::cout << "Instantiate name=%(name)s and id=%(id)s" << std::endl;
+            #endif
+                return new %(name)s(pre, post, postNeuronRank, target);
+                }
 
 """ % { 'id': proj.generator.proj_class['ID'], 
         'name': proj.generator.proj_class['name']
@@ -118,27 +109,54 @@ def generate_proj_instance_class():
     code = """class createProjInstance {
 public:
     createProjInstance() {};
-
+    
+    /**
+     *    @brief      instantiate a projection object or returns previous exsisting one.
+     *    @details    called by cpp method ANNarchy::ANNarchy() or by 
+     *                createProjInstance::getInstanceOf(int, int, int, int, int)
+     */
     Projection* getInstanceOf(int ID, Population *pre, Population *post, int postNeuronRank, int target) {
-        switch(ID) {
+        
+        if(pre == NULL || post == NULL) {
+            std::cout << "Critical error: invalid pointer in c++ core library." << std::endl;
+            return NULL;
+        }
+        
+        // search for already existing instance
+        Projection* proj = post->getProjection(postNeuronRank, target, pre);
+        
+        if(proj)
+        {
+            // return existing one
+            return proj;
+        }
+        else
+        {
+            switch(ID) 
+            {
 %(case1)s
-            default:
-                std::cout << "Unknown typeID: "<< ID << std::endl;
-                return NULL;
+                default:
+                {
+                    std::cout << "Unknown typeID: "<< ID << std::endl;
+                    return NULL;
+                }
+            }                    
         }
     }
 
+    /**
+     *  @brief          instantiate a projection object or returns previous exsisting one.
+     *  @details        called by cython wrapper.
+     */
     Projection* getInstanceOf(int ID, int preID, int postID, int postNeuronRank, int target) {
-        switch(ID) {
-%(case2)s
-            default:
-                std::cout << "Unknown typeID: "<< ID << std::endl;
-                return NULL;
-        }
+        Population *pre  = Network::instance()->getPopulation(preID);
+        Population *post = Network::instance()->getPopulation(postID);
+        
+        return getInstanceOf(ID, pre, post, postNeuronRank, target);
     }
 
 };
-""" % { 'case1': cases_ptr, 'case2': cases_id }
+""" % { 'case1': cases_ptr }
     return code
 
 def generate_py_extension():
@@ -210,12 +228,8 @@ def code_generation(cpp_stand_alone, verbose):
 
     # create population cpp class for each neuron
     for pop in Global._populations:
-        try:
-            pop.generator.generate(verbose)
-        except exceptions.TypeError:
-            print 'Error on code generation for',pop.name
-            return
-        
+        pop.generator.generate(verbose)
+
     # create projection cpp class for each synapse
     for projection in Global._projections:
         projection.generator.generate(verbose)
@@ -325,5 +339,3 @@ def compile(verbose=False, cpp_stand_alone=False, debug_build=False):
         #abort the application after compiling ANNarchyCPP
         print '\nCompilation process of ANNarchyCPP completed successful.\n'
         exit(0)
-                
-    

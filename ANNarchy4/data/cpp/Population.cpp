@@ -76,6 +76,39 @@ Population::~Population() {
 #endif
 }
 
+std::vector<Projection*> Population::getProjections(int neuron, int type) {
+    std::vector<Projection*> vec = std::vector<Projection*>();
+
+    if (neuron < projections_.size())
+    {
+        for(int p=0; p< projections_[neuron].size(); p++)
+        {
+            if(projections_[neuron][p]->getTarget() == type)
+            {
+                vec.push_back(projections_[neuron][p]);
+            }
+        }
+    }
+
+    return vec;
+}
+
+Projection* Population::getProjection(int neuron, int type, Population *pre) {
+    if (neuron < projections_.size())
+    {
+        for(int p=0; p< projections_[neuron].size(); p++)
+        {
+            if ( (projections_[neuron][p]->getTarget() == type) &&
+                 (projections_[neuron][p]->getPrePopulation() == pre) )
+            {
+                return projections_[neuron][p];
+            }
+        }
+    }
+
+    return NULL;
+}
+
 void Population::printRates() {
 	for(int n=0; n<nbNeurons_; n++) {
 		printf("%.02f ", rate_[n]);
@@ -140,10 +173,26 @@ void Population::metaSum() {
     double start = omp_get_wtime();
 #endif
 
-	#pragma omp parallel for
-	for(int n=0; n<nbNeurons_; n++) {
-		for(int p=0; p< (int)projections_[n].size();p++) {
-			projections_[n][p]->computeSum();
+#ifdef _DEBUG
+    std::cout << "###########################"<< std::endl;
+    std::cout << "# Meta sum                #"<< std::endl;
+    std::cout << "###########################"<< std::endl;
+#endif
+
+    #pragma omp parallel for
+    for(int n=0; n<nbNeurons_; n++)
+    {
+    #ifdef _DEBUG
+        std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
+    #endif
+        for(int p=0; p< (int)projections_[n].size();p++)
+        {
+        #ifdef _DEBUG
+            std::cout << "reference: " << projections_[n][p] << std::endl;
+            std::cout << "\tpost = " << name_ << std::endl;
+            std::cout << "\tpre = " << projections_[n][p]->getPrePopulation()->getName()<< std::endl;
+        #endif
+            projections_[n][p]->computeSum();
 		}
 	}
 
@@ -166,12 +215,19 @@ void Population::metaLearn() {
     double start = omp_get_wtime();
 #endif
 
+#ifdef _DEBUG
+    std::cout << "###########################"<< std::endl;
+    std::cout << "# Global learning         #"<< std::endl;
+    std::cout << "###########################"<< std::endl;
+#endif
     #pragma omp parallel for
-    for(int n=0; n<nbNeurons_; n++) {
+    for(int n=0; n<nbNeurons_; n++)
+    {
     #ifdef _DEBUG
-        std::cout << "n: "<< n << " "<< projections_[n].size()<< " projections."<< std::endl;
+        std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
     #endif
-        for(int p=0; p< (int)projections_[n].size();p++) {
+        for(int p=0; p< (int)projections_[n].size();p++)
+        {
             projections_[n][p]->globalLearn();
         }
     }
@@ -187,10 +243,16 @@ void Population::metaLearn() {
     double start2 = omp_get_wtime();
 #endif
 
+#ifdef _DEBUG
+    std::cout << "###########################"<< std::endl;
+    std::cout << "# Local  learning         #"<< std::endl;
+    std::cout << "###########################"<< std::endl;
+#endif
+
     #pragma omp parallel for
     for(int n=0; n<nbNeurons_; n++) {
     #ifdef _DEBUG
-        std::cout << "n: "<< n << " "<< projections_[n].size()<< " projections."<< std::endl;
+        std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
     #endif
         for(int p=0; p< (int)projections_[n].size();p++) {
             projections_[n][p]->localLearn();

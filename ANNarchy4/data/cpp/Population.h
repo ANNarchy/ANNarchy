@@ -42,7 +42,9 @@ public:
 
 	virtual int getNeuronCount() { return nbNeurons_; }
 
-	class Projection* getProjection(int neuron, int type) { return projections_[neuron][type]; }
+	std::vector<class Projection*> getProjections(int neuron, int type);
+
+	class Projection* getProjection(int neuron, int type, Population* pre);
 
 	void addProjection(int postRankID, Projection* proj);
 

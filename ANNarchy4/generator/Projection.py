@@ -302,7 +302,7 @@ class Projection(object):
             return access
 
         if verbose:
-            print "    for", self.name, '( from',self.projection.pre.name,'to',self.projection.post.name, ', target=',self.projection.target, ')' 
+            print "    for", self.name, '( from',self.projection.pre.name,'to',self.projection.post.name, ', target = \"',self.projection.target, '\")' 
 
         # generate func body            
         self.parser = parser.SynapseAnalyser(self.synapse_variables)
@@ -357,6 +357,8 @@ private:
     target_ = target;
     post_neuron_rank_ = postRank;
 
+    post_population_->addProjection(postRank, this);
+    
 %(init)s
 }
 
