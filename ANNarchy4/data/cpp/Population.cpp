@@ -190,7 +190,8 @@ void Population::metaSum() {
         #ifdef _DEBUG
             std::cout << "reference: " << projections_[n][p] << std::endl;
             std::cout << "\tpost = " << name_ << std::endl;
-            std::cout << "\tpre = " << projections_[n][p]->getPrePopulation()->getName()<< std::endl;
+            std::cout << "\tpre = " << projections_[n][p]->getPrePopulation()->getName() << std::endl;
+            std::cout << "\tsynaseCount = " << projections_[n][p]->getSynapseCount() << std::endl;
         #endif
             projections_[n][p]->computeSum();
 		}

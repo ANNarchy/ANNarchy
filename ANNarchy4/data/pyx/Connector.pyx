@@ -205,6 +205,118 @@ cdef class All2All(PyxConnector):
             for j in xrange(self.postSize):
                 self.ranks.push_back(tmp)
 
+cdef class Gaussian(PyxConnector):
+    """
+    gaussians projection between to populations.
+    
+    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+    the neuron with the same rank and width weights following a gaussians distribution.
+    """
+    cdef preSize
+    cdef postSize
+    cdef pre
+    cdef post
+    cdef amp
+    cdef sigma
+    cdef limit
+    cdef delay_dist
+
+    def __cinit__(self, proj_type):
+        """
+        Constructor.
+        
+        Parameters:
+    
+        * proj_type:    unique ID of the projection (base projection = 0)
+        """
+        PyxConnector.__init__(proj_type)
+      
+    def connect(self, pre, post, target, weights, delays, parameters):
+        """
+        Create the connection informations and instantiate the c++ classes.
+        
+        Parameters:
+        
+            * *pre*: the presynaptic population (python Population instance)            
+            * *post*: the postsynaptic population (python Population instance)            
+            * *target*: string describing the connection type
+            * *weights*: synaptic weights as an instance of RandomDistribution            
+            * *delays*: synaptic weights as an instance of RandomDistribution                        
+            * *parameters*: pattern specific parameters
+        
+        Specific parameters:
+        
+            * *amp*: the maximal value of the gaussian distribution for the connection weights.
+            * *sigma*: the standard deviation of the gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
+            * *limit*: percentage of amplitude below which the connection is not created (default = 0.01)
+            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
+        """        
+        self.preSize = pre.size
+        self.postSize = post.size
+        self.pre = pre
+        self.post = post
+
+        self.sigma = parameters['sigma']
+        self.amp = parameters['amp']
+        
+        self.delay_dist = delays
+        
+        if 'limit' in parameters.keys():
+            self.limit = parameters['limit']
+        else:
+            self.limit = 0.01
+
+        if (self.postSize < self.preSize):
+            return None
+
+        Proj = []
+
+        for p in xrange(self.postSize):
+            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
+            
+            r, v, d = self.genRanksAndValues(p)
+            
+            local.init(r, v, d)
+            Proj.append(local)
+
+        return Proj
+
+    cdef compDist(self, pre, post):
+        cdef float res = 0.0
+        cdef int i = 0
+
+        for i in range(len(pre)):
+            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
+
+        return res
+
+    cdef genRanksAndValues(self, postRank):
+        cdef int j
+        cdef float dist, value
+        cdef vector[float] normPre, normPost
+        cdef vector[int] ranks
+        cdef vector[int] delay
+        cdef vector[float] values
+        selfConnection = False
+
+        ranks.clear()
+        values.clear()
+        delay.clear()
+
+        normPost = self.post.normalized_coordinates_from_rank(postRank)
+        
+        for j in range(self.preSize):
+            if (not selfConnection or (self.pre != self.post)):
+                normPre = self.pre.normalized_coordinates_from_rank(j)
+                dist = self.compDist(normPre, normPost)
+                value = self.amp_pos*exp(-dist/2.0/self.sigma)
+                if (abs(value) > self.limit*abs(self.amp)):
+                    ranks.push_back(j)
+                    values.push_back(value)
+                    delay.push_back(self.delay_dist.get_value())
+                    
+        return ranks, values, delay
+    
 cdef class DoG(PyxConnector):
     """
     Difference-of-gaussians projection between to populations.
@@ -272,7 +384,7 @@ cdef class DoG(PyxConnector):
         else:
             self.limit = 0.01
 
-        if (self.preSize != self.postSize):
+        if (self.postSize < self.preSize):
             return None
 
         Proj = []
@@ -299,7 +411,7 @@ cdef class DoG(PyxConnector):
     cdef genRanksAndValues(self, postRank):
         cdef int j
         cdef float dist, value
-        cdef vector[int] normPre, normPost
+        cdef vector[float] normPre, normPost
         cdef vector[int] ranks
         cdef vector[int] delay
         cdef vector[float] values
@@ -310,7 +422,7 @@ cdef class DoG(PyxConnector):
         delay.clear()
 
         normPost = self.post.normalized_coordinates_from_rank(postRank)
-
+        
         for j in range(self.preSize):
             if (not selfConnection or (self.pre != self.post)):
                 normPre = self.pre.normalized_coordinates_from_rank(j)

@@ -341,12 +341,15 @@ class Population(Descriptor):
             coord = self.coordinates_from_rank(pos)
         else:
             coord = pos
+            
         normal = tuple()
         for dim in range(self.dimension):
             if self.geometry[dim] > 1:
                 normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
             else:
                 normal += (0.0,) # default?
+
+        #print self.geometry,'=> (1.0,1.0):',coord,'=>', normal               
         return normal
 
     def set(self, value):
