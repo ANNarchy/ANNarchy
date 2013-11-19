@@ -37,13 +37,15 @@ Input = Neuron(   tau = NEUR_TAU,
 TestSynapse = Synapse( tau = SYN_TAU )
  
 InputPop = Population(name="Input", geometry=(2,2), neuron=Input)
+OutputPop = Population(name="Input", geometry=(2,2), neuron=Input)
 
 InputProj = Projection(pre=InputPop, 
-                       post=InputPop, 
+                       post=OutputPop, 
                        target='exc',
                        synapse = TestSynapse,
-                       connector=Connector('One2One', weights=RandomDistribution('constant', [0.2]))                       
+                       connector=Connector('All2All', weights=RandomDistribution('constant', [0.2]))                       
                        )
+                       
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
@@ -75,15 +77,15 @@ def test_pop_direct_modify1_variable_rate():
     assert np.allclose(InputPop.rate, np.ones((2,2))*0.1)
 
 def test_pop_direct_modify2_variable_rate():
-    InputPop.rate = [0.2, 0.3, 0.4, 0.5]
-    assert np.allclose(InputPop.rate, [0.2, 0.3, 0.4, 0.5])
+    InputPop.rate = np.array([0.2, 0.3, 0.4, 0.5]).reshape(2,2)
+    assert np.allclose(InputPop.rate, np.array([0.2, 0.3, 0.4, 0.5]).reshape(2,2))
 
 def test_pop_direct_modify3_variable_rate():
     InputPop.rate = np.ones(InputPop.geometry)
     assert np.allclose(InputPop.rate, np.ones(InputPop.geometry))
 
 def test_pop_direct_access_variable_test_var():
-    tmp = [0.1, 0.1, 0.1, 0.1]
+    tmp = np.ones((2,2))*0.1
     assert np.allclose(InputPop.test_var, tmp)
         
 def test_pop_access_variable_test_var_with_get():
@@ -96,11 +98,12 @@ def test_pop_access_variable_test_var_with_get_variable():
 
 def test_pop_direct_modify1_variable_test_var():
     InputPop.test_var = 0.1
-    assert np.allclose(InputPop.test_var, [0.1, 0.1, 0.1, 0.1])
+    result = (np.ones((2,2)))*0.1
+    assert np.allclose(InputPop.test_var, result)
 
 def test_pop_direct_modify2_variable_test_var():
-    InputPop.test_var = [0.2, 0.3, 0.4, 0.5]
-    assert np.allclose(InputPop.test_var, [0.2, 0.3, 0.4, 0.5])
+    InputPop.test_var = np.array([0.2, 0.3, 0.4, 0.5]).reshape(2,2)
+    assert np.allclose(InputPop.test_var, np.array([0.2, 0.3, 0.4, 0.5]).reshape(2,2))
 
 def test_pop_direct_modify3_variable_test_var():
     InputPop.test_var = np.ones(InputPop.geometry)
@@ -122,11 +125,9 @@ def test_proj_direct_access_variable_value():
     assert np.allclose(InputProj.dendrites[0].value, [0.2])
 
 def test_proj_access_variable_value_with_get():
-    tmp = np.zeros((2,2))
-    tmp[0,0] = 0.2
+    tmp = [0.2, 0.2, 0.2, 0.2]
     assert np.allclose(InputProj.dendrites[0].get('value'), tmp)
 
 def test_proj_access_variable_value_with_get_variable():
-    tmp = np.zeros((2,2))
-    tmp[0,0] = 0.2
+    tmp = [0.2, 0.2, 0.2, 0.2]
     assert np.allclose(InputProj.dendrites[0].get_variable('value'), tmp)
