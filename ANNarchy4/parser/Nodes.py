@@ -49,7 +49,7 @@ class TreeBuilder(object):
 class Node(object):
     """Base node of the tree processing a group of expressions.
     
-    The hierarchize() method analyses its content and adds unray/binary/ternary operators if needed.
+    The hierarchize() method analyses its content and adds unary/binary/ternary operators if needed.
     """
     def __init__(self, machine):
         self.machine = machine
@@ -59,17 +59,19 @@ class Node(object):
 
     def hierarchize(self, side):
         """ Create a hierarchy using the recognized nodes. """
-        if len(side)==1: # The group has only one item
-            import Group
-            if isinstance(side[0], Group.Group): # A term between brackets.
-                newside = self.hierarchize(side[0])
-                newside.parent= self
-                return newside
-            else: # Terminal leaf
-                newside = side[0]
-                newside.parent= self
-                return newside
-        found = False
+        if isinstance(side, Parenthesis):
+            return side
+        if isinstance(side, list) :
+            if len(side)==1: # The group has only one item
+                import Group
+                if isinstance(side[0], Group.Group): # A term between brackets.
+                    newside = self.hierarchize(side[0])
+                    newside.parent= self
+                    return newside
+                else: # Terminal leaf
+                    newside = side[0]
+                    newside.parent= self
+                    return newside
         for i in range(len(side)): # if then else
             if isinstance(side[i], If):
                 newside = If(self.machine, value = 'if', child=(side[i+1:]) )
@@ -104,71 +106,58 @@ class Node(object):
                                     left=(side[:i]), 
                                     right=(side[i+1:]) )
                 newside.parent= self
-                found=True
-                break
-        if not found:
-            for i in range(len(side)): # sub
-                if isinstance(side[i], MinusOperator):
-                    if i >0:
-                        newside = MinusOperator(self.machine, 
-                                            left=(side[:i]), 
-                                            right=(side[i+1:]) )
-                    else:
-                        newside = MinusOperator(self.machine, 
-                                            left=[Constant(self.machine, value='')], 
-                                            right=(side[i+1:]) )
-                    newside.parent= self
-                    found=True
-                    break
-        if not found: # Multiply
-            for i in range(len(side)):
-                if isinstance(side[i], MultOperator):
-                    newside = MultOperator(self.machine, 
+                return newside
+        for i in range(len(side)): # sub
+            if isinstance(side[i], MinusOperator):
+                if i >0:
+                    newside = MinusOperator(self.machine, 
                                         left=(side[:i]), 
                                         right=(side[i+1:]) )
-                    newside.parent= self
-                    found=True
-                    break
-        if not found: # Divide
-            for i in range(len(side)-1, 0, -1):
-                if isinstance(side[i], DivOperator):
-                    newside = DivOperator(self.machine, 
-                                        left=(side[:i]), 
+                else:
+                    newside = MinusOperator(self.machine, 
+                                        left=[Constant(self.machine, value='')], 
                                         right=(side[i+1:]) )
-                    newside.parent= self
-                    found=True
-                    break
-        if not found: # power function
-            for i in range(len(side)):
-                if isinstance(side[i], PowOperator):
-                    newside = PowOperator(self.machine, 
-                                        left=(side[:i]), 
-                                        right=(side[i+1:]) )
-                    newside.parent= self
-                    found=True
-                    break
-        if not found: # No operators, only functions are left
-            for i in range(len(side)):
-                if isinstance(side[i], Function):
-                    newside = Function(self.machine,
-                                    value = side[i].value,
-                                    child = side[i+1] )
-                    newside.parent= self
-                    found=True
-                    break
-                elif isinstance(side[i], GlobalFunction):
-                    newside = GlobalFunction(self.machine,
-                                    value = side[i].value,
-                                    child = side[i].child )
-                    newside.parent= self
-                    found=True
-                    break
-        if not found:
-            print self.machine.expr
-            print 'Error: could not analyse the expression'
-            exit(0)
-        return newside
-        
+                newside.parent= self
+                return newside
+        for i in range(len(side)): #mult
+            if isinstance(side[i], MultOperator):
+                newside = MultOperator(self.machine, 
+                                    left=(side[:i]), 
+                                    right=(side[i+1:]) )
+                newside.parent= self
+                return newside
+        for i in range(len(side)-1, 0, -1): #div
+            if isinstance(side[i], DivOperator):
+                newside = DivOperator(self.machine, 
+                                    left=(side[:i]), 
+                                    right=(side[i+1:]) )
+                newside.parent= self
+                return newside
+        for i in range(len(side)):# power function
+            if isinstance(side[i], PowOperator):
+                newside = PowOperator(self.machine, 
+                                    left=(side[:i]), 
+                                    right=(side[i+1:]) )
+                newside.parent= self
+                return newside
+        for i in range(len(side)): # No operators, only functions are left
+            if isinstance(side[i], Function):
+                newside = Function(self.machine,
+                                value = side[i].value,
+                                child = side[i+1] )
+                newside.parent= self
+                return newside
+            elif isinstance(side[i], GlobalFunction):
+                newside = GlobalFunction(self.machine,
+                                value = side[i].value,
+                                child = side[i].child )
+                newside.parent= self
+                return newside
+        # Not found
+        print self.machine.expr
+        print 'Error: could not analyse the expression.'
+        exit(0)
+    
 # Equal object        
 class Equal(Node):
     """ Top node of the hierarchy. There should be only one Equal object."""
@@ -348,6 +337,26 @@ class PostVariable(Leaf):
 # Unitary operators
 ########################
         
+        
+# Parenthesized term   
+class Parenthesis(Node):
+    def __init__(self, machine, value, child=None, hierarchize=True):
+        Node.__init__(self, machine)
+        self.machine = machine
+        self.value = value
+        self.child = child
+        if self.child != None and hierarchize:
+            self.child = self.hierarchize(self.child)
+            self.child.parent=self
+            
+    def cpp(self):
+        if self.child != None:
+            return '(' + self.child.cpp() + ')'  
+        return '()'
+        
+    def latex(self):
+        return '('+self.child.latex()+')'
+        
 # Mathematical functions    
 class Function(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
@@ -361,7 +370,7 @@ class Function(Node):
             
     def cpp(self):
         if self.child != None:
-            return str(cpp_equivalent(self.value))+'('+self.child.cpp()+')'  
+            return str(cpp_equivalent(self.value))+self.child.cpp()
         return str(self.value)+'()'
         
     def latex(self):
@@ -518,7 +527,10 @@ class Operator(Node):
     
     def cpp(self):
         if self.left != None and self.right != None:
-            return ' (' + self.left.cpp() + str(self.value) + self.right.cpp() + ') '
+            if str(self.value) == "+" or str(self.value) == "-" :
+                return self.left.cpp() + str(self.value) + self.right.cpp() 
+            else:
+                return ' (' + self.left.cpp() + ')' + str(self.value) + '(' + self.right.cpp() + ') '
         return ' (' + str(self.value) + ') '
  
 # Comparators (< > <= >=)       

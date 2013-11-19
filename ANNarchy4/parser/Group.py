@@ -34,10 +34,10 @@ class Group(Nodes.Node):
         self.items = items
         
     def __repr__(self):
-        return str(self.items)
+        return '(' + str(self.items) + ')'
         
-    def cpp(self):
-        return str(self.items)
+    def cpp(self): # useless?
+        return '(' + str(self.items) + ')'
         
     def latex(self):
         return str(self.items)
@@ -173,7 +173,7 @@ class Group(Nodes.Node):
             # Check if it is a subgroup
             elif isinstance(item, Group):
                 item.analyse()
-                items.append(item)
+                items.append(Nodes.Parenthesis(self.machine, value=None, child=item))
                 found = True          
             # Else: don't know what to do with it...
             if not found:
