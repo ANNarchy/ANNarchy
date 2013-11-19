@@ -16,7 +16,7 @@ SimpleSynapse = Synapse(
     tau = 1.0,
     boolPar = True,
     boolVar = Variable(init=True),
-    intVar = Variable(init=1),
+    intVar = Variable(init=1.0, type=int),
     value = Variable(init=0.1, eq="value = 1.0 / pre.rate", min=-0.5, max=1.0)
 )
 

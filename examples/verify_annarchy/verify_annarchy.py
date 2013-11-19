@@ -35,8 +35,10 @@ Input = Neuron(   tau = NEUR_TAU,
                )
 
 TestSynapse = Synapse(     
-    boolVar = Variable(init=True),
-    intVar = Variable(init=1),
+    boolVar = Variable(init=True, type=bool),
+    boolVar2 = Variable(init=False),
+    intVar = Variable(init=1.0, type=int),
+    value = Variable(init = 0.0, eq = "value = if boolVar then 1.0 else 0.0"),
     tau = SYN_TAU 
 )
 
@@ -54,6 +56,15 @@ InputProj = Projection(pre=InputPop,
 # Analyse and compile everything, initialize the parameters/variables...
 #
 compile()
+
+#
+#   Test some code generation stuff
+#
+def test_proj_variable_bool_detection():
+    assert ( type(InputProj.dendrites[0].boolVar2) == bool)
+
+def test_proj_variable_bool_definition():
+    assert ( type(InputProj.dendrites[0].boolVar) == bool)
 
 #
 #   Test population functions
@@ -137,15 +148,44 @@ def test_proj_access_variable_value_with_get_variable():
     assert np.allclose(InputProj.dendrites[0].get_variable('value'), tmp)
 
 def test_proj_direct_access_variable_int_variable():
-    assert np.allclose(InputProj.dendrites[0].intVar, [1])
+    assert np.allclose(InputProj.dendrites[0].intVar, 1)
 
 def test_proj_direct_modify_variable_int_variable():
     InputProj.dendrites[0].intVar = 2
-    assert np.allclose(InputProj.dendrites[0].intVar, [2])
+    assert np.allclose(InputProj.dendrites[0].intVar, 2)
 
-def test_proj_direct_access_variable_boolVal():
+def test_proj_direct_access_bool_variable():
     assert np.allclose(InputProj.dendrites[0].boolVar, [True])
 
-def test_proj_direct_modify_variable_intVal():
+def test_proj_direct_modify_bool_variable():
     InputProj.dendrites[0].boolVar = False
     assert np.allclose(InputProj.dendrites[0].boolVar, [False])
+    
+#
+#   Test time
+#
+def test_global_get_current_step_single_inc():
+    base_time = current_step()
+    simulate(1)
+    assert (fabs(current_step() - base_time) < 1+EPSILON)
+    
+def test_global_get_current_step_several_inc():
+    base_time = current_step()
+    simulate(20)
+    assert (fabs(current_step() - base_time) < 20+EPSILON)
+
+def test_get_current_time():
+    assert (fabs(current_time() - current_step()*config['dt']) < EPSILON)
+    
+#
+#    Test some equation stuff
+#
+def test_synapse_eq_bool_var_set_false():
+    InputProj.dendrites[0].boolVar = False
+    simulate(1)
+    assert np.allclose(InputProj.dendrites[0].value, np.zeros((4,1)))
+    
+def test_synapse_eq_bool_var_set_true():
+    InputProj.dendrites[0].boolVar = True
+    simulate(1)
+    assert np.allclose(InputProj.dendrites[0].value, np.ones((4,1)))

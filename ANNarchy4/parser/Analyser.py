@@ -28,6 +28,31 @@ import re
 from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.SpikeVariable import SpikeVariable
 
+def get_value_and_type(value):
+
+    if 'var' in value.keys():
+         # variables
+        if value['var'].init != None:
+            init_value = value['var'].init
+        else:
+            init_value = 0.0
+        
+        if value['var'].type != None:
+            cpp_type = value['var'].type
+        else:
+            cpp_type = type(init_value)
+            
+        if value['var'].type != type(init_value) and value['var'].type != None:
+            print "'WARNING: type mismatch between provided type and initialization value of '",value['name'],"' ('",value['var'].type,",",type(init_value),")."
+             
+    else:
+        # parameter, have always an initial value,
+        # but no type information
+        init_value = value['init']
+        cpp_type = type(init_value)
+         
+    return cpp_type, init_value
+
 # Main analyser class for neurons
 class NeuronAnalyser(object):
     
@@ -42,16 +67,6 @@ class NeuronAnalyser(object):
         self.global_operations = {'pre': [], 'post': []}
         
     def parse(self):
-        def get_value_and_type(value):
-            if 'init' in value.keys():
-                init_value = value['init']
-            elif 'var' in value.keys():
-                init_value = value['var'].init
-            else:
-                init_value = 0.0
-            
-            return type(init_value), init_value
-    
         # Determine parameters and variables
         for value in self.neuron:
             if not 'name' in value.keys():
@@ -158,15 +173,7 @@ class SynapseAnalyser(object):
         self.global_operations = {'pre': [], 'post': []}
         
     def parse(self):
-        def get_value_and_type(value):
-            if 'init' in value.keys():
-                init_value = value['init']
-            elif 'var' in value.keys():
-                init_value = value['var'].init
-            else:
-                init_value = 0.0
-            
-            return type(init_value), init_value
+        
     
         # Determine parameters and variables
         for value in self.synapse:

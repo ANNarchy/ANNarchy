@@ -43,7 +43,7 @@ class Variable(object):
         self.init = None
         self.min = None
         self.max = None
-        self.type = float
+        self.type = None
         
         for key in keyValueArgs:
 
