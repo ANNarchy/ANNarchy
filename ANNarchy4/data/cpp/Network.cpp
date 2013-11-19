@@ -76,6 +76,10 @@ void Network::disconnect(int prePopulationID, int postPopulationID) {
 void Network::run(int steps) {
 
 	for(int i =0; i<steps; i++) {
+	    // update time in all populations
+	    for(int p=0; p<(int)populations_.size(); p++) {
+	        populations_[p]->time_ = time;
+	    }
 
 		for(int p=0; p<(int)populations_.size(); p++) {
 			populations_[p]->metaSum();

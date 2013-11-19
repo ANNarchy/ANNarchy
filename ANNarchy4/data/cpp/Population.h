@@ -78,6 +78,8 @@ public:
     FILE *ll;
 #endif
 protected:
+    int time_;
+
 	// data
 	int nbNeurons_;
 	std::string name_;	///< name of layer
@@ -87,6 +89,8 @@ protected:
 	std::vector<DATA_TYPE>	rate_;
 	std::vector< std::vector<DATA_TYPE>	> delayedRates_;
 	std::vector<std::vector<class Projection*> > projections_;	// first dimension, neuron wise
+
+	friend class Network;
 };
 
 #endif

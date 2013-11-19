@@ -9,7 +9,7 @@ from datetime import datetime
 # Define the neuron classes
 #
 Simple = Neuron(   tau = 1.0,
-                  rate = Variable(init = 0.0)
+                  rate = Variable(init = 0.0, eq="tau * drate/dt + rate = cos(2*pi*t)")
                )
 
 InputPop = Population(name="Input", geometry=(8,8), neuron=Simple)
