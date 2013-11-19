@@ -31,10 +31,11 @@ class Variable(object):
         
         Possible keys are:
         
-            * *eq*: variable equation
-            * *init*: initialization
-            * *min*: minimal value for this variable
-            * *max*: maximal value for this variable            
+        * *eq*: variable equation
+        * *init*: initialization
+        * *min*: minimal value for this variable
+        * *max*: maximal value for this variable
+        * *type*: data type, available are: float, int, bool (default is float)            
             
         other keys will be rejected.
         """
@@ -42,6 +43,7 @@ class Variable(object):
         self.init = None
         self.min = None
         self.max = None
+        self.type = float
         
         for key in keyValueArgs:
 
@@ -53,6 +55,13 @@ class Variable(object):
                 self.min = keyValueArgs[key]
             elif key=='max':
                 self.max = keyValueArgs[key]
+            elif key=='type':
+                self.type = keyValueArgs[key]
             else:
                 print 'unknown key: '+key
-         
+
+        #
+        # for later operations it's not positive if no
+        # default is set
+        if self.init == None:
+            self.init = self.type(0.0)

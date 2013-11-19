@@ -42,6 +42,15 @@ class NeuronAnalyser(object):
         self.global_operations = {'pre': [], 'post': []}
         
     def parse(self):
+        def get_value_and_type(value):
+            if 'init' in value.keys():
+                init_value = value['init']
+            elif 'var' in value.keys():
+                init_value = value['var'].init
+            else:
+                init_value = 0.0
+            
+            return type(init_value), init_value
     
         # Determine parameters and variables
         for value in self.neuron:
@@ -58,16 +67,14 @@ class NeuronAnalyser(object):
         for value in self.neuron:
 
             if 'var' in value.keys(): # A variable which needs to be analysed
-                if value['var'].init != None:
-                    init_value = value['var'].init
-                else:
-                    init_value = 0.0
+                cpp_type, init_value = get_value_and_type(value)
 
                 #
                 # basic stuff
                 neur = {}
                 neur['name'] = value['name']
                 neur['type'] = 'variable'
+                neur['cpp_type'] = cpp_type
                 
                 #
                 # eq stuff
@@ -97,21 +104,16 @@ class NeuronAnalyser(object):
                     
                 self.analysed_neuron.append( neur )
             else: # A parameter
-                if 'init' in value.keys():
-                    init_value = value['init']
-                else:
-                    init_value = 0.0
+                cpp_type, init_value = get_value_and_type(value)
                     
                 self.analysed_neuron.append( 
                     {'name': value['name'],
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
                      'def': self.def_parameter(value['name']),
-                     'cpp' : '' } ) #TODO: why a parameter should have no update rule
+                     'cpp' : '',
+                     'cpp_type': cpp_type } ) #TODO: why a parameter should have no update rule
                      
-#        for cpp in self.analysed_neuron:
-#            print cpp['cpp']
-            
         # Process the global operations
         self.global_operations = sort_global_operations(self.global_operations)
         
@@ -156,6 +158,15 @@ class SynapseAnalyser(object):
         self.global_operations = {'pre': [], 'post': []}
         
     def parse(self):
+        def get_value_and_type(value):
+            if 'init' in value.keys():
+                init_value = value['init']
+            elif 'var' in value.keys():
+                init_value = value['var'].init
+            else:
+                init_value = 0.0
+            
+            return type(init_value), init_value
     
         # Determine parameters and variables
         for value in self.synapse:
@@ -194,68 +205,48 @@ class SynapseAnalyser(object):
         
         # Perform the analysis
         for value in self.synapse:
-            if value['name'] in self.local_variables_names: # A variable which needs to be analysed
-                if value['var'].init != None:
-                    init_value = value['var'].init
-                else:
-                    init_value = 0.0
+            
+            if value['name'] in self.local_variables_names + self.global_variables_names: # a variable
+                synapse = { }
+                cpp_type, init_value = get_value_and_type(value)
                     
                 tree = Tree.Tree(self, value['name'], value['var'].eq)
                 self.trees.append(tree)
                 
                 #
-                # base description
-                synapse = {'name': value['name'],
-                           'type': 'local',
-                           'init': self.init_local_variable(value['name'], init_value),
-                           'cpp' : tree.cpp() +';'
-                           }
+                # base data: name, type, init, cpp, cpp_type
+                if value['name'] in self.local_variables_names:
+                    synapse['type'] = 'local'
+                    synapse['init'] = self.init_local_variable(value['name'], init_value)                                
+                elif value['name'] in self.global_variables_names:
+                    synapse['type'] = 'global'
+                    synapse['init'] = self.init_global_variable(value['name'], init_value)
+                
+                synapse['name'] = value['name']
+                synapse['cpp'] = tree.cpp() +';'
+                synapse['cpp_type'] = cpp_type
+                
                 #
-                # extend by optional parameters
+                # optional parameters: min, max
                 if value['var'].min != None:
                     synapse['min'] = value['var'].min
                     
                 if value['var'].max != None:
                     synapse['max'] = value['var'].max                     
                 
-                self.analysed_synapse.append(synapse)                
-            elif value['name'] in self.global_variables_names:
-                if value['var'].init != None:
-                    init_value = value['var'].init
-                else:
-                    init_value = 0.0
-
-                tree = Tree.Tree(self, value['name'], value['var'].eq)
-                self.trees.append(tree)
-                
-                #
-                # base description
-                synapse = {'name': value['name'],
-                           'type': 'global',
-                           'init': self.init_global_variable(value['name'], init_value),
-                           'cpp' : tree.cpp() +';'
-                           } 
-                
-                #
-                # extend by optional parameters
-                if value['var'].min != None:
-                    synapse['min'] = value['var'].min
-                    
-                if value['var'].max != None:
-                    synapse['max'] = value['var'].max                     
-                
+                # attach to list
                 self.analysed_synapse.append(synapse)
+                
             else: # A parameter
-                if 'init' in value.keys():
-                    init_value = value['init']
-                else:
-                    init_value = 0.0
+                cpp_type, init_value = get_value_and_type(value)
 
                 self.analysed_synapse.append( 
                     {'name': value['name'],
                      'type': 'parameter',
                      'init': self.init_parameter(value['name'], init_value),
-                     'cpp' : '' } )
+                     'cpp' : '',
+                     'cpp_type': cpp_type
+                     } )
                      
         # Process the global operations
         self.global_operations = sort_global_operations(self.global_operations)
