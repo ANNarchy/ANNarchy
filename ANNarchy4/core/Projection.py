@@ -85,8 +85,7 @@ class Projection(Descriptor):
     def get(self, name):
         """ Returns a list of parameters/variables values for each dendrite in the projection.
         
-        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.
-        
+        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.        
         """
         ret=[]
         for dendrite in self.dendrites:

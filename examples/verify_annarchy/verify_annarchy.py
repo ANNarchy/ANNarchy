@@ -34,8 +34,12 @@ Input = Neuron(   tau = NEUR_TAU,
                   rate = Variable(init=1.0),
                )
 
-TestSynapse = Synapse( tau = SYN_TAU )
- 
+TestSynapse = Synapse(     
+    boolVar = Variable(init=True),
+    intVar = Variable(init=1),
+    tau = SYN_TAU 
+)
+
 InputPop = Population(name="Input", geometry=(2,2), neuron=Input)
 OutputPop = Population(name="Input", geometry=(2,2), neuron=Input)
 
@@ -131,3 +135,17 @@ def test_proj_access_variable_value_with_get():
 def test_proj_access_variable_value_with_get_variable():
     tmp = [0.2, 0.2, 0.2, 0.2]
     assert np.allclose(InputProj.dendrites[0].get_variable('value'), tmp)
+
+def test_proj_direct_access_variable_int_variable():
+    assert np.allclose(InputProj.dendrites[0].intVar, [1])
+
+def test_proj_direct_modify_variable_int_variable():
+    InputProj.dendrites[0].intVar = 2
+    assert np.allclose(InputProj.dendrites[0].intVar, [2])
+
+def test_proj_direct_access_variable_boolVal():
+    assert np.allclose(InputProj.dendrites[0].boolVar, [True])
+
+def test_proj_direct_modify_variable_intVal():
+    InputProj.dendrites[0].boolVar = False
+    assert np.allclose(InputProj.dendrites[0].boolVar, [False])

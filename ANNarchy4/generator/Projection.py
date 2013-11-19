@@ -110,6 +110,22 @@ class Projection(object):
         """
         generate projection c++ code.
         """
+        
+        def get_type_name(type):
+            """
+            mapping between python types and cpp names, float will be mapped to
+            DATA_TYPE to allow changing between precisions in the framework.
+            """
+            if type==float:
+                return 'DATA_TYPE'
+            elif type==int:
+                return 'int'
+            elif type==bool:
+                return 'bool'
+            else:
+                print "Unknown type, use default = 'DATA_TYPE'"
+                return 'DATA_TYPE'
+        
         def member_def(parsed_variables):
             """
             create variable/parameter header entries.
@@ -119,12 +135,19 @@ class Projection(object):
                 if var['name'] in Global._pre_def_synapse:
                     continue
                     
-                if var['type'] == 'parameter':
-                    code += "\tDATA_TYPE "+var['name']+"_;\n"
-                elif var['type'] == 'local':
-                    code += "\tstd::vector<DATA_TYPE> "+var['name']+"_;\n"
-                else: # global (postsynaptic neurons), or weight bound
-                    code += "\tDATA_TYPE "+var['name']+"_;\n"
+                if var['type'] == 'local':
+                    code += """\tstd::vector<%(type)s> %(name)s_;\n""" % { 
+                        'type': get_type_name(var['cpp_type']), 
+                        'name': var['name']
+                    }
+                else: 
+                    # variable is 
+                    #     global (postsynaptic neurons)
+                    #     or parameter
+                    code += """\t%(type)s %(name)s_;\n""" % { 
+                        'type': get_type_name(var['cpp_type']), 
+                        'name': var['name']
+                    }
 
             return code
 
@@ -136,7 +159,15 @@ class Projection(object):
             for var in parsed_variables:
                 if var['name'] == 'psp':
                     continue
-                code += "\t"+var['init']+"\n"               
+                
+                if var['cpp_type']==bool:
+                    if 'True' in var['init']: # is either True or False
+                        code += "\t"+var['name']+"_ = true; \n"
+                    else:
+                        code += "\t"+var['name']+"_ = false; \n"
+                else:
+                    code += "\t"+var['init']+"\n"       
+                            
             code += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return code
 
@@ -289,16 +320,25 @@ class Projection(object):
                 if value['name'] in Global._pre_def_synapse:
                     continue
     
-                if value['type'] == 'parameter':
-                    access += 'void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
-                    access += 'DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
-                elif value['type'] == 'global':
-                    access += 'void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
-                    access += 'DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
+                if value['type'] == 'variable':
+                    access += """
+void set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_= %(name)s; }
+
+std::vector<%(type)s> get%(Name)s() { return this->%(name)s_; }""" % {
+       'Name': value['name'].capitalize(),
+       'type': get_type_name(value['cpp_type']),
+       'name': value['name']
+}              
                 else:
-                    access += 'void set'+value['name'].capitalize()+'(std::vector<DATA_TYPE> '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
-                    access += 'std::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
-                    
+                    access += """
+void set%(Name)s(%(type)s %(name)s) { this->%(name)s_=%(name)s; }
+
+%(type)s get%(Name)s() { return this->%(name)s_; }
+""" % {
+       'Name': value['name'].capitalize(),
+       'type': get_type_name(value['cpp_type']),
+       'name': value['name']
+}                    
             return access
 
         if verbose:
@@ -424,6 +464,19 @@ void %(name)s::globalLearn() {
         """
         Create projection class python extension.
         """
+        def get_type_name(type):
+            """
+            mapping between python types and cython names
+            """
+            if type==float:
+                return 'float'
+            elif type==int:
+                return 'int'
+            elif type==bool:
+                return 'bool'
+            else:
+                print "Unknown type, use default = 'DATA_TYPE'"
+                return 'float'
         
         def pyx_func(parsed_synapse):
             """
@@ -435,13 +488,13 @@ void %(name)s::globalLearn() {
                 if value['name'] in Global._pre_def_synapse:
                     continue
    
-                if value['type'] == 'parameter' or value['type'] == 'global':
-                    code += '        float get'+value['name'].capitalize()+'()\n\n'
-                    code += '        void set'+value['name'].capitalize()+'(float value)\n\n'
+                if value['type'] == 'local':
+                     code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
+                     code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
                 else:
-                    code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
-                    code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
-    
+                    code += '        '+get_type_name(value['cpp_type'])+' get'+value['name'].capitalize()+'()\n\n'
+                    code += '        void set'+value['name'].capitalize()+'('+get_type_name(value['cpp_type'])+' value)\n\n'    
+
             return code
     
         def py_func(parsed_synapse):
@@ -483,6 +536,8 @@ void %(name)s::globalLearn() {
         
         pyx = '''from libcpp.vector cimport vector
 from libcpp.string cimport string
+from libcpp cimport bool
+
 import numpy as np
 
 cdef extern from "../build/%(name)s.h":

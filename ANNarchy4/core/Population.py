@@ -393,10 +393,6 @@ class Population(Descriptor):
         Parameter:
         
         * *value*: value name as string
-        
-        .. warning::
-        
-        In contrast to direct accessing variables, this function returns the synaptic variavles as one dimensional array. 
         """
         if hasattr(self, 'cyInstance'):
             if value in self.variables:

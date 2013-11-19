@@ -8,14 +8,22 @@ from datetime import datetime
 #
 # Define the neuron classes
 #
-Simple = Neuron(   tau = 1.0,
-                  rate = Variable(init = 0.0)
+Simple = Neuron(  tau = 1.0,
+                  rate = Variable(init = 0.0, max=1.5)
                )
+
+SimpleSynapse = Synapse(
+    tau = 1.0,
+    boolPar = True,
+    boolVar = Variable(init=True),
+    intVar = Variable(init=1),
+    value = Variable(init=0.1, eq="value = 1.0 / pre.rate", min=-0.5, max=1.0)
+)
 
 InputPop = Population(name="Input", geometry=(8,8), neuron=Simple)
 Layer1Pop = Population(name="Layer1", geometry=(1,1), neuron=Simple)
 
-Proj = Projection(pre="Input", post="Layer1", target='exc', connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,1.0])))
+Proj = Projection(pre="Input", post="Layer1", target='exc', synapse=SimpleSynapse, connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,1.0])))
 
 #
 # Analyse and compile everything, initialize the parameters/variables...
