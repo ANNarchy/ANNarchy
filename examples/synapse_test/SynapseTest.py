@@ -9,7 +9,8 @@ from datetime import datetime
 # Define the neuron classes
 #
 Simple = Neuron(   tau = 1.0,
-                  rate = Variable(init = 0.0, eq="tau * drate/dt + rate = cos(2*pi*t)")
+                  rate = Variable(init = 0.0, eq="tau * drate / dt = cos(2*pi*t)")
+                  #rate = Variable(init = 0.0, eq="rate = t")
                )
 
 InputPop = Population(name="Input", geometry=(8,8), neuron=Simple)
@@ -58,3 +59,6 @@ if __name__ == '__main__':
     print Proj.dendrite(0).rank
     print Proj.dendrite(0).value
     
+    for i in xrange(15):
+        simulate(1)
+        print InputPop.rate

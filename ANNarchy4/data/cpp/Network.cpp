@@ -78,7 +78,7 @@ void Network::run(int steps) {
 	for(int i =0; i<steps; i++) {
 	    // update time in all populations
 	    for(int p=0; p<(int)populations_.size(); p++) {
-	        populations_[p]->time_ = time;
+	        populations_[p]->time_ = time_;
 	    }
 
 		for(int p=0; p<(int)populations_.size(); p++) {
