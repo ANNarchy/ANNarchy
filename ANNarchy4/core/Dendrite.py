@@ -144,9 +144,9 @@ class Dendrite(Descriptor):
         """
         Returns the value of the given variable for all synapses in the dendrite, as a NumPy array having the same geometry as the presynaptic population.
         
-        Parameters:
+        Parameter:
         
-            * *variable*:    a string representing the variable's name.
+        * *variable*:    a string representing the variable's name.
         """
         if hasattr(self.cyInstance, variable):
             return getattr(self.cyInstance, variable)
@@ -158,9 +158,9 @@ class Dendrite(Descriptor):
         """
         Returns the value of the given parameter, which is common for all synapses in the dendrite.
         
-        Parameters:
+        Parameter:
         
-            * *parameter*:    a string representing the parameter's name.
+        * *parameter*:    a string representing the parameter's name.
         """
         if hasattr(self.cyInstance, parameter):
             return getattr(self.cyInstance, parameter)

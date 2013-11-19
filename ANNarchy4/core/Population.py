@@ -83,23 +83,20 @@ class Population(Descriptor):
         if self.dimension >= 1:
             return self.geometry[0]
         else:
-            print 'WARNING: insufficient dimension'
             return 1
 
     @property
     def height(self):
         if self.dimension >= 2:
             return self.geometry[1]
-        else:
-            print 'WARNING: insufficient dimension' 
+        else: 
             return 1
 
     @property
     def depth(self):
         if self.dimension == 3:
             return self.geometry[2]
-        else:
-            print 'WARNING: insufficient dimension' 
+        else: 
             return 1
         
     @property
@@ -272,7 +269,11 @@ class Population(Descriptor):
         
         Parameter:
         
-            * *variable*: should be a string representing the variables's name.
+        * *variable*: should be a string representing the variables's name.
+        
+        .. warning::
+        
+        In contrast to direct accessing variables, this function returns the synaptic as one dimensional array. 
         """
         if hasattr(self, 'cyInstance'):
             if hasattr(self.cyInstance, variable):
@@ -290,7 +291,7 @@ class Population(Descriptor):
         
         Parameter:
         
-            * *parameter*: should be a string representing the variables's name.
+        * *parameter*: should be a string representing the variables's name.
         """
         
         if hasattr(self, 'cyInstance'):
@@ -336,6 +337,12 @@ class Population(Descriptor):
     def normalized_coordinates_from_rank(self, pos, norm=1.):
         """
         Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
+        
+        Parameters:
+        
+        * *pos*: position to normalize
+        * *norm*: upper limit (default = 1.0)
+        
         """
         if isinstance(pos, int):
             coord = self.coordinates_from_rank(pos)
@@ -385,7 +392,11 @@ class Population(Descriptor):
         
         Parameter:
         
-            * *value*: value name as string
+        * *value*: value name as string
+        
+        .. warning::
+        
+        In contrast to direct accessing variables, this function returns the synaptic variavles as one dimensional array. 
         """
         if hasattr(self, 'cyInstance'):
             if value in self.variables:
