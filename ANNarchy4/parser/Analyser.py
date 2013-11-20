@@ -204,6 +204,8 @@ class SynapseAnalyser(object):
                     init_value = 0.0
 
                 tree = Tree.Tree(self, value['name'], value['var'].eq)
+                if not tree.success: # Error while processing the equation
+                    return None, None
                 self.trees.append(tree)
 
                 #
@@ -229,6 +231,8 @@ class SynapseAnalyser(object):
                     init_value = 0.0
 
                 tree = Tree.Tree(self, value['name'], value['var'].eq)
+                if not tree.success: # Error while processing the equation
+                    return None, None
                 self.trees.append(tree)
 
                 #

@@ -6,7 +6,7 @@ from ANNarchy4.core.Population import Population
 LeakyNeuron = Neuron(
     baseline =  0.0,
     tau = 10.0,
-    rate = Variable(init=0.0, eq='tau*drate/dt + rate = sum(exc) + baseline'),
+    rate = Variable(init=0.0, eq='tau*drate/dt - rate - 1 = sum(exc) + baseline'),
 )
 
 def print_parsing(NeuronType):

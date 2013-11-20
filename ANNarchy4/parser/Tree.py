@@ -173,10 +173,18 @@ def simplify(tree, target):
             tree.left = tree.left.right
     elif isinstance(tree.left, Nodes.MinusOperator):
         if tree.left.left.has_target: # the left branch has the target
-            tree.right = Nodes.PlusOperator(tree.machine, left=tree.right, right=tree.left.right, hierarchize=False)
+            tree.right = Nodes.PlusOperator(tree.machine,
+                                            left=tree.right,
+                                            right=tree.left.right,
+                                            #right=Nodes.Parenthesis(tree.machine, value=None, child=tree.left.right, hierarchize=False),
+                                            hierarchize=False)
             tree.left = tree.left.left
         else:
-            tree.right = Nodes.MinusOperator(tree.machine, left=tree.left.left, right=tree.right, hierarchize=False)
+            tree.right = Nodes.MinusOperator(tree.machine,
+                                             left=tree.left.left,
+                                             #left=Nodes.Parenthesis(tree.machine, value=None, child=tree.left.left, hierarchize=False),
+                                             right=tree.right,
+                                             hierarchize=False)
             tree.left = tree.left.right
 
     elif isinstance(tree.left, Nodes.MultOperator):
