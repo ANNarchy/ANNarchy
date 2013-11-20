@@ -1,9 +1,9 @@
 """
 
     Nodes.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -20,18 +20,18 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""    
+"""
 from Definitions import *
 import Analyser
 import Tree
-            
+
 ## Object transforming the expression into an ordered tree
 class TreeBuilder(object):
 
     def __init__(self, machine, expr_list):
         self.machine = machine
         self.expr_list = expr_list
-    
+
     def build(self):
         # Split the list around the equal sign
         id_equal = self.expr_list.index(EQUAL)
@@ -40,20 +40,20 @@ class TreeBuilder(object):
         # Start the group analysis
         for group in [self.left_group, self.right_group]:
             group.group()
-            group.analyse()       
+            group.analyse()
         # Return ordered tree
         tree = Equal(self.machine, left=self.left_group, right=self.right_group).build_hierarchy()
         return tree
-        
+
 # Node class
 class Node(object):
     """Base node of the tree processing a group of expressions.
-    
+
     The hierarchize() method analyses its content and adds unary/binary/ternary operators if needed.
     """
     def __init__(self, machine):
         self.machine = machine
-        
+
     def __repr__(self):
         return self.cpp()
 
@@ -61,9 +61,9 @@ class Node(object):
         """ Create a hierarchy using the recognized nodes. """
         if isinstance(side, Parenthesis):
             return side
-        if isinstance(side, list) :
+        import Group
+        if isinstance(side, list) or isinstance(side, Group.Group):
             if len(side)==1: # The group has only one item
-                import Group
                 if isinstance(side[0], Group.Group): # A term between brackets.
                     newside = self.hierarchize(side[0])
                     newside.parent= self
@@ -79,9 +79,9 @@ class Node(object):
                 return newside
         for i in range(len(side)): # logical operator
             if isinstance(side[i], Logical):
-                newside = Logical(self.machine, 
+                newside = Logical(self.machine,
                                     value=side[i].value,
-                                    left=(side[:i]), 
+                                    left=(side[:i]),
                                     right=(side[i+1:]) )
                 newside.parent= self
                 return newside
@@ -94,49 +94,49 @@ class Node(object):
                 return newside
         for i in range(len(side)): # comparator
             if isinstance(side[i], Comparator):
-                newside = Comparator(self.machine, 
+                newside = Comparator(self.machine,
                                     value=side[i].value,
-                                    left=(side[:i]), 
+                                    left=(side[:i]),
                                     right=(side[i+1:]) )
                 newside.parent= self
                 return newside
         for i in range(len(side)): # add
             if isinstance(side[i], PlusOperator):
-                newside = PlusOperator(self.machine, 
-                                    left=(side[:i]), 
+                newside = PlusOperator(self.machine,
+                                    left=(side[:i]),
                                     right=(side[i+1:]) )
                 newside.parent= self
                 return newside
         for i in range(len(side)): # sub
             if isinstance(side[i], MinusOperator):
                 if i >0:
-                    newside = MinusOperator(self.machine, 
-                                        left=(side[:i]), 
+                    newside = MinusOperator(self.machine,
+                                        left=(side[:i]),
                                         right=(side[i+1:]) )
                 else:
-                    newside = MinusOperator(self.machine, 
-                                        left=[Constant(self.machine, value='')], 
+                    newside = MinusOperator(self.machine,
+                                        left=[Constant(self.machine, value='')],
                                         right=(side[i+1:]) )
                 newside.parent= self
                 return newside
         for i in range(len(side)): #mult
             if isinstance(side[i], MultOperator):
-                newside = MultOperator(self.machine, 
-                                    left=(side[:i]), 
+                newside = MultOperator(self.machine,
+                                    left=(side[:i]),
                                     right=(side[i+1:]) )
                 newside.parent= self
                 return newside
         for i in range(len(side)-1, 0, -1): #div
             if isinstance(side[i], DivOperator):
-                newside = DivOperator(self.machine, 
-                                    left=(side[:i]), 
+                newside = DivOperator(self.machine,
+                                    left=(side[:i]),
                                     right=(side[i+1:]) )
                 newside.parent= self
                 return newside
         for i in range(len(side)):# power function
             if isinstance(side[i], PowOperator):
-                newside = PowOperator(self.machine, 
-                                    left=(side[:i]), 
+                newside = PowOperator(self.machine,
+                                    left=(side[:i]),
                                     right=(side[i+1:]) )
                 newside.parent= self
                 return newside
@@ -154,11 +154,10 @@ class Node(object):
                 newside.parent= self
                 return newside
         # Not found
-        print self.machine.expr
-        print 'Error: could not analyse the expression.'
-        exit(0)
-    
-# Equal object        
+        print 'Error when parsing \"', self.machine.expr, '\": could not analyse the expression.'
+        return None
+
+# Equal object
 class Equal(Node):
     """ Top node of the hierarchy. There should be only one Equal object."""
     def __init__(self, machine, left, right):
@@ -167,52 +166,60 @@ class Equal(Node):
         self.left = left
         self.right = right
         self.order=0
-                
+
     def cpp(self):
         if self.order == 1:
             return self.left.cpp() + " += dt_*" + self.right.cpp()
         return self.left.cpp() + " = " + self.right.cpp()
-                
+
     def latex(self):
         return self.left.latex() + " = " + self.right.latex()
-        
+
     def build_hierarchy(self):
         left=None
         right=None
         # left member
         if len(self.left) == 1:
             if not isinstance(self.left[0], MainVariable) and not isinstance(self.left[0], Gradient):
-                print self.machine.expr 
+                print self.machine.expr
                 print 'Error: the left term should be the updated variable'
                 exit(0)
             else:
                 left = self.left[0]
         else: # there is at least one operator
-            left = self.hierarchize(self.left) 
-        self.left = left
-        self.left.parent= self  
-                    
-        # right member 
-        right = self.hierarchize(self.right) 
-        self.right = right
-        self.right.parent= self
+            left = self.hierarchize(self.left)
+        if not left==None:
+            self.left = left
+            self.left.parent= self
+        else:
+            print 'Error when analysing the left term.'
+            return None
+
+        # right member
+        right = self.hierarchize(self.right)
+        if not right==None:
+            self.right = right
+            self.right.parent= self
+        else:
+            print 'Error when analysing the right term.'
+            return None
         return self
 
 #############################
 # Simple objects
 #############################
-        
+
 # Leaf (no need to go further)
 class Leaf(object):
     def __repr__(self):
-        return self.cpp()       
-        
+        return self.cpp()
+
 # Constants
 class Constant(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
         self.value = value
-        
+
     def cpp(self):
         if self.value in PI:
             return ' ' + cpp_equivalent(self.value) + ' '
@@ -223,7 +230,7 @@ class Constant(Leaf):
         elif self.value == '': # case of negative numbers
             return ''
         return ' ' + str(float(self.value)) + ' '
-        
+
     def latex(self):
         if self.value in PI:
             return '{\\pi}'
@@ -233,7 +240,7 @@ class Constant(Leaf):
 # Variables and parameters
 ##################################
 
-# Variable of the neuron/synapse, but not the one updated here        
+# Variable of the neuron/synapse, but not the one updated here
 class Variable(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -252,7 +259,7 @@ class Variable(Leaf):
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
 
-# Main variable updated        
+# Main variable updated
 class MainVariable(Variable):
     def __init__(self, machine, value):
         Variable.__init__(self, machine, value)
@@ -266,7 +273,7 @@ class MainVariable(Variable):
             suffix = '[i] '
         return ' ' + str(self.value)+'_'+suffix
 
-# Parameter if the neuron/synapse        
+# Parameter if the neuron/synapse
 class Parameter(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -276,7 +283,7 @@ class Parameter(Leaf):
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
 
-# Gradient on the main variable        
+# Gradient on the main variable
 class Gradient(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -293,7 +300,7 @@ class Gradient(Leaf):
     def latex(self):
         return '{\\frac{d\\text{'+str(self.value) + '}}{dt}}'
 
-# Weighted sum of inputs        
+# Weighted sum of inputs
 class PSP(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -307,7 +314,7 @@ class PSP(Leaf):
     def latex(self):
         return '{\\sum_{i}^{'+str(self.value)+'} w_{i} \\cdot \\text{rate}_{i}}'
 
-# Presynaptic variable (e.g. pre.rate)        
+# Presynaptic variable (e.g. pre.rate)
 class PreVariable(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -319,8 +326,8 @@ class PreVariable(Leaf):
         return ' pre_population_->getSingle'+variable.capitalize()+'( rank_[i] ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
-      
-# Postsynaptic variable (e.g. post.rate)   
+
+# Postsynaptic variable (e.g. post.rate)
 class PostVariable(Leaf):
     def __init__(self, machine, value):
         self.machine = machine
@@ -332,13 +339,13 @@ class PostVariable(Leaf):
         return ' post_population_->getSingle'+variable.capitalize()+'( post_neuron_rank_ ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
-        
+
 ########################
 # Unitary operators
 ########################
-        
-        
-# Parenthesized term   
+
+
+# Parenthesized term
 class Parenthesis(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         Node.__init__(self, machine)
@@ -348,16 +355,16 @@ class Parenthesis(Node):
         if self.child != None and hierarchize:
             self.child = self.hierarchize(self.child)
             self.child.parent=self
-            
+
     def cpp(self):
         if self.child != None:
-            return '(' + self.child.cpp() + ')'  
+            return '(' + self.child.cpp() + ')'
         return '()'
-        
+
     def latex(self):
         return '('+self.child.latex()+')'
-        
-# Mathematical functions    
+
+# Mathematical functions
 class Function(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         Node.__init__(self, machine)
@@ -367,25 +374,25 @@ class Function(Node):
         if self.child != None and hierarchize:
             self.child = self.hierarchize(self.child)
             self.child.parent=self
-            
+
     def cpp(self):
         if self.child != None:
             return str(cpp_equivalent(self.value))+self.child.cpp()
         return str(self.value)+'()'
-        
+
     def latex(self):
         if self.child != None:
             if self.value in POS:
-                return '{('+self.child.latex()+')^+}' 
+                return '{('+self.child.latex()+')^+}'
             elif self.value in NEG:
-                return '{('+self.child.latex()+')^-}' 
+                return '{('+self.child.latex()+')^-}'
             elif self.value in SQRT:
-                return '{' + latex_equivalent(self.value)+'{'+self.child.latex()+'}}' 
+                return '{' + latex_equivalent(self.value)+'{'+self.child.latex()+'}}'
             else:
-                return '{' + latex_equivalent(self.value)+'{('+self.child.latex()+')}}'  
+                return '{' + latex_equivalent(self.value)+'{('+self.child.latex()+')}}'
         return '{\\text{'+str(self.value)+'}()}'
-        
-# Not operator    
+
+# Not operator
 class Not(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         Node.__init__(self, machine)
@@ -395,17 +402,17 @@ class Not(Node):
         if self.child != None and hierarchize:
             self.child = self.hierarchize(self.child)
             self.child.parent=self
-            
+
     def cpp(self):
         if self.child != None:
-            return str(cpp_equivalent(self.value))+'('+self.child.cpp()+')'  
+            return str(cpp_equivalent(self.value))+'('+self.child.cpp()+')'
         return str(self.value)+'()'
-        
+
     def latex(self):
         return '{\\bar{'+str(self.value)+'}}'
-        
-        
-# Global function (mean, max, min)    
+
+
+# Global function (mean, max, min)
 class GlobalFunction(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         Node.__init__(self, machine)
@@ -424,7 +431,7 @@ class GlobalFunction(Node):
                 self.variable = self.child.split('.')[1]
             # Tell the parser that it should generate the corresponding functions
             self.machine.analyser.global_operations[self.pop].append({'variable': self.variable, 'function': self.value})
-                
+
     def cpp(self):
         if self.child != None:
             # TODO: save which variables are called. neuron?
@@ -432,17 +439,17 @@ class GlobalFunction(Node):
                 return ' get' + self.value.capitalize() + self.variable.capitalize() + '()'
             else:
                 return ' ' + self.pop + '_population_->get' + self.value.capitalize() + self.variable.capitalize() + '() '
-            
+
         return str(self.value)+'()'
-        
+
     def latex(self):
         return '{\\text{'+str(self.value)+'}{'+ str(self.child)+ '}}'
-        
+
 ######################
-# Ternary operator    
+# Ternary operator
 ######################
 
-# IF node    
+# IF node
 class If(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         self.machine = machine
@@ -458,53 +465,53 @@ class If(Node):
                 elif isinstance(item, Then):
                     if nb_if == 0:
                         id_then =  rk
-                elif isinstance(item, Else):                    
+                elif isinstance(item, Else):
                     if nb_if == 0:
                         id_else =  rk
                     else:
                         nb_if -= 1
-                    
+
             if id_then is -1 or id_else is -1:
                 print 'Error in analysing', self.machine.expr
                 print 'The conditional should use the (if A then B else C) structure.'
                 exit(0)
-                
+
             import Group
             self.cond = self.hierarchize(Group.Group(self.machine, self.child[:id_then]))
             self.then = self.hierarchize(Group.Group(self.machine, self.child[id_then+1: id_else]))
             self.elsestatement = self.hierarchize(Group.Group(self.machine, self.child[id_else+1:]))
-            
+
     def cpp(self):
         if self.child:
             return '( (' +  self.cond.cpp() + ') ? ' + self.then.cpp() + ' : ' + self.elsestatement.cpp() + ')'
-        else: 
-            return ' if ' 
+        else:
+            return ' if '
     def latex(self):
-        return ''      
-        
-# Then node        
+        return ''
+
+# Then node
 class Then(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         self.machine = machine
         self.value = value
         self.child = child
-            
-    def cpp(self):
-        return ' then ' 
-    def latex(self):
-        return ''   
 
-# Else node           
+    def cpp(self):
+        return ' then '
+    def latex(self):
+        return ''
+
+# Else node
 class Else(Node):
     def __init__(self, machine, value, child=None, hierarchize=True):
         self.machine = machine
         self.value = value
         self.child = child
-            
+
     def cpp(self):
-        return ' else ' 
+        return ' else '
     def latex(self):
-        return ''          
+        return ''
 
 ###########################
 # Binary operators
@@ -524,25 +531,25 @@ class Operator(Node):
         if self.right != None and hierarchize:
             self.right = self.hierarchize(self.right)
             self.right.parent = self
-    
+
     def cpp(self):
         if self.left != None and self.right != None:
             if str(self.value) == "+" or str(self.value) == "-" :
-                return self.left.cpp() + str(self.value) + self.right.cpp() 
+                return self.left.cpp() + str(self.value) + self.right.cpp()
             else:
                 return ' (' + self.left.cpp() + ')' + str(self.value) + '(' + self.right.cpp() + ') '
         return ' (' + str(self.value) + ') '
- 
-# Comparators (< > <= >=)       
+
+# Comparators (< > <= >=)
 class Comparator(Operator):
     def __init__(self, machine, value='<', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
-        
+
     def cpp(self): # comparators are already in C++
         if self.left is not None:
-            return self.left.cpp() + cpp_equivalent(self.value) + self.right.cpp() 
+            return self.left.cpp() + cpp_equivalent(self.value) + self.right.cpp()
         return str(self.value)
-            
+
     def latex(self):
         if self.value is '>':
             return '{>}'
@@ -555,25 +562,25 @@ class Comparator(Operator):
         elif self.value is '!=':
             return '{\neq}'
         return '{' + str(self.value) + '}'
-        
+
 # Logical operator (and, or)
 class Logical(Operator):
     def __init__(self, machine, value='and', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
-        
+
     def cpp(self): # comparators are already in C++
         if self.left != None:
             return ' (' + self.left.cpp() + ') ' + str(cpp_equivalent(self.value)) + ' (' + self.right.cpp() + ') '
         return str(self.value)
-            
+
     def latex(self):
         return "\\text{and}"
 
-# +    
-class PlusOperator(Operator):   
+# +
+class PlusOperator(Operator):
     def __init__(self, machine, value='+', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
-        
+
     def latex(self):
         if self.left != None and self.right != None:
             if not isinstance(self.parent, MultOperator):
@@ -581,8 +588,8 @@ class PlusOperator(Operator):
             else:
                 return ' {(' + self.left.latex() + str(self.value) + self.right.latex() + ')} '
         return ''
-# -    
-class MinusOperator(Operator):   
+# -
+class MinusOperator(Operator):
     def __init__(self, machine, value='-', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
     def latex(self):
@@ -593,8 +600,8 @@ class MinusOperator(Operator):
                 return ' {(' + self.left.latex() + str(self.value) + self.right.latex() + ')} '
         return ''
 
-# *    
-class MultOperator(Operator):   
+# *
+class MultOperator(Operator):
     def __init__(self, machine, value='*', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
     def latex(self):
@@ -602,16 +609,16 @@ class MultOperator(Operator):
             return ' {' + self.left.latex() + ' \cdot ' + self.right.latex() + '} '
         return ''
 
-# /        
-class DivOperator(Operator):   
+# /
+class DivOperator(Operator):
     def __init__(self, machine, value='/', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
     def latex(self):
         if self.left != None and self.right != None:
             return ' {\\frac{' + self.left.latex() + '}{' + self.right.latex() + '}} '
         return ''
-# ^        
-class PowOperator(Operator):   
+# ^
+class PowOperator(Operator):
     def __init__(self, machine, value='^', left=None, right=None, hierarchize=True):
         Operator.__init__(self, machine, value, left, right, hierarchize)
 
