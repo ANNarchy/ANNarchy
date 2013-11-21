@@ -72,6 +72,7 @@ class NeuronAnalyser(object):
                 #
                 # eq stuff
                 if value['var'].eq != None:
+                    neur['eq'] = value['var'].eq
                     tree = Tree.Tree(self, value['name'], value['var'].eq)
                     if not tree.success: # Error while processing the equation
                         return None, None
@@ -212,6 +213,7 @@ class SynapseAnalyser(object):
                 # base description
                 synapse = {'name': value['name'],
                            'type': 'local',
+                           'eq': value['var'].eq,
                            'init': self.init_local_variable(value['name'], init_value),
                            'cpp' : tree.cpp() +';'
                            }
@@ -239,6 +241,7 @@ class SynapseAnalyser(object):
                 # base description
                 synapse = {'name': value['name'],
                            'type': 'global',
+                           'eq': value['var'].eq,
                            'init': self.init_global_variable(value['name'], init_value),
                            'cpp' : tree.cpp() +';'
                            }
