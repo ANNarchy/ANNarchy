@@ -9,14 +9,15 @@ from datetime import datetime
 # Define the neuron classes
 #
 Simple = Neuron(  tau = 1.0,
-                  rate = Variable(init = 0.0, max=1.5)
+                  baseline = Variable(init = 1, type=int),
+                  rate = Variable(init = 0.0, max=1.5, type=float, eq="rate = baseline")
                )
 
 SimpleSynapse = Synapse(
     tau = 1.0,
     boolPar = True,
     boolVar = Variable(init=True),
-    intVar = Variable(init=1.0, type=int),
+    intVar = Variable(init=1, type=int),
     value = Variable(init=0.1, eq="value = 1.0 / pre.rate", min=-0.5, max=1.0)
 )
 

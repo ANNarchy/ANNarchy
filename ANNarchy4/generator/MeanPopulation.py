@@ -34,6 +34,21 @@ from ANNarchy4 import parser
 import copy
 from Population import Population
 
+def get_type_name(type):
+    """
+    mapping between python types and cpp names, float will be mapped to
+    DATA_TYPE to allow changing between precisions in the framework.
+    """
+    if type==float:
+        return 'DATA_TYPE'
+    elif type==int:
+        return 'int'
+    elif type==bool:
+        return 'bool'
+    else:
+        print "Unknown type, use default = 'DATA_TYPE'"
+        return 'DATA_TYPE'
+
 class MeanPopulation(Population):
     """
     Population generator class
@@ -100,20 +115,28 @@ class MeanPopulation(Population):
                 
                 if value['type'] == 'variable':
                     # Array access
-                    access += '    void set'+value['name'].capitalize()+'(std::vector<DATA_TYPE> '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
-                    access += '    std::vector<DATA_TYPE> get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
+                    access += """
+\tstd::vector<%(type)s> get%(Name)s() { return this->%(name)s_; }
+\tvoid set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
+""" % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
 
                     # Individual access
-                    access += '    void setSingle'+value['name'].capitalize()+'(int rank, DATA_TYPE '+value['name']+') { this->'+value['name']+'_[rank] = '+value['name']+'; }\n\n'
-                    access += '    DATA_TYPE getSingle'+value['name'].capitalize()+'(int rank) { return this->'+value['name']+'_[rank]; }\n\n'
+                    access += """
+\t%(type)s getSingle%(Name)s(int rank) { return this->%(name)s_[rank]; }
+\tvoid setSingle%(Name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
+""" % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
                     
                     # Recording
-                    access += '    std::vector< std::vector<DATA_TYPE> >getRecorded'+value['name'].capitalize()+'() { return this->recorded_'+value['name']+'_; }\n\n'                    
-                    access += '    void startRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = true; }\n\n'
-                    access += '    void stopRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = false; }\n\n'
+                    access += """
+\tstd::vector< std::vector<DATA_TYPE> >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
+\tvoid startRecord%(name)s() { this->record_%(name)s_ = true; }
+\tvoid stopRecord%(Name)s() { this->record_%(name)s_ = false; }
+""" % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
                 else:
-                    access += '    void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
-                    access += '    DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
+                    access += """
+\t%(type)s get%(Name)s { return this->%(name)s_; }
+\tvoid set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
+""" % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
     
             for value in global_ops['post']:
                 access += '\tDATA_TYPE get'+value['function'].capitalize()+value['variable'].capitalize()+'() { return '+value['variable']+'_'+value['function']+'_; }\n\n'
