@@ -217,9 +217,9 @@ class Population(Descriptor):
             
             try:
                 import ANNarchyCython
+                print 'stop record of', var
                 exec('self.cyInstance._stop_record_'+var+'()')
             except:
-                print 'stop record of', var
                 print "Error: only possible after compilation."
 
     def get_record(self, variable):
@@ -249,6 +249,7 @@ class Population(Descriptor):
             
             try:
                 import ANNarchyCython
+                print 'get record of', var
                 data = eval('self.cyInstance._get_recorded_'+var+'()')
                 
                 tmp = []
@@ -258,7 +259,6 @@ class Population(Descriptor):
                 data_dict[var] = tmp
                 
             except:
-                print 'get record of', var
                 print "Error: only possible after compilation."
 
         return data_dict

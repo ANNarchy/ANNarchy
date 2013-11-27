@@ -109,6 +109,7 @@ class MeanPopulation(Population):
                     
                     # Recording
                     access += '    std::vector< std::vector<DATA_TYPE> >getRecorded'+value['name'].capitalize()+'() { return this->recorded_'+value['name']+'_; }\n\n'                    
+                    access += '    void clearRecorded'+value['name'].capitalize()+'() { this->recorded_'+value['name']+'_.clear(); }\n\n'
                     access += '    void startRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = true; }\n\n'
                     access += '    void stopRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = false; }\n\n'
                 else:
@@ -463,6 +464,7 @@ void %(class)s::record() {
                     code += '        void setSingle'+value['name'].capitalize()+'(int rank, float values)\n\n'
                     code += '        void startRecord'+value['name'].capitalize()+'()\n\n'
                     code += '        void stopRecord'+value['name'].capitalize()+'()\n\n'
+                    code += '        void clearRecorded'+value['name'].capitalize()+'()\n\n'
                     code += '        vector[vector[float]] getRecorded'+value['name'].capitalize()+'()\n\n'
                 else:
                     code += '        float get'+value['name'].capitalize()+'()\n\n'
@@ -503,8 +505,10 @@ void %(class)s::record() {
                     code += '        self.cInstance.startRecord'+value['name'].capitalize()+'()\n\n'  
                     code += '    def _stop_record_'+ value['name'] + '(self):\n'   
                     code += '        self.cInstance.stopRecord'+value['name'].capitalize()+'()\n\n'  
-                    code += '    def _get_recorded_'+ value['name'] + '(self):\n'   
-                    code += '        return np.array(self.cInstance.getRecorded'+value['name'].capitalize()+'())\n\n'  
+                    code += '    def _get_recorded_'+ value['name'] + '(self):\n'
+                    code += '        tmp = np.array(self.cInstance.getRecorded'+value['name'].capitalize()+'())\n\n'
+                    code += '        self.cInstance.clearRecorded'+value['name'].capitalize()+'()\n'   
+                    code += '        return tmp\n\n'  
                 else:
                     code += '        def __get__(self):\n'
                     code += '            return self.cInstance.get'+value['name'].capitalize()+'()\n\n'
