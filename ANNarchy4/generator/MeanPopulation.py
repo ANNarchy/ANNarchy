@@ -113,6 +113,8 @@ class MeanPopulation(Population):
                 if '_rand_' in value['name']:
                     continue
                 
+                #
+                # variables
                 if value['type'] == 'variable':
                     # Array access
                     access += """
@@ -128,13 +130,16 @@ class MeanPopulation(Population):
                     
                     # Recording
                     access += """
-\tstd::vector< std::vector<DATA_TYPE> >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
-\tvoid startRecord%(name)s() { this->record_%(name)s_ = true; }
+\tstd::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
+\tvoid startRecord%(Name)s() { this->record_%(name)s_ = true; }
 \tvoid stopRecord%(Name)s() { this->record_%(name)s_ = false; }
 """ % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
+                
+                #
+                # parameters
                 else:
                     access += """
-\t%(type)s get%(Name)s { return this->%(name)s_; }
+\t%(type)s get%(Name)s() { return this->%(name)s_; }
 \tvoid set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
 """ % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
     
@@ -154,19 +159,26 @@ class MeanPopulation(Population):
                 if '_rand_' in value['name']:   # skip local member
                     member += '\tstd::vector<DATA_TYPE> '+value['name']+'_;\n'
                     continue
+                
                 if 'rate' == value['name']:
                     # rate recording
                     member += '\t'+'bool record_rate_;\n'
                     member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_rate_;\n'                    
                     continue
     
-                member += '\t'+value['def']+'\n'
+                #member += '\t'+value['def']+'\n'
                 
-                #recording
                 if value['type'] == 'variable':
-                    member += '\t'+'bool record_'+value['name']+'_;\n'
-                    member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_'+value['name']+'_;\n'
-            
+                    member += """
+\tstd::vector<%(type)s> %(name)s_;
+\tbool record_%(name)s_; 
+\tstd::vector< std::vector<%(type)s> > recorded_%(name)s_;\n
+""" % { 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
+                else:
+                    member += """
+\t%(type)s %(name)s_;\n
+""" % { 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
+                    
             for value in global_ops['post']:
                 member += '\tDATA_TYPE '+ value['variable']+'_'+value['function']+'_;\n\n'
 
@@ -235,16 +247,25 @@ private:
                 if '_rand_' in value['name']:   # skip local member
                     continue
                 
+                curr_line = ''
+                
                 if 'True' in value['init']:
-                    constructor += '\t'+value['init'].replace('True',str(1.0))+'\n'
+                    curr_line += '\t'+value['init'].replace('True',str(1.0))+'\n'
                 elif 'False' in value['init']:
-                    constructor += '\t'+value['init'].replace('False',str(0.0))+'\n'
+                    curr_line += '\t'+value['init'].replace('False',str(0.0))+'\n'
                 else:
-                    constructor += '\t'+value['init']+'\n'
+                    curr_line += '\t'+value['init']+'\n'
+
+                if value['cpp_type'] != float:
+                    curr_line = curr_line.replace("DATA_TYPE", get_type_name(value['cpp_type']))               
 
                 if value['type'] == 'variable':
-                    constructor += '\trecord_'+value['name']+'_ = false;\n'
-                    constructor += '\trecorded_'+value['name']+'_ = std::vector< std::vector<DATA_TYPE> >();\n'
+                    curr_line += """
+\trecord_%(name)s_ = false;
+\trecorded_%(name)s_ = std::vector< std::vector< %(type)s > >();
+""" % { 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
+
+                constructor += curr_line
     
             constructor += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return constructor
@@ -402,13 +423,19 @@ private:
                 if '_rand_' in value['name']:   # skip local member
                     continue
 
+                curr_line = ''
                 if 'True' in value['init']:
-                    code += '\t'+value['init'].replace('True',str(1.0))+'\n'
+                    curr_line += '\t'+value['init'].replace('True',str(1.0))+'\n'
                 elif 'False' in value['init']:
-                    code += '\t'+value['init'].replace('False',str(0.0))+'\n'
+                    curr_line += '\t'+value['init'].replace('False',str(0.0))+'\n'
                 else:
-                    code += '\t'+value['init']+'\n'
-
+                    curr_line += '\t'+value['init']+'\n'
+                    
+                if value['cpp_type'] != float:
+                    curr_line = curr_line.replace("DATA_TYPE", get_type_name(value['cpp_type']))
+                    
+                code += curr_line
+                
             return code
 
         body = """#include "%(class)s.h"
@@ -480,13 +507,25 @@ void %(class)s::record() {
                     continue
     
                 if value['type'] == 'variable':
-                    code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
-                    code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
-                    code += '        float getSingle'+value['name'].capitalize()+'(int rank)\n\n'
-                    code += '        void setSingle'+value['name'].capitalize()+'(int rank, float values)\n\n'
-                    code += '        void startRecord'+value['name'].capitalize()+'()\n\n'
-                    code += '        void stopRecord'+value['name'].capitalize()+'()\n\n'
-                    code += '        vector[vector[float]] getRecorded'+value['name'].capitalize()+'()\n\n'
+                    #===========================================================
+                    # code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
+                    # code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
+                    # code += '        float getSingle'+value['name'].capitalize()+'(int rank)\n\n'
+                    # code += '        void setSingle'+value['name'].capitalize()+'(int rank, float values)\n\n'
+                    # code += '        void startRecord'+value['name'].capitalize()+'()\n\n'
+                    # code += '        void stopRecord'+value['name'].capitalize()+'()\n\n'
+                    # code += '        vector[vector[float]] getRecorded'+value['name'].capitalize()+'()\n\n'
+                    #===========================================================
+                    code += """
+        vector[%(type)s] get%(Name)s()\n
+        void set%(Name)s(vector[%(type)s] values)\n
+        (type)s getSingle%(Name)s(int rank)\n
+        void setSingle%(Name)s(int rank, %(type)s values)\n
+        void startRecord%(Name)s()\n
+        void stopRecord%(Name)s()\n
+        vector[vector[%(type)s]] getRecorded%(Name)s()\n
+""" % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
+                    
                 else:
                     code += '        float get'+value['name'].capitalize()+'()\n\n'
                     code += '        void set'+value['name'].capitalize()+'(float value)\n\n'

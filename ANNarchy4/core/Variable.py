@@ -65,3 +65,9 @@ class Variable(object):
         # default is set
         if self.init == None:
             self.init = self.type(0.0)
+            
+        if self.init and self.type==None:
+            self.type = float
+            
+        if self.init and self.type:
+            self.init = self.type(self.init)

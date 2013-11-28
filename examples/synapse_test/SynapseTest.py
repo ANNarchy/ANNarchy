@@ -18,7 +18,8 @@ SimpleSynapse = Synapse(
     boolPar = True,
     boolVar = Variable(init=True),
     intVar = Variable(init=1, type=int),
-    value = Variable(init=0.1, eq="value = 1.0 / pre.rate", min=-0.5, max=1.0)
+    value2 = Variable(init=0, eq="value2 = 1.0 / pre.rate", min=-0.5, max=1.0, type=float),
+    value = Variable(init=0, eq="value = 1.0 / pre.rate", min=-0.5, max=1.0)
 )
 
 InputPop = Population(name="Input", geometry=(8,8), neuron=Simple)
