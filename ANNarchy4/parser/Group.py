@@ -1,9 +1,9 @@
 """
 
     Group.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -20,34 +20,34 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""    
+"""
 from Definitions import *
 import Nodes
 import Tree
-        
-# Group of expressions with parenthesis                
+
+# Group of expressions with parenthesis
 class Group(Nodes.Node):
 
     def __init__(self, machine, items):
         Nodes.Node.__init__(self, machine)
         self.machine = machine
         self.items = items
-        
+
     def __repr__(self):
         return str(self.items)
-        
+
     def cpp(self):
         return str(self.items)
-        
+
     def latex(self):
         return str(self.items)
-        
+
     def __len__(self):
         return len(self.items)
-        
+
     def __getitem__(self, k):
         return self.items[k]
-        
+
     def group(self):
         complete = False
         while not complete:
@@ -78,7 +78,7 @@ class Group(Nodes.Node):
                     items.append(self.items[i])
                 subgroup.group()
                 self.items = items
-            
+
     def analyse(self):
         items=[]
         # Turn the items into objects
@@ -154,27 +154,27 @@ class Group(Nodes.Node):
                     found=True
                 if belongs_to(item, DIV):
                     items.append(Nodes.DivOperator(self.machine, item))
-                    found=True  
+                    found=True
                 if belongs_to(item, POW):
                     items.append(Nodes.PowOperator(self.machine, item))
-                    found=True  
+                    found=True
                 # Check if it is a comparator
                 if belongs_to(item, COMPARATORS):
                     items.append(Nodes.Comparator(self.machine, item))
-                    found = True  
+                    found = True
                 # Check if it is a logical operator
                 if belongs_to(item, LOGICALS):
                     items.append(Nodes.Logical(self.machine, item))
-                    found = True  
+                    found = True
                 # Check if it is a not operator
                 if belongs_to(item, NOT):
                     items.append(Nodes.Not(self.machine, item))
-                    found = True                
+                    found = True
             # Check if it is a subgroup
             elif isinstance(item, Group):
                 item.analyse()
-                items.append(item)
-                found = True          
+                items.append(Nodes.Parenthesis(self.machine, value=None, child=item))
+                found = True
             # Else: don't know what to do with it...
             if not found:
                 print self.machine.expr

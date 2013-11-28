@@ -42,9 +42,9 @@ InputPop = Population(geometry=(8,8), neuron=Input)
 Layer1Pop = Population(name="Layer1", geometry=(8,8), neuron=Layer1)
 Layer2Pop = Population(name="Layer2", geometry=(6,5), neuron=Layer2)
 
-Proj_In_L1 = Projection(pre=InputPop, post=Layer1Pop, target='exc', connector=Connector('One2One', weights=RandomDistribution('constant', [1.0])))
-Proj_L1_L2 = Projection(pre=Layer1Pop, post=Layer2Pop, target='exc', synapse=Oja, connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,0.1])))
-Proj_L2_L2 = Projection(pre=Layer2Pop, post=Layer2Pop, target='inh', synapse=AntiHebb, connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0,0.1])))
+Proj_In_L1 = Projection(pre=InputPop, post=Layer1Pop, target='exc', connector=Connector('One2One', weights=1.0))
+Proj_L1_L2 = Projection(pre=Layer1Pop, post=Layer2Pop, target='exc', synapse=Oja, connector=Connector('All2All', weights= Uniform(0.0,0.1)))
+Proj_L2_L2 = Projection(pre=Layer2Pop, post=Layer2Pop, target='inh', synapse=AntiHebb, connector=Connector('All2All', weights= Uniform(0.0,0.1)))
 
 #
 # Analyse and compile everything, initialize the parameters/variables...

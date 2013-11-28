@@ -110,9 +110,6 @@ class MeanPopulation(Population):
                         raise exceptions.TypeError
     
             for value in neuron_values:
-                if '_rand_' in value['name']:
-                    continue
-                
                 #
                 # variables
                 if value['type'] == 'variable':
@@ -137,11 +134,16 @@ class MeanPopulation(Population):
                 
                 #
                 # parameters
-                else:
+                elif value['type'] == 'parameter':
                     access += """
 \t%(type)s get%(Name)s() { return this->%(name)s_; }
 \tvoid set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
 """ % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
+
+                #
+                # rand variable
+                else:
+                    continue
     
             for value in global_ops['post']:
                 access += '\tDATA_TYPE get'+value['function'].capitalize()+value['variable'].capitalize()+'() { return '+value['variable']+'_'+value['function']+'_; }\n\n'
@@ -156,24 +158,22 @@ class MeanPopulation(Population):
             member = ''
             
             for value in neuron_values:
-                if '_rand_' in value['name']:   # skip local member
-                    member += '\tstd::vector<DATA_TYPE> '+value['name']+'_;\n'
-                    continue
-                
                 if 'rate' == value['name']:
                     # rate recording
                     member += '\t'+'bool record_rate_;\n'
                     member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_rate_;\n'                    
                     continue
     
-                #member += '\t'+value['def']+'\n'
-                
                 if value['type'] == 'variable':
                     member += """
 \tstd::vector<%(type)s> %(name)s_;
 \tbool record_%(name)s_; 
 \tstd::vector< std::vector<%(type)s> > recorded_%(name)s_;\n
 """ % { 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
+                elif value['type'] == 'rand_variable':
+                    member += """
+\tstd::vector<%(type)s> %(name)s_;\n
+""" % { 'name': value['name'], 'type': get_type_name(value['cpp_type']) }                    
                 else:
                     member += """
 \t%(type)s %(name)s_;\n
@@ -244,28 +244,29 @@ private:
             constructor = ''
     
             for value in parsed_neuron:
-                if '_rand_' in value['name']:   # skip local member
-                    continue
-                
                 curr_line = ''
-                
-                if 'True' in value['init']:
-                    curr_line += '\t'+value['init'].replace('True',str(1.0))+'\n'
-                elif 'False' in value['init']:
-                    curr_line += '\t'+value['init'].replace('False',str(0.0))+'\n'
+
+                if value['type'] == 'rand_variable':
+                    constructor += """\t%(name)s_ = %(cpp_obj)s.getValues(nbNeurons_);\n""" % { 'name': value['name'], 'cpp_obj': value['eq']._gen_cpp() }
+
                 else:
-                    curr_line += '\t'+value['init']+'\n'
-
-                if value['cpp_type'] != float:
-                    curr_line = curr_line.replace("DATA_TYPE", get_type_name(value['cpp_type']))               
-
-                if value['type'] == 'variable':
-                    curr_line += """
+                    if 'True' in value['init']:
+                        curr_line += '\t'+value['init'].replace('True',str(1.0))
+                    elif 'False' in value['init']:
+                        curr_line += '\t'+value['init'].replace('False',str(0.0))
+                    else:
+                        curr_line += '\t'+value['init']
+    
+                    if value['cpp_type'] != float:
+                        curr_line = curr_line.replace("DATA_TYPE", get_type_name(value['cpp_type']))               
+    
+                    if value['type'] == 'variable':
+                        curr_line += """
 \trecord_%(name)s_ = false;
 \trecorded_%(name)s_ = std::vector< std::vector< %(type)s > >();
 """ % { 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
 
-                constructor += curr_line
+                constructor += curr_line + '\n'
     
             constructor += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return constructor
@@ -374,7 +375,11 @@ private:
             Parallel evaluation of neuron equations.
             """
             
-            meta = replace_rand_(parsed_neuron, rand_objects)
+            meta = ''
+            for value in parsed_neuron:
+                if value['type'] == 'rand_variable':
+                    meta += """\t%(name)s_ = %(cpp_obj)s.getValues(nbNeurons_);\n""" % { 'name': value['name'], 'cpp_obj': value['eq']._gen_cpp() }
+            
             loop = ''
     
             #
@@ -382,7 +387,7 @@ private:
             if order == []:
                 # order does not play an important role        
                 for value in parsed_neuron:
-                    if '_rand_' in value['name']:   # skip local member
+                    if value['type'] == 'rand_variable':
                         continue
     
                     loop += '\t\t'+value['cpp']+'\n'
@@ -395,7 +400,7 @@ private:
             else:
                 for value in order:
                     for value2 in parsed_neuron:
-                        if '_rand_' in value2['name']:   # skip local member
+                        if value2['type'] == 'rand_variable':
                             continue
     
                         if value2['name'] == value:
@@ -406,10 +411,11 @@ private:
                             if 'max' in value2.keys():
                                 loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['max'] }
     
-            code = meta
-            code += '\tfor(int i=0; i<nbNeurons_; i++) {\n'
+            code = meta + '\n'
+            code += '\tfor(int i=0; i<nbNeurons_; i++)\n' 
+            code += '\t{\n'
             code += loop
-            code += '}\n'
+            code += '\t}\n'
             
             return code
 
@@ -420,21 +426,23 @@ private:
             code = ''
 
             for value in parsed_neuron:
-                if '_rand_' in value['name']:   # skip local member
-                    continue
+                if value['type'] == 'rand_variable':
+                    code += """\t%(name)s_ = %(cpp_obj)s.getValues(nbNeurons_);\n""" % { 'name': value['name'], 'cpp_obj': value['eq']._gen_cpp() }
 
-                curr_line = ''
-                if 'True' in value['init']:
-                    curr_line += '\t'+value['init'].replace('True',str(1.0))+'\n'
-                elif 'False' in value['init']:
-                    curr_line += '\t'+value['init'].replace('False',str(0.0))+'\n'
-                else:
-                    curr_line += '\t'+value['init']+'\n'
+                elif value['type'] == 'variable':
+
+                    curr_line = ''
+                    if 'True' in value['init']:
+                        curr_line += '\t'+value['init'].replace('True',str(1.0))+'\n'
+                    elif 'False' in value['init']:
+                        curr_line += '\t'+value['init'].replace('False',str(0.0))+'\n'
+                    else:
+                        curr_line += '\t'+value['init']+'\n'
+                        
+                    if value['cpp_type'] != float:
+                        curr_line = curr_line.replace("DATA_TYPE", get_type_name(value['cpp_type']))
                     
-                if value['cpp_type'] != float:
-                    curr_line = curr_line.replace("DATA_TYPE", get_type_name(value['cpp_type']))
-                    
-                code += curr_line
+                    code += curr_line
                 
             return code
 
@@ -503,29 +511,21 @@ void %(class)s::record() {
             code = ''
     
             for value in parsed_neuron:
-                if '_rand_' in value['name']:
+                if value['type'] == 'rand_variable':
                     continue
     
                 if value['type'] == 'variable':
-                    #===========================================================
-                    # code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
-                    # code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
-                    # code += '        float getSingle'+value['name'].capitalize()+'(int rank)\n\n'
-                    # code += '        void setSingle'+value['name'].capitalize()+'(int rank, float values)\n\n'
-                    # code += '        void startRecord'+value['name'].capitalize()+'()\n\n'
-                    # code += '        void stopRecord'+value['name'].capitalize()+'()\n\n'
-                    # code += '        vector[vector[float]] getRecorded'+value['name'].capitalize()+'()\n\n'
-                    #===========================================================
-                    code += """
+                    var_code = """
         vector[%(type)s] get%(Name)s()\n
         void set%(Name)s(vector[%(type)s] values)\n
-        (type)s getSingle%(Name)s(int rank)\n
+        %(type)s getSingle%(Name)s(int rank)\n
         void setSingle%(Name)s(int rank, %(type)s values)\n
         void startRecord%(Name)s()\n
         void stopRecord%(Name)s()\n
         vector[vector[%(type)s]] getRecorded%(Name)s()\n
 """ % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
                     
+                    code += var_code.replace('DATA_TYPE', 'float')
                 else:
                     code += '        float get'+value['name'].capitalize()+'()\n\n'
                     code += '        void set'+value['name'].capitalize()+'(float value)\n\n'
@@ -540,7 +540,7 @@ void %(class)s::record() {
             code = ''
     
             for value in parsed_neuron:
-                if '_rand_' in value['name']:
+                if value['type'] == 'rand_variable':
                     continue
     
                 code += '    property '+value['name']+':\n'

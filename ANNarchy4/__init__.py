@@ -8,10 +8,10 @@ from core.PopulationView import PopulationView
 from core.Projection import Projection
 from core.Dendrite import Dendrite
 from core.Connector import Connector
-from core.Random import RandomDistribution
+from core.Random import Constant, Uniform, Normal
 from core.Variable import Variable
 from core.SpikeVariable import SpikeVariable
 from visualization import Visualization
 
 import numpy as np
-__version__ = '4.0.0'
+__version__ = '4.0.0.beta'

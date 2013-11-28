@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from Random import RandomDistribution
+from Random import Constant
 from Dendrite import Dendrite
 
 class Connector(object):
@@ -41,13 +41,15 @@ class Connector(object):
             * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
         """
         if isinstance(weights, float) or isinstance(weights, int):
-            self.weights = RandomDistribution('constant', [float(weights)])
+            self.weights = Constant( float(weights) )
         else:
             self.weights = weights
+        
         if isinstance(delays, float) or isinstance(delays, int):
-            self.delays = RandomDistribution('constant', [int(delays)])
+            self.delays = Constant( int(delays) )
         else:
             self.delays = delays
+            
         self.conn_type = conn_type        
         self.parameters = parameters
 

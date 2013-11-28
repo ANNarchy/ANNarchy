@@ -10,9 +10,9 @@ from ANNarchy4 import *
 #
 Input = Neuron(   
     tau = 1.0,
-    noise = 0.5,
+    noise = Variable(eq=Uniform(0,1)),
     baseline = Variable(init = 0.0),
-    mp = Variable(eq = "tau * dmp / dt + mp = baseline + noise * (2 * RandomDistribution('uniform', [0,1]) -1)"),
+    mp = Variable(eq = "tau * dmp / dt + mp = baseline + noise"),
     rate = Variable(eq = "rate = pos(mp)"),
     order = ['mp','rate'] 
 )
@@ -23,7 +23,7 @@ Focus = Neuron(
     baseline = Variable(init=0.0),
     threshold_min = 0.0,
     threshold_max = 1.0,
-    mp = Variable(eq = "tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise * (2 * RandomDistribution('uniform', [0,1]) - 1) "),
+    mp = Variable(eq = "tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise"),
     rate = Variable(eq = "rate = if mp > threshold_max then threshold_max else pos(mp)", init = 0.0),
     order = ['mp', 'rate']
 )
@@ -35,7 +35,7 @@ Proj1 = Projection(
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc', 
-    connector = Connector( conn_type='One2One', weights=RandomDistribution('constant', [1.0]) )
+    connector = Connector( conn_type='One2One', weights=1.0 )
 )
                     
 Proj2 = Projection(
@@ -43,7 +43,7 @@ Proj2 = Projection(
     post = FocusPop, 
     target = 'inh', 
     connector = Connector( conn_type='DoG', 
-                           weights=RandomDistribution('uniform', [0,1]), 
+                           weights=Uniform(0.0,0.1), 
                            amp_pos=0.2, 
                            sigma_pos=0.1, 
                            amp_neg=0.1, 

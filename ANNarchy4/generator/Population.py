@@ -140,34 +140,9 @@ class Population(object):
         Updates the neuron variable dictionary e.g. :
             
             * global operations
-            * replace RandomDistribution objects
             
         Should be called before code generation starts.
         """
-
-        #   replace all RandomDistribution by rand variables with continous
-        #   numbers and stores the corresponding call as local variable
-        i = 0
-        for value in self.neuron_variables:
-            if 'var' not in value.keys(): 
-                continue 
-
-            if value['var'].eq == None: 
-                continue 
-
-            matches = re.findall('RandomDistribution\(.*?\)', value['var'].eq)
-            for phrase in matches:
-                part = phrase.split('RandomDistribution')[1]
-                self.neuron_variables.append( 
-                    { 'name': '_rand_'+str(i), 
-                      'var': Variable(init = part) 
-                    }
-                )
-                
-                value['var'].eq = value['var'].eq.replace(phrase, '_rand_'+str(i))
-                self.rand_objects.append(part)
-                i += 1
-
         #   parse neuron
         self.neuron_parser = parser.NeuronAnalyser(
             self.neuron_variables, 
