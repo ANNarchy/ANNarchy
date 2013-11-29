@@ -130,6 +130,7 @@ class MeanPopulation(Population):
 \tstd::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
 \tvoid startRecord%(Name)s() { this->record_%(name)s_ = true; }
 \tvoid stopRecord%(Name)s() { this->record_%(name)s_ = false; }
+\tvoid clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
 """ % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type'])}
                 
                 #
@@ -522,6 +523,7 @@ void %(class)s::record() {
         void setSingle%(Name)s(int rank, %(type)s values)\n
         void startRecord%(Name)s()\n
         void stopRecord%(Name)s()\n
+        void clearRecorded%(Name)s()\n
         vector[vector[%(type)s]] getRecorded%(Name)s()\n
 """ % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
                     
@@ -565,8 +567,10 @@ void %(class)s::record() {
                     code += '        self.cInstance.startRecord'+value['name'].capitalize()+'()\n\n'  
                     code += '    def _stop_record_'+ value['name'] + '(self):\n'   
                     code += '        self.cInstance.stopRecord'+value['name'].capitalize()+'()\n\n'  
-                    code += '    def _get_recorded_'+ value['name'] + '(self):\n'   
-                    code += '        return np.array(self.cInstance.getRecorded'+value['name'].capitalize()+'())\n\n'  
+                    code += '    def _get_recorded_'+ value['name'] + '(self):\n'
+                    code += '        tmp = np.array(self.cInstance.getRecorded'+value['name'].capitalize()+'())\n\n'
+                    code += '        self.cInstance.clearRecorded'+value['name'].capitalize()+'()\n'   
+                    code += '        return tmp\n\n'  
                 else:
                     code += '        def __get__(self):\n'
                     code += '            return self.cInstance.get'+value['name'].capitalize()+'()\n\n'

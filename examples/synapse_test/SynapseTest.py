@@ -8,10 +8,13 @@ from datetime import datetime
 #
 # Define the neuron classes
 #
-Simple = Neuron(  tau = 1.0,
-                  baseline = Variable(init = 1, eq="baseline = baseline + 1", type=int),
-                  rate = Variable(init = 0.0, max=1.5, type=float, eq="rate = baseline")
-               )
+Simple = Neuron(   
+    tau = 1.0,
+    mp = Variable(init = 0, eq="mp = mp+1"),
+    rate = Variable(init = 0.0, eq="tau * drate / dt = 1.0/mp"),
+    order = ['mp','rate']
+    #rate = Variable(init = 0.0, eq="rate = t")
+)
 
 SimpleSynapse = Synapse(
     tau = 1.0,
@@ -35,9 +38,86 @@ compile()
 import math
 import numpy as np
 
-if __name__ == '__main__':
+def loop():
 
+    for i in xrange(20):
+
+        if(i==5):
+            InputPop.start_record('rate')
+        
+        if(i==10):
+            InputPop.pause_record('rate')
+            
+        if(i==15):
+            InputPop.resume_record('rate')
+        
+        simulate(1)
+    
+    rec_rate = InputPop.get_record('rate')
+    print 'start', rec_rate['start']
+    print 'stop', rec_rate['stop']
+    print 'data.shape', rec_rate['data'].shape
+    print 'data', rec_rate['data']
+    
+def loop2():
+
+    to_record = [ {'pop':InputPop, 'var': 'rate'}, {'pop':InputPop, 'var': 'mp'} ]
+    
+    record(to_record)
+    
+    for i in xrange(10):
+        simulate(1)
+    
+    rec_data = get_record(to_record)
+    for rec in rec_data:
+        print 'start', rec['start']
+        print 'stop', rec['stop']
+        print 'data.shape', rec['data'].shape
+        print 'data', rec['data']
+    
+def loop3():
+    InputPop.start_record('rate')
+    InputPop.start_record('mp')
+    for i in xrange(15):
+        simulate(1)
+        #print InputPop.rate
+        
+    rec_rate = InputPop.get_record('rate')
+    for i in xrange(15):
+        print 'rate, time',i
+        print rec_rate['data'][:,:,i]
+        
+    rec_mp = InputPop.get_record('mp')
+    for i in xrange(15):
+        print 'mp, time',i
+        print rec_mp['data'][:,:,i]
+
+    #
+    # need to re-run to record new data
+    InputPop.start_record('rate')
+    InputPop.start_record('mp')
+    for i in xrange(5):
+        simulate(1)
+        #print InputPop.rate
+        
+    rec = InputPop.get_record(['rate', 'mp'])
+    for i in xrange(5):
+        print 'rate, time',i
+        print rec['rate']['data'][:,:,i]
+        
+        print 'mp, time',i
+        print rec['mp']['data'][:,:,i]
+       
+    #
+    # need to re-run to record new data
+    InputPop.start_record('rate')
+    InputPop.start_record('mp')
+    for i in xrange(5):
+        simulate(1)
+
+def synapse_test():
     #print 'target:',Proj.dendrite[0].target
+    InputPop.baseline = np.ones((8,1))
 
     #
     #   synapse removal
@@ -68,6 +148,12 @@ if __name__ == '__main__':
     print Proj.dendrite(0).rank
     print Proj.dendrite(0).value
     
-    for i in xrange(15):
-        simulate(1)
-        print InputPop.rate
+if __name__ == '__main__':
+
+    loop()
+    
+    loop2()
+
+    loop3()
+    
+    synapse_test()

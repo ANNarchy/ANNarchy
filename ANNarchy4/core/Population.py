@@ -28,7 +28,10 @@ from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
 
+from ANNarchy4.core.Record import Record
+
 import traceback
+import exceptions
 import numpy as np
 
 class Population(Descriptor):
@@ -70,7 +73,12 @@ class Population(Descriptor):
             exit(0)
             
         Global._populations.append(self)
-        self._recorded_variables = []
+        
+        self._recorded_variables = {}
+        
+        for var in self.variables:
+            self._recorded_variables[var] = Record(var)
+
         self.initialized = True        
         
     def _init_attributes(self):
@@ -181,28 +189,35 @@ class Population(Descriptor):
         
         for var in _variable:
             
-            if not var in self.variables + self.parameters:
-                print var,'is not an attribute of',self.name
+            if not var in self._recorded_variables.keys():
+                print var,'is not a recordable variable of',self.name
+                continue
+
+            if not self._recorded_variables[var].is_inited:
                 continue
             
             try:
                 import ANNarchyCython
-                print 'start record of', var
                 exec('self.cyInstance._start_record_'+var+'()')
-            except:
-                print "Error: only possible after compilation."
 
-    def stop_record(self, variable):
+                print 'start record of', var, '(',self.name,')'
+                self._recorded_variables[var].start()
+            except:
+                print "Error (start_record): only possible after compilation."
+                
+
+    def pause_record(self, variable=None):
         """
-        Stops recording the previous defined variables.
+        pause recording the previous defined variables.
 
         Parameter:
             
-            * *variable*: single variable name or list of variable names.        
-
+        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
         """
         _variable = []
-        if isinstance(variable, str):
+        if variable == None:
+            _variable = self._running_recorded_variables
+        elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
             _variable = variable
@@ -211,28 +226,73 @@ class Population(Descriptor):
         
         for var in _variable:
             
-            if not var in self.variables + self.parameters:
-                print var,'is not an attribute of',self.name
+            if not var in self._recorded_variables.keys():
+                print var,'is not a recordable variable of',self.name
+                continue
+
+            if not self._recorded_variables[var].is_running:
+                print 'record of', var,' was not running on population',self.name
                 continue
             
             try:
                 import ANNarchyCython
                 exec('self.cyInstance._stop_record_'+var+'()')
+
+                print 'pause record of', var, '(',self.name,')'
+                self._recorded_variables[var].pause()
             except:
-                print 'stop record of', var
-                print "Error: only possible after compilation."
+                print "Error (pause_record): only possible after compilation."
 
-    def get_record(self, variable):
+    def resume_record(self, variable):
         """
-        Returns the recorded data as list of matrices. 
-
+        Resume recording the previous defined variables.
+        
         Parameter:
             
             * *variable*: single variable name or list of variable names.        
-        
         """
         _variable = []
+        
         if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print 'Error: variable must be either a string or list of strings.'
+        
+        for var in _variable:
+            
+            if not var in var in self._recorded_variables.keys():
+                print var,'is not a recordable variable of',self.name
+                continue
+            
+            if not self._recorded_variables[var].is_running:
+                print 'record of', var,' is already running on population',self.name
+                continue
+            
+            try:
+                import ANNarchyCython
+                exec('self.cyInstance._start_record_'+var+'()')
+                
+                print 'resume record of', var, '(',self.name,')'
+                self._recorded_variables[var].start()
+            except:
+                print "Error: only possible after compilation."
+                
+    def get_record(self, variable=None):
+        """
+        Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
+        The last dimension represents the time, the remaining dimensions are the population geometry.
+        
+        Parameter:
+            
+        * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
+        """
+        
+        _variable = []
+        if variable == None:
+            _variable = self._recorded_variables
+        elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
             _variable = variable
@@ -243,25 +303,38 @@ class Population(Descriptor):
         
         for var in _variable:
 
-            if not var in self.variables + self.parameters:
-                print var,'is not an attribute of',self.name
+            if not var in var in self._recorded_variables.keys():
+                print var,'is not a recordable variable of',self.name
                 continue
+            
+            if self._recorded_variables[var].is_running:
+                self.pause_record(var)
             
             try:
                 import ANNarchyCython
+                print 'get record of', var, '(',self.name,')'
                 data = eval('self.cyInstance._get_recorded_'+var+'()')
                 
-                tmp = []
-                for i in xrange(data.shape[0]):
-                    tmp.append(data[i,:].reshape(self.geometry))
-                 
-                data_dict[var] = tmp
-                
+                #
+                # [ time, data(1D) ] => [ time, data(geometry) ] 
+                mat1 = data.reshape((data.shape[0],)+self.geometry)
+
+                data_dict[var] = { 
+                            #
+                            # [ time, data(geometry) ] => [  data(geometry), time ]                 
+                    'data': np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) ),
+                    'start': self._recorded_variables[var].start_time,
+                    'stop': self._recorded_variables[var].stop_time
+                }
+                                
+                self._recorded_variables[var].reset()
             except:
-                print 'get record of', var
                 print "Error: only possible after compilation."
 
-        return data_dict
+        if( len(_variable)==1 and variable!=None):
+            return data_dict[_variable[0]]
+        else:
+            return data_dict          
         
     def get_variable(self, variable):
         """

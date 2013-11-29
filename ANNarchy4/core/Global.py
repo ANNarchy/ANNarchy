@@ -131,6 +131,18 @@ def get_projection(pre, post, target):
     print "Error: no projection '"+pre.name+"'->'"+post.name+"' with target '"+target+"' found."
     return None
 
+def record(to_record):
+    
+    for data_set in to_record:
+        data_set['pop'].start_record(data_set['var'])
+
+def get_record(to_record):
+    data = []
+    for data_set in to_record:
+        data.append(data_set['pop'].get_record(data_set['var']))
+    
+    return data
+
 def current_time():
     """
     Returns current simulation time in ms.
