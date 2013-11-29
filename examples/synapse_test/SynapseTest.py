@@ -65,10 +65,41 @@ if __name__ == '__main__':
     InputPop.start_record('mp')
     for i in xrange(15):
         simulate(1)
-        print InputPop.rate
+        #print InputPop.rate
         
     InputPop.stop_record(['mp'])
     InputPop.stop_record(['rate'])
     #InputPop.stop_record(['mp','rate'])
     #InputPop.stop_record()
+    
+    rec_rate = InputPop.get_record('rate')
+    for i in xrange(15):
+        print 'rate, time',i
+        print rec_rate[:,:,i]
         
+    rec_mp = InputPop.get_record('mp')
+    for i in xrange(15):
+        print 'mp, time',i
+        print rec_mp[:,:,i]
+
+    #
+    # need to re-run to record new data
+    InputPop.start_record('rate')
+    InputPop.start_record('mp')
+    for i in xrange(5):
+        simulate(1)
+        #print InputPop.rate
+        
+    InputPop.stop_record(['mp'])
+    InputPop.stop_record(['rate'])
+        
+    rec = InputPop.get_record(['rate', 'mp'])
+    for i in xrange(5):
+        print 'rate, time',i
+        print rec['rate'][:,:,i]
+        
+        print 'mp, time',i
+        print rec['mp'][:,:,i]
+       
+    rec_rate = InputPop.get_record('rate')
+    print rec_rate

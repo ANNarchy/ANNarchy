@@ -227,12 +227,12 @@ class Population(Descriptor):
 
     def get_record(self, variable):
         """
-        Returns the recorded data as list of matrices. 
-
+        Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
+        The last dimension represents the time, the remaining dimensions are the population geometry.
+        
         Parameter:
             
-            * *variable*: single variable name or list of variable names.        
-        
+        * *variable*: single variable name or list of variable names.        
         """
         _variable = []
         if isinstance(variable, str):
@@ -255,16 +255,21 @@ class Population(Descriptor):
                 print 'get record of', var
                 data = eval('self.cyInstance._get_recorded_'+var+'()')
                 
-                tmp = []
-                for i in xrange(data.shape[0]):
-                    tmp.append(data[i,:].reshape(self.geometry))
-                 
-                data_dict[var] = tmp
+                #
+                # [ time, data(1D) ] => [ time, data(geometry) ] 
+                mat1 = data.reshape((data.shape[0],)+self.geometry)
+
+                #
+                # [ time, data(geometry) ] => [  data(geometry), time ]                 
+                data_dict[var] = np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) )
                 
             except:
                 print "Error: only possible after compilation."
 
-        return data_dict
+        if( len(_variable)==1 ):
+            return data_dict[_variable[0]]
+        else:
+            return data_dict            
         
     def get_variable(self, variable):
         """
