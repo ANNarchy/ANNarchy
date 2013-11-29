@@ -50,7 +50,7 @@ def loop():
     print 'data.shape', rec_rate['data'].shape
     print 'data', rec_rate['data']
     
-def loop():
+def loop2():
 
     to_record = [ {'pop':InputPop, 'var': 'rate'}, {'pop':InputPop, 'var': 'mp'} ]
     
@@ -59,7 +59,7 @@ def loop():
     for i in xrange(10):
         simulate(1)
     
-    rec_data = unrecord(to_record)
+    rec_data = get_record(to_record)
     for rec in rec_data:
         print 'start', rec['start']
         print 'stop', rec['stop']
@@ -162,5 +162,4 @@ def snapse_test():
     
 if __name__ == '__main__':
 
-    loop()
-    
+    loop2()

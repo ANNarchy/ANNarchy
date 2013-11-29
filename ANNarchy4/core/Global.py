@@ -136,7 +136,7 @@ def record(to_record):
     for data_set in to_record:
         data_set['pop'].start_record(data_set['var'])
 
-def unrecord(to_record):
+def get_record(to_record):
     data = []
     for data_set in to_record:
         data.append(data_set['pop'].get_record(data_set['var']))
