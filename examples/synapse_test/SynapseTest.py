@@ -11,7 +11,8 @@ from datetime import datetime
 Simple = Neuron(   
     tau = 1.0,
     mp = Variable(init = 0, eq="mp = mp+1"),
-    rate = Variable(init = 0.0, eq="tau * drate / dt = cos(2*pi*t)")
+    rate = Variable(init = 0.0, eq="tau * drate / dt = 1.0/mp"),
+    order = ['mp','rate']
     #rate = Variable(init = 0.0, eq="rate = t")
 )
 
@@ -28,39 +29,44 @@ compile()
 import math
 import numpy as np
 
-if __name__ == '__main__':
+def loop():
 
-    #print 'target:',Proj.dendrite[0].target
+    for i in xrange(20):
 
-    #
-    #   synapse removal
-    print Proj.dendrite(0).rank
-    print Proj.dendrite(0).value
+        if(i==5):
+            InputPop.start_record('rate')
+        
+        if(i==10):
+            InputPop.pause_record('rate')
+            
+        if(i==15):
+            InputPop.resume_record('rate')
+        
+        simulate(1)
     
-    print 'test: remove synapse to neuron 1'
-    print 'result', Proj.dendrite(0).remove_synapse(1)
+    rec_rate = InputPop.get_record('rate')
+    print 'start', rec_rate['start']
+    print 'stop', rec_rate['stop']
+    print 'data.shape', rec_rate['data'].shape
+    print 'data', rec_rate['data']
     
-    print Proj.dendrite(0).rank
-    print Proj.dendrite(0).value
-    
-    #
-    #   synapse add - this test should lead to an error output
-    print 'remove synapse to neuron 1'    
-    Proj.dendrite(0).remove_synapse(1)
-    
-    #
-    #   synapse add - this test should lead to an error output
-    print 'add synapse (0, , 0.11111, 0)'    
-    Proj.dendrite(0).add_synapse(0, 0.11111, 0)
-    
-    #
-    #   synapse add
-    print 'add synapse (1, 0.11111, 0)'        
-    Proj.dendrite(0).add_synapse(1, 0.11111, 0)
+def loop():
 
-    print Proj.dendrite(0).rank
-    print Proj.dendrite(0).value
+    to_record = [ {'pop':InputPop, 'var': 'rate'}, {'pop':InputPop, 'var': 'mp'} ]
     
+    record(to_record)
+    
+    for i in xrange(10):
+        simulate(1)
+    
+    rec_data = unrecord(to_record)
+    for rec in rec_data:
+        print 'start', rec['start']
+        print 'stop', rec['stop']
+        print 'data.shape', rec['data'].shape
+        print 'data', rec['data']
+    
+def loop3():
     InputPop.start_record('rate')
     InputPop.start_record('mp')
     for i in xrange(15):
@@ -119,3 +125,42 @@ if __name__ == '__main__':
     for i in xrange(5):
         print 'rate, time',i
         print rec['rate'][:,:,i]
+
+def snapse_test():
+    #print 'target:',Proj.dendrite[0].target
+    InputPop.baseline = np.ones((8,1))
+
+    #
+    #   synapse removal
+    print Proj.dendrite(0).rank
+    print Proj.dendrite(0).value
+    
+    print 'test: remove synapse to neuron 1'
+    print 'result', Proj.dendrite(0).remove_synapse(1)
+    
+    print Proj.dendrite(0).rank
+    print Proj.dendrite(0).value
+    
+    #
+    #   synapse add - this test should lead to an error output
+    print 'remove synapse to neuron 1'    
+    Proj.dendrite(0).remove_synapse(1)
+    
+    #
+    #   synapse add - this test should lead to an error output
+    print 'add synapse (0, , 0.11111, 0)'    
+    Proj.dendrite(0).add_synapse(0, 0.11111, 0)
+    
+    #
+    #   synapse add
+    print 'add synapse (1, 0.11111, 0)'        
+    Proj.dendrite(0).add_synapse(1, 0.11111, 0)
+
+    print Proj.dendrite(0).rank
+    print Proj.dendrite(0).value
+    
+    
+if __name__ == '__main__':
+
+    loop()
+    
