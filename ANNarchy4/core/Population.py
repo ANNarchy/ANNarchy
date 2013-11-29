@@ -188,21 +188,23 @@ class Population(Descriptor):
             try:
                 import ANNarchyCython
                 print 'start record of', var
+                self._recorded_variables.append(var)
                 exec('self.cyInstance._start_record_'+var+'()')
             except:
                 print "Error: only possible after compilation."
 
-    def stop_record(self, variable):
+    def stop_record(self, variable=None):
         """
         Stops recording the previous defined variables.
 
         Parameter:
             
-            * *variable*: single variable name or list of variable names.        
-
+        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
         """
         _variable = []
-        if isinstance(variable, str):
+        if variable == None:
+            _variable = self._recorded_variables
+        elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
             _variable = variable
@@ -218,6 +220,7 @@ class Population(Descriptor):
             try:
                 import ANNarchyCython
                 print 'stop record of', var
+                self._recorded_variables = [ x for x in self._recorded_variables if x != var ]
                 exec('self.cyInstance._stop_record_'+var+'()')
             except:
                 print "Error: only possible after compilation."
