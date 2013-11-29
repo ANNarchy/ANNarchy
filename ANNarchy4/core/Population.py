@@ -71,6 +71,7 @@ class Population(Descriptor):
             
         Global._populations.append(self)
         self._recorded_variables = []
+        self._running_recorded_variables = []
         self.initialized = True        
         
     def _init_attributes(self):
@@ -188,7 +189,7 @@ class Population(Descriptor):
             try:
                 import ANNarchyCython
                 print 'start record of', var
-                self._recorded_variables.append(var)
+                self._running_recorded_variables.append(var)
                 exec('self.cyInstance._start_record_'+var+'()')
             except:
                 print "Error: only possible after compilation."
@@ -203,7 +204,7 @@ class Population(Descriptor):
         """
         _variable = []
         if variable == None:
-            _variable = self._recorded_variables
+            _variable = self._running_recorded_variables
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -220,22 +221,26 @@ class Population(Descriptor):
             try:
                 import ANNarchyCython
                 print 'stop record of', var
-                self._recorded_variables = [ x for x in self._recorded_variables if x != var ]
+                
+                self._recorded_variables.append(var)
+                self._running_recorded_variables = [ x for x in self._running_recorded_variables if x != var ]
                 exec('self.cyInstance._stop_record_'+var+'()')
             except:
                 print "Error: only possible after compilation."
 
-    def get_record(self, variable):
+    def get_record(self, variable=None):
         """
         Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
         The last dimension represents the time, the remaining dimensions are the population geometry.
         
         Parameter:
             
-        * *variable*: single variable name or list of variable names.        
+        * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
         """
         _variable = []
-        if isinstance(variable, str):
+        if variable == None:
+            _variable = self._recorded_variables
+        elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
             _variable = variable
@@ -262,11 +267,12 @@ class Population(Descriptor):
                 #
                 # [ time, data(geometry) ] => [  data(geometry), time ]                 
                 data_dict[var] = np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) )
-                
+               
+                self._recorded_variables = [ x for x in self._recorded_variables if x != var ]
             except:
                 print "Error: only possible after compilation."
 
-        if( len(_variable)==1 ):
+        if( len(_variable)==1 and variable!=None):
             return data_dict[_variable[0]]
         else:
             return data_dict            
