@@ -23,6 +23,7 @@ class SpikeVariable(object):
         self.init = None
         self.min = None
         self.max = None
+        self.type = None
         
         for key in keyValueArgs:
 
@@ -34,6 +35,19 @@ class SpikeVariable(object):
                 self.reset = keyValueArgs[key]
             elif key=='init':
                 self.init = keyValueArgs[key]
+            elif key=='type':
+                self.type = keyValueArgs[key]
             else:
                 print 'unknown key: '+key
+         
+        #
+        # for later operations it's not positive if no
+        # default is set
+        if self.init == None:
+            self.init = self.type(0.0)
+            
+        if type(self.init) != self.type:
+            if self.type != bool and type(self.init) != bool:
+                self.init = float(self.init)
+                self.type = float
          

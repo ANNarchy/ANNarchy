@@ -64,7 +64,7 @@ class SpikePopulation(Population):
             access = ''
     
             for value in neuron_values:
-                if '_rand_' in value['name']:
+                if value['type'] == 'rand_variable':
                     continue
     
                 if value['type'] == 'variable':
@@ -96,14 +96,6 @@ class SpikePopulation(Population):
             member = ''
             
             for value in neuron_values:
-                if '_rand_' in value['name']:   # skip local member
-                    member += '\tstd::vector<DATA_TYPE> '+value['name']+'_;\n'
-                    continue
-                if 'rate' == value['name']:
-                    # rate recording
-                    member += '\t'+'bool record_rate_;\n'
-                    member += '\t'+'std::vector< std::vector<DATA_TYPE> > recorded_rate_;\n'                                        
-                    continue
     
                 member += '\t' + value['def'] + '\n'
             
@@ -184,10 +176,9 @@ private:
             constructor = ''
     
             for value in parsed_neuron:
-                if '_rand_' in value['name']:   # skip local member
-                    continue
-                    
-                constructor += '\t'+value['init']+'\n'
+
+                if value['type'] != 'rand_variable':
+                    constructor += '\t'+value['init']+'\n'
     
             constructor += '\tdt_ = ' + str(Global.config['dt']) + ';'
             return constructor
@@ -345,7 +336,11 @@ private:
             Parallel evaluation of neuron equations.
             """
             
-            meta = replace_rand_(parsed_neuron, rand_objects)
+            meta = ''
+            for value in parsed_neuron:
+                if value['type'] == 'rand_variable':
+                    meta += """\t%(name)s_ = %(cpp_obj)s.getValues(nbNeurons_);\n""" % { 'name': value['name'], 'cpp_obj': value['eq']._gen_cpp() }
+            
             loop = ''
     
             #
@@ -495,7 +490,7 @@ void %(class)s::record() {
             code = ''
     
             for value in parsed_neuron:
-                if '_rand_' in value['name']:
+                if value['type'] == 'rand_variable':
                     continue
     
                 code += '    property '+value['name']+':\n'

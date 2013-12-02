@@ -117,7 +117,10 @@ class Population(object):
                 elif isinstance(value, Variable):
                     values['var'] = value
                 elif isinstance(value, RandomDistribution):
-                    values['var'].init = value
+                    if isinstance(values['var'].eq, RandomDistribution):
+                        values['var'].eq = value
+                    else:
+                        values['var'].init = value
                 elif isinstance(value, list):
                     if len(value) == self.population.size:
                         self.post_compilation_init[name] = value

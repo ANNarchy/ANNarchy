@@ -90,6 +90,7 @@ class NeuronAnalyser(object):
                 neur['name'] = value['name']
                 neur['type'] = 'variable'
                 neur['cpp_type'] = cpp_type
+                neur['def'] = self.def_variable(value['name'])
                 
                 #
                 # eq stuff
@@ -108,11 +109,9 @@ class NeuronAnalyser(object):
                     self.trees.append(tree)
 
                     neur['init'] = self.init_variable(value['name'], init_value)
-                    neur['def'] = self.def_variable(value['name'])
                     neur['cpp'] = tree.cpp() + ';'
                 else:
                     neur['init'] = self.init_variable(value['name'], init_value)
-                    neur['def'] = self.def_variable(value['name'])
                     neur['cpp'] = ''
 
                 #

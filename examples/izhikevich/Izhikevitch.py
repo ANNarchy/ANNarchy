@@ -9,8 +9,8 @@ Izhikevitch = Neuron(
     b = Variable(init=0.2),
     c = Variable(init=-65.0),
     d = Variable(init=2.0),
-    noise = 1.0,
-    I = Variable(init=0.0, eq="I = noise * RandomDistribution('uniform', [0,1]) + sum(exc) - sum(inh)"),
+    noise = Variable(eq=Uniform(0,1)),
+    I = Variable(init=0.0, eq="I = noise + sum(exc) - sum(inh)"),
     u = Variable(init=-65.*0.2, eq="u = a * (b*mp - u)"), # init should be b*baseline
     mp = SpikeVariable(eq="dmp/dt = 0.04 * mp * mp + 5*mp + 140 -u +I", threshold=30.0, init=-65, reset=['mp = c', 'u = u+d']),
     order = ['I', 'mp', 'u']
@@ -20,9 +20,9 @@ Izhikevitch = Neuron(
 Excitatory = Population(name="Excitatory", geometry=(40, 20), neuron=Izhikevitch)
 Excitatory.a = 0.02
 Excitatory.b = 0.2
-Excitatory.c = RandomDistribution('uniform', [-65., -50.])
-Excitatory.d = RandomDistribution('uniform', [2., 8.])
-Excitatory.noise = 5.0
+Excitatory.c = Uniform(-65., -50.).get_values((40, 20))
+Excitatory.d = Uniform( 2., 8.).get_values((40, 20))
+Excitatory.noise = Uniform(0.,5.)
 
 #Inhibitory = Population(name="Inhibitory", geometry=(20, 10), neuron=Izhikevitch)
 #Inhibitory.a = RandomDistribution('uniform', [0.02, 1.])
@@ -50,3 +50,8 @@ compile()
 
 # Run the simulation
 simulate(1000)
+
+import matplotlib.pyplot as plt
+
+plt.plot( Excitatory.I )
+plt.show
