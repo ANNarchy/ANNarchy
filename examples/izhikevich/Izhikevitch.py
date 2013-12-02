@@ -49,9 +49,19 @@ Excitatory.noise = Uniform(0.,5.)
 compile()
 
 # Run the simulation
+to_record = [
+    { 'pop': Excitatory, 'var': 'I' }, 
+    { 'pop': Excitatory, 'var': 'u' }
+]
+
+record( to_record )
 simulate(1000)
+data = get_record( to_record )
 
 import matplotlib.pyplot as plt
 
 plt.plot( Excitatory.I )
 plt.show
+
+print 'Press a key to continue ...'
+raw_input()

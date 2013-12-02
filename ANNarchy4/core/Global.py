@@ -137,9 +137,13 @@ def record(to_record):
         data_set['pop'].start_record(data_set['var'])
 
 def get_record(to_record):
-    data = []
+    data = {}
+    
     for data_set in to_record:
-        data.append(data_set['pop'].get_record(data_set['var']))
+        if data_set['pop'] in data:
+            data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var']) } )
+        else:
+            data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var']) } } )
     
     return data
 
