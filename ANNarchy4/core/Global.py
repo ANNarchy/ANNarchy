@@ -44,7 +44,11 @@ _compiled = False   #I know it's evil
 
 # discretization timestamp
 config = dict(
-       { 'dt' : 1.0 }
+   { 
+    'dt' : 1.0,
+    'verbose': False,
+    'show_time': False
+   }
 )
 
 def setup(**keyValueArgs):
@@ -53,7 +57,8 @@ def setup(**keyValueArgs):
 
     Parameter:
     
-        * *dt*:    discretization constant
+    * *dt*:    discretization constant
+    * *show_time*: if true, initialization times are shown.
         
     **Note**: use this function before any other functions of ANNarchy
     """
