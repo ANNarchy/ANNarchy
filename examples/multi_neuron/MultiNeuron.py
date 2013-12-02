@@ -59,7 +59,15 @@ if __name__ == '__main__':
 
     print 'Running the simulation'
 
-    for trial in range(50000):
+    rec = [ 
+        { 'pop': Layer1Pop, 'var': 'mp' },
+        { 'pop': Layer1Pop, 'var': 'rate' }
+    ]
+    
+    record(rec)
+    
+    #for trial in range(50000):
+    for trial in range(50):
         bars = np.zeros((8,8))
         
         # appears a vertical bar?
@@ -72,7 +80,13 @@ if __name__ == '__main__':
             if np.random.rand(1) < 1.0/8.0:
                 bars[i,:] = 1.0
 
+
         InputPop.rate = bars.reshape(8*8)
 
-        simulate(50)
+        simulate(1)
+        #simulate(50)
         vis.render()
+
+    data = get_record(rec)
+    
+    raw_input('Press any key to continue ...')

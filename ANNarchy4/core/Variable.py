@@ -64,7 +64,11 @@ class Variable(object):
         # for later operations it's not positive if no
         # default is set
         if self.init == None:
-            self.init = self.type(0.0)
+            if self.type != None:
+                self.init = self.type(0.0)
+            else:
+                self.type = float
+                self.init = self.type(0.0)
             
         if type(self.init) != self.type:
             if self.type != bool and type(self.init) != bool:
