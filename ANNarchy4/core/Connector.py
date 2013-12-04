@@ -25,8 +25,6 @@ from Random import Constant
 from Dendrite import Dendrite
 from ANNarchy4.core import Global
 
-import time
-
 class Connector(object):
     """
     The connector class manages all information and operations related to connection patterns.
@@ -68,10 +66,6 @@ class Connector(object):
     def connect(self):
         self.init_connector(self.proj.generator.proj_class['ID'])
             
-        if Global.config['verbose']:
-            print '\nCreate connections from',self.proj.pre.name,'to',self.proj.post.name,'(',self.proj.target,')'
-                  
-        t0 = time.time()
         tmp = self.cyInstance.connect(self.proj.pre,
                                           self.proj.post,
                                           self.proj.post.generator.targets.index(self.proj.target),
@@ -80,10 +74,6 @@ class Connector(object):
                                           self.parameters
                                           )
         
-        t1 = time.time()
-        if Global.config['show_time']:
-            print '    took', t1 - t0,'seconds.'
-            
         dendrites = []
         post_ranks = []
         for i in xrange(len(tmp)):

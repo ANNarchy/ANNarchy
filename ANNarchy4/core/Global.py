@@ -57,8 +57,10 @@ def setup(**keyValueArgs):
 
     Parameter:
     
-    * *dt*:    discretization constant
-    * *show_time*: if true, initialization times are shown.
+    * *dt*:         discretization constant
+    * *verbose*:    shows details about compilation process on console (by default False). 
+                    Additional some information of the network construction will be shown. 
+    * *show_time*:  if true, initialization times are shown. ATTENTION: verbose should be set to True.
         
     **Note**: use this function before any other functions of ANNarchy
     """

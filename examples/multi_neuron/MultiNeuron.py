@@ -4,6 +4,8 @@
 #
 from ANNarchy4 import *
 
+setup( verbose= True, show_time= True)
+
 #
 # Define the neuron classes
 #
@@ -49,7 +51,7 @@ Proj_L2_L2 = Projection(pre=Layer2Pop, post=Layer2Pop, target='inh', synapse=Ant
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-compile(verbose=True)
+compile()
 
 if __name__ == '__main__':
 
@@ -59,15 +61,7 @@ if __name__ == '__main__':
 
     print 'Running the simulation'
 
-    rec = [ 
-        { 'pop': Layer1Pop, 'var': 'mp' },
-        { 'pop': Layer1Pop, 'var': 'rate' }
-    ]
-    
-    record(rec)
-    
-    #for trial in range(50000):
-    for trial in range(50):
+    for trial in range(50000):
         bars = np.zeros((8,8))
         
         # appears a vertical bar?
@@ -83,10 +77,7 @@ if __name__ == '__main__':
 
         InputPop.rate = bars.reshape(8*8)
 
-        simulate(1)
-        #simulate(50)
+        simulate(50)
         vis.render()
-
-    data = get_record(rec)
     
     raw_input('Press any key to continue ...')
