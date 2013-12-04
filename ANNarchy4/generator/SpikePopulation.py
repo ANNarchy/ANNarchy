@@ -25,7 +25,22 @@ from ANNarchy4.core import Global
 from ANNarchy4.core.Random import RandomDistribution
 from Population import Population
 import re
-                        
+         
+def get_type_name(type):
+    """
+    mapping between python types and cpp names, float will be mapped to
+    DATA_TYPE to allow changing between precisions in the framework.
+    """
+    if type==float:
+        return 'DATA_TYPE'
+    elif type==int:
+        return 'int'
+    elif type==bool:
+        return 'bool'
+    else:
+        print "Unknown type, use default = 'DATA_TYPE'"
+        return 'DATA_TYPE'
+               
 class SpikePopulation(Population):
     """
     Population generator class
@@ -78,7 +93,8 @@ class SpikePopulation(Population):
                     # Recording
                     access += '    std::vector< std::vector<DATA_TYPE> >getRecorded'+value['name'].capitalize()+'() { return this->recorded_'+value['name']+'_; }\n\n'                    
                     access += '    void startRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = true; }\n\n'
-                    access += '    void stopRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = false; }\n\n'    
+                    access += '    void stopRecord'+value['name'].capitalize()+'() { this->record_'+value['name']+'_ = false; }\n\n' 
+                    access += '    void clearRecorded'+value['name'].capitalize()+'() { this->recorded_'+value['name']+'_.clear(); }\n\n'   
                 else:
                     access += '    void set'+value['name'].capitalize()+'(DATA_TYPE '+value['name']+') { this->'+value['name']+'_='+value['name']+'; }\n\n'
                     access += '    DATA_TYPE get'+value['name'].capitalize()+'() { return this->'+value['name']+'_; }\n\n'
@@ -470,14 +486,22 @@ void %(class)s::record() {
             code = ''
     
             for value in parsed_neuron:
-                if '_rand_' in value['name']:
+                if value['type'] == 'rand_variable':
                     continue
     
                 if value['type'] == 'variable':
-                    code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
-                    code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
-                    code += '        float getSingle'+value['name'].capitalize()+'(int rank)\n\n'
-                    code += '        void setSingle'+value['name'].capitalize()+'(int rank, float values)\n\n'
+                    var_code = """
+        vector[%(type)s] get%(Name)s()\n
+        void set%(Name)s(vector[%(type)s] values)\n
+        %(type)s getSingle%(Name)s(int rank)\n
+        void setSingle%(Name)s(int rank, %(type)s values)\n
+        void startRecord%(Name)s()\n
+        void stopRecord%(Name)s()\n
+        void clearRecorded%(Name)s()\n
+        vector[vector[%(type)s]] getRecorded%(Name)s()\n
+""" % { 'Name': value['name'].capitalize(), 'name': value['name'], 'type': get_type_name(value['cpp_type']) }
+                    
+                    code += var_code.replace('DATA_TYPE', 'float')
                 else:
                     code += '        float get'+value['name'].capitalize()+'()\n\n'
                     code += '        void set'+value['name'].capitalize()+'(float value)\n\n'
@@ -512,7 +536,15 @@ void %(class)s::record() {
                     code += '    def _get_single_'+ value['name'] + '(self, rank):\n'   
                     code += '        return self.cInstance.getSingle'+value['name'].capitalize()+'(rank)\n\n'  
                     code += '    def _set_single_'+ value['name'] + '(self, rank, value):\n'   
-                    code += '        self.cInstance.setSingle'+value['name'].capitalize()+'(rank, value)\n\n' 
+                    code += '        self.cInstance.setSingle'+value['name'].capitalize()+'(rank, value)\n\n'
+                    code += '    def _start_record_'+ value['name'] + '(self):\n'   
+                    code += '        self.cInstance.startRecord'+value['name'].capitalize()+'()\n\n'  
+                    code += '    def _stop_record_'+ value['name'] + '(self):\n'   
+                    code += '        self.cInstance.stopRecord'+value['name'].capitalize()+'()\n\n'  
+                    code += '    def _get_recorded_'+ value['name'] + '(self):\n'
+                    code += '        tmp = np.array(self.cInstance.getRecorded'+value['name'].capitalize()+'())\n\n'
+                    code += '        self.cInstance.clearRecorded'+value['name'].capitalize()+'()\n'   
+                    code += '        return tmp\n\n'                      
                 else:
                     code += '        def __get__(self):\n'
                     code += '            return self.cInstance.get'+value['name'].capitalize()+'()\n\n'

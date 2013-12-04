@@ -1,4 +1,5 @@
 from ANNarchy4 import *
+from pylab import plot, show
 
 setup()
 
@@ -24,44 +25,58 @@ Excitatory.c = Uniform(-65., -50.).get_values((40, 20))
 Excitatory.d = Uniform( 2., 8.).get_values((40, 20))
 Excitatory.noise = Uniform(0.,5.)
 
-#Inhibitory = Population(name="Inhibitory", geometry=(20, 10), neuron=Izhikevitch)
-#Inhibitory.a = RandomDistribution('uniform', [0.02, 1.])
-#Inhibitory.b = RandomDistribution('uniform', [0.2, 0.25])
-#Inhibitory.c = -65.
-#Inhibitory.d = 2.0
-#Inhibitory.noise = 2.0
+Inhibitory = Population(name="Inhibitory", geometry=(20, 10), neuron=Izhikevitch)
+Inhibitory.a = Uniform(0.02, 1.).get_values((20, 10))
+Inhibitory.b = Uniform(0.2, 0.25).get_values((20, 10))
+Inhibitory.c = -65.
+Inhibitory.d = 2.0
+Inhibitory.noise = 2.0
+
 #
 ## Connect the populations
-#exc_exc = Projection(pre=Excitatory, post=Excitatory, target='exc',
-#                     connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0, 0.5] ))
-#                    )
-#exc_inh = Projection(pre=Excitatory, post=Inhibitory, target='exc',
-#                     connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0, 0.5] ))
-#                    )
-#inh_exc = Projection(pre=Inhibitory, post=Excitatory, target='inh',
-#                     connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0, 1.0] ))
-#                    )
-#inh_inh = Projection(pre=Inhibitory, post=Inhibitory, target='inh',
-#                     connector=Connector('All2All', weights=RandomDistribution('uniform', [0.0, 1.0] ))
-#                    )
+exc_exc = Projection(
+                     pre=Excitatory, 
+                     post=Excitatory, 
+                     target='exc',
+                     connector=Connector('All2All', weights=Uniform(0.0, 0.5))
+                    )
+exc_inh = Projection(pre=Excitatory, 
+                     post=Inhibitory, 
+                     target='exc',
+                     connector=Connector('All2All', weights=Uniform(0.0, 0.5))
+                    )
+inh_exc = Projection(pre=Inhibitory, 
+                     post=Excitatory, 
+                     target='inh',
+                     connector=Connector('All2All', weights= Uniform(0.0, 1.0))
+                    )
+inh_inh = Projection(
+                     pre=Inhibitory, 
+                     post=Inhibitory, 
+                     target='inh',
+                     connector=Connector('All2All', weights=Uniform(0.0, 1.0))
+                    )
 
 # Compile
 compile()
 
-# Run the simulation
-to_record = [
-    { 'pop': Excitatory, 'var': 'I' }, 
-    { 'pop': Excitatory, 'var': 'u' }
-]
-
-record( to_record )
-simulate(1000)
-data = get_record( to_record )
-
-import matplotlib.pyplot as plt
-
-plt.plot( Excitatory.I )
-plt.show
-
-print 'Press a key to continue ...'
-raw_input()
+if __name__ == '__main__':
+    # Run the simulation
+    to_record = [
+        { 'pop': Excitatory, 'var': 'u' }, 
+        { 'pop': Excitatory, 'var': 'mp' }
+    ]
+    
+    record( to_record )
+    simulate(200)
+    data = get_record( to_record )
+    
+    neur_1 = data['Excitatory']['mp']['data'][1,1,:]
+    neur_2 = data['Excitatory']['mp']['data'][10,1,:]
+    
+    plot( neur_1 )
+    plot( neur_2 )
+    
+    show()
+    
+    raw_input('Press a key to continue ...')
