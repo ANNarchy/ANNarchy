@@ -29,6 +29,8 @@ cdef extern from "../build/Network.h":
 
 		int getTime()
 
+		void setTime(int)
+        
 		void run(int nbSteps)
 		
 cdef extern from "../build/Network.h" namespace "Network":
@@ -41,8 +43,11 @@ cdef class pyNetwork:
 	def __cinit__(self):
 		self.cInstance = instance()
 
-	def Time(self):
+	def get_time(self):
 		return self.cInstance.getTime()
+
+	def set_time(self, time):
+		self.cInstance.setTime(time)
 
 	def Run(self, int nbSteps):
 		self.cInstance.run(nbSteps)

@@ -44,7 +44,11 @@ _compiled = False   #I know it's evil
 
 # discretization timestamp
 config = dict(
-       { 'dt' : 1.0 }
+   { 
+    'dt' : 1.0,
+    'verbose': False,
+    'show_time': False
+   }
 )
 
 def setup(**keyValueArgs):
@@ -53,7 +57,10 @@ def setup(**keyValueArgs):
 
     Parameter:
     
-        * *dt*:    discretization constant
+    * *dt*:         discretization constant
+    * *verbose*:    shows details about compilation process on console (by default False). 
+                    Additional some information of the network construction will be shown. 
+    * *show_time*:  if true, initialization times are shown. ATTENTION: verbose should be set to True.
         
     **Note**: use this function before any other functions of ANNarchy
     """
@@ -154,11 +161,27 @@ def current_time():
     **Note**: computed as number of simulation steps times dt
     """
     import ANNarchyCython
-    return ANNarchyCython.pyNetwork().Time() * config['dt']
+    return ANNarchyCython.pyNetwork().get_time() * config['dt']
 
 def current_step():
     """
-    Returns current simulation time step.
+    Returns current simulation step.
     """
     import ANNarchyCython    
-    return ANNarchyCython.pyNetwork().Time()    
+    return ANNarchyCython.pyNetwork().get_time()    
+
+def set_current_time(time):
+    """
+    Set current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+
+def set_current_step(time):
+    """
+    set current simulation step.
+    """
+    import ANNarchyCython    
+    ANNarchyCython.pyNetwork().set_time( time )    

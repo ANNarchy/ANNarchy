@@ -22,6 +22,7 @@
     
 """
 import numpy as np
+import time
 
 import Global
 from Dendrite import Dendrite
@@ -219,8 +220,15 @@ class Projection(Descriptor):
         return ret_par
 
     def connect(self):
+        if Global.config['verbose']:
+            print '    Create connections from',self.pre.name,'to',self.post.name,'(',self.target,')'
+                  
+        t0 = time.time()
         
         self._dendrites, self._post_ranks = self.connector.connect()
+        t1 = time.time()
+        if Global.config['show_time']:
+            print '        took', t1 - t0,'seconds.'
 
     def gather_data(self, variable):
         blank_col=np.zeros((self.pre.geometry[1], 1))

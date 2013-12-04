@@ -4,6 +4,8 @@
 #
 from ANNarchy4 import *
 
+setup( verbose= True, show_time= True)
+
 #
 # Define the neuron classes
 #
@@ -49,7 +51,7 @@ Proj_L2_L2 = Projection(pre=Layer2Pop, post=Layer2Pop, target='inh', synapse=Ant
 #
 # Analyse and compile everything, initialize the parameters/variables...
 #
-compile(verbose=True)
+compile()
 
 if __name__ == '__main__':
 
@@ -72,7 +74,10 @@ if __name__ == '__main__':
             if np.random.rand(1) < 1.0/8.0:
                 bars[i,:] = 1.0
 
+
         InputPop.rate = bars.reshape(8*8)
 
         simulate(50)
         vis.render()
+    
+    raw_input('Press any key to continue ...')

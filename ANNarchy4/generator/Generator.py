@@ -24,6 +24,7 @@
 import os, sys
 import subprocess
 import shutil
+import time
 
 # ANNarchy core informations
 import ANNarchy4
@@ -217,30 +218,30 @@ def folder_management():
 
     sys.path.append(Global.annarchy_dir)
 
-def code_generation(cpp_stand_alone, verbose):
+def code_generation(cpp_stand_alone):
     """
     code generation for each population respectively projection object the user defined. 
     
     After this the ANNarchy main header is expanded by the corresponding headers.
     """
-    if verbose:
+    if Global.config['verbose']:
         print '\nGenerate code ...'
 
     # create population cpp class for each neuron
     for pop in Global._populations:
-        pop.generator.generate(verbose)
+        pop.generator.generate(Global.config['verbose'])
 
     # create projection cpp class for each synapse
     for projection in Global._projections:
-        projection.generator.generate(verbose)
+        projection.generator.generate(Global.config['verbose'])
 
     create_includes()
 
-    if verbose:
+    if Global.config['verbose']:
         print '\nUpdate ANNarchy header ...'
     update_annarchy_header(cpp_stand_alone)
 
-    if verbose:
+    if Global.config['verbose']:
         print '\nGenerate py extensions ...'
     generate_py_extension()
     
@@ -260,7 +261,7 @@ def _update_global_operations():
                 proj.post.generator._add_global_oparation(entry)
             
     
-def compile(verbose=False, cpp_stand_alone=False, debug_build=False):
+def compile(cpp_stand_alone=False, debug_build=False):
     """
     The compilation procedure consists roughly of 3 steps:
     
@@ -272,22 +273,25 @@ def compile(verbose=False, cpp_stand_alone=False, debug_build=False):
     
     *Parameters*:
 
-        * *verbose*: shows details about compilation process on console (by default False).
-        * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
-        * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
+    * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
+    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
     """
     print 'ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')'
     # Create the necessary subfolders and copy the source files
-    if verbose:
+    if Global.config['verbose']:
         print "\nCreate 'annarchy' subdirectory."
     folder_management()
     # Tell each population which global operation they should compute
     _update_global_operations()
     # Generate the code
-    code_generation(cpp_stand_alone, verbose)
+    code_generation(cpp_stand_alone)
     
     # Create ANNarchyCore.so and py extensions
-    print '\nCompiling...',
+    
+    print '\nCompiling ...',
+    if Global.config['show_time']:
+        t0 =  time.clock()
+            
     os.chdir(Global.annarchy_dir)
     # Make sure the makefiles are executable
     if sys.platform.startswith('linux'):
@@ -307,7 +311,11 @@ def compile(verbose=False, cpp_stand_alone=False, debug_build=False):
         proc.wait()
         
     Global._compiled = True
-    
+    print ' OK.'
+    if Global.config['show_time']:
+        print 'took', time.clock() - t0,'seconds.'
+        
+    print '\nConstruct network ...\n',   
     # Return to the current directory
     os.chdir('..')
     # Import the libraries
@@ -322,19 +330,24 @@ def compile(verbose=False, cpp_stand_alone=False, debug_build=False):
     if not cpp_stand_alone:
         # bind the py extensions to the corresponding python objects
         for pop in Global._populations:
+            if Global.config['verbose']:
+                print '    Create population', pop.name
+            if Global.config['show_time']:
+                t0 = time.clock()
             # Create the Cython instance
             pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
             # Create the attributes
             pop._init_attributes()
             # Initialize their value
             pop.generator._init_variables()
+            if Global.config['show_time']:
+                print '        took', time.clock()-t0                
         # instantiate projections
         for proj in Global._projections:
             # Create the synapses
             proj.connect()  
             # Create the attributes
-            proj._init_attributes()
-        print ' OK.'   
+            proj._init_attributes()   
     else:
         #abort the application after compiling ANNarchyCPP
         print '\nCompilation process of ANNarchyCPP completed successful.\n'

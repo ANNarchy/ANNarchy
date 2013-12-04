@@ -448,6 +448,8 @@ private:
             return code
 
         body = """#include "%(class)s.h"
+#include "Global.h"
+using namespace ANNarchy_Global;
 
 %(class)s::%(class)s(std::string name, int nbNeurons):Population(name, nbNeurons)
 {

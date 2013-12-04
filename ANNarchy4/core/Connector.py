@@ -23,6 +23,7 @@
 """
 from Random import Constant
 from Dendrite import Dendrite
+from ANNarchy4.core import Global
 
 class Connector(object):
     """
@@ -64,7 +65,7 @@ class Connector(object):
         
     def connect(self):
         self.init_connector(self.proj.generator.proj_class['ID'])
-                      
+            
         tmp = self.cyInstance.connect(self.proj.pre,
                                           self.proj.post,
                                           self.proj.post.generator.targets.index(self.proj.target),
@@ -72,6 +73,7 @@ class Connector(object):
                                           self.delays,
                                           self.parameters
                                           )
+        
         dendrites = []
         post_ranks = []
         for i in xrange(len(tmp)):

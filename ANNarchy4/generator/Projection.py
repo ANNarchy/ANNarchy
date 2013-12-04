@@ -386,7 +386,10 @@ private:
         'access': generate_accessor(self.parsed_variables),
         'synapseMember': member_def(self.parsed_variables) }
 
-        body = '''#include "%(name)s.h"
+        body = '''#include "%(name)s.h"        
+#include "Global.h"
+using namespace ANNarchy_Global;
+        
 %(name)s::%(name)s(Population* pre, Population* post, int postRank, int target) : Projection() {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);

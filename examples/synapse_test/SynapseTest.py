@@ -9,11 +9,12 @@ from datetime import datetime
 # Define the neuron classes
 #
 Simple = Neuron(   
-    tau = 1.0,
-    mp = Variable(init = 0, eq="mp = mp+1"),
-    rate = Variable(init = 0.0, eq="tau * drate / dt = 1.0/mp"),
-    order = ['mp','rate']
+    tau = 10.0,
+    #mp = Variable(init = 0, eq="mp = mp+1"),
+    #rate = Variable(init = 0.0, eq="tau * drate / dt = 1.0/mp"),
     #rate = Variable(init = 0.0, eq="rate = t")
+    rate = Variable(init = 0.0, eq="tau * drate/dt +rate = pos(0.3)"),
+    order = ['mp','rate']
 )
 
 SimpleSynapse = Synapse(
@@ -150,10 +151,18 @@ def synapse_test():
     
 if __name__ == '__main__':
 
-    loop()
-    
-    loop2()
+    set_current_step(10)
 
-    loop3()
+    InputPop.start_record('rate')
+    simulate(5)
+    rec = InputPop.get_record('rate')
+    print rec['start']
+    print rec['stop']
+    print rec['data']
+    #loop()
     
-    synapse_test()
+    #loop2()
+
+    #loop3()
+    
+    #synapse_test()
