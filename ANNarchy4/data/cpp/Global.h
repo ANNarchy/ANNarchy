@@ -41,24 +41,20 @@
 //	parallel stuff
 #include <omp.h>
 
+#ifdef ANNAR_DOUBLE
+    #define DATA_TYPE double
+#else
+    #define DATA_TYPE float
+#endif
+
 //
 //	conventions
-#ifdef ANNAR_DOUBLE
-	#define DATA_TYPE double
-	#define positive(x) x > 0.0 ? x : 0.0
-#else
-	#define DATA_TYPE float
-	#define positive(x) x > 0.0f ? x : 0.0f
-#endif
+namespace ANNarchy_Global
+{
+    inline DATA_TYPE positive(DATA_TYPE x) { return x > 0.0 ? x : 0.0; }
 
-#ifdef ANNAR_DOUBLE
-	#define DATA_TYPE double
-	#define negative(x) x < 0.0 ? x : 0.0
-#else
-	#define DATA_TYPE float
-	#define negative(x) x < 0.0f ? x : 0.0f
-#endif
-
+    inline DATA_TYPE negative(DATA_TYPE x) { return x < 0.0 ? x : 0.0; }
+}
 //#define ANNAR_PROFILE
 
 #include "Random.h"
