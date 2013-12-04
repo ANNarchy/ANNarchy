@@ -333,9 +333,13 @@ private:
                             else:
                                 val = val.replace(tval, tval+'_')
                                 
-                        loop +='''\t\t%(lside)s = %(rside)s;\n''' % { 'lside': lside, 'rside': val }
+                        loop +='''\t\t\t%(lside)s = %(rside)s;\n''' % { 'lside': lside, 'rside': val }
 
-            code = '''\tfor(auto it=reset_.begin(); it != reset_.end(); it++) {\n%(loop)s\n\t}\n''' % { 'loop': loop }
+            code = """
+        for(auto it=reset_.begin(); it != reset_.end(); it++) 
+        {
+%(loop)s
+        } """ % { 'loop': loop }
 
             return code            
             
@@ -383,16 +387,17 @@ private:
                             loop += '\t\t'+value2['cpp']+'\n'
     
                             if 'min' in value2.keys():
-                                loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['min'] }
+                                loop += '''\t\t if (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['min'] }
                             if 'max' in value2.keys():
-                                loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['max'] }
+                                loop += '''\t\t if (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['max'] }
                             if 'threshold' in value2.keys():
-                                loop += '''\t\tif (%(name)s_[i] > %(threshold)s) {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\t\t}\n''' % { 'name': value2['name'], 'threshold': value2['threshold'] }
+                                loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\t\t }\n''' % { 'name': value2['name'], 'threshold': value2['threshold'] }
     
             code = meta
-            code += '\tfor(int i=0; i<nbNeurons_; i++) {\n'
+            code += '\tfor(int i=0; i<nbNeurons_; i++)\n' 
+            code += '\t{\n'
             code += loop
-            code += '}\n'
+            code += '\t}\n'
             
             return code
 
@@ -445,7 +450,8 @@ void %(class)s::reset() {
     
 }
 
-void %(class)s::globalOperations() {
+void %(class)s::globalOperations() 
+{
 
     propagateSpike();
     
@@ -454,7 +460,8 @@ void %(class)s::globalOperations() {
 %(global_ops)s
 }
 
-void %(class)s::record() {
+void %(class)s::record() 
+{
 %(record)s
 }
 
