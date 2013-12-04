@@ -151,10 +151,13 @@ def synapse_test():
     
 if __name__ == '__main__':
 
+    set_current_step(10)
+
     InputPop.start_record('rate')
     simulate(5)
     rec = InputPop.get_record('rate')
-    
+    print rec['start']
+    print rec['stop']
     print rec['data']
     #loop()
     

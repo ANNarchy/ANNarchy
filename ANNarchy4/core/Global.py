@@ -161,11 +161,27 @@ def current_time():
     **Note**: computed as number of simulation steps times dt
     """
     import ANNarchyCython
-    return ANNarchyCython.pyNetwork().Time() * config['dt']
+    return ANNarchyCython.pyNetwork().get_time() * config['dt']
 
 def current_step():
     """
-    Returns current simulation time step.
+    Returns current simulation step.
     """
     import ANNarchyCython    
-    return ANNarchyCython.pyNetwork().Time()    
+    return ANNarchyCython.pyNetwork().get_time()    
+
+def set_current_time(time):
+    """
+    Set current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+
+def set_current_step(time):
+    """
+    set current simulation step.
+    """
+    import ANNarchyCython    
+    ANNarchyCython.pyNetwork().set_time( time )    
