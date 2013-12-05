@@ -231,31 +231,6 @@ private:
                 
             return code
         
-        def replace_rand_(parsed_neuron, rand_objects):
-            """
-            Before the equations are provided to the parser all RandomDistribution
-            calls are masked by unique names. Now we revert this masking.
-            """
-            meta_code = ''
-            
-            #
-            # revert the replace of RD objects
-            for value in parsed_neuron:
-                if '_rand_' in value['name']:
-                    
-                    idx = int(value['name'].split('_rand_')[1])
-                    parameters = rand_objects[idx]
-                    call = 'RandomDistribution' + parameters + '.genCPP()'
-                    try:
-                        random_cpp = eval(call)
-                    except Exception, exception:
-                        print exception
-                        print 'Error in', value['eq'], ': the RandomDistribution object is not correctly defined.'
-                        exit(0) 
-                    meta_code += '\t'+value['name']+'_= '+random_cpp+'.getValues(nbNeurons_);\n'
-                    
-            return meta_code
-        
         def single_global_ops(class_name, global_ops):
             """
             Generate the implementation for requested attributes.
@@ -336,9 +311,12 @@ private:
                         loop +='''\t\t\t%(lside)s = %(rside)s;\n''' % { 'lside': lside, 'rside': val }
 
             code = """
-        for(auto it=reset_.begin(); it != reset_.end(); it++) 
+        int i=0;
+        for(auto it=reset_.begin(); it != reset_.end(); it++, i++) 
         {
 %(loop)s
+
+             spike_timings_[i].push_back(time_);
         } """ % { 'loop': loop }
 
             return code            
@@ -574,6 +552,8 @@ cdef extern from "../build/%(name)s.h":
         
         string getName()
         
+        vector[vector[int]] getSpikeTimings()
+        
 %(cFunction)s
 
 
@@ -593,6 +573,9 @@ cdef class py%(name)s:
         def __set__(self, value):
             print "py%(name)s.size is a read-only attribute."
             
+    def get_spike_timings(self):
+        return np.array(self.cInstance.getSpikeTimings())
+        
 %(pyFunction)s
 
 ''' % { 'name': self.class_name,  

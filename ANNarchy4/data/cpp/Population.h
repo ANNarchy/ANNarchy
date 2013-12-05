@@ -67,6 +67,7 @@ public:
 			return NULL;
 	}
 
+	std::vector< std::vector<int> > getSpikeTimings() { return spike_timings_;}
 	std::vector<DATA_TYPE> getRates(std::vector<int> delays, std::vector<int> ranks);
 
 	DATA_TYPE getDt() { return dt_;	}
@@ -88,8 +89,9 @@ protected:
 
 	std::vector<DATA_TYPE>	rate_;
 	std::vector< std::vector<DATA_TYPE>	> delayedRates_;
-	std::vector<std::vector<class Projection*> > projections_;	// first dimension, neuron wise
+	std::vector< std::vector<class Projection*> > projections_;	// first dimension, neuron wise
 
+	std::vector< std::vector<int> > spike_timings_;
 	friend class Network;
 };
 

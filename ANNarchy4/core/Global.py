@@ -147,7 +147,7 @@ def get_record(to_record):
     data = {}
     
     for data_set in to_record:
-        if data_set['pop'] in data:
+        if data_set['pop'].name in data:
             data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var']) } )
         else:
             data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var']) } } )
