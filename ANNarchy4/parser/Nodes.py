@@ -254,7 +254,7 @@ class Variable(Leaf):
         else:
             suffix = '[i] '
         if self.value == 't':
-            return ' ANNarchy_Global::time_ '
+            return ' ANNarchy_Global::time '
         
         return ' ' + str(self.value)+'_'+suffix
     def latex(self):
@@ -347,7 +347,7 @@ class SpikeVariable(Leaf):
         self.machine = machine
         self.value = value
     def cpp(self):
-        return ' pre_population_->getSpike(rank_[i]) '
+        return ' pre_population_->getLastSpikeTime(rank_[i]) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
 

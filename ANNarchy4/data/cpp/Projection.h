@@ -94,5 +94,6 @@ protected:
 
     bool constDelay_;
     int maxDelay_;
+    int time_;
 };
 #endif

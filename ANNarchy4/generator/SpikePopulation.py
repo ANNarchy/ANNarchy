@@ -366,7 +366,7 @@ private:
                             if 'max' in value2.keys():
                                 loop += '''\t\t if (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['max'] }
                             if 'threshold' in value2.keys():
-                                loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\n\t\t\tspike_timings_[i].push_back(time_);\n\t\t }\n''' % { 'name': value2['name'], 'threshold': value2['threshold'] }
+                                loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\n\t\t\tspike_timings_[i].push_back(ANNarchy_Global::time);\n\t\t\tspiked_[i] = true;\n\t\t }\n''' % { 'name': value2['name'], 'threshold': value2['threshold'] }
     
             code = meta
             code += '\tfor(int i=0; i<nbNeurons_; i++)\n' 
@@ -400,6 +400,7 @@ using namespace ANNarchy_Global;
 }
 
 void %(class)s::metaStep() {
+    spiked_ = std::vector<bool>(nbNeurons_, false);
 %(metaStep)s    
 }
 
@@ -407,7 +408,7 @@ void %(class)s::propagateSpike() {
 
     if (!propagate_.empty())
     {
-        std::cout << "Propagate spikes" << std::endl;
+
         propagate_.erase(propagate_.begin(), propagate_.end());
     }
         
@@ -418,8 +419,7 @@ void %(class)s::reset() {
     if (!reset_.empty())
     {
 %(reset)s
-        
-        std::cout << "Reset spiked neurons" << std::endl;
+
         reset_.erase(reset_.begin(), reset_.end());
     }
     

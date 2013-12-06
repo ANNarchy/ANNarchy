@@ -32,6 +32,7 @@ Population::Population(std::string name, int nbNeurons) {
 	dt_ = 1.0;
 	delayedRates_ = std::vector< std::vector<DATA_TYPE> >();
 
+	spiked_ = std::vector< bool >(nbNeurons_, false);
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
 #ifdef ANNAR_PROFILE
     char buffer[200];

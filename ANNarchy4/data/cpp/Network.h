@@ -64,15 +64,14 @@ public:
 
 	void addPopulation(class Population* population);
 
-	int getTime() { return time_; }
+	int getTime() { return ANNarchy_Global::time; }
 
-	void setTime(int time) { time_ = time; }
+	void setTime(int time) { ANNarchy_Global::time = time; }
 protected:
 	Network();
 
 private:
 	static Network *instance_;
-	int time_;
 
 	// data
 	std::vector<class Population*>	populations_;

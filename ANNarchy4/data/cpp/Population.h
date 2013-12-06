@@ -73,13 +73,20 @@ public:
 	DATA_TYPE getDt() { return dt_;	}
 
 	void setDt(DATA_TYPE dt) { dt_ = dt; }
+
+	int getLastSpikeTime(int rank)
+	{
+	    if(spike_timings_[rank].empty())
+	        return 0;
+	    else
+	        return spike_timings_[rank].back();
+	}
 #ifdef ANNAR_PROFILE
     FILE *cs;
     FILE *gl;
     FILE *ll;
 #endif
 protected:
-    int time_;
 
 	// data
 	int nbNeurons_;
@@ -91,8 +98,8 @@ protected:
 	std::vector< std::vector<DATA_TYPE>	> delayedRates_;
 	std::vector< std::vector<class Projection*> > projections_;	// first dimension, neuron wise
 
+	std::vector< bool > spiked_;
 	std::vector< std::vector<int> > spike_timings_;
-	friend class Network;
 };
 
 #endif

@@ -4,33 +4,66 @@ from pylab import show, figure, subplot, legend, close
 #
 # experiment setup
 setup(dt=1)
-nb_steps = 200
-nb_neurons = 5
+nb_steps = 300
+nb_exc_neurons = 800
+nb_exc_neurons = 200
 
 # Define the neurons
 Izhikevitch = Neuron(
     I_in = Variable(init=0.0),
-    I = Variable(init=0.0, eq = "I = I_in + sum(exc) + noise"),
+    I = Variable(init=0.0, eq = "I = sum(exc) - sum(inh) + noise"),
     noise = Variable(eq=Uniform(0.0,5.0)),
-    #noise = Variable(init=0),
     a = 0.02,
     b = 0.2,
     c = -65.0,
-    d = 2.0,
+    d = 6.0,
     u = Variable(init=-65.*0.2, eq="du/dt = a * (b*v - u)"), # init should be b*baseline
-    v = SpikeVariable(eq="dv/dt = 0.04 * v * v + 5*v + 140 -u + I", threshold=-30.0, init=-65.0, reset=['v = c', 'u = u+d']),
+    v = SpikeVariable(eq="dv/dt = 0.04 * v * v + 5*v + 140 -u + I", threshold= 30.0, init=-65.0, reset=['v = c', 'u = u+d']),
     order = ['I', 'v','u']
 )
 
-Excitatory = Population(name='Excitory', geometry=(nb_neurons), neuron=Izhikevitch)
-Inhibitory = Population(name='Inhibitory', geometry=(nb_neurons), neuron=Izhikevitch)
 
+Simple = Synapse(
+    psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
+)
+
+Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
+Inhibitory = Population(name='Inhibitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
+Inhibitory.noise = Variable(eq=Uniform(0.0,2.0))
+Inhibitory.d = 2.0
+
+exc_exc = Projection(
+    pre=Excitatory, 
+    post=Excitatory, 
+    target='exc',
+    synapse = Simple,
+    connector=Connector('All2All', weights=Uniform(0,0.5))
+)
+ 
 exc_inh = Projection(
-            pre=Excitatory, 
-            post=Inhibitory, 
-            target='exc',
-            connector=Connector('One2One', weights=1)
-          )
+    pre=Excitatory, 
+    post=Inhibitory, 
+    target='exc',
+    synapse = Simple,
+    connector=Connector('All2All', weights=Uniform(0,0.5))
+)
+
+inh_exc = Projection(
+    pre=Inhibitory, 
+    post=Excitatory, 
+    target='inh',
+    synapse = Simple,
+    connector=Connector('All2All', weights= Uniform(-1.0,0.0))
+)
+
+inh_inh = Projection(
+    pre=Inhibitory, 
+    post=Inhibitory, 
+    target='inh',
+    synapse = Simple,
+    connector=Connector('All2All', weights=Uniform(-1.0,0.0))
+)
+
 # Compile
 compile()
 
@@ -42,11 +75,12 @@ def plot(population, data):
     neur_v =  data[population.name]['v']['data']
     neur_u =  data[population.name]['u']['data']    
     
+    nb_neurons = population.size
+    
     X = np.arange(nb_steps)
     spikes = np.zeros((nb_neurons, nb_steps))
-
     timing = population.cyInstance.get_spike_timings()
-    
+        
     #
     # reformat data for plot  
     if timing.shape == (nb_neurons,):  
@@ -56,7 +90,7 @@ def plot(population, data):
                 spikes[ i, timing[i] ] = 1
         
     rest_pot = np.ones((nb_steps,1)) * -65.0
-    threshold = np.ones((nb_steps,1)) * -30.0
+    threshold = np.ones((nb_steps,1)) * 30.0
         
     X = np.arange(nb_steps)
     for i in range(1):
@@ -103,9 +137,9 @@ if __name__ == '__main__':
     ]
     
     # 20-100ms is an input
-    I = np.zeros((nb_steps,nb_neurons))
-    if nb_steps > 20:
-        I[20:nb_steps,:] = 15. # 15mV as input
+    I = np.zeros((nb_steps,nb_exc_neurons))
+    if nb_steps > 10:
+        I[10:nb_steps,:] = 0.0 # 15mV as input
     
     record( to_record )
     for i in xrange(nb_steps):
