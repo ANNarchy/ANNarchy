@@ -290,7 +290,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     
     print '\nCompiling ...',
     if Global.config['show_time']:
-        t0 =  time.clock()
+        t0 = time.time()
             
     os.chdir(Global.annarchy_dir)
     # Make sure the makefiles are executable
@@ -313,7 +313,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     Global._compiled = True
     print ' OK.'
     if Global.config['show_time']:
-        print 'took', time.clock() - t0,'seconds.'
+        print 'took', time.time() - t0, 'seconds.'
         
     print '\nConstruct network ...\n',   
     # Return to the current directory
@@ -333,7 +333,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
             if Global.config['verbose']:
                 print '    Create population', pop.name
             if Global.config['show_time']:
-                t0 = time.clock()
+                t0 = time.time()
             # Create the Cython instance
             pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
             # Create the attributes
@@ -341,13 +341,20 @@ def compile(cpp_stand_alone=False, debug_build=False):
             # Initialize their value
             pop.generator._init_variables()
             if Global.config['show_time']:
-                print '        took', time.clock()-t0                
+                print '        took', (time.time()-t0)*1000, 'milliseconds'             
         # instantiate projections
         for proj in Global._projections:
+            if Global.config['verbose']:
+                print '    Create projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"'           
+            if Global.config['show_time']:
+                t0 = time.time()
             # Create the synapses
             proj.connect()  
             # Create the attributes
             proj._init_attributes()   
+            if Global.config['show_time']:
+                print '        took', (time.time()-t0)*1000, 'milliseconds'             
+
     else:
         #abort the application after compiling ANNarchyCPP
         print '\nCompilation process of ANNarchyCPP completed successful.\n'
