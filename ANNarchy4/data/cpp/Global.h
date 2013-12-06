@@ -55,7 +55,7 @@ namespace ANNarchy_Global
 
     inline DATA_TYPE negative(DATA_TYPE x) { return x < 0.0 ? x : 0.0; }
 
-    static int time;
+    extern int time;
 }
 //#define ANNAR_PROFILE
 

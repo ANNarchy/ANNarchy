@@ -11,7 +11,7 @@ nb_exc_neurons = 200
 # Define the neurons
 Izhikevitch = Neuron(
     I_in = Variable(init=0.0),
-    I = Variable(init=0.0, eq = "I = sum(exc) - sum(inh) + noise"),
+    I = Variable(init=0.0, eq = "I = I_in + sum(exc) - sum(inh) + noise"),
     noise = Variable(eq=Uniform(0.0,5.0)),
     a = 0.02,
     b = 0.2,
@@ -21,7 +21,6 @@ Izhikevitch = Neuron(
     v = SpikeVariable(eq="dv/dt = 0.04 * v * v + 5*v + 140 -u + I", threshold= 30.0, init=-65.0, reset=['v = c', 'u = u+d']),
     order = ['I', 'v','u']
 )
-
 
 Simple = Synapse(
     psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
@@ -139,7 +138,7 @@ if __name__ == '__main__':
     # 20-100ms is an input
     I = np.zeros((nb_steps,nb_exc_neurons))
     if nb_steps > 10:
-        I[10:nb_steps,:] = 0.0 # 15mV as input
+        I[10:nb_steps,:] = 20.0 # 15mV as input
     
     record( to_record )
     for i in xrange(nb_steps):

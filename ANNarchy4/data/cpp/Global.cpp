@@ -23,3 +23,4 @@
 
 generator *generator::instance_ = NULL;
 Network* Network::instance_ = NULL;
+int ANNarchy_Global::time = 0;
