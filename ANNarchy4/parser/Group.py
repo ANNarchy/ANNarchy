@@ -102,6 +102,10 @@ class Group(Nodes.Node):
                 if item in self.machine.other_variables:
                     items.append(Nodes.Variable(self.machine, item))
                     found=True
+                # Check if it is a spike time
+                if belongs_to(item, SPIKE_VARIABLE):
+                    items.append(Nodes.SpikeVariable(self.machine, item))
+                    found=True
                 # Check if it is a global function (min, max, mean): pass the child as if
                 if belongs_to(item, GLOBAL_FUNCTIONS):
                     items.append(Nodes.GlobalFunction(self.machine, value=item, child = iter_items.next()))

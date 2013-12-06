@@ -77,6 +77,7 @@ BRACKET_RIGHT = ')'
 # VARIABLES
 PRE_VAR = ['pre.']
 POST_VAR = ['post.']
+SPIKE_VARIABLE = ['t_spike']
 
 # GROUPS
 OPERATORS = [PLUS, MINUS, MULT, DIV, POW]

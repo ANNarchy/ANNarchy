@@ -254,7 +254,8 @@ class Variable(Leaf):
         else:
             suffix = '[i] '
         if self.value == 't':
-            return ' time_ '
+            return ' ANNarchy_Global::time_ '
+        
         return ' ' + str(self.value)+'_'+suffix
     def latex(self):
         return '{\\text{'+str(self.value) + '}}'
@@ -337,6 +338,16 @@ class PostVariable(Leaf):
         if variable=='rate':
             return ' (*post_rates_) [ post_neuron_rank_ ] '
         return ' post_population_->getSingle'+variable.capitalize()+'( post_neuron_rank_ ) '
+    def latex(self):
+        return '{\\text{'+str(self.value)+'}}'
+
+# Spike variable (e.g. t_spike)
+class SpikeVariable(Leaf):
+    def __init__(self, machine, value):
+        self.machine = machine
+        self.value = value
+    def cpp(self):
+        return ' pre_population_->getSpike(rank_[i]) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
 
