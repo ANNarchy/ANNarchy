@@ -311,12 +311,9 @@ private:
                         loop +='''\t\t\t%(lside)s = %(rside)s;\n''' % { 'lside': lside, 'rside': val }
 
             code = """
-        int i=0;
-        for(auto it=reset_.begin(); it != reset_.end(); it++, i++) 
+        for(auto it=reset_.begin(); it != reset_.end(); it++) 
         {
 %(loop)s
-
-             spike_timings_[i].push_back(time_);
         } """ % { 'loop': loop }
 
             return code            
@@ -369,7 +366,7 @@ private:
                             if 'max' in value2.keys():
                                 loop += '''\t\t if (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': value2['name'], 'border': value2['max'] }
                             if 'threshold' in value2.keys():
-                                loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\t\t }\n''' % { 'name': value2['name'], 'threshold': value2['threshold'] }
+                                loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\n\t\t\tspike_timings_[i].push_back(time_);\n\t\t }\n''' % { 'name': value2['name'], 'threshold': value2['threshold'] }
     
             code = meta
             code += '\tfor(int i=0; i<nbNeurons_; i++)\n' 
