@@ -218,6 +218,21 @@ def folder_management():
 
     sys.path.append(Global.annarchy_dir)
 
+def _update_float_prec(file):
+    """
+    all code generated files will be updated
+    """
+    code = ''
+    with open(file, mode = 'r') as r_file:
+        for a_line in r_file:
+            if Global.config['float_prec']=='single':
+                code += a_line.replace("DATA_TYPE","float")
+            else:
+                code += a_line.replace("float","double").replace("DATA_TYPE","double")
+
+    with open(file, mode='w') as w_file:
+        w_file.write(code)
+    
 def code_generation(cpp_stand_alone):
     """
     code generation for each population respectively projection object the user defined. 
@@ -244,6 +259,18 @@ def code_generation(cpp_stand_alone):
     if Global.config['verbose']:
         print '\nGenerate py extensions ...'
     generate_py_extension()
+    
+    os.chdir(Global.annarchy_dir+'/build')
+    cpp_src = filter(os.path.isfile, os.listdir('.'))
+    for file in cpp_src:
+        _update_float_prec(file)
+            
+    os.chdir(Global.annarchy_dir+'/pyx')
+    pyx_src = filter(os.path.isfile, os.listdir('.'))
+    for file in pyx_src:
+        _update_float_prec(file)
+
+    os.chdir(Global.annarchy_dir)    
     
 def _update_global_operations():
     
