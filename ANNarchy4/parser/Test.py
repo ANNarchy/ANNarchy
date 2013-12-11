@@ -79,6 +79,8 @@ if __name__ == '__main__':
     Oja = Synapse(
         eta = 10.0,
         alpha = 1.0,
+        tmp = Variable(init=0, eq = "tmp= if t == t_spike then value else 0.0"),
+        psp = Variable(init=0, eq = "psp = tmp"),
         value = Variable(init=0.0, eq="dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value", min=0.0)
     )
     test_synapse(Oja, 'testsyn')

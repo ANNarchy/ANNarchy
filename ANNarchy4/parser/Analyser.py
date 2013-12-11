@@ -29,11 +29,16 @@ from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.SpikeVariable import SpikeVariable
 
 def get_value_and_type(value):
-
+    
     if 'var' in value.keys():
+        print value['var'].init
+        
          # variables
         if value['var'].init != None:
-            init_value = value['var'].init
+            if isinstance(value['var'].init, RandomDistribution):
+                 init_value = 0.0
+            else:
+                 init_value = value['var'].init
         else:
             init_value = 0.0
         
@@ -274,7 +279,7 @@ class SynapseAnalyser(object):
         return name + '_ = ' + str(value) + ';';
 
     def init_local_variable(self, name, value):
-        return name +'_ = std::vector< '+DATA_TYPE+' >(post_population_->getNeuronCount(), '+str(value)+');\n'
+        return name +'_ = std::vector< '+DATA_TYPE+' >(pre_population_->getNeuronCount(), '+str(value)+');\n'
 
     def init_global_variable(self, name, value):
         return name + '_ = '+str(value)+';'

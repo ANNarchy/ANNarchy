@@ -200,7 +200,7 @@ class Projection(object):
             
             for var in parsed_variables:
                 if var['name'] == 'psp':
-                    psp_code = var['cpp'].split('=')[1]
+                    psp_code = var['cpp'].split(' = ')[1]
                     
             if len(psp_code) == 0:
                 psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
@@ -320,7 +320,7 @@ class Projection(object):
                 if value['name'] in Global._pre_def_synapse:
                     continue
     
-                if value['type'] == 'variable':
+                if value['type'] == 'local':
                     access += """
 void set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_= %(name)s; }
 

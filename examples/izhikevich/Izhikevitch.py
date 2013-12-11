@@ -4,32 +4,41 @@ from pylab import show, figure, subplot, legend, close
 #
 # experiment setup
 setup(dt=1)
-nb_steps = 300
+nb_steps = 1000
 nb_exc_neurons = 800
-nb_exc_neurons = 200
+nb_inh_neurons = 200
 
 # Define the neurons
 Izhikevitch = Neuron(
     I_in = Variable(init=0.0),
-    I = Variable(init=0.0, eq = "I = I_in + sum(exc) - sum(inh) + noise"),
-    noise = Variable(eq=Uniform(0.0,5.0)),
-    a = 0.02,
-    b = 0.2,
-    c = -65.0,
-    d = 6.0,
+    noise_scale = 5.0,
+    I = Variable(init=0.0, eq = "I = sum(exc) + sum(inh) + noise*noise_scale"),
+    noise = Variable(eq=Normal(0.0,1.0)),
+    a = Variable(init=0.02),
+    b = Variable(init=0.2),
+    c = Variable(init=-65.0),
+    d = Variable(init=2.0),
     u = Variable(init=-65.*0.2, eq="du/dt = a * (b*v - u)"), # init should be b*baseline
     v = SpikeVariable(eq="dv/dt = 0.04 * v * v + 5*v + 140 -u + I", threshold= 30.0, init=-65.0, reset=['v = c', 'u = u+d']),
     order = ['I', 'v','u']
 )
 
 Simple = Synapse(
-    psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
+    #psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
+    psp = Variable(init=0, eq = "psp = if t is (t_spike+1) then value else 0.0")
 )
 
 Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
-Inhibitory = Population(name='Inhibitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
-Inhibitory.noise = Variable(eq=Uniform(0.0,2.0))
-Inhibitory.d = 2.0
+re = np.random.random(nb_exc_neurons)
+Excitatory.c = -65.0 + 15.0*re**2
+Excitatory.d = 8.0 - 6.0*re**2
+
+Inhibitory = Population(name='Inhibitory', geometry=(nb_inh_neurons), neuron=Izhikevitch)
+ri = np.random.random(nb_inh_neurons)
+Inhibitory.noise_scale=2.0
+Inhibitory.b = 0.25 - 0.05*ri
+Inhibitory.a = 0.02 + 0.08*ri
+Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
 
 exc_exc = Projection(
     pre=Excitatory, 
@@ -77,7 +86,7 @@ def plot(population, data):
     nb_neurons = population.size
     
     X = np.arange(nb_steps)
-    spikes = np.zeros((nb_neurons, nb_steps))
+    spikes = np.ones((nb_neurons, nb_steps))
     timing = population.cyInstance.get_spike_timings()
         
     #
@@ -85,8 +94,8 @@ def plot(population, data):
     if timing.shape == (nb_neurons,):  
         for i in xrange(nb_neurons):
             if len(timing[i])>1:
-                neur_v[ i, timing[i] ] = 30
-                spikes[ i, timing[i] ] = 1
+                neur_v[ i, timing[i] ] = 60
+                spikes[ i, timing[i] ] = 0
         
     rest_pot = np.ones((nb_steps,1)) * -65.0
     threshold = np.ones((nb_steps,1)) * 30.0
@@ -102,11 +111,11 @@ def plot(population, data):
         ax.plot( rest_pot, label = "resting potential")
         ax.plot( threshold, label = "threshold")
         ax.legend(loc=2)
-        ax.set_ylim([-70,40])
+        #ax.set_ylim([-70,70])
         
         ax = subplot(312)
         ax.plot( input[i,:] )
-        ax.set_ylim([-70,40])
+        #ax.set_ylim([-70,70])
         
         ax = subplot(313)
         ax.bar( X, spikes[i,:] )
