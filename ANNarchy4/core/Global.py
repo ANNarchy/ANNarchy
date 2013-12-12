@@ -47,7 +47,8 @@ config = dict(
    { 
     'dt' : 1.0,
     'verbose': False,
-    'show_time': False
+    'show_time': False,
+    'float_prec': 'single'
    }
 )
 

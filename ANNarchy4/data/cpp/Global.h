@@ -41,12 +41,6 @@
 //	parallel stuff
 #include <omp.h>
 
-#ifdef ANNAR_DOUBLE
-    #define DATA_TYPE double
-#else
-    #define DATA_TYPE float
-#endif
-
 //
 //	conventions
 namespace ANNarchy_Global
