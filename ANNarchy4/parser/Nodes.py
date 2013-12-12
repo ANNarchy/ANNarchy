@@ -24,6 +24,7 @@
 from Definitions import *
 import Analyser
 import Tree
+from ANNarchy4.core import Global
 
 ## Object transforming the expression into an ordered tree
 class TreeBuilder(object):
@@ -308,8 +309,9 @@ class PSP(Leaf):
         self.value = value[0]
     def cpp(self):
         if not self.value in self.machine.targets:
-            print self.machine.expr
-            print 'Warning: the target', self.value, 'does not exist on this neuron. The sum will be 0.0.'
+            if not Global.config['suppress_warnings']:
+                print self.machine.expr
+                print 'Warning: the target', self.value, 'does not exist on this neuron. The sum will be 0.0.'
             return ' 0.0 '
         return ' sum(i, ' + str(self.machine.targets.index(self.value))+') '
     def latex(self):

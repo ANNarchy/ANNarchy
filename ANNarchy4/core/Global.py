@@ -48,22 +48,24 @@ config = dict(
     'dt' : 1.0,
     'verbose': False,
     'show_time': False,
+    'suppress_warnings': False,
     'float_prec': 'single'
    }
 )
 
 def setup(**keyValueArgs):
     """
-    takes various optional arguments: 
+    The setup function is used to configure ANNarchy4 simulation environment. It takes various optional arguments: 
 
     Parameter:
     
     * *dt*:         discretization constant
-    * *verbose*:    shows details about compilation process on console (by default False). 
-                    Additional some information of the network construction will be shown. 
-    * *show_time*:  if true, initialization times are shown. ATTENTION: verbose should be set to True.
-        
-    **Note**: use this function before any other functions of ANNarchy
+    * *verbose*:    shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    * *suppress_warnings*:  if set True warnings suppressed.
+    * *show_time*:  if set True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
+    * *float_prec*: determine the used floating point precision. By default ANNarchy4 uses single floating point precision for computation. 
+    
+    **Note**: use this function before any other functions of ANNarchy4.
     """
     for key in keyValueArgs:
 
@@ -76,8 +78,8 @@ def simulate(duration, show_time=False):
     
     Parameter:
         
-        * *duration*: number of time steps simulated in ANNarchy ( 1 time steps is normally equal to 1 ms )
-        * *show_time*: how long the simulation took (cpu-time). Might be used for an assumption of whole computation time.
+    * *duration*: number of time steps simulated in ANNarchy ( 1 time steps is normally equal to 1 ms )
+    * *show_time*: how long the simulation took (cpu-time). Might be used for an assumption of whole computation time.
     """    
     import ANNarchyCython
     t_start = datetime.now()
@@ -94,7 +96,6 @@ def reset(populations=False, projections=False):
     Parameter:
     
     * *populations*: reset the population values.
-    
     * *projections*: reset the projection values.
     """
     if populations:
@@ -110,7 +111,7 @@ def get_population(name):
     
     Parameter:
     
-        * *name*: population name
+    * *name*: population name
     """
     for pop in _populations:
         if pop.name == name:
@@ -123,11 +124,11 @@ def get_projection(pre, post, target):
     """
     Returns projection corresponding to the arguments.
     
-    Parameter:
+    Parameters:
     
-        * *pre*: presynaptic population
-        * *post*: postsynaptic population
-        * *target*: connection type
+    * *pre*: presynaptic population
+    * *post*: postsynaptic population
+    * *target*: connection type
     """
     for proj in _projections:
         
@@ -140,11 +141,41 @@ def get_projection(pre, post, target):
     return None
 
 def record(to_record):
+    """
+    Record variables of one or more populations.
     
+    Parameter:
+    
+    * *to_record*: a set of dictionaries containing population objects and variable names.
+    
+    Example:
+    
+        .. code-block:: python
+        
+            to_record = [
+                { 'pop': Input, 'var': 'rate' }, 
+                { 'pop': Input, 'var': 'mp' }        
+            ]
+        
+    """
     for data_set in to_record:
         data_set['pop'].start_record(data_set['var'])
 
 def get_record(to_record):
+    """
+    Retrieve recorded variables of one or more populations.
+    
+    Returns:
+    
+    * ...
+    
+    Example:
+    
+        .. code-block:: python
+        
+            ...
+        
+    """    
     data = {}
     
     for data_set in to_record:

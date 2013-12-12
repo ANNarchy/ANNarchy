@@ -13,7 +13,8 @@ class SpikeVariable(object):
             * *threshold*: if the variable exceeds threshold the neuron emits a spike
             * *init*: initial value. After emitting a spike the variable value is set back to this.
             * *min*: minimal value for this variable
-            * *max*: maximal value for this variable            
+            * *max*: maximal value for this variable    
+            * *type*: data type, available are: float, int, bool (default is float)        
             
         other keys will be rejected.
         """

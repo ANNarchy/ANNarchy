@@ -31,8 +31,6 @@ from ANNarchy4.core.SpikeVariable import SpikeVariable
 def get_value_and_type(value):
     
     if 'var' in value.keys():
-        print value['var'].init
-        
          # variables
         if value['var'].init != None:
             if isinstance(value['var'].init, RandomDistribution):
@@ -48,7 +46,8 @@ def get_value_and_type(value):
             cpp_type = type(init_value)
             
         if value['var'].type != type(init_value) and value['var'].type != None:
-            print "'WARNING: type mismatch between provided type and initialization value of '",value['name'],"' ('",value['var'].type,",",type(init_value),")."
+            if not Global.config['suppress_warnings']:
+                print "'WARNING: type mismatch between provided type and initialization value of '",value['name'],"' ('",value['var'].type,",",type(init_value),")."
              
     else:
         # parameter, have always an initial value,
