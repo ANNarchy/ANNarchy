@@ -13,5 +13,7 @@ from core.Variable import Variable
 from core.SpikeVariable import SpikeVariable
 from visualization import Visualization
 
+from extensions import *
+
 import numpy as np
 __version__ = '4.0.0.beta'
