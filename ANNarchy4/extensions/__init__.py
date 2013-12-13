@@ -8,6 +8,10 @@
 #
 #       except ImportError:
 #           print 'Module not found.'
+from ANNarchy4.core import Global
+
+if Global.config['verbose']:
+    print 'checking for extensions.'
 
 try:
     from Nao import Nao
@@ -16,5 +20,5 @@ except ImportError:
     pass
 
 else:
-    print '... Nao module inited ...'
-
+    if Global.config['verbose']:
+        print '... Nao module imported ...'

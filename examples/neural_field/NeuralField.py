@@ -5,6 +5,7 @@
 #
 from ANNarchy4 import *
 
+setup(verbose=True)
 #
 # Define the neuron classes
 #
