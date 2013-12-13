@@ -10,7 +10,7 @@ from datetime import datetime
 #
 Simple = Neuron(   
     tau = 10.0,
-    #mp = Variable(init = 0, eq="mp = mp+1"),
+    mp = Variable(init = 0, eq="mp = mp+1"),
     #rate = Variable(init = 0.0, eq="tau * drate / dt = 1.0/mp"),
     #rate = Variable(init = 0.0, eq="rate = t")
     rate = Variable(init = 0.0, eq="tau * drate/dt +rate = pos(0.3)"),
@@ -70,11 +70,12 @@ def loop2():
         simulate(1)
     
     rec_data = get_record(to_record)
-    for rec in rec_data:
-        print 'start', rec['start']
-        print 'stop', rec['stop']
-        print 'data.shape', rec['data'].shape
-        print 'data', rec['data']
+    for pop in rec_data:
+        for var in rec_data[pop]:
+            print 'start', rec_data[pop][var]['start']
+            print 'stop', rec_data[pop][var]['stop']
+            print 'data.shape', rec_data[pop][var]['data'].shape
+            print 'data', rec_data[pop][var]['data']
     
 def loop3():
     InputPop.start_record('rate')
@@ -159,10 +160,11 @@ if __name__ == '__main__':
     print rec['start']
     print rec['stop']
     print rec['data']
-    #loop()
-    
-    #loop2()
 
-    #loop3()
+    loop()
     
-    #synapse_test()
+    loop2()
+
+    loop3()
+    
+    synapse_test()
