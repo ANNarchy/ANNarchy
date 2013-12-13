@@ -37,7 +37,7 @@ class Population(object):
     Population generator base class
     """
     def __init__(self, population):
-        self.class_name = 'Population'+str(population.id)
+        self.class_name = 'Population'+str(population.rank)
         
         self.header = Global.annarchy_dir+'/build/'+self.class_name+'.h'
         self.body = Global.annarchy_dir+'/build/'+self.class_name+'.cpp'

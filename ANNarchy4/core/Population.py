@@ -31,7 +31,6 @@ from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.Record import Record
 
 import traceback
-import exceptions
 import numpy as np
 
 class Population(Descriptor):
@@ -58,11 +57,11 @@ class Population(Descriptor):
             self.geometry = geometry
             
         self.neuron_type = neuron
-        self.id = len(Global._populations)
+        self._id = len(Global._populations)
         if name:
             self.name = name
         else:
-            self.name = 'Population'+str(self.id)
+            self.name = 'Population'+str(self._id)
         
         if neuron.spike_vars == 0:
             self.generator = generator.MeanPopulation(self)            
@@ -88,6 +87,9 @@ class Population(Descriptor):
 
     @property
     def width(self):
+        """
+        Width of population.
+        """
         if self.dimension >= 1:
             return self.geometry[0]
         else:
@@ -95,6 +97,9 @@ class Population(Descriptor):
 
     @property
     def height(self):
+        """
+        Height of population.
+        """
         if self.dimension >= 2:
             return self.geometry[1]
         else: 
@@ -102,6 +107,9 @@ class Population(Descriptor):
 
     @property
     def depth(self):
+        """
+        Depth of population.
+        """
         if self.dimension == 3:
             return self.geometry[2]
         else: 
@@ -109,6 +117,9 @@ class Population(Descriptor):
         
     @property
     def cpp_class(self):
+        """
+        Returns name of cpp class.
+        """
         return self.generator.class_name
     
     @property
@@ -116,7 +127,7 @@ class Population(Descriptor):
         """
         Returns a list of all variable names.
         """
-        ret_var=[] #default        
+        ret_var = [] #default        
         
         #check additional variables
         neur_var = self.generator.neuron_variables
@@ -132,7 +143,7 @@ class Population(Descriptor):
         Returns a list of all parameter names.
         """
         neur_var = self.generator.neuron_variables
-        ret_par=[]        
+        ret_par = []        
         for var in neur_var:
             if not 'var' in var.keys():
                 ret_par.append(var['name'])
@@ -160,6 +171,13 @@ class Population(Descriptor):
         Dimension of the population (1, 2 or 3)
         """
         return len(self.geometry)
+        
+    @property 
+    def rank(self):
+        """
+        Unique identifier of the population, e.g. usable on connection patterns.
+        """
+        return self._id
         
     def reset(self):
         """
@@ -190,17 +208,16 @@ class Population(Descriptor):
         for var in _variable:
             
             if not var in self._recorded_variables.keys():
-                print var,'is not a recordable variable of',self.name
+                print var, 'is not a recordable variable of', self.name
                 continue
 
             if not self._recorded_variables[var].is_inited:
                 continue
             
             try:
-                import ANNarchyCython
-                exec('self.cyInstance._start_record_'+var+'()')
+                getattr(self.cyInstance, '_start_record_'+var)()
 
-                print 'start record of', var, '(',self.name,')'
+                print 'start record of', var, '(', self.name, ')'
                 self._recorded_variables[var].start()
             except:
                 print "Error (start_record): only possible after compilation."
@@ -227,18 +244,17 @@ class Population(Descriptor):
         for var in _variable:
             
             if not var in self._recorded_variables.keys():
-                print var,'is not a recordable variable of',self.name
+                print var, 'is not a recordable variable of', self.name
                 continue
 
             if not self._recorded_variables[var].is_running:
-                print 'record of', var,' was not running on population',self.name
+                print 'record of', var, ' was not running on population', self.name
                 continue
             
             try:
-                import ANNarchyCython
-                exec('self.cyInstance._stop_record_'+var+'()')
+                getattr(self.cyInstance, '_stop_record_'+var)()
 
-                print 'pause record of', var, '(',self.name,')'
+                print 'pause record of', var, '(', self.name, ')'
                 self._recorded_variables[var].pause()
             except:
                 print "Error (pause_record): only possible after compilation."
@@ -263,18 +279,17 @@ class Population(Descriptor):
         for var in _variable:
             
             if not var in var in self._recorded_variables.keys():
-                print var,'is not a recordable variable of',self.name
+                print var, 'is not a recordable variable of', self.name
                 continue
             
             if not self._recorded_variables[var].is_running:
-                print 'record of', var,' is already running on population',self.name
+                print 'record of', var, ' is already running on population', self.name
                 continue
             
             try:
-                import ANNarchyCython
-                exec('self.cyInstance._start_record_'+var+'()')
+                getattr(self.cyInstance, '_start_record_'+var)()
                 
-                print 'resume record of', var, '(',self.name,')'
+                print 'resume record of', var, '(' , self.name, ')'
                 self._recorded_variables[var].start()
             except:
                 print "Error: only possible after compilation."
@@ -304,16 +319,15 @@ class Population(Descriptor):
         for var in _variable:
 
             if not var in var in self._recorded_variables.keys():
-                print var,'is not a recordable variable of',self.name
+                print var, 'is not a recordable variable of', self.name
                 continue
             
             if self._recorded_variables[var].is_running:
                 self.pause_record(var)
             
             try:
-                import ANNarchyCython
-                print 'get record of', var, '(',self.name,')'
-                data = eval('self.cyInstance._get_recorded_'+var+'()')
+                print 'get record of', var, '(', self.name, ')'
+                data = getattr(self.cyInstance, '_get_recorded_'+var)()
                 
                 #
                 # [ time, data(1D) ] => [ time, data(geometry) ] 
@@ -352,7 +366,7 @@ class Population(Descriptor):
             if hasattr(self.cyInstance, variable):
                 return getattr(self.cyInstance, variable).reshape(self.geometry)
             else:
-                print 'Error: variable',variable,'does not exist in this population.'
+                print 'Error: variable', variable, 'does not exist in this population.'
                 print traceback.print_stack()
         else:
             print 'Error: the network is not compiled yet.'
@@ -371,7 +385,7 @@ class Population(Descriptor):
             if hasattr(self.cyInstance, parameter):
                 return getattr(self.cyInstance, parameter)
             else:
-                print 'Error: parameter',parameter,'does not exist in this population.'
+                print 'Error: parameter', parameter, 'does not exist in this population.'
                 print traceback.print_stack()
         else:
             print 'Error: the network is not compiled yet.'
@@ -389,8 +403,8 @@ class Population(Descriptor):
         if not len(coord) == self.dimension:
             print 'Error when accessing neuron', str(coord), ': the population', self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
             return None
-        for d in range(len(coord)):
-            if not coord[d] < self.geometry[d]:
+        for dim in range(len(coord)):
+            if not coord[dim] < self.geometry[dim]:
                 print 'Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
                 return None
         # Return the rank
@@ -514,8 +528,8 @@ class Population(Descriptor):
             >>> for neur in pop:
             ...     print neur.rate               
         """
-        for n in range(self.size):
-            yield self.neuron(n)
+        for neur_rank in range(self.size):
+            yield self.neuron(neur_rank)
             
     # Iterators
     def __getitem__(self, *args, **kwds):
@@ -531,11 +545,11 @@ class Population(Descriptor):
         elif isinstance(indices, slice): # a slice of ranks
             start, stop, step = indices.start, indices.stop, indices.step
             if indices.start is None:
-                start=0
+                start = 0
             if indices.stop is None:
-                stop=self.size
+                stop = self.size
             if indices.step is None:
-                step=1
+                step = 1
             rk_range = list(range(start, stop, step))
             return PopulationView(self, rk_range)
         elif isinstance(indices, tuple): # a tuple
@@ -546,27 +560,27 @@ class Population(Descriptor):
             if not slices: # return one neuron
                 return self.neuron(indices)
             else: # Compute a list of ranks from the slices 
-                coords=[]
+                coords = []
                 # Expand the slices
-                for rk in range(len(indices)):
-                    idx = indices[rk]
+                for rank in range(len(indices)):
+                    idx = indices[rank]
                     if isinstance(idx, int): # no slice
                         coords.append([idx])
                     elif isinstance(idx, slice): # slice
                         start, stop, step = idx.start, idx.stop, idx.step
                         if idx.start is None:
-                            start=0
+                            start = 0
                         if idx.stop is None:
-                            stop=self.geometry[rk]
+                            stop = self.geometry[rank]
                         if idx.step is None:
-                            step=1
+                            step = 1
                         rk_range = list(range(start, stop, step))
                         coords.append(rk_range)
                 # Generate all ranks from the indices
-                if self.dimension ==2:
+                if self.dimension == 2:
                     ranks = [self.rank_from_coordinates((x, y)) for x in coords[0] for y in coords[1]]
                 elif self.dimension == 3:
-                    ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for y in coords[2]]
+                    ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for z in coords[2]]
                 if not max(ranks) < self.size:
                     print 'Error: indices do not match the geometry of the population', str(self.geometry)
                     return 
@@ -574,7 +588,7 @@ class Population(Descriptor):
                 
     def __iter__(self):
         " Returns iteratively each neuron in the population in ascending rank order."
-        for n in range(self.size):
-            yield self.neuron(n)  
+        for neur_rank in range(self.size):
+            yield self.neuron(neur_rank)  
 
 

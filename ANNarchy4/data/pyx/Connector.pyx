@@ -101,7 +101,7 @@ cdef class One2One(PyxConnector):
         Proj = []
         
         for p in xrange(self.postSize):
-            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
+            local = self.create_local_proj(self.proj_type, pre.rank, post.rank, p, target)
             v = weights.get_value()
             d = delays.get_value()
             
@@ -151,8 +151,8 @@ cdef class All2All(PyxConnector):
         
             * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """
-        self.preID = pre.id
-        self.postID = post.id        
+        self.preID = pre.rank
+        self.postID = post.rank        
         self.preSize = pre.size
         self.postSize = post.size
 
@@ -166,7 +166,7 @@ cdef class All2All(PyxConnector):
         Proj = []
 
         for p in xrange(self.postSize):
-            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
+            local = self.create_local_proj(self.proj_type, pre.rank, post.rank, p, target)
             if not self.allowSelfConnections and (pre==post):
                 v = weights.get_values(self.preSize-1)
                 d = delays.get_values(self.preSize-1)
@@ -272,7 +272,7 @@ cdef class Gaussian(PyxConnector):
         Proj = []
 
         for p in xrange(self.postSize):
-            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
+            local = self.create_local_proj(self.proj_type, pre.rank, post.rank, p, target)
             
             r, v, d = self.genRanksAndValues(p)
             
@@ -390,7 +390,7 @@ cdef class DoG(PyxConnector):
         Proj = []
 
         for p in xrange(self.postSize):
-            local = self.create_local_proj(self.proj_type, pre.id, post.id, p, target)
+            local = self.create_local_proj(self.proj_type, pre.rank, post.rank, p, target)
             
             r, v, d = self.genRanksAndValues(p)
             

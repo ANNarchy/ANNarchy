@@ -72,22 +72,18 @@ def setup(**keyValueArgs):
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
-def simulate(duration, show_time=False):
+def simulate(duration):
     """
     Run the simulation.
     
     Parameter:
         
     * *duration*: number of time steps simulated in ANNarchy ( 1 time steps is normally equal to 1 ms )
-    * *show_time*: how long the simulation took (cpu-time). Might be used for an assumption of whole computation time.
     """    
     import ANNarchyCython
-    t_start = datetime.now()
+
     nb_steps = ceil(duration / config['dt'])
     ANNarchyCython.pyNetwork().Run(nb_steps)
-    t_stop = datetime.now()
-    if show_time:
-        print 'Simulation:\t', t_stop - t_start, '(', nb_steps, 'steps, '+duration+' ms)'
 
 def reset(populations=False, projections=False):
     """

@@ -23,23 +23,21 @@
 """
 from Random import Constant
 from Dendrite import Dendrite
-from ANNarchy4.core import Global
 
 class Connector(object):
     """
     The connector class manages all information and operations related to connection patterns.
     """
-
     def __init__(self, conn_type, weights, delays=0, **parameters):
         """
         Initialize a connection object.
 
         Parameters:
                 
-            * *conn_type*: name of connection class (One2One, All2All, DoG, ...)
-            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.
-            * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
+        * *conn_type*: name of connection class (One2One, All2All, DoG, ...)
+        * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.
+        * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.
+        * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
         """
         if isinstance(weights, float) or isinstance(weights, int):
             self.weights = Constant( float(weights) )
@@ -53,22 +51,30 @@ class Connector(object):
             
         self.conn_type = conn_type        
         self.parameters = parameters
+        self.cy_instance = None
+        self.proj = None    # set externally
 
     def init_connector(self, proj_type):
         """
         Returns a connector object (instance of python extension class). Will be called after compilation of ANNarchy py extension library.
         
-        proj_type   ID of projection class (zero for standard projection)
+        Parameter:
+            
+        * *proj_type*: ID of projection class (zero for standard projection)
         """
-        import ANNarchyCython
-        self.cyInstance = eval('ANNarchyCython.'+self.conn_type+'(proj_type)')
+        cython_module = __import__('ANNarchyCython')
+        self.cy_instance = getattr(cython_module, 'All2All')(proj_type)
         
     def connect(self):
+        """
+        Build up the defined connection pattern for all postsynaptic neurons.
+        """
         self.init_connector(self.proj.generator.proj_class['ID'])
             
-        tmp = self.cyInstance.connect(self.proj.pre,
+        target = self.proj.post.generator.targets.index(self.proj.target)
+        tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
-                                          self.proj.post.generator.targets.index(self.proj.target),
+                                          target,
                                           self.weights,
                                           self.delays,
                                           self.parameters
@@ -85,16 +91,19 @@ class Connector(object):
     def cpp_call(self):
         """
         Generate connector initialization in ANNarchy.h. 
-        HINT: only used if cpp_stand_alone=True provided to compile()
+        HINT: only used if cpp_stand_alone = True provided to compile()
         """
         if self.conn_type == 'All2All':
             if 'allow_self_connections' in self.parameters.keys():
-                bool_value = 'true' if self.parameters['allow_self_connections']==True else 'false'
+                par = self.parameters['allow_self_connections']
+                bool_value = 'true' if par == True else 'false'
             else:
-                print 'All2All: no value for allow_self_connections. Default = False was set.'
+                print 'All2All: no value for allow_self_connections.' 
+                print '\tset False as default value'
                 bool_value = 'false' # raise an error
                 
-            return '&(All2AllConnector('+ bool_value +', new ' + self.weights.genCPP() +'))'
+            cpp_call  = 'new ' + self.weights.genCPP()
+            return '&(All2AllConnector('+ bool_value +', ' + cpp_call +'))'
 
         elif self.conn_type == 'One2One':
             return '&(One2OneConnector(new ' + self.weights.genCPP() +'))'

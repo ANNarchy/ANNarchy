@@ -21,10 +21,8 @@
     
 """
 from Descriptor import Descriptor, Attribute
-import Global
 from ANNarchy4.core.Random import RandomDistribution
 
-import numpy as np
 import traceback
 
 class Dendrite(Descriptor):
@@ -40,28 +38,31 @@ class Dendrite(Descriptor):
     * *cython_instance*: instance of the cythonized dendrite class.
     """
     def __init__(self, proj, post_rank, cython_instance=None, ranks=None, weights=None, delays=None):
+        Descriptor.__init__(self)
+        
         self.post_rank = post_rank
         self.proj = proj
         self.pre = proj.pre
 
         if cython_instance != None:
-            self.cyInstance = cython_instance
+            self.cy_instance = cython_instance
         else:
-            import ANNarchyCython
-            id = self.proj.generator.proj_class['ID']
-            self.cyInstance = eval('ANNarchyCython.LocalProjection'+str(id)+'('+
-                str(id) + ',' +
-                str(self.proj.pre.id) + ',' +
-                str(self.proj.post.id) + ',' +
-                str(post_rank) + ',' +
-                str(self.proj.post.generator.targets.index(self.proj.target))+
-                ')'
+            cython_module = __import__('ANNarchyCython')
+            local_proj = getattr(cython_module, 'LocalProjection'+str(id))
+            
+            proj_id = self.proj.generator.proj_class['ID']
+            self.cy_instance = local_proj(
+                proj_id, 
+                self.proj.pre.id, 
+                self.proj.post.id, 
+                post_rank, 
+                self.proj.post.generator.targets.index(self.proj.target) 
             )
-             
-            self.cyInstance.rank = ranks
-            self.cyInstance.value = weights
+
+            self.cy_instance.rank = ranks
+            self.cy_instance.value = weights
             if delays != None:
-                self.cyInstance.delay = delays
+                self.cy_instance.delay = delays
             
         # synapse variables           
         for value in self.variables + self.parameters:
@@ -80,14 +81,14 @@ class Dendrite(Descriptor):
                     set( 'tau' : 20, 'value'= np.random.rand(8,8) } )
         """
         for val_key in value.keys():
-            if hasattr(self.cyInstance, val_key):
+            if hasattr(self.cy_instance, val_key):
                 # Check the type of the data!!
                 if isinstance(value[val_key], RandomDistribution):
                     val = value[val_key].getValues(self.size) 
                 else: 
                     val = value[val_key]           
                 # Set the value
-                setattr(self.cyInstance, val_key, val)
+                setattr(self.cy_instance, val_key, val)
             else:
                 print "Error: dendrite has no parameter/variable called", val_key+"."    
                 
@@ -125,20 +126,20 @@ class Dendrite(Descriptor):
         """
         Number of synapses.
         """
-        return self.cyInstance.size
+        return self.cy_instance.size
     
     def __len__(self):
         """
         Number of synapses.
         """
-        return self.cyInstance.size
+        return self.cy_instance.size
         
     @property
     def target(self):
         """
         Connection type id.
         """
-        return self.cyInstance.get_target()
+        return self.cy_instance.get_target()
         
     def get_variable(self, variable):
         """
@@ -148,8 +149,8 @@ class Dendrite(Descriptor):
         
         * *variable*:    a string representing the variable's name.
         """
-        if hasattr(self.cyInstance, variable):
-            return getattr(self.cyInstance, variable)
+        if hasattr(self.cy_instance, variable):
+            return getattr(self.cy_instance, variable)
         else:
             print 'Error: variable', variable, 'does not exist in this dendrite.'
             print traceback.print_stack()
@@ -162,10 +163,10 @@ class Dendrite(Descriptor):
         
         * *parameter*:    a string representing the parameter's name.
         """
-        if hasattr(self.cyInstance, parameter):
-            return getattr(self.cyInstance, parameter)
+        if hasattr(self.cy_instance, parameter):
+            return getattr(self.cy_instance, parameter)
         else:
-            print 'Error: parameter',parameter,'does not exist in this dendrite.'
+            print 'Error: parameter', parameter, 'does not exist in this dendrite.'
             print traceback.print_stack()
 
     def add_synapse(self, rank, value, delay=0):
@@ -178,7 +179,7 @@ class Dendrite(Descriptor):
             * *value*:    synaptic weight
             * *delay*:    additional delay of the synapse (as default a delay of 1ms is assumed)
         """
-        self.cyInstance.add_synapse(rank, value, delay)
+        self.cy_instance.add_synapse(rank, value, delay)
     
     def remove_synapse(self, rank):
         """
@@ -188,5 +189,5 @@ class Dendrite(Descriptor):
         
             * *rank*:     rank of the presynaptic neuron
         """
-        self.cyInstance.remove_synapse(rank)
+        self.cy_instance.remove_synapse(rank)
 
