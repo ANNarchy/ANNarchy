@@ -34,21 +34,14 @@ Population::Population(std::string name, int nbNeurons) {
 
 	spiked_ = std::vector< bool >(nbNeurons_, false);
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
+
 #ifdef ANNAR_PROFILE
     char buffer[200];
     try{
-        sprintf(buffer, "%s(%02i)_sum.txt", name_.c_str(), omp_get_max_threads());
-        cs = fopen(buffer, "w");
-        sprintf(buffer, "%s(%02i)_global.txt", name_.c_str(), omp_get_max_threads());
-        gl = fopen(buffer, "w");
-        sprintf(buffer, "%s(%02i)_local.txt", name_.c_str(), omp_get_max_threads());
-        ll = fopen(buffer, "w");
+        Profile::profileInstance()->addLayer(name_);
     }catch(std::exception e){
-        std::cout << "Cannnot open file '"<<buffer<<"'" << std::endl;
+        std::cout << "Can't attach population to profile instance." << std::endl;
         std::cout << e.what() << std::endl;
-        cs = NULL;
-        gl = NULL;
-        ll = NULL;
     }
 #endif
 }
@@ -202,8 +195,7 @@ void Population::metaSum() {
 #ifdef ANNAR_PROFILE
     double stop = omp_get_wtime();
 
-    if(cs)
-        fprintf(cs, "%f\n", (stop-start)*1000.0);
+    Profile::profileInstance()->appendTimeSum(name_, (stop-start)*1000.0);
 #endif
 }
 
@@ -238,8 +230,7 @@ void Population::metaLearn() {
 #ifdef ANNAR_PROFILE
     double stop = omp_get_wtime();
 
-    if(gl)
-        fprintf(gl, "%f\n", (stop-start)*1000.0);
+    Profile::profileInstance()->appendTimeGlobal(name_, (stop-start)*1000.0);
 #endif
 
 #ifdef ANNAR_PROFILE
@@ -265,8 +256,7 @@ void Population::metaLearn() {
 #ifdef ANNAR_PROFILE
     double stop2 = omp_get_wtime();
 
-    if(ll)
-        fprintf(ll, "%f\n", (stop2-start2)*1000.0);
+    Profile::profileInstance()->appendTimeLocal(name_, (stop2-start2)*1000.0);
 #endif
 }
 

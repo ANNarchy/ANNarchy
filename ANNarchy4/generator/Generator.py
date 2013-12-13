@@ -56,11 +56,21 @@ def create_includes():
     with open(Global.annarchy_dir + '/build/Includes.h', mode = 'w') as w_file:
         w_file.write(header)
 
-def update_annarchy_header(cpp_stand_alone):
+def update_annarchy_header(cpp_stand_alone, profile_enabled):
     """
-    update ANNarchy.h dependent on compilation mode (cpp_stand_alone):
-        - True: instantiation of population, projection classes and projection instantiation.
-        - False: only projection instantiation.
+    update ANNarchy.h dependent on compilation modes:
+    
+    *available modes*:
+     
+        * cpp_stand_alone::
+        
+            True: instantiation of population, projection classes and projection instantiation.
+            False: only projection instantiation.
+
+        * profile_enabled::
+        
+            True: enabled profile
+            False: disabled profile
     """
     code = ''
     with open(Global.annarchy_dir+'/build/ANNarchy.h', mode = 'r') as r_file:
@@ -81,6 +91,31 @@ def update_annarchy_header(cpp_stand_alone):
                 code += a_line
 
     with open(Global.annarchy_dir+'/build/ANNarchy.h', mode='w') as w_file:
+        w_file.write(code)
+
+def update_global_header(profile_enabled):
+    """
+    update Global.h dependent on compilation modes:
+    
+    *available modes*:
+
+        * profile_enabled::
+        
+            True: enabled profile
+            False: disabled profile
+    """
+    code = ''
+    
+    if profile_enabled:
+        with open(Global.annarchy_dir+'/build/Global.h', mode = 'r') as r_file:
+            for a_line in r_file:
+                if (a_line.find('ANNAR_PROFILE') != -1 and 
+                    a_line.find('define') != -1):
+                    code += '#define ANNAR_PROFILE\n'
+                else:
+                    code += a_line
+
+    with open(Global.annarchy_dir+'/build/Global.h', mode = 'w') as w_file:
         w_file.write(code)
 
 def generate_proj_instance_class():
@@ -160,7 +195,7 @@ public:
 """ % { 'case1': cases_ptr }
     return code
 
-def generate_py_extension():
+def generate_py_extension(profile_enabled):
     """
     Hence the amount of code is higher, we decide to split up the code. Nevertheless cython generates 
     one shared library per .pyx file. To retrieve only one library we need to compile only one .pyx file
@@ -181,17 +216,24 @@ def generate_py_extension():
 include "Projection.pyx"
 %(proj_inc)s  
 
+%(profile)s
 include "Connector.pyx"
 """ % { 'pop_inc': pop_include,
-        'proj_inc': proj_include }
+        'proj_inc': proj_include,
+        'profile': 'include "Profile.pyx"' if profile_enabled else '' 
+    }
 
     with open(Global.annarchy_dir+'/pyx/ANNarchyCython.pyx', mode='w') as w_file:
         w_file.write(code)
         
-def folder_management():
+def folder_management(profile_enabled):
     """
     ANNarchy is provided as a python package. For compilation a local folder
     'annarchy' is created in the current working directory.
+    
+    *Parameter*:
+    
+    * *profile_enabled*: copy needed data for profile extension
     """
     if os.path.exists(Global.annarchy_dir):
         shutil.rmtree(Global.annarchy_dir, True)
@@ -202,19 +244,30 @@ def folder_management():
 
     sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
 
+    # other files
     for file in os.listdir(sources_dir):
         if not os.path.isdir(os.path.abspath(sources_dir+'/'+file)):
             shutil.copy(sources_dir+'/'+file, Global.annarchy_dir)
             
+    # cpp / h files
     for file in os.listdir(sources_dir+'/cpp'):
         shutil.copy(sources_dir+'/cpp/'+file, # src
                     Global.annarchy_dir+'/build/'+file # dest
                     )
         
+    # py files
     for file in os.listdir(sources_dir+'/pyx'):
         shutil.copy(sources_dir+'/pyx/'+file, #src
                     Global.annarchy_dir+'/pyx/'+file #dest
                     )
+        
+    # profile files
+    if profile_enabled:
+        profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')
+    
+        shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/build')
+        shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/build')
+        shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/pyx')
 
     sys.path.append(Global.annarchy_dir)
 
@@ -233,7 +286,7 @@ def _update_float_prec(file):
     with open(file, mode='w') as w_file:
         w_file.write(code)
     
-def code_generation(cpp_stand_alone):
+def code_generation(cpp_stand_alone, profile_enabled):
     """
     code generation for each population respectively projection object the user defined. 
     
@@ -254,11 +307,15 @@ def code_generation(cpp_stand_alone):
 
     if Global.config['verbose']:
         print '\nUpdate ANNarchy header ...'
-    update_annarchy_header(cpp_stand_alone)
+    update_annarchy_header(cpp_stand_alone, profile_enabled)
+
+    if Global.config['verbose']:
+        print '\nUpdate global header ...'
+    update_global_header(profile_enabled)
 
     if Global.config['verbose']:
         print '\nGenerate py extensions ...'
-    generate_py_extension()
+    generate_py_extension(profile_enabled)
     
     os.chdir(Global.annarchy_dir+'/build')
     cpp_src = filter(os.path.isfile, os.listdir('.'))
@@ -304,14 +361,25 @@ def compile(cpp_stand_alone=False, debug_build=False):
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
     """
     print 'ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')'
+        
+    profile_enabled = False
+    try:
+        from ANNarchy4.extensions import Profile
+    except ImportError:
+        pass
+    else:
+        profile_enabled = True
+        
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:
         print "\nCreate 'annarchy' subdirectory."
-    folder_management()
+    folder_management(profile_enabled)
+    
     # Tell each population which global operation they should compute
     _update_global_operations()
+    
     # Generate the code
-    code_generation(cpp_stand_alone)
+    code_generation(cpp_stand_alone, profile_enabled)
     
     # Create ANNarchyCore.so and py extensions
     

@@ -30,6 +30,8 @@ cdef extern from "../build/Network.h":
 		int getTime()
 
 		void setTime(int)
+
+		void setNumThreads(int)
         
 		void run(int nbSteps)
 		
@@ -49,5 +51,8 @@ cdef class pyNetwork:
 	def set_time(self, time):
 		self.cInstance.setTime(time)
 
+	def set_num_threads(self, threads):
+		self.cInstance.setNumThreads(threads)
+        
 	def Run(self, int nbSteps):
 		self.cInstance.run(nbSteps)

@@ -9,16 +9,29 @@
 #       except ImportError:
 #           print 'Module not found.'
 from ANNarchy4.core import Global
-
-if Global.config['verbose']:
-    print 'checking for extensions.'
-
 try:
     from Nao import Nao
-    
+    from Profile import Profile
 except ImportError:
     pass
 
-else:
-    if Global.config['verbose']:
-        print '... Nao module imported ...'
+def check_extensions():
+    print 'checking for extensions.'
+    
+    try:
+        from Nao import Nao
+        
+    except ImportError:
+        pass
+    
+    else:
+        print '... Nao module available ...'
+    
+    try:
+        from Profile import Profile
+        
+    except ImportError:
+        pass
+    
+    else:
+        print '... Profile module available ...'

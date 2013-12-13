@@ -51,7 +51,13 @@ namespace ANNarchy_Global
 
     extern int time;
 }
-//#define ANNAR_PROFILE
+
+//
+// profiling extension
+// #define ANNAR_PROFILE
+#ifdef ANNAR_PROFILE
+#include "Profile.h"
+#endif
 
 #include "Random.h"
 #include "Network.h"

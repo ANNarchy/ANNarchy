@@ -50,6 +50,11 @@ public:
            }
 	}
 
+	void setNumThreads(int threads)
+	{
+	    omp_set_num_threads(threads);
+	}
+
 	std::vector<DATA_TYPE> getRates(int populationID);
 
 	std::vector<DATA_TYPE> getRates(int populationID,int delay);
