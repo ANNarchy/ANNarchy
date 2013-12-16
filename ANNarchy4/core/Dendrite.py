@@ -48,13 +48,14 @@ class Dendrite(Descriptor):
             self.cy_instance = cython_instance
         else:
             cython_module = __import__('ANNarchyCython')
-            local_proj = getattr(cython_module, 'LocalProjection'+str(id))
+            proj_id = self.proj.generator.proj_class['ID']   
+            proj_class_name = 'LocalProjection'+str(proj_id)
+            local_proj = getattr(cython_module, proj_class_name)
             
-            proj_id = self.proj.generator.proj_class['ID']
             self.cy_instance = local_proj(
                 proj_id, 
-                self.proj.pre.id, 
-                self.proj.post.id, 
+                self.proj.pre.rank, 
+                self.proj.post.rank, 
                 post_rank, 
                 self.proj.post.generator.targets.index(self.proj.target) 
             )
