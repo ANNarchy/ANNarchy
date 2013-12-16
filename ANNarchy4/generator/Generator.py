@@ -115,8 +115,8 @@ def update_global_header(profile_enabled):
                 else:
                     code += a_line
 
-    with open(Global.annarchy_dir+'/build/Global.h', mode = 'w') as w_file:
-        w_file.write(code)
+        with open(Global.annarchy_dir+'/build/Global.h', mode = 'w') as w_file:
+            w_file.write(code)
 
 def generate_proj_instance_class():
     """
