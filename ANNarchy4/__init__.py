@@ -7,7 +7,7 @@ from core.Population import Population
 from core.PopulationView import PopulationView
 from core.Projection import Projection
 from core.Dendrite import Dendrite
-from core.Connector import Connector
+from core.Connector import Connector, One2One, All2All, Gaussian, DoG
 from core.Random import Constant, Uniform, Normal
 from core.Variable import Variable
 from core.SpikeVariable import SpikeVariable

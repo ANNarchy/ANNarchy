@@ -48,9 +48,7 @@ input_feature = Projection(
     post=feature_pop, 
     target='exc', 
     synapse = Oja,
-    connector=Connector('All2All', 
-                        weights = Uniform(-0.5, 0.5) 
-                       )
+    connector=All2All(weights = Uniform(-0.5, 0.5))
 )
                     
 feature_feature = Projection(
@@ -58,8 +56,7 @@ feature_feature = Projection(
     post=feature_pop, 
     target='inh', 
     synapse = AntiHebb,
-    connector=Connector('All2All', 
-                        weights = Uniform(0.0, 1.0)                        )
+    connector=All2All(weights = Uniform(0.0, 1.0))
 ) 
 
 # Compiling the network

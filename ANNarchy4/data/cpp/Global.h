@@ -55,10 +55,10 @@ namespace ANNarchy_Global
 //
 // profiling extension
 // #define ANNAR_PROFILE
+// #define ANNAR_SCHEDULE
 #ifdef ANNAR_PROFILE
 #include "Profile.h"
 #endif
-#define ANNAR_SCHEDULE
 
 #include "Random.h"
 #include "Network.h"

@@ -51,6 +51,8 @@ cdef class PyxConnector:
         
 cdef class One2One(PyxConnector):
     """
+    One2One projection between two populations. Each neuron in the postsynaptic 
+    population is connected to the corresponding neuron of the presynaptic population.
     
     """
     cdef postSize
@@ -77,19 +79,6 @@ cdef class One2One(PyxConnector):
     def connect(self, pre, post, target, weights, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
-        
-        Parameters:
-        
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights as an instance of RandomDistribution            
-            * *delays*: synaptic delays as an instance of RandomDistribution                        
-            * *parameters*: pattern specific parameters
-        
-        Specific parameters:
-        
-            * None for this pattern.
         """
         self.postSize = post.size
 
@@ -137,19 +126,6 @@ cdef class All2All(PyxConnector):
     def connect(self, pre, post, target, weights, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
-        
-        Parameters:
-        
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights as an instance of RandomDistribution            
-            * *delays*: synaptic delays as an instance of RandomDistribution                        
-            * *parameters*: pattern specific parameters
-        
-        Specific parameters:
-        
-            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """
         self.preID = pre.rank
         self.postID = post.rank        
@@ -234,22 +210,6 @@ cdef class Gaussian(PyxConnector):
     def connect(self, pre, post, target, weights, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
-        
-        Parameters:
-        
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights as an instance of RandomDistribution            
-            * *delays*: synaptic weights as an instance of RandomDistribution                        
-            * *parameters*: pattern specific parameters
-        
-        Specific parameters:
-        
-            * *amp*: the maximal value of the gaussian distribution for the connection weights.
-            * *sigma*: the standard deviation of the gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
-            * *limit*: percentage of amplitude below which the connection is not created (default = 0.01)
-            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """        
         self.preSize = pre.size
         self.postSize = post.size
@@ -348,24 +308,6 @@ cdef class DoG(PyxConnector):
     def connect(self, pre, post, target, weights, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
-        
-        Parameters:
-        
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights as an instance of RandomDistribution            
-            * *delays*: synaptic weights as an instance of RandomDistribution                        
-            * *parameters*: pattern specific parameters
-        
-        Specific parameters:
-        
-            * *amp_pos*: the maximal value of the positive gaussian distribution for the connection weights.
-            * *sigma_pos*: the standard deviation of the positive gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
-            * *amp_pos*: the maximal value of the negative gaussian distribution for the connection weights.
-            * *sigma_pos*: the standard deviation of the negative gaussian distribution (normalized by the number of neurons)
-            * *limit*: percentage of ``amp_pos - amp_neg`` below which the connection is not created (default = 0.01)
-            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """        
         self.preSize = pre.size
         self.postSize = post.size

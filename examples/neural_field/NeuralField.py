@@ -36,19 +36,20 @@ Proj1 = Projection(
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc', 
-    connector = Connector( conn_type='One2One', weights=1.0 )
+    connector = One2One( weights=1.0 )
 )
                     
 Proj2 = Projection(
     pre = FocusPop, 
     post = FocusPop, 
     target = 'inh', 
-    connector = Connector( conn_type='DoG', 
-                           weights=Uniform(0.0,0.1), 
-                           amp_pos=0.2, 
-                           sigma_pos=0.1, 
-                           amp_neg=0.1, 
-                           sigma_neg=0.7 ) 
+    connector = DoG( 
+                   weights=Uniform(0.0,0.1), 
+                   amp_pos=0.2, 
+                   sigma_pos=0.1, 
+                   amp_neg=0.1, 
+                   sigma_neg=0.7 
+                ) 
 )
 
 # Main program

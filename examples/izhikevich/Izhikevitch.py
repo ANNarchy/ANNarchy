@@ -45,7 +45,7 @@ exc_exc = Projection(
     post=Excitatory, 
     target='exc',
     synapse = Simple,
-    connector=Connector('All2All', weights=Uniform(0,0.5))
+    connector=All2All(weights=Uniform(0,0.5))
 )
  
 exc_inh = Projection(
@@ -53,7 +53,7 @@ exc_inh = Projection(
     post=Inhibitory, 
     target='exc',
     synapse = Simple,
-    connector=Connector('All2All', weights=Uniform(0,0.5))
+    connector=All2All(weights=Uniform(0,0.5))
 )
 
 inh_exc = Projection(
@@ -61,7 +61,7 @@ inh_exc = Projection(
     post=Excitatory, 
     target='inh',
     synapse = Simple,
-    connector=Connector('All2All', weights= Uniform(-1.0,0.0))
+    connector=All2All(weights= Uniform(-1.0,0.0))
 )
 
 inh_inh = Projection(
@@ -69,7 +69,7 @@ inh_inh = Projection(
     post=Inhibitory, 
     target='inh',
     synapse = Simple,
-    connector=Connector('All2All', weights=Uniform(-1.0,0.0))
+    connector=All2All(weights=Uniform(-1.0,0.0))
 )
 
 # Compile
