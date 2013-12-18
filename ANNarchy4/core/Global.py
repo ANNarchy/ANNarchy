@@ -142,7 +142,7 @@ def record(to_record):
     
     Parameter:
     
-    * *to_record*: a set of dictionaries containing population objects and variable names.
+    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format. For more details check Population.get_record().
     
     Example:
     
@@ -152,7 +152,7 @@ def record(to_record):
                 { 'pop': Input, 'var': 'rate' }, 
                 { 'pop': Input, 'var': 'mp' }        
             ]
-        
+
     """
     for data_set in to_record:
         data_set['pop'].start_record(data_set['var'])
@@ -176,9 +176,15 @@ def get_record(to_record):
     
     for data_set in to_record:
         if data_set['pop'].name in data:
-            data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var']) } )
+            if 'as_1D' in data_set.keys():
+                data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var'], data_set['as_1D']) } )
+            else:
+                data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var']) } )
         else:
-            data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var']) } } )
+            if 'as_1D' in data_set.keys():
+                data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var'], data_set['as_1D']) } } )
+            else:
+                data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var']) } } )
     
     return data
 

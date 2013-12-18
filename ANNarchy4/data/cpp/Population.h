@@ -86,7 +86,14 @@ public:
     FILE *gl;
     FILE *ll;
 #endif
+
+
 protected:
+#ifdef ANNAR_SCHEDULE
+    // coreCounter counts the runtime of each thread on each CPU
+    // and the number of switches of a thread between the CPUs
+    int * volatile *coreCounter;
+#endif
 
 	// data
 	int nbNeurons_;

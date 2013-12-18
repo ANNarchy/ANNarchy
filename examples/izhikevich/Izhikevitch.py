@@ -141,7 +141,7 @@ if __name__ == '__main__':
         { 'pop': Excitatory, 'var': 'I' },
         { 'pop': Inhibitory, 'var': 'u' }, 
         { 'pop': Inhibitory, 'var': 'v' },
-        { 'pop': Inhibitory, 'var': 'I' }        
+        { 'pop': Inhibitory, 'var': 'I', 'as_1D': True }        
     ]
     
     # 20-100ms is an input

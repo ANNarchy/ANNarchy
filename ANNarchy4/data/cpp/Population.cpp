@@ -44,6 +44,21 @@ Population::Population(std::string name, int nbNeurons) {
         std::cout << e.what() << std::endl;
     }
 #endif
+
+#ifdef ANNAR_SCHEDULE
+    // initialization of coreCounter, which counts the runtime of each thread on each CPU
+    // and the number of switches of a thread between the CPUs
+    coreCounter = new int* volatile [omp_get_max_threads()];
+#pragma omp parallel
+    {
+        coreCounter[omp_get_thread_num()] = new int[omp_get_num_procs() + 2];
+        for (int j = 0; j < omp_get_num_procs(); ++j) {
+            coreCounter[omp_get_thread_num()][j] = 0;
+        }
+        coreCounter[omp_get_thread_num()][omp_get_num_procs()] = -1;
+        coreCounter[omp_get_thread_num()][omp_get_num_procs() + 1] = -1;
+    }
+#endif
 }
 
 Population::~Population() {
@@ -68,6 +83,14 @@ Population::~Population() {
         fclose(gl);
     if(ll)
         fclose(ll);
+#endif
+
+#ifdef ANNAR_SCHEDULE
+    // delete the coreCounter
+    for (int i = 0; i < omp_get_max_threads(); i++) {
+        delete[] coreCounter[i];
+    }
+    delete[] coreCounter;
 #endif
 }
 
@@ -190,6 +213,18 @@ void Population::metaSum() {
         #endif
             projections_[n][p]->computeSum();
 		}
+
+    #ifdef ANNAR_SCHEDULE
+        // increase the number of runs for the current thread on the current scheduled cpu
+        coreCounter[omp_get_thread_num()][sched_getcpu()]++;
+        // if the last scheduled cpu is different from the actual scheduled cpu then increase
+        // the number of switches for the current thread
+        if (coreCounter[omp_get_thread_num()][omp_get_num_procs() + 1] != sched_getcpu()) {
+            coreCounter[omp_get_thread_num()][omp_get_num_procs() + 1] = sched_getcpu();
+            coreCounter[omp_get_thread_num()][omp_get_num_procs()]++;
+        }
+    #endif
+
 	}
 
 #ifdef ANNAR_PROFILE
@@ -197,6 +232,21 @@ void Population::metaSum() {
 
     Profile::profileInstance()->appendTimeSum(name_, (stop-start)*1000.0);
 #endif
+
+#ifdef ANNAR_SCHEDULE
+
+    // output the coreCounter
+    if(ANNarchy_Global::time % 1000 == 0) {
+        printf("\n'%s' - time: %d\n", name_.c_str(), ANNarchy_Global::time);
+        for (int i = 0; i < omp_get_max_threads(); ++i) {
+            for (int j = 0; j < omp_get_num_procs(); ++j) {
+                printf("%d\t", coreCounter[i][j]);
+            }
+            printf("(%d)\n", coreCounter[i][omp_get_num_procs()]);
+        }
+    }
+#endif
+
 }
 
 void Population::metaStep() {

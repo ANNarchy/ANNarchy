@@ -58,6 +58,7 @@ namespace ANNarchy_Global
 #ifdef ANNAR_PROFILE
 #include "Profile.h"
 #endif
+#define ANNAR_SCHEDULE
 
 #include "Random.h"
 #include "Network.h"
