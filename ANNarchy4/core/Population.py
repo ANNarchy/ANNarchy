@@ -217,7 +217,9 @@ class Population(Descriptor):
             try:
                 getattr(self.cyInstance, '_start_record_'+var)()
 
-                print 'start record of', var, '(', self.name, ')'
+                if Global.config['verbose']:
+                    print 'start record of', var, '(', self.name, ')'
+                    
                 self._recorded_variables[var].start()
             except:
                 print "Error (start_record): only possible after compilation."
@@ -254,7 +256,8 @@ class Population(Descriptor):
             try:
                 getattr(self.cyInstance, '_stop_record_'+var)()
 
-                print 'pause record of', var, '(', self.name, ')'
+                if Global.config['verbose']:
+                    print 'pause record of', var, '(', self.name, ')'
                 self._recorded_variables[var].pause()
             except:
                 print "Error (pause_record): only possible after compilation."
@@ -289,12 +292,13 @@ class Population(Descriptor):
             try:
                 getattr(self.cyInstance, '_start_record_'+var)()
                 
-                print 'resume record of', var, '(' , self.name, ')'
+                if Global.config['verbose']:
+                    print 'resume record of', var, '(' , self.name, ')'
                 self._recorded_variables[var].start()
             except:
                 print "Error: only possible after compilation."
                 
-    def get_record(self, variable=None):
+    def get_record(self, variable=None, as_1D=False):
         """
         Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
         The last dimension represents the time, the remaining dimensions are the population geometry.
@@ -302,6 +306,7 @@ class Population(Descriptor):
         Parameter:
             
         * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
+        * *as_1D*: by default this functions returns the data as matrix (geometry shape, time). If as_1D set to True, the data will be returned as two-dimensional plot (neuron x time)
         """
         
         _variable = []
@@ -326,20 +331,32 @@ class Population(Descriptor):
                 self.pause_record(var)
             
             try:
-                print 'get record of', var, '(', self.name, ')'
+                if Global.config['verbose']:
+                    print 'get record of', var, '(', self.name, ')'
                 data = getattr(self.cyInstance, '_get_recorded_'+var)()
                 
-                #
-                # [ time, data(1D) ] => [ time, data(geometry) ] 
-                mat1 = data.reshape((data.shape[0],)+self.geometry)
+                if as_1D:
+                    #
+                    # [ time, data(1D) ] => [ time, data(1D) ] 
+                    mat1 = data.T
 
-                data_dict[var] = { 
-                            #
-                            # [ time, data(geometry) ] => [  data(geometry), time ]                 
-                    'data': np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) ),
-                    'start': self._recorded_variables[var].start_time,
-                    'stop': self._recorded_variables[var].stop_time
-                }
+                    data_dict[var] = { 
+                        'data': mat1,
+                        'start': self._recorded_variables[var].start_time,
+                        'stop': self._recorded_variables[var].stop_time
+                    }
+                else:
+                    #
+                    # [ time, data(1D) ] => [ time, data(geometry) ] 
+                    mat1 = data.reshape((data.shape[0],)+self.geometry)
+
+                    data_dict[var] = { 
+                                #
+                                # [ time, data(geometry) ] => [  data(geometry), time ]                 
+                        'data': np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) ),
+                        'start': self._recorded_variables[var].start_time,
+                        'stop': self._recorded_variables[var].stop_time
+                    }
                                 
                 self._recorded_variables[var].reset()
             except:
