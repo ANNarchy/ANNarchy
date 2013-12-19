@@ -149,7 +149,8 @@ class Population(object):
         #   parse neuron
         self.neuron_parser = parser.NeuronAnalyser(
             self.neuron_variables, 
-            self.targets
+            self.targets,
+            self.population.name
         )
         self.parsed_neuron, global_operations = self.neuron_parser.parse()
         

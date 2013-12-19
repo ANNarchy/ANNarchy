@@ -29,11 +29,12 @@ import copy
 # State machine for a single expression
 class Tree(object):
 
-    def __init__(self, analyser, name, expr):
+    def __init__(self, analyser, name, expr, pop_name=None):
 
         self.analyser = analyser
         self.targets = self.analyser.targets
         self.name = name
+        self.pop_name = pop_name
         self.expr = expr
 
         self.parameters = self.analyser.parameters_names

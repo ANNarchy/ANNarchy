@@ -311,7 +311,7 @@ class PSP(Leaf):
         if not self.value in self.machine.targets:
             if not Global.config['suppress_warnings']:
                 print self.machine.expr
-                print 'Warning: the target', self.value, 'does not exist on this neuron. The sum will be 0.0.'
+                print 'Warning: the target', self.value, 'does not exist on this neuron. The sum will be 0.0. ('+self.machine.pop_name+')'
             return ' 0.0 '
         return ' sum(i, ' + str(self.machine.targets.index(self.value))+') '
     def latex(self):

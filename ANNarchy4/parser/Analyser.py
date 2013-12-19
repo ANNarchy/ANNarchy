@@ -60,9 +60,10 @@ def get_value_and_type(value):
 # Main analyser class for neurons
 class NeuronAnalyser(object):
 
-    def __init__(self, neuron, targets):
+    def __init__(self, neuron, targets, pop_name):
 
         self.neuron = neuron
+        self.pop_name = pop_name
         self.targets = targets
         self.analysed_neuron = []
         self.parameters_names = []
@@ -107,7 +108,7 @@ class NeuronAnalyser(object):
                         continue
                     
                     neur['eq'] = value['var'].eq
-                    tree = Tree.Tree(self, value['name'], value['var'].eq)
+                    tree = Tree.Tree(self, value['name'], value['var'].eq, self.pop_name)
                     if not tree.success: # Error while processing the equation
                         return None, None
                     self.trees.append(tree)
