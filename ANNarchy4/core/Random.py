@@ -62,6 +62,12 @@ class Constant(RandomDistribution):
     def _gen_cpp(self):
         return 'Constant<DATA_TYPE>('+str(self._value)+')'
         
+    def max(self):
+        return self._value
+
+    def min(self):
+        return self._value
+
 class Uniform(RandomDistribution):
     def __init__(self, min, max, cpp_seed=-1):
         """
@@ -87,6 +93,12 @@ class Uniform(RandomDistribution):
             return 'UniformDistribution<DATA_TYPE>('+str(self._min)+','+ str(self._max)+')'
         else:
             return 'UniformDistribution<DATA_TYPE>('+str(self._min)+','+ str(self._max)+','+ str(self._cpp_seed)+')'
+
+    def max(self):
+        return self._max
+
+    def min(self):
+        return self._min
 
 class Normal(RandomDistribution):
     def __init__(self, mu, sigma, cpp_seed=-1):
@@ -114,3 +126,9 @@ class Normal(RandomDistribution):
         else:
             return 'NormalDistribution<DATA_TYPE>('+str(self._mu)+','+ str(self._sigma)+','+ str(self._cpp_seed)+')'
         
+    def max(self):
+        return self._mu
+
+    def min(self):
+        return 0
+
