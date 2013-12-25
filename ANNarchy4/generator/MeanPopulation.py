@@ -417,6 +417,40 @@ private:
             code += '\t{\n'
             code += loop
             code += '\t}\n'
+
+            code += '#ifdef _DEBUG'
+            code += '\tstd::cout << "Population:" << name_ << std::endl;'
+            code += '\tstd::cout << "before:" << std::endl;'
+            code += '\tfor (auto it=delayedRates_.begin(); it!=delayedRates_.end(); it++)\n'
+            code += '\t{\n'
+            code += '\t\tstd::cout << "rates: "<< std::endl;\n'
+            code += '\t\tfor (auto it2 = (*it).begin(); it2 != (*it).end(); it2++)\n'
+            code += '\t\t{\n'
+            code += '\t\t\tstd::cout << (*it2) << " ";\n'
+            code += '\t\t}\n'
+            code += '\t\tstd::cout << std::endl;\n'
+            code += '\t}\n'
+            code += '#endif'
+            
+            code += '\tstd::cout << "maxDelay:" << maxDelay_ << std::endl;\n'
+            code += '\tif (maxDelay_ > 1)'
+            code += '\t{\n'
+            code += '\t\tdelayedRates_.push_front(rate_);\n'
+            code += '\t\tdelayedRates_.pop_back();\n'
+            code += '\t}\n'
+
+            code += '#ifdef _DEBUG'
+            code += '\tstd::cout << "after:" << std::endl;'
+            code += '\tfor (auto it=delayedRates_.begin(); it!=delayedRates_.end(); it++)\n'
+            code += '\t{\n'
+            code += '\t\tstd::cout << "rates: "<< std::endl;\n'
+            code += '\t\tfor (auto it2 = (*it).begin(); it2 != (*it).end(); it2++)\n'
+            code += '\t\t{\n'
+            code += '\t\t\tstd::cout << (*it2) << " ";\n'
+            code += '\t\t}\n'
+            code += '\t\tstd::cout << std::endl;\n'
+            code += '\t}\n'
+            code += '#endif'
             
             return code
 
@@ -597,6 +631,8 @@ cdef extern from "../build/%(name)s.h":
         
         void resetToInit()
         
+        void setMaxDelay(int)
+
 %(cFunction)s
 
 
@@ -612,6 +648,9 @@ cdef class py%(name)s:
 
     def reset(self):
         self.cInstance.resetToInit()
+
+    def set_max_delay(self, delay):
+        self.cInstance.setMaxDelay(delay)
 
     property size:
         def __get__(self):

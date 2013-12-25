@@ -218,6 +218,13 @@ class Projection(object):
         if(constDelay_) // one delay for all connections
         {
             pre_rates_ = pre_population_->getRates(delay_[0]);
+        #ifdef _DEBUG
+            std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
+            for(int i=0; i<(int)(*pre_rates_).size(); i++) {
+                std::cout << (*pre_rates_)[i] << " ";
+            }
+            std::cout << std::endl;
+        #endif
 
             for(int i=0; i<(int)rank_.size(); i++) {
                 sum_ += %(psp_const_delay)s

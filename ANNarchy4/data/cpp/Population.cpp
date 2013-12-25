@@ -30,7 +30,7 @@ Population::Population(std::string name, int nbNeurons) {
 	
 	maxDelay_ = 0;
 	dt_ = 1.0;
-	delayedRates_ = std::vector< std::vector<DATA_TYPE> >();
+	delayedRates_ = std::deque< std::vector<DATA_TYPE> >();
 
 	spiked_ = std::vector< bool >(nbNeurons_, false);
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
@@ -164,10 +164,21 @@ std::vector<DATA_TYPE> Population::getRates(std::vector<int> delays, std::vector
 void Population::setMaxDelay(int delay) {
 	// TODO:
 	// maybe we should take the current fire rate as initial value
+#ifdef _DEBUG
+        std::cout << "Population " << name_ << " got new max delay: " << delay << std::endl;
+#endif
 	if(delay > maxDelay_) {
 		for(int oldSize = delayedRates_.size(); oldSize < delay; oldSize++)
-			delayedRates_.push_back(std::vector<DATA_TYPE>(nbNeurons_, (DATA_TYPE)oldSize));
+			delayedRates_.push_front(std::vector<DATA_TYPE>(nbNeurons_, (DATA_TYPE)oldSize));
+
+                maxDelay_ = delay;
 	}
+
+#ifdef _DEBUG
+        std::cout << "current delay vec: " << delayedRates_.size() << std::endl;
+        for(int i=0; i<delayedRates_.size(); i++)
+                std::cout << "   Delay: " << i << " rates: " << delayedRates_[i].size() << std::endl;
+#endif
 }
 
 void Population::addProjection(int postRankID, Projection* proj) {

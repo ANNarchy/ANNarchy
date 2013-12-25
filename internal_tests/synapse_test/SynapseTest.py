@@ -29,7 +29,7 @@ SimpleSynapse = Synapse(
 InputPop = Population(name="Input", geometry=(8,8), neuron=Simple)
 Layer1Pop = Population(name="Layer1", geometry=(1,1), neuron=Simple)
 
-Proj = Projection(pre="Input", post="Layer1", target='exc', synapse=SimpleSynapse, connector=Connector('All2All', weights= Uniform(0.0,1.0)))
+Proj = Projection(pre="Input", post="Layer1", target='exc', synapse=SimpleSynapse, connector=All2All(weights= Uniform(0.0,1.0), delays=2.0))
 
 #
 # Analyse and compile everything, initialize the parameters/variables...
@@ -150,6 +150,7 @@ def synapse_test():
     print Proj.dendrite(0).rank
     print Proj.dendrite(0).value
     
+
 if __name__ == '__main__':
 
     set_current_step(10)
@@ -161,10 +162,10 @@ if __name__ == '__main__':
     print rec['stop']
     print rec['data']
 
-    loop()
+    #loop()
     
-    loop2()
+    #loop2()
 
-    loop3()
+    #loop3()
     
-    synapse_test()
+    #synapse_test()

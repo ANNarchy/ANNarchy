@@ -26,6 +26,7 @@
 //	stl and other common things
 #include <string>
 #include <vector>
+#include <deque>
 #include <iostream>
 
 //

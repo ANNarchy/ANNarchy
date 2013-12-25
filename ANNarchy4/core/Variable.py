@@ -21,6 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
+
 class Variable(object):
     """
     Variable representation in ANNarchy.
@@ -69,9 +70,10 @@ class Variable(object):
             else:
                 self.type = float
                 self.init = self.type(0.0)
-            
+
         if type(self.init) != self.type:
-            if self.type != bool and type(self.init) != bool:
-                self.init = float(self.init)
-                self.type = float
+            if isinstance(self.init, (bool, float, int)):
+                if self.type != bool and type(self.init) != bool:
+                    self.init = float(self.init)
+                    self.type = float
                 

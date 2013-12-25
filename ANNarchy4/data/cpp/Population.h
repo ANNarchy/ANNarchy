@@ -61,13 +61,23 @@ public:
 	}
 
 	std::vector<DATA_TYPE>* getRates(int delay) {
-		if (delay < (int)delayedRates_.size())
-			return &(delayedRates_[delay-1]);
+		if ( delay <= (int)delayedRates_.size()) 
+                {
+                #ifdef _DEBUG
+                        for(int i=0; i < delayedRates_.size(); i++)
+                                std::cout << &(delayedRates_[i]) << std::endl;
+                #endif
+                        return &(delayedRates_[delay-1]);
+                }       
 		else
+                {
+                        std::cout << "Invalid delay " << delay << " (maxDelay is "<< maxDelay_ << ")"<< std::endl;
 			return NULL;
+                }
 	}
 
 	std::vector< std::vector<int> > getSpikeTimings() { return spike_timings_;}
+
 	std::vector<DATA_TYPE> getRates(std::vector<int> delays, std::vector<int> ranks);
 
 	DATA_TYPE getDt() { return dt_;	}
@@ -102,7 +112,7 @@ protected:
 	DATA_TYPE dt_;
 
 	std::vector<DATA_TYPE>	rate_;
-	std::vector< std::vector<DATA_TYPE>	> delayedRates_;
+	std::deque< std::vector<DATA_TYPE> > delayedRates_;
 	std::vector< std::vector<class Projection*> > projections_;	// first dimension, neuron wise
 
 	std::vector< bool > spiked_;
