@@ -23,6 +23,7 @@
 """
 from Random import Constant
 from Dendrite import Dendrite
+import numpy as np
 
 class Connector(object):
     """
@@ -101,6 +102,8 @@ class One2One(Connector):
                                           self.parameters
                                           )
         
+        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+
         dendrites = []
         post_ranks = []
         for i in xrange(len(tmp)):
@@ -155,6 +158,8 @@ class All2All(Connector):
                                           self.delays,
                                           self.parameters
                                           )
+
+        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
         
         dendrites = []
         post_ranks = []
@@ -213,7 +218,9 @@ class Gaussian(Connector):
                                           self.delays,
                                           self.parameters
                                           )
-        
+
+        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+
         dendrites = []
         post_ranks = []
         for i in xrange(len(tmp)):
@@ -272,6 +279,8 @@ class DoG(Connector):
                                           self.parameters
                                           )
         
+        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+
         dendrites = []
         post_ranks = []
         for i in xrange(len(tmp)):
