@@ -3,7 +3,7 @@ from ANNarchy4.core.Variable import Variable
 from ANNarchy4.core.Neuron import Neuron
 from ANNarchy4.core.Synapse import Synapse
 from ANNarchy4.core.Projection import Projection
-from ANNarchy4.core.Connector import Connector
+from ANNarchy4.core.Connector import All2All
 from ANNarchy4.core.Population import Population
 from ANNarchy4.core.Random import Uniform
 
@@ -47,11 +47,12 @@ def test_synapse(SynapseType, name):
     pop2 = Population(name=name+"2", neuron=DefaultNeuron, geometry=1)
     proj = Projection(
         pre=pop1, post=pop2, target='exc',
-        synapse = Oja, 
-        connector=Connector('All2All', weights= Uniform (-0.5, 0.5 ) ) 
+        synapse = SynapseType, 
+        connector = All2All(weights= Uniform (-0.5, 0.5 ) ) 
     )
     variables = proj.generator.synapse_variables
     analyser = SynapseAnalyser(variables)
+    analyser.targets_post = ['inh', 'exc']
     analysed, gop = analyser.parse()
     if not analysed:
         print 'Parsing not successful'
@@ -67,21 +68,30 @@ def test_synapse(SynapseType, name):
 if __name__ == '__main__':
     print 'Testing the parser...'
 
-    print 'Leaky neuron'
-    LeakyNeuron = Neuron(
-        baseline =  Variable(init=0.1),
-        tau = 10.0,
-        rate = Variable(init=0.0, eq='tau*drate/dt + rate = sum(exc) + baseline', min=0.0),
-    )
-    test_neuron(LeakyNeuron, 'testleaky')
+#    print 'Leaky neuron'
+#    LeakyNeuron = Neuron(
+#        baseline =  Variable(init=0.1),
+#        tau = 10.0,
+#        rate = Variable(init=0.0, eq='tau*drate/dt + rate = sum(exc) + baseline', min=0.0),
+#    )
+#    test_neuron(LeakyNeuron, 'testleaky')
+#    
+#    print 'Oja learning rule'
+#    Oja = Synapse(
+#        eta = 10.0,
+#        alpha = 1.0,
+#        tmp = Variable(init=0, eq = "tmp= if t == t_spike then value else 0.0"),
+#        psp = Variable(init=0, eq = "psp = tmp"),
+#        value = Variable(init=0.0, eq="dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value", min=0.0)
+#    )
+#    test_synapse(Oja, 'testsyn')
     
-    print 'Oja learning rule'
-    Oja = Synapse(
+    print 'Access sums learning rule'
+    Sum = Synapse(
         eta = 10.0,
-        alpha = 1.0,
-        tmp = Variable(init=0, eq = "tmp= if t == t_spike then value else 0.0"),
-        psp = Variable(init=0, eq = "psp = tmp"),
-        value = Variable(init=0.0, eq="dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value", min=0.0)
+        value = Variable(init=0.0, eq="""
+            eta * dvalue/dt = pre.rate * post.rate - post.sum(exc)
+        """, min=0.0)
     )
-    test_synapse(Oja, 'testsyn')
+    test_synapse(Sum, 'testsum')
 

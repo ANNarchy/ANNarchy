@@ -236,6 +236,18 @@ class Constant(Leaf):
         if self.value in PI:
             return '{\\pi}'
         return '{' + str(self.value) + '}'
+        
+# Target
+class Target(Leaf):
+    def __init__(self, machine, value):
+        self.machine = machine
+        self.value = value
+
+    def cpp(self):
+        return self.value
+
+    def latex(self):
+        return '{' + str(self.value) + '}'
 
 ##################################
 # Variables and parameters
@@ -319,26 +331,51 @@ class PSP(Leaf):
 
 # Presynaptic variable (e.g. pre.rate)
 class PreVariable(Leaf):
-    def __init__(self, machine, value):
+    def __init__(self, machine, value, child=None):
         self.machine = machine
         self.value = value
+        self.child = child
+        
     def cpp(self):
         variable =  self.value.split('.')[1]
         if variable=='rate':
             return ' (*pre_rates_) [ rank_ [i] ] '
+        elif variable=='sum':
+            # Check if the target exists
+            try:
+                index = self.machine.analyser.targets_pre.index(self.child[0])
+            except:
+                if not Global.config['suppress_warnings']:
+                    print self.machine.expr
+                    print 'Warning: the target', self.value, 'does not exist on the presynaptic neuron. The sum will be 0.0. ('+self.machine.pop_name+')'
+                return ' 0.0 '  
+            return ' pre_population_->sum( rank_[i] , '+ str(index)  +') '
         return ' pre_population_->getSingle'+variable.capitalize()+'( rank_[i] ) '
+        
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'
 
 # Postsynaptic variable (e.g. post.rate)
 class PostVariable(Leaf):
-    def __init__(self, machine, value):
+    def __init__(self, machine, value, child=None):
         self.machine = machine
         self.value = value
-    def cpp(self):
+        self.child = child
+            
+    def cpp(self):        
         variable =  self.value.split('.')[1]
         if variable=='rate':
             return ' (*post_rates_) [ post_neuron_rank_ ] '
+        elif variable=='sum': # eg post.sum(dopa)
+            # Check if the target exists
+            try:
+                index = self.machine.analyser.targets_post.index(self.child[0])
+            except:
+                if not Global.config['suppress_warnings']:
+                    print self.machine.expr
+                    print 'Warning: the target', self.value, 'does not exist on the postsynaptic neuron. The sum will be 0.0. (' + self.machine.pop_name+')'
+                return ' 0.0 '  
+            return ' post_population_->sum( post_neuron_rank_  , '+ str(index)  +') '
         return ' post_population_->getSingle'+variable.capitalize()+'( post_neuron_rank_ ) '
     def latex(self):
         return '{\\text{'+str(self.value)+'}}'

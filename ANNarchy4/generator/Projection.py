@@ -352,7 +352,7 @@ void set%(Name)s(%(type)s %(name)s) { this->%(name)s_=%(name)s; }
             print "    for", self.name, '( from',self.projection.pre.name,'to',self.projection.post.name, ', target = \"',self.projection.target, '\")' 
 
         # generate func body            
-        self.parser = parser.SynapseAnalyser(self.synapse_variables)
+        self.parser = parser.SynapseAnalyser(self.synapse_variables, self.projection.pre.generator.targets,  self.projection.post.generator.targets)
         self.parsed_variables, self.global_operations = self.parser.parse()
 
         header = '''#ifndef __%(name)s_H__
