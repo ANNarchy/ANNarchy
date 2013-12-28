@@ -26,7 +26,7 @@
 
 class Projection{
 public:
-	Projection() {};
+	Projection();
 
       virtual ~Projection();
 
@@ -48,7 +48,24 @@ public:
 
 	std::vector<int> getDelay() { return delay_; };
 
-	void setDelay(std::vector<int> delay) { delay_ = delay; };
+	void setDelay(std::vector<int> delay) 
+        { 
+        #ifdef _DEBUG
+                std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl; 
+        #endif
+		for(auto it=delay.begin(); it!=delay.end();it++) 
+                {
+			if(*it>maxDelay_)
+				maxDelay_ = *it;
+
+			if(*it != maxDelay_)
+				constDelay_ = false;
+		}
+        #ifdef _DEBUG
+                std::cout << "NEW: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl; 
+        #endif
+                delay_ = delay;
+        };
     	
 	std::vector<int> getRank() { return rank_; }
 

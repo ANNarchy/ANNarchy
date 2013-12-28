@@ -102,7 +102,7 @@ class One2One(Connector):
                                           self.parameters
                                           )
         
-        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
 
         dendrites = []
         post_ranks = []
@@ -159,7 +159,7 @@ class All2All(Connector):
                                           self.parameters
                                           )
 
-        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
         
         dendrites = []
         post_ranks = []
@@ -219,7 +219,7 @@ class Gaussian(Connector):
                                           self.parameters
                                           )
 
-        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
 
         dendrites = []
         post_ranks = []
@@ -279,7 +279,7 @@ class DoG(Connector):
                                           self.parameters
                                           )
         
-        self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
 
         dendrites = []
         post_ranks = []

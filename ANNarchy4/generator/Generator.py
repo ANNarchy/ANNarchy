@@ -444,7 +444,11 @@ def compile(cpp_stand_alone=False, debug_build=False):
             if Global.config['show_time']:
                 t0 = time.time()
             # Create the synapses
-            proj.connect()  
+            proj.connect() 
+            if proj.connector.delays != None:
+                #print 'set new delay',proj.connector.delays.max(),'for',proj.pre.name
+                proj.pre.cyInstance.set_max_delay(int(proj.connector.delays.max()))
+ 
             # Create the attributes
             proj._init_attributes()   
             if Global.config['show_time']:

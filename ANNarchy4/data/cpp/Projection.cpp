@@ -21,6 +21,12 @@
  */
 #include "Projection.h"
 
+Projection::Projection()
+{
+     constDelay_ = true;
+     maxDelay_ =0;
+}
+
 Projection::~Projection() {
 #ifdef _DEBUG
     std::cout<<"Projection::Destructor"<<std::endl;
