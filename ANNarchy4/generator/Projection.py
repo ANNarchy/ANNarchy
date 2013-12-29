@@ -182,8 +182,6 @@ class Projection(object):
         def init_val(parsed_variables):
             code ="""
             Projection::initValues(rank, value, delay);
-            
-            pre_population_->setMaxDelay(maxDelay_);
             """
             return code
         

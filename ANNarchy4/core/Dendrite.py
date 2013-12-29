@@ -22,7 +22,7 @@
 """
 from Descriptor import Descriptor, Attribute
 from ANNarchy4.core.Random import RandomDistribution
-
+import numpy as np
 import traceback
 
 class Dendrite(Descriptor):
@@ -64,6 +64,8 @@ class Dendrite(Descriptor):
             self.cy_instance.value = weights
             if delays != None:
                 self.cy_instance.delay = delays
+                max_delay = np.amax(delays)
+                self.proj.pre.cyInstance.set_max_delay(int(max_delay))
             
         # synapse variables           
         for value in self.variables + self.parameters:
