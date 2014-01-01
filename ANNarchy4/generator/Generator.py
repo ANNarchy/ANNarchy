@@ -226,7 +226,7 @@ include "Connector.pyx"
     with open(Global.annarchy_dir+'/pyx/ANNarchyCython.pyx', mode='w') as w_file:
         w_file.write(code)
         
-def folder_management(profile_enabled):
+def folder_management(profile_enabled, clean):
     """
     ANNarchy is provided as a python package. For compilation a local folder
     'annarchy' is created in the current working directory.
@@ -235,39 +235,40 @@ def folder_management(profile_enabled):
     
     * *profile_enabled*: copy needed data for profile extension
     """
-    if os.path.exists(Global.annarchy_dir):
-        shutil.rmtree(Global.annarchy_dir, True)
-    
-    os.mkdir(Global.annarchy_dir)
-    os.mkdir(Global.annarchy_dir+'/pyx')
-    os.mkdir(Global.annarchy_dir+'/build')
-
     sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
+    if os.path.exists(Global.annarchy_dir): # Already compiled
+        if clean:
+            shutil.rmtree(Global.annarchy_dir, True)
+        else:
+            # Reset ANNarchy.h anyway
+            shutil.copy(sources_dir+'/cpp/ANNarchy.h', # src
+                        Global.annarchy_dir+'/build/ANNarchy.h' # dest
+                        )
+    else:    
+        os.mkdir(Global.annarchy_dir)
+        os.mkdir(Global.annarchy_dir+'/pyx')
+        os.mkdir(Global.annarchy_dir+'/build')
 
-#    # other files
-#    for file in os.listdir(sources_dir):
-#        if not os.path.isdir(os.path.abspath(sources_dir+'/'+file)):
-#            shutil.copy(sources_dir+'/'+file, Global.annarchy_dir)
             
-    # cpp / h files
-    for file in os.listdir(sources_dir+'/cpp'):
-        shutil.copy(sources_dir+'/cpp/'+file, # src
-                    Global.annarchy_dir+'/build/'+file # dest
-                    )
+        # cpp / h files
+        for file in os.listdir(sources_dir+'/cpp'):
+            shutil.copy(sources_dir+'/cpp/'+file, # src
+                        Global.annarchy_dir+'/build/'+file # dest
+                        )
+            
+        # py files
+        for file in os.listdir(sources_dir+'/pyx'):
+            shutil.copy(sources_dir+'/pyx/'+file, #src
+                        Global.annarchy_dir+'/pyx/'+file #dest
+                        )
+                        
+        # profile files
+        if profile_enabled:
+            profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')
         
-    # py files
-    for file in os.listdir(sources_dir+'/pyx'):
-        shutil.copy(sources_dir+'/pyx/'+file, #src
-                    Global.annarchy_dir+'/pyx/'+file #dest
-                    )
-        
-    # profile files
-    if profile_enabled:
-        profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')
-    
-        shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/build')
-        shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/build')
-        shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/pyx')
+            shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/build')
+            shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/build')
+            shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/pyx')
 
     sys.path.append(Global.annarchy_dir)
 
@@ -345,23 +346,19 @@ def _update_global_operations():
                 proj.post.generator._add_global_oparation(entry)
             
     
-def compile(cpp_stand_alone=False, debug_build=False):
+def compile(clean=False, cpp_stand_alone=False, debug_build=False):
     """
-    The compilation procedure consists roughly of 3 steps:
-    
-        a) generate user defined classes and cython wrapper
-        b) compile ANNarchyCore
-        c) compile ANNarchyCython
-        
-    after this the cythonized objects are instantiated and available for the user. 
+    This method uses the network architecture to generate optimized C++ code and compile a shared library that will carry the simulation.
     
     *Parameters*:
 
+    * *clean*: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
-    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
+    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     """
     print 'ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')'
         
+    # Test if profiling is enabled
     profile_enabled = False
     try:
         from ANNarchy4.extensions import Profile
@@ -373,7 +370,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:
         print "Create 'annarchy' subdirectory."
-    folder_management(profile_enabled)
+    folder_management(profile_enabled, clean)
     
     # Tell each population which global operation they should compute
     _update_global_operations()
@@ -381,45 +378,39 @@ def compile(cpp_stand_alone=False, debug_build=False):
     # Generate the code
     code_generation(cpp_stand_alone, profile_enabled)
     
+    # Copy only the code that has changed
+    
     # Create ANNarchyCore.so and py extensions    
-    print 'Compiling ...',
+    print 'Compiling ...'
     if Global.config['show_time']:
         t0 = time.time()
             
     os.chdir(Global.annarchy_dir)
-    # Make sure the makefiles are executable
     if sys.platform.startswith('linux'):
         if not debug_build:
-            src = """# Makefile
-SRC = $(wildcard build/*.cpp)
-OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
-
-prog: $(OBJ)
-\tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ -O2 -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o build/ANNarchyCython.o -fopenmp -L. -I. -Ibuild -std=c++11 -fpermissive 
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
-
-build/%.o: build/%.cpp
-\tg++ -O2 -fPIC -pipe -fpermissive -std=c++11 -fopenmp -I. -c $< -o $@
-
-"""
+            flags = "-O2"
         else:
-            src = """# Makefile
+            flags = "-O0 -g -D_DEBUG"
+        src = """# Makefile
 SRC = $(wildcard build/*.cpp)
+PYX = $(wildcard pyx/*.pyx)
 OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
+     
+ANNarchyCython.so : $(OBJ) pyx/ANNarchyCython.o
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o pyx/ANNarchyCython.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
 
-prog: $(OBJ)
+pyx/ANNarchyCython.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ -O0 -g -D_DEBUG -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o build/ANNarchyCython.o -fopenmp -L. -I. -Ibuild -std=c++11 -fpermissive 
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython.o -L. -I. -Ibuild -fopenmp -std=c++11 -fpermissive 
 
-build/%.o: build/%.cpp
-\tg++ -O0 -g -D_DEBUG -fPIC -pipe -fpermissive -std=c++11 -fopenmp -I. -c $< -o $@
+build/%.o : build/%.cpp
+\tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++11 -fopenmp -I. -c $< -o $@
+""" #% {'dflags': flags}
 
-"""
         with open('Makefile', 'w') as wfile:
             wfile.write(src)
         t_start = time.time()
+        os.system('touch pyx/ANNarchyCython.pyx')
         os.system('make -j4 > compile_stdout.log 2> compile_stderr.log')
         print time.time() - t_start
     else:
@@ -429,7 +420,7 @@ build/%.o: build/%.cpp
         proc.wait()
     
     Global._compiled = True
-    print 'OK.'
+#    print 'OK.'
     if Global.config['show_time']:
         print 'took', time.time() - t0, 'seconds.'
         
@@ -476,7 +467,7 @@ build/%.o: build/%.cpp
             proj._init_attributes()   
             if Global.config['show_time']:
                 print '        took', (time.time()-t0)*1000, 'milliseconds'  
-        print 'OK.'           
+#        print 'OK.'           
 
     else:
         #abort the application after compiling ANNarchyCPP
