@@ -244,10 +244,10 @@ def folder_management(profile_enabled):
 
     sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
 
-    # other files
-    for file in os.listdir(sources_dir):
-        if not os.path.isdir(os.path.abspath(sources_dir+'/'+file)):
-            shutil.copy(sources_dir+'/'+file, Global.annarchy_dir)
+#    # other files
+#    for file in os.listdir(sources_dir):
+#        if not os.path.isdir(os.path.abspath(sources_dir+'/'+file)):
+#            shutil.copy(sources_dir+'/'+file, Global.annarchy_dir)
             
     # cpp / h files
     for file in os.listdir(sources_dir+'/cpp'):
@@ -372,7 +372,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:
-        print "\nCreate 'annarchy' subdirectory."
+        print "Create 'annarchy' subdirectory."
     folder_management(profile_enabled)
     
     # Tell each population which global operation they should compute
@@ -381,36 +381,59 @@ def compile(cpp_stand_alone=False, debug_build=False):
     # Generate the code
     code_generation(cpp_stand_alone, profile_enabled)
     
-    # Create ANNarchyCore.so and py extensions
-    
-    print '\nCompiling ...',
+    # Create ANNarchyCore.so and py extensions    
+    print 'Compiling ...',
     if Global.config['show_time']:
         t0 = time.time()
             
     os.chdir(Global.annarchy_dir)
     # Make sure the makefiles are executable
     if sys.platform.startswith('linux'):
-        os.system('chmod +x compile*')
-    # Start the compilation depending on the platform
-    if not debug_build:
-        if sys.platform.startswith('linux'):
-            proc = subprocess.Popen(['./compile.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
+        if not debug_build:
+            src = """# Makefile
+SRC = $(wildcard build/*.cpp)
+OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
+
+prog: $(OBJ)
+\tcython pyx/ANNarchyCython.pyx --cplus  
+\tg++ -O2 -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o build/ANNarchyCython.o -fopenmp -L. -I. -Ibuild -std=c++11 -fpermissive 
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+
+build/%.o: build/%.cpp
+\tg++ -O2 -fPIC -pipe -fpermissive -std=c++11 -fopenmp -I. -c $< -o $@
+
+"""
         else:
-            proc = subprocess.Popen(['compile.bat'], shell=True)
-        proc.wait()
+            src = """# Makefile
+SRC = $(wildcard build/*.cpp)
+OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
+
+prog: $(OBJ)
+\tcython pyx/ANNarchyCython.pyx --cplus  
+\tg++ -O0 -g -D_DEBUG -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o build/ANNarchyCython.o -fopenmp -L. -I. -Ibuild -std=c++11 -fpermissive 
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+
+build/%.o: build/%.cpp
+\tg++ -O0 -g -D_DEBUG -fPIC -pipe -fpermissive -std=c++11 -fopenmp -I. -c $< -o $@
+
+"""
+        with open('Makefile', 'w') as wfile:
+            wfile.write(src)
+        t_start = time.time()
+        os.system('make -j4 > compile_stdout.log 2> compile_stderr.log')
+        print time.time() - t_start
     else:
-        if sys.platform.startswith('linux'):
-            proc = subprocess.Popen(['./compiled.sh', 'cpp_stand_alone='+str(cpp_stand_alone)])
-        else:
-            proc = subprocess.Popen(['compile.bat'], shell=True)
+        sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
+        shutil.copy(sources_dir+'/compile.bat', Global.annarchy_dir)
+        proc = subprocess.Popen(['compile.bat'], shell=True)
         proc.wait()
-        
+    
     Global._compiled = True
-    print ' OK.'
+    print 'OK.'
     if Global.config['show_time']:
         print 'took', time.time() - t0, 'seconds.'
         
-    print '\nConstruct network ...\n',   
+    print 'Building network ...'   
     # Return to the current directory
     os.chdir('..')
     # Import the libraries
@@ -452,7 +475,8 @@ def compile(cpp_stand_alone=False, debug_build=False):
             # Create the attributes
             proj._init_attributes()   
             if Global.config['show_time']:
-                print '        took', (time.time()-t0)*1000, 'milliseconds'             
+                print '        took', (time.time()-t0)*1000, 'milliseconds'  
+        print 'OK.'           
 
     else:
         #abort the application after compiling ANNarchyCPP

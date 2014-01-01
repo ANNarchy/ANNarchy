@@ -418,9 +418,9 @@ private:
             code += loop
             code += '\t}\n'
 
-            code += '#ifdef _DEBUG'
-            code += '\tstd::cout << "Population:" << name_ << std::endl;'
-            code += '\tstd::cout << "before:" << std::endl;'
+            code += '#ifdef _DEBUG\n'
+            code += '\tstd::cout << "Population:" << name_ << std::endl;\n'
+            code += '\tstd::cout << "before:" << std::endl;\n'
             code += '\tfor (auto it=delayedRates_.begin(); it!=delayedRates_.end(); it++)\n'
             code += '\t{\n'
             code += '\t\tstd::cout << "rates: "<< std::endl;\n'
@@ -430,7 +430,6 @@ private:
             code += '\t\t}\n'
             code += '\t\tstd::cout << std::endl;\n'
             code += '\t}\n'
-            code += '#endif'
             
             code += '\tstd::cout << "maxDelay:" << maxDelay_ << std::endl;\n'
             code += '\tif (maxDelay_ > 1)'
@@ -439,7 +438,6 @@ private:
             code += '\t\tdelayedRates_.pop_back();\n'
             code += '\t}\n'
 
-            code += '#ifdef _DEBUG'
             code += '\tstd::cout << "after:" << std::endl;'
             code += '\tfor (auto it=delayedRates_.begin(); it!=delayedRates_.end(); it++)\n'
             code += '\t{\n'

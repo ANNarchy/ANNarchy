@@ -2,7 +2,6 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import sys, os
-import numpy
 
 if sys.platform.startswith('linux'):
     setup(
