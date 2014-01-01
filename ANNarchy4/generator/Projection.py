@@ -46,9 +46,9 @@ class Projection(object):
         self.projection = projection
         self.name = projection.name
 
-        self.h_file = Global.annarchy_dir+'/build/'+self.name+'.h'
-        self.cpp_file = Global.annarchy_dir+'/build/'+self.name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/pyx/'+self.name+'.pyx'
+        self.h_file = Global.annarchy_dir+'/generate/build/'+self.name+'.h'
+        self.cpp_file = Global.annarchy_dir+'/generate/build/'+self.name+'.cpp'
+        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.name+'.pyx'
 
         self.proj_class = { 
             'ID': len(Global._projections), 
@@ -110,7 +110,7 @@ class Projection(object):
         """
         generate projection c++ code.
         """
-        
+            
         def get_type_name(type):
             """
             mapping between python types and cpp names, float will be mapped to

@@ -53,7 +53,7 @@ def create_includes():
 #endif
 """ % { 'pop_header': pop_header, 'proj_header': proj_header}
 
-    with open(Global.annarchy_dir + '/build/Includes.h', mode = 'w') as w_file:
+    with open(Global.annarchy_dir + '/generate/build/Includes.h', mode = 'w') as w_file:
         w_file.write(header)
 
 def update_annarchy_header(cpp_stand_alone, profile_enabled):
@@ -73,7 +73,7 @@ def update_annarchy_header(cpp_stand_alone, profile_enabled):
             False: disabled profile
     """
     code = ''
-    with open(Global.annarchy_dir+'/build/ANNarchy.h', mode = 'r') as r_file:
+    with open(Global.annarchy_dir+'/generate/build/ANNarchy.h', mode = 'r') as r_file:
         for a_line in r_file:
             if a_line.find('//AddProjection') != -1:
                 if(cpp_stand_alone):
@@ -90,7 +90,7 @@ def update_annarchy_header(cpp_stand_alone, profile_enabled):
             else:
                 code += a_line
 
-    with open(Global.annarchy_dir+'/build/ANNarchy.h', mode='w') as w_file:
+    with open(Global.annarchy_dir+'/generate/build/ANNarchy.h', mode='w') as w_file:
         w_file.write(code)
 
 def update_global_header(profile_enabled):
@@ -107,7 +107,7 @@ def update_global_header(profile_enabled):
     code = ''
     
     if profile_enabled:
-        with open(Global.annarchy_dir+'/build/Global.h', mode = 'r') as r_file:
+        with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'r') as r_file:
             for a_line in r_file:
                 if (a_line.find('ANNAR_PROFILE') != -1 and 
                     a_line.find('define') != -1):
@@ -115,7 +115,7 @@ def update_global_header(profile_enabled):
                 else:
                     code += a_line
 
-        with open(Global.annarchy_dir+'/build/Global.h', mode = 'w') as w_file:
+        with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'w') as w_file:
             w_file.write(code)
 
 def generate_proj_instance_class():
@@ -223,7 +223,7 @@ include "Connector.pyx"
         'profile': 'include "Profile.pyx"' if profile_enabled else '' 
     }
 
-    with open(Global.annarchy_dir+'/pyx/ANNarchyCython.pyx', mode='w') as w_file:
+    with open(Global.annarchy_dir+'/generate/pyx/ANNarchyCython.pyx', mode='w') as w_file:
         w_file.write(code)
         
 def folder_management(profile_enabled, clean):
@@ -242,33 +242,39 @@ def folder_management(profile_enabled, clean):
         else:
             # Reset ANNarchy.h anyway
             shutil.copy(sources_dir+'/cpp/ANNarchy.h', # src
-                        Global.annarchy_dir+'/build/ANNarchy.h' # dest
+                        Global.annarchy_dir+'/generate/build/ANNarchy.h' # dest
+                        )
+            shutil.copy(sources_dir+'/cpp/Global.h', # src
+                        Global.annarchy_dir+'/generate/build/Global.h' # dest
                         )
     else:    
         os.mkdir(Global.annarchy_dir)
         os.mkdir(Global.annarchy_dir+'/pyx')
         os.mkdir(Global.annarchy_dir+'/build')
+        os.mkdir(Global.annarchy_dir+'/generate')
+        os.mkdir(Global.annarchy_dir+'/generate/pyx')
+        os.mkdir(Global.annarchy_dir+'/generate/build')
 
             
         # cpp / h files
         for file in os.listdir(sources_dir+'/cpp'):
             shutil.copy(sources_dir+'/cpp/'+file, # src
-                        Global.annarchy_dir+'/build/'+file # dest
+                        Global.annarchy_dir+'/generate/build/'+file # dest
                         )
             
         # py files
         for file in os.listdir(sources_dir+'/pyx'):
             shutil.copy(sources_dir+'/pyx/'+file, #src
-                        Global.annarchy_dir+'/pyx/'+file #dest
+                        Global.annarchy_dir+'/generate/pyx/'+file #dest
                         )
                         
         # profile files
         if profile_enabled:
             profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')
         
-            shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/build')
-            shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/build')
-            shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/pyx')
+            shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/generate/build')
+            shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/generate/build')
+            shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/generate/pyx')
 
     sys.path.append(Global.annarchy_dir)
 
@@ -287,7 +293,7 @@ def _update_float_prec(file):
     with open(file, mode='w') as w_file:
         w_file.write(code)
     
-def code_generation(cpp_stand_alone, profile_enabled):
+def code_generation(cpp_stand_alone, profile_enabled, clean):
     """
     code generation for each population respectively projection object the user defined. 
     
@@ -304,6 +310,7 @@ def code_generation(cpp_stand_alone, profile_enabled):
     for projection in Global._projections:
         projection.generator.generate(Global.config['verbose'])
 
+    # Create includes
     create_includes()
 
     if Global.config['verbose']:
@@ -318,17 +325,47 @@ def code_generation(cpp_stand_alone, profile_enabled):
         print '\nGenerate py extensions ...'
     generate_py_extension(profile_enabled)
     
-    os.chdir(Global.annarchy_dir+'/build')
+    os.chdir(Global.annarchy_dir+'/generate/build')
     cpp_src = filter(os.path.isfile, os.listdir('.'))
     for file in cpp_src:
         _update_float_prec(file)
             
-    os.chdir(Global.annarchy_dir+'/pyx')
+    os.chdir(Global.annarchy_dir+'/generate/pyx')
     pyx_src = filter(os.path.isfile, os.listdir('.'))
     for file in pyx_src:
         _update_float_prec(file)
-
     os.chdir(Global.annarchy_dir)    
+    
+    # Test if the code generation has changed
+    if not clean:
+        changed = False
+        import filecmp
+        for file in os.listdir(Global.annarchy_dir+'/generate/build'):
+            if not os.path.isfile(Global.annarchy_dir+'/build/'+file) or not filecmp.cmp(Global.annarchy_dir+'/generate/build/'+file, Global.annarchy_dir+'/build/'+file):
+                shutil.copy(Global.annarchy_dir+'/generate/build/'+file, # src
+                            Global.annarchy_dir+'/build/'+file # dest
+                )
+                changed = True
+                if Global.config['verbose']:
+                    print file, 'has changed since last compilation.'
+        for file in os.listdir(Global.annarchy_dir+'/generate/pyx'):
+            if not os.path.isfile(Global.annarchy_dir+'/pyx/'+file) or not filecmp.cmp(Global.annarchy_dir+'/generate/pyx/'+file, Global.annarchy_dir+'/pyx/'+file):
+                shutil.copy(Global.annarchy_dir+'/generate/pyx/'+file, # src
+                            Global.annarchy_dir+'/pyx/'+file # dest
+                )
+                changed = True
+                if Global.config['verbose']:
+                    print file, 'has changed since last compilation.'
+    else: # Copy everything
+        for file in os.listdir(Global.annarchy_dir+'/generate/build'):
+            shutil.copy(Global.annarchy_dir+'/generate/build/'+file, # src
+                        Global.annarchy_dir+'/build/'+file # dest
+            )
+        for file in os.listdir(Global.annarchy_dir+'/generate/pyx'):
+            shutil.copy(Global.annarchy_dir+'/generate/pyx/'+file, # src
+                        Global.annarchy_dir+'/pyx/'+file # dest
+            )
+        changed = True
     
 def _update_global_operations():
     
@@ -376,12 +413,11 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False):
     _update_global_operations()
     
     # Generate the code
-    code_generation(cpp_stand_alone, profile_enabled)
+    changed = code_generation(cpp_stand_alone, profile_enabled, clean)
     
-    # Copy only the code that has changed
-    
-    # Create ANNarchyCore.so and py extensions    
-    print 'Compiling ...'
+    # Create ANNarchyCore.so and py extensions 
+    if changed:   
+        print 'Compiling ...'
     if Global.config['show_time']:
         t0 = time.time()
             
@@ -409,11 +445,10 @@ build/%.o : build/%.cpp
 
         with open('Makefile', 'w') as wfile:
             wfile.write(src)
-        t_start = time.time()
-        os.system('touch pyx/ANNarchyCython.pyx')
+        if changed:
+            os.system('touch pyx/ANNarchyCython.pyx')
         os.system('make -j4 > compile_stdout.log 2> compile_stderr.log')
-        print time.time() - t_start
-    else:
+    else: # Windows: to test....
         sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
         shutil.copy(sources_dir+'/compile.bat', Global.annarchy_dir)
         proc = subprocess.Popen(['compile.bat'], shell=True)
