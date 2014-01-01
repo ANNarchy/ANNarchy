@@ -239,14 +239,6 @@ def folder_management(profile_enabled, clean):
     if os.path.exists(Global.annarchy_dir): # Already compiled
         if clean:
             shutil.rmtree(Global.annarchy_dir, True)
-        else:
-            # Reset ANNarchy.h anyway
-            shutil.copy(sources_dir+'/cpp/ANNarchy.h', # src
-                        Global.annarchy_dir+'/generate/build/ANNarchy.h' # dest
-                        )
-            shutil.copy(sources_dir+'/cpp/Global.h', # src
-                        Global.annarchy_dir+'/generate/build/Global.h' # dest
-                        )
     else:    
         os.mkdir(Global.annarchy_dir)
         os.mkdir(Global.annarchy_dir+'/pyx')
@@ -256,25 +248,23 @@ def folder_management(profile_enabled, clean):
         os.mkdir(Global.annarchy_dir+'/generate/build')
 
             
-        # cpp / h files
-        for file in os.listdir(sources_dir+'/cpp'):
-            shutil.copy(sources_dir+'/cpp/'+file, # src
-                        Global.annarchy_dir+'/generate/build/'+file # dest
-                        )
-            
-        # py files
-        for file in os.listdir(sources_dir+'/pyx'):
-            shutil.copy(sources_dir+'/pyx/'+file, #src
-                        Global.annarchy_dir+'/generate/pyx/'+file #dest
-                        )
-                        
-        # profile files
-        if profile_enabled:
-            profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')
-        
-            shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/generate/build')
-            shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/generate/build')
-            shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/generate/pyx')
+    # cpp / h files
+    for file in os.listdir(sources_dir+'/cpp'):
+        shutil.copy(sources_dir+'/cpp/'+file, # src
+                    Global.annarchy_dir+'/generate/build/'+file # dest
+                    )
+    # pyx files
+    for file in os.listdir(sources_dir+'/pyx'):
+        shutil.copy(sources_dir+'/pyx/'+file, #src
+                    Global.annarchy_dir+'/generate/pyx/'+file #dest
+                    )
+    # profile files
+    if profile_enabled:
+        profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')
+    
+        shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/generate/build')
+        shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/generate/build')
+        shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/generate/pyx')
 
     sys.path.append(Global.annarchy_dir)
 
@@ -341,6 +331,7 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
         changed = False
         import filecmp
         for file in os.listdir(Global.annarchy_dir+'/generate/build'):
+            # If the file does not exist in build/, or if the newly generated file is different, copy the new file
             if not os.path.isfile(Global.annarchy_dir+'/build/'+file) or not filecmp.cmp(Global.annarchy_dir+'/generate/build/'+file, Global.annarchy_dir+'/build/'+file):
                 shutil.copy(Global.annarchy_dir+'/generate/build/'+file, # src
                             Global.annarchy_dir+'/build/'+file # dest
@@ -366,6 +357,8 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
                         Global.annarchy_dir+'/pyx/'+file # dest
             )
         changed = True
+        
+    return changed
     
 def _update_global_operations():
     
@@ -448,6 +441,7 @@ build/%.o : build/%.cpp
         if changed:
             os.system('touch pyx/ANNarchyCython.pyx')
         os.system('make -j4 > compile_stdout.log 2> compile_stderr.log')
+        
     else: # Windows: to test....
         sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
         shutil.copy(sources_dir+'/compile.bat', Global.annarchy_dir)
@@ -455,11 +449,12 @@ build/%.o : build/%.cpp
         proc.wait()
     
     Global._compiled = True
-#    print 'OK.'
     if Global.config['show_time']:
         print 'took', time.time() - t0, 'seconds.'
         
-    print 'Building network ...'   
+    if Global.config['verbose']:
+        print 'Building network ...' 
+          
     # Return to the current directory
     os.chdir('..')
     # Import the libraries
