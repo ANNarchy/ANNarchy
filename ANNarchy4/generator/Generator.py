@@ -485,11 +485,11 @@ build/%.o : build/%.cpp
             # Initialize their value
             pop.generator._init_variables()
             if Global.config['show_time']:
-                print '        took', (time.time()-t0)*1000, 'milliseconds'             
+                print 'Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds'             
         # instantiate projections
         for proj in Global._projections:
             if Global.config['verbose']:
-                print '    Create projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"'           
+                print 'Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"'           
             if Global.config['show_time']:
                 t0 = time.time()
             # Create the synapses
