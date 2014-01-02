@@ -221,28 +221,40 @@ def set_current_step(time):
     import ANNarchyCython    
     ANNarchyCython.pyNetwork().set_time( time )    
 
-def _print(text):
+def _print(*var_text):
     """
     Prints a message to standard out.
     """    
+    text = ''
+    for var in var_text:
+        text += var + ' '
+        
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         __future__.print_function(text)
     else:
         print(text)
         
-def _warning(text):
+def _warning(*var_text):
     """
     Prints a warning message to standard out.
     """
+    text = ''
+    for var in var_text:
+        text += var + ' '
+
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         __future__.print_function("WARNING",text)
     else:
         print(text)
         
-def _error(text):
+def _error(*var_text):
     """
     Prints an error message to standard out.
     """
+    text = ''
+    for var in var_text:
+        text += var + ' '
+    
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         __future__.print_function("ERROR:",text)
     else:

@@ -360,7 +360,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
     """
-    print('ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')')
+    Global._print('ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')')
         
     profile_enabled = False
     try:
