@@ -327,8 +327,9 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
     os.chdir(Global.annarchy_dir)    
     
     # Test if the code generation has changed
+    changed_cpp = False
+    changed_pyx = False
     if not clean:
-        changed = False
         import filecmp
         for file in os.listdir(Global.annarchy_dir+'/generate/build'):
             # If the file does not exist in build/, or if the newly generated file is different, copy the new file
@@ -336,7 +337,7 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
                 shutil.copy(Global.annarchy_dir+'/generate/build/'+file, # src
                             Global.annarchy_dir+'/build/'+file # dest
                 )
-                changed = True
+                changed_cpp = True
                 if Global.config['verbose']:
                     print file, 'has changed since last compilation.'
         for file in os.listdir(Global.annarchy_dir+'/generate/pyx'):
@@ -344,7 +345,7 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
                 shutil.copy(Global.annarchy_dir+'/generate/pyx/'+file, # src
                             Global.annarchy_dir+'/pyx/'+file # dest
                 )
-                changed = True
+                changed_pyx = True
                 if Global.config['verbose']:
                     print file, 'has changed since last compilation.'
     else: # Copy everything
@@ -356,9 +357,10 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
             shutil.copy(Global.annarchy_dir+'/generate/pyx/'+file, # src
                         Global.annarchy_dir+'/pyx/'+file # dest
             )
-        changed = True
+        changed_cpp = True
+        changed_pyx = True
         
-    return changed
+    return changed_cpp, changed_pyx
     
 def _update_global_operations():
     
@@ -406,10 +408,10 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False):
     _update_global_operations()
     
     # Generate the code
-    changed = code_generation(cpp_stand_alone, profile_enabled, clean)
+    changed_cpp, changed_pyx = code_generation(cpp_stand_alone, profile_enabled, clean)
     
     # Create ANNarchyCore.so and py extensions 
-    if changed:   
+    if changed_cpp or changed_pyx:   
         print 'Compiling ...'
     if Global.config['show_time']:
         t0 = time.time()
@@ -438,7 +440,7 @@ build/%.o : build/%.cpp
 
         with open('Makefile', 'w') as wfile:
             wfile.write(src)
-        if changed:
+        if changed_pyx: # Force recompilation of the Cython wrappers
             os.system('touch pyx/ANNarchyCython.pyx')
         os.system('make -j4 > compile_stdout.log 2> compile_stderr.log')
         
@@ -450,7 +452,7 @@ build/%.o : build/%.cpp
     
     Global._compiled = True
     if Global.config['show_time']:
-        print 'took', time.time() - t0, 'seconds.'
+        print 'Compilation took', time.time() - t0, 'seconds.'
         
     if Global.config['verbose']:
         print 'Building network ...' 
