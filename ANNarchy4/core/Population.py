@@ -21,8 +21,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-import Global 
-import Neuron
+from . import Global
+from . import Neuron
+
 from ANNarchy4 import generator
 from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
@@ -68,7 +69,7 @@ class Population(Descriptor):
         elif neuron.spike_vars == 1:
             self.generator = generator.SpikePopulation(self)                        
         else:
-            print 'Error: only one SpikeVariable is allowed per neuron'
+            print('Error: only one SpikeVariable is allowed per neuron')
             exit(0)
             
         Global._populations.append(self)
@@ -155,7 +156,7 @@ class Population(Descriptor):
         Number of neurons in the population.
         """
         size = 1
-        for i in xrange(len(self.geometry)):
+        for i in range(len(self.geometry)):
             size *= self.geometry[i]
         return size
         
@@ -186,7 +187,7 @@ class Population(Descriptor):
         try:
             self.cyInstance.reset()
         except:
-            print 'reset population', self.name, 'failed.'
+            print('reset population', self.name, 'failed.')
         
     def start_record(self, variable):
         """
@@ -203,12 +204,12 @@ class Population(Descriptor):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print 'Error: variable must be either a string or list of strings.'
+            print('Error: variable must be either a string or list of strings.')
         
         for var in _variable:
             
             if not var in self._recorded_variables.keys():
-                print var, 'is not a recordable variable of', self.name
+                print(var, 'is not a recordable variable of', self.name)
                 continue
 
             if not self._recorded_variables[var].is_inited:
@@ -218,11 +219,11 @@ class Population(Descriptor):
                 getattr(self.cyInstance, '_start_record_'+var)()
 
                 if Global.config['verbose']:
-                    print 'start record of', var, '(', self.name, ')'
+                    print('start record of', var, '(', self.name, ')')
                     
                 self._recorded_variables[var].start()
             except:
-                print "Error (start_record): only possible after compilation."
+                print("Error (start_record): only possible after compilation.")
                 
 
     def pause_record(self, variable=None):
@@ -241,26 +242,26 @@ class Population(Descriptor):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print 'Error: variable must be either a string or list of strings.'       
+            print('Error: variable must be either a string or list of strings.')       
         
         for var in _variable:
             
             if not var in self._recorded_variables.keys():
-                print var, 'is not a recordable variable of', self.name
+                print(var, 'is not a recordable variable of', self.name)
                 continue
 
             if not self._recorded_variables[var].is_running:
-                print 'record of', var, ' was not running on population', self.name
+                print('record of', var, 'was not running on population', self.name)
                 continue
             
             try:
                 getattr(self.cyInstance, '_stop_record_'+var)()
 
                 if Global.config['verbose']:
-                    print 'pause record of', var, '(', self.name, ')'
+                    print('pause record of', var, '(', self.name, ')')
                 self._recorded_variables[var].pause()
             except:
-                print "Error (pause_record): only possible after compilation."
+                print("Error (pause_record): only possible after compilation.")
 
     def resume_record(self, variable):
         """
@@ -277,26 +278,27 @@ class Population(Descriptor):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print 'Error: variable must be either a string or list of strings.'
+            print('Error: variable must be either a string or list of strings.')
         
         for var in _variable:
             
             if not var in var in self._recorded_variables.keys():
-                print var, 'is not a recordable variable of', self.name
+                print(var, 'is not a recordable variable of', self.name)
                 continue
             
             if not self._recorded_variables[var].is_running:
-                print 'record of', var, ' is already running on population', self.name
+                print('record of', var, 'is already running on population', self.name)
                 continue
             
             try:
                 getattr(self.cyInstance, '_start_record_'+var)()
                 
                 if Global.config['verbose']:
-                    print 'resume record of', var, '(' , self.name, ')'
+                    print('resume record of', var, '(' , self.name, ')')
+
                 self._recorded_variables[var].start()
             except:
-                print "Error: only possible after compilation."
+                print("Error: only possible after compilation.")
                 
     def get_record(self, variable=None, as_1D=False):
         """
@@ -317,14 +319,14 @@ class Population(Descriptor):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print 'Error: variable must be either a string or list of strings.'
+            print('Error: variable must be either a string or list of strings.')
         
         data_dict = {}
         
         for var in _variable:
 
             if not var in var in self._recorded_variables.keys():
-                print var, 'is not a recordable variable of', self.name
+                print(var, 'is not a recordable variable of', self.name)
                 continue
             
             if self._recorded_variables[var].is_running:
@@ -332,7 +334,8 @@ class Population(Descriptor):
             
             try:
                 if Global.config['verbose']:
-                    print 'get record of', var, '(', self.name, ')'
+                    print('get record of', var, '(', self.name, ')')
+                    
                 data = getattr(self.cyInstance, '_get_recorded_'+var)()
                 
                 if as_1D:
@@ -360,7 +363,7 @@ class Population(Descriptor):
                                 
                 self._recorded_variables[var].reset()
             except:
-                print "Error: only possible after compilation."
+                print("Error: only possible after compilation.")
 
         if( len(_variable)==1 and variable!=None):
             return data_dict[_variable[0]]
@@ -383,11 +386,11 @@ class Population(Descriptor):
             if hasattr(self.cyInstance, variable):
                 return getattr(self.cyInstance, variable).reshape(self.geometry)
             else:
-                print 'Error: variable', variable, 'does not exist in this population.'
-                print traceback.print_stack()
+                print('Error: variable', variable, 'does not exist in this population.')
+                print(traceback.print_stack())
         else:
-            print 'Error: the network is not compiled yet.'
-            print traceback.print_stack()
+            print('Error: the network is not compiled yet.')
+            print(traceback.print_stack())
             
     def get_parameter(self, parameter):
         """
@@ -402,11 +405,11 @@ class Population(Descriptor):
             if hasattr(self.cyInstance, parameter):
                 return getattr(self.cyInstance, parameter)
             else:
-                print 'Error: parameter', parameter, 'does not exist in this population.'
-                print traceback.print_stack()
+                print('Error: parameter', parameter, 'does not exist in this population.')
+                print(traceback.print_stack())
         else:
-            print 'Error: the network is not compiled yet.'
-            print traceback.print_stack()
+            print('Error: the network is not compiled yet.')
+            print(traceback.print_stack())
     
     def rank_from_coordinates(self, coord):
         """
@@ -418,11 +421,11 @@ class Population(Descriptor):
         """
         # Check the coordinates
         if not len(coord) == self.dimension:
-            print 'Error when accessing neuron', str(coord), ': the population', self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
+            Global.ANNarchyPrint('Error when accessing neuron', str(coord), ': the population', self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
             return None
         for dim in range(len(coord)):
             if not coord[dim] < self.geometry[dim]:
-                print 'Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
+                Global.ANNarchyPrint('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
                 return None
         # Return the rank
         return np.ravel_multi_index( coord, self.geometry)
@@ -433,8 +436,9 @@ class Population(Descriptor):
         """
         # Check the rank
         if not rank < self.size:
-            print 'Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.'
+            Global.ANNarchyPrint('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
             return None
+        
         coord = np.unravel_index(rank, self.geometry)
         return coord
 
@@ -485,10 +489,10 @@ class Population(Descriptor):
                         val = value[val_key] 
                     setattr(self.cyInstance, val_key, val)
                 else:
-                    print "Error: population does not have the attribute: " + val_key + "."
+                    Global._ANNarchyError("population does not have the attribute: ",val_key,".")
         else:
-            print 'Error: the network is not compiled yet.'
-            print traceback.print_stack()
+            Global._ANNarchyError("the network is not compiled yet.")
+            Global._ANNarchyPrint(traceback.print_stack())
         
     def get(self, value):
         """
@@ -504,16 +508,10 @@ class Population(Descriptor):
             elif value in self.parameters:
                 return self.get_parameter(value)
             else:
-                print "Error: population does not contain attribute: '"+value+"'"   
+                Global._ANNarchyError("population does not contain attribute: '"+value+"'")   
         else:
-            print 'Error: the network is not compiled yet.'
-            print traceback.print_stack()
-            
-#    def _reshape_vector(self, vector):
-#        """
-#        Transfers a list or a 1D np.array (indiced with ranks) into the correct 1D, 2D, 3D np.array
-#        """
-#        return np.array(vector).reshape(self.geometry)
+            Global._ANNarchyError("the network is not compiled yet.'")
+            Global._ANNarchyPrint(traceback.print_stack())
             
     def neuron(self, coord):  
         " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  
@@ -522,8 +520,9 @@ class Population(Descriptor):
         if isinstance(coord, int):
             rank = coord
             if not rank < self.size:
-                print 'Error when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').'
+                Global._ANNarchyError(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
                 return None
+
         else: # a tuple
             rank = self.rank_from_coordinates( coord )
             if rank == None:
@@ -599,7 +598,7 @@ class Population(Descriptor):
                 elif self.dimension == 3:
                     ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for z in coords[2]]
                 if not max(ranks) < self.size:
-                    print 'Error: indices do not match the geometry of the population', str(self.geometry)
+                    Global._ANNarchyError("indices do not match the geometry of the population", self.geometry)
                     return 
                 return PopulationView(self, ranks)
                 

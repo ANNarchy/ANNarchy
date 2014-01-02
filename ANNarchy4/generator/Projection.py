@@ -68,7 +68,7 @@ class Projection(object):
         return [var['name'] for var in self.synapse_variables ]
 
     def _add_value(self, name, value):
-        print "Error: it's not allowed to add new variables / parameters to projection object."
+        print("Error: it's not allowed to add new variables / parameters to projection object.")
 
     def _update_value(self, name, value):
 
@@ -83,11 +83,11 @@ class Projection(object):
                 elif isinstance(value, RandomDistribution):
                     values['var'].init = value
                 else:
-                    print "Error: can't assign ", value ,"(",type(value),") to "+name
+                    print("Error: can't assign", value ,"(",type(value),") to",name)
             else:
                 values['init'] = float(value)
         else:
-            print "Error: variable / parameter "+name+" does not exist in population object."
+            print("Error: variable / parameter",name,"does not exist in population object.")
         
     def generate_cpp_add(self):
         """
@@ -103,7 +103,7 @@ class Projection(object):
                 str(self.projection.post.generator.targets.index(self.projection.target))+
                 ');\n')
         else:
-            print '\tWARNING: no connector object provided.'
+            print('\tWARNING: no connector object provided.')
             return ''
 
     def generate(self, verbose):
@@ -123,7 +123,7 @@ class Projection(object):
             elif type==bool:
                 return 'bool'
             else:
-                print "Unknown type, use default = 'DATA_TYPE'"
+                print("Unknown type, use default = 'DATA_TYPE'")
                 return 'DATA_TYPE'
         
         def member_def(parsed_variables):
@@ -347,7 +347,7 @@ void set%(Name)s(%(type)s %(name)s) { this->%(name)s_=%(name)s; }
             return access
 
         if verbose:
-            print "    for", self.name, '( from',self.projection.pre.name,'to',self.projection.post.name, ', target = \"',self.projection.target, '\")' 
+            print("    for", self.name, '( from',self.projection.pre.name,'to',self.projection.post.name, ', target = \"',self.projection.target, '\")') 
 
         # generate func body            
         self.parser = parser.SynapseAnalyser(self.synapse_variables)
@@ -483,7 +483,7 @@ void %(name)s::globalLearn() {
             elif type==bool:
                 return 'bool'
             else:
-                print "Unknown type, use default = 'DATA_TYPE'"
+                print("Unknown type, use default = 'DATA_TYPE'")
                 return 'float'
         
         def pyx_func(parsed_synapse):

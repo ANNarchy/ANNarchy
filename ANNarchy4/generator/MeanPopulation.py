@@ -23,7 +23,7 @@
 """
 import re
 import numpy as np
-import exceptions
+import copy
 
 # ANNarchy core informations
 import ANNarchy4.core.Global as Global
@@ -31,8 +31,8 @@ from ANNarchy4.core.Random import RandomDistribution
 
 from ANNarchy4.core.Variable import Variable
 from ANNarchy4 import parser
-import copy
-from Population import Population
+
+from .Population import Population
 
 def get_type_name(type):
     """
@@ -46,7 +46,7 @@ def get_type_name(type):
     elif type==bool:
         return 'bool'
     else:
-        print "Unknown type, use default = 'DATA_TYPE'"
+        print("Unknown type, use default = 'DATA_TYPE'")
         return 'DATA_TYPE'
 
 class MeanPopulation(Population):
@@ -64,9 +64,9 @@ class MeanPopulation(Population):
         """        
         if verbose:
             if self.class_name != self.population.name:
-                print '    for', self.class_name, '(', self.population.name, ')' 
+                print('    for', self.class_name, '(', self.population.name, ')') 
             else:
-                print '    for', self.class_name
+                print('    for', self.class_name)
 
         self._update_neuron_variables()
 
@@ -106,8 +106,8 @@ class MeanPopulation(Population):
             for val in neuron_values:
                 for val2 in neuron_values:
                     if val2 != val and val2['name'].capitalize() == val['name']:
-                        print 'Error: variable',val2['name'],'and',val['name'],'are not allowed.'
-                        raise exceptions.TypeError
+                        print('Error: variable',val2['name'],'and',val['name'],'are not allowed.')
+                        raise TypeError
     
             for value in neuron_values:
                 #
@@ -321,12 +321,13 @@ private:
                     call = 'RandomDistribution' + parameters + '.genCPP()'
                     try:
                         random_cpp = eval(call)
-                    except Exception, exception:
-                        print exception
-                        print 'Error in', value['eq'], ': the RandomDistribution object is not correctly defined.'
+                    except Exception as exception:
+                        print(exception)
+                        print('occured in', value['eq'], ': the RandomDistribution object is not correctly defined.')
                         exit(0) 
+
                     meta_code += '\t'+value['name']+'_= '+random_cpp+'.getValues(nbNeurons_);\n'
-                    
+
             return meta_code
         
         def single_global_ops(class_name, global_ops):
@@ -359,7 +360,7 @@ private:
     %(var)s_mean_ /= %(var)s_.size();
 }\n\n"""  % { 'class': class_name, 'var': var['variable'] }
                 else:
-                    print "Error: unknown operation - '"+var['function']+"'"
+                    print("Error: unknown operation - '"+var['function']+"'")
                 
             return code
         

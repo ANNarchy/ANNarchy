@@ -32,18 +32,21 @@ class RandomDistribution(object):
         pass
 
     def get_values(self, shape):
-        print 'ERROR: instantiated base class RandomDistribution is not allowed.'
+        print('Error: instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
     def get_value(self):
-        print 'ERROR: instantiated base class RandomDistribution is not allowed.'
+        print('Error: instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
     def genCPP(self):
-        print 'ERROR: instantiated base class RandomDistribution is not allowed.'
+        print('Error: instantiated base class RandomDistribution is not allowed.')
         return ''
 
 class Constant(RandomDistribution):
+    """
+    Random distribution instance returning a constant value.
+    """
     def __init__(self, value):
         """
         Constructor.
@@ -69,6 +72,9 @@ class Constant(RandomDistribution):
         return self._value
 
 class Uniform(RandomDistribution):
+    """
+    Random distribution instance returning a random value based on uniform distribution.
+    """   
     def __init__(self, min, max, cpp_seed=-1):
         """
         Constructor.
@@ -101,6 +107,9 @@ class Uniform(RandomDistribution):
         return self._min
 
 class Normal(RandomDistribution):
+    """
+    Random distribution instance returning a random value based on uniform distribution.
+    """   
     def __init__(self, mu, sigma, cpp_seed=-1):
         """
         Constructor.

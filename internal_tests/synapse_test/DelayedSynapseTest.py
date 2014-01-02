@@ -59,10 +59,10 @@ def synapse_test():
 
     for i in range(5):
         simulate(1)
-	print 'One2One'
-        print Layer1Pop.mp1
-	print 'MyConnector'
-        print Layer1Pop.mp2
+        print('One2One')
+        print(Layer1Pop.mp1)
+        print('MyConnector')
+        print(Layer1Pop.mp2)
 
     #print InputPop.rate
     #print Layer1Pop.rate

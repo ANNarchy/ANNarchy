@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from Master import Master
+from .Master import Master
 
 class Neuron(Master):
     """
@@ -89,17 +89,23 @@ class IndividualNeuron(object):
             return eval('self.pop.cyInstance._get_single_'+name+'(self.rank)')
         elif name in self.pop.parameters:
             return self.pop.__getattribute__(name)
-        print 'Error: population has no attribute called', name
-        print 'Parameters:', self.pop.parameters
-        print 'Variables:', self.pop.variables 
+        print('Error: population has no attribute called', name)
+        print('Parameters:', self.pop.parameters)
+        print('Variables:', self.pop.variables) 
                        
     def __setattr__(self, name, val):
         if hasattr(getattr(self.__class__, name, None), '__set__'):
             return object.__setattr__(self, name, val)
+        
+        # old version:
+        #if name in self.pop.variables:
+        #    eval('self.pop.cyInstance._set_single_'+name+'(self.rank, val)')
+            
+        #TODO: check if this works !!!
         if name in self.pop.variables:
-            eval('self.pop.cyInstance._set_single_'+name+'(self.rank, val)')
+            getattr(self.pop.cyInstance, '_set_single_'+name)(self.rank, val)
         elif name in self.pop.parameters:
-            print 'Warning: parameters are population-wide, this will affect all other neurons.'
+            print('Warning: parameters are population-wide, this will affect all other neurons.')
             self.pop.__setattr__(name, val)
             
     def __repr__(self):

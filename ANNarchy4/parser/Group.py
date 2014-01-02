@@ -21,10 +21,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from Definitions import *
-import Nodes
-import Tree
+from .Definitions import *
+from . import Nodes
+from . import Tree
 
+from ANNarchy4.core import Global
+ 
 # Group of expressions with parenthesis
 class Group(Nodes.Node):
 
@@ -126,7 +128,7 @@ class Group(Nodes.Node):
                     found = True
                 # Check if it is a weighted sum
                 if belongs_to(item, SUMS):
-                    items.append(Nodes.PSP(self.machine, iter_items.next()))
+                    items.append(Nodes.PSP(self.machine, next(iter_items)))
                     found = True
                 # Check if it is a pre variable
                 if not item.find('pre.') == -1:
@@ -142,8 +144,8 @@ class Group(Nodes.Node):
                     found=True
                 if item == 'd' + self.machine.name: # found the first item of a gradient
                     items.append(Nodes.Gradient(self.machine, self.machine.name))
-                    if not iter_items.next() == '/' or not iter_items.next() == 'dt':
-                        print 'Error: the gradient on', self.machine.name, 'is badly expressed, it should be', 'd'+self.machine.name+'/dt'
+                    if not next(iter_items) == '/' or not next(iter_items) == 'dt':
+                        Global._error('the gradient on', self.machine.name, 'is badly expressed, it should be', 'd'+self.machine.name+'/dt')
                         exit(0)
                     found=True
                 # Check if it is an operator
@@ -181,7 +183,7 @@ class Group(Nodes.Node):
                 found = True
             # Else: don't know what to do with it...
             if not found:
-                print self.machine.expr
-                print 'Error: the term', item, 'is neither part of the allowed vocabulary or a parameter of your model.'
+                Global._print(self.machine.expr)
+                Global._error('the term', item, 'is neither part of the allowed vocabulary or a parameter of your model.')
                 exit(0)
         self.items = items

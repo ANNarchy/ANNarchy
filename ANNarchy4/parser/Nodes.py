@@ -21,9 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from Definitions import *
-import Analyser
-import Tree
+from .Definitions import *
+
 from ANNarchy4.core import Global
 
 ## Object transforming the expression into an ordered tree
@@ -36,7 +35,7 @@ class TreeBuilder(object):
     def build(self):
         # Split the list around the equal sign
         id_equal = self.expr_list.index(EQUAL)
-        import Group
+        from . import Group
         self.left_group, self.right_group = Group.Group(self.machine, self.expr_list[:id_equal]), Group.Group(self.machine, self.expr_list[id_equal+1:])
         # Start the group analysis
         for group in [self.left_group, self.right_group]:
@@ -62,7 +61,8 @@ class Node(object):
         """ Create a hierarchy using the recognized nodes. """
         if isinstance(side, Parenthesis):
             return side
-        import Group
+        
+        from . import Group
         if isinstance(side, list) or isinstance(side, Group.Group):
             if len(side)==1: # The group has only one item
                 if isinstance(side[0], Group.Group): # A term between brackets.
@@ -155,7 +155,7 @@ class Node(object):
                 newside.parent= self
                 return newside
         # Not found
-        print 'Error when parsing \"', self.machine.expr, '\": could not analyse the expression.'
+        print('Error when parsing \"', self.machine.expr, '\": could not analyse the expression.')
         return None
 
 # Equal object
@@ -182,8 +182,8 @@ class Equal(Node):
         # left member
         if len(self.left) == 1:
             if not isinstance(self.left[0], MainVariable) and not isinstance(self.left[0], Gradient):
-                print self.machine.expr
-                print 'Error: the left term should be the updated variable'
+                print(self.machine.expr)
+                print('Error: the left term should be the updated variable')
                 exit(0)
             else:
                 left = self.left[0]
@@ -193,7 +193,7 @@ class Equal(Node):
             self.left = left
             self.left.parent= self
         else:
-            print 'Error when analysing the left term.'
+            print('Error when analysing the left term.')
             return None
 
         # right member
@@ -202,7 +202,7 @@ class Equal(Node):
             self.right = right
             self.right.parent= self
         else:
-            print 'Error when analysing the right term.'
+            print('Error when analysing the right term.')
             return None
         return self
 
@@ -247,6 +247,7 @@ class Variable(Leaf):
         self.machine = machine
         self.value = value
     def cpp(self):
+        from . import Analyser
         if isinstance(self.machine.analyser, Analyser.SynapseAnalyser):
             if str(self.value) in self.machine.analyser.local_variables_names:
                 suffix = '[i] '
@@ -266,6 +267,7 @@ class MainVariable(Variable):
     def __init__(self, machine, value):
         Variable.__init__(self, machine, value)
     def cpp(self):
+        from . import Analyser
         if isinstance(self.machine.analyser, Analyser.SynapseAnalyser):
             if str(self.value) in self.machine.analyser.local_variables_names:
                 suffix = '[i] '
@@ -291,6 +293,7 @@ class Gradient(Leaf):
         self.machine = machine
         self.value = value
     def cpp(self):
+        from . import Analyser
         if isinstance(self.machine.analyser, Analyser.SynapseAnalyser):
             if str(self.value) in self.machine.analyser.local_variables_names:
                 suffix = '[i] '
@@ -310,8 +313,8 @@ class PSP(Leaf):
     def cpp(self):
         if not self.value in self.machine.targets:
             if not Global.config['suppress_warnings']:
-                print self.machine.expr
-                print 'Warning: the target', self.value, 'does not exist on this neuron. The sum will be 0.0. ('+self.machine.pop_name+')'
+                print(self.machine.expr)
+                print('Warning: the target', self.value, 'does not exist on this neuron. The sum will be 0.0. ('+self.machine.pop_name+')')
             return ' 0.0 '
         return ' sum(i, ' + str(self.machine.targets.index(self.value))+') '
     def latex(self):
@@ -434,7 +437,7 @@ class GlobalFunction(Node):
         self.child = child
         if self.child != None and hierarchize:
             if len(self.child) != 1:
-                print 'Error: only one term should be specified inside the', self.value, 'function.'
+                print('Error: only one term should be specified inside the', self.value, 'function.')
                 exit(0)
             self.child=self.child[0]
             self.pop = 'pre' if self.child.find('pre.') != -1 else 'post'
@@ -485,8 +488,8 @@ class If(Node):
                         nb_if -= 1
 
             if id_then is -1 or id_else is -1:
-                print 'Error in analysing', self.machine.expr
-                print 'The conditional should use the (if A then B else C) structure.'
+                print('Error in analysing', self.machine.expr)
+                print('The conditional should use the (if A then B else C) structure.')
                 exit(0)
 
             import Group

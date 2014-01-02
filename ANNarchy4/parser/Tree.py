@@ -21,9 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from Definitions import *
-import Nodes
-import Analyser
+from .Definitions import *
+
 import copy
 
 # State machine for a single expression
@@ -45,6 +44,7 @@ class Tree(object):
         self.other_variables.append('t') # time can be used by default
 
         # Synapse analysers may need value or psp without defining it
+        from . import Analyser
         if isinstance(self.analyser, Analyser.SynapseAnalyser):
             if not 'psp' in self.other_variables:
                 if not self.name == 'psp':
@@ -64,9 +64,11 @@ class Tree(object):
             self.expr_list.remove('')
         # Check for an equal sign
         if not EQUAL in self.expr_list:
-            print 'Error in the evaluation of', self.name, '(', self.expr, '): there is no equal sign.'
+            print('Error in the evaluation of', self.name, '(', self.expr, '): there is no equal sign.')
             return False
+
         # Start the recursive analysis
+        from . import Nodes
         self.tree = Nodes.TreeBuilder(self, self.expr_list).build()
         if not self.tree:
             return False
@@ -100,8 +102,8 @@ class Tree(object):
         expr = re.sub('>(?P<post>[^=])', ' > \g<post>', expr) # Avoid splitting the comparators
         code = re.split('([^<>!=])=([^=])', expr) # Avoid splitting the comparators
         if len(code) != 4:
-            print code
-            print 'Error while analysing', expr, ': There should be only one equal sign in the equation.'
+            print(code)
+            print('Error while analysing', expr, ': There should be only one equal sign in the equation.')
             exit(0)
         expr=code[0] + code[1] + ' = ' + code[2] + code[3]
         return expr
@@ -159,6 +161,8 @@ def lookup(obj, Type):
 def simplify(tree, target):
     if isinstance(tree.left, target):
         return tree
+    
+    from . import Nodes
     if isinstance(tree.left, Nodes.PlusOperator):
         if tree.left.left.has_target: # the left branch has the target
             tree.right = Nodes.MinusOperator(tree.machine,
@@ -214,11 +218,11 @@ def simplify(tree, target):
                 tree.right = Nodes.Function(tree.machine, value = 'sqrt', child=tree.right, hierarchize=False)
                 tree.left = tree.left.left
         else:
-            print 'Error: can not solve a^x = b yet.'
+            print('Error: can not solve a^x = b yet.')
             exit(0)
 
     else:
-        print 'Error: one node is not invertible in the left member.'
+        print('Error: one node is not invertible in the left member.')
         exit(0)
 
     return simplify(tree, target)

@@ -59,7 +59,7 @@ class Variable(object):
             elif key=='type':
                 self.type = keyValueArgs[key]
             else:
-                print 'unknown key: '+key
+                print('unknown key for Variable: ',key)
 
         #
         # for later operations it's not positive if no

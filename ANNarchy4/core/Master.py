@@ -22,8 +22,9 @@
 
 """    
 import pprint
-from Variable import Variable
-from SpikeVariable import SpikeVariable
+
+from .Variable import Variable
+from .SpikeVariable import SpikeVariable
 
 #
 # maybe we find  a better name for this class
@@ -51,14 +52,8 @@ class Master(object):
         
         # debug
         if debug:
-            print 'Object '+self.__class__.__name__
+            print('Object '+self.__class__.__name__)
             pprint.pprint(self.variables)
-
-    def set(self, keyValueArgs):
-        """
-        update variable/parameter locally.
-        """        
-        print keyValueArgs
 
     def keyAlreadyContained(self, key, value):
         """

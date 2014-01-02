@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from Definitions import *
-import Tree
+from .Definitions import *
+from . import Tree
 import re
 
 from ANNarchy4.core.Random import RandomDistribution
@@ -47,7 +47,7 @@ def get_value_and_type(value):
             
         if value['var'].type != type(init_value) and value['var'].type != None:
             if not Global.config['suppress_warnings']:
-                print "'WARNING: type mismatch between provided type and initialization value of '",value['name'],"' ('",value['var'].type,",",type(init_value),")."
+                print("'WARNING: type mismatch between provided type and initialization value of '",value['name'],"' ('",value['var'].type,",",type(init_value),").")
              
     else:
         # parameter, have always an initial value,
@@ -75,7 +75,7 @@ class NeuronAnalyser(object):
         # Determine parameters and variables
         for value in self.neuron:
             if not 'name' in value.keys():
-                print 'Error: dictionary must have a name attribute.'
+                print('Error: dictionary must have a name attribute.')
                 exit(0)
 
             if 'var' in value.keys():
@@ -194,7 +194,7 @@ class SynapseAnalyser(object):
         # Determine parameters and variables
         for value in self.synapse:
             if not 'name' in value.keys():
-                print 'Error: dictionary must have a name attribute.'
+                print('Error: dictionary must have a name attribute.')
                 exit(0)
             if 'var' in value.keys(): # A variable which needs to be analysed
                 self.variables_names.append(value['name'])

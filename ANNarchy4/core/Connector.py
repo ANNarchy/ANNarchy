@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from Random import Constant
-from Dendrite import Dendrite
+from .Random import Constant
+from .Dendrite import Dendrite
 import numpy as np
 
 class Connector(object):

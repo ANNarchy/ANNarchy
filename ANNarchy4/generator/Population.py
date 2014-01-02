@@ -102,8 +102,8 @@ class Population(object):
         **Attention**: this function print out an error, as it's not allowed 
         to add new variables / parameters to population object.
         """
-        print "Error: it's not allowed to add new variables / parameters to population object."
-        print 'Population:', self.population.name, 'variable', name, 'value', value
+        print("Error: it's not allowed to add new variables / parameters to population object.")
+        print('Population:', self.population.name, 'variable', name, 'value', value)
 
     def _update_value(self, name, value):
         """ 
@@ -125,18 +125,18 @@ class Population(object):
                     if len(value) == self.population.size:
                         self.post_compilation_init[name] = value
                     else:
-                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with a list of the same size', self.population.size                    
+                        print('Error: the variable', name, 'of population', self.population.name, 'must be initialized with a list of the same size', self.population.size)                    
                 elif isinstance(value, np.ndarray): # will be assigned after the constrution of the c++ objects
                     if value.shape == self.population.geometry or value.shape == (self.population.size, ):
                         self.post_compilation_init[name] = value
                     else:
-                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with an array of the same shape', self.population.geometry  
+                        print('Error: the variable', name, 'of population', self.population.name, 'must be initialized with an array of the same shape', self.population.geometry)  
                 else:
-                    print "Error: can't assign ", value , "(", type(value), ") to the variable "+name
+                    print("Error: can't assign ", value , "(", type(value), ") to the variable", name)
             else:
                 values['init'] = float(value)
         else:
-            print "Error: variable / parameter "+name+" does not exist in population object."
+            print("Error: variable / parameter ",name," does not exist in population object.")
             
     def _update_neuron_variables(self):
         """

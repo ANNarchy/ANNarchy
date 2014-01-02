@@ -39,7 +39,7 @@ class SpikeVariable(object):
             elif key=='type':
                 self.type = keyValueArgs[key]
             else:
-                print 'unknown key: '+key
+                print('unknown key: '+key)
          
         #
         # for later operations it's not positive if no

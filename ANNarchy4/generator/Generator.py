@@ -293,7 +293,7 @@ def code_generation(cpp_stand_alone, profile_enabled):
     After this the ANNarchy main header is expanded by the corresponding headers.
     """
     if Global.config['verbose']:
-        print '\nGenerate code ...'
+        print('\nGenerate code ...')
 
     # create population cpp class for each neuron
     for pop in Global._populations:
@@ -306,15 +306,15 @@ def code_generation(cpp_stand_alone, profile_enabled):
     create_includes()
 
     if Global.config['verbose']:
-        print '\nUpdate ANNarchy header ...'
+        print('\nUpdate ANNarchy header ...')
     update_annarchy_header(cpp_stand_alone, profile_enabled)
 
     if Global.config['verbose']:
-        print '\nUpdate global header ...'
+        print('\nUpdate global header ...')
     update_global_header(profile_enabled)
 
     if Global.config['verbose']:
-        print '\nGenerate py extensions ...'
+        print('\nGenerate py extensions ...')
     generate_py_extension(profile_enabled)
     
     os.chdir(Global.annarchy_dir+'/build')
@@ -360,7 +360,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (by default False).
     """
-    print 'ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')'
+    print('ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')')
         
     profile_enabled = False
     try:
@@ -372,7 +372,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:
-        print "\nCreate 'annarchy' subdirectory."
+        print("\nCreate 'annarchy' subdirectory.")
     folder_management(profile_enabled)
     
     # Tell each population which global operation they should compute
@@ -383,7 +383,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
     
     # Create ANNarchyCore.so and py extensions
     
-    print '\nCompiling ...',
+    print('\nCompiling ...')
     if Global.config['show_time']:
         t0 = time.time()
             
@@ -406,19 +406,20 @@ def compile(cpp_stand_alone=False, debug_build=False):
         proc.wait()
         
     Global._compiled = True
-    print ' OK.'
+    print(' OK.')
     if Global.config['show_time']:
-        print 'took', time.time() - t0, 'seconds.'
+        print('    took', time.time() - t0, 'seconds.')
         
-    print '\nConstruct network ...\n',   
+    print('\nConstruct network ...\n')
+       
     # Return to the current directory
     os.chdir('..')
     # Import the libraries
     try:
         import ANNarchyCython
-    except:
+    except ImportError:
         if not cpp_stand_alone:
-            print '\nError: the Cython library was not correctly compiled.'
+            print('\nError: the Cython library was not correctly compiled.')
             exit(0)
             
     # Create the Python objects    
@@ -426,7 +427,7 @@ def compile(cpp_stand_alone=False, debug_build=False):
         # bind the py extensions to the corresponding python objects
         for pop in Global._populations:
             if Global.config['verbose']:
-                print '    Create population', pop.name
+                print('    Create population', pop.name)
             if Global.config['show_time']:
                 t0 = time.time()
             # Create the Cython instance
@@ -436,11 +437,11 @@ def compile(cpp_stand_alone=False, debug_build=False):
             # Initialize their value
             pop.generator._init_variables()
             if Global.config['show_time']:
-                print '        took', (time.time()-t0)*1000, 'milliseconds'             
+                print('    took', (time.time()-t0)*1000, 'milliseconds')             
         # instantiate projections
         for proj in Global._projections:
             if Global.config['verbose']:
-                print '    Create projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"'           
+                print('    Create projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')           
             if Global.config['show_time']:
                 t0 = time.time()
             # Create the synapses
@@ -452,9 +453,9 @@ def compile(cpp_stand_alone=False, debug_build=False):
             # Create the attributes
             proj._init_attributes()   
             if Global.config['show_time']:
-                print '        took', (time.time()-t0)*1000, 'milliseconds'             
+                print('        took', (time.time()-t0)*1000, 'milliseconds')             
 
     else:
         #abort the application after compiling ANNarchyCPP
-        print '\nCompilation process of ANNarchyCPP completed successful.\n'
+        print('\nCompilation process of ANNarchyCPP completed successful.\n')
         exit(0)

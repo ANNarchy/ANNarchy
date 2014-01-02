@@ -23,7 +23,9 @@
 """
 from ANNarchy4.core import Global
 from ANNarchy4.core.Random import RandomDistribution
-from Population import Population
+
+from .Population import Population
+
 import re
          
 def get_type_name(type):
@@ -38,7 +40,7 @@ def get_type_name(type):
     elif type==bool:
         return 'bool'
     else:
-        print "Unknown type, use default = 'DATA_TYPE'"
+        print("Unknown type, use default = 'DATA_TYPE'")
         return 'DATA_TYPE'
                
 class SpikePopulation(Population):
@@ -264,7 +266,7 @@ private:
     %(var)s_mean_ /= %(var)s_.size();
 }\n\n"""  % { 'class': class_name, 'var': var['variable'] }
                 else:
-                    print "Error: unknown operation - '"+var['function']+"'"
+                    print("Error: unknown operation - '"+var['function']+"'")
                 
             return code
         

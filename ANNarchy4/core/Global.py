@@ -21,9 +21,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-import os
+import sys, os
 from datetime import datetime
 from math import ceil
+import __future__
 
 # instances
 _populations = []       # created populations
@@ -99,7 +100,7 @@ def reset(populations=False, projections=False):
             pop.reset()
             
     if projections:
-        print 'currently not implemented'
+        print('currently not implemented')
         
 def get_population(name):
     """
@@ -113,7 +114,7 @@ def get_population(name):
         if pop.name == name:
             return pop
         
-    print "Error: no population with the name '"+name+"' found."
+    print("Error: no population",name,"found.")
     return None
 
 def get_projection(pre, post, target):
@@ -133,7 +134,7 @@ def get_projection(pre, post, target):
                 if proj.target == target:
                     return proj
     
-    print "Error: no projection '"+pre.name+"'->'"+post.name+"' with target '"+target+"' found."
+    print("Error: no projection",pre.name,"->",post.name,"with target ",target,"found.")
     return None
 
 def record(to_record):
@@ -219,3 +220,30 @@ def set_current_step(time):
     """
     import ANNarchyCython    
     ANNarchyCython.pyNetwork().set_time( time )    
+
+def _print(text):
+    """
+    Prints a message to standard out.
+    """    
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        __future__.print_function(text)
+    else:
+        print(text)
+        
+def _warning(text):
+    """
+    Prints a warning message to standard out.
+    """
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        __future__.print_function("WARNING",text)
+    else:
+        print(text)
+        
+def _error(text):
+    """
+    Prints an error message to standard out.
+    """
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        __future__.print_function("ERROR:",text)
+    else:
+        print("ERROR",text)

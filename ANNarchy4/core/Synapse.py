@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from Master import Master
-import Global
+from .Master import Master
+from . import Global
 
 from ANNarchy4 import parser
 
