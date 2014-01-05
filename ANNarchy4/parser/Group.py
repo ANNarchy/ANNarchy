@@ -60,9 +60,10 @@ class Group(Nodes.Node):
             nb_left = self.items.count('(')
             nb_right = self.items.count(')')
             if nb_left != nb_right: # no match
-                print 'Error in', self.machine.expr
-                print 'Parenthesis do not match'
+                Global._error(self.machine.expr)
+                Global._print('Parenthesis do not match')
                 exit(0)
+
             # Find first-level brackets
             for idx in range(len(self.items)):
                 it = self.items[idx]

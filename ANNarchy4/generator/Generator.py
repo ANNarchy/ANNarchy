@@ -339,7 +339,7 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
                 )
                 changed_cpp = True
                 if Global.config['verbose']:
-                    print file, 'has changed since last compilation.'
+                    Global._print(file, 'has changed since last compilation.')
         for file in os.listdir(Global.annarchy_dir+'/generate/pyx'):
             if not os.path.isfile(Global.annarchy_dir+'/pyx/'+file) or not filecmp.cmp(Global.annarchy_dir+'/generate/pyx/'+file, Global.annarchy_dir+'/pyx/'+file):
                 shutil.copy(Global.annarchy_dir+'/generate/pyx/'+file, # src
@@ -347,7 +347,8 @@ def code_generation(cpp_stand_alone, profile_enabled, clean):
                 )
                 changed_pyx = True
                 if Global.config['verbose']:
-                    print file, 'has changed since last compilation.'
+                    Global._print(file, 'has changed since last compilation.')
+
     else: # Copy everything
         for file in os.listdir(Global.annarchy_dir+'/generate/build'):
             shutil.copy(Global.annarchy_dir+'/generate/build/'+file, # src
@@ -401,7 +402,8 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False):
         
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:
-        print "Create 'annarchy' subdirectory."
+        Global._print("Create 'annarchy' subdirectory.")
+
     folder_management(profile_enabled, clean)
     
     # Tell each population which global operation they should compute
@@ -412,7 +414,7 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False):
     
     # Create ANNarchyCore.so and py extensions 
     if changed_cpp or changed_pyx:   
-        print 'Compiling ...'
+        Global._print('Compiling ...')
         if Global.config['show_time']:
             t0 = time.time()
             
@@ -422,27 +424,49 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False):
             flags = "-O2"
         else:
             flags = "-O0 -g -D_DEBUG"
+
         src = """# Makefile
 SRC = $(wildcard build/*.cpp)
 PYX = $(wildcard pyx/*.pyx)
 OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
      
-ANNarchyCython.so : $(OBJ) pyx/ANNarchyCython.o
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o pyx/ANNarchyCython.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+all:
+	@echo "Please provide a target, either 'ANNarchyCython_2.x' or 'ANNarchyCython_3.x"
 
-pyx/ANNarchyCython.o : pyx/ANNarchyCython.pyx
+ANNarchyCython_2.x: $(OBJ) pyx/ANNarchyCython_2.7.o
+\t@echo "Build ANNarchyCython library for python 2.x"
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o pyx/ANNarchyCython_2.7.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+
+pyx/ANNarchyCython_2.7.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython.o -L. -I. -Ibuild -fopenmp -std=c++11 -fpermissive 
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++11 -fpermissive 
+
+ANNarchyCython_3.x: $(OBJ) pyx/ANNarchyCython_3.x.o
+\t@echo "Build ANNarchyCython library for python 3.x"
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o pyx/ANNarchyCython_3.x.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython3.2mu -o ANNarchyCython.so  
+
+pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
+\tcython pyx/ANNarchyCython.pyx --cplus  
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python3.2 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_3.x.o -L. -I. -Ibuild -fopenmp -std=c++11 -fpermissive 
 
 build/%.o : build/%.cpp
 \tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++11 -fopenmp -I. -c $< -o $@
-""" #% {'dflags': flags}
+
+clean:
+	rm -rf build/*.o
+	rm -rf pyx/*.o
+	rm -rf ANNarchyCython.so
+"""
 
         with open('Makefile', 'w') as wfile:
             wfile.write(src)
         if changed_pyx: # Force recompilation of the Cython wrappers
             os.system('touch pyx/ANNarchyCython.pyx')
-        os.system('make -j4 > compile_stdout.log 2> compile_stderr.log')
+
+        if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+            os.system('make ANNarchyCython_2.x -j4 > compile_stdout.log 2> compile_stderr.log')
+        else:
+            os.system('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log')
         
     else: # Windows: to test....
         sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
@@ -454,10 +478,10 @@ build/%.o : build/%.cpp
 
     if changed_cpp or changed_pyx:   
         if Global.config['show_time']:
-            print 'Compilation took', time.time() - t0, 'seconds.'
+            Global._print('Compilation took', time.time() - t0, 'seconds.')
         
     if Global.config['verbose']:
-        print 'Building network ...' 
+        Global._print('Building network ...')
           
     # Return to the current directory
     os.chdir('..')
@@ -466,7 +490,7 @@ build/%.o : build/%.cpp
         import ANNarchyCython
     except ImportError:
         if not cpp_stand_alone:
-            print('\nError: the Cython library was not correctly compiled.')
+            Global._print('\nError: the Cython library was not correctly compiled.')
             exit(0)
             
     # Create the Python objects    
@@ -474,9 +498,11 @@ build/%.o : build/%.cpp
         # bind the py extensions to the corresponding python objects
         for pop in Global._populations:
             if Global.config['verbose']:
-                print('    Create population', pop.name)
+                Global._print('    Create population', pop.name)
+
             if Global.config['show_time']:
                 t0 = time.time()
+
             # Create the Cython instance
             pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
             # Create the attributes
@@ -484,11 +510,11 @@ build/%.o : build/%.cpp
             # Initialize their value
             pop.generator._init_variables()
             if Global.config['show_time']:
-                print 'Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds'             
+                Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')             
         # instantiate projections
         for proj in Global._projections:
             if Global.config['verbose']:
-                print 'Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"'           
+                Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')        
 
             if Global.config['show_time']:
                 t0 = time.time()
@@ -502,9 +528,9 @@ build/%.o : build/%.cpp
             # Create the attributes
             proj._init_attributes()   
             if Global.config['show_time']:
-                print '        took', (time.time()-t0)*1000, 'milliseconds'  
+                Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
 
     else:
         #abort the application after compiling ANNarchyCPP
-        print('\nCompilation process of ANNarchyCPP completed successful.\n')
+        Global._print('\nCompilation process of ANNarchyCPP completed successful.\n')
         exit(0)

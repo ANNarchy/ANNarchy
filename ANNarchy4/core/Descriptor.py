@@ -23,62 +23,54 @@
 """    
 from . import Global
 
-#===============================================================================
-# class Descriptor(object):
-#     """
-#     Base class for Projection and Population class to 
-#     extend these with attributes after instantiation.
-#     
-#     refer: blog.brianbeck.com/post/74086029/instance-descriptors
-#     """
-#     def __getattribute__(self, name):
-#         """
-#         getter
-#         """
-#         
-#         try:
-#             value = object.__getattribute__(self, name)
-#             print('value',value)
-#             
-#         except Exception as err:
-#             if not Global._compiled :
-#                 if name in object.__getattribute__(self, 'generator')._variable_names():
-#                     tmp = object.__getattribute__(self, 'generator')._get_value(name)
-#                     if tmp != None:
-#                         value = tmp
-#                         return value
-#             else:
-#                 print(err)
-#                 pass
-#         else:
-#             if hasattr(value, '__get__'):
-#                 value = value.__get__(self)
-#                 return value
-# 
-#     def __setattr__(self, name, value):
-#         """
-#         setter
-#         """        
-#         try:
-#             obj = object.__getattribute__(self, name)
-#         except AttributeError:
-#             pass
-#         else:
-#             if hasattr(obj, '__set__'):
-#                 return obj.__set__(self, value)
-#         if not Global._compiled :
-#             print('hasattr', self, name)
-#             if hasattr(self, 'initialized'):
-#                 if name in self.generator._variable_names():
-#                     self.generator._update_value(name, value)
-#                     return None
-#                 else:
-#                     self.generator._add_value(name, value)
-#                     return None
-#         return object.__setattr__(self, name, value)
-#===============================================================================
-          
 class Descriptor(object):
+    """
+    Base class for Projection and Population class to 
+    extend these with attributes after instantiation.
+    
+    refer: blog.brianbeck.com/post/74086029/instance-descriptors
+    """
+    def __getattribute__(self, name):
+        """
+        getter
+        """
+        
+        try:
+            value = object.__getattribute__(self, name)
+        except AttributeError:
+            if not Global._compiled :
+                if name in object.__getattribute__(self, 'generator')._variable_names():
+                    tmp = object.__getattribute__(self, 'generator')._get_value(name)
+                    if tmp != None:
+                        value = tmp
+        else:
+            if hasattr(value, '__get__'):
+                value = value.__get__(self)
+        
+        return value
+
+    def __setattr__(self, name, value):
+        """
+        setter
+        """        
+        try:
+            obj = object.__getattribute__(self, name)
+        except AttributeError:
+            pass
+        else:
+            if hasattr(obj, '__set__'):
+                return obj.__set__(self, value)
+        if not Global._compiled :
+            if hasattr(self, 'initialized'):
+                if name in self.generator._variable_names():
+                    self.generator._update_value(name, value)
+                    return None
+                else:
+                    self.generator._add_value(name, value)
+                    return None
+        return object.__setattr__(self, name, value)
+          
+class Descriptor2(object):
     def __getattribute__(self, name):
         value = object.__getattribute__(self, name)
         if hasattr(value, '__get__'):
@@ -117,7 +109,4 @@ class Attribute(object):
 
     def __delete__(self, instance):
         pass
-
-
-# -*- coding: utf-8 -*-
 

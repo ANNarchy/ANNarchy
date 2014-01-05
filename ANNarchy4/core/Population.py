@@ -489,10 +489,10 @@ class Population(Descriptor):
                         val = value[val_key] 
                     setattr(self.cyInstance, val_key, val)
                 else:
-                    Global._ANNarchyError("population does not have the attribute: ",val_key,".")
+                    Global._error("population does not have the attribute: ",val_key,".")
         else:
-            Global._ANNarchyError("the network is not compiled yet.")
-            Global._ANNarchyPrint(traceback.print_stack())
+            Global._error("the network is not compiled yet.")
+            Global._print(traceback.print_stack())
         
     def get(self, value):
         """
@@ -508,10 +508,10 @@ class Population(Descriptor):
             elif value in self.parameters:
                 return self.get_parameter(value)
             else:
-                Global._ANNarchyError("population does not contain attribute: '"+value+"'")   
+                Global._error("population does not contain attribute: '"+value+"'")   
         else:
-            Global._ANNarchyError("the network is not compiled yet.'")
-            Global._ANNarchyPrint(traceback.print_stack())
+            Global._error("the network is not compiled yet.'")
+            Global._print(traceback.print_stack())
             
     def neuron(self, coord):  
         " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  
@@ -520,7 +520,7 @@ class Population(Descriptor):
         if isinstance(coord, int):
             rank = coord
             if not rank < self.size:
-                Global._ANNarchyError(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+                Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
                 return None
 
         else: # a tuple

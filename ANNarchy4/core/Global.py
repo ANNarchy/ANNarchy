@@ -21,10 +21,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
+from __future__ import print_function
+
 import sys, os
 from datetime import datetime
 from math import ceil
-import __future__
 
 # instances
 _populations = []       # created populations
@@ -230,7 +231,8 @@ def _print(*var_text):
         text += var + ' '
         
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-        __future__.print_function(text)
+        p = print        
+        p(text)
     else:
         print(text)
         
@@ -238,12 +240,13 @@ def _warning(*var_text):
     """
     Prints a warning message to standard out.
     """
-    text = ''
+    text = 'WARNING: '
     for var in var_text:
         text += var + ' '
 
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-        __future__.print_function("WARNING",text)
+        p = print        
+        p(text)
     else:
         print(text)
         
@@ -251,11 +254,12 @@ def _error(*var_text):
     """
     Prints an error message to standard out.
     """
-    text = ''
+    text = 'ERROR: '
     for var in var_text:
         text += var + ' '
     
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-        __future__.print_function("ERROR:",text)
+        p = print        
+        p(text)
     else:
-        print("ERROR",text)
+        print(text)

@@ -433,7 +433,6 @@ private:
             code += '\t}\n'
             code += '#endif\n'
             
-            code += '\tstd::cout << "maxDelay:" << maxDelay_ << std::endl;\n'
             code += '\tif (maxDelay_ > 1)'
             code += '\t{\n'
             code += '\t\tdelayedRates_.push_front(rate_);\n'

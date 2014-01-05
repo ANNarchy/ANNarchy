@@ -349,8 +349,8 @@ class PreVariable(Leaf):
                 index = self.machine.analyser.targets_pre.index(self.child[0])
             except:
                 if not Global.config['suppress_warnings']:
-                    print self.machine.expr
-                    print 'Warning: the target', self.value, 'does not exist on the presynaptic neuron. The sum will be 0.0. ('+self.machine.pop_name+')'
+                    Global._print(self.machine.expr)
+                    Global._warning('the target', self.value, 'does not exist on the presynaptic neuron. The sum will be 0.0. ('+self.machine.pop_name+')')
                 return ' 0.0 '  
             return ' pre_population_->sum( rank_[i] , '+ str(index)  +') '
         return ' pre_population_->getSingle'+variable.capitalize()+'( rank_[i] ) '
@@ -375,8 +375,8 @@ class PostVariable(Leaf):
                 index = self.machine.analyser.targets_post.index(self.child[0])
             except:
                 if not Global.config['suppress_warnings']:
-                    print self.machine.expr
-                    print 'Warning: the target', self.value, 'does not exist on the postsynaptic neuron. The sum will be 0.0. (' + self.machine.pop_name+')'
+                    Global._print(self.machine.expr)
+                    Global._print('the target', self.value, 'does not exist on the postsynaptic neuron. The sum will be 0.0. (' + self.machine.pop_name+')')
                 return ' 0.0 '  
             return ' post_population_->sum( post_neuron_rank_  , '+ str(index)  +') '
         return ' post_population_->getSingle'+variable.capitalize()+'( post_neuron_rank_ ) '
