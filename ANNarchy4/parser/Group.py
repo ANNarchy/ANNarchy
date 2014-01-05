@@ -56,6 +56,13 @@ class Group(Nodes.Node):
             rk = 0
             idx_left = idx_right = 0
             complete=True
+            # Count the total numbers of brackets
+            nb_left = self.items.count('(')
+            nb_right = self.items.count(')')
+            if nb_left != nb_right: # no match
+                print 'Error in', self.machine.expr
+                print 'Parenthesis do not match'
+                exit(0)
             # Find first-level brackets
             for idx in range(len(self.items)):
                 it = self.items[idx]
@@ -130,12 +137,20 @@ class Group(Nodes.Node):
                 if belongs_to(item, SUMS):
                     items.append(Nodes.PSP(self.machine, next(iter_items)))
                     found = True
+                # Check if it is a pre variable with access to sum()
+                if item == 'pre.sum':
+                    items.append(Nodes.PreVariable(self.machine, item, child = iter_items.next()))
+                    found = True
                 # Check if it is a pre variable
-                if not item.find('pre.') == -1:
+                elif not item.find('pre.') == -1:
                     items.append(Nodes.PreVariable(self.machine, item))
                     found = True
+                # Check if it is a post variable with access to sum()
+                if  item == 'post.sum':
+                    items.append(Nodes.PostVariable(self.machine, item, child = iter_items.next()))
+                    found = True
                 # Check if it is a post variable
-                if not item.find('post.') == -1:
+                elif not item.find('post.') == -1:
                     items.append(Nodes.PostVariable(self.machine, item))
                     found = True
                 # Check if it is the updated variable
@@ -186,4 +201,4 @@ class Group(Nodes.Node):
                 Global._print(self.machine.expr)
                 Global._error('the term', item, 'is neither part of the allowed vocabulary or a parameter of your model.')
                 exit(0)
-        self.items = items
+        self.items = items      

@@ -39,9 +39,9 @@ class Population(object):
     def __init__(self, population):
         self.class_name = 'Population'+str(population.rank)
         
-        self.header = Global.annarchy_dir+'/build/'+self.class_name+'.h'
-        self.body = Global.annarchy_dir+'/build/'+self.class_name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/pyx/'+self.class_name+'.pyx'
+        self.header = Global.annarchy_dir+'/generate/build/'+self.class_name+'.h'
+        self.body = Global.annarchy_dir+'/generate/build/'+self.class_name+'.cpp'
+        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.class_name+'.pyx'
         
         self.population = population
         

@@ -57,7 +57,7 @@ class SpikePopulation(Population):
         Generates the cpp codes for the spike coded population.
         """        
         self._update_neuron_variables()
-        
+            
         #   generate files
         with open(self.header, mode = 'w') as w_file:
             w_file.write(self._generate_header())

@@ -420,8 +420,8 @@ private:
             code += '\t}\n'
 
             code += '#ifdef _DEBUG\n'
-            code += '\tstd::cout << "Population:" << name_ << std::endl;'
-            code += '\tstd::cout << "before:" << std::endl;'
+            code += '\tstd::cout << "Population:" << name_ << std::endl;\n'
+            code += '\tstd::cout << "before:" << std::endl;\n'
             code += '\tfor (auto it=delayedRates_.begin(); it!=delayedRates_.end(); it++)\n'
             code += '\t{\n'
             code += '\t\tstd::cout << "rates: "<< std::endl;\n'

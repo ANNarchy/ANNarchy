@@ -179,14 +179,16 @@ class NeuronAnalyser(object):
 # Main analyser class for synapses
 class SynapseAnalyser(object):
 
-    def __init__(self, synapse):
+    def __init__(self, synapse, targets_pre=[], targets_post=[]):
 
         self.synapse = synapse
         self.analysed_synapse = []
         self.parameters_names = []
         self.variables_names = []
-        self.targets=None
-        self.targetIDs=None
+        self.targets_pre=targets_pre # Need the list of targets for each population to allow pre.sum(exc) or post.sum(dopa)
+        self.targets_post=targets_post
+        self.targets = list(set(self.targets_pre + self.targets_post))
+        self.targetIDs=None # What is it doing?
         self.trees = []
         self.global_operations = {'pre': [], 'post': []}
 

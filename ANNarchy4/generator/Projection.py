@@ -46,9 +46,9 @@ class Projection(object):
         self.projection = projection
         self.name = projection.name
 
-        self.h_file = Global.annarchy_dir+'/build/'+self.name+'.h'
-        self.cpp_file = Global.annarchy_dir+'/build/'+self.name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/pyx/'+self.name+'.pyx'
+        self.h_file = Global.annarchy_dir+'/generate/build/'+self.name+'.h'
+        self.cpp_file = Global.annarchy_dir+'/generate/build/'+self.name+'.cpp'
+        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.name+'.pyx'
 
         self.proj_class = { 
             'ID': len(Global._projections), 
@@ -110,7 +110,7 @@ class Projection(object):
         """
         generate projection c++ code.
         """
-        
+            
         def get_type_name(type):
             """
             mapping between python types and cpp names, float will be mapped to
@@ -350,7 +350,7 @@ void set%(Name)s(%(type)s %(name)s) { this->%(name)s_=%(name)s; }
             print("    for", self.name, '( from',self.projection.pre.name,'to',self.projection.post.name, ', target = \"',self.projection.target, '\")') 
 
         # generate func body            
-        self.parser = parser.SynapseAnalyser(self.synapse_variables)
+        self.parser = parser.SynapseAnalyser(self.synapse_variables, self.projection.pre.generator.targets,  self.projection.post.generator.targets)
         self.parsed_variables, self.global_operations = self.parser.parse()
 
         header = '''#ifndef __%(name)s_H__
