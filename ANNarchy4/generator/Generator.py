@@ -435,22 +435,22 @@ all:
 
 ANNarchyCython_2.x: $(OBJ) pyx/ANNarchyCython_2.7.o
 \t@echo "Build ANNarchyCython library for python 2.x"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o pyx/ANNarchyCython_2.7.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.7.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
 
 pyx/ANNarchyCython_2.7.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++11 -fpermissive 
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
 
 ANNarchyCython_3.x: $(OBJ) pyx/ANNarchyCython_3.x.o
 \t@echo "Build ANNarchyCython library for python 3.x"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++11 -fopenmp build/*.o pyx/ANNarchyCython_3.x.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython3.2mu -o ANNarchyCython.so  
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_3.x.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython3.2mu -o ANNarchyCython.so  
 
 pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python3.2 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_3.x.o -L. -I. -Ibuild -fopenmp -std=c++11 -fpermissive 
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python3.2 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_3.x.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
 
 build/%.o : build/%.cpp
-\tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++11 -fopenmp -I. -c $< -o $@
+\tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
 
 clean:
 	rm -rf build/*.o
