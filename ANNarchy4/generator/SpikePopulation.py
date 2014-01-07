@@ -553,6 +553,8 @@ cdef extern from "../build/%(name)s.h":
         
         vector[vector[int]] getSpikeTimings()
         
+        void setMaxDelay(int)
+        
 %(cFunction)s
 
 
@@ -565,6 +567,9 @@ cdef class py%(name)s:
 
     def name(self):
         return self.cInstance.getName()
+
+    def set_max_delay(self, delay):
+        self.cInstance.setMaxDelay(delay)
 
     property size:
         def __get__(self):
