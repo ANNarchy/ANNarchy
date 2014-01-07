@@ -26,6 +26,7 @@ import os
 import pickle
 from lxml import etree 
 import scipy.io as sio
+import exceptions
 
 def load_parameter(in_file):
     """

@@ -427,22 +427,53 @@ SRC = $(wildcard build/*.cpp)
 PYX = $(wildcard pyx/*.pyx)
 OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
      
-ANNarchyCython.so : $(OBJ) pyx/ANNarchyCython.o
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+all:
+\t@echo "Please provide a target, either 'ANNarchyCython_2.6', 'ANNarchyCython_2.7' or 'ANNarchyCython_3.x"
 
-pyx/ANNarchyCython.o : pyx/ANNarchyCython.pyx
+ANNarchyCython_2.6: $(OBJ) pyx/ANNarchyCython_2.6.o
+\t@echo "Build ANNarchyCython library for python 2.6"
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.6.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.6 -o ANNarchyCython.so  
+
+pyx/ANNarchyCython_2.6.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.6 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
+
+ANNarchyCython_2.7: $(OBJ) pyx/ANNarchyCython_2.7.o
+\t@echo "Build ANNarchyCython library for python 2.7"
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.7.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
+
+pyx/ANNarchyCython_2.7.o : pyx/ANNarchyCython.pyx
+\tcython pyx/ANNarchyCython.pyx --cplus  
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
+
+ANNarchyCython_3.x: $(OBJ) pyx/ANNarchyCython_3.x.o
+\t@echo "Build ANNarchyCython library for python 3.x"
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_3.x.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython3.2mu -o ANNarchyCython.so  
+
+pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
+\tcython pyx/ANNarchyCython.pyx --cplus  
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python3.2 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_3.x.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
 
 build/%.o : build/%.cpp
 \tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
-""" #% {'dflags': flags}
+
+clean:
+\trm -rf build/*.o
+\trm -rf pyx/*.o
+\trm -rf ANNarchyCython.so
+"""
 
         with open('Makefile', 'w') as wfile:
             wfile.write(src)
         if changed_pyx: # Force recompilation of the Cython wrappers
             os.system('touch pyx/ANNarchyCython.pyx')
-        os.system('make -j4 > compile_stdout.log 2> compile_stderr.log')
+
+        if sys.version_info[:2] == (2, 6):
+            os.system('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log')
+        elif sys.version_info[:2] == (2, 7):
+            os.system('make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log')
+        else:
+            os.system('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log')
         
     else: # Windows: to test....
         sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
