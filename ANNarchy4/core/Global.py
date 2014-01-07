@@ -108,6 +108,10 @@ def get_population(name):
     Parameter:
     
     * *name*: population name
+
+    Returns:
+    
+    the requested population if existing otherwise None is returned.
     """
     for pop in _populations:
         if pop.name == name:
@@ -125,6 +129,10 @@ def get_projection(pre, post, target):
     * *pre*: presynaptic population
     * *post*: postsynaptic population
     * *target*: connection type
+    
+    Returns:
+    
+    the requested projection if existing otherwise None is returned.
     """
     for proj in _projections:
         
@@ -138,11 +146,11 @@ def get_projection(pre, post, target):
 
 def record(to_record):
     """
-    Record variables of one or more populations.
+    Record variables of one or more populations. For more detailed information please refer to the Population.record method.
     
     Parameter:
     
-    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format. For more details check Population.get_record().
+    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format.
     
     Example:
     
@@ -150,8 +158,10 @@ def record(to_record):
         
             to_record = [
                 { 'pop': Input, 'var': 'rate' }, 
-                { 'pop': Input, 'var': 'mp' }        
+                { 'pop': Input, 'var': 'mp', 'as_1D': True }        
             ]
+            
+        By default the variable data is always handled in population geometry shape. In this example, we force the storage of ``mp`` as one dimensional array.
 
     """
     for data_set in to_record:
@@ -159,11 +169,15 @@ def record(to_record):
 
 def get_record(to_record):
     """
-    Retrieve recorded variables of one or more populations.
+    Retrieve recorded variables of one or more populations. For more detailed information please refer to the Population.get_record method.
+  
+    Parameter:
+    
+    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format. For more details check Population.record().
     
     Returns:
     
-    * ...
+    * A dictionary containing all recorded values. The dictionary is empty if no recorded data is available.
     
     Example:
     

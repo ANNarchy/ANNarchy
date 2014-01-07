@@ -49,7 +49,7 @@ InputProj = Projection(pre=InputPop,
                        post=OutputPop, 
                        target='exc',
                        synapse = TestSynapse,
-                       connector=Connector('All2All', weights=0.2)                       
+                       connector=All2All(weights=0.2)                       
                        )
                        
 #
