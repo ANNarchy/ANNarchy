@@ -436,7 +436,7 @@ ANNarchyCython_2.6: $(OBJ) pyx/ANNarchyCython_2.6.o
 
 pyx/ANNarchyCython_2.6.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.6 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.6 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.6.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
 
 ANNarchyCython_2.7: $(OBJ) pyx/ANNarchyCython_2.7.o
 \t@echo "Build ANNarchyCython library for python 2.7"
