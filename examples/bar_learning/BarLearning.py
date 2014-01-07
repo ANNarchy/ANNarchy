@@ -67,6 +67,11 @@ vis_during_sim=True
 
 if __name__=='__main__':
 
+    save('save_init.mat')
+    save('save_init.data')
+    
+    #load('save_1000.data')
+    
     # Definition of the environment
     def set_input():
         # Choose which bars will be used as inputs
@@ -90,12 +95,14 @@ if __name__=='__main__':
     vis = Visualization( [plot1, plot2, plot3 ] )
 
     # Run the simulation        
-    for trial in range(3000):
+    for trial in range(1000):
         set_input()
         simulate(50) 
         
         if vis_during_sim:
            vis.render()
+
+    save('save_2000.data')
 
     # Visualize the result of learning
     vis.render()  

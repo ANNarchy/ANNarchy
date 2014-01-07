@@ -235,6 +235,23 @@ def _print(*var_text):
         p(text)
     else:
         print(text)
+
+def _debug(*var_text):
+    """
+    Prints a message to standard out, if verbose mode set True.
+    """    
+    if not config['verbose']:
+        return
+    
+    text = ''
+    for var in var_text:
+        text += var + ' '
+        
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
         
 def _warning(*var_text):
     """

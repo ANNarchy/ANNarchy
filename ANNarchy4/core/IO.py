@@ -25,6 +25,7 @@ from ANNarchy4.core import Global
 import os
 import pickle
 from lxml import etree 
+import scipy.io as sio
 
 def load_parameter(in_file):
     """
@@ -122,6 +123,8 @@ def save(in_file, pure_data=True, variables=True, connections=True):
             print('creating folder', path)
             os.mkdir(path)
     
+    extension = os.path.splitext(filename)[1]
+    
     #
     #
     if pure_data:
@@ -138,15 +141,25 @@ def save(in_file, pure_data=True, variables=True, connections=True):
         print('Complete save currently not implemented')
         return
     
-    #
-    # save in Pythons pickle format
-    with open(in_file, mode = 'w') as w_file:
-        try:
-            cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
-        except Exception as e:
-            print('Error while saving in Python pickle format.')
-            print(e)
-            return
+    if extension == '.mat':
+        Global._debug("Save in matlab format.")
+        
+        
+    elif extension == '.data':
+        Global._debug("Save in python pickle format.")
+        
+        #
+        # save in Pythons pickle format
+        with open(in_file, mode = 'w') as w_file:
+            try:
+                pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
+            except Exception as e:
+                print('Error while saving in Python pickle format.')
+                print(e)
+                return
+    else:
+        Global._error("invalid file format.")
+        return
 
 def load(in_file, pure_data=True):
     """
@@ -161,7 +174,7 @@ def load(in_file, pure_data=True):
     """    
     with open(in_file, mode = 'r') as r_file:
         try:
-            net_desc = cPickle.load(r_file)
+            net_desc = pickle.load(r_file)
     
             if pure_data:
                 _load_pop_data(net_desc)
