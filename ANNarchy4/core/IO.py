@@ -23,9 +23,9 @@
 """
 from ANNarchy4.core import Global 
 import os
-import cPickle
+import pickle
 from lxml import etree 
-import exceptions
+import scipy.io as sio
 
 def load_parameter(in_file):
     """
@@ -49,7 +49,7 @@ def load_parameter(in_file):
             doc = etree.parse(file)
             
         except exceptions.IOError:
-            print 'Error: file \'',file,'\' not found.'
+            print('Error: file \'',file,'\' not found.')
             continue
         
         matches = doc.findall('parameter')
@@ -59,7 +59,7 @@ def load_parameter(in_file):
     
             #TODO: allways correct ???
             if len(childs) != 2:
-                print 'Error: to much tags in parameter'
+                print('Error: to much tags in parameter')
     
             name=None
             value=None
@@ -71,7 +71,7 @@ def load_parameter(in_file):
                     value = child.text
                     
                     if value == None:
-                        print 'Error: no value defined for',name
+                        print('Error: no value defined for',name)
                         damaged_pars.append(name)
                         value = 0
                     else:
@@ -84,15 +84,15 @@ def load_parameter(in_file):
                                 value = value
                         
                 else:
-                    print 'Error: unexpected xml-tag', child.tag
+                    print('Error: unexpected xml-tag', child.tag)
             
             if name == None:
-                print 'Error: no name in parameter set.'
+                print('Error: no name in parameter set.')
             elif value == None:
-                print 'Error: no value in parameter set.'
+                print('Error: no value in parameter set.')
                 damaged_pars.append(name)
             elif name in par.keys():
-                print 'Error: parameter \'',name,'\' already exists.'
+                print("Error: parameter",name,"already exists.")
                 damaged_pars.append(name)
             else:
                 par[name] = value
@@ -120,8 +120,10 @@ def save(in_file, pure_data=True, variables=True, connections=True):
     
     if not path == '':
         if not os.path.isdir(path):
-            print 'creating folder', path
+            print('creating folder', path)
             os.mkdir(path)
+    
+    extension = os.path.splitext(filename)[1]
     
     #
     #
@@ -136,18 +138,28 @@ def save(in_file, pure_data=True, variables=True, connections=True):
         # pickle proj, population
         #
         # data = above + _description_data(variables, connections)
-        print 'Complete save currently not implemented'
+        print('Complete save currently not implemented')
         return
     
-    #
-    # save in Pythons pickle format
-    with open(in_file, mode = 'w') as w_file:
-        try:
-            cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
-        except Exception, e:
-            print 'Error while saving in Python pickle format.'
-            print e
-            return
+    if extension == '.mat':
+        #Global._debug("Save in matlab format.")
+        sio.savemat(in_file, data)
+        
+    elif extension == '.data':
+        #Global._debug("Save in python pickle format.")
+        
+        #
+        # save in Pythons pickle format
+        with open(in_file, mode = 'w') as w_file:
+            try:
+                pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
+            except Exception as e:
+                print('Error while saving in Python pickle format.')
+                print(e)
+                return
+    else:
+        Global._error("invalid file format.")
+        return
 
 def load(in_file, pure_data=True):
     """
@@ -160,9 +172,21 @@ def load(in_file, pure_data=True):
     * *variables*: if True population data will be saved (by default True)
     * *connections*: if True projection data will be saved (by default True)
     """    
+    (path, filename) = os.path.split(in_file)
+    extension = os.path.splitext(filename)[1]
+    
     with open(in_file, mode = 'r') as r_file:
         try:
-            net_desc = cPickle.load(r_file)
+            net_desc = {}
+            
+            if extension == '.mat':
+                #Global._debug("Save in matlab format.")
+                print 'Error: currently not supported to load network data from matlab files.'
+                return
+                #sio.loadmat(in_file, net_desc)
+        
+            elif extension == '.data':         
+                net_desc = pickle.load(r_file)
     
             if pure_data:
                 _load_pop_data(net_desc)
@@ -179,12 +203,12 @@ def load(in_file, pure_data=True):
                 # compile()
                 #
                 # _load_only_data(net_desc)
-                print 'Load network from scratch is not implemented yet.'
+                print('Load network from scratch is not implemented yet.')
                 return
     
-        except Exception, e:
-            print 'Error while loading in Python pickle format.'
-            print e
+        except Exception as e:
+            print('Error while loading in Python pickle format.')
+            print(e)
             return
   
 def _net_description(variables, connections):
