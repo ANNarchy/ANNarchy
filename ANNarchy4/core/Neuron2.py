@@ -1,16 +1,17 @@
 from Variable import Variable
 
 import re
+import pprint
 
 class Master2:
     def __init__(self):
-        pass
-
-    def _transform_expr_in_variable(self, expr):
+        self._variables = []
         
+    def _transform_expr_in_variable(self, expr):
+
         var = {}
-        print 'process:\n\t', expr    
-    
+        var['type'] = 'local'
+        
         try:
             constraints = {}
             equation, constraint = expr.split(':')
@@ -18,11 +19,15 @@ class Master2:
             for con in constraint.split(','):
                 try:
                     key, value = con.split('=')
+                    key = re.sub('\s+', '', key)
                     constraints[key] = value
                     
                 except ValueError:
-                    print 'Error: constraint statement', con, 'is wrong.'
-                    continue
+                    if con.find('population') !=-1:
+                        var['type'] = 'global'
+                    else:
+                        print 'Error: constraint statement', con, 'is wrong.'
+                        continue
             
         except ValueError:
             equation = expr # there are no constraints
@@ -36,29 +41,34 @@ class Master2:
             
                 name = re.findall("[\w\s]+\/[\w\s]+", lside)
                 if name == []:
+                    #found direct value assignment, either init value or equation
                     name = re.findall("[\w]+", lside)
                     var['name'] = name
-                    var['type'] = 'parameter'
-                    var['var'] = Variable(init=rside, eq = None)
+                    try:
+                        var['var'] = Variable(init=rside, **constraints)
+                    except ValueError:
+                        var['var'] = Variable(eq=rside, **constraints)
+                    
                 else:
+                    # found an ODE
                     name = re.findall("(?<=d)[\w\s]+(?=/)", lside)
                     var['name'] = name
-                    var['type'] = 'variable'
-                    var['var'] = Variable(init=0.0, eq = rside)
+                    var['var'] = Variable(eq = rside, **constraints)
                     
             except ValueError:
-                name = equation
-                var['name'] = name
-                var['init'] = 0.0
-                var['type'] = 'parameter' 
-                    
-        print 'detected:\n\t', name,'with eq:', equation,'and constraints:', constraints            
-               
-        return var
+                print 'Error: no default value for', equation             
+            
+        found = False   
+        for iter in self._variables:
+            if iter['name'] == var['name']:
+                found = True
+                iter['var'] + var['var']
+            
+        if not found:
+            self._variables.append(var)
     
     def _convert(self, set_of_eq):
-        ret = []
-               
+
          # replace the ,,, by empty space and split the result up
         tmp_set = re.sub('\s+\.\.\.\s+', ' ', set_of_eq).split('\n')
         
@@ -69,30 +79,30 @@ class Master2:
             if expr == ' ' or len(expr)==0:
                 continue
             
-            ret.append(self._transform_expr_in_variable(expr))
-        
-        return ret
+            self._transform_expr_in_variable(expr)
+
+        # check created variables        
+        for var in self._variables:
+            var['var']._validate()
 
 class RateNeuron(Master2):
-    def __init__(self, parameters, variables, functions=None):
+    def __init__(self, parameters, equations, extra_values=None, functions=None):
         Master2.__init__(self)
         
-        self._parameters = self._convert(parameters) 
-        print 'parameters:\n', self._parameters 
-
-        self._variables = self._convert(variables) 
-        print 'variables:\n', self._variables
+        print 'variables:'
+        self._convert(parameters + equations) 
+        pprint.pprint( self._variables, depth=4 )
+        print '\n'
         
 class SpikeNeuron(Master2):
 
-    def __init__(self, parameters, variables, spike, reset, functions=None ):
+    def __init__(self, parameters, equations, spike, reset, extra_values=None, functions=None ):
         Master2.__init__(self)
         
-        self._parameters = self._convert(parameters) 
-        print 'parameters:\n', self._parameters 
-
-        self._variables = self._convert(variables) 
-        print 'variables:\n', self._variables
+        print 'variables:'
+        self._convert(parameters + equations) 
+        pprint.pprint( self._variables, depth=4 )
+        print '\n'
             
         print 'spike:\n', spike
         print 'reset:\n', reset

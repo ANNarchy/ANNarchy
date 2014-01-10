@@ -21,12 +21,25 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
+import pprint
 
 class Variable(object):
     """
     Variable representation in ANNarchy.
     """
     def __init__(self,  **keyValueArgs):
+        def convert_str_to_value(string):
+            try:
+                init = int(string)
+            except ValueError:
+                try:
+                    init = float(string)
+                except ValueError:
+                    print 'Error: ...'
+                    return 0.0
+                    
+            return init
+            
         """
         Set of key-value pairs defining this variable.
         
@@ -51,16 +64,17 @@ class Variable(object):
             if key == 'eq':
                 self.eq = keyValueArgs[key]
             elif key=='init':
-                self.init = keyValueArgs[key]
+                self.init = convert_str_to_value(keyValueArgs[key])
             elif key=='min':
-                self.min = keyValueArgs[key]
+                self.min = convert_str_to_value(keyValueArgs[key])
             elif key=='max':
-                self.max = keyValueArgs[key]
+                self.max = convert_str_to_value(keyValueArgs[key])
             elif key=='type':
                 self.type = keyValueArgs[key]
             else:
                 print 'unknown key: '+key
 
+    def _validate(self):
         #
         # for later operations it's not positive if no
         # default is set
@@ -70,10 +84,42 @@ class Variable(object):
             else:
                 self.type = float
                 self.init = self.type(0.0)
-
+ 
         if type(self.init) != self.type:
             if isinstance(self.init, (bool, float, int)):
                 if self.type != bool and type(self.init) != bool:
                     self.init = float(self.init)
                     self.type = float
-                
+    
+    def __add__(self, other):
+        """
+        Called if two Variable objects are added up.
+        """
+        if not isinstance(other, Variable):
+            print 'Error: ...'
+            return
+
+        if self.init != None and other.init != None:
+            print 'WARNING: init value will be overwritten.'
+
+        if other.init:
+            self.init = other.init
+            self.type = type(self.init)
+
+        self.eq = other.eq
+        self.min = other.min
+        self.max = other.max
+        
+    #
+    # some customization stuff, maybe needed later.
+    def __str__(self):
+        itemDir = self.__dict__
+        str = '['
+        for i in itemDir:
+            str += '{0} : {1}, '.format(i, itemDir[i])
+        str+= ']'
+         
+        return str
+     
+    def __repr__(self):
+        return "<%s instance at %li> %s" % (self.__class__.__name__, id(self), self.__str__())  
