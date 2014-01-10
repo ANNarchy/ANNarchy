@@ -2,6 +2,7 @@ from core.Global import *
 from generator.Generator import compile
 from core.IO import save, load, load_parameter
 from core.Neuron import Neuron
+from core.Neuron2 import RateNeuron, SpikeNeuron
 from core.Synapse import Synapse
 from core.Population import Population
 from core.PopulationView import PopulationView
