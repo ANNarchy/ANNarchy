@@ -9,7 +9,7 @@ from ANNarchy4 import *
 LeakyNeuron = RateNeuron(
     parameters= 
         """tau = 10.0""",
-    variables = 
+    equations = 
         """ noise = Uniform(-0.1, 0.1) : init = 0.0 # one can specify init values after the 0.0. 
             baseline :  init= 0.0 # if a variable is just used for external inputs but not computed, just write its name
             tau * dmp/dt + mp = sum(exc) - sum(inh) +baseline + noise : init=0.0 # first order eqs should be written this way, I need it for the exponential Euler
@@ -32,7 +32,7 @@ ShuntingPhasicNeuron = RateNeuron(
         tau =  10.0
         tau_a = 500.0
     ''',
-    variables = 
+    equations = 
         """ 
             noise = Uniform(-0.1, 0.1) : init = 0.0 
             tau_a * dAexc/dt + Aexc = sum(exc):  init= 0.0
@@ -52,7 +52,7 @@ Covariance = RateSynapse(
         """ eta' : 100.
             tau_alpha = 10.0
         """,
-    variables = 
+    equations = 
         """ tau_alpha * dalpha/dt + alpha = pos(post.rate - 1.0) : init = 0.0, postsynaptic # allows to specify global variables. If the user says nothing, it is local, too bad for him
          
             eta * dvalue/dt = ... 
@@ -76,7 +76,7 @@ IF = SpikeNeuron(
             V_rest = -65.0
             V_exc = -50.0
         """,
-    variables = 
+    equations = 
         """ tau*dmp/dt + mp = V_rest + g_exc * (mp - V_exc):
             g_exc = 0 : init=0.0 # g_exc is increased by the synapse, must be reset after using it.
         """,
@@ -96,7 +96,7 @@ Izhikevitch = SpikeNeuron(
             d = 2.0
             threshold = 30.0
         """,
-    variables = 
+    equations = 
         """ dg_exc/dt + g_exc = 0 : init=0.0
             dg_inh/dt + g_inh = 0 : init=0.0
             I = g_exc + g_inh : init=0.0

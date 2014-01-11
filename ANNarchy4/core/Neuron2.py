@@ -45,6 +45,7 @@ class Master2:
                     name = re.findall("[\w]+", lside)
                     var['name'] = name
                     try:
+                        rvalue = float(rside) #just test conversion (if rside contains Uniform or something else we chose the except path)
                         var['var'] = Variable(init=rside, **constraints)
                     except ValueError:
                         var['var'] = Variable(eq=rside, **constraints)
@@ -56,7 +57,11 @@ class Master2:
                     var['var'] = Variable(eq = rside, **constraints)
                     
             except ValueError:
-                print 'Error: no default value for', equation             
+                if not 'init' in constraints.keys():
+                    print 'WARNING: no default value for', equation
+                
+                var['name'] = equation
+                var['var'] = Variable(**constraints)                    
             
         found = False   
         for iter in self._variables:
@@ -90,7 +95,7 @@ class RateNeuron(Master2):
         Master2.__init__(self)
         
         print 'variables:'
-        self._convert(parameters + equations) 
+        self._convert(parameters +'\n'+ equations) 
         pprint.pprint( self._variables, depth=4 )
         print '\n'
         
@@ -100,7 +105,7 @@ class SpikeNeuron(Master2):
         Master2.__init__(self)
         
         print 'variables:'
-        self._convert(parameters + equations) 
+        self._convert(parameters +'\n'+ equations) 
         pprint.pprint( self._variables, depth=4 )
         print '\n'
             
