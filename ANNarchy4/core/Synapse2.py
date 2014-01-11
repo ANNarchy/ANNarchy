@@ -3,8 +3,8 @@ from Master2 import Master2
 
 import pprint
 
-class RateNeuron(Master2):
-    def __init__(self, parameters, equations, extra_values=None, functions=None):
+class RateSynapse(Master2):
+    def __init__(self, parameters, equations, psp=None, extra_values=None, functions=None):
         Master2.__init__(self)
         
         print 'variables:'
@@ -12,7 +12,10 @@ class RateNeuron(Master2):
         pprint.pprint( self._variables, depth=4 )
         print '\n'
         
-class SpikeNeuron(Master2):
+        print 'psp:'
+        print psp
+        
+class SpikeSynapse(Master2):
 
     def __init__(self, parameters, equations, spike, reset, extra_values=None, functions=None ):
         Master2.__init__(self)

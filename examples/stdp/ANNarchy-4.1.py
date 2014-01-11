@@ -49,12 +49,12 @@ ShuntingPhasicNeuron = RateNeuron(
 #Covariance learning rule with homeostatic regularization
 Covariance = RateSynapse(
     parameters = 
-        """ eta' : 100.
+        """ eta = 100.
             tau_alpha = 10.0
         """,
     equations = 
         """ tau_alpha * dalpha/dt + alpha = pos(post.rate - 1.0) : init = 0.0, postsynaptic # allows to specify global variables. If the user says nothing, it is local, too bad for him
-         
+                 
             eta * dvalue/dt = ... 
                 if (pre.rate > mean(pre.rate) or post.rate > mean(post.rate) ) ...
                 then (pre.rate - mean(pre.rate) ) * (post.rate - mean(post.rate)) - alpha * (post.rate - mean(post.rate))^2 * value ...
