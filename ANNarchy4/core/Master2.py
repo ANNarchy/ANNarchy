@@ -1,14 +1,56 @@
+"""
+
+    Population.py
+    
+    This file is part of ANNarchy.
+    
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+"""
 from Variable import Variable
 
 import re
 
 
-class Master2:
+class Master2(object):
+    """
+    Root object for all neuron or synapse base class implementations.
+    
+    The transformation code of several data used are similar. Special cases are handled 
+    through the several derived classes.
+    """
     def __init__(self):
+        """
+        Constructor.
+        """
         self._variables = []
+        self._order = []
         
     def _transform_expr_in_variable(self, expr, is_eq=False):
-
+        """
+        Private function.
+        
+        This function transforms a single expression into a ANNarchy Variable representation and 
+        should be called only by the _convert function.
+        
+        Parameter:
+        
+        * *is_eq*: determines if the expression belongs to equation part or parameter part.
+        """
         var = {}
         var['type'] = 'local'
         
@@ -23,9 +65,10 @@ class Master2:
                     constraints[key] = value
                     
                 except ValueError:
+                    con = con.replace(' ','')
                     if con.find('population') !=-1:
                         var['type'] = 'global'
-                    if con.find('postsynaptic') !=-1:
+                    elif con.find('postsynaptic') !=-1:
                         var['type'] = 'global'
                     else:
                         print expr
@@ -50,17 +93,17 @@ class Master2:
                     try:
                         rvalue = float(rside) #just test conversion (if rside contains Uniform or something else we chose the except path)
                         if is_eq:
-                            var['var'] = Variable(eq=rside, **constraints)
+                            var['var'] = Variable(eq=equation, **constraints)
                         else:
                             var['var'] = Variable(init=rside, **constraints)
                     except ValueError:
-                        var['var'] = Variable(eq=rside, **constraints)
+                        var['var'] = Variable(eq=equation, **constraints)
                     
                 else:
                     # found an ODE
                     name = re.findall("(?<=d)[\w\s]+(?=/)", lside)
                     var['name'] = name
-                    var['var'] = Variable(eq = rside, **constraints)
+                    var['var'] = Variable(eq = equation, **constraints)
                     
             except ValueError:
                 if not 'init' in constraints.keys():
@@ -69,6 +112,16 @@ class Master2:
                 var['name'] = equation
                 var['var'] = Variable(**constraints)                    
             
+        # during other operations a list of single characters is created
+        # so, now we convert list of single characters to a string
+        var['name'] = ''.join(var['name']) 
+        
+        if is_eq:
+            self._order.append(var['name'])
+            
+        #
+        # check if the parameter / eq-variable already existed, if
+        # yes we simply update the object
         found = False   
         for iter in self._variables:
             if iter['name'] == var['name']:
@@ -79,6 +132,13 @@ class Master2:
             self._variables.append(var)
     
     def _convert(self, parameters, equations):
+        """
+        Private function.
+        
+        This function transforms the different possible equation types into an easier
+        parsable data representation. This function is called from the different Neuron/Synapse
+        constructors. 
+        """
 
          # replace the ,,, by empty space and split the result up
         tmp_par = re.sub('\s+\.\.\.\s+', ' ', parameters).split('\n')
@@ -105,3 +165,13 @@ class Master2:
         # check created variables        
         for var in self._variables:
             var['var']._validate()
+            
+    @property
+    def variables(self):
+        return self._variables
+    
+    @property
+    def order(self):
+        return self._order
+    
+    

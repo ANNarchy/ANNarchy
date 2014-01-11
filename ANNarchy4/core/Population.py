@@ -30,6 +30,8 @@ from ANNarchy4.core.Random import RandomDistribution
 
 from ANNarchy4.core.Record import Record
 
+from ANNarchy4.core.Neuron2 import RateNeuron, SpikeNeuron
+
 import traceback
 import numpy as np
 
@@ -63,14 +65,11 @@ class Population(Descriptor):
         else:
             self.name = 'Population'+str(self._id)
         
-        if neuron.spike_vars == 0:
+        if isinstance(neuron, RateNeuron):
             self.generator = generator.MeanPopulation(self)            
-        elif neuron.spike_vars == 1:
-            self.generator = generator.SpikePopulation(self)                        
         else:
-            print 'Error: only one SpikeVariable is allowed per neuron'
-            exit(0)
-            
+            self.generator = generator.SpikePopulation(self)                        
+                
         Global._populations.append(self)
         
         self._recorded_variables = {}
