@@ -35,8 +35,7 @@ class Variable(object):
                 try:
                     init = float(string)
                 except ValueError:
-                    print 'Error: ...'
-                    return 0.0
+                    init = string
                     
             return init
             
@@ -90,6 +89,8 @@ class Variable(object):
                 if self.type != bool and type(self.init) != bool:
                     self.init = float(self.init)
                     self.type = float
+            else:
+                self.type = 'eq'
     
     def __add__(self, other):
         """
