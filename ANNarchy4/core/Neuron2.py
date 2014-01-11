@@ -7,20 +7,25 @@ class RateNeuron(Master2):
     def __init__(self, parameters, equations, extra_values=None, functions=None):
         Master2.__init__(self)
         
-        print 'variables:'
         self._convert(parameters, equations) 
-        pprint.pprint( self._variables, depth=4 )
-        print '\n'
+
+    def __str__(self):
+        str = pprint.pformat( self._variables, depth=4 )
+        return str
         
 class SpikeNeuron(Master2):
 
     def __init__(self, parameters, equations, spike, reset, extra_values=None, functions=None ):
         Master2.__init__(self)
         
-        print 'variables:'
-        self._convert(parameters, equations) 
-        pprint.pprint( self._variables, depth=4 )
-        print '\n'
+        self._convert(parameters, equations)
+        
+        self._spike = spike
+        self._reset = reset 
+
+    def __str__(self):
+        str = pprint.pformat( self._variables, depth=4 )
             
-        print 'spike:\n', spike
-        print 'reset:\n', reset
+        #str += 'spike:\n', self._spike
+        #str += 'reset:\n', self._reset
+        return str

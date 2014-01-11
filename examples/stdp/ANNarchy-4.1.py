@@ -20,6 +20,7 @@ LeakyNeuron = RateNeuron(
             my_other_function(x, y) = if x > y then x-y else 0.0
         """
 )
+print LeakyNeuron
 
 # Alternative to functions:
 #Function(
@@ -77,7 +78,7 @@ IF = SpikeNeuron(
             V_exc = -50.0
         """,
     equations = 
-        """ tau*dmp/dt + mp = V_rest + g_exc * (mp - V_exc):
+        """ tau*dmp/dt + mp = V_rest + g_exc * (mp - V_exc)
             g_exc = 0 : init=0.0 # g_exc is increased by the synapse, must be reset after using it.
         """,
     spike = 
@@ -87,6 +88,8 @@ IF = SpikeNeuron(
         """ mp = V_rest : refractory = 5ms # some models require to keep the mp at rest level for several ms after a spike
         """
 )
+print IF
+
 
 Izhikevitch = SpikeNeuron(
     parameters = 

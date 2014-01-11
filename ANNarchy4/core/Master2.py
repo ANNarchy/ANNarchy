@@ -28,7 +28,8 @@ class Master2:
                     if con.find('postsynaptic') !=-1:
                         var['type'] = 'global'
                     else:
-                        print 'Error: constraint statement', con, 'is wrong.'
+                        print expr
+                        print "WARNING: constraint statement '", con, "' is wrong or no arguments provided."
                         continue
             
         except ValueError:
