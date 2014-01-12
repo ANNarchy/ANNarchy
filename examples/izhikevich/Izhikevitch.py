@@ -37,10 +37,12 @@ reset = """
 )
 print Izhikevitch
 
-Simple = Synapse(
-    #psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
-    psp = Variable(init=0, eq = "psp = if t is (t_spike+1) then value else 0.0")
+Simple = SpikeSynapse(
+    psp = """ 
+        if t is (t_spike+1) then value else 0.0 
+    """
 )
+print Simple
 
 Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
 re = np.random.random(nb_exc_neurons)
@@ -87,7 +89,7 @@ inh_inh = Projection(
 )
 
 # Compile
-#compile()
+compile()
 
 def plot(population, data):
     """
