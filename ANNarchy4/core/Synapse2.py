@@ -1,6 +1,8 @@
 from Variable import Variable
 from Master2 import Master2
 
+from ANNarchy4 import parser
+
 import re
 import pprint
 
@@ -21,6 +23,10 @@ class RateSynapse(Master2):
         print 'variables:'
         pprint.pprint( self._variables, depth=4 )
         print '\n'
+        
+    def _global_operations(self):
+        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()        
+        return g_op
         
 class SpikeSynapse(Master2):
 
@@ -46,3 +52,7 @@ class SpikeSynapse(Master2):
             
         print 'spike:\n', self._spike
         print 'reset:\n', self._reset
+
+    def _global_operations(self):
+        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()        
+        return g_op
