@@ -39,7 +39,7 @@ class Master2(object):
         """
         Constructor.
         """
-        self._variables = []
+        self._variables = {}
         self._order = []
         
     def _transform_expr_in_variable(self, expr, is_eq=False):
@@ -52,6 +52,10 @@ class Master2(object):
         Parameter:
         
         * *is_eq*: determines if the expression belongs to equation part or parameter part.
+        
+        Return:
+        
+        * instance of ANNarchy.core.Variable
         """
         var = {}
         var['type'] = 'local'
@@ -91,7 +95,6 @@ class Master2(object):
                 if name == []:
                     #found direct value assignment, either init value or equation
                     name = re.findall("[\w]+", lside)
-                    var['name'] = name
                     try:
                         #just test conversion (if rside contains Uniform or something else we chose the except path)
                         rvalue = float(rside) 
@@ -117,35 +120,63 @@ class Master2(object):
                 else:
                     # found an ODE
                     name = re.findall("(?<=d)[\w\s]+(?=/)", lside)
-                    var['name'] = name
                     var['var'] = Variable(eq = equation, **constraints)
                     
             except ValueError:
                 if not 'init' in constraints.keys():
                     print 'WARNING: no default value for', equation
                 
-                var['name'] = equation
+                name = equation
                 var['var'] = Variable(**constraints)                    
             
         # during other operations a list of single characters is created
         # so, now we convert list of single characters to a string
-        var['name'] = ''.join(var['name']) 
+        name = ''.join(name) 
         
         if is_eq:
-            self._order.append(var['name'])
-            
-        #
-        # check if the parameter / eq-variable already existed, if
-        # yes we simply update the object
-        found = False   
-        for iter in self._variables:
-            if iter['name'] == var['name']:
-                found = True
-                iter['var'] + var['var']
-            
-        if not found:
-            self._variables.append(var)
+            self._order.append(name)
+
+        return name, var
     
+    def _prepare_string(self, stream):
+        """
+        The function splits up the several equations, remove comments and unneeded spaces or tabs.
+        
+        Parameter:
+        
+        *  *stream*: string contain a variable, parameter or similar set, e.g.
+        
+        .. code-block:: python 
+
+            \"\"\" 
+                tau = 10.0 : population
+                baseline = 0.0 
+            \"\"\"
+        
+        Return:
+            
+        an array contain the several strings, according the above example:
+        
+        .. code-block:: python
+            
+            [ ' tau = 10.0 : population ', ' baseline = 0.0 ' ] 
+        """
+        expr_set = []
+        
+        # replace the ,,, by empty space and split the result up
+        tmp_set = re.sub('\s+\.\.\.\s+', ' ', stream).split('\n')
+        
+        for expr in tmp_set:
+            expr = re.sub('\#[\s\S]+', ' ', expr)   # remove comments
+            expr = re.sub('\s+', ' ', expr)     # remove additional tabs etc.
+                    
+            if expr == ' ' or len(expr)==0: # through beginning line breaks or something similar empty strings are contained in the set
+                continue
+            
+            expr_set.append(expr)
+        
+        return expr_set
+        
     def _convert(self, parameters, equations):
         """
         Private function.
@@ -154,32 +185,26 @@ class Master2(object):
         parsable data representation. This function is called from the different Neuron/Synapse
         constructors. 
         """
-
-         # replace the ,,, by empty space and split the result up
-        tmp_par = re.sub('\s+\.\.\.\s+', ' ', parameters).split('\n')
-        tmp_eq = re.sub('\s+\.\.\.\s+', ' ', equations).split('\n')
+        tmp_par = self._prepare_string(parameters)
+        tmp_eq = self._prepare_string(equations)
                 
         # check each line      
         for expr in tmp_par:
-            expr = re.sub('\#[\s\S]+', ' ', expr) # remove comments
-            expr = re.sub('\s+', ' ', expr) # remove additional tabs etc.
-            if expr == ' ' or len(expr)==0:
-                continue
+            name, var = self._transform_expr_in_variable(expr)
+            self._variables[name] = var
             
-            self._transform_expr_in_variable(expr)
-
         # check each line      
         for expr in tmp_eq:
-            expr = re.sub('\#[\s\S]+', ' ', expr) # remove comments
-            expr = re.sub('\s+', ' ', expr) # remove additional tabs etc.
-            if expr == ' ' or len(expr)==0:
-                continue
-            
-            self._transform_expr_in_variable(expr, True)
+            name, var = self._transform_expr_in_variable(expr, True)
+
+            if name in self._variables.keys():
+                self._variables[name]['var'] + var['var'] 
+            else:
+                self._variables[name] = var
 
         # check created variables        
-        for var in self._variables:
-            var['var']._validate()
+        for var in self._variables.keys():
+            self._variables[var]['var']._validate()
             
     @property
     def variables(self):

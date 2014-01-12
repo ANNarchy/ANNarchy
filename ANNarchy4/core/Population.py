@@ -130,9 +130,9 @@ class Population(Descriptor):
         
         #check additional variables
         neur_var = self.generator.neuron_variables
-        for var in neur_var:
-            if 'var' in var.keys():
-                ret_var.append(var['name'])      
+        for name, var in neur_var.iteritems():
+            if var['type'] == 'local':
+                ret_var.append(name)      
                 
         return ret_var
 
@@ -143,9 +143,10 @@ class Population(Descriptor):
         """
         neur_var = self.generator.neuron_variables
         ret_par = []        
-        for var in neur_var:
-            if not 'var' in var.keys():
-                ret_par.append(var['name'])
+        for name, var in neur_var.iteritems():
+            if var['type'] == 'global':
+                ret_par.append(name)      
+
         return ret_par
         
     @property

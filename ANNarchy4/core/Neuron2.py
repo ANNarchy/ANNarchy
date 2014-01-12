@@ -20,8 +20,13 @@ class SpikeNeuron(Master2):
         
         self._convert(parameters, equations)
         
-        self._variables.append({'name': 'spike', 'type' : 'spike_event', 'eq': spike })
-        self._variables.append({'name': 'reset', 'type' : 'reset_event', 'eq': reset })
+        spike_eq = self._prepare_string(spike)
+        print spike_eq
+        
+        reset_eq = self._prepare_string(reset)
+        print reset_eq
+        #self._variables.append({'name': 'spike', 'type' : 'local', 'eq': spike })
+        #self._variables.append({'name': 'reset', 'type' : 'local', 'eq': reset })
 
     def __str__(self):
         str = pprint.pformat( self._variables, depth=4 )

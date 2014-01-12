@@ -6,36 +6,46 @@
 from ANNarchy4 import *
 
 # Defining the neurons
-InputNeuron = Neuron( 
-    tau = 10.0, 
-    baseline = Variable(init=0.0),
-    rate = Variable(init=0.0, eq="tau * drate/dt + rate = baseline", min=0.0)
+InputNeuron = RateNeuron(
+    parameters=""" 
+        tau = 10.0 : population
+        baseline = 0.0 
+    """,
+    equations="""
+        tau * drate/dt + rate = baseline : min=0.0
+    """
 )
 
-LeakyNeuron = Neuron( 
-    tau = 10.0, 
-    rate = Variable(init=0.0, eq="tau * drate/dt + rate = sum(exc) - sum(inh)", min=0.0)
+LeakyNeuron = RateNeuron(
+    parameters=""" 
+        tau = 10.0 : population
+        baseline = 0.0 
+    """,
+    equations="""
+        tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0
+    """
 )
 
 # Defining the synapses
-Oja = Synapse(
-    tau = 2000,
-    alpha = 8.0,
-    value = Variable(
-        init=0.0, 
-        eq="tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value"
-    )
+Oja = RateSynapse(
+    parameters=""" 
+        tau = 2000 : postsynaptic
+        alpha = 8.0 : postsynaptic
+    """,
+    equations="""
+        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value
+    """
 )  
 
-AntiHebb = Synapse(
-    tau = 2000,
-    alpha = 0.3,
-    value = Variable(
-        init=0.0, 
-        eq="tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value",
-        min=0.0
-    )
-)
+AntiHebb = RateSynapse(
+    parameters=""" 
+        tau = 2000 : postsynaptic
+        alpha = 0.3 : postsynaptic
+    """,
+    equations="""
+        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min = 0.0
+    """
+)  
 
 # Creating the populations
 nb_neurons = 16  
@@ -50,7 +60,7 @@ input_feature = Projection(
     synapse = Oja,
     connector=All2All(weights = Uniform(-0.5, 0.5))
 )
-                    
+                     
 feature_feature = Projection(
     pre=feature_pop, 
     post=feature_pop, 

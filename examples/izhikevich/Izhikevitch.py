@@ -35,6 +35,7 @@ reset = """
 """
 #    order = ['I', 'v','u']
 )
+print Izhikevitch
 
 Simple = Synapse(
     #psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
@@ -45,7 +46,6 @@ Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhik
 re = np.random.random(nb_exc_neurons)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
-print Excitatory
 
 Inhibitory = Population(name='Inhibitory', geometry=(nb_inh_neurons), neuron=Izhikevitch)
 ri = np.random.random(nb_inh_neurons)
@@ -87,7 +87,7 @@ inh_inh = Projection(
 )
 
 # Compile
-compile()
+#compile()
 
 def plot(population, data):
     """

@@ -78,7 +78,7 @@ class Population(object):
         
     def _variable_names(self):
         """ Return names of all attached variables. """
-        return [var['name'] for var in self.neuron_variables ]
+        return self.neuron_variables.keys()
 
     def _add_global_oparation(self, global_op):
         """
@@ -109,8 +109,9 @@ class Population(object):
         """ 
         Update variable *name* with value *value*. 
         """
-        values = next(( item for item in self.neuron_variables if item['name']==name ), None)
-        if values:
+        
+        try:
+            values = self.neuron_variables[name]
             if 'var' in values.keys():
                 if isinstance(value, (int, float)):       
                     values['var'].init = float(value)
@@ -135,7 +136,8 @@ class Population(object):
                     print "Error: can't assign ", value , "(", type(value), ") to the variable "+name
             else:
                 values['init'] = float(value)
-        else:
+        
+        except KeyError:
             print "Error: variable / parameter "+name+" does not exist in population object."
             
     def _update_neuron_variables(self):

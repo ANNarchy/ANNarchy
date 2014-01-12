@@ -25,7 +25,7 @@ class RateSynapse(Master2):
         print '\n'
         
     def _global_operations(self):
-        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()        
+        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()
         return g_op
         
 class SpikeSynapse(Master2):
