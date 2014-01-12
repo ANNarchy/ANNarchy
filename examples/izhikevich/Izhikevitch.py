@@ -9,18 +9,31 @@ nb_exc_neurons = 800
 nb_inh_neurons = 200
 
 # Define the neurons
-Izhikevitch = Neuron(
-    I_in = Variable(init=0.0),
-    noise_scale = 5.0,
-    I = Variable(init=0.0, eq = "I = sum(exc) + sum(inh) + noise*noise_scale"),
-    noise = Variable(eq=Normal(0.0,1.0)),
-    a = Variable(init=0.02),
-    b = Variable(init=0.2),
-    c = Variable(init=-65.0),
-    d = Variable(init=2.0),
-    u = Variable(init=-65.*0.2, eq="du/dt = a * (b*v - u)"), # init should be b*baseline
-    v = SpikeVariable(eq="dv/dt = 0.04 * v * v + 5*v + 140 -u + I", threshold= 30.0, init=-65.0, reset=['v = c', 'u = u+d']),
-    order = ['I', 'v','u']
+Izhikevitch = SpikeNeuron(
+parameters="""
+    I_in = 0.0
+    noise_scale = 5.0
+    a = 0.02
+    b = 0.2
+    c = -65.0
+    d = 2.0
+    threshold= 30.0
+    u = b * c
+""",
+equations="""
+    noise = Normal(0.0,1.0)
+    I = sum(exc) + sum(inh) + noise * noise_scale
+    dv/dt = 0.04 * v * v + 5*v + 140 -u + I
+    du/dt = a * (b*v - u)
+""",
+spike = """
+    v > threshold
+""",
+reset = """
+    v = c
+    u = u+d
+"""
+#    order = ['I', 'v','u']
 )
 
 Simple = Synapse(
@@ -32,6 +45,7 @@ Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhik
 re = np.random.random(nb_exc_neurons)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
+print Excitatory
 
 Inhibitory = Population(name='Inhibitory', geometry=(nb_inh_neurons), neuron=Izhikevitch)
 ri = np.random.random(nb_inh_neurons)
@@ -47,7 +61,7 @@ exc_exc = Projection(
     synapse = Simple,
     connector=All2All(weights=Uniform(0,0.5))
 )
- 
+  
 exc_inh = Projection(
     pre=Excitatory, 
     post=Inhibitory, 
@@ -55,7 +69,7 @@ exc_inh = Projection(
     synapse = Simple,
     connector=All2All(weights=Uniform(0,0.5))
 )
-
+ 
 inh_exc = Projection(
     pre=Inhibitory, 
     post=Excitatory, 
@@ -63,7 +77,7 @@ inh_exc = Projection(
     synapse = Simple,
     connector=All2All(weights= Uniform(-1.0,0.0))
 )
-
+ 
 inh_inh = Projection(
     pre=Inhibitory, 
     post=Inhibitory, 

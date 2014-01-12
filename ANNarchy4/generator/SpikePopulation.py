@@ -343,7 +343,7 @@ private:
             if order == []:
                 # order does not play an important role        
                 for value in parsed_neuron:
-                    if '_rand_' in value['name']:   # skip local member
+                    if 'rand_variable' == value['type']:   # skip local member
                         continue
     
                     loop += '\t\t'+value['cpp']+'\n'
@@ -355,7 +355,7 @@ private:
             else:
                 for value in order:
                     for value2 in parsed_neuron:
-                        if '_rand_' in value2['name']:   # skip local member
+                        if 'rand_variable' == value2['type']:   # skip local member
                             continue
     
                         if value2['name'] == value:

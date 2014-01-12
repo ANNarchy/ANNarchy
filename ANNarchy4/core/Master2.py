@@ -23,6 +23,8 @@
 """
 from Variable import Variable
 
+import Random
+
 import re
 
 
@@ -91,13 +93,26 @@ class Master2(object):
                     name = re.findall("[\w]+", lside)
                     var['name'] = name
                     try:
-                        rvalue = float(rside) #just test conversion (if rside contains Uniform or something else we chose the except path)
+                        #just test conversion (if rside contains Uniform or something else we chose the except path)
+                        rvalue = float(rside) 
                         if is_eq:
                             var['var'] = Variable(eq=equation, **constraints)
                         else:
                             var['var'] = Variable(init=rside, **constraints)
                     except ValueError:
-                        var['var'] = Variable(eq=equation, **constraints)
+                        rand_dist = re.findall("[\w\s]+(?=\()", rside) #matches Uniform(), Normal() but also sum()
+                        found = False
+                        for rand in rand_dist:
+                            rand = rand.replace(' ','')
+                            
+                            if rand in Random.RandomDistribution().keywords():
+                                found = True
+                                args = re.findall("[\d\.]+", equation)
+                                rand_obj = getattr(Random, rand)(float(args[0]),float(args[1]))
+                                var['var'] = Variable(eq=rand_obj, **constraints)
+                                
+                        if not found:
+                            var['var'] = Variable(eq=equation, **constraints)
                     
                 else:
                     # found an ODE
