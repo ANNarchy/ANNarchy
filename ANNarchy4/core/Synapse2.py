@@ -14,10 +14,11 @@ class RateSynapse(Master2):
         
         if psp:
             psp = re.sub('\#[\s\S]+', ' ', psp) # remove comment
+            psp = 'psp = ' + psp
             var = Variable(init=0.0, eq=psp)
             var._validate() 
             
-            self._variables.append({'name': 'psp', 'var': var })
+            self._variables[ 'psp' ] = {'type' : 'local' ,'var': var } 
          
     def __str__(self):
         print 'variables:'
