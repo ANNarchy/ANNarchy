@@ -27,14 +27,12 @@ import Global
 from ANNarchy4 import parser
 
 from Variable import Variable
-from Master2 import Master2
-
 from ANNarchy4 import parser
 
 import re
 import pprint
 
-class RateSynapse(Master2):
+class RateSynapse(Master):
     """
     Definition of a rate coded synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
@@ -76,7 +74,7 @@ class RateSynapse(Master2):
                     An experimental feature, currently not fully implemented.
             
         """        
-        Master2.__init__(self)
+        Master.__init__(self)
         
         self._convert(parameters, equations, extra_values)
         
@@ -94,13 +92,13 @@ class RateSynapse(Master2):
         var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()
         return g_op
         
-class SpikeSynapse(Master2):
+class SpikeSynapse(Master):
     """
     Definition of a spiking synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
 
     def __init__(self, parameters="", equations="", psp = None, extra_values=None, functions=None ):
-        Master2.__init__(self)
+        Master.__init__(self)
         
         self._convert(parameters, equations, extra_values)
         

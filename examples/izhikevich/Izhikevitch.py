@@ -94,7 +94,7 @@ inh_inh = Projection(
 )
 
 # Compile
-compile()
+#compile()
 
 def plot(population, data):
     """
@@ -150,6 +150,10 @@ def plot(population, data):
     ax.set_xlim([0,nb_steps])
         
 if __name__ == '__main__':
+ 
+    net = Network(Excitatory, Inhibitory, exc_exc, exc_inh, inh_exc, inh_inh)
+    
+    net.compile()
     
     #
     # close previous opened figures
@@ -175,7 +179,7 @@ if __name__ == '__main__':
         
         # first 20 ms no input
         Excitatory.I_in = I[i,:]    
-        simulate(1)
+        net.simulate(1)
         
     data = get_record( to_record )
     

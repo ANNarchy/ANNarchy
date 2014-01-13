@@ -378,7 +378,7 @@ def _update_global_operations():
                 proj.post.generator._add_global_oparation(entry)
             
     
-def compile(clean=False, cpp_stand_alone=False, debug_build=False):
+def compile(clean=False, cpp_stand_alone=False, debug_build=False, populations=None, projections=None):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will carry the simulation.
     
@@ -388,8 +388,14 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False):
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     """
-    print 'ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')'
-        
+    print 'ANNarchy', ANNarchy4.__version__, '(', ANNarchy4.__release__, ')', 'on', sys.platform, '(', os.name,')'
+    
+    if populations != None:
+        Global._populations = populations
+
+    if projections != None:
+        Global._projections = projections
+            
     # Test if profiling is enabled
     profile_enabled = False
     try:

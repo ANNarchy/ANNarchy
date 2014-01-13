@@ -1,4 +1,5 @@
 from core.Global import *
+from core.Network import Network
 from generator.Generator import compile
 from core.IO import save, load, load_parameter
 from core.Neuron import RateNeuron, SpikeNeuron
@@ -16,4 +17,5 @@ from visualization import Visualization
 from extensions import *
 
 import numpy as np
-__version__ = '4.1.0.alpha'
+__version__ = '4.1'
+__release__ = '4.1.0.alpha'
