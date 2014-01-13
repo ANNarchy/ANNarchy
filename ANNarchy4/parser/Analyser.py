@@ -65,7 +65,7 @@ class NeuronAnalyser(object):
         self.neuron = neuron
         self.pop_name = pop_name
         self.targets = targets
-        self.analysed_neuron = []
+        self.analysed_neuron = {}
         self.parameters_names = []
         self.variables_names = []
         self.trees = []
@@ -88,8 +88,7 @@ class NeuronAnalyser(object):
                 #
                 # basic stuff
                 neur = {}
-                neur['name'] = name
-                neur['type'] = 'variable'
+                neur['type'] = 'local'
                 neur['cpp_type'] = cpp_type
                 neur['def'] = self.def_variable(name)
                 
@@ -127,18 +126,18 @@ class NeuronAnalyser(object):
                     neur['threshold'] = value['var'].threshold
                     neur['reset'] = value['var'].reset
 
-                self.analysed_neuron.append( neur )
+                self.analysed_neuron[name] = neur
 
             else: # A parameter
                 cpp_type, init_value = get_value_and_type(value)
                     
-                self.analysed_neuron.append( 
-                    {'name': name,
-                     'type': 'parameter',
-                     'init': self.init_parameter(name, init_value),
-                     'def': self.def_parameter(name),
-                     'cpp' : '',
-                     'cpp_type': cpp_type } ) #TODO: why a parameter should have no update rule
+                self.analysed_neuron[name] =  {
+                    'type': 'global',
+                    'init': self.init_parameter(name, init_value),
+                    'def': self.def_parameter(name),
+                    'cpp' : '',
+                    'cpp_type': cpp_type 
+                }
 
 #        for cpp in self.analysed_neuron:
 #            print cpp['cpp']
@@ -257,7 +256,7 @@ class SynapseAnalyser(object):
 
                 self.analysed_synapse.append(
                     {'name': name,
-                     'type': 'parameter',
+                     'type': 'global',
                      'init': self.init_parameter(name, init_value),
                      'cpp' : '',
                      'cpp_type': cpp_type

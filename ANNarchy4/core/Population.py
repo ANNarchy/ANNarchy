@@ -26,7 +26,8 @@ import Neuron
 
 from Neuron import RateNeuron, SpikeNeuron
 
-from ANNarchy4 import generator
+import ANNarchy4.generator.Population as PopulationGenerator
+
 from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
@@ -66,10 +67,7 @@ class Population(Descriptor):
         else:
             self.name = 'Population'+str(self._id)
         
-        if isinstance(neuron, RateNeuron):
-            self.generator = generator.MeanPopulation(self)            
-        else:
-            self.generator = generator.SpikePopulation(self)                        
+        self.generator = PopulationGenerator.Population(self)
                 
         Global._populations.append(self)
         
@@ -382,7 +380,7 @@ class Population(Descriptor):
         """
         if hasattr(self, 'cyInstance'):
             if hasattr(self.cyInstance, variable):
-                return getattr(self.cyInstance, variable).reshape(self.geometry)
+                return np.array(getattr(self.cyInstance, variable)).reshape(self.geometry)
             else:
                 print 'Error: variable', variable, 'does not exist in this population.'
                 print traceback.print_stack()
