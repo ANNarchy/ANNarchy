@@ -18,16 +18,16 @@ parameters="""
     c = -65.0
     d = 2.0
     threshold= 30.0
-    u = b * c
+    u = b * c 
 """,
 equations="""
     noise = Normal(0.0,1.0)
-    I = sum(exc) + sum(inh) + noise * noise_scale
+    I = sum(exc) + sum(inh) + noise * noise_scale : init = 0.0
     dv/dt = 0.04 * v * v + 5*v + 140 -u + I
     du/dt = a * (b*v - u)
 """,
 spike = """
-    v > threshold
+    v : v > threshold
 """,
 reset = """
     v = c
@@ -37,9 +37,9 @@ reset = """
 )
 print Izhikevitch
 
-Simple = Synapse(
+Simple = SpikeSynapse(
     #psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
-    psp = Variable(init=0, eq = "psp = if t is (t_spike+1) then value else 0.0")
+    psp = """ psp = if t is (t_spike+1) then value else 0.0 """
 )
 
 Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
@@ -87,7 +87,7 @@ inh_inh = Projection(
 )
 
 # Compile
-#compile()
+compile()
 
 def plot(population, data):
     """

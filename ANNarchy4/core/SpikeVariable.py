@@ -52,3 +52,16 @@ class SpikeVariable(object):
                 self.init = float(self.init)
                 self.type = float
          
+    #
+    # some customization stuff, maybe needed later.
+    def __str__(self):
+        itemDir = self.__dict__
+        str = '['
+        for i in itemDir:
+            str += '{0} : {1}, '.format(i, itemDir[i])
+        str+= ']'
+         
+        return str
+     
+    def __repr__(self):
+        return "<%s instance at %li> %s" % (self.__class__.__name__, id(self), self.__str__())  
