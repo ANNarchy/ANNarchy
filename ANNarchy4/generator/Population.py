@@ -29,6 +29,7 @@ import ANNarchy4.core.Global as Global
 from ANNarchy4.core.Random import RandomDistribution
 
 from ANNarchy4.core.Variable import Variable
+from ANNarchy4.core.Neuron import RateNeuron
 from ANNarchy4 import parser
 
 import CppGenerator
@@ -308,8 +309,9 @@ class Population(object):
                 code += '\tvoid compute_'+var['function']+'_'+var['variable']+'();\n\n'
                 
             return code
-            
-        header = """#ifndef __ANNarchy_%(class)s_H__
+        
+        if isinstance(self.population.neuron_type, RateNeuron):    
+            header = """#ifndef __ANNarchy_%(class)s_H__
 #define __ANNarchy_%(class)s_H__
 
 #include "Global.h"
@@ -345,7 +347,49 @@ private:
         'access' : generate_accessor(self.parsed_neuron,
                                      self.global_operations) 
         } 
+        else:
+           header = """#ifndef __ANNarchy_%(class)s_H__
+#define __ANNarchy_%(class)s_H__
 
+#include "Global.h"
+
+class %(class)s: public Population
+{
+public:
+    %(class)s(std::string name, int nbNeurons);
+    
+    ~%(class)s();
+    
+    int getNeuronCount() { return nbNeurons_; }
+    
+    void metaStep();
+    
+    void globalOperations();
+    
+    void propagateSpike();
+    
+    void reset();
+    
+    void record();
+    
+%(access)s
+private:
+%(global_ops)s
+
+%(member)s
+
+    std::vector<int> propagate_;    ///< neurons which will propagate their spike
+    std::vector<int> reset_;    ///< neurons which will reset after current eval
+};
+#endif
+""" % { 'class': self.class_name, 
+        'member': generate_member_definition(self.parsed_neuron, 
+                                             self.global_operations),
+        'global_ops': global_ops(self.global_operations), 
+        'access' : generate_accessor(self.parsed_neuron,
+                                     self.global_operations) 
+        }
+ 
         return header
 
     def generate_body(self):
@@ -363,7 +407,7 @@ private:
                 curr_line = ''
 
                 if value['type'] == 'rand_variable':
-                    constructor += """\t%(name)s_ = %(cpp_obj)s.getValues(nbNeurons_);\n""" % { 'name': value['name'], 'cpp_obj': value['eq']._gen_cpp() }
+                    constructor += """\t%(name)s_ = %(cpp_obj)s.getValues(nbNeurons_);\n""" % { 'name' : name, 'cpp_obj': value['eq']._gen_cpp() }
 
                 else:
                     if 'True' in value['init']:
@@ -509,6 +553,10 @@ private:
                         loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var_name, 'border': value['min'] }
                     if 'max' in value.keys():
                         loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var_name, 'border': value['max'] }
+
+            for name, value in parsed_neuron.iteritems():
+                if 'threshold' in value.keys():
+                    loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\n\t\t\tspike_timings_[i].push_back(ANNarchy_Global::time);\n\t\t\tspiked_[i] = true;\n\t\t }\n''' % { 'name': name, 'threshold': value['threshold'] }
     
             code = meta + '\n'
             code += '\tfor(int i=0; i<nbNeurons_; i++)\n' 
@@ -550,6 +598,51 @@ private:
             
             return code
 
+        def reset(parsed_neuron):
+            """
+            implementation of reset values after a spike was emited.
+            """
+            loop = ''
+            
+            for name, value in parsed_neuron.iteritems():
+                
+                #
+                # TODO: maybe better in parser??
+                if 'reset' in value.keys():
+                    for reset_val in value['reset']:
+                        var = re.findall('[A-Za-z]+', reset_val.split("=")[0])[0] # only on match exist, but spaces are supressed
+                        val = reset_val.split("=")[1]
+                        
+                        #
+                        # left side of equation
+                        lside = ''
+                        var_type = parsed_neuron[var]['type']
+                        if var_type == 'local':
+                            lside = var+'_[(*it)]'
+                        else:
+                            lside = var
+
+                        #
+                        # right side
+                        values = re.findall('[A-Za-z]+', val)
+                        
+                        for tval in values:
+                            v_t = parsed_neuron[tval]['type']
+                            if v_t == 'local':
+                                val = val.replace(tval, tval+'_[(*it)]')
+                            else:
+                                val = val.replace(tval, tval+'_')
+                                
+                        loop +='''\t\t\t%(lside)s = %(rside)s;\n''' % { 'lside': lside, 'rside': val }
+
+            code = """
+        for(auto it=reset_.begin(); it != reset_.end(); it++) 
+        {
+%(loop)s
+        } """ % { 'loop': loop }
+
+            return code
+        
         def reset_to_init(parsed_neuron):
             """
             generate code for reset to initial values.
@@ -577,7 +670,8 @@ private:
                 
             return code
 
-        body = """#include "%(class)s.h"
+        if isinstance(self.population.neuron_type, RateNeuron):
+            body = """#include "%(class)s.h"
 #include "Global.h"
 using namespace ANNarchy_Global;
 
@@ -629,7 +723,84 @@ void %(class)s::record() {
         'record' : record(self.parsed_neuron),
         'single_global_ops': single_global_ops(self.class_name, self.global_operations)
     } 
+        else:
+            body = """#include "%(class)s.h"
+#include "Global.h"
+using namespace ANNarchy_Global;
 
+%(class)s::%(class)s(std::string name, int nbNeurons):Population(name, nbNeurons)
+{
+#ifdef _DEBUG
+    std::cout << "%(class)s::%(class)s called." << std::endl;
+#endif
+%(construct)s
+    Network::instance()->addPopulation(this);
+}
+
+%(class)s::~%(class)s() {
+#ifdef _DEBUG
+    std::cout << "%(class)s::Destructor" << std::endl;
+#endif
+
+    std::cout << "%(class)s::Destructor" << std::endl;
+    
+%(destruct)s
+}
+
+void %(class)s::metaStep() {
+    spiked_ = std::vector<bool>(nbNeurons_, false);
+%(metaStep)s    
+}
+
+void %(class)s::propagateSpike() {
+
+    if (!propagate_.empty())
+    {
+
+        propagate_.erase(propagate_.begin(), propagate_.end());
+    }
+        
+}
+
+void %(class)s::reset() {
+
+    if (!reset_.empty())
+    {
+%(reset)s
+
+        reset_.erase(reset_.begin(), reset_.end());
+    }
+    
+}
+
+void %(class)s::globalOperations() 
+{
+
+    propagateSpike();
+    
+    reset();
+    
+%(global_ops)s
+}
+
+void %(class)s::record() 
+{
+%(record)s
+}
+
+%(single_global_ops)s
+""" % { 'class': self.class_name, 
+        'construct': constructor(self.parsed_neuron),
+        'destruct': destructor(self.parsed_neuron), 
+        'metaStep': meta_step(self.parsed_neuron,
+                              self.rand_objects,
+                              self.population.neuron_type.order
+                              ),
+        'reset': reset(self.parsed_neuron),
+        'global_ops': global_ops(self.global_operations),
+        'record' : record(self.parsed_neuron),
+        'single_global_ops': single_global_ops(self.class_name, self.global_operations)
+    }
         return body    
 
     def generate_pyx(self):
@@ -678,7 +849,8 @@ void %(class)s::record() {
                     continue
     
                 code += '    property '+name+':\n'
-                if value['type'] == 'variable':
+                
+                if value['type'] == 'local':
                     code += '        def __get__(self):\n'
                     code += '            return np.array(self.cInstance.get'+name.capitalize()+'())\n\n'
     
@@ -713,7 +885,8 @@ void %(class)s::record() {
                 
             return code
         
-        pyx = '''from libcpp.vector cimport vector
+        if isinstance(self.population.neuron_type, RateNeuron):
+            pyx = '''from libcpp.vector cimport vector
 from libcpp.string cimport string
 import numpy as np
 
@@ -754,6 +927,57 @@ cdef class py%(name)s:
         def __set__(self, value):
             print "py%(name)s.size is a read-only attribute."
             
+%(pyFunction)s
+
+''' % { 'name': self.class_name,  
+        'neuron_count': self.population.size, 
+        'cFunction': pyx_func(self.parsed_neuron,
+                              self.global_operations), 
+        'pyFunction': py_func(self.parsed_neuron,
+                              self.global_operations) 
+    }
+        else:
+            pyx = '''from libcpp.vector cimport vector
+from libcpp.string cimport string
+import numpy as np
+
+cdef extern from "../build/%(name)s.h":
+    cdef cppclass %(name)s:
+        %(name)s(string name, int N)
+
+        int getNeuronCount()
+        
+        string getName()
+        
+        vector[vector[int]] getSpikeTimings()
+        
+        void setMaxDelay(int)
+        
+%(cFunction)s
+
+
+cdef class py%(name)s:
+
+    cdef %(name)s* cInstance
+
+    def __cinit__(self):
+        self.cInstance = new %(name)s('%(name)s', %(neuron_count)s)
+
+    def name(self):
+        return self.cInstance.getName()
+
+    def set_max_delay(self, delay):
+        self.cInstance.setMaxDelay(delay)
+
+    property size:
+        def __get__(self):
+            return self.cInstance.getNeuronCount()
+        def __set__(self, value):
+            print "py%(name)s.size is a read-only attribute."
+            
+    def get_spike_timings(self):
+        return np.array(self.cInstance.getSpikeTimings())
+        
 %(pyFunction)s
 
 ''' % { 'name': self.class_name,  

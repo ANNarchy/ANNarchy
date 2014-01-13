@@ -99,7 +99,7 @@ class NeuronAnalyser(object):
                     if isinstance(value['var'].eq, RandomDistribution):
                         neur['type'] = 'rand_variable'
                         neur['eq'] = value['var'].eq
-                        self.analysed_neuron.append( neur )
+                        self.analysed_neuron[name] = neur
                         continue
                     
                     neur['eq'] = value['var'].eq
