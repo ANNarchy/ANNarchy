@@ -32,8 +32,6 @@ from ANNarchy4.core.Variable import Variable
 from ANNarchy4.core.Neuron import RateNeuron
 from ANNarchy4 import parser
 
-import CppGenerator
-
 import copy
 
 def get_type_name(type):
