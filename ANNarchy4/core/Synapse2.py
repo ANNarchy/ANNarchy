@@ -13,18 +13,15 @@ class RateSynapse(Master2):
         self._convert(parameters, equations)
         
         if psp:
-            psp = re.sub('\#[\s\S]+', ' ', psp) # remove comment
-            psp = 'psp = ' + psp
+            psp = 'psp = ' + self._prepare_string(psp)
             var = Variable(init=0.0, eq=psp)
             var._validate() 
             
             self._variables[ 'psp' ] = {'type' : 'local' ,'var': var } 
          
     def __str__(self):
-        print 'variables:'
-        pprint.pprint( self._variables, depth=4 )
-        print '\n'
-        
+        return pprint.pformat( self._variables, depth=4 )
+            
     def _global_operations(self):
         var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()
         return g_op
@@ -37,11 +34,11 @@ class SpikeSynapse(Master2):
         self._convert(parameters, equations)
         
         if psp:
-            psp = re.sub('\#[\s\S]+', ' ', psp) # remove comment
+            psp = 'psp = ' + ''.join(self._prepare_string(psp))
             var = Variable(init=0.0, eq=psp)
             var._validate() 
             
-            self._variables.append({'name': 'psp', 'var': var })
+            self._variables['psp'] = { 'type':'local', 'var': var }
 
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )
