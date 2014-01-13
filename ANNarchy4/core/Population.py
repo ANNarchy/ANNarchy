@@ -23,14 +23,15 @@
 """
 import Global 
 import Neuron
+
+from Neuron import RateNeuron, SpikeNeuron
+
 from ANNarchy4 import generator
 from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
 
 from ANNarchy4.core.Record import Record
-
-from ANNarchy4.core.Neuron2 import RateNeuron, SpikeNeuron
 
 import traceback
 import numpy as np

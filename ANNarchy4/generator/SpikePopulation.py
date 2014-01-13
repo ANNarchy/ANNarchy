@@ -368,6 +368,7 @@ private:
 
             for value in parsed_neuron:
                 if 'threshold' in value.keys():
+                    
                     loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\n\t\t\tspike_timings_[i].push_back(ANNarchy_Global::time);\n\t\t\tspiked_[i] = true;\n\t\t }\n''' % { 'name': value['name'], 'threshold': value['threshold'] }
     
             code = meta
