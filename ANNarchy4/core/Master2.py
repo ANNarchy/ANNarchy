@@ -42,7 +42,7 @@ class Master2(object):
         self._variables = {}
         self._order = []
         
-    def _transform_expr_in_variable(self, expr, is_eq=False):
+    def _transform_expr_in_variable(self, expr, param_dict, is_eq=False):
         """
         Private function.
         
@@ -90,6 +90,15 @@ class Master2(object):
             # evaluate the equation
             try:
                 lside, rside = equation.split('=')
+
+                dict_entry = ''.join(re.findall("(?<=\')[\w]+(?=')", rside))
+                if dict_entry != '':
+                    try:
+                        tmp = param_dict[dict_entry]
+                    except KeyError:
+                        print 'key', dict_entry, 'not found in provided dictionary.'
+                    
+                    rside = str(tmp)
             
                 name = re.findall("[\w\s]+\/[\w\s]+", lside)
                 if name == []:
@@ -103,6 +112,7 @@ class Master2(object):
                         else:
                             var['var'] = Variable(init=rside, **constraints)
                     except ValueError:
+                        
                         rand_dist = re.findall("[\w\s]+(?=\()", rside) #matches Uniform(), Normal() but also sum()
                         found = False
                         for rand in rand_dist:
@@ -177,7 +187,7 @@ class Master2(object):
         
         return expr_set
         
-    def _convert(self, parameters, equations):
+    def _convert(self, parameters, equations, param_dict):
         """
         Private function.
         
@@ -190,12 +200,12 @@ class Master2(object):
                 
         # check each line      
         for expr in tmp_par:
-            name, var = self._transform_expr_in_variable(expr)
+            name, var = self._transform_expr_in_variable(expr, param_dict)
             self._variables[name] = var
             
         # check each line      
         for expr in tmp_eq:
-            name, var = self._transform_expr_in_variable(expr, True)
+            name, var = self._transform_expr_in_variable(expr, param_dict, True)
 
             if name in self._variables.keys():
                 self._variables[name]['var'] + var['var'] 

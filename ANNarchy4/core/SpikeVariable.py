@@ -38,6 +38,10 @@ class SpikeVariable(object):
                 self.init = keyValueArgs[key]
             elif key=='type':
                 self.type = keyValueArgs[key]
+            elif key=='min':
+                self.min = keyValueArgs[key]
+            elif key=='max':
+                self.max = keyValueArgs[key]
             else:
                 print 'unknown key: '+key
          

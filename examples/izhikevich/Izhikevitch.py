@@ -8,18 +8,25 @@ nb_steps = 1000
 nb_exc_neurons = 800
 nb_inh_neurons = 200
 
+param_dict = {
+    'noise_factor': 5.0,
+    'a' : 0.02,
+    'b' : 0.2,
+}
+
 # Define the neurons
 Izhikevitch = SpikeNeuron(
 parameters="""
     I_in = 0.0
-    noise_scale = 5.0
-    a = 0.02
-    b = 0.2
+    noise_scale = 'noise_factor'
+    a = 'a'
+    b = 'b'
     c = -65.0
     d = 2.0
     threshold= 30.0
     u = b * c 
 """,
+extra_values = param_dict,
 equations="""
     noise = Normal(0.0,1.0)
     I = sum(exc) + sum(inh) + noise * noise_scale : init = 0.0

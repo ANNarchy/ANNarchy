@@ -10,7 +10,7 @@ class RateSynapse(Master2):
     def __init__(self, parameters="", equations="", psp=None, extra_values=None, functions=None):
         Master2.__init__(self)
         
-        self._convert(parameters, equations)
+        self._convert(parameters, equations, extra_values)
         
         if psp:
             psp = 'psp = ' + self._prepare_string(psp)
@@ -31,7 +31,7 @@ class SpikeSynapse(Master2):
     def __init__(self, parameters="", equations="", psp = None, extra_values=None, functions=None ):
         Master2.__init__(self)
         
-        self._convert(parameters, equations)
+        self._convert(parameters, equations, extra_values)
         
         if psp:
             psp = 'psp = ' + ''.join(self._prepare_string(psp))

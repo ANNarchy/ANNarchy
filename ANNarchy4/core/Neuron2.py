@@ -9,7 +9,7 @@ class RateNeuron(Master2):
     """
     Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
-    def __init__(self, parameters, equations, extra_values=None, functions=None):
+    def __init__(self, parameters, equations, extra_values={}, functions=None):
         """ 
         The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
         <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
@@ -45,7 +45,7 @@ class RateNeuron(Master2):
         """        
         Master2.__init__(self)
         
-        self._convert(parameters, equations) 
+        self._convert(parameters, equations, extra_values) 
 
     def __str__(self):
         """
@@ -57,7 +57,7 @@ class SpikeNeuron(Master2):
     """
     Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
-    def __init__(self, parameters, equations, spike, reset, extra_values=None, functions=None ):
+    def __init__(self, parameters="", equations="", spike="", reset="", extra_values={}, functions=None ):
         """ 
         The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
         <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
@@ -111,7 +111,7 @@ class SpikeNeuron(Master2):
         """        
         Master2.__init__(self)
         
-        self._convert(parameters, equations)
+        self._convert(parameters, equations, extra_values)
         
         spike_eq = self._prepare_string(spike)[0]
         reset_eq = self._prepare_string(reset)
