@@ -36,6 +36,7 @@ _pre_def_synapse_par = []
 
 _pre_def_neuron = ['rank', 'rate']
 
+_cy_instance = None
 
 # path to annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
@@ -72,6 +73,111 @@ def setup(**keyValueArgs):
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
+def compile(self):
+    """
+    Compile all classes and setup the network
+    """
+    generator.compile(populations = self._populations, projections = self._projections)
+    
+def reset(states=False, connections=False):
+    """
+    Reinitialises the network, runs each object's reset() method (resetting them to 0).
+
+    Parameter:
+
+    * *populations*: if set to True then it will reinitialise the neuron state variables.
+    * *projections*: if set to True then it will reinitialise the connection variables.
+    """
+    if populations:
+        for pop in _populations:
+            pop.reset()
+            
+    if projections:
+        print 'currently not implemented'
+        
+def get_population(name):
+    """
+    Returns population corresponding to *name*.
+    
+    Parameter:
+    
+    * *name*: population name
+
+    Returns:
+    
+    the requested population if existing otherwise None is returned.
+    """
+    for pop in _populations:
+        if pop.name == name:
+            return pop
+        
+    print "Error: no population with the name '"+name+"' found."
+    return None
+
+def get_projection(pre, post, target):
+    """
+    Returns projection corresponding to the arguments.
+    
+    Parameters:
+    
+    * *pre*: presynaptic population
+    * *post*: postsynaptic population
+    * *target*: connection type
+    
+    Returns:
+    
+    the requested projection if existing otherwise None is returned.
+    """
+    for proj in _projections:
+        
+        if proj.post == post:
+            if proj.pre == pre:
+                if proj.target == target:
+                    return proj
+    
+    print "Error: no projection '"+pre.name+"'->'"+post.name+"' with target '"+target+"' found."
+    return None
+
+def simulate(duration):
+    """
+    Runs the network for the given duration.
+    """
+    nb_steps = ceil(duration / config['dt'])
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().Run(nb_steps)
+    
+def current_time():
+    """
+    Returns current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().get_time() * config['dt']
+
+def current_step():
+    """
+    Returns current simulation step.
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().get_time()
+
+def set_current_time(time):
+    """
+    Set current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+    
+def set_current_step(time):
+    """
+    set current simulation step.
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().set_time( time )
+        
 def record(to_record):
     """
     Record variables of one or more populations. For more detailed information please refer to the Population.record method.
