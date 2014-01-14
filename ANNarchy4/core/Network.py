@@ -45,11 +45,11 @@ class Network(object):
         for object in args:
             self.add(object)
         
-    def compile(self):
+    def compile(self, cpp_stand_alone=False):
         """
         Compile all classes and setup the network
         """
-        generator.compile(populations = self._populations, projections = self._projections)
+        generator.compile(cpp_stand_alone=cpp_stand_alone, populations = self._populations, projections = self._projections)
         
         # copy back the data
         
