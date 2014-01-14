@@ -221,7 +221,9 @@ class Population(Descriptor):
                     
                 self._recorded_variables[var].start()
             except:
-                print "Error (start_record): only possible after compilation."
+                #TODO:
+                #print "Error (start_record): only possible after compilation."
+                pass
                 
 
     def pause_record(self, variable=None):

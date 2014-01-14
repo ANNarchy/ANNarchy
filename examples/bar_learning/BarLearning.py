@@ -69,13 +69,15 @@ feature_feature = Projection(
     connector=All2All(weights = Uniform(0.0, 1.0))
 ) 
 
-# Compiling the network
-compile()
 
 # visualization meanwhile yes/no
 vis_during_sim=True
 
 if __name__=='__main__':
+
+    net = MagicNetwork()
+    # Compiling the network
+    net.compile()
 
     # Definition of the environment
     def set_input():
@@ -102,7 +104,7 @@ if __name__=='__main__':
     # Run the simulation        
     for trial in range(3000):
         set_input()
-        simulate(50) 
+        net.simulate(50) 
         
         if vis_during_sim:
            vis.render()

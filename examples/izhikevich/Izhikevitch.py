@@ -49,7 +49,7 @@ Simple = SpikeSynapse(
     """
 )
 
-Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
+Excitatory = Population(name='Excitatory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
 re = np.random.random(nb_exc_neurons)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
@@ -152,6 +152,7 @@ def plot(population, data):
 if __name__ == '__main__':
  
     net = Network(Excitatory, Inhibitory, exc_exc, exc_inh, inh_exc, inh_inh)
+    #net = MagicNetwork()
     
     net.compile()
     

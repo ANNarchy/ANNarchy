@@ -1,5 +1,5 @@
 from core.Global import *
-from core.Network import Network
+from core.Network import Network, MagicNetwork
 from generator.Generator import compile
 from core.IO import save, load, load_parameter
 from core.Neuron import RateNeuron, SpikeNeuron
