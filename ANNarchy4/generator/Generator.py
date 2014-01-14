@@ -463,6 +463,9 @@ pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
 build/%.o : build/%.cpp
 \tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
 
+ANNarchyCPP : $(OBJ)
+\tg++ """+flags+""" -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.o -o libANNarchyCPP.so
+
 clean:
 \trm -rf build/*.o
 \trm -rf pyx/*.o
@@ -478,9 +481,13 @@ clean:
             os.system('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log')
         elif sys.version_info[:2] == (2, 7):
             os.system('make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log')
-        else:
+        elif sys.version_info[:2] == (3, 2):
             os.system('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log')
-        
+        elif cpp_stand_alone:
+            os.system('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log')
+        else:
+            print 'Error.'
+
     else: # Windows: to test....
         sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
         shutil.copy(sources_dir+'/compile.bat', Global.annarchy_dir)
