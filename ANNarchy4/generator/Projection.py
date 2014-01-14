@@ -199,9 +199,11 @@ class Projection(object):
             for var in parsed_variables:
                 if var['name'] == 'psp':
                     psp_code = var['cpp'].split(' = ')[1]
-                    
+
             if len(psp_code) == 0:
                 psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
+            else:
+                psp_code = psp_code.replace('value_', 'value_[i]')
 
             code = """\tsum_ =0.0;
     

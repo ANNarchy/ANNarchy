@@ -25,10 +25,11 @@ from Definitions import *
 import Tree
 import re
 
+from ANNarchy4.core import Global
 from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.SpikeVariable import SpikeVariable
 
-def get_value_and_type(value):
+def get_value_and_type(name, value):
     
     if 'var' in value.keys():
          # variables
@@ -47,7 +48,7 @@ def get_value_and_type(value):
             
         if value['var'].type != type(init_value) and value['var'].type != None:
             if not Global.config['suppress_warnings']:
-                print "'WARNING: type mismatch between provided type and initialization value of '",value['name'],"' ('",value['var'].type,",",type(init_value),")."
+                print "'WARNING: type mismatch between provided type and initialization value of '", name,"' ('", value['var'].type,",", type(init_value),")."
              
     else:
         # parameter, have always an initial value,
@@ -83,7 +84,7 @@ class NeuronAnalyser(object):
         for name, value in self.neuron.iteritems():
             
             if name in self.variables_names:
-                cpp_type, init_value = get_value_and_type(value)
+                cpp_type, init_value = get_value_and_type(name, value)
 
                 #
                 # basic stuff
@@ -129,7 +130,7 @@ class NeuronAnalyser(object):
                 self.analysed_neuron[name] = neur
 
             else: # A parameter
-                cpp_type, init_value = get_value_and_type(value)
+                cpp_type, init_value = get_value_and_type(name, value)
                     
                 self.analysed_neuron[name] =  {
                     'type': 'global',
@@ -193,8 +194,10 @@ class SynapseAnalyser(object):
         for name, value in self.synapse.iteritems():
             if value['type'] == 'local':
                 self.variables_names.append(name)
-            else: # A parameter
+            elif value['type'] == 'global':
                 self.parameters_names.append(name)
+            else:
+                continue
                 
         # Identify the local variables (synapse-specific) from the global ones (neuron-specific)
         dependencies={}
@@ -219,14 +222,16 @@ class SynapseAnalyser(object):
                                 dep.append(ovar)
                 dependencies[name] = dep
 
-        self.local_variables_names, self.global_variables_names = self.sort_dependencies(dependencies)
-                
+        #self.local_variables_names, self.global_variables_names = self.sort_dependencies(dependencies)
+        self.local_variables_names = self.variables_names
+        self.global_variables_names = self.parameters_names
+        
         # Perform the analysis
         for name, value in self.synapse.iteritems():
 
-            if value['type'] == 'local':
+            if value['type'] == 'local' and value['var'].eq != None:
                 synapse = { }
-                cpp_type, init_value = get_value_and_type(value)
+                cpp_type, init_value = get_value_and_type(name, value)
                     
                 tree = Tree.Tree(self, name, value['var'].eq)
                 if not tree.success: # Error while processing the equation
@@ -251,9 +256,24 @@ class SynapseAnalyser(object):
                     synapse['max'] = value['var'].max
 
                 self.analysed_synapse.append(synapse)
-            else: # A parameter
-                cpp_type, init_value = get_value_and_type(value)
+                
+            elif value['type'] == 'global' and value['var'].eq != None: # A parameter with equation
+                cpp_type, init_value = get_value_and_type(name, value)
 
+                tree = Tree.Tree(self, name, value['var'].eq)
+                if not tree.success: # Error while processing the equation
+                    return None, None
+                self.trees.append(tree)
+                self.analysed_synapse.append(
+                    {'name': name,
+                     'type': 'global',
+                     'init': self.init_parameter(name, init_value),
+                     'cpp' : tree.cpp()+';',
+                     'cpp_type': cpp_type
+                     } )
+                
+            else:
+                cpp_type, init_value = get_value_and_type(name, value)
                 self.analysed_synapse.append(
                     {'name': name,
                      'type': 'global',

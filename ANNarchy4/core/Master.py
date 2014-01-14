@@ -91,7 +91,7 @@ class Master(object):
             try:
                 lside, rside = equation.split('=')
 
-                dict_entry = ''.join(re.findall("(?<=\')[\w]+(?=')", rside))
+                dict_entry = ''.join(re.findall("(?<=\')[\W\w\_]+(?=')", rside))
                 if dict_entry != '':
                     try:
                         tmp = param_dict[dict_entry]
@@ -99,20 +99,30 @@ class Master(object):
                         print 'key', dict_entry, 'not found in provided dictionary.'
                     
                     rside = str(tmp)
-            
+                                            
                 name = re.findall("[\w\s]+\/[\w\s]+", lside)
                 if name == []:
                     #found direct value assignment, either init value or equation
                     name = re.findall("[\w]+", lside)
+
+                    tmp_side = rside.replace(' ','')
+                    if tmp_side in self._variables.keys():
+                        rside = self._variables[tmp_side]['var'].init
+                        
+                    elif tmp_side == 'True':
+                        var['var'] = Variable(init='True', **constraints)
+
+                    elif rside.replace(' ', '') == 'False':
+                        var['var'] = Variable(init='False', **constraints)
+
                     try:
-                        #just test conversion (if rside contains Uniform or something else we chose the except path)
-                        rvalue = float(rside) 
+                        rval = float(rside)
                         if is_eq:
                             var['var'] = Variable(eq=equation, **constraints)
                         else:
                             var['var'] = Variable(init=rside, **constraints)
-                    except ValueError:
-                        
+                                            
+                    except:    
                         rand_dist = re.findall("[\w\s]+(?=\()", rside) #matches Uniform(), Normal() but also sum()
                         found = False
                         for rand in rand_dist:
@@ -126,7 +136,7 @@ class Master(object):
                                 
                         if not found:
                             var['var'] = Variable(eq=equation, **constraints)
-                    
+    
                 else:
                     # found an ODE
                     name = re.findall("(?<=d)[\w\s]+(?=/)", lside)
@@ -183,7 +193,7 @@ class Master(object):
             if expr == ' ' or len(expr)==0: # through beginning line breaks or something similar empty strings are contained in the set
                 continue
             
-            expr_set.append(expr)
+            expr_set.append(''.join(expr))
         
         return expr_set
         
@@ -206,7 +216,8 @@ class Master(object):
         # check each line      
         for expr in tmp_eq:
             name, var = self._transform_expr_in_variable(expr, param_dict, True)
-
+            name = name.replace(' ','')
+            
             if name in self._variables.keys():
                 self._variables[name]['var'] + var['var'] 
             else:

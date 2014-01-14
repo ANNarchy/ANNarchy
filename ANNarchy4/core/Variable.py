@@ -28,17 +28,6 @@ class Variable(object):
     Variable representation in ANNarchy.
     """
     def __init__(self,  **keyValueArgs):
-        def convert_str_to_value(string):
-            try:
-                init = int(string)
-            except ValueError:
-                try:
-                    init = float(string)
-                except ValueError:
-                    init = string
-                    
-            return init
-            
         """
         Set of key-value pairs defining this variable.
         
@@ -63,15 +52,48 @@ class Variable(object):
             if key == 'eq':
                 self.eq = keyValueArgs[key]
             elif key=='init':
-                self.init = convert_str_to_value(keyValueArgs[key])
+                self.init = self._convert_str_to_value(keyValueArgs[key])
             elif key=='min':
-                self.min = convert_str_to_value(keyValueArgs[key])
+                self.min = self._convert_str_to_value(keyValueArgs[key])
             elif key=='max':
-                self.max = convert_str_to_value(keyValueArgs[key])
+                self.max = self._convert_str_to_value(keyValueArgs[key])
             elif key=='type':
-                self.type = keyValueArgs[key]
+                self.type = self._convert_str_to_type(keyValueArgs[key])
             else:
                 print 'unknown key: '+key
+
+    def _convert_str_to_value(self, string):
+        if type(string) != str:
+            return string 
+        
+        if string.find('True') != -1:
+            init = True
+        elif string.find('False') != -1:
+            init = False
+        else:
+            try:
+                init = int(string)
+            except ValueError:
+                try:
+                    init = float(string)
+                except ValueError:
+                    init = string
+                
+        return init
+
+    def _convert_str_to_type(self, string):
+        string = string.replace(' ','')
+        
+        if string.find('int') != -1:
+            type = int
+        elif string.find('float') != -1:
+            type = float
+        elif string.find('bool') != -1:
+            type = bool
+        else:
+            print 'Error: unknown type', string
+            
+        return type
 
     def _validate(self):
         #

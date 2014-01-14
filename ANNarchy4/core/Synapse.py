@@ -79,7 +79,7 @@ class RateSynapse(Master):
         self._convert(parameters, equations, extra_values)
         
         if psp:
-            psp = 'psp = ' + self._prepare_string(psp)
+            psp = 'psp = ' + self._prepare_string(psp)[0]
             var = Variable(init=0.0, eq=psp)
             var._validate() 
             
@@ -97,17 +97,29 @@ class SpikeSynapse(Master):
     Definition of a spiking synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
 
-    def __init__(self, parameters="", equations="", psp = None, extra_values=None, functions=None ):
+    def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, psp = None, extra_values=None, functions=None ):
         Master.__init__(self)
         
         self._convert(parameters, equations, extra_values)
         
         if psp:
-            psp = 'psp = ' + ''.join(self._prepare_string(psp))
+            psp = 'psp = ' + self._prepare_string(psp)[0]
             var = Variable(init=0.0, eq=psp)
             var._validate() 
             
             self._variables['psp'] = { 'type':'local', 'var': var }
+            
+        if pre_spike:
+            var = Variable(init=0.0, eq=self._prepare_string(pre_spike))
+            var._validate() 
+            
+            self._variables['pre_spike'] = { 'type':'pre_spike', 'var': var }
+
+        if post_spike:
+            var = Variable(init=0.0, eq=self._prepare_string(post_spike))
+            var._validate() 
+
+            self._variables['post_spike'] = { 'type':'post_spike', 'var': var }
 
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )

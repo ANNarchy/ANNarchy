@@ -20,7 +20,6 @@ LeakyNeuron = RateNeuron(
             my_other_function(x, y) = if x > y then x-y else 0.0
         """
 )
-print LeakyNeuron
 
 # Alternative to functions:
 #Function(
@@ -85,11 +84,9 @@ IF = SpikeNeuron(
         """ mp > threshold
         """,
     reset = 
-        """ mp = V_rest : refractory = 5ms # some models require to keep the mp at rest level for several ms after a spike
+        """ mp = V_rest # refractory = 5ms # some models require to keep the mp at rest level for several ms after a spike
         """
 )
-print IF
-
 
 Izhikevitch = SpikeNeuron(
     parameters = 
@@ -120,33 +117,34 @@ Izhikevitch = SpikeNeuron(
 ### Spiking synapses
 ##############################
 
-#SimpleExcitatory = SpikingSynapse(
-#    pre_spike = 
-#        """ post.g_exc += value
-#        """
-#) # Problem: how to generalize the target? post.g_%(target) += value ?
+SimpleExcitatory = SpikeSynapse(
+    pre_spike = 
+        """ post.g_exc += value
+        """
+) # Problem: how to generalize the target? post.g_%(target) += value ?
 
-#===============================================================================
-# STDP = SpikingSynapse(
-#     parameters = 
-#         """ tau_pre = 20.0
-#             tau_post = tau_pre
-#             delta_A_pre = .01
-#             delta_A_post = -delta_A_pre * tau_pre / tau_post * 1.05
-#         """,
-#     pre_spike = 
-#         """ A_pre += delta_A_pre
-#             value += A_post
-#         """,
-#     post_spike = 
-#         """ A_post += delta_A_post
-#             value += A_pre
-#         """,
-#     variables = 
-#         """ tau_pre * dA_pre/dt + A_pre = 0.0   : init = 0.0, event_driven
-#             tau_post * dA_post/dt  + A_post = 0.0 : init = 0.0, side=post_only, event_driven
-#         """
-# )
-#===============================================================================
+STDP = SpikeSynapse(
+    parameters = 
+        """ tau_pre = 20.0 : postsynaptic
+            tau_post = tau_pre : postsynaptic
+            delta_A_pre = .01
+            delta_A_post = -delta_A_pre * tau_pre / tau_post * 1.05
+        """,
+    pre_spike = 
+        """ A_pre += delta_A_pre
+            value += A_post
+        """,
+    post_spike = 
+        """ A_post += delta_A_post
+            value += A_pre
+        """,
+    equations = 
+        """ tau_pre * dA_pre/dt + A_pre = 0.0   : init = 0.0, event_driven
+            tau_post * dA_post/dt  + A_post = 0.0 : init = 0.0, postsynaptic, event_driven
+        """
+)
+print STDP
+
+net = MagicNetwork().compile()
 
 #CompleteSynapse = SimpleExcitatory + STDP # Combines the psp with the learning rule: in practice, just prepends the pre_spike rule of SimpleExc to the one of STDP. Except pre_spike and post_spike, no variable should have the same name. Adding two classes is easy by implementing __add__ in SpikingSynapse

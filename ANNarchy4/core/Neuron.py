@@ -138,7 +138,7 @@ class SpikeNeuron(Master):
         spike_eq = self._prepare_string(spike)[0]
         reset_eq = self._prepare_string(reset)
         
-        lside, rside = spike_eq.split(':')
+        lside, rside = spike_eq.split('>')
         var_name = lside.replace(' ','')
         var_eq = rside.replace(' ','')
         

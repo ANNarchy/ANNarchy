@@ -14,9 +14,11 @@
 #
 #    author: hdin
 #
-EPSILON = 0.000001
-SYN_TAU = 4.0
-NEUR_TAU = 10.0
+data = {
+'EPSILON' : 0.000001,
+'SYN_TAU' : 4.0,
+'NEUR_TAU' : 10.0
+}
 
 from ANNarchy4 import *
 from math import fabs
@@ -29,18 +31,30 @@ import numpy as np
 #
 # Define some simple classes
 #
-Input = Neuron(   tau = NEUR_TAU,
-                  test_var=Variable(init=0.1),
-                  rate = Variable(init=1.0),
-               )
-
-TestSynapse = Synapse(     
-    boolVar = Variable(init=True, type=bool),
-    boolVar2 = Variable(init=False),
-    intVar = Variable(init=1.0, type=int),
-    value = Variable(init = 0.0, eq = "value = if boolVar then 1.0 else 0.0"),
-    tau = SYN_TAU 
+Input = RateNeuron(   
+    parameters = """
+        tau = 'NEUR_TAU' : population
+        test_var = 0.1
+    """,
+    extra_values = data,
+    equations = """
+        rate = 1.0
+    """              
 )
+
+TestSynapse = RateSynapse(
+    parameters = """
+        tau = 'SYN_TAU' : population
+        boolVar = True : type = bool, population
+        boolVar2 = False : type = bool
+        intVar = 1.0 : type = int
+    """,
+    extra_values = data,
+    equations = """
+        value = if boolVar then 1.0 else 0.0 : type = float
+    """              
+)
+print TestSynapse
 
 InputPop = Population(name="Input", geometry=(2,2), neuron=Input)
 OutputPop = Population(name="Input", geometry=(2,2), neuron=Input)

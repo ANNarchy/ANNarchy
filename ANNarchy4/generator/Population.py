@@ -554,7 +554,16 @@ private:
 
             for name, value in parsed_neuron.iteritems():
                 if 'threshold' in value.keys():
-                    loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\n\t\t\tspike_timings_[i].push_back(ANNarchy_Global::time);\n\t\t\tspiked_[i] = true;\n\t\t }\n''' % { 'name': name, 'threshold': value['threshold'] }
+                    try:
+                        th = parsed_neuron[value['threshold'].replace(' ','')]
+                        if th['type']=='local':
+                            var = value['threshold']+'_[i]'
+                        else:
+                            var = value['threshold']
+                    except KeyError:
+                        var = value['threshold']
+                        
+                    loop += '''\t\t if (%(name)s_[i] > %(threshold)s)\n\t\t {\n\t\t\treset_.push_back(i);\n\t\t\tpropagate_.push_back(i);\n\n\t\t\tspike_timings_[i].push_back(ANNarchy_Global::time);\n\t\t\tspiked_[i] = true;\n\t\t }\n''' % { 'name': name, 'threshold': var }
     
             code = meta + '\n'
             code += '\tfor(int i=0; i<nbNeurons_; i++)\n' 
