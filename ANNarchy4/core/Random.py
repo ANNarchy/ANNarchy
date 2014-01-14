@@ -39,7 +39,7 @@ class RandomDistribution(object):
         print 'ERROR: instantiated base class RandomDistribution is not allowed.'
         return 0.0
 
-    def genCPP(self):
+    def _gen_cpp(self):
         print 'ERROR: instantiated base class RandomDistribution is not allowed.'
         return ''
     

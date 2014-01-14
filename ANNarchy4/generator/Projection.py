@@ -94,11 +94,13 @@ class Projection(object):
         In case of cpp_stand_alone compilation, this function generates
         the connector calls.
         """
+        cpp_call = self.projection.connector.cpp_call()
+        
         if self.projection.connector != None:
             return ('net_->connect('+
-                str(self.projection.pre.id)+', '+
-                str(self.projection.post.id)+', '+
-                self.projection.connector.cpp_call() +', '+ 
+                str(self.projection.pre._id)+', '+
+                str(self.projection.post._id)+', '+
+                cpp_call +', '+ 
                 str(self.proj_class['ID'])+', '+ 
                 str(self.projection.post.generator.targets.index(self.projection.target))+
                 ');\n')

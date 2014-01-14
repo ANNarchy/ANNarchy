@@ -113,7 +113,7 @@ class One2One(Connector):
         return dendrites, post_ranks
     
     def cpp_call(self):
-        return '&(One2OneConnector(new ' + self.weights.genCPP() +'))'
+        return '&(One2OneConnector(new ' + self.weights._gen_cpp() +'))'
 
 class All2All(Connector):
     """
@@ -170,7 +170,7 @@ class All2All(Connector):
         return dendrites, post_ranks
 
     def cpp_call(self):
-        return '&(One2OneConnector(new ' + self.weights.genCPP() +'))'
+        return '&(All2AllConnector(new ' + self.weights._gen_cpp() +'))'
 
 class Gaussian(Connector):
     """
