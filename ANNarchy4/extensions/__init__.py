@@ -11,12 +11,16 @@
 from ANNarchy4.core import Global
 try:
     from Nao import Nao
+except ImportError:
+    pass
+
+try:
     from Profile import Profile
 except ImportError:
     pass
 
 def check_extensions():
-    Global._print('checking for extensions.')
+    Global._debug('checking for extensions.')
     
     try:
         from Nao import Nao
@@ -25,7 +29,7 @@ def check_extensions():
         pass
     
     else:
-        Global._print('... Nao module available ...')
+        Global._debug('... Nao module available ...')
     
     try:
         from Profile import Profile
@@ -34,4 +38,4 @@ def check_extensions():
         pass
     
     else:
-        Global._print('... Profile module available ...')
+        Global._debug('... Profile module available ...')

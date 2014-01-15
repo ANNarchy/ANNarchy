@@ -38,6 +38,7 @@ _pre_def_synapse_par = []
 
 _pre_def_neuron = ['rank', 'rate']
 
+_cy_instance = None
 
 # path to annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
@@ -74,27 +75,20 @@ def setup(**keyValueArgs):
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
-def simulate(duration):
+def compile(self):
     """
-    Run the simulation.
-    
-    Parameter:
-        
-    * *duration*: number of time steps simulated in ANNarchy ( 1 time steps is normally equal to 1 ms )
-    """    
-    import ANNarchyCython
-
-    nb_steps = ceil(duration / config['dt'])
-    ANNarchyCython.pyNetwork().Run(nb_steps)
-
-def reset(populations=False, projections=False):
+    Compile all classes and setup the network
     """
-    Reset the network to initial values.
+    generator.compile(populations = self._populations, projections = self._projections)
     
+def reset(states=False, connections=False):
+    """
+    Reinitialises the network, runs each object's reset() method (resetting them to 0).
+
     Parameter:
-    
-    * *populations*: reset the population values.
-    * *projections*: reset the projection values.
+
+    * *populations*: if set to True then it will reinitialise the neuron state variables.
+    * *projections*: if set to True then it will reinitialise the connection variables.
     """
     if populations:
         for pop in _populations:
@@ -110,6 +104,10 @@ def get_population(name):
     Parameter:
     
     * *name*: population name
+
+    Returns:
+    
+    the requested population if existing otherwise None is returned.
     """
     for pop in _populations:
         if pop.name == name:
@@ -127,6 +125,10 @@ def get_projection(pre, post, target):
     * *pre*: presynaptic population
     * *post*: postsynaptic population
     * *target*: connection type
+    
+    Returns:
+    
+    the requested projection if existing otherwise None is returned.
     """
     for proj in _projections:
         
@@ -138,13 +140,53 @@ def get_projection(pre, post, target):
     print("Error: no projection",pre.name,"->",post.name,"with target ",target,"found.")
     return None
 
+def simulate(duration):
+    """
+    Runs the network for the given duration.
+    """
+    nb_steps = ceil(duration / config['dt'])
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().Run(nb_steps)
+    
+def current_time():
+    """
+    Returns current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().get_time() * config['dt']
+
+def current_step():
+    """
+    Returns current simulation step.
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().get_time()
+
+def set_current_time(time):
+    """
+    Set current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+    
+def set_current_step(time):
+    """
+    set current simulation step.
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().set_time( time )
+        
 def record(to_record):
     """
-    Record variables of one or more populations.
+    Record variables of one or more populations. For more detailed information please refer to the Population.record method.
     
     Parameter:
     
-    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format. For more details check Population.get_record().
+    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format.
     
     Example:
     
@@ -152,8 +194,10 @@ def record(to_record):
         
             to_record = [
                 { 'pop': Input, 'var': 'rate' }, 
-                { 'pop': Input, 'var': 'mp' }        
+                { 'pop': Input, 'var': 'mp', 'as_1D': True }        
             ]
+            
+        By default the variable data is always handled in population geometry shape. In this example, we force the storage of ``mp`` as one dimensional array.
 
     """
     for data_set in to_record:
@@ -161,11 +205,15 @@ def record(to_record):
 
 def get_record(to_record):
     """
-    Retrieve recorded variables of one or more populations.
+    Retrieve recorded variables of one or more populations. For more detailed information please refer to the Population.get_record method.
+  
+    Parameter:
+    
+    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format. For more details check Population.record().
     
     Returns:
     
-    * ...
+    * A dictionary containing all recorded values. The dictionary is empty if no recorded data is available.
     
     Example:
     
@@ -280,3 +328,4 @@ def _error(*var_text):
         p(text)
     else:
         print(text)
+

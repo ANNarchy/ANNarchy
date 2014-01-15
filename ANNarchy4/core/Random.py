@@ -39,9 +39,12 @@ class RandomDistribution(object):
         print('Error: instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
-    def genCPP(self):
-        print('Error: instantiated base class RandomDistribution is not allowed.')
+    def _gen_cpp(self):
+        print 'ERROR: instantiated base class RandomDistribution is not allowed.'
         return ''
+    
+    def keywords(self):
+        return ['Normal', 'Uniform', 'Constant']
 
 class Constant(RandomDistribution):
     """

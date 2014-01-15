@@ -48,7 +48,7 @@ def load_parameter(in_file):
         try:
             doc = etree.parse(file)
             
-        except exceptions.IOError:
+        except IOError:
             print('Error: file \'',file,'\' not found.')
             continue
         
@@ -77,10 +77,10 @@ def load_parameter(in_file):
                     else:
                         try:
                             value = int(value)
-                        except exceptions.ValueError:
+                        except ValueError:
                             try:
                                 value = float(value)
-                            except exceptions.ValueError:
+                            except ValueError:
                                 value = value
                         
                 else:
@@ -106,14 +106,28 @@ def load_parameter(in_file):
     
 def save(in_file, pure_data=True, variables=True, connections=True):
     """
-    Save the current network state
+    Save the current network state to file.
     
     Parameter:
     
-    * *in_file*: filename
+    * *in_file*: filename, may contain relative or absolute path. Allowed file extensions: '.mat' and '.data'
+    
+        .. warning:: Only the '.data' files are loadable by ANNarchy. 
+        
     * *pure_data*: if True only the network state will be saved. If False additionaly all neuron and synapse definitions will be saved (by default True).
+    
     * *variables*: if True population data will be saved (by default True)
+    
     * *connections*: if True projection data will be saved (by default True)
+    
+    Example:
+    
+        .. code-block:: python
+        
+            save('results/init.data')
+            
+            save('1000_trials.mat')
+    
     """    
     # Check if the repertory exist
     (path, filename) = os.path.split(in_file) 
@@ -143,7 +157,7 @@ def save(in_file, pure_data=True, variables=True, connections=True):
     
     if extension == '.mat':
         Global._debug("Save in matlab format.")
-        
+        sio.savemat(in_file, data)
         
     elif extension == '.data':
         Global._debug("Save in python pickle format.")
@@ -167,14 +181,33 @@ def load(in_file, pure_data=True):
     
     Parameter:
     
-    * *in_file*: filename
+    * *in_file*: the complete filename, allowed extensions are: '.data' for python pickle format.
     * *pure_data*: if True only the network state will be loaded assumes that the network is build up. If False the stored neuron and synapse definitions will be used to build up a network (by default True).
     * *variables*: if True population data will be saved (by default True)
     * *connections*: if True projection data will be saved (by default True)
+    
+    Example:
+    
+        .. code-block:: python
+        
+            load('results/init.data')
+            
     """    
+    (path, filename) = os.path.split(in_file)
+    extension = os.path.splitext(filename)[1]
+    
     with open(in_file, mode = 'r') as r_file:
         try:
-            net_desc = pickle.load(r_file)
+            net_desc = {}
+            
+            if extension == '.mat':
+                #Global._debug("Save in matlab format.")
+                print 'Error: currently not supported to load network data from matlab files.'
+                return
+                #sio.loadmat(in_file, net_desc)
+        
+            elif extension == '.data':         
+                net_desc = pickle.load(r_file)
     
             if pure_data:
                 _load_pop_data(net_desc)

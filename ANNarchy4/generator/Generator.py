@@ -379,7 +379,7 @@ def _update_global_operations():
                 proj.post.generator._add_global_oparation(entry)
             
     
-def compile(clean=False, cpp_stand_alone=False, debug_build=False):
+def compile(clean=False, cpp_stand_alone=False, debug_build=False, profile_enabled = False, populations=None, projections=None):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will carry the simulation.
     
@@ -389,16 +389,21 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False):
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     """
-    Global._print('ANNarchy', ANNarchy4.__version__, 'on', sys.platform, '(', os.name,')')
-        
+    print 'ANNarchy', ANNarchy4.__version__, '(', ANNarchy4.__release__, ')', 'on', sys.platform, '(', os.name,')'
+    
+    if populations != None:
+        Global._populations = populations
+
+    if projections != None:
+        Global._projections = projections
+            
     # Test if profiling is enabled
-    profile_enabled = False
-    try:
-        from ANNarchy4.extensions import Profile
-    except ImportError:
-        pass
-    else:
-        profile_enabled = True
+    if profile_enabled:
+        try:
+            from ANNarchy4.extensions import Profile
+        except ImportError:
+            print 'Error: profile extension was not found.'
+            profile_enabled = False
         
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:
@@ -431,10 +436,18 @@ PYX = $(wildcard pyx/*.pyx)
 OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
      
 all:
-	@echo "Please provide a target, either 'ANNarchyCython_2.x' or 'ANNarchyCython_3.x"
+\t@echo "Please provide a target, either 'ANNarchyCython_2.6', 'ANNarchyCython_2.7' or 'ANNarchyCython_3.x for python versions."
 
-ANNarchyCython_2.x: $(OBJ) pyx/ANNarchyCython_2.7.o
-\t@echo "Build ANNarchyCython library for python 2.x"
+ANNarchyCython_2.6: $(OBJ) pyx/ANNarchyCython_2.6.o
+\t@echo "Build ANNarchyCython library for python 2.6"
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.6.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.6 -o ANNarchyCython.so  
+
+pyx/ANNarchyCython_2.6.o : pyx/ANNarchyCython.pyx
+\tcython pyx/ANNarchyCython.pyx --cplus  
+\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.6 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.6.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
+
+ANNarchyCython_2.7: $(OBJ) pyx/ANNarchyCython_2.7.o
+\t@echo "Build ANNarchyCython library for python 2.7"
 \tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.7.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
 
 pyx/ANNarchyCython_2.7.o : pyx/ANNarchyCython.pyx
@@ -452,10 +465,13 @@ pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
 build/%.o : build/%.cpp
 \tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
 
+ANNarchyCPP : $(OBJ)
+\tg++ """+flags+""" -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.o -o libANNarchyCPP.so
+
 clean:
-	rm -rf build/*.o
-	rm -rf pyx/*.o
-	rm -rf ANNarchyCython.so
+\trm -rf build/*.o
+\trm -rf pyx/*.o
+\trm -rf ANNarchyCython.so
 """
 
         with open('Makefile', 'w') as wfile:
@@ -463,11 +479,17 @@ clean:
         if changed_pyx: # Force recompilation of the Cython wrappers
             os.system('touch pyx/ANNarchyCython.pyx')
 
-        if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-            os.system('make ANNarchyCython_2.x -j4 > compile_stdout.log 2> compile_stderr.log')
-        else:
+        if cpp_stand_alone:
+            os.system('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log')
+        elif sys.version_info[:2] == (2, 6):
+            os.system('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log')
+        elif sys.version_info[:2] == (2, 7):
+            os.system('make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log')
+        elif sys.version_info[:2] == (3, 2):
             os.system('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log')
-        
+        else:
+            print 'Error.'
+
     else: # Windows: to test....
         sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
         shutil.copy(sources_dir+'/compile.bat', Global.annarchy_dir)

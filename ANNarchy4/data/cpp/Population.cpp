@@ -36,7 +36,6 @@ Population::Population(std::string name, int nbNeurons) {
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
 
 #ifdef ANNAR_PROFILE
-    char buffer[200];
     try{
         Profile::profileInstance()->addLayer(name_);
     }catch(std::exception e){

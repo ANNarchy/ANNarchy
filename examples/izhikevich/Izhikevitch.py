@@ -8,27 +8,48 @@ nb_steps = 1000
 nb_exc_neurons = 800
 nb_inh_neurons = 200
 
+param_dict = {
+    'noise_factor': 5.0,
+    'a' : 0.02,
+    'b' : 0.2,
+}
+
 # Define the neurons
-Izhikevitch = Neuron(
-    I_in = Variable(init=0.0),
-    noise_scale = 5.0,
-    I = Variable(init=0.0, eq = "I = sum(exc) + sum(inh) + noise*noise_scale"),
-    noise = Variable(eq=Normal(0.0,1.0)),
-    a = Variable(init=0.02),
-    b = Variable(init=0.2),
-    c = Variable(init=-65.0),
-    d = Variable(init=2.0),
-    u = Variable(init=-65.*0.2, eq="du/dt = a * (b*v - u)"), # init should be b*baseline
-    v = SpikeVariable(eq="dv/dt = 0.04 * v * v + 5*v + 140 -u + I", threshold= 30.0, init=-65.0, reset=['v = c', 'u = u+d']),
-    order = ['I', 'v','u']
+Izhikevitch = SpikeNeuron(
+parameters="""
+    I_in = 0.0
+    noise_scale = 'noise_factor'
+    a = 'a'
+    b = 'b'
+    c = -65.0
+    d = 2.0
+    threshold= 30.0
+    u = b * c 
+""",
+extra_values = param_dict,
+equations="""
+    noise = Normal(0.0,1.0)
+    I = sum(exc) + sum(inh) + noise * noise_scale : init = 0.0
+    dv/dt = 0.04 * v * v + 5*v + 140 -u + I
+    du/dt = a * (b*v - u)
+""",
+spike = """
+    v > 30.0
+""",
+reset = """
+    v = c
+    u = u+d
+"""
+#    order = ['I', 'v','u']
 )
 
-Simple = Synapse(
-    #psp = Variable(init=0, eq = "psp = exp(-(t - t_spike))*value")  
-    psp = Variable(init=0, eq = "psp = if t is (t_spike+1) then value else 0.0")
+Simple = SpikeSynapse(
+    psp = """ 
+        if t is (t_spike+1) then value else 0.0 
+    """
 )
 
-Excitatory = Population(name='Excitory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
+Excitatory = Population(name='Excitatory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
 re = np.random.random(nb_exc_neurons)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
@@ -47,7 +68,7 @@ exc_exc = Projection(
     synapse = Simple,
     connector=All2All(weights=Uniform(0,0.5))
 )
- 
+  
 exc_inh = Projection(
     pre=Excitatory, 
     post=Inhibitory, 
@@ -55,7 +76,7 @@ exc_inh = Projection(
     synapse = Simple,
     connector=All2All(weights=Uniform(0,0.5))
 )
-
+ 
 inh_exc = Projection(
     pre=Inhibitory, 
     post=Excitatory, 
@@ -63,7 +84,7 @@ inh_exc = Projection(
     synapse = Simple,
     connector=All2All(weights= Uniform(-1.0,0.0))
 )
-
+ 
 inh_inh = Projection(
     pre=Inhibitory, 
     post=Inhibitory, 
@@ -127,7 +148,7 @@ def plot(population, data):
     ax = subplot(111)
     ax.imshow( spikes, cmap='hot' )
     ax.set_xlim([0,nb_steps])
-        
+                
 if __name__ == '__main__':
     
     #

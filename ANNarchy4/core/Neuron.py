@@ -21,57 +21,141 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from .Master import Master
+from Master import Master
+from Variable import Variable
+from SpikeVariable import SpikeVariable
 
-class Neuron(Master):
+import pprint
+
+class RateNeuron(Master):
     """
-    Python definition of a neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
-    """
-    
-    def __init__(self, debug=False, order=[], **key_value_args ):
-        """ The user describes the initialization of variables / parameters as *key-value pairs* 'variable'='value'. 
-        Neuron variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialization value'.
+    Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
+    """    
+    def __init__(self, parameters, equations, extra_values={}, functions=None):
+        """ 
+        The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
+        <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
         
         *Parameters*:
         
-            * *key_value_args*: dictionary contain the variable / parameter declarations as *key-value pairs*. For example:
+            * *parameters*: stored as *key-value pairs*. For example:
 
                 .. code-block:: python
         
-                    tau = 5.0, 
+                    parameters = \"\"\"
+                        tau = 10, 
+                    \"\"\"
 
-                initializes a parameter ``tau`` with the value 5.0 
+                initializes a parameter ``tau`` with the value 10. Please note, that you may specify several constraints for a parameter:
+            
+                * *population* : 
+                
+                * *min*:
+                
+                * *max*:
 
+            * *equations*: simply as a string contain the equations
+            
                 .. code-block:: python
         
-                    rate = Variable( init=0.0, rate="tau * drate / dt + rate = sum(exc)" )
+                    equations = \"\"\"
+                        tau * drate / dt + rate = sum(exc)
+                    \"\"\"
 
-                and variable ``rate`` bases on his excitory inputs.
+                spcifies a variable ``rate`` bases on his excitory inputs.
 
-                .. warning::
-                    
-                    Please note, that automatically all key-value pairs provided to the function, except ``debug`` and ``order``, are assigned to *key_value_args*.
+        """        
+        Master.__init__(self)
+        
+        self._convert(parameters, equations, extra_values) 
 
-            * *order*: execution order of update rules. All variables of one neuron are stored in a dictionary but are not necessarily evaluated in the order how the designer may provide them to this object. If the equations depend on each other you may provide the right execution order. For example:
-                
-                .. code-block:: python
-                
-                    order = ['mp', 'rate'] 
-              
-                leads to execution of the mp update and then the rate will updated.
-                
-                .. warning::
-                    
-                    if you use the order key, the value need to contain **all** variable names.
-            
-            * *debug*: prints all defined variables/parameters to standard out (default = False)
-            
-                .. hint::            
-                    
-                    An experimental feature, currently not fully implemented.
-                
+    def __str__(self):
         """
-        Master.__init__(self, debug, order, key_value_args)
+        Customized print.
+        """
+        return pprint.pformat( self._variables, depth=4 ) 
+        
+class SpikeNeuron(Master):
+    """
+    Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
+    """    
+    def __init__(self, parameters="", equations="", spike="", reset="", extra_values={}, functions=None ):
+        """ 
+        The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
+        <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
+        
+        *Parameters*:
+        
+            * *parameters*: stored as *key-value pairs*. For example:
+
+                .. code-block:: python
+        
+                    parameters = \"\"\"
+                        a = 0.2
+                        b = 2
+                        c = -65 
+                    \"\"\"
+
+                initializes a parameter ``tau`` with the value 10. Please note, that you may specify several constraints for a parameter:
+            
+                * *population* : 
+                
+                * *min*:
+                
+                * *max*:
+
+            * *equations*: simply as a string contain the equations
+            
+                .. code-block:: python
+        
+                    equations = \"\"\"
+                        dv/dt = 0.04 * v * v + 5*v + 140 -u + I
+                    \"\"\"
+
+                spcifies a variable ``rate`` bases on his excitory inputs.
+                
+            * *spike*: denotes the conditions when a spike should be emited.
+
+                .. code-block:: python
+        
+                    spike = \"\"\"
+                        v > treshold
+                    \"\"\"
+
+            * *reset*: denotes the equations executed after a spike
+
+                .. code-block:: python
+        
+                    reset = \"\"\"
+                        u = u + d
+                        v = c
+                    \"\"\"
+        """        
+        Master.__init__(self)
+        
+        self._convert(parameters, equations, extra_values)
+        
+        spike_eq = self._prepare_string(spike)[0]
+        reset_eq = self._prepare_string(reset)
+        
+        lside, rside = spike_eq.split('>')
+        var_name = lside.replace(' ','')
+        var_eq = rside.replace(' ','')
+        
+        old_var = self._variables[var_name]['var']
+        new_var = SpikeVariable(
+                            init = old_var.init,
+                            eq = old_var.eq,
+                            min = old_var.min,
+                            max = old_var.max,
+                            threshold = rside,
+                            reset = reset_eq
+                        )
+        
+        self._variables[var_name]['var'] = new_var 
+        
+    def __str__(self):
+        return pprint.pformat( self._variables, depth=4 )
         
 class IndividualNeuron(object):
     """Neuron object returned by the Population.neuron(rank) method.

@@ -38,17 +38,23 @@ class SpikeVariable(object):
                 self.init = keyValueArgs[key]
             elif key=='type':
                 self.type = keyValueArgs[key]
+            elif key=='min':
+                self.min = keyValueArgs[key]
+            elif key=='max':
+                self.max = keyValueArgs[key]
             else:
-                print('unknown key: '+key)
-         
-        #
-        # for later operations it's not positive if no
-        # default is set
-        if self.init == None:
-            self.init = self.type(0.0)
-            
-        if type(self.init) != self.type:
-            if self.type != bool and type(self.init) != bool:
-                self.init = float(self.init)
-                self.type = float
-         
+                print 'unknown key: '+key
+                  
+    #
+    # some customization stuff, maybe needed later.
+    def __str__(self):
+        itemDir = self.__dict__
+        str = '['
+        for i in itemDir:
+            str += '{0} : {1}, '.format(i, itemDir[i])
+        str+= ']'
+
+        return str
+     
+    def __repr__(self):
+        return "<%s instance at %li> %s" % (self.__class__.__name__, id(self), self.__str__())  

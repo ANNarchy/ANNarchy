@@ -21,6 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
+import pprint
 
 class Variable(object):
     """
@@ -51,16 +52,50 @@ class Variable(object):
             if key == 'eq':
                 self.eq = keyValueArgs[key]
             elif key=='init':
-                self.init = keyValueArgs[key]
+                self.init = self._convert_str_to_value(keyValueArgs[key])
             elif key=='min':
-                self.min = keyValueArgs[key]
+                self.min = self._convert_str_to_value(keyValueArgs[key])
             elif key=='max':
-                self.max = keyValueArgs[key]
+                self.max = self._convert_str_to_value(keyValueArgs[key])
             elif key=='type':
-                self.type = keyValueArgs[key]
+                self.type = self._convert_str_to_type(keyValueArgs[key])
             else:
                 print('unknown key for Variable: ',key)
 
+    def _convert_str_to_value(self, string):
+        if type(string) != str:
+            return string 
+        
+        if string.find('True') != -1:
+            init = True
+        elif string.find('False') != -1:
+            init = False
+        else:
+            try:
+                init = int(string)
+            except ValueError:
+                try:
+                    init = float(string)
+                except ValueError:
+                    init = string
+                
+        return init
+
+    def _convert_str_to_type(self, string):
+        string = string.replace(' ','')
+        
+        if string.find('int') != -1:
+            type = int
+        elif string.find('float') != -1:
+            type = float
+        elif string.find('bool') != -1:
+            type = bool
+        else:
+            print 'Error: unknown type', string
+            
+        return type
+
+    def _validate(self):
         #
         # for later operations it's not positive if no
         # default is set
@@ -70,10 +105,44 @@ class Variable(object):
             else:
                 self.type = float
                 self.init = self.type(0.0)
-
+ 
         if type(self.init) != self.type:
             if isinstance(self.init, (bool, float, int)):
                 if self.type != bool and type(self.init) != bool:
                     self.init = float(self.init)
                     self.type = float
-                
+            else:
+                self.type = 'eq'
+    
+    def __add__(self, other):
+        """
+        Called if two Variable objects are added up.
+        """
+        if not isinstance(other, Variable):
+            print 'Error: ...'
+            return
+
+        if self.init != None and other.init != None:
+            print 'WARNING: init value will be overwritten.'
+
+        if other.init:
+            self.init = other.init
+            self.type = type(self.init)
+
+        self.eq = other.eq
+        self.min = other.min
+        self.max = other.max
+        
+    #
+    # some customization stuff, maybe needed later.
+    def __str__(self):
+        itemDir = self.__dict__
+        str = '['
+        for i in itemDir:
+            str += '{0} : {1}, '.format(i, itemDir[i])
+        str+= ']'
+         
+        return str
+     
+    def __repr__(self):
+        return "<%s instance at %li> %s" % (self.__class__.__name__, id(self), self.__str__())  

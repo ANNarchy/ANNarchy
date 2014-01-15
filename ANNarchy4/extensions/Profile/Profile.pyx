@@ -29,6 +29,8 @@ cdef extern from "../build/Profile.h":
     cdef cppclass Profile:
         Profile()
 
+        void resetTimer()
+
         float getAvgTimeSum(string name, int begin, int end)
         
         float lastRecordedTimeSum(string name)
@@ -54,6 +56,9 @@ cdef class pyProfile:
 
     def __cinit__(self):
         self.cInstance = profileInstance()
+
+    def resetTimer(self):
+        self.cInstance.resetTimer()
 
     def lastTimeSum(self, name):
         return self.cInstance.lastRecordedTimeSum(name)

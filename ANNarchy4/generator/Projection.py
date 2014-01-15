@@ -94,11 +94,13 @@ class Projection(object):
         In case of cpp_stand_alone compilation, this function generates
         the connector calls.
         """
+        cpp_call = self.projection.connector.cpp_call()
+        
         if self.projection.connector != None:
             return ('net_->connect('+
-                str(self.projection.pre.id)+', '+
-                str(self.projection.post.id)+', '+
-                self.projection.connector.cpp_call() +', '+ 
+                str(self.projection.pre._id)+', '+
+                str(self.projection.post._id)+', '+
+                cpp_call +', '+ 
                 str(self.proj_class['ID'])+', '+ 
                 str(self.projection.post.generator.targets.index(self.projection.target))+
                 ');\n')
@@ -175,7 +177,7 @@ class Projection(object):
             """
             create variable/parameter constructor entries.
             """
-            code = ''            
+            code = ''
 
             return code
         
@@ -199,9 +201,11 @@ class Projection(object):
             for var in parsed_variables:
                 if var['name'] == 'psp':
                     psp_code = var['cpp'].split(' = ')[1]
-                    
+
             if len(psp_code) == 0:
                 psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
+            else:
+                psp_code = psp_code.replace('value_', 'value_[i]')
 
             code = """\tsum_ =0.0;
     
@@ -429,6 +433,7 @@ using namespace ANNarchy_Global;
 #ifdef _DEBUG
     std::cout<<"%(name)s::Destructor"<<std::endl;
 #endif
+
 %(destruct)s
 }
 

@@ -21,10 +21,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from . import Global
-from . import Neuron
+import Global 
+import Neuron
 
-from ANNarchy4 import generator
+from Neuron import RateNeuron, SpikeNeuron
+
+import ANNarchy4.generator.Population as PopulationGenerator
+
 from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
@@ -64,14 +67,8 @@ class Population(Descriptor):
         else:
             self.name = 'Population'+str(self._id)
         
-        if neuron.spike_vars == 0:
-            self.generator = generator.MeanPopulation(self)            
-        elif neuron.spike_vars == 1:
-            self.generator = generator.SpikePopulation(self)                        
-        else:
-            print('Error: only one SpikeVariable is allowed per neuron')
-            exit(0)
-            
+        self.generator = PopulationGenerator.Population(self)
+                
         Global._populations.append(self)
         
         self._recorded_variables = {}
@@ -132,9 +129,9 @@ class Population(Descriptor):
         
         #check additional variables
         neur_var = self.generator.neuron_variables
-        for var in neur_var:
-            if 'var' in var.keys():
-                ret_var.append(var['name'])      
+        for name, var in neur_var.iteritems():
+            if var['type'] == 'local':
+                ret_var.append(name)      
                 
         return ret_var
 
@@ -145,9 +142,10 @@ class Population(Descriptor):
         """
         neur_var = self.generator.neuron_variables
         ret_par = []        
-        for var in neur_var:
-            if not 'var' in var.keys():
-                ret_par.append(var['name'])
+        for name, var in neur_var.iteritems():
+            if var['type'] == 'global':
+                ret_par.append(name)      
+
         return ret_par
         
     @property
@@ -223,8 +221,9 @@ class Population(Descriptor):
                     
                 self._recorded_variables[var].start()
             except:
-                print("Error (start_record): only possible after compilation.")
-                
+                #TODO:
+                #print "Error (start_record): only possible after compilation."
+                pass
 
     def pause_record(self, variable=None):
         """
@@ -384,7 +383,7 @@ class Population(Descriptor):
         """
         if hasattr(self, 'cyInstance'):
             if hasattr(self.cyInstance, variable):
-                return getattr(self.cyInstance, variable).reshape(self.geometry)
+                return np.array(getattr(self.cyInstance, variable)).reshape(self.geometry)
             else:
                 print('Error: variable', variable, 'does not exist in this population.')
                 print(traceback.print_stack())

@@ -113,7 +113,7 @@ class One2One(Connector):
         return dendrites, post_ranks
     
     def cpp_call(self):
-        return '&(One2OneConnector(new ' + self.weights.genCPP() +'))'
+        return '&(One2OneConnector(new ' + self.weights._gen_cpp() +'))'
 
 class All2All(Connector):
     """
@@ -140,6 +140,12 @@ class All2All(Connector):
             * *allow_self_connections*: if the ranks of two neurons are equal and within the same population, this parameter determines wether a connection is build up or not.
         """        
         super(self.__class__, self).__init__(weights, delays, **parameters)
+
+        if 'allow_self_connections' in parameters.keys():
+            self._allow_self_connections = parameters['allow_self_connections']
+        else:
+            # print "ALL2ALL: assume 'allow_self_connections = False'"
+            self._allow_self_connections = False
     
     def connect(self):
         """
@@ -170,7 +176,10 @@ class All2All(Connector):
         return dendrites, post_ranks
 
     def cpp_call(self):
-        return '&(One2OneConnector(new ' + self.weights.genCPP() +'))'
+        if self._allow_self_connections:
+            return '&(All2AllConnector(true, new ' + self.weights._gen_cpp() +'))'
+        else:
+            return '&(All2AllConnector(false, new ' + self.weights._gen_cpp() +'))'
 
 class Gaussian(Connector):
     """

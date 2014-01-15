@@ -29,7 +29,7 @@ Projection::Projection()
 
 Projection::~Projection() {
 #ifdef _DEBUG
-    std::cout<<"Projection::Destructor"<<std::endl;
+    std::cout<<"Projection::Destructor (" << this << ")"<<std::endl;
 #endif
     
     if(!rank_.empty())

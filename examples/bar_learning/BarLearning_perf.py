@@ -48,7 +48,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 16 
+nb_neurons = 64  
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -89,7 +89,7 @@ vis_during_sim=True
 if __name__=='__main__':
 
     # Compiling the network
-    compile()
+    compile(cpp_stand_alone=False)
 
     # Collect visualizing information
     plot1 = {'pop': input_pop, 'var': 'rate'}
@@ -100,17 +100,50 @@ if __name__=='__main__':
     # Setup visualizer
     vis = Visualization( [plot1, plot2, plot3 ] )
 
-    # Run the simulation        
-    for trial in range(1000):
-        set_input()
-        simulate(50) 
+    # profile instance
+    profiler = Profile()
 
-        if vis_during_sim:
-           vis.render()
+    #
+    # setup the test
+    num_trials = 10
+    thread_count = [6,4,2,1]
+    trial_dur = 50
 
-    # Visualize the result of learning
-    vis.render()  
+    #
+    # pre setup
+    diff_runs = []
+    index = [ x for x in xrange(num_trials) ]
 
-    print 'simulation finished.'
+    for test in range(len(thread_count)):
+        diff_runs.append( [0 for x in range(num_trials) ] )
+
+        profiler.set_num_threads(thread_count[test])   
+
+        # Run the simulation        
+        for trial in range(num_trials):
+            set_input()
+            simulate(trial_dur) 
+
+            if vis_during_sim:
+               vis.render()
+    
+            diff_runs[test][trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            print profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
+
+        profiler.reset_timer()
+
+        # Visualize the result of learning
+        vis.render()  
+
+        print 'simulation finished.'
+
+    print 'results:\n'
+    for test in range(len(thread_count)):
+        print '\ttest',test,'with',thread_count[test],'thread(s)'
+        print '\t',diff_runs[test]
+        print '\n'
+
+    print diff_runs
+    print 'all simulation finished.'
 
     raw_input()

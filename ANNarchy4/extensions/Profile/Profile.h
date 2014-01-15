@@ -43,6 +43,17 @@ public:
 
     }
 
+    void resetTimer() {
+        for (auto it = timesSum_.begin(); it != timesSum_.end(); it++)
+                it->second.clear();
+        for (auto it = timesStep_.begin(); it != timesStep_.end(); it++)
+                it->second.clear();
+        for (auto it = timesLocal_.begin(); it != timesLocal_.end(); it++)
+                it->second.clear();
+        for (auto it = timesGlobal_.begin(); it != timesGlobal_.end(); it++)
+                it->second.clear();
+    }
+
     void addLayer(std::string name) {
     #ifdef _DEBUG
         std::cout<<"Population '"<<name<<"' added to profiler."<<std::endl;

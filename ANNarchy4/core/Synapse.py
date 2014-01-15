@@ -26,12 +26,18 @@ from . import Global
 
 from ANNarchy4 import parser
 
-class Synapse(Master):
-    """
-    Definition of a synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
-    """
+from Variable import Variable
+from ANNarchy4 import parser
 
-    def __init__(self, debug=False, order=[], **key_value_args):
+import re
+import pprint
+
+class RateSynapse(Master):
+    """
+    Definition of a rate coded synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
+    """
+    
+    def __init__(self, parameters="", equations="", psp=None, extra_values=None, functions=None):
         """ The user describes the initialization of variables / parameters as *key-value pairs* 'variable'='value'. 
         Synapse variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialzation value'.
         
@@ -67,9 +73,57 @@ class Synapse(Master):
                     
                     An experimental feature, currently not fully implemented.
             
-        """
-        Master.__init__(self, debug, order, key_value_args)
-
+        """        
+        Master.__init__(self)
+        
+        self._convert(parameters, equations, extra_values)
+        
+        if psp:
+            psp = 'psp = ' + self._prepare_string(psp)[0]
+            var = Variable(init=0.0, eq=psp)
+            var._validate() 
+            
+            self._variables[ 'psp' ] = {'type' : 'local' ,'var': var } 
+         
+    def __str__(self):
+        return pprint.pformat( self._variables, depth=4 )
+            
     def _global_operations(self):
-        var, g_op = parser.SynapseAnalyser(self.variables, [], []).parse()        
+        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()
+        return g_op
+        
+class SpikeSynapse(Master):
+    """
+    Definition of a spiking synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
+    """
+
+    def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, psp = None, extra_values=None, functions=None ):
+        Master.__init__(self)
+        
+        self._convert(parameters, equations, extra_values)
+        
+        if psp:
+            psp = 'psp = ' + self._prepare_string(psp)[0]
+            var = Variable(init=0.0, eq=psp)
+            var._validate() 
+            
+            self._variables['psp'] = { 'type':'local', 'var': var }
+            
+        if pre_spike:
+            var = Variable(init=0.0, eq=self._prepare_string(pre_spike))
+            var._validate() 
+            
+            self._variables['pre_spike'] = { 'type':'local', 'var': var }
+
+        if post_spike:
+            var = Variable(init=0.0, eq=self._prepare_string(post_spike))
+            var._validate() 
+
+            self._variables['post_spike'] = { 'type':'local', 'var': var }
+
+    def __str__(self):
+        return pprint.pformat( self._variables, depth=4 )
+            
+    def _global_operations(self):
+        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()        
         return g_op
