@@ -147,6 +147,12 @@ def simulate(duration):
     """
     nb_steps = ceil(duration / config['dt'])
     import ANNarchyCython
+    
+    #
+    # check if user defined a certain number of threads.
+    if config['num_threads'] != None:
+        ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
+    
     ANNarchyCython.pyNetwork().Run(nb_steps)
     
 def current_time():
