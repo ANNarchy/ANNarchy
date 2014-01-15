@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-import Global
+from . import Global
 
 class Descriptor(object):
     """
@@ -69,7 +69,25 @@ class Descriptor(object):
                     self.generator._add_value(name, value)
                     return None
         return object.__setattr__(self, name, value)
-                
+          
+class Descriptor2(object):
+    def __getattribute__(self, name):
+        value = object.__getattribute__(self, name)
+        if hasattr(value, '__get__'):
+            value = value.__get__(self, self.__class__)
+        return value
+
+    def __setattr__(self, name, value):
+        try:
+            obj = object.__getattribute__(self, name)
+        except AttributeError:
+            pass
+        else:
+            if hasattr(obj, '__set__'):
+                return obj.__set__(self, value)
+        return object.__setattr__(self, name, value)
+
+      
 class Attribute(object):
     """
     Descriptor object, needed to extend Population and 
@@ -91,7 +109,4 @@ class Attribute(object):
 
     def __delete__(self, instance):
         pass
-
-
-# -*- coding: utf-8 -*-
 

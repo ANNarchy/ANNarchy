@@ -21,11 +21,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-from Population import Population
-from Projection import Projection
+from .Population import Population
+from .Projection import Projection
 
 from ANNarchy4 import generator
-from ANNarchy4.core import Global
+from . import Global
 
 from math import ceil
 
@@ -66,7 +66,7 @@ class Network(object):
         elif isinstance(object, Projection):
             self._projections.append(object)        
         else:
-            print 'wrong argument provided to Network.add()'
+            Global._error('wrong argument provided to Network.add()')
 
     
     def remove(self, object):
@@ -78,7 +78,7 @@ class Network(object):
         elif isinstance(object, Projection):
             self._projections = self._projections.remove(object)         
         else:
-            print 'wrong argument provided to Network.add()'
+            Global._error('wrong argument provided to Network.add()')
 
     
     def reset(self, states=False, connections=False):
@@ -95,7 +95,7 @@ class Network(object):
                 pop.reset()
                 
         if projections:
-            print 'currently not implemented'
+            Global._error('reset of projections is currently not implemented')
             
     def get_population(self, name):
         """
@@ -113,7 +113,7 @@ class Network(object):
             if pop.name == name:
                 return pop
             
-        print "Error: no population with the name '"+name+"' found."
+        Global._error('no population with the name',name,'found.')
         return None
     
     def get_projection(self, pre, post, target):
@@ -137,7 +137,7 @@ class Network(object):
                     if proj.target == target:
                         return proj
         
-        print "Error: no projection '"+pre.name+"'->'"+post.name+"' with target '"+target+"' found."
+        Global._error("no projection '", pre.name, "'->'", post.name, "' with target '", target,"' found.")
         return None
     
     def simulate(self, duration):

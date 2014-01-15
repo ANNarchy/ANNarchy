@@ -58,7 +58,7 @@ class PopulationView(Descriptor):
         elif name in self.population.parameters:
             return self.population.get_parameter(name)
         else:
-            print "Error: population does not have a parameter/variable called", value + "."
+            Global._ANNarchyError("population does not have a parameter/variable called", value + ".")
         
     def set(self, value):
         """ Updates neuron variable/parameter definition.
@@ -81,21 +81,21 @@ class PopulationView(Descriptor):
                 # Check the value
                 if isinstance(value[val_key], np.ndarray): # np.array
                     if value[val_key].ndim >1 or len(value[val_key]) != self.size:
-                        print 'Error: you can only provide a 1D list/array of the same size as the PopulationView', self.size
+                        Global._ANNarchyError("you can only provide a 1D list/array of the same size as the PopulationView", self.size)
                         return None
                     if val_key in self.population.parameters:
-                        print 'Error: you can only provide a single value for parameters.'
+                        Global._ANNarchyError("you can only provide a single value for parameters.")
                         return None
                     # Assign the value
                     for rk in self.ranks:
                         setattr(self.population.neuron(rk), value[val_key][rk])
                 elif isinstance(value[val_key], list): # list
                     if value[val_key].ndim >1 or len(value[val_key]) != self.size:
-                        print 'Error: you can only provide a 1D list/array of the same size as the PopulationView', self.size
+                        Global._ANNarchyError("you can only provide a 1D list/array of the same size as the PopulationView", self.size)
                         return None
                     if val_key in self.population.parameters:
-                        print 'Error: you can only provide a single value for parameters.'
-                        return None
+                        Global._ANNarchyError("you can only provide a single value for parameters.")
+                        return None                    
                     # Assign the value
                     for rk in self.ranks:
                         setattr(self.population.neuron(rk), value[val_key][rk])   
@@ -106,7 +106,7 @@ class PopulationView(Descriptor):
                     for rk in self.ranks:
                         setattr(self.population.neuron(rk), value[val_key])
             else:
-                print "Error: population does not contain value: '"+val_key+"'"
+                Global._ANNarchyError("population does not contain value: ", val_key)
                 return None
                 
     def __add__(self, other):
@@ -114,7 +114,7 @@ class PopulationView(Descriptor):
         if other.population == self.population:
             return PopulationView(self.population, list(set(self.ranks + other.ranks)))
         else:
-            print 'Error: can only add two PopulationViews of the same population.'
+            Global._ANNarchyError("can only add two PopulationViews of the same population.")
             return None
                 
     def __repr__(self):

@@ -26,7 +26,6 @@ import os
 import pickle
 from lxml import etree 
 import scipy.io as sio
-import exceptions
 
 def load_parameter(in_file):
     """
@@ -49,7 +48,7 @@ def load_parameter(in_file):
         try:
             doc = etree.parse(file)
             
-        except exceptions.IOError:
+        except IOError:
             print('Error: file \'',file,'\' not found.')
             continue
         
@@ -78,10 +77,10 @@ def load_parameter(in_file):
                     else:
                         try:
                             value = int(value)
-                        except exceptions.ValueError:
+                        except ValueError:
                             try:
                                 value = float(value)
-                            except exceptions.ValueError:
+                            except ValueError:
                                 value = value
                         
                 else:
@@ -157,11 +156,11 @@ def save(in_file, pure_data=True, variables=True, connections=True):
         return
     
     if extension == '.mat':
-        #Global._debug("Save in matlab format.")
+        Global._debug("Save in matlab format.")
         sio.savemat(in_file, data)
         
     elif extension == '.data':
-        #Global._debug("Save in python pickle format.")
+        Global._debug("Save in python pickle format.")
         
         #
         # save in Pythons pickle format
@@ -202,10 +201,8 @@ def load(in_file, pure_data=True):
             net_desc = {}
             
             if extension == '.mat':
-                #Global._debug("Save in matlab format.")
-                print 'Error: currently not supported to load network data from matlab files.'
+                Global._error("currently not supported to load network data from matlab files.")
                 return
-                #sio.loadmat(in_file, net_desc)
         
             elif extension == '.data':         
                 net_desc = pickle.load(r_file)

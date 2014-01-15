@@ -21,9 +21,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-from Variable import Variable
-
-import Random
+from .Variable import Variable
+from . import Global
+from . import Random
 
 import re
 
@@ -77,8 +77,7 @@ class Master(object):
                     elif con.find('postsynaptic') !=-1:
                         var['type'] = 'global'
                     else:
-                        print expr
-                        print "WARNING: constraint statement '", con, "' is wrong or no arguments provided."
+                        Global._warning("'", expr, "'\nconstraint statement '", con, "' is wrong or no arguments provided.")
                         continue
             
         except ValueError:
@@ -96,7 +95,7 @@ class Master(object):
                     try:
                         tmp = param_dict[dict_entry]
                     except KeyError:
-                        print 'key', dict_entry, 'not found in provided dictionary.'
+                        Global._error( 'key', dict_entry, 'not found in provided dictionary.' )
                     
                     rside = str(tmp)
                                             
@@ -144,7 +143,7 @@ class Master(object):
                     
             except ValueError:
                 if not 'init' in constraints.keys():
-                    print 'WARNING: no default value for', equation
+                    Global._warning(' no default value for', equation )
                 
                 name = equation
                 var['var'] = Variable(**constraints)                    

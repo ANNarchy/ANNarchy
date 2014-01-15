@@ -28,16 +28,24 @@ Possible improvements:
    -   configurator of visualization fields, to create the visualization plot dictionary currently 
        provided as plot_data to Visualization
 """
-import matplotlib
+
+from ANNarchy4.core import Global 
 from pkg_resources import parse_version
 
 enable_vis = True
-if parse_version(matplotlib.__version__) < parse_version('1.0'):
-    enable_vis = False
-    print 'Insufficient matplotlib version.'
 
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+try:
+    import matplotlib
+    if parse_version(matplotlib.__version__) < parse_version('1.0'):
+        enable_vis = False
+        Global._print('Insufficient matplotlib version. Visualization features will be disabled.')
+    else:
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+
+except:
+    Global._print('No matplotlib found. Visualization features will be disabled.')
+    enable_vis = False
 
 from math import ceil, sqrt
 from datetime import datetime 
@@ -64,7 +72,7 @@ class Render(object):
             try:
                 self.p_map =  eval('cm.'+plot_data['cmap'])
             except:
-                print 'unknown color map'
+                Global._print('unknown color map')
                 self.p_map = cm.hot
         else:
             self.p_map = cm.hot
@@ -77,7 +85,7 @@ class Render(object):
         *
         * Implemented by derived classes.
         """        
-        print 'It is recommended to use derived objects.'
+        Global._print('It is recommended to use derived objects.')
         
 class Visualization(object):
     """
@@ -133,7 +141,7 @@ class Visualization(object):
                         
                     i += 1
                 else:
-                    print 'Incorrect plot data.'
+                    Global._error('incorrect plot data.')
                 
         self.figure.canvas.draw()
         
@@ -167,7 +175,7 @@ class Visualization(object):
 
         t_stop = datetime.now()
         if show_time:
-            print 'Visualization:\t', t_stop-t_start
+            Global._print('Visualization:\t', t_stop-t_start)
             
         self.time += 1
         

@@ -146,7 +146,7 @@ def cpp_equivalent(string):
     for key, val in cpp_equivalents.items():
         if string in val:
             return key
-    print 'Error: the function', string, 'is not defined.'
+    print('Error: the function', string, 'is not defined.')
                     
 def latex_equivalent(string):
     for key, val in latex_equivalents.items():

@@ -20,7 +20,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from Descriptor import Descriptor, Attribute
+from .Descriptor import Descriptor, Attribute
 from ANNarchy4.core.Random import RandomDistribution
 import numpy as np
 import traceback
@@ -93,7 +93,7 @@ class Dendrite(Descriptor):
                 # Set the value
                 setattr(self.cy_instance, val_key, val)
             else:
-                print "Error: dendrite has no parameter/variable called", val_key+"."    
+                Global._error("dendrite has no parameter/variable called", val_key)
                 
     def get(self, value):
         """
@@ -108,7 +108,7 @@ class Dendrite(Descriptor):
         elif value in self.parameters:
             return self.get_parameter(value)
         else:
-            print "Error: dendrite has no parameter/variable called", value+"."     
+            Global._error("dendrite has no parameter/variable called", val_key)     
                
     @property
     def variables(self):
@@ -155,8 +155,8 @@ class Dendrite(Descriptor):
         if hasattr(self.cy_instance, variable):
             return getattr(self.cy_instance, variable)
         else:
-            print 'Error: variable', variable, 'does not exist in this dendrite.'
-            print traceback.print_stack()
+            Global._error("variable", variable, "does not exist in this dendrite.")
+            Global._print(traceback.print_stack())
 
     def get_parameter(self, parameter):
         """
@@ -169,8 +169,8 @@ class Dendrite(Descriptor):
         if hasattr(self.cy_instance, parameter):
             return getattr(self.cy_instance, parameter)
         else:
-            print 'Error: parameter', parameter, 'does not exist in this dendrite.'
-            print traceback.print_stack()
+            Global._error("parameter", parameter, "does not exist in this dendrite.")
+            Global._print(traceback.print_stack())
 
     def add_synapse(self, rank, value, delay=0):
         """

@@ -46,7 +46,7 @@ def get_type_name(type):
     elif type==bool:
         return 'bool'
     else:
-        print "Unknown type, use default = 'DATA_TYPE'"
+        Global._warning("Unknown type, use default = 'DATA_TYPE'")
         return 'DATA_TYPE'
 
 class Population(object):
@@ -119,8 +119,8 @@ class Population(object):
         **Attention**: this function print out an error, as it's not allowed 
         to add new variables / parameters to population object.
         """
-        print "Error: it's not allowed to add new variables / parameters to population object."
-        print 'Population:', self.population.name, 'variable', name, 'value', value
+        print("Error: it's not allowed to add new variables / parameters to population object.")
+        print('Population:', self.population.name, 'variable', name, 'value', value)
 
     def _update_value(self, name, value):
         """ 
@@ -143,19 +143,19 @@ class Population(object):
                     if len(value) == self.population.size:
                         self.post_compilation_init[name] = value
                     else:
-                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with a list of the same size', self.population.size                    
+                        print('Error: the variable', name, 'of population', self.population.name, 'must be initialized with a list of the same size', self.population.size)                    
                 elif isinstance(value, np.ndarray): # will be assigned after the constrution of the c++ objects
                     if value.shape == self.population.geometry or value.shape == (self.population.size, ):
                         self.post_compilation_init[name] = value
                     else:
-                        print 'Error: the variable', name, 'of population', self.population.name, 'must be initialized with an array of the same shape', self.population.geometry  
+                        print('Error: the variable', name, 'of population', self.population.name, 'must be initialized with an array of the same shape', self.population.geometry)  
                 else:
-                    print "Error: can't assign ", value , "(", type(value), ") to the variable "+name
+                    print("Error: can't assign ", value , "(", type(value), ") to the variable", name)
             else:
                 values['init'] = float(value)
-        
+ 
         except KeyError:
-            print "Error: variable / parameter "+name+" does not exist in population object."
+            Global._error(" variable / parameter "+name+" does not exist in population object." )
             
     def _update_neuron_variables(self):
         """
@@ -184,9 +184,9 @@ class Population(object):
         """        
         if verbose:
             if self.class_name != self.population.name:
-                print '    for', self.class_name, '(', self.population.name, ')' 
+                Global._print( '    for', self.class_name, '(', self.population.name, ')' ) 
             else:
-                print '    for', self.class_name
+                Global._print( '    for', self.class_name )
 
         self._update_neuron_variables()
 
@@ -475,10 +475,9 @@ private:
                     call = 'RandomDistribution' + parameters + '.genCPP()'
                     try:
                         random_cpp = eval(call)
-                    except Exception, exception:
-                        print exception
-                        print 'Error in', value['eq'], ': the RandomDistribution object is not correctly defined.'
-                        exit(0) 
+                    except:
+                        Global._error( value['eq'], ': the RandomDistribution object is not correctly defined.' )
+                        
                     meta_code += '\t'+value['name']+'_= '+random_cpp+'.getValues(nbNeurons_);\n'
                     
             return meta_code
@@ -513,7 +512,7 @@ private:
     %(var)s_mean_ /= %(var)s_.size();
 }\n\n"""  % { 'class': class_name, 'var': var['variable'] }
                 else:
-                    print "Error: unknown operation - '"+var['function']+"'"
+                    Global._error (" unknown operation - '"+var['function']+"'")
                 
             return code
         
@@ -529,7 +528,6 @@ private:
             """
             Parallel evaluation of neuron equations.
             """
-            
             meta = ''
             # initialize the random variables before the loop
             for name, value in parsed_neuron.iteritems():

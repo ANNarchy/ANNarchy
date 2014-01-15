@@ -1,1 +1,1 @@
-from Analyser import NeuronAnalyser, SynapseAnalyser
+from .Analyser import NeuronAnalyser, SynapseAnalyser

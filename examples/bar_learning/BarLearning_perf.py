@@ -89,7 +89,7 @@ vis_during_sim=True
 if __name__=='__main__':
 
     # Compiling the network
-    compile(cpp_stand_alone=False)
+    compile(cpp_stand_alone=False, profile_enabled=True)
 
     # Collect visualizing information
     plot1 = {'pop': input_pop, 'var': 'rate'}

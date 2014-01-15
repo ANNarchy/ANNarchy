@@ -1,0 +1,6 @@
+*.pyc
+*.txt
+*.xml
+*.py~
+*.mat
+*.data

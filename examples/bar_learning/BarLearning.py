@@ -101,7 +101,7 @@ if __name__=='__main__':
     vis = Visualization( [plot1, plot2, plot3 ] )
 
     # Run the simulation        
-    for trial in range(3000):
+    for trial in range(1000):
         set_input()
         simulate(50) 
 

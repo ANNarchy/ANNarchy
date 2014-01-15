@@ -20,7 +20,7 @@ except ImportError:
     pass
 
 def check_extensions():
-    print 'checking for extensions.'
+    Global._debug('checking for extensions.')
     
     try:
         from Nao import Nao
@@ -29,7 +29,7 @@ def check_extensions():
         pass
     
     else:
-        print '... Nao module available ...'
+        Global._debug('... Nao module available ...')
     
     try:
         from Profile import Profile
@@ -38,5 +38,4 @@ def check_extensions():
         pass
     
     else:
-        print '... Profile module available ...'
-
+        Global._debug('... Profile module available ...')

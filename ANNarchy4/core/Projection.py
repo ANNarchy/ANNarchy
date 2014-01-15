@@ -23,8 +23,9 @@
 """
 import numpy as np
 
-import Global
-from Dendrite import Dendrite
+from . import Global
+from .Dendrite import Dendrite
+
 from ANNarchy4 import generator
 from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.Variable import Variable
@@ -144,7 +145,7 @@ class Projection(Descriptor):
         if rank in self._post_ranks:
             return self._dendrites[rank]
         else:
-            print 'Error: neuron of rank', str(rank), 'has no synapse in this projection.'
+            Global._ANNarchyError("neuron of rank", str(rank),"has no synapse in this projection.")
             return None
     
     # Iterators

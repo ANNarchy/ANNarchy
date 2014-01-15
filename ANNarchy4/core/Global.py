@@ -21,7 +21,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-import os
+from __future__ import print_function
+
+import sys, os
 from datetime import datetime
 from math import ceil
 
@@ -50,7 +52,8 @@ config = dict(
     'verbose': False,
     'show_time': False,
     'suppress_warnings': False,
-    'float_prec': 'single'
+    'float_prec': 'single',
+    'num_threads': None #default by os
    }
 )
 
@@ -93,7 +96,7 @@ def reset(states=False, connections=False):
             pop.reset()
             
     if projections:
-        print 'currently not implemented'
+        print('currently not implemented')
         
 def get_population(name):
     """
@@ -111,7 +114,7 @@ def get_population(name):
         if pop.name == name:
             return pop
         
-    print "Error: no population with the name '"+name+"' found."
+    print("Error: no population",name,"found.")
     return None
 
 def get_projection(pre, post, target):
@@ -135,7 +138,7 @@ def get_projection(pre, post, target):
                 if proj.target == target:
                     return proj
     
-    print "Error: no projection '"+pre.name+"'->'"+post.name+"' with target '"+target+"' found."
+    print("Error: no projection",pre.name,"->",post.name,"with target ",target,"found.")
     return None
 
 def simulate(duration):
@@ -144,6 +147,12 @@ def simulate(duration):
     """
     nb_steps = ceil(duration / config['dt'])
     import ANNarchyCython
+    
+    #
+    # check if user defined a certain number of threads.
+    if config['num_threads'] != None:
+        ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
+    
     ANNarchyCython.pyNetwork().Run(nb_steps)
     
 def current_time():
@@ -235,3 +244,95 @@ def get_record(to_record):
                 data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var']) } } )
     
     return data
+
+def current_time():
+    """
+    Returns current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    return ANNarchyCython.pyNetwork().get_time() * config['dt']
+
+def current_step():
+    """
+    Returns current simulation step.
+    """
+    import ANNarchyCython    
+    return ANNarchyCython.pyNetwork().get_time()    
+
+def set_current_time(time):
+    """
+    Set current simulation time in ms.
+    
+    **Note**: computed as number of simulation steps times dt
+    """
+    import ANNarchyCython
+    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+
+def set_current_step(time):
+    """
+    set current simulation step.
+    """
+    import ANNarchyCython    
+    ANNarchyCython.pyNetwork().set_time( time )    
+
+def _print(*var_text):
+    """
+    Prints a message to standard out.
+    """    
+    text = ''
+    for var in var_text:
+        text += str(var) + ' '
+        
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
+
+def _debug(*var_text):
+    """
+    Prints a message to standard out, if verbose mode set True.
+    """    
+    if not config['verbose']:
+        return
+    
+    text = ''
+    for var in var_text:
+        text += str(var) + ' '
+        
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
+        
+def _warning(*var_text):
+    """
+    Prints a warning message to standard out.
+    """
+    text = 'WARNING: '
+    for var in var_text:
+        text += var + ' '
+
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
+        
+def _error(*var_text):
+    """
+    Prints an error message to standard out.
+    """
+    text = 'ERROR: '
+    for var in var_text:
+        text += var + ' '
+    
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
+
