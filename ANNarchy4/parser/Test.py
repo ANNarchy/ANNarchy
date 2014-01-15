@@ -1,7 +1,7 @@
 from Analyser import *
 from ANNarchy4.core.Variable import Variable
-from ANNarchy4.core.Neuron import RateNeuron
-from ANNarchy4.core.Synapse import RateSynapse
+from ANNarchy4.core.Neuron import RateNeuron, SpikingNeuron
+from ANNarchy4.core.Synapse import RateSynapse, SpikingSynapse
 from ANNarchy4.core.Projection import Projection
 from ANNarchy4.core.Connector import All2All
 from ANNarchy4.core.Population import Population
@@ -32,6 +32,30 @@ Oja = RateSynapse(
         value * pre.rate
     """
 )   
+
+Izhikevitch = SpikingNeuron(
+    parameters = 
+        """ a = 0.02
+            b = 0.2
+            c = -65.0
+            d = 2.0
+            threshold = 30.0
+        """,
+    equations = 
+        """ dg_exc/dt + g_exc = 0 : init=0.0
+            dg_inh/dt + g_inh = 0 : init=0.0
+            I = g_exc + g_inh : init=0.0
+            dmp/dt = 0.04 * mp * mp + 5*mp + 140 -u + I : init=c
+            u = a * (b*mp - u) : init = c*b
+        """,
+    spike = 
+        """ mp > threshold
+        """,
+    reset = 
+        """ mp = c 
+            u = u + d 
+        """
+)
     
 def test_neuron(NeuronType, name):
     """Tests the result of parsing on a single neuron definition.
@@ -114,15 +138,14 @@ if __name__ == '__main__':
     print '-'*60
     test_neuron(DefaultNeuron, 'testleaky')
     
+    print '-'*60
     print 'Analysing Oja learning rule'
+    print '-'*60
     test_synapse(Oja, 'testsyn')
+
     
-#    print 'Access sums learning rule'
-#    Sum = Synapse(
-#        eta = 10.0,
-#        value = Variable(init=0.0, eq="""
-#            eta * dvalue/dt = pre.rate * post.rate - post.sum(exc)
-#        """, min=0.0)
-#    )
-#    test_synapse(Sum, 'testsum')
+    print '-'*60
+    print 'Analysing Izhikevitch neuron'
+    print '-'*60
+    test_neuron(Izhikevitch, 'testizhi')
 
