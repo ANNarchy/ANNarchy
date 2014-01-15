@@ -27,7 +27,7 @@ import re
 
 from ANNarchy4.core import Global
 from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.SpikeVariable import SpikeVariable
+from ANNarchy4.core.Variable import SpikeVariable
 
 def get_value_and_type(name, value):
     
@@ -48,7 +48,7 @@ def get_value_and_type(name, value):
             
         if value['var'].type != type(init_value) and value['var'].type != None:
             if not Global.config['suppress_warnings']:
-                print "'WARNING: type mismatch between provided type and initialization value of '", name,"' ('", value['var'].type,",", type(init_value),")."
+                Global._warning( " type mismatch between provided type and initialization value of '", name,"' ('", value['var'].type,",", type(init_value),")." )
              
     else:
         # parameter, have always an initial value,

@@ -201,10 +201,8 @@ def load(in_file, pure_data=True):
             net_desc = {}
             
             if extension == '.mat':
-                #Global._debug("Save in matlab format.")
-                print 'Error: currently not supported to load network data from matlab files.'
+                Global._error("currently not supported to load network data from matlab files.")
                 return
-                #sio.loadmat(in_file, net_desc)
         
             elif extension == '.data':         
                 net_desc = pickle.load(r_file)

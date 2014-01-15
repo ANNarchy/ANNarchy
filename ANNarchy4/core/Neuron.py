@@ -21,9 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from Master import Master
-from Variable import Variable
-from SpikeVariable import SpikeVariable
+from .Master import Master
+from .Variable import Variable, SpikeVariable
 
 import pprint
 

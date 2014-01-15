@@ -32,15 +32,15 @@ class RandomDistribution(object):
         pass
 
     def get_values(self, shape):
-        print('Error: instantiated base class RandomDistribution is not allowed.')
+        Global._error('instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
     def get_value(self):
-        print('Error: instantiated base class RandomDistribution is not allowed.')
+        Global._error('instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
     def _gen_cpp(self):
-        print 'ERROR: instantiated base class RandomDistribution is not allowed.'
+        Global._error('instantiated base class RandomDistribution is not allowed.')
         return ''
     
     def keywords(self):

@@ -21,15 +21,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from .Master import Master
 from . import Global
 
+from .Master import Master
+from .Variable import Variable
+
+from ANNarchy4 import parser
 from ANNarchy4 import parser
 
-from Variable import Variable
-from ANNarchy4 import parser
-
-import re
 import pprint
 
 class RateSynapse(Master):

@@ -21,10 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-import Global 
-import Neuron
-
-from Neuron import RateNeuron, SpikeNeuron
+from .Neuron import RateNeuron, SpikeNeuron
 
 import ANNarchy4.generator.Population as PopulationGenerator
 
@@ -33,6 +30,7 @@ from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
 
 from ANNarchy4.core.Record import Record
+import ANNarchy4.core.Global as Global
 
 import traceback
 import numpy as np

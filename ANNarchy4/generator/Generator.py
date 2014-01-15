@@ -226,7 +226,7 @@ include "Connector.pyx"
     with open(Global.annarchy_dir+'/generate/pyx/ANNarchyCython.pyx', mode='w') as w_file:
         w_file.write(code)
         
-def folder_management(profile_enabled, clean):
+def _folder_management(profile_enabled, clean):
     """
     ANNarchy is provided as a python package. For compilation a local folder
     'annarchy' is created in the current working directory.
@@ -236,10 +236,11 @@ def folder_management(profile_enabled, clean):
     * *profile_enabled*: copy needed data for profile extension
     """
     sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
-    if os.path.exists(Global.annarchy_dir): # Already compiled
-        if clean:
-            shutil.rmtree(Global.annarchy_dir, True)
-    else:    
+
+    if clean or profile_enabled:
+        shutil.rmtree(Global.annarchy_dir, True)
+
+    if not os.path.exists(Global.annarchy_dir):    
         os.mkdir(Global.annarchy_dir)
         os.mkdir(Global.annarchy_dir+'/pyx')
         os.mkdir(Global.annarchy_dir+'/build')
@@ -247,7 +248,6 @@ def folder_management(profile_enabled, clean):
         os.mkdir(Global.annarchy_dir+'/generate/pyx')
         os.mkdir(Global.annarchy_dir+'/generate/build')
 
-            
     # cpp / h files
     for file in os.listdir(sources_dir+'/cpp'):
         shutil.copy(sources_dir+'/cpp/'+file, # src
@@ -389,7 +389,7 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False, profile_enabl
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     """
-    print 'ANNarchy', ANNarchy4.__version__, '(', ANNarchy4.__release__, ')', 'on', sys.platform, '(', os.name,')'
+    Global._print( 'ANNarchy', ANNarchy4.__version__, '(', ANNarchy4.__release__, ')', 'on', sys.platform, '(', os.name,')' )
     
     if populations != None:
         Global._populations = populations
@@ -402,14 +402,14 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False, profile_enabl
         try:
             from ANNarchy4.extensions import Profile
         except ImportError:
-            print 'Error: profile extension was not found.'
+            Global._error( 'profile extension was not found.' )
             profile_enabled = False
         
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:
         Global._print("Create 'annarchy' subdirectory.")
 
-    folder_management(profile_enabled, clean)
+    _folder_management(profile_enabled, clean)
     
     # Tell each population which global operation they should compute
     _update_global_operations()
@@ -488,7 +488,8 @@ clean:
         elif sys.version_info[:2] == (3, 2):
             os.system('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log')
         else:
-            print 'Error.'
+            Global._error('no setup could be found.')
+            exit(0)
 
     else: # Windows: to test....
         sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
