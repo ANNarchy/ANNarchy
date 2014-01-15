@@ -1,17 +1,37 @@
 from Analyser import *
 from ANNarchy4.core.Variable import Variable
-from ANNarchy4.core.Neuron import Neuron
-from ANNarchy4.core.Synapse import Synapse
+from ANNarchy4.core.Neuron import RateNeuron
+from ANNarchy4.core.Synapse import RateSynapse
 from ANNarchy4.core.Projection import Projection
 from ANNarchy4.core.Connector import All2All
 from ANNarchy4.core.Population import Population
 from ANNarchy4.core.Random import Uniform
 
-DefaultNeuron = Neuron(
-    baseline =  Variable(init=0.1),
-    tau = 10.0,
-    rate = Variable(init=0.0, eq='tau*drate/dt + rate = sum(exc) + baseline', min=0.0),
+from pprint import pprint
+
+DefaultNeuron = RateNeuron(
+    parameters = """
+        tau = 10.0 : population
+        baseline = 1.0
+    """,
+    equations= """
+        tau*drate/dt + rate = sum(exc) - sum(inh) + baseline : min=0.0
+    """
 )
+   
+Oja = RateSynapse(
+    parameters = """
+        eta = 10.0 
+        tau_alpha = 10.0 : post_only
+    """,
+    equations = """
+        tau_alpha * dalpha/dt + alpha = pos(post.rate - 1.0) : post_only
+        eta * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=0.0
+    """,
+    psp = """
+        value * pre.rate
+    """
+)   
     
 def test_neuron(NeuronType, name):
     """Tests the result of parsing on a single neuron definition.
@@ -22,18 +42,30 @@ def test_neuron(NeuronType, name):
     """
     pop = Population(name=name, neuron=NeuronType, geometry=1)
     variables = pop.generator.neuron_variables
-    analyser = NeuronAnalyser(variables, pop.generator.targets)
-    analysed, gop = analyser.parse()
-    if not analysed:
-        print 'Parsing not successful'
+    parser = NeuronAnalyser(
+            variables, 
+            ['exc', 'inh'],
+            name
+    )
+    parsed_neuron, global_operations = parser.parse()
+    if parsed_neuron:
+        for name, desc in parsed_neuron.items():
+            if desc['type'] == 'global':
+                print name, 'is a population-wise parameter'
+                print '\ttype:', desc['cpp_type']
+                print '\tdeclaration:', desc['def']
+                print '\tinit:', desc['init']
+            else:
+                print name, 'is a neuron_specific variable'
+                print '\ttype:', desc['cpp_type']
+                print '\tdeclaration:', desc['def']
+                print '\tinit:', desc['init']
+                print '\tequation:', variables[name]['var'].eq
+                print '\tupdate rule:', desc['cpp']
+            print '-'*60
     else:
-        print '-'*80
-        for var in analysed:
-            print var['name'], 'is a', var['type'], ', defined with', var['def'], 'and initialized with', var['init']
-            if var['type'] == 'variable' and 'eq' in var.keys():
-                print 'Its update rule \"', var['eq'], '\" is translated to C++ with:'
-                print var['cpp']
-            print '-'*80
+        print 'Analyser failed'
+        exit(0)
 
 
 def test_synapse(SynapseType, name):
@@ -43,6 +75,7 @@ def test_synapse(SynapseType, name):
 
     * name is a unique population name for the test.
     """
+    # Create dummy network
     pop1 = Population(name=name+"1", neuron=DefaultNeuron, geometry=1)
     pop2 = Population(name=name+"2", neuron=DefaultNeuron, geometry=1)
     proj = Projection(
@@ -50,48 +83,46 @@ def test_synapse(SynapseType, name):
         synapse = SynapseType, 
         connector = All2All(weights= Uniform (-0.5, 0.5 ) ) 
     )
+    # Analyse
     variables = proj.generator.synapse_variables
     analyser = SynapseAnalyser(variables)
     analyser.targets_post = ['inh', 'exc']
-    analysed, gop = analyser.parse()
-    if not analysed:
-        print 'Parsing not successful'
+    parsed_synapse, gop = analyser.parse()
+    if parsed_synapse:
+        for name, desc in parsed_synapse.items():
+            print desc.keys()
+            if desc['type'] == 'global':
+                print name, 'is a projection-wise parameter'
+                print '\ttype:', desc['cpp_type']
+                print '\tinit:', desc['init']
+            else:
+                print name, 'is a synapse_specific variable'
+                print '\ttype:', desc['cpp_type']
+                print '\tinit:', desc['init']
+                print '\tequation:', desc['eq']
+                print '\tupdate rule:', desc['cpp']
+            print '-'*60
     else:
-        print '-'*80
-        for var in analysed:
-            print var['name'], 'is a', var['type'], ', initialized with', var['init']
-            if (var['type'] == 'local' or var['type'] == 'global' ) and 'eq' in var.keys():
-                print 'Its update rule \"', var['eq'], '\" is translated to C++ with:'
-                print var['cpp']
-            print '-'*80
+        print 'Analyser failed'
+        exit(0)   
+
 
 if __name__ == '__main__':
     print 'Testing the parser...'
 
-#    print 'Leaky neuron'
-#    LeakyNeuron = Neuron(
-#        baseline =  Variable(init=0.1),
-#        tau = 10.0,
-#        rate = Variable(init=0.0, eq='tau*drate/dt + rate = sum(exc) + baseline', min=0.0),
-#    )
-#    test_neuron(LeakyNeuron, 'testleaky')
-#    
-#    print 'Oja learning rule'
-#    Oja = Synapse(
-#        eta = 10.0,
-#        alpha = 1.0,
-#        tmp = Variable(init=0, eq = "tmp= if t == t_spike then value else 0.0"),
-#        psp = Variable(init=0, eq = "psp = tmp"),
-#        value = Variable(init=0.0, eq="dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value", min=0.0)
-#    )
-#    test_synapse(Oja, 'testsyn')
+    print 'Analysing Leaky neuron'
+    print '-'*60
+    test_neuron(DefaultNeuron, 'testleaky')
     
-    print 'Access sums learning rule'
-    Sum = Synapse(
-        eta = 10.0,
-        value = Variable(init=0.0, eq="""
-            eta * dvalue/dt = pre.rate * post.rate - post.sum(exc)
-        """, min=0.0)
-    )
-    test_synapse(Sum, 'testsum')
+    print 'Analysing Oja learning rule'
+    test_synapse(Oja, 'testsyn')
+    
+#    print 'Access sums learning rule'
+#    Sum = Synapse(
+#        eta = 10.0,
+#        value = Variable(init=0.0, eq="""
+#            eta * dvalue/dt = pre.rate * post.rate - post.sum(exc)
+#        """, min=0.0)
+#    )
+#    test_synapse(Sum, 'testsum')
 

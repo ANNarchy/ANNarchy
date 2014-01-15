@@ -178,7 +178,7 @@ class SynapseAnalyser(object):
     def __init__(self, synapse, targets_pre=[], targets_post=[]):
 
         self.synapse = synapse
-        self.analysed_synapse = []
+        self.analysed_synapse = {}
         self.parameters_names = []
         self.variables_names = []
         self.targets_pre=targets_pre # Need the list of targets for each population to allow pre.sum(exc) or post.sum(dopa)
@@ -255,7 +255,7 @@ class SynapseAnalyser(object):
                 if value['var'].max != None:
                     synapse['max'] = value['var'].max
 
-                self.analysed_synapse.append(synapse)
+                self.analysed_synapse[name] = synapse
                 
             elif value['type'] == 'global' and value['var'].eq != None: # A parameter with equation
                 cpp_type, init_value = get_value_and_type(name, value)
@@ -264,23 +264,23 @@ class SynapseAnalyser(object):
                 if not tree.success: # Error while processing the equation
                     return None, None
                 self.trees.append(tree)
-                self.analysed_synapse.append(
-                    {'name': name,
-                     'type': 'global',
-                     'init': self.init_parameter(name, init_value),
-                     'cpp' : tree.cpp()+';',
-                     'cpp_type': cpp_type
-                     } )
+                self.analysed_synapse[name] = {
+                    'name': name,
+                    'type': 'global',
+                    'init': self.init_parameter(name, init_value),
+                    'cpp' : tree.cpp()+';',
+                    'cpp_type': cpp_type
+                } 
                 
             else:
                 cpp_type, init_value = get_value_and_type(name, value)
-                self.analysed_synapse.append(
-                    {'name': name,
-                     'type': 'global',
-                     'init': self.init_parameter(name, init_value),
-                     'cpp' : '',
-                     'cpp_type': cpp_type
-                     } )
+                self.analysed_synapse[name] = {
+                    'name': name,
+                    'type': 'global',
+                    'init': self.init_parameter(name, init_value),
+                    'cpp' : '',
+                    'cpp_type': cpp_type
+                } 
                 
         # Process the global operations
         self.global_operations = sort_global_operations(self.global_operations)

@@ -236,10 +236,9 @@ def folder_management(profile_enabled, clean):
     * *profile_enabled*: copy needed data for profile extension
     """
     sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
-    if os.path.exists(Global.annarchy_dir): # Already compiled
-        if clean:
-            shutil.rmtree(Global.annarchy_dir, True)
-    else:    
+    if clean or profile_enabled:
+        shutil.rmtree(Global.annarchy_dir, True)
+    if not os.path.exists(Global.annarchy_dir):  
         os.mkdir(Global.annarchy_dir)
         os.mkdir(Global.annarchy_dir+'/pyx')
         os.mkdir(Global.annarchy_dir+'/build')
