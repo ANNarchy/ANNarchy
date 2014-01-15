@@ -1,3 +1,5 @@
+#
+# ANNarchy4 core
 from core.Global import *
 from core.Network import Network, MagicNetwork
 from generator.Generator import compile
@@ -14,7 +16,10 @@ from core.Variable import Variable
 from core.SpikeVariable import SpikeVariable
 from visualization import Visualization
 
+#
+# extension packages, imported as available
 from extensions import *
+check_extensions()
 
 import numpy as np
 __version__ = '4.1'

@@ -35,6 +35,9 @@ class Profile:
             self._profile_instance = ANNarchyCython.pyProfile()
             self._network = ANNarchyCython.pyNetwork()
             
+    def reset_timer(self):
+        self._profile_instance.resetTimer()
+
     def last_step_sum(self, name):
         if isinstance(name, str):
             pop = get_population(name)
