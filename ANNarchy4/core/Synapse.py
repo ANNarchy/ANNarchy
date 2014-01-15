@@ -113,13 +113,13 @@ class SpikeSynapse(Master):
             var = Variable(init=0.0, eq=self._prepare_string(pre_spike))
             var._validate() 
             
-            self._variables['pre_spike'] = { 'type':'pre_spike', 'var': var }
+            self._variables['pre_spike'] = { 'type':'local', 'var': var }
 
         if post_spike:
             var = Variable(init=0.0, eq=self._prepare_string(post_spike))
             var._validate() 
 
-            self._variables['post_spike'] = { 'type':'post_spike', 'var': var }
+            self._variables['post_spike'] = { 'type':'local', 'var': var }
 
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )

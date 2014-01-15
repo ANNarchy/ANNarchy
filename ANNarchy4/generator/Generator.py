@@ -378,7 +378,7 @@ def _update_global_operations():
                 proj.post.generator._add_global_oparation(entry)
             
     
-def compile(clean=False, cpp_stand_alone=False, debug_build=False, populations=None, projections=None):
+def compile(clean=False, cpp_stand_alone=False, debug_build=False, profile_enabled = False, populations=None, projections=None):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will carry the simulation.
     
@@ -397,13 +397,12 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False, populations=N
         Global._projections = projections
             
     # Test if profiling is enabled
-    profile_enabled = False
-    try:
-        from ANNarchy4.extensions import Profile
-    except ImportError:
-        pass
-    else:
-        profile_enabled = True
+    if profile_enabled:
+        try:
+            from ANNarchy4.extensions import Profile
+        except ImportError:
+            print 'Error: profile extension was not found.'
+            profile_enabled = False
         
     # Create the necessary subfolders and copy the source files
     if Global.config['verbose']:

@@ -144,7 +144,7 @@ class All2All(Connector):
         if 'allow_self_connections' in parameters.keys():
             self._allow_self_connections = parameters['allow_self_connections']
         else:
-            print "ALL2ALL: assume 'allow_self_connections = False'"
+            # print "ALL2ALL: assume 'allow_self_connections = False'"
             self._allow_self_connections = False
     
     def connect(self):

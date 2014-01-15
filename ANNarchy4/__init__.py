@@ -19,7 +19,8 @@ from visualization import Visualization
 #
 # extension packages, imported as available
 from extensions import *
-check_extensions()
+if core.Global.config['verbose']:
+    check_extensions()
 
 import numpy as np
 __version__ = '4.1'

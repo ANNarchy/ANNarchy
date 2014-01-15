@@ -30,7 +30,6 @@ def check_extensions():
     
     else:
         print '... Nao module available ...'
-        ext.append('Nao')
     
     try:
         from Profile import Profile
