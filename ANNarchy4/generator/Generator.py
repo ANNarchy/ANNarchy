@@ -391,6 +391,22 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False, profile_enabl
     """
     Global._print( 'ANNarchy', ANNarchy4.__version__, '(', ANNarchy4.__release__, ')', 'on', sys.platform, '(', os.name,')' )
     
+    # first argument is python script itself.
+    for arg in sys.argv[1:]:
+        if arg == '--clean':
+            clean = True
+        elif arg == '--profile':
+            profile_enabled = True
+        elif str(arg).find('-j')!= -1:
+            try:
+                num_threads = int(arg.replace('-j',''))
+                Global.config['num_threads'] = num_threads
+                Global._debug( 'use', num_threads, 'threads')
+            except:
+                Global._error( 'wrong format, expected -jx')
+        else:
+            Global._error( 'unknown command line argument', arg )
+    
     if populations != None:
         Global._populations = populations
 

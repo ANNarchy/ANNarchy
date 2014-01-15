@@ -52,7 +52,8 @@ config = dict(
     'verbose': False,
     'show_time': False,
     'suppress_warnings': False,
-    'float_prec': 'single'
+    'float_prec': 'single',
+    'num_threads': None #default by os
    }
 )
 
@@ -276,7 +277,7 @@ def _print(*var_text):
     """    
     text = ''
     for var in var_text:
-        text += var + ' '
+        text += str(var) + ' '
         
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         p = print        
@@ -293,7 +294,7 @@ def _debug(*var_text):
     
     text = ''
     for var in var_text:
-        text += var + ' '
+        text += str(var) + ' '
         
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         p = print        
