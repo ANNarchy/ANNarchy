@@ -477,14 +477,14 @@ clean:
         if changed_pyx: # Force recompilation of the Cython wrappers
             os.system('touch pyx/ANNarchyCython.pyx')
 
-        if sys.version_info[:2] == (2, 6):
+        if cpp_stand_alone:
+            os.system('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log')
+        elif sys.version_info[:2] == (2, 6):
             os.system('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log')
         elif sys.version_info[:2] == (2, 7):
             os.system('make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log')
         elif sys.version_info[:2] == (3, 2):
             os.system('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log')
-        elif cpp_stand_alone:
-            os.system('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log')
         else:
             print 'Error.'
 

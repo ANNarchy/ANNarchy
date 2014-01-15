@@ -74,6 +74,9 @@ void Network::disconnect(int prePopulationID, int postPopulationID) {
 }
 
 void Network::run(int steps) {
+#ifdef ANNAR_PROFILE
+        std::cout << "Run simulation with "<< omp_get_max_threads() << " thread(s)." << std::endl;
+#endif
 
 	for(int i =0; i<steps; i++) {
 	    // update time in all populations

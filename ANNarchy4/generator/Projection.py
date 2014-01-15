@@ -177,7 +177,7 @@ class Projection(object):
             """
             create variable/parameter constructor entries.
             """
-            code = ''            
+            code = ''
 
             return code
         
@@ -433,6 +433,7 @@ using namespace ANNarchy_Global;
 #ifdef _DEBUG
     std::cout<<"%(name)s::Destructor"<<std::endl;
 #endif
+
 %(destruct)s
 }
 

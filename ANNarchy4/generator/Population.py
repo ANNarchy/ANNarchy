@@ -205,8 +205,7 @@ class Population(object):
         generates population instantiation code for c++. 
         HINT: only used if cpp_stand_alone=True provided to generator.compile()
         """        
-        return ('\t\t'+self.population.generator.class_name+'* '+
-                      self.population.name+' = new '+
+        return ('\t\tnew '+
                       self.population.generator.class_name+'("'+
                       self.population.name+'", '+
                       str(self.population.size)+');\n')
@@ -696,8 +695,6 @@ using namespace ANNarchy_Global;
     std::cout << "%(class)s::Destructor" << std::endl;
 #endif
 
-    std::cout << "%(class)s::Destructor" << std::endl;
-    
 %(destruct)s
 }
 
