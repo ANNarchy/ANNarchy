@@ -48,7 +48,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 64  
+nb_neurons = 16 
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -89,7 +89,7 @@ vis_during_sim=True
 if __name__=='__main__':
 
     # Compiling the network
-    compile(cpp_stand_alone=False)
+    compile()
 
     # Collect visualizing information
     plot1 = {'pop': input_pop, 'var': 'rate'}
@@ -101,9 +101,9 @@ if __name__=='__main__':
     vis = Visualization( [plot1, plot2, plot3 ] )
 
     # Run the simulation        
-    for trial in range(num_trials):
+    for trial in range(3000):
         set_input()
-        simulate(trial_dur) 
+        simulate(50) 
 
         if vis_during_sim:
            vis.render()
