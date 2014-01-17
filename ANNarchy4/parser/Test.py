@@ -111,6 +111,7 @@ def test_synapse(SynapseType, name):
     )
     # Analyse
     variables = proj.generator.synapse_variables
+    pprint(variables)
     analyser = SynapseAnalyser(variables)
     analyser.targets_post = ['inh', 'exc']
     parsed_synapse, gop = analyser.parse()
@@ -136,18 +137,18 @@ def test_synapse(SynapseType, name):
 if __name__ == '__main__':
     print 'Testing the parser...'
 
-    print 'Analysing Leaky neuron'
-    print '-'*60
-    test_neuron(DefaultNeuron, 'testleaky')
+#    print 'Analysing Leaky neuron'
+#    print '-'*60
+#    test_neuron(DefaultNeuron, 'testleaky')
     
     print '-'*60
     print 'Analysing Oja learning rule'
     print '-'*60
     test_synapse(Oja, 'testsyn')
 
-    
-    print '-'*60
-    print 'Analysing Izhikevitch neuron'
-    print '-'*60
-    test_neuron(Izhikevitch, 'testizhi')
+#    
+#    print '-'*60
+#    print 'Analysing Izhikevitch neuron'
+#    print '-'*60
+#    test_neuron(Izhikevitch, 'testizhi')
 

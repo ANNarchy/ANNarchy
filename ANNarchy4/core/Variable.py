@@ -123,7 +123,7 @@ class Variable(object):
             return
 
         if self.init != None and other.init != None:
-            Global._waring(" init value", self.init, "will be overwritten by", other.init)
+            Global._warning(" init value", self.init, "will be overwritten by", other.init)
 
         if other.init:
             self.init = other.init
