@@ -87,14 +87,14 @@ class Network(object):
     
         Parameter:
     
-        * *populations*: if set to True then it will reinitialise the neuron state variables.
-        * *projections*: if set to True then it will reinitialise the connection variables.
+        * *states*: if set to True then it will reinitialise the neuron state variables.
+        * *connections*: if set to True then it will reinitialise the connection variables.
         """
-        if populations:
+        if states:
             for pop in self._populations:
                 pop.reset()
                 
-        if projections:
+        if connections:
             Global._error('reset of projections is currently not implemented')
             
     def get_population(self, name):

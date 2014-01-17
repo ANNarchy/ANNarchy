@@ -488,6 +488,7 @@ class GlobalFunction(Node):
     def cpp(self):
         if self.child != None:
             # TODO: save which variables are called. neuron?
+            from . import Analyser
             if isinstance(self.machine.analyser, Analyser.NeuronAnalyser):
                 return ' get' + self.value.capitalize() + self.variable.capitalize() + '()'
             else:

@@ -41,7 +41,7 @@ class Projection(object):
         if self.synapse:
             self.synapse_variables = copy.deepcopy(synapse.variables)
         else:
-            self.synapse_variables = []
+            self.synapse_variables = {}
             
         self.projection = projection
         self.name = projection.name

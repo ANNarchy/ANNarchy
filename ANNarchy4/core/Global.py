@@ -88,14 +88,14 @@ def reset(states=False, connections=False):
 
     Parameter:
 
-    * *populations*: if set to True then it will reinitialise the neuron state variables.
-    * *projections*: if set to True then it will reinitialise the connection variables.
+    * *states*: if set to True then it will reinitialise the neuron state variables.
+    * *connections*: if set to True then it will reinitialise the connection variables.
     """
-    if populations:
+    if states:
         for pop in _populations:
             pop.reset()
             
-    if projections:
+    if connections:
         print('currently not implemented')
         
 def get_population(name):
