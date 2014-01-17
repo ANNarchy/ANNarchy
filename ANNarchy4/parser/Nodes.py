@@ -170,7 +170,7 @@ class Equal(Node):
 
     def cpp(self):
         if self.order == 1:
-            return self.left.cpp() + " += dt_*" + self.right.cpp()
+            return self.left.cpp() + " += dt_*(" + self.right.cpp() + ")"
         return self.left.cpp() + " = " + self.right.cpp()
 
     def latex(self):

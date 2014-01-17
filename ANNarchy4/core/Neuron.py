@@ -21,8 +21,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from .Master import Master
-from .Variable import Variable, SpikeVariable
+from ANNarchy4.core.Master import Master
+from ANNarchy4.core.Variable import Variable, SpikeVariable
+from ANNarchy4.core.Global import _error
 
 import pprint
 
@@ -78,7 +79,7 @@ class SpikeNeuron(Master):
     """
     Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
-    def __init__(self, parameters="", equations="", spike="", reset="", extra_values={}, functions=None ):
+    def __init__(self, parameters="", equations="", spike=None, reset=None, extra_values={}, functions=None ):
         """ 
         The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
         <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
@@ -132,8 +133,13 @@ class SpikeNeuron(Master):
         """        
         Master.__init__(self)
         
+        # Analyse the provided strings in parameters, equations and extra_values
         self._convert(parameters, equations, extra_values)
         
+        # Check if the reset and spike arguments were passed
+        if not spike or not reset:
+            _error('The *spike* and *reset* arguments must be defined for a spiking neuron')
+            exit(0)
         spike_eq = self._prepare_string(spike)[0]
         reset_eq = self._prepare_string(reset)
         

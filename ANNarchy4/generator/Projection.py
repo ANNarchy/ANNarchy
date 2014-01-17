@@ -133,14 +133,14 @@ class Projection(object):
             create variable/parameter header entries.
             """
             code = ''
-            for var in parsed_variables:
-                if var['name'] in Global._pre_def_synapse:
+            for name, var in parsed_variables.items():
+                if name in Global._pre_def_synapse:
                     continue
                     
                 if var['type'] == 'local':
                     code += """\tstd::vector<%(type)s> %(name)s_;\n""" % { 
                         'type': get_type_name(var['cpp_type']), 
-                        'name': var['name']
+                        'name': name
                     }
                 else: 
                     # variable is 
@@ -148,7 +148,7 @@ class Projection(object):
                     #     or parameter
                     code += """\t%(type)s %(name)s_;\n""" % { 
                         'type': get_type_name(var['cpp_type']), 
-                        'name': var['name']
+                        'name': name
                     }
 
             return code
@@ -158,15 +158,15 @@ class Projection(object):
             create variable/parameter constructor entries.
             """
             code = ''            
-            for var in parsed_variables:
-                if var['name'] == 'psp':
+            for name, var in parsed_variables.items():
+                if name == 'psp':
                     continue
                 
                 if var['cpp_type']==bool:
                     if 'True' in var['init']: # is either True or False
-                        code += "\t"+var['name']+"_ = true; \n"
+                        code += "\t"+name+"_ = true; \n"
                     else:
-                        code += "\t"+var['name']+"_ = false; \n"
+                        code += "\t"+name+"_ = false; \n"
                 else:
                     code += "\t"+var['init']+"\n"       
                             
@@ -198,8 +198,8 @@ class Projection(object):
             # check if 'psp' is contained in variable set
             psp_code = ''
             
-            for var in parsed_variables:
-                if var['name'] == 'psp':
+            for name, var in parsed_variables.items():
+                if name == 'psp':
                     psp_code = var['cpp'].split(' = ')[1]
 
             if len(psp_code) == 0:
@@ -256,8 +256,8 @@ class Projection(object):
                 return ''
             
             if self.synapse.order == []:
-                for var in parsed_variables:
-                    if var['name'] == 'psp':
+                for name, var in parsed_variables.items():
+                    if name == 'psp':
                         continue
                     if var['type'] == 'global':
                         continue
@@ -266,15 +266,15 @@ class Projection(object):
                         loop += '\t\t'+var['cpp']+'\n'
                         
                         if 'min' in var.keys():
-                            loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var['name'], 'border': var['min'] }
+                            loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': name, 'border': var['min'] }
                         if 'max' in var.keys():
-                            loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var['name'], 'border': var['max'] }
+                            loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': name, 'border': var['max'] }
                        
             else:
                 for var in self.synapse.order:
-                    for var2 in parsed_variables:
-                        if var == var2['name']:
-                            if var2['name'] == 'psp':
+                    for name2, var2 in parsed_variables.items():
+                        if var == name2:
+                            if name2 == 'psp':
                                 continue
                             if var2['type'] == 'global':
                                 continue
@@ -283,9 +283,9 @@ class Projection(object):
                                 loop += '\t\t'+var2['cpp']+'\n'
 
                                 if 'min' in var2.keys():
-                                    loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var2['name'], 'border': var2['min'] }
+                                    loop += '''\t\tif (%(name)s_[i] < %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': name2, 'border': var2['min'] }
                                 if 'max' in var2.keys():
-                                    loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': var2['name'], 'border': var2['max'] }
+                                    loop += '''\t\tif (%(name)s_[i] > %(border)s) \n\t\t\t%(name)s_[i] = %(border)s;\n''' % { 'name': name2, 'border': var2['max'] }
 
 
             code = '\tfor(int i=0; i<(int)rank_.size();i++) {\n'
@@ -302,8 +302,8 @@ class Projection(object):
             if self.synapse == None:
                 return code
             
-            for var in parsed_variables:
-                if var['name'] == 'psp':
+            for name, var in parsed_variables.items():
+                if name == 'psp':
                     continue
                 if var['type'] == 'local':
                     continue
@@ -312,9 +312,9 @@ class Projection(object):
                     code += '\t\t'+var['cpp']+'\n'
                     
                     if 'min' in var.keys():
-                        code += '''\t\tif (%(name)s_ < %(border)s) \n\t\t\t%(name)s_ = %(border)s;\n''' % { 'name': var['name'], 'border': var['min'] }
+                        code += '''\t\tif (%(name)s_ < %(border)s) \n\t\t\t%(name)s_ = %(border)s;\n''' % { 'name': name, 'border': var['min'] }
                     if 'max' in var.keys():
-                        code += '''\t\tif (%(name)s_ > %(border)s) \n\t\t\t%(name)s_ = %(border)s;\n''' % { 'name': var['name'], 'border': var['max'] }
+                        code += '''\t\tif (%(name)s_ > %(border)s) \n\t\t\t%(name)s_ = %(border)s;\n''' % { 'name': name, 'border': var['max'] }
 
             return code
 
@@ -325,8 +325,8 @@ class Projection(object):
             """
             access = ''
     
-            for value in synapse_values:
-                if value['name'] in Global._pre_def_synapse:
+            for name, value in synapse_values.items():
+                if name in Global._pre_def_synapse:
                     continue
     
                 if value['type'] == 'local':
@@ -334,9 +334,9 @@ class Projection(object):
 void set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_= %(name)s; }
 
 std::vector<%(type)s> get%(Name)s() { return this->%(name)s_; }""" % {
-       'Name': value['name'].capitalize(),
+       'Name': name.capitalize(),
        'type': get_type_name(value['cpp_type']),
-       'name': value['name']
+       'name': name
 }              
                 else:
                     access += """
@@ -344,9 +344,9 @@ void set%(Name)s(%(type)s %(name)s) { this->%(name)s_=%(name)s; }
 
 %(type)s get%(Name)s() { return this->%(name)s_; }
 """ % {
-       'Name': value['name'].capitalize(),
+       'Name': name.capitalize(),
        'type': get_type_name(value['cpp_type']),
-       'name': value['name']
+       'name': name
 }                    
             return access
 
@@ -497,16 +497,16 @@ void %(name)s::globalLearn() {
             """
             code = ''
     
-            for value in parsed_synapse:
-                if value['name'] in Global._pre_def_synapse:
+            for name, value in parsed_synapse.items():
+                if name in Global._pre_def_synapse:
                     continue
    
                 if value['type'] == 'local':
-                     code += '        vector[float] get'+value['name'].capitalize()+'()\n\n'
-                     code += '        void set'+value['name'].capitalize()+'(vector[float] values)\n\n'
+                     code += '        vector[float] get'+name.capitalize()+'()\n\n'
+                     code += '        void set'+name.capitalize()+'(vector[float] values)\n\n'
                 else:
-                    code += '        '+get_type_name(value['cpp_type'])+' get'+value['name'].capitalize()+'()\n\n'
-                    code += '        void set'+value['name'].capitalize()+'('+get_type_name(value['cpp_type'])+' value)\n\n'    
+                    code += '        '+get_type_name(value['cpp_type'])+' get'+name.capitalize()+'()\n\n'
+                    code += '        void set'+name.capitalize()+'('+get_type_name(value['cpp_type'])+' value)\n\n'    
 
             return code
     
@@ -517,33 +517,33 @@ void %(name)s::globalLearn() {
             """            
             code = ''
             
-            for value in parsed_synapse:
-                if value['name'] in Global._pre_def_synapse:
+            for name, value in parsed_synapse.items():
+                if name in Global._pre_def_synapse:
                     continue
     
-                code += '    property '+value['name']+':\n'
+                code += '    property '+name+':\n'
                 if value['type'] == 'local':
                     #getter
                     code += '        def __get__(self):\n'
-                    code += '            return np.array(self.cInhInstance.get'+value['name'].capitalize()+'())\n\n'
+                    code += '            return np.array(self.cInhInstance.get'+name.capitalize()+'())\n\n'
 
                     code += '        def __set__(self, value):\n'
                     code += '            if isinstance(value, np.ndarray)==True:\n'
                     code += '                if value.ndim==1:\n'
-                    code += '                    self.cInhInstance.set'+value['name'].capitalize()+'(value)\n'
+                    code += '                    self.cInhInstance.set'+name.capitalize()+'(value)\n'
                     code += '                else:\n'
-                    code += '                    self.cInhInstance.set'+value['name'].capitalize()+'(value.reshape(self.size))\n'
+                    code += '                    self.cInhInstance.set'+name.capitalize()+'(value.reshape(self.size))\n'
 
                     code += '            else:\n'
-                    code += '                self.cInhInstance.set'+value['name'].capitalize()+'(np.ones(self.size)*value)\n\n'    
+                    code += '                self.cInhInstance.set'+name.capitalize()+'(np.ones(self.size)*value)\n\n'    
     
                 else:
                     #getter
                     code += '        def __get__(self):\n'
-                    code += '            return self.cInhInstance.get'+value['name'].capitalize()+'()\n\n'
+                    code += '            return self.cInhInstance.get'+name.capitalize()+'()\n\n'
                 
                     code += '        def __set__(self, value):\n'
-                    code += '            self.cInhInstance.set'+value['name'].capitalize()+'(value)\n\n'
+                    code += '            self.cInhInstance.set'+name.capitalize()+'(value)\n\n'
     
             return code
         

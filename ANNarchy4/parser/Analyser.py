@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from .Definitions import *
-from . import Tree
+from ANNarchy4.parser.Definitions import *
+from ANNarchy4.parser.Tree import Tree
 import re
 
 from ANNarchy4.core import Global
@@ -48,7 +48,7 @@ def get_value_and_type(name, value):
             
         if value['var'].type != type(init_value) and value['var'].type != None:
             if not Global.config['suppress_warnings']:
-                Global._warning( " type mismatch between provided type and initialization value of '", name,"' ('", value['var'].type,",", type(init_value),")." )
+                Global._warning( " type mismatch between provided type and initialization value of '" + name + "' ('" +  str(value['var'].type) + "," + str(type(init_value)) + ")." )
              
     else:
         # parameter, have always an initial value,
@@ -104,7 +104,7 @@ class NeuronAnalyser(object):
                         continue
                     
                     neur['eq'] = value['var'].eq
-                    tree = Tree.Tree(self, name, value['var'].eq, self.pop_name)
+                    tree = Tree(self, name, value['var'].eq, self.pop_name)
                     if not tree.success: # Error while processing the equation
                         return None, None
                     self.trees.append(tree)
@@ -139,9 +139,6 @@ class NeuronAnalyser(object):
                     'cpp' : '',
                     'cpp_type': cpp_type 
                 }
-
-#        for cpp in self.analysed_neuron:
-#            print cpp['cpp']
 
         # Process the global operations
         self.global_operations = sort_global_operations(self.global_operations)
@@ -232,7 +229,7 @@ class SynapseAnalyser(object):
                 synapse = { }
                 cpp_type, init_value = get_value_and_type(name, value)
                     
-                tree = Tree.Tree(self, name, value['var'].eq)
+                tree = Tree(self, name, value['var'].eq)
                 if not tree.success: # Error while processing the equation
                     return None, None
                 self.trees.append(tree)
@@ -259,7 +256,7 @@ class SynapseAnalyser(object):
             elif value['type'] == 'global' and value['var'].eq != None: # A parameter with equation
                 cpp_type, init_value = get_value_and_type(name, value)
 
-                tree = Tree.Tree(self, name, value['var'].eq)
+                tree = Tree(self, name, value['var'].eq)
                 if not tree.success: # Error while processing the equation
                     return None, None
                 self.trees.append(tree)

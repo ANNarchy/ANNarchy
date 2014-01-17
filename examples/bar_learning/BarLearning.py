@@ -5,11 +5,13 @@
 #
 from ANNarchy4 import *
 
+setup()
+
 # Defining the neurons
 InputNeuron = RateNeuron(
     parameters=""" 
         tau = 10.0 : population
-        baseline = 0.0 
+        baseline = 0.0 : toto
     """,
     equations="""
         tau * drate/dt + rate = baseline : min=0.0
@@ -19,7 +21,6 @@ InputNeuron = RateNeuron(
 LeakyNeuron = RateNeuron(
     parameters=""" 
         tau = 10.0 : population
-        baseline = 0.0 
     """,
     equations="""
         tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0
@@ -29,7 +30,7 @@ LeakyNeuron = RateNeuron(
 # Defining the synapses
 Oja = RateSynapse(
     parameters=""" 
-        tau = 2000 : postsynaptic
+        tau = 2000.0 : postsynaptic
         alpha = 8.0 : postsynaptic
     """,
     equations="""
@@ -39,7 +40,7 @@ Oja = RateSynapse(
 
 AntiHebb = RateSynapse(
     parameters=""" 
-        tau = 2000 : postsynaptic
+        tau = 2000.0 : postsynaptic
         alpha = 0.3 : postsynaptic
     """,
     equations="""
@@ -114,3 +115,4 @@ if __name__=='__main__':
     print 'simulation finished.'
 
     raw_input()
+    

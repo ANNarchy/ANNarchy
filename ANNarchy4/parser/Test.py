@@ -1,7 +1,7 @@
 from Analyser import *
 from ANNarchy4.core.Variable import Variable
-from ANNarchy4.core.Neuron import RateNeuron, SpikingNeuron
-from ANNarchy4.core.Synapse import RateSynapse, SpikingSynapse
+from ANNarchy4.core.Neuron import RateNeuron, SpikeNeuron
+from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy4.core.Projection import Projection
 from ANNarchy4.core.Connector import All2All
 from ANNarchy4.core.Population import Population
@@ -22,10 +22,10 @@ DefaultNeuron = RateNeuron(
 Oja = RateSynapse(
     parameters = """
         eta = 10.0 
-        tau_alpha = 10.0 : post_only
+        tau_alpha = 10.0 : postsynaptic
     """,
     equations = """
-        tau_alpha * dalpha/dt + alpha = pos(post.rate - 1.0) : post_only
+        tau_alpha * dalpha/dt + alpha = pos(post.rate - 1.0) : postsynaptic
         eta * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=0.0
     """,
     psp = """
@@ -33,20 +33,20 @@ Oja = RateSynapse(
     """
 )   
 
-Izhikevitch = SpikingNeuron(
+Izhikevitch = SpikeNeuron(
     parameters = 
-        """ a = 0.02
+        """ a = 0.02 : population
             b = 0.2
             c = -65.0
             d = 2.0
             threshold = 30.0
         """,
     equations = 
-        """ dg_exc/dt + g_exc = 0 : init=0.0
+        """ I = g_exc + g_inh : init=0.0
+            dmp/dt = 0.04 * mp^2 + 5*mp + 140 -u + I : init = -65.0
+            u = a * (b*mp - u) : init = -13.0
+            dg_exc/dt + g_exc = 0 : init=0.0
             dg_inh/dt + g_inh = 0 : init=0.0
-            I = g_exc + g_inh : init=0.0
-            dmp/dt = 0.04 * mp * mp + 5*mp + 140 -u + I : init=c
-            u = a * (b*mp - u) : init = c*b
         """,
     spike = 
         """ mp > threshold
@@ -74,13 +74,15 @@ def test_neuron(NeuronType, name):
     parsed_neuron, global_operations = parser.parse()
     if parsed_neuron:
         for name, desc in parsed_neuron.items():
+            print 'Initial description: '
+            pprint(variables[name])
             if desc['type'] == 'global':
                 print name, 'is a population-wise parameter'
                 print '\ttype:', desc['cpp_type']
                 print '\tdeclaration:', desc['def']
                 print '\tinit:', desc['init']
             else:
-                print name, 'is a neuron_specific variable'
+                print name, 'is a neuron-specific variable'
                 print '\ttype:', desc['cpp_type']
                 print '\tdeclaration:', desc['def']
                 print '\tinit:', desc['init']
@@ -88,7 +90,7 @@ def test_neuron(NeuronType, name):
                 print '\tupdate rule:', desc['cpp']
             print '-'*60
     else:
-        print 'Analyser failed'
+        _error('Analyser failed')
         exit(0)
 
 
@@ -127,7 +129,7 @@ def test_synapse(SynapseType, name):
                 print '\tupdate rule:', desc['cpp']
             print '-'*60
     else:
-        print 'Analyser failed'
+        _error('Analyser failed')
         exit(0)   
 
 

@@ -27,6 +27,13 @@ from . import Random
 
 import re
 
+# List of allowed flags for each each equation
+allowed_flags = [
+    'population', # The neural parameter is common to all neurons in the population
+    'postsynaptic', # The synaptic parameter/variable is computed once per postsynaptic neuron.
+    'implicit', # The ODE should be integrated with the implicite Euler method
+    'explicit', # The ODE should be integrated with the explicite Euler method
+]
 
 class Master(object):
     """
@@ -59,6 +66,7 @@ class Master(object):
         """
         var = {}
         var['type'] = 'local'
+        var['flags'] = []
         
         try:
             constraints = {}
@@ -72,12 +80,13 @@ class Master(object):
                     
                 except ValueError:
                     con = con.replace(' ','')
+                    var['flags'].append(con)
                     if con.find('population') !=-1:
                         var['type'] = 'global'
                     elif con.find('postsynaptic') !=-1:
                         var['type'] = 'global'
-                    else:
-                        Global._warning("'", expr, "'\nconstraint statement '", con, "' is wrong or no arguments provided.")
+                    if not con in allowed_flags:
+                        Global._warning('The flag '+con+ ' in ' + expr + ' is not allowed.')
                         continue
             
         except ValueError:

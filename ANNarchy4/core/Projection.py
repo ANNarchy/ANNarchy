@@ -200,10 +200,10 @@ class Projection(Descriptor):
         """
         ret_var = ['rank','value', 'delay']
         
-        # check for additional variables        
-        for var in self._parsed_variables():
-            if not var['type'] == 'parameter' and not var['name'] in ret_var:
-                ret_var.append(var['name'])        
+        # check for additional variables 
+        for name, var in self._parsed_variables().items():
+            if not var['type'] == 'parameter' and not name in ret_var:
+                ret_var.append(name)        
         return ret_var
 
     @property
@@ -213,9 +213,9 @@ class Projection(Descriptor):
         """
         ret_par = []
                 
-        for var in self._parsed_variables():
-            if var['type'] == 'parameter' and not var['name'] in ret_par:
-                ret_par.append(var['name'])    
+        for name, var in self._parsed_variables().items():
+            if var['type'] == 'parameter' and not name in ret_par:
+                ret_par.append(name)    
                 
         return ret_par
 
