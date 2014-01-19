@@ -19,7 +19,7 @@ from .visualization import Visualization
 
 #
 # ANNarchy4 compilation
-from .generator.Generator import compile
+from .generator import compile
 
 #
 # extension packages, imported as available

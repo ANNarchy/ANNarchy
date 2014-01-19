@@ -65,7 +65,7 @@ def setup(**keyValueArgs):
     
     * *dt*:         discretization constant
     * *verbose*:    shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
-    * *suppress_warnings*:  if set True warnings suppressed.
+    * *suppress_warnings*:  if set True warnings (e. g. from mathematical parser) are suppressed.
     * *show_time*:  if set True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
     * *float_prec*: determine the used floating point precision. By default ANNarchy4 uses single floating point precision for computation. 
     
@@ -76,11 +76,22 @@ def setup(**keyValueArgs):
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
-def compile(self):
+def compile(clean=False, debug_build=False, cpp_stand_alone=False, profile_enabled=False):
     """
     Compile all classes and setup the network
+
+    Parameters:
+    
+    * *clean*: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
+    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
+
+    .. hint: these parameters are also available but should only used if performance issues exists
+
+        * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
+        * *profile_enabled*: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
+    
     """
-    generator.compile(populations = self._populations, projections = self._projections)
+    generator.compile(clean, _populations, _projections, cpp_standalone, debug_build, profile_enabled)
     
 def reset(states=False, connections=False):
     """

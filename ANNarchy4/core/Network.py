@@ -45,15 +45,24 @@ class Network(object):
         for object in args:
             self.add(object)
         
-    def compile(self, cpp_stand_alone=False):
+    def compile(self, clean=False, debug_build=False, cpp_stand_alone=False, profile_enabled=False):
         """
         Compile all classes and setup the network
+    
+        Parameters:
+        
+        * *clean*: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
+        * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
+    
+        .. hint: these parameters are also available but should only used if performance issues exists
+    
+            * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
+            * *profile_enabled*: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
+        
         """
-        generator.compile(cpp_stand_alone=cpp_stand_alone, populations = self._populations, projections = self._projections)
+        generator.compile(clean, self._populations, self._projections, cpp_standalone, debug_build, profile_enabled)
         
         # copy back the data
-        
-        
         self.cython_module = __import__('ANNarchyCython')
         self.cy_instance = self.cython_module.pyNetwork()
     
