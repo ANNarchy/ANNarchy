@@ -30,7 +30,7 @@ class RateNeuron(Master):
     """
     Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
-    def __init__(self, parameters, equations, extra_values={}, functions=None):
+    def __init__(self, parameters="", equations="", extra_values={}, functions=None):
         """ 
         The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
         <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
@@ -67,6 +67,12 @@ class RateNeuron(Master):
         Master.__init__(self)
         
         self._convert(parameters, equations, extra_values) 
+
+    def __add__(self, neuron):
+        if not isinstance(neuron, RateNeuron):
+            return
+        
+        self._variables.update(neuron.variables) 
 
     def __str__(self):
         """
@@ -152,6 +158,12 @@ class SpikeNeuron(Master):
                         )
         
         self._variables[var_name]['var'] = new_var 
+
+    def __add__(self, neuron):
+        if not isinstance(neuron, SpikeNeuron):
+            return
+        
+        self._variables.update(neuron.variables) 
         
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )

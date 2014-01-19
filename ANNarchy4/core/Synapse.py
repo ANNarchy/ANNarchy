@@ -84,6 +84,12 @@ class RateSynapse(Master):
             
             self._variables[ 'psp' ] = {'type' : 'local' ,'var': var } 
          
+    def __add__(self, synapse):
+        if not isinstance(synapse, RateSynapse):
+            return
+        
+        self._variables.update(synapse.variables) 
+
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )
             
@@ -119,6 +125,12 @@ class SpikeSynapse(Master):
             var._validate() 
 
             self._variables['post_spike'] = { 'type':'local', 'var': var }
+
+    def __add__(self, synapse):
+        if not isinstance(synapse, SpikeSynapse):
+            return
+        
+        self._variables.update(synapse.variables) 
 
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )
