@@ -123,7 +123,7 @@ class All2All(Connector):
     """
     def __init__(self, weights, delays=0, **parameters):
         """
-        Initialize an One2One connection object.
+        Initialize an All2All connection object.
 
         Parameters:
         

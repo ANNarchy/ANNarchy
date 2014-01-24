@@ -269,7 +269,7 @@ cdef class Gaussian(PyxConnector):
             if (not selfConnection or (self.pre != self.post)):
                 normPre = self.pre.normalized_coordinates_from_rank(j)
                 dist = self.compDist(normPre, normPost)
-                value = self.amp_pos*exp(-dist/2.0/self.sigma)
+                value = self.amp*exp(-dist/2.0/self.sigma)
                 if (abs(value) > self.limit*abs(self.amp)):
                     ranks.push_back(j)
                     values.push_back(value)

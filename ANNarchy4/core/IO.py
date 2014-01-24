@@ -249,12 +249,16 @@ def _net_description(variables, connections):
             varias = {}
             for var in pop.variables:
                 varias[var] = pop.get_variable(var)
-            pop_desc['variables'] = varias
+
+            if varias != {}:
+                pop_desc['variables'] = varias
                 
             params = {}
             for par in pop.parameters:
                 params[par] = pop.get_parameter(par)
-            pop_desc['parameter'] = params
+            
+            if params != {}:
+                pop_desc['parameter'] = params
             
             network_desc[pop.name] = pop_desc 
 
@@ -273,12 +277,16 @@ def _net_description(variables, connections):
                 varias = {}
                 for var in dendrite.variables:
                     varias[var] = dendrite.get_variable(var)
-                dendrite_desc['variables'] = varias
+                
+                if varias != {}:
+                    dendrite_desc['variables'] = varias
                     
                 params = {}
                 for par in dendrite.parameters:
                     params[par] = dendrite.get_parameter(par)
-                dendrite_desc['parameter'] = params
+                
+                if params != {}:
+                    dendrite_desc['parameter'] = params
                 
                 dendrites.append(dendrite_desc)
             
@@ -299,11 +307,13 @@ def _load_pop_data(net_desc):
         if pop.name in net_desc.keys():
             pop_desc = net_desc[pop.name]
             
-            for var in pop_desc['variables'].keys():
-                setattr(pop, var, pop_desc['variables'][var].reshape(pop.size) )
-                
-            for par in pop_desc['parameter'].keys():
-                setattr(pop, par, pop_desc['parameter'][par] )
+            if 'variables' in pop_desc.keys():
+                for var in pop_desc['variables'].keys():
+                    setattr(pop, var, pop_desc['variables'][var].reshape(pop.size) )
+
+            if 'parameter' in pop_desc.keys():                
+                for par in pop_desc['parameter'].keys():
+                    setattr(pop, par, pop_desc['parameter'][par] )
     
 def _load_proj_data(net_desc):
     """
@@ -321,9 +331,11 @@ def _load_proj_data(net_desc):
                 
                 net_dendrite = net_proj.dendrite(saved_dendrite['post_rank'])
                 
-                for var in saved_dendrite['variables'].keys():
-                    setattr(net_dendrite, var, saved_dendrite['variables'][var])
+                if 'variables' in saved_dendrite.keys():
+                    for var in saved_dendrite['variables'].keys():
+                        setattr(net_dendrite, var, saved_dendrite['variables'][var])
                     
-                for par in saved_dendrite['parameter'].keys():
-                    setattr(net_dendrite, par, saved_dendrite['parameter'][par])
+                if 'parameter' in saved_dendrite.keys():
+                    for par in saved_dendrite['parameter'].keys():
+                        setattr(net_dendrite, par, saved_dendrite['parameter'][par])
                     
