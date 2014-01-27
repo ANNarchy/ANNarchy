@@ -27,6 +27,8 @@ import sys, os
 from datetime import datetime
 from math import ceil
 
+from PyQt4.QtCore import QCoreApplication
+
 # instances
 _populations = []       # created populations
 _projections = []       # created projections
@@ -164,7 +166,9 @@ def simulate(duration):
     if config['num_threads'] != None:
         ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
     
-    ANNarchyCython.pyNetwork().Run(nb_steps)
+    QCoreApplication.processEvents() # handle user events
+    
+    ANNarchyCython.pyNetwork().Run(int(nb_steps))
     
 def current_time():
     """

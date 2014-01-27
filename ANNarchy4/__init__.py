@@ -16,6 +16,7 @@ from .core.Variable import Variable, SpikeVariable
 #
 # ANNarchy4 visualizer
 from .visualization import Visualization
+from .editor import ANNarchyEditor
 
 #
 # ANNarchy4 compilation

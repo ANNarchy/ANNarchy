@@ -86,10 +86,23 @@ def set_input():
 # visualization meanwhile yes/no
 vis_during_sim=True
 
-if __name__=='__main__':
+def simulate_sth():
+    
+    # Run the simulation        
+    for trial in range(5000):
+        print trial
+        set_input()
+        simulate(50) 
 
-    # Compiling the network
-    compile()
+        #if vis_during_sim:
+        #   vis.render()
+
+    # Visualize the result of learning
+    #vis.render()  
+
+    print 'simulation finished.'
+
+if __name__=='__main__':
 
     # Collect visualizing information
     plot1 = {'pop': input_pop, 'var': 'rate'}
@@ -97,20 +110,4 @@ if __name__=='__main__':
     plot3 = {'proj': input_feature, 'var': 'value', 
          'max': 0.1, 'title': 'Receptive fields'}
 
-    # Setup visualizer
-    vis = Visualization( [plot1, plot2, plot3 ] )
-
-    # Run the simulation        
-    for trial in range(1000):
-        set_input()
-        simulate(50) 
-
-        if vis_during_sim:
-           vis.render()
-
-    # Visualize the result of learning
-    vis.render()  
-
-    print 'simulation finished.'
-
-    raw_input()
+    ANNarchyEditor(simulate_sth, [plot1, plot2, plot3 ] )
