@@ -31,7 +31,7 @@ from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.Variable import Variable
 from ANNarchy4.core.Descriptor import Descriptor, Attribute
 
-class Projection(Descriptor):
+class Projection(object):#Descriptor):
     """
     Python class representing the projection between two populations.
     """

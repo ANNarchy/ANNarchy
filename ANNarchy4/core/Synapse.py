@@ -75,14 +75,20 @@ class RateSynapse(Master):
         """        
         Master.__init__(self)
         
-        self._convert(parameters, equations, extra_values)
+        # Store the parameters and equations
+        self.parameters = parameters
+        self.equations = equations
+        self.functions = functions
+        self.psp = psp
         
-        if psp:
-            psp = 'psp = ' + self._prepare_string(psp)[0]
-            var = Variable(init=0.0, eq=psp)
-            var._validate() 
-            
-            self._variables[ 'psp' ] = {'type' : 'local' ,'var': var } 
+#        self._convert(parameters, equations, extra_values)
+#        
+#        if psp:
+#            psp = 'psp = ' + self._prepare_string(psp)[0]
+#            var = Variable(init=0.0, eq=psp)
+#            var._validate() 
+#            
+#            self._variables[ 'psp' ] = {'type' : 'local' ,'var': var } 
          
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )
@@ -99,26 +105,34 @@ class SpikeSynapse(Master):
     def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, psp = None, extra_values=None, functions=None ):
         Master.__init__(self)
         
-        self._convert(parameters, equations, extra_values)
+        # Store the parameters and equations
+        self.parameters = parameters
+        self.equations = equations
+        self.functions = functions
+        self.pre_spike = pre_spike
+        self.post_spike = post_spike
+        self.psp = psp
         
-        if psp:
-            psp = 'psp = ' + self._prepare_string(psp)[0]
-            var = Variable(init=0.0, eq=psp)
-            var._validate() 
-            
-            self._variables['psp'] = { 'type':'local', 'var': var }
-            
-        if pre_spike:
-            var = Variable(init=0.0, eq=self._prepare_string(pre_spike))
-            var._validate() 
-            
-            self._variables['pre_spike'] = { 'type':'local', 'var': var }
+#        self._convert(parameters, equations, extra_values)
+#        
+#        if psp:
+#            psp = 'psp = ' + self._prepare_string(psp)[0]
+#            var = Variable(init=0.0, eq=psp)
+#            var._validate() 
+#            
+#            self._variables['psp'] = { 'type':'local', 'var': var }
+#            
+#        if pre_spike:
+#            var = Variable(init=0.0, eq=self._prepare_string(pre_spike))
+#            var._validate() 
+#            
+#            self._variables['pre_spike'] = { 'type':'local', 'var': var }
 
-        if post_spike:
-            var = Variable(init=0.0, eq=self._prepare_string(post_spike))
-            var._validate() 
+#        if post_spike:
+#            var = Variable(init=0.0, eq=self._prepare_string(post_spike))
+#            var._validate() 
 
-            self._variables['post_spike'] = { 'type':'local', 'var': var }
+#            self._variables['post_spike'] = { 'type':'local', 'var': var }
 
     def __str__(self):
         return pprint.pformat( self._variables, depth=4 )

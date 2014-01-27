@@ -35,7 +35,7 @@ import ANNarchy4.core.Global as Global
 import traceback
 import numpy as np
 
-class Population(Descriptor):
+class Population(object):#Descriptor):
     """
     Represents a population of neurons.
     """

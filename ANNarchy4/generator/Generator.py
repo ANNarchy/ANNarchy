@@ -391,6 +391,16 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False, profile_enabl
     """
     Global._print( 'ANNarchy', ANNarchy4.__version__, '(', ANNarchy4.__release__, ')', 'on', sys.platform, '(', os.name,')' )
     
+    # Temporary: use the new parser
+    from ANNarchy4.newparser.Analyser import Analyser
+    analyser = Analyser(Global._populations, Global._projections)
+    success = analyser.analyse()
+    if success:
+        analyser.generate()
+    else:
+        Global._error('The network can not be generated.')
+        exit(0)
+    
     # first argument is python script itself.
     for arg in sys.argv[1:]:
         if arg == '--clean':

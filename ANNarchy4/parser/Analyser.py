@@ -32,12 +32,12 @@ from ANNarchy4.core.Variable import SpikeVariable
 def get_value_and_type(name, value):
     
     if 'var' in value.keys():
-         # variables
+        # variables
         if value['var'].init != None:
             if isinstance(value['var'].init, RandomDistribution):
-                 init_value = 0.0
+                init_value = 0.0
             else:
-                 init_value = value['var'].init
+                init_value = value['var'].init
         else:
             init_value = 0.0
         

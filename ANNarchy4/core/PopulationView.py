@@ -25,7 +25,7 @@ from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.core.Random import RandomDistribution
 import numpy as np
 
-class PopulationView(Descriptor):
+class PopulationView(object):#Descriptor):
     """ Container representing a subset of neurons of a Population."""
     
     def __init__(self, population, ranks):

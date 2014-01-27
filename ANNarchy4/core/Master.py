@@ -147,7 +147,7 @@ class Master(object):
     
                 else:
                     # found an ODE
-                    name = re.findall("(?<=d)[\w\s]+(?=/)", lside)
+                    name = (re.findall("(?<=d)[\w\s]+(?=/)", lside))[0]
                     var['var'] = Variable(eq = equation, **constraints)
                     
             except ValueError:

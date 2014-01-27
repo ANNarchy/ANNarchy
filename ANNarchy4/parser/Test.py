@@ -22,10 +22,10 @@ DefaultNeuron = RateNeuron(
 Oja = RateSynapse(
     parameters = """
         eta = 10.0 
-        tau_alpha = 10.0 : postsynaptic
+        tau = 10.0 : postsynaptic
     """,
     equations = """
-        tau_alpha * dalpha/dt + alpha = pos(post.rate - 1.0) : postsynaptic
+        tau * dalpha/dt + alpha = pos(post.rate - 1.0) : postsynaptic
         eta * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=0.0
     """,
     psp = """

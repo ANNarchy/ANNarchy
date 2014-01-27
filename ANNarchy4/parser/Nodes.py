@@ -155,7 +155,8 @@ class Node(object):
                 newside.parent= self
                 return newside
         # Not found
-        print('Error when parsing \"', self.machine.expr, '\": could not analyse the expression.')
+        print side
+        Global._error('Error when parsing ' + self.machine.expr + ': could not analyse the expression.')
         return None
 
 # Equal object

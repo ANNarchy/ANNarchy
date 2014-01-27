@@ -23,6 +23,11 @@
 """
 import numpy as np
 
+# List of available distributions
+available_distributions = [ 'Constant',
+                            'Uniform',
+                            'Normal' ]
+
 class RandomDistribution(object):
     """ 
     BaseClass for random distributions.
