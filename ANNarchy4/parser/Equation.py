@@ -21,9 +21,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+from ANNarchy4.core.Global import _warning
+
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
-from ANNarchy4.core.Global import _warning
+
 
 
 # Dictionary of built-in symbols or functions
@@ -41,7 +43,7 @@ class Equation(object):
     Class to analyse one equation.
     '''
     def __init__(self, name, expression, variables, 
-                 local_variables, global_variables, untouched = [], method='explicit'):
+                 local_variables, global_variables, untouched = [], method='explicit', type=None):
         '''
         Parameters:
         
@@ -62,7 +64,10 @@ class Equation(object):
         self.method = method
         
         # Determine the type of the equation
-        self.type = self.identify_type()
+        if not type:
+            self.type = self.identify_type()
+        else:
+            self.type = type
         
         # Build the default dictionary for the analysis
         self.local_dict = global_dict
@@ -81,6 +86,8 @@ class Equation(object):
             code = self.analyse_condition(self.expression)
         elif self.type == 'inc':
             code = self.analyse_increment(self.expression)
+        elif self.type == 'return':
+            code = self.analyse_return(self.expression)
         elif self.type == 'simple':
             code = self.analyse_assignment(self.expression)
         return code
@@ -104,7 +111,7 @@ class Equation(object):
             return 'ODE'
         # Check if it is a condition (e.g spike)
         split_expr = expression.split('=') 
-        if len(split_expr) == 1: # no equal sign = condition for sure
+        if len(split_expr) == 1: # no equal sign = treat as condition (return statements will be specified
             return 'cond'
         if split_expr[1] == '': # the first = is followed by another =
             return 'cond'
@@ -342,6 +349,20 @@ class Equation(object):
         
         # Get only the right term
         expression = expression[expression.find('=')+1:]
+                
+        # Parse the string
+        analysed = self.parse_expression(expression,
+            local_dict = self.local_dict
+        )
+    
+        # Obtain C code
+        code = self.c_code(self.local_dict[self.name]) + ' = ' + self.c_code(simplify(analysed)) +';'
+    
+        # Return result
+        return code
+    
+    def analyse_return(self, expression):
+        " Analyzes a return statement (e.g. value * pre.rate)."
                 
         # Parse the string
         analysed = self.parse_expression(expression,

@@ -208,7 +208,8 @@ class Analyser(object):
                     method = 'explicit'
                 # Analyse the equation
                 translator = Equation(variable['name'], variable['eq'], proj['attributes'], 
-                                      proj['local'], proj ['global'], method = method, untouched = untouched.keys())
+                                      proj['local'], proj ['global'], 
+                                      method = method, untouched = untouched.keys())
                 code = translator.parse()
                 # Replace untouched variables with their original name
                 for prev, next in untouched.iteritems():

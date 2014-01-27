@@ -48,7 +48,7 @@ class Projection(object):#Descriptor):
             * *connector*: connection pattern object
             * *synapse*: synapse object
         """
-        
+        # Store the pre and post synaptic populations
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object 
         if isinstance(pre, str):
@@ -65,7 +65,7 @@ class Projection(object):#Descriptor):
         else:
             self.post = post
             
-        self.post.generator._add_target(target)
+        # Store the arguments
         self.target = target
         self.connector = connector
         self.connector.proj = self # set reference to projection
@@ -73,8 +73,10 @@ class Projection(object):#Descriptor):
         self._dendrites = []
         self._post_ranks = []
 
+        # Create a default name
         self.name = 'Projection'+str(len(Global._projections))
-        self.generator = generator.Projection(self, self.synapse)
+        
+        # Add the population to the global variable
         Global._projections.append(self)
         self.initialized = True
         
@@ -145,7 +147,7 @@ class Projection(object):#Descriptor):
         if rank in self._post_ranks:
             return self._dendrites[rank]
         else:
-            Global._ANNarchyError("neuron of rank", str(rank),"has no synapse in this projection.")
+            Global._error("neuron of rank", str(rank),"has no synapse in this projection.")
             return None
     
     # Iterators

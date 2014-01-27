@@ -23,11 +23,11 @@
 """
 from .Neuron import RateNeuron, SpikeNeuron
 
-import ANNarchy4.generator.Population as PopulationGenerator
-
-from ANNarchy4.core.Descriptor import Descriptor, Attribute
+#from ANNarchy4.core.Descriptor import Descriptor, Attribute
+from ANNarchy4.parser.Analyser import NeuronAnalyser
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
+from ANNarchy4.core.Neuron import IndividualNeuron
 
 from ANNarchy4.core.Record import Record
 import ANNarchy4.core.Global as Global
@@ -48,38 +48,48 @@ class Population(object):#Descriptor):
         
             * *geometry*: population geometry as tuple. If an integer is given, it is the size of the population.
 
-            * *neuron*: instance of ``ANNarchy4.Neuron``
+            * *neuron*: instance of ``ANNarchy4.RateNeuron`` or ``ANNarchy4.SpikeNeuron``
 
             * *name*: unique name of the population (optional).
         
         """
+        # Store the provided geometry
         if isinstance(geometry, int): # 1D
             self.geometry = (geometry, )
         else: # a tuple is given
             self.geometry = geometry
             
+        # Store the neuron type
         self.neuron_type = neuron
+        
+        # Attribute a name if not provided
         self._id = len(Global._populations)
         if name:
             self.name = name
         else:
             self.name = 'Population'+str(self._id)
-        
-        self.generator = PopulationGenerator.Population(self)
                 
+        # Add the population to the global variable
         Global._populations.append(self)
         
-        self._recorded_variables = {}
+        # Get a list of parameters and variables
+        analyser = NeuronAnalyser(self.neuron_type)
+        self.parameters = analyser.parameters()
+        self.variables = analyser.variables()
         
+        
+        # Allow recording of variables
+        self._recorded_variables = {}        
         for var in self.variables:
             self._recorded_variables[var] = Record(var)
 
+        # Finalize initialization
         self.initialized = True        
         
-    def _init_attributes(self):
-        """ Method used after compilation to initialize the attributes."""
-        for var in self.variables + self.parameters:
-            setattr(self, var, Attribute(var))
+#     def _init_attributes(self):
+#         """ Method used after compilation to initialize the attributes."""
+#         for var in self.variables + self.parameters:
+#             setattr(self, var, Attribute(var))
 
     @property
     def width(self):
@@ -118,33 +128,33 @@ class Population(object):#Descriptor):
         """
         return self.generator.class_name
     
-    @property
-    def variables(self):
-        """
-        Returns a list of all variable names.
-        """
-        ret_var = [] #default        
-        
-        #check additional variables
-        neur_var = self.generator.neuron_variables
-        for name, var in neur_var.iteritems():
-            if var['type'] == 'local':
-                ret_var.append(name)      
-                
-        return ret_var
+#     @property
+#     def variables(self):
+#         """
+#         Returns a list of all variable names.
+#         """
+#         ret_var = [] #default        
+#         
+#         #check additional variables
+#         neur_var = self.generator.neuron_variables
+#         for name, var in neur_var.iteritems():
+#             if var['type'] == 'local':
+#                 ret_var.append(name)      
+#                 
+#         return ret_var
 
-    @property
-    def parameters(self):
-        """
-        Returns a list of all parameter names.
-        """
-        neur_var = self.generator.neuron_variables
-        ret_par = []        
-        for name, var in neur_var.iteritems():
-            if var['type'] == 'global':
-                ret_par.append(name)      
-
-        return ret_par
+#     @property
+#     def parameters(self):
+#         """
+#         Returns a list of all parameter names.
+#         """
+#         neur_var = self.generator.neuron_variables
+#         ret_par = []        
+#         for name, var in neur_var.iteritems():
+#             if var['type'] == 'global':
+#                 ret_par.append(name)      
+# 
+#         return ret_par
         
     @property
     def size(self):
@@ -418,11 +428,11 @@ class Population(object):#Descriptor):
         """
         # Check the coordinates
         if not len(coord) == self.dimension:
-            Global.ANNarchyPrint('Error when accessing neuron', str(coord), ': the population', self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+            Global._warning('Error when accessing neuron', str(coord), ': the population', self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
             return None
         for dim in range(len(coord)):
             if not coord[dim] < self.geometry[dim]:
-                Global.ANNarchyPrint('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+                Global._warning('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
                 return None
         # Return the rank
         return np.ravel_multi_index( coord, self.geometry)
@@ -433,7 +443,7 @@ class Population(object):#Descriptor):
         """
         # Check the rank
         if not rank < self.size:
-            Global.ANNarchyPrint('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
+            Global._warning('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
             return None
         
         coord = np.unravel_index(rank, self.geometry)
@@ -525,7 +535,7 @@ class Population(object):#Descriptor):
             if rank == None:
                 return None
         # Return corresponding neuron
-        return Neuron.IndividualNeuron(self, rank)
+        return IndividualNeuron(self, rank)
         
           
     def neurons(self):
@@ -595,7 +605,7 @@ class Population(object):#Descriptor):
                 elif self.dimension == 3:
                     ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for z in coords[2]]
                 if not max(ranks) < self.size:
-                    Global._ANNarchyError("indices do not match the geometry of the population", self.geometry)
+                    Global._error("Indices do not match the geometry of the population", self.geometry)
                     return 
                 return PopulationView(self, ranks)
                 
