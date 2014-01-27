@@ -168,7 +168,6 @@ void %(class)s::record() {
 rate_population_pyx = """from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp cimport bool
-from cpython cimport bool
 import numpy as np
 
 cdef extern from "../build/%(name)s.h":
