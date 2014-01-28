@@ -118,7 +118,11 @@ class EditorMainWindow(QMainWindow):
 
         ANNarchy4.compile()
         
+        self._vis_editor._render_mode.emit(True)
+        
         self._func()
+        
+        self._vis_editor._render_mode.emit(False)
     
     @QtCore.pyqtSlot()
     def load_file(self):

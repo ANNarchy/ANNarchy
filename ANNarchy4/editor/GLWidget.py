@@ -116,17 +116,48 @@ class GLWidget(QGLWidget):
                     
 class VisualizerGLWidget(GLWidget):
     _update_grid = QtCore.pyqtSignal(int, int)
+    _render_mode = QtCore.pyqtSignal(bool)
         
     def __init__(self, parent):
         super(VisualizerGLWidget, self).__init__(parent)
         self._offset = 0.0
         
         self._update_grid.connect(self.update_grid)
+        self._render_mode.connect(self.set_render_mode)
         
         self._grid = { 0: Quad(Point2d(0.5,0.5), 0.5) }
         self._x_dim = 1
         self._y_dim = 1
+        self._render = False
+        self.timer = QtCore.QBasicTimer()
         
+    def timerEvent(self, event):
+        self.updateGL()
+        
+    @QtCore.pyqtSlot(bool)    
+    def set_render_mode(self, mode):
+        self._render = mode
+        print mode
+        if mode:
+            gl.glViewport(0, 0, self.width, self.height)
+            # set orthographic projection (2D only)
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
+            # the window corner OpenGL coordinates are (-+1, -+1)
+            gl.glOrtho(0, 360, -1, 1, 0, 1)
+            
+            self.timer.start(0, self)
+            
+        else:
+            self.timer.stop()
+            
+            gl.glViewport(0, 0, self.width, self.height)
+            # set orthographic projection (2D only)
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glLoadIdentity()
+            # the window corner OpenGL coordinates are (-+1, -+1)
+            gl.glOrtho(0, 1, 0, 1, 0, 1)
+            
     @QtCore.pyqtSlot(int, int)    
     def update_grid(self, num_x, num_y):
         g_w = 1.0 / float(num_x)
@@ -169,16 +200,36 @@ class VisualizerGLWidget(GLWidget):
         # clear the buffer
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
         
-        gl.glColor3f(0,0,0)
-        for quad in self._grid.itervalues():
-
-            gl.glBegin(gl.GL_LINE_LOOP)
-            gl.glVertex2f(quad.p1._x, quad.p1._y)
-            gl.glVertex2f(quad.p2._x, quad.p2._y)
-            gl.glVertex2f(quad.p3._x, quad.p3._y)
-            gl.glVertex2f(quad.p4._x, quad.p4._y)
+        if not self._render:
+            gl.glColor3f(0,0,0)
+            for quad in self._grid.itervalues():
+    
+                gl.glBegin(gl.GL_LINE_LOOP)
+                gl.glVertex2f(quad.p1._x, quad.p1._y)
+                gl.glVertex2f(quad.p2._x, quad.p2._y)
+                gl.glVertex2f(quad.p3._x, quad.p3._y)
+                gl.glVertex2f(quad.p4._x, quad.p4._y)
+                gl.glEnd()
+        else:
+            gl.glPointSize(3.0)
+            self._offset += 1.0
+            self._offset = self._offset % 360
+     
+            x = [ i for i in range(360)]
+            y = [ math.cos( float(i+self._offset) * math.pi / 180.0) for i in range(360) ]
+            y2 = [ math.sin( float(i+self._offset) * math.pi / 180.0) for i in range(360) ]
+             
+            gl.glColor3f(0.0,0.0,0.6)                
+            gl.glBegin(gl.GL_LINE_STRIP)
+            for i in range(360):
+                 gl.glVertex2f(x[i], y[i])
             gl.glEnd()
-        
+            gl.glColor3f(0.0,0.6,0.0)                
+            gl.glBegin(gl.GL_LINE_STRIP)
+            for i in range(360):
+                 gl.glVertex2f(x[i], y2[i])
+            gl.glEnd()            
+            
     def mousePressEvent(self, event):
         mousePos = event.pos()
         
@@ -187,27 +238,6 @@ class VisualizerGLWidget(GLWidget):
         for id, quad in self._grid.iteritems():
             if quad.point_within(p):
                 print 'selected a cell', id
-        
-#===============================================================================
-#         gl.glPointSize(3.0)
-#         self._offset += 1.0
-#         self._offset = self._offset % 360
-# 
-#         x = [ i for i in range(360)]
-#         y = [ math.cos( float(i+self._offset) * math.pi / 180.0) for i in range(360) ]
-#         y2 = [ math.sin( float(i+self._offset) * math.pi / 180.0) for i in range(360) ]
-#         
-#         gl.glColor3f(0.0,0.0,0.6)                
-#         gl.glBegin(gl.GL_LINE_STRIP)
-#         for i in range(360):
-#              gl.glVertex2f(x[i], y[i])
-#         gl.glEnd()
-#         gl.glColor3f(0.0,0.6,0.0)                
-#         gl.glBegin(gl.GL_LINE_STRIP)
-#         for i in range(360):
-#              gl.glVertex2f(x[i], y2[i])
-#         gl.glEnd()
-#===============================================================================
 
     def resizeGL(self, width, height):
         """
