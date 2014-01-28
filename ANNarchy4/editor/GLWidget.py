@@ -41,10 +41,12 @@ class Quad(object):
         if radius < 0:
             radius = (-1.0)* radius
             
-        self.p1 = center - Point2d( radius, -radius)
-        self.p2 = center - Point2d(-radius, -radius)
-        self.p3 = center - Point2d(-radius,  radius)
-        self.p4 = center - Point2d( radius,  radius)
+        self.p1 = center - Point2d( radius,  radius)
+        self.p2 = center - Point2d(-radius,  radius)
+        self.p3 = center - Point2d(-radius, -radius)
+        self.p4 = center - Point2d( radius, -radius)
+        
+        print self
 
     def from_p(self, p1, p2, p3, p4):
         self.p1 = p1
@@ -58,13 +60,12 @@ class Quad(object):
                 
     def point_within(self, p):
         
-        if (p._x < self.p1._x):
+        if (p._x < self.p1._x) or (p._x > self.p2._x):
+            #print ('\tx_test failed')
             return False;
-        if (p._x > self.p2._x):
-            return False;
-        if (p._y < self.p3._y):
-            return False;
-        if (p._y > self.p1._y):
+
+        if (p._y < self.p1._y) or (p._y > self.p3._y):
+            #print ('\ty_test failed')
             return False;
         
         return True;
@@ -111,7 +112,7 @@ class GLWidget(QGLWidget):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         # the window corner OpenGL coordinates are (-+1, -+1)
-        gl.glOrtho(-0.2, 1.2, -0.2, 1.2, 0, 1)
+        gl.glOrtho(0, 1, 0, 1, 0, 1)
                     
 class VisualizerGLWidget(GLWidget):
     _update_grid = QtCore.pyqtSignal(int, int)
@@ -137,17 +138,27 @@ class VisualizerGLWidget(GLWidget):
         print g_w, g_h
         self._grid = {}
         
-        for y in xrange(num_y):
-            for x in xrange(num_x):
-                p1 = Point2d(x * g_w, y * g_h)
-                q = Quad().from_p(
-                         p1,
-                         Point2d((x+1) * g_w, y * g_h),
-                         Point2d((x+1) * g_w, (y+1) * g_h),
-                         Point2d(x * g_w, (y+1) * g_h)
+        if num_x == 1 and num_y == 1:
+            q = Quad().from_p(
+                         Point2d(0.0, 0.0),
+                         Point2d(1.0, 0.0),
+                         Point2d(1.0, 1.0),
+                         Point2d(0.0, 1.0)
                          )
-                id = y * self._x_dim + x
-                self._grid.update( { id : q } )
+            self._grid.update( { 0 : q } )
+        else:
+            for y in xrange(num_y):
+                for x in xrange(num_x):
+                    q = Quad().from_p(
+                             Point2d(x * g_w, y * g_h),
+                             Point2d((x+1) * g_w, y * g_h),
+                             Point2d((x+1) * g_w, (y+1) * g_h),
+                             Point2d(x * g_w, (y+1) * g_h)
+                             )
+                    id = y * self._x_dim + x
+                    
+                    print q
+                    self._grid.update( { id : q } )
                 
         self.updateGL()
         
@@ -254,8 +265,11 @@ class NetworkGLWidget(GLWidget):
     def mousePressEvent(self, event):
         mousePos = event.pos()
         
-        p = Point2d(mousePos.x()/float(self.width), mousePos.y()/float(self.height))
+        #
+        # the mouse and view coord system are invers to each other
+        p = Point2d(mousePos.x()/float(self.width), 1.0 - mousePos.y()/float(self.height))
         
         for id, quad in self.populations.iteritems():
             if quad.point_within(p):
                 print 'selected a population', id
+            

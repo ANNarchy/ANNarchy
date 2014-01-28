@@ -166,9 +166,9 @@ def simulate(duration):
     if config['num_threads'] != None:
         ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
     
-    QCoreApplication.processEvents() # handle user events
-    
-    ANNarchyCython.pyNetwork().Run(int(nb_steps))
+    for i in xrange(int(nb_steps)):
+        QCoreApplication.processEvents() # handle user events
+        ANNarchyCython.pyNetwork().Run(1)
     
 def current_time():
     """
