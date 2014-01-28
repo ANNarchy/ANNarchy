@@ -10,7 +10,9 @@ from ui_ANNarchyEditor import Ui_ANNarchyEditor
 # buisness logic
 from CodeView import CodeView
 from ListView import ListView 
-from GLWidget import NetworkGLWidget, VisualizerGLWidget
+
+from GLNetwork import GLNetworkWidget
+from GLPlotWidget import GLPlot1d
 
 import ANNarchy4
 
@@ -32,6 +34,8 @@ class EditorMainWindow(QMainWindow):
     signal_net_editor_to_pop_view = QtCore.pyqtSignal(int, int)
     
     def __init__(self, func, vis):
+        ANNarchy4.Global._visualizer = self
+        
         super(QMainWindow, self).__init__()
         
         self._ui = Ui_ANNarchyEditor()
@@ -52,13 +56,14 @@ class EditorMainWindow(QMainWindow):
         self._env_editor = CodeView(self._ui.environment, int( self._w * 0.80), int ( self._h * 0.90))
         self._comp_editor = CodeView(self._ui.complete, int( self._w * 0.80), int ( self._h * 0.90))
         
-        self._net_editor = NetworkGLWidget(self._ui.editor, self) 
-        self._vis_editor = VisualizerGLWidget(self._ui.visualizer)
+        self._net_editor = GLNetworkWidget(self._ui.editor, self) 
         
         # 
         # stack widget for general properties.
         self._general = GeneralWidget(self._ui, self)
         self._connect_signals()
+        
+        self.change_grid()
 
     def _connect_signals(self):
         #
@@ -87,13 +92,49 @@ class EditorMainWindow(QMainWindow):
         check the edit lines and modify width and height of the visualized grid.
         """
         try:
-            x_size = int(self._ui.grid_x_dim.text())
-            y_size = int(self._ui.grid_y_dim.text())
+            self._x_size = int(self._ui.grid_x_dim.text())
+            self._y_size = int(self._ui.grid_y_dim.text())
         except ValueError:
-            x_size = 1
-            y_size = 1
+            self._x_size = 1
+            self._y_size = 1
 
-        self._vis_editor._update_grid.emit(x_size, y_size)
+        #
+        # delete old ones
+        while self._ui.grid_root.count():
+            item = self._ui.grid_root.takeAt(0)
+            widget = item.widget()
+            widget.deleteLater()        
+
+        self._gl_instances = {}
+        #
+        # create new widgets
+        if self._x_size > 1 or self._y_size > 1:
+            for y in xrange(self._y_size):
+                for x in xrange(self._x_size):
+                    tmp = GLPlot1d(self._ui.visualizer)
+                    self._gl_instances.update( { y * self._x_size + x : tmp})
+                    self._ui.grid_root.addWidget(tmp, x, y)
+        else:
+            tmp = GLPlot1d(self._ui.visualizer)
+            self._gl_instances.update( { 0 : tmp})
+            self._ui.grid_root.addWidget( tmp, 0, 0)
+
+    def set_color(self, x_pos, y_pos, r, g, b):
+        try:
+            self._gl_instances[y_pos * self._x_size + x_pos].set_color(r, g, b)
+        except AttributeError:
+            print 'No plot with coord (', x_pos, y_pos,')'
+        
+    def set_data(self, x_pos, y_pos, x, y):
+        try:
+            self._gl_instances[y_pos * self._x_size + x_pos].set_data(x,y)
+        except AttributeError:
+            print 'No plot with coord (', x_pos, y_pos,')'
+
+    def render(self):
+        for i in xrange(self._ui.grid_root.count()):
+            self._ui.grid_root.itemAt(i).widget()._render.emit()
+        
                 
     def resizeEvent(self, *args, **kwargs):
         self._w = self.width()
@@ -102,8 +143,8 @@ class EditorMainWindow(QMainWindow):
         self._ui.splitter.setMinimumSize( int (self._w * 0.80), int ( self._h * 0.90) )
         self._ui.splitter.setMaximumSize( int (self._w * 0.80)+1, int ( self._h * 0.90)+1 )
 
-        self._vis_editor.setMinimumSize( int (self._w * 0.80), int ( self._h * 0.90) )
-        self._vis_editor.setMaximumSize( int (self._w * 0.80)+1, int ( self._h * 0.90)+1 )
+        self._ui.visualizer.setMinimumSize( int (self._w * 0.80), int ( self._h * 0.90) )
+        self._ui.visualizer.setMaximumSize( int (self._w * 0.80)+1, int ( self._h * 0.90)+1 )
         
         self._net_editor.setMinimumSize( int (self._w * 0.80), int ( self._h * 0.90) ) #TODO:
         self._net_editor.setMaximumSize( int (self._w * 0.80)+1, int ( self._h * 0.90)+1 ) # we need to set min and max, else the GL window does not react
@@ -118,12 +159,8 @@ class EditorMainWindow(QMainWindow):
 
         ANNarchy4.compile()
         
-        self._vis_editor._render_mode.emit(True)
-        
         self._func()
         
-        self._vis_editor._render_mode.emit(False)
-    
     @QtCore.pyqtSlot()
     def load_file(self):
         if self._tab_index == 5:

@@ -95,7 +95,7 @@ def simulate_sth():
         simulate(50) 
 
         #if vis_during_sim:
-        #   vis.render()
+        render()
 
     # Visualize the result of learning
     #vis.render()  

@@ -41,6 +41,7 @@ _pre_def_synapse_par = []
 _pre_def_neuron = ['rank', 'rate']
 
 _cy_instance = None
+_visualizer = None
 
 # path to annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
@@ -95,6 +96,10 @@ def compile(clean=False, debug_build=False, cpp_stand_alone=False, profile_enabl
     """
     generator.compile(clean, _populations, _projections, cpp_standalone, debug_build, profile_enabled)
     
+def render():
+    if _visualizer:
+        _visualizer.render()
+        
 def reset(states=False, connections=False):
     """
     Reinitialises the network, runs each object's reset() method (resetting them to 0).

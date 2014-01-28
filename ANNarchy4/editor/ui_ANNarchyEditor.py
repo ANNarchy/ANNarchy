@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Tue Jan 28 08:18:46 2014
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Tue Jan 28 20:32:29 2014
+#      by: PyQt4 UI code generator 4.9.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -48,6 +48,11 @@ class Ui_ANNarchyEditor(object):
         self.views.addTab(self.params, _fromUtf8(""))
         self.visualizer = QtGui.QWidget()
         self.visualizer.setObjectName(_fromUtf8("visualizer"))
+        self.verticalLayout_11 = QtGui.QVBoxLayout(self.visualizer)
+        self.verticalLayout_11.setObjectName(_fromUtf8("verticalLayout_11"))
+        self.grid_root = QtGui.QGridLayout()
+        self.grid_root.setObjectName(_fromUtf8("grid_root"))
+        self.verticalLayout_11.addLayout(self.grid_root)
         self.views.addTab(self.visualizer, _fromUtf8(""))
         self.complete = QtGui.QWidget()
         self.complete.setObjectName(_fromUtf8("complete"))
@@ -261,7 +266,7 @@ class Ui_ANNarchyEditor(object):
         self.horizontalLayout.addWidget(self.splitter_2)
         ANNarchyEditor.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(ANNarchyEditor)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1080, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1080, 29))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -275,8 +280,8 @@ class Ui_ANNarchyEditor(object):
         self.menubar.addAction(self.menuFile.menuAction())
 
         self.retranslateUi(ANNarchyEditor)
-        self.views.setCurrentIndex(5)
-        self.general.setCurrentIndex(5)
+        self.views.setCurrentIndex(4)
+        self.general.setCurrentIndex(4)
         self.stackedWidget_2.setCurrentIndex(0)
         self.stackedWidget.setCurrentIndex(1)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), ANNarchyEditor.close)
@@ -304,7 +309,9 @@ class Ui_ANNarchyEditor(object):
         self.label_7.setText(QtGui.QApplication.translate("ANNarchyEditor", "Loaded file(s):", None, QtGui.QApplication.UnicodeUTF8))
         self.groupBox.setTitle(QtGui.QApplication.translate("ANNarchyEditor", "Grid configuration", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("ANNarchyEditor", "x size", None, QtGui.QApplication.UnicodeUTF8))
+        self.grid_x_dim.setText(QtGui.QApplication.translate("ANNarchyEditor", "1", None, QtGui.QApplication.UnicodeUTF8))
         self.label_2.setText(QtGui.QApplication.translate("ANNarchyEditor", "y size", None, QtGui.QApplication.UnicodeUTF8))
+        self.grid_y_dim.setText(QtGui.QApplication.translate("ANNarchyEditor", "1", None, QtGui.QApplication.UnicodeUTF8))
         self.change_grid.setText(QtGui.QApplication.translate("ANNarchyEditor", "Apply", None, QtGui.QApplication.UnicodeUTF8))
         self.groupBox_2.setTitle(QtGui.QApplication.translate("ANNarchyEditor", "Data set", None, QtGui.QApplication.UnicodeUTF8))
         self.label_4.setText(QtGui.QApplication.translate("ANNarchyEditor", "Pop/Proj", None, QtGui.QApplication.UnicodeUTF8))
