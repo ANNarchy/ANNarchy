@@ -225,17 +225,16 @@ class VisualizerGLWidget(GLWidget):
         
 class NetworkGLWidget(GLWidget):
     
-    def __init__(self, parent):
+    def __init__(self, parent, main_window):
         super(NetworkGLWidget, self).__init__(parent)
         
+        self._main_window = main_window
         self.populations = {}
-        self.populations.update( { 1 : Quad(Point2d(0.5,0.5), 0.05) } )
-        self.populations.update( { 2 : Quad(Point2d(0.3,0.2), 0.05) } )
-        self.populations.update( { 3 : Quad(Point2d(0.2,0.5), 0.05) } )
+        self.populations.update( { 0 : Quad(Point2d(0.5,0.5), 0.05) } )
+        self.populations.update( { 1 : Quad(Point2d(0.3,0.5), 0.05) } )
         
         self.projections = [];
-        self.projections.append(Line(Point2d(0.5,0.5), Point2d(0.3,0.2)))
-        self.projections.append(Line(Point2d(0.2,0.5), Point2d(0.3,0.2)))
+        self.projections.append(Line(Point2d(0.5,0.5), Point2d(0.3,0.5)))
 
     def paintGL(self):
         """
@@ -269,7 +268,12 @@ class NetworkGLWidget(GLWidget):
         # the mouse and view coord system are invers to each other
         p = Point2d(mousePos.x()/float(self.width), 1.0 - mousePos.y()/float(self.height))
         
+        selected = False
         for id, quad in self.populations.iteritems():
             if quad.point_within(p):
-                print 'selected a population', id
-            
+                self._main_window.signal_net_editor_to_pop_view.emit(1, id) # 1 = population view
+                selected = True
+        
+        if not selected: 
+            self._main_window.signal_net_editor_to_pop_view.emit(0, 0) # 0 = population view
+        

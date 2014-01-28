@@ -24,14 +24,12 @@ class GeneralWidget(object):
         self._synapses = ListView(widget.syn_general, main_window, "synapse type")
         self._synapses.initialize()
 
-        self._populations = ListView(widget.pop_general, main_window, "population")
-        self._populations.initialize()
-        self._projections = ListView(widget.proj_general, main_window, "projection")
-        self._projections.initialize()
+
         self._params = ListView(widget.par_general, main_window, "params")
         self._params.initialize()
         
 class EditorMainWindow(QMainWindow):
+    signal_net_editor_to_pop_view = QtCore.pyqtSignal(int, int)
     
     def __init__(self, func, vis):
         super(QMainWindow, self).__init__()
@@ -54,8 +52,9 @@ class EditorMainWindow(QMainWindow):
         self._env_editor = CodeView(self._ui.environment, int( self._w * 0.80), int ( self._h * 0.90))
         self._comp_editor = CodeView(self._ui.complete, int( self._w * 0.80), int ( self._h * 0.90))
         
-        self._net_editor = NetworkGLWidget(self._ui.editor) 
+        self._net_editor = NetworkGLWidget(self._ui.editor, self) 
         self._vis_editor = VisualizerGLWidget(self._ui.visualizer)
+        
         # 
         # stack widget for general properties.
         self._general = GeneralWidget(self._ui, self)
@@ -70,6 +69,18 @@ class EditorMainWindow(QMainWindow):
         
         self._ui.actionOpen.triggered[()].connect(self.load_file)
         self._ui.change_grid.pressed[()].connect(self.change_grid)
+        
+        self.signal_net_editor_to_pop_view.connect(self.test)
+        
+    @QtCore.pyqtSlot(int, int)
+    def test(self, tab, pop):
+        print 'Update population', pop, 'tab =',tab 
+        self._ui.stackedWidget_2.setCurrentIndex(tab)
+        
+        if tab != 0:
+            obj = ANNarchy4.get_population('Population'+str(pop))
+            self._ui.pop_name.setText(obj.name)
+            self._ui.pop_size.setText(str(obj.geometry))
         
     def change_grid(self):
         """
