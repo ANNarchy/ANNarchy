@@ -251,7 +251,10 @@ class VisualizerGLWidget(GLWidget):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         # the window corner OpenGL coordinates are (-+1, -+1)
-        gl.glOrtho(0, 1, 0, 1, 0, 1)
+        if self._render:
+            gl.glOrtho(0, 360, -1, 1, 0, 1)
+        else:
+            gl.glOrtho(0, 1, 0, 1, 0, 1)
         
 class NetworkGLWidget(GLWidget):
     
