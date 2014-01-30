@@ -145,18 +145,12 @@ class Equation(object):
         # Suppress spaces to extract dvar/dt
         expression=expression.replace(' ', '')
     
-        # Extract random numbers TODO
-    
-        # Extract weighted sums TODO
-    
-        # Extract global functions TODO
-    
         if self.method == 'implicit':
             return self.implicit(expression)
         elif self.method == 'explicit':
             return self.explicit(expression)
         elif self.method == 'exponential':
-            return self.explicit(expression)
+            return self.exponential(expression)
         
     def explicit(self, expression):
         " Explicit or backward Euler numerical method"
@@ -370,7 +364,7 @@ class Equation(object):
         )
     
         # Obtain C code
-        code = self.c_code(self.local_dict[self.name]) + ' = ' + self.c_code(simplify(analysed)) +';'
+        code = self.c_code(analysed) +';'
     
         # Return result
         return code

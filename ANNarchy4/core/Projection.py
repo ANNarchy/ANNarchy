@@ -23,13 +23,8 @@
 """
 import numpy as np
 
-from . import Global
-from .Dendrite import Dendrite
-
-from ANNarchy4 import generator
-from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.Variable import Variable
-from ANNarchy4.core.Descriptor import Descriptor, Attribute
+from ANNarchy4.core import Global
+from ANNarchy4.parser.Analyser import SynapseAnalyser
 
 class Projection(object):#Descriptor):
     """
@@ -69,21 +64,26 @@ class Projection(object):#Descriptor):
         self.target = target
         self.connector = connector
         self.connector.proj = self # set reference to projection
-        self.synapse = synapse
+        self.synapse_type = synapse
         self._dendrites = []
         self._post_ranks = []
 
         # Create a default name
         self.name = 'Projection'+str(len(Global._projections))
         
+        # Get a list of parameters and variables
+        analyser = SynapseAnalyser(self.synapse_type)
+        self.parameters = analyser.parameters()
+        self.variables = analyser.variables()
+        
         # Add the population to the global variable
         Global._projections.append(self)
         self.initialized = True
         
-    def _init_attributes(self):
-        """ Method used after compilation to initialize the attributes."""
-        for var in self.variables + self.parameters:
-            setattr(self, var, Attribute(var))
+#     def _init_attributes(self):
+#         """ Method used after compilation to initialize the attributes."""
+#         for var in self.variables + self.parameters:
+#             setattr(self, var, Attribute(var))
             
     def get(self, name):
         """ Returns a list of parameters/variables values for each dendrite in the projection.
@@ -186,40 +186,40 @@ class Projection(object):#Descriptor):
         """
         return self._post_ranks
 
-    def _parsed_variables(self):
-        """
-        Returns parsed variables in case of an attached synapse.
-        """
-        if self.synapse:
-            return self.generator.parsed_variables
-        else:
-            return []
+#     def _parsed_variables(self):
+#         """
+#         Returns parsed variables in case of an attached synapse.
+#         """
+#         if self.synapse:
+#             return self.generator.parsed_variables
+#         else:
+#             return []
             
-    @property
-    def variables(self):
-        """
-        Returns a list of all variable names.
-        """
-        ret_var = ['rank','value', 'delay']
-        
-        # check for additional variables 
-        for name, var in self._parsed_variables().items():
-            if not var['type'] == 'parameter' and not name in ret_var:
-                ret_var.append(name)        
-        return ret_var
-
-    @property
-    def parameters(self):
-        """
-        Returns a list of all parameter names.
-        """
-        ret_par = []
-                
-        for name, var in self._parsed_variables().items():
-            if var['type'] == 'parameter' and not name in ret_par:
-                ret_par.append(name)    
-                
-        return ret_par
+#     @property
+#     def variables(self):
+#         """
+#         Returns a list of all variable names.
+#         """
+#         ret_var = ['rank','value', 'delay']
+#         
+#         # check for additional variables 
+#         for name, var in self._parsed_variables().items():
+#             if not var['type'] == 'parameter' and not name in ret_var:
+#                 ret_var.append(name)        
+#         return ret_var
+# 
+#     @property
+#     def parameters(self):
+#         """
+#         Returns a list of all parameter names.
+#         """
+#         ret_par = []
+#                 
+#         for name, var in self._parsed_variables().items():
+#             if var['type'] == 'parameter' and not name in ret_par:
+#                 ret_par.append(name)    
+#                 
+#         return ret_par
 
     def connect(self):
         self._dendrites, self._post_ranks = self.connector.connect()

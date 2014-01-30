@@ -21,9 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from .Neuron import RateNeuron, SpikeNeuron
-
-#from ANNarchy4.core.Descriptor import Descriptor, Attribute
 from ANNarchy4.parser.Analyser import NeuronAnalyser
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
@@ -77,7 +74,9 @@ class Population(object):#Descriptor):
         self.parameters = analyser.parameters()
         self.variables = analyser.variables()
         
-        
+        # List of targets actually connected
+        self.targets = []
+                
         # Allow recording of variables
         self._recorded_variables = {}        
         for var in self.variables:
@@ -121,12 +120,12 @@ class Population(object):#Descriptor):
         else: 
             return 1
         
-    @property
-    def cpp_class(self):
-        """
-        Returns name of cpp class.
-        """
-        return self.generator.class_name
+#     @property
+#     def cpp_class(self):
+#         """
+#         Returns name of cpp class.
+#         """
+#         return self.generator.class_name
     
 #     @property
 #     def variables(self):

@@ -58,9 +58,12 @@ def _folder_management(profile_enabled, clean):
         os.mkdir(Global.annarchy_dir)
         os.mkdir(Global.annarchy_dir+'/pyx')
         os.mkdir(Global.annarchy_dir+'/build')
-        os.mkdir(Global.annarchy_dir+'/generate')
-        os.mkdir(Global.annarchy_dir+'/generate/pyx')
-        os.mkdir(Global.annarchy_dir+'/generate/build')
+        
+    # Create the generate subfolder
+    shutil.rmtree(Global.annarchy_dir+'/generate', True)
+    os.mkdir(Global.annarchy_dir+'/generate')
+    os.mkdir(Global.annarchy_dir+'/generate/pyx')
+    os.mkdir(Global.annarchy_dir+'/generate/build')
 
     # cpp / h files
     for cfile in os.listdir(sources_dir+'/cpp'):
@@ -178,29 +181,13 @@ class Generator(object):
         # Test if the code has changed last compilation
         changed_cpp, changed_pyx = self.test_changed()
         
-        # Temporary stop here
-        exit(0)
-        
         # Perform compilation if something has changed
         self.partial_compilation(changed_cpp, changed_pyx)
-        
-        
-            
-        if Global.config['verbose']:
-            Global._print('Building network ...')
-              
-        # Return to the current directory
-        os.chdir('..')
-        # Import the libraries
-        try:
-            import ANNarchyCython
-        except ImportError:
-            if not self.cpp_stand_alone:
-                Global._print('\nError: the Cython library was not correctly compiled.')
-                exit(0)
                 
         # Create the Python objects    
-        if not self.cpp_stand_alone:
+        if not self.cpp_stand_alone:        
+            if Global.config['verbose']:
+                Global._print('Building network ...')
             self.instantiate()
     
         else:
@@ -266,27 +253,46 @@ class Generator(object):
         
     def test_changed(self):  
         " Test if the code generation has changed since last time."
+        def copy_changed(folder):
+            changed = False
+            # Copy the files which have changed 
+            for file in os.listdir(Global.annarchy_dir+'/generate/' + folder):
+                # If the file does not exist in build/ or pyx/, 
+                # or if the newly generated file is different, copy the new file
+                if not os.path.isfile(Global.annarchy_dir+'/'+folder+'/'+file) or \
+                   not filecmp.cmp(Global.annarchy_dir+'/generate/'+folder+'/'+file, 
+                                   Global.annarchy_dir+'/'+folder+'/'+file):
+                    shutil.copy(Global.annarchy_dir+'/generate/'+folder+'/'+file, # src
+                                Global.annarchy_dir+'/'+folder+'/'+file # dest
+                    )
+                    changed = True
+                    if Global.config['verbose']:
+                        Global._print(file, 'has changed since last compilation.')                        
+            return changed
+        
+        def test_deleted(folder):
+            changed = False
+            # Copy the files which have changed 
+            for file in os.listdir(Global.annarchy_dir+'/' + folder):
+                # If the file does not exist in build/ or pyx/, 
+                # or if the newly generated file is different, copy the new file
+                if not os.path.isfile(Global.annarchy_dir+'/generate/'+folder+'/'+file):
+                    os.remove(Global.annarchy_dir+'/'+folder+'/'+file)
+                    changed = True
+                    if Global.config['verbose']:
+                        Global._print(file, 'has been deleted.') 
+            return changed
+        
         changed_cpp = False
         changed_pyx = False
         if not self.clean:
             import filecmp
-            for file in os.listdir(Global.annarchy_dir+'/generate/build'):
-                # If the file does not exist in build/, or if the newly generated file is different, copy the new file
-                if not os.path.isfile(Global.annarchy_dir+'/build/'+file) or not filecmp.cmp(Global.annarchy_dir+'/generate/build/'+file, Global.annarchy_dir+'/build/'+file):
-                    shutil.copy(Global.annarchy_dir+'/generate/build/'+file, # src
-                                Global.annarchy_dir+'/build/'+file # dest
-                    )
-                    changed_cpp = True
-                    if Global.config['verbose']:
-                        Global._print(file, 'has changed since last compilation.')
-            for file in os.listdir(Global.annarchy_dir+'/generate/pyx'):
-                if not os.path.isfile(Global.annarchy_dir+'/pyx/'+file) or not filecmp.cmp(Global.annarchy_dir+'/generate/pyx/'+file, Global.annarchy_dir+'/pyx/'+file):
-                    shutil.copy(Global.annarchy_dir+'/generate/pyx/'+file, # src
-                                Global.annarchy_dir+'/pyx/'+file # dest
-                    )
-                    changed_pyx = True
-                    if Global.config['verbose']:
-                        Global._print(file, 'has changed since last compilation.')
+            # Copy the files which have changed 
+            changed_cpp = copy_changed('build')
+            changed_pyx = copy_changed('pyx')
+            # Test if some files have disappeared in generate
+            changed_cpp = changed_cpp or test_deleted('build')
+            changed_pyx = changed_pyx or test_deleted('pyx')
     
         else: # Copy everything
             for file in os.listdir(Global.annarchy_dir+'/generate/build'):
@@ -359,22 +365,32 @@ clean:
 \trm -rf pyx/*.o
 \trm -rf ANNarchyCython.so
     """
-    
+            
+            # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)
-            if changed_pyx: # Force recompilation of the Cython wrappers
+            # Force recompilation of the Cython wrappers
+            if changed_pyx: 
                 os.system('touch pyx/ANNarchyCython.pyx')
-    
-            if self.cpp_stand_alone:
-                os.system('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log')
-            elif sys.version_info[:2] == (2, 6):
-                os.system('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log')
-            elif sys.version_info[:2] == (2, 7):
-                os.system('make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log')
-            elif sys.version_info[:2] == (3, 2):
-                os.system('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log')
-            else:
-                Global._error('no setup could be found.')
+            # Start the compilation
+            try:
+                if self.cpp_stand_alone:
+                    subprocess.check_output('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log', 
+                                            shell=True)
+                elif sys.version_info[:2] == (2, 6):
+                    subprocess.check_output('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log', 
+                                            shell=True)
+                elif sys.version_info[:2] == (2, 7):
+                    subprocess.check_output("make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log", 
+                                            shell=True)
+                elif sys.version_info[:2] == (3, 2):
+                    subprocess.check_output('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log', 
+                                            shell=True)
+                else:
+                    Global._error('No correct setup could be found. Do you have Python installed?')
+                    exit(0)
+            except subprocess.CalledProcessError:
+                Global._error('Compilation failed.\nCheck the compilation logs in annarchy/compile_sterr.log')
                 exit(0)
     
         else: # Windows: to test....
@@ -392,16 +408,25 @@ clean:
     def instantiate(self):
         """ After every is compiled, actually create the Cython objects and 
             bind them to the Python ones."""
+        # Return to the current directory
+        os.chdir('..')
+        # Import the Cython library
+        try:
+            import ANNarchyCython
+        except ImportError:
+            if not self.cpp_stand_alone:
+                Global._error('The Cython library was not correctly compiled.\n Check the compilation logs in annarchy/compile_sterr.log')
+                exit(0)
         # Bind the py extensions to the corresponding python objects
         for pop in self.populations:
             if Global.config['verbose']:
                 Global._print('    Create population', pop.name)
-
             if Global.config['show_time']:
                 t0 = time.time()
-
-            # Create the Cython instance TODO
-            pop.cyInstance = eval('ANNarchyCython.py'+ pop.generator.class_name+'()')
+            # Get the corresponding class name
+            class_name = self.analyser._find_population_name(pop.name)
+            # Create the Cython instance 
+            pop.cyInstance = eval('ANNarchyCython.py'+ class_name+'()')
             # Create the attributes
             # pop._init_attributes() TODO
             # Initialize their value
@@ -413,10 +438,8 @@ clean:
         for proj in self.projections:
             if Global.config['verbose']:
                 Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')        
-
             if Global.config['show_time']:
                 t0 = time.time()
-
             # Create the synapses
             proj.connect() 
             if proj.connector.delays != None:
@@ -424,7 +447,7 @@ clean:
                 proj.pre.cyInstance.set_max_delay(int(proj.connector.delays.max()))
  
             # Create the attributes
-            proj._init_attributes()   
+            #proj._init_attributes()   
             if Global.config['show_time']:
                 Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
                 

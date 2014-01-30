@@ -21,10 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy4.core import Global
-
-from ANNarchy4.core.Variable import Variable
-
 import pprint
 
 class RateSynapse(object):
@@ -38,35 +34,7 @@ class RateSynapse(object):
         
         *Parameters*:
         
-            * *key_value_args*: dictionary contain the variable / parameter declarations as key-value pairs. For example:
-
-                .. code-block:: python
-        
-                    tau = 5.0, 
-
-                initializes a parameter ``tau`` with the value 5.0 
-
-                .. code-block:: python
-        
-                    value = Variable( init=0.0, rate="tau * drate / dt + value = pre.rate * 0.1" )
-
-                and a simple update of the synaptic weight.
-                
-                .. warning::
-                    
-                    Please note, that automatically all key-value pairs provided to the function, except ``debug`` and ``order``, are assigned to *key_value_args*.
-
-            * *order*: execution order of update rules.
-
-                .. warning::
-                    
-                    if you use the order key, the value need to contain **all** variable names.
-                            
-            * *debug*: prints all defined variables/parameters to standard out (default = False)
-
-                .. hint::            
-                    
-                    An experimental feature, currently not fully implemented.
+            * TODO
             
         """                
         # Store the parameters and equations
@@ -77,7 +45,7 @@ class RateSynapse(object):
         
          
     def __str__(self):
-        return pprint.pformat( self._variables, depth=4 )
+        return pprint.pformat( self, depth=4 ) #TODO
         
 class SpikeSynapse(object):
     """
@@ -95,5 +63,5 @@ class SpikeSynapse(object):
         self.psp = psp
 
     def __str__(self):
-        return pprint.pformat( self._variables, depth=4 )
+        return pprint.pformat( self, depth=4 ) #TODO
 

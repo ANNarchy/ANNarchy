@@ -22,7 +22,7 @@
     
 """
 from ANNarchy4.core import Global
-from ANNarchy4.generator.Templates import *
+from ANNarchy4.generator.PopulationTemplates import *
 from ANNarchy4.core.Random import *
 
 class PopulationGenerator(object):
@@ -165,24 +165,11 @@ class PopulationGenerator(object):
                 constructor += """
     // %(name)s_ : global
     %(name)s_ = %(init)s;   
-""" % {'name' : param['name'], 'init': param['init']}   
-                # no reinit?     
-        
-        # Random numbers generators
-        constructor += """
-    // Random variables"""
-        for var in self.desc['random_distributions']:
-            try:
-                dist = eval(var['definition'])
-            except:
-                Global._error('Random distribution ' + var['definition'] + ' is not valid.')
-                exit(0)
-            constructor +="""
-    %(name)s_ = %(call)s.getValues(nbNeurons_);
-""" % {'name' : var['name'], 'call' : dist._gen_cpp() }
-            reset +="""
-    %(name)s_ = %(call)s.getValues(nbNeurons_);
-""" % {'name' : var['name'], 'call' : dist._gen_cpp() }
+""" % {'name' : param['name'], 'init': param['init']} 
+                reset += """
+    // %(name)s_ : global
+    %(name)s_ = %(init)s;   
+""" % {'name' : param['name'], 'type': param['ctype'], 'init' : param['init']} 
 
         # Global operations
         for var in self.desc['global_operations']:
@@ -290,6 +277,7 @@ void %(class)s::compute_sum_%(var)s() {
             code +="""
     %(name)s_ = %(call)s.getValues(nbNeurons_);
 """ % {'name' : var['name'], 'call' : dist._gen_cpp() }
+
         # Global variables
         for param in self.desc['variables']:            
             if param['name'] in self.desc['global']: # global attribute
