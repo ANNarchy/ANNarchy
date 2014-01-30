@@ -19,18 +19,57 @@ import ANNarchy4
 import code
             
 class GeneralWidget(object):
+    signal_change_grid = QtCore.pyqtSignal(int, int)
+    
     def __init__(self, widget, main_window):
+        self._widget = widget
+        self._main_window = main_window
         
-        self._neurons = ListView(widget.neur_general, main_window, "neuron type")
+        #
+        # initialize the several tab pages
+        self._setup_obj()
+        self._setup_net()
+        self._setup_vis()
+
+    def _setup_obj(self):
+        self._neurons = ListView(self._widget.neur_general, 
+                                 self._main_window, 
+                                 "neuron type"
+                                 )
         self._neurons.initialize()
-        self._synapses = ListView(widget.syn_general, main_window, "synapse type")
+        
+        self._synapses = ListView(self._widget.syn_general, 
+                                  self._main_window, 
+                                  "synapse type"
+                                  )
         self._synapses.initialize()
 
-
-        self._params = ListView(widget.par_general, main_window, "params")
+    def _setup_net(self):
+        self._params = ListView(self._widget.par_general, 
+                                self._main_window, 
+                                "params"
+                                )
         self._params.initialize()
+
+    def _setup_vis(self):
+        self._widget.change_grid.pressed[()].connect(self.change_grid)
+        self.change_grid() # initialize with default values
+        
+    def change_grid(self):
+        """
+        check the edit lines and modify width and height of the visualized grid.
+        """
+        try:
+            x_size = int(self._widget.grid_x_dim.text())
+            y_size = int(self._widget.grid_y_dim.text())
+        except ValueError:
+            x_size = 1
+            y_size = 1
+
+        self._main_window.signal_change_grid_from_general.emit(x_size, y_size)
         
 class EditorMainWindow(QMainWindow):
+    signal_change_grid_from_general = QtCore.pyqtSignal(int, int)
     signal_net_editor_to_pop_view = QtCore.pyqtSignal(int, int)
     
     def __init__(self, func, vis):
@@ -62,8 +101,6 @@ class EditorMainWindow(QMainWindow):
         # stack widget for general properties.
         self._general = GeneralWidget(self._ui, self)
         self._connect_signals()
-        
-        self.change_grid()
 
     def _connect_signals(self):
         #
@@ -73,31 +110,29 @@ class EditorMainWindow(QMainWindow):
         self._ui.views.connect(self._ui.views, QtCore.SIGNAL("currentChanged(int)"), self, QtCore.SLOT("_set_current_tab(int)"))
         
         self._ui.actionOpen.triggered[()].connect(self.load_file)
-        self._ui.change_grid.pressed[()].connect(self.change_grid)
+        
+        #
+        # signals from general
+        self.signal_change_grid_from_general.connect(self.change_grid)
         
         self.signal_net_editor_to_pop_view.connect(self.test)
         
     @QtCore.pyqtSlot(int, int)
     def test(self, tab, pop):
-        print 'Update population', pop, 'tab =',tab 
         self._ui.stackedWidget_2.setCurrentIndex(tab)
         
         if tab != 0:
+            print 'Update population', pop 
             obj = ANNarchy4.get_population('Population'+str(pop))
-            self._ui.pop_name.setText(obj.name)
-            self._ui.pop_size.setText(str(obj.geometry))
+            if obj != None:
+                self._ui.pop_name.setText(obj.name)
+                self._ui.pop_size.setText(str(obj.geometry))
         
-    def change_grid(self):
-        """
-        check the edit lines and modify width and height of the visualized grid.
-        """
-        try:
-            self._x_size = int(self._ui.grid_x_dim.text())
-            self._y_size = int(self._ui.grid_y_dim.text())
-        except ValueError:
-            self._x_size = 1
-            self._y_size = 1
-
+    @QtCore.pyqtSlot(int, int)
+    def change_grid(self, x_size, y_size):
+        self._x_size = x_size
+        self._y_size = y_size
+        
         #
         # delete old ones
         while self._ui.grid_root.count():
@@ -120,16 +155,16 @@ class EditorMainWindow(QMainWindow):
             self._ui.grid_root.addWidget( tmp, 0, 0)
 
     def set_color(self, x_pos, y_pos, r, g, b):
-        try:
-            self._gl_instances[y_pos * self._x_size + x_pos].set_color(r, g, b)
-        except AttributeError:
-            print 'No plot with coord (', x_pos, y_pos,')'
+        #try:
+        self._gl_instances[y_pos * self._x_size + x_pos].set_color(r, g, b)
+        #except AttributeError:
+        #    print 'No plot with coord', (x_pos, y_pos),'in grid',(self._x_size,self._y_size)
         
     def set_data(self, x_pos, y_pos, x, y):
-        try:
-            self._gl_instances[y_pos * self._x_size + x_pos].set_data(x,y)
-        except AttributeError:
-            print 'No plot with coord (', x_pos, y_pos,')'
+        #try:
+        self._gl_instances[y_pos * self._x_size + x_pos].set_data(x,y)
+        #except AttributeError:
+        #    print 'No plot with coord', (x_pos, y_pos),'in grid',(self._x_size,self._y_size)
 
     def render(self):
         for i in xrange(self._ui.grid_root.count()):
@@ -168,10 +203,6 @@ class EditorMainWindow(QMainWindow):
         else:
             QMessageBox.warning(self,"Open file", "Opening a file is only possible in the complete script view.")
             self._ui.views.setCurrentIndex(5)
-        
-    @QtCore.pyqtSlot(str)
-    def _update_editor(self, population):
-        print 'update:', population
 
     @QtCore.pyqtSlot(int)
     def _set_current_tab(self, idx):

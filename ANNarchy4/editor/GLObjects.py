@@ -3,6 +3,7 @@ from PyQt4 import QtGui, QtCore, QtOpenGL
 from PyQt4.QtOpenGL import QGLWidget
 # PyOpenGL imports
 import OpenGL.GL as gl
+import math
 
 class Point2d(object):
     def __init__(self,x,y):
@@ -19,7 +20,7 @@ class Point2d(object):
             res._y = self._y + other._y
         else: #scalar
             res._x = self._x + other
-            res._x = self._y + other
+            res._y = self._y + other
         return res
 
     def __sub__(self, other):
@@ -29,9 +30,33 @@ class Point2d(object):
             res._y = self._y - other._y
         else: #scalar
             res._x = self._x - other
-            res._x = self._y - other
+            res._y = self._y - other
         return res
-        
+    
+    def __mul__(self, other):
+        res = Point2d(0.0,0.0)
+        if isinstance(other, Point2d):
+            res._x = self._x * other._x
+            res._y = self._y * other._y
+        else: #scalar
+            res._x = self._x * other
+            res._y = self._y * other
+        return res
+
+    def __div__(self, other):
+        res = Point2d(0.0,0.0)
+        if isinstance(other, Point2d):
+            res._x = self._x / other._x
+            res._y = self._y / other._y
+        else: #scalar
+            res._x = self._x / other
+            res._y = self._y / other
+        return res
+    
+    @property
+    def length(self):
+        return math.sqrt( (self._x * self._x) + (self._y * self._y) ) 
+                    
 class Quad2d(object):
     def __init__(self, center=Point2d(0,0), radius=0):
         if radius < 0:
@@ -41,8 +66,6 @@ class Quad2d(object):
         self.p2 = center - Point2d(-radius,  radius)
         self.p3 = center - Point2d(-radius, -radius)
         self.p4 = center - Point2d( radius, -radius)
-        
-        print self
 
     def from_p(self, p1, p2, p3, p4):
         self.p1 = p1
@@ -65,11 +88,19 @@ class Quad2d(object):
             return False;
         
         return True;
+    
+    def comp_area(self):
+        # we assume a 3dimensional vector and the 3rd component is 1
+        return ((self.p2 - self.p1).length) * ((self.p2 - self.p3).length)
         
 class Line2d(object):
     def __init__(self, p1, p2):
         self.p1 = p1 
         self.p2 = p2
+        
+    @property
+    def length(self):
+        return (self.p2 - self.p1).length
 
 class GLBaseWidget(QGLWidget):
     """
@@ -87,7 +118,7 @@ class GLBaseWidget(QGLWidget):
         Initialize OpenGL, VBOs, upload data on the GPU, etc.
         """
         # background color
-        gl.glClearColor(0.9,0.9,0.9,0) # background color
+        gl.glClearColor(1.0,1.0,1.0,0) # background color
         gl.glDisable(gl.GL_DEPTH_TEST) # we don't need depth test in 2D case
         gl.glLineWidth(3.0)
 

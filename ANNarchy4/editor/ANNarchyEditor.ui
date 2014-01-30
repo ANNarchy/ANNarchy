@@ -38,7 +38,7 @@
        </property>
        <widget class="QTabWidget" name="views">
         <property name="currentIndex">
-         <number>4</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="objects">
          <attribute name="title">
@@ -73,11 +73,6 @@
          <attribute name="title">
           <string>Visualizer</string>
          </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_11">
-          <item>
-           <layout class="QGridLayout" name="grid_root"/>
-          </item>
-         </layout>
         </widget>
         <widget class="QWidget" name="complete">
          <attribute name="title">
@@ -109,7 +104,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="obj_tab">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -216,14 +211,14 @@
              <item row="0" column="1">
               <widget class="QLineEdit" name="pop_name">
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
               </widget>
              </item>
              <item row="1" column="1">
               <widget class="QLineEdit" name="pop_size">
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
               </widget>
              </item>
@@ -252,7 +247,11 @@
               </widget>
              </item>
              <item row="0" column="2">
-              <widget class="QLineEdit" name="pre_name"/>
+              <widget class="QLineEdit" name="pre_name">
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+              </widget>
              </item>
              <item row="1" column="0" colspan="2">
               <widget class="QLabel" name="label_12">
@@ -262,7 +261,11 @@
               </widget>
              </item>
              <item row="1" column="2">
-              <widget class="QLineEdit" name="post_name"/>
+              <widget class="QLineEdit" name="post_name">
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+              </widget>
              </item>
              <item row="2" column="0">
               <widget class="QLabel" name="label_13">
@@ -272,7 +275,11 @@
               </widget>
              </item>
              <item row="2" column="2">
-              <widget class="QLineEdit" name="target"/>
+              <widget class="QLineEdit" name="target">
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+              </widget>
              </item>
              <item row="3" column="1">
               <spacer name="verticalSpacer_4">
@@ -341,11 +348,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLineEdit" name="grid_x_dim">
-                  <property name="text">
-                   <string>1</string>
-                  </property>
-                 </widget>
+                 <widget class="QLineEdit" name="grid_x_dim"/>
                 </item>
                </layout>
               </item>
@@ -372,11 +375,7 @@
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLineEdit" name="grid_y_dim">
-                  <property name="text">
-                   <string>1</string>
-                  </property>
-                 </widget>
+                 <widget class="QLineEdit" name="grid_y_dim"/>
                 </item>
                </layout>
               </item>
@@ -503,7 +502,7 @@
      <x>0</x>
      <y>0</y>
      <width>1080</width>
-     <height>29</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -513,7 +512,13 @@
     <addaction name="actionOpen"/>
     <addaction name="actionQuit"/>
    </widget>
+   <widget class="QMenu" name="menuConfig">
+    <property name="title">
+     <string>Config</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuConfig"/>
   </widget>
   <action name="actionOpen">
    <property name="text">

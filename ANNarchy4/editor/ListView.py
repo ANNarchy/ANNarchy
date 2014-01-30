@@ -8,7 +8,7 @@ class ListView(QListView):
         super(QListView,self).__init__(parent)
         
         self._type = type
-        self._update.connect(main_window._update_editor)
+
         
     def initialize(self, entries=[]):
         

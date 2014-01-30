@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from .Neuron import RateNeuron, SpikeNeuron
+from .Neuron import RateNeuron, SpikeNeuron, IndividualNeuron
 
 import ANNarchy4.generator.Population as PopulationGenerator
 
@@ -525,7 +525,7 @@ class Population(Descriptor):
             if rank == None:
                 return None
         # Return corresponding neuron
-        return Neuron.IndividualNeuron(self, rank)
+        return IndividualNeuron(self, rank)
         
           
     def neurons(self):
