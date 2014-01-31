@@ -20,7 +20,7 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout_14">
     <item>
      <widget class="QSplitter" name="splitter_2">
       <property name="orientation">
@@ -36,16 +36,16 @@
        <property name="orientation">
         <enum>Qt::Vertical</enum>
        </property>
-       <widget class="QTabWidget" name="views">
+       <widget class="MyTabWidget" name="views">
         <property name="currentIndex">
-         <number>1</number>
+         <number>4</number>
         </property>
-        <widget class="QWidget" name="objects">
+        <widget class="CodeView" name="objects">
          <attribute name="title">
           <string>Neuron / Synapses</string>
          </attribute>
         </widget>
-        <widget class="QWidget" name="editor">
+        <widget class="QWidget" name="editor_page">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -58,8 +58,13 @@
          <attribute name="title">
           <string>Network</string>
          </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_11">
+          <item>
+           <widget class="GLNetworkWidget" name="editor" native="true"/>
+          </item>
+         </layout>
         </widget>
-        <widget class="QWidget" name="environment">
+        <widget class="CodeView" name="environment">
          <attribute name="title">
           <string>Environment</string>
          </attribute>
@@ -69,12 +74,23 @@
           <string>Parameter</string>
          </attribute>
         </widget>
-        <widget class="QWidget" name="visualizer">
+        <widget class="QWidget" name="visualizer_page">
          <attribute name="title">
           <string>Visualizer</string>
          </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_13">
+          <item>
+           <widget class="VisualizerWidget" name="visualizer" native="true">
+            <layout class="QGridLayout" name="gridLayout_4">
+             <item row="0" column="0">
+              <widget class="GLBaseWidget" name="gl_context" native="true"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
         </widget>
-        <widget class="QWidget" name="complete">
+        <widget class="CodeView" name="complete">
          <attribute name="title">
           <string>CompleteScript</string>
          </attribute>
@@ -104,7 +120,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>1</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="obj_tab">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -116,7 +132,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QListView" name="neur_general"/>
+          <widget class="NeuronListView" name="neur_general"/>
          </item>
          <item>
           <widget class="QLabel" name="label_8">
@@ -133,7 +149,7 @@
        <widget class="QWidget" name="net_tab">
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
-          <widget class="QStackedWidget" name="stackedWidget_2">
+          <widget class="StackWidget" name="stackedWidget_2">
            <property name="currentIndex">
             <number>0</number>
            </property>
@@ -318,165 +334,179 @@
        <widget class="QWidget" name="vis_tab">
         <layout class="QVBoxLayout" name="verticalLayout_8">
          <item>
-          <widget class="QGroupBox" name="groupBox">
-           <property name="title">
-            <string>Grid configuration</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_3">
+          <widget class="VisControlWidget" name="vis_control" native="true">
+           <layout class="QVBoxLayout" name="verticalLayout_12">
             <item>
-             <layout class="QVBoxLayout" name="verticalLayout_2">
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_2">
-                <item>
-                 <widget class="QLabel" name="label">
-                  <property name="text">
-                   <string>x size</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <spacer name="horizontalSpacer">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>40</width>
-                    <height>20</height>
-                   </size>
-                  </property>
-                 </spacer>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="grid_x_dim"/>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_3">
-                <item>
-                 <widget class="QLabel" name="label_2">
-                  <property name="text">
-                   <string>y size</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <spacer name="horizontalSpacer_2">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>40</width>
-                    <height>20</height>
-                   </size>
-                  </property>
-                 </spacer>
-                </item>
-                <item>
-                 <widget class="QLineEdit" name="grid_y_dim"/>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QPushButton" name="change_grid">
-                <property name="text">
-                 <string>Apply</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
+             <widget class="QGroupBox" name="groupBox">
+              <property name="title">
+               <string>Grid configuration</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_2">
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_2">
+                   <item>
+                    <widget class="QLabel" name="label">
+                     <property name="text">
+                      <string>x size</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="horizontalSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>40</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLineEdit" name="grid_x_dim">
+                     <property name="text">
+                      <string>1</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_3">
+                   <item>
+                    <widget class="QLabel" name="label_2">
+                     <property name="text">
+                      <string>y size</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="horizontalSpacer_2">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>40</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLineEdit" name="grid_y_dim">
+                     <property name="text">
+                      <string>1</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <spacer name="verticalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="change_grid">
+                   <property name="text">
+                    <string>Apply</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_2">
+              <property name="title">
+               <string>Data set</string>
+              </property>
+              <layout class="QGridLayout" name="gridLayout">
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_4">
+                 <property name="text">
+                  <string>Pop/Proj</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QComboBox" name="pop_proj_select"/>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_10">
+                 <property name="text">
+                  <string>Parameter</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QComboBox" name="param_select"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_3">
+              <property name="title">
+               <string>GroupBox</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_7">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_4">
+                 <item>
+                  <widget class="QLabel" name="label_3">
+                   <property name="text">
+                    <string>Plot Type</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="comboBox"/>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QStackedWidget" name="stackedWidget">
+                 <property name="currentIndex">
+                  <number>1</number>
+                 </property>
+                 <widget class="QWidget" name="page_2"/>
+                 <widget class="QWidget" name="page_3"/>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>166</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_2">
-           <property name="title">
-            <string>Data set</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="text">
-               <string>Pop/Proj</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="pop_proj_select"/>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_10">
-              <property name="text">
-               <string>Parameter</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QComboBox" name="param_select"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_3">
-           <property name="title">
-            <string>GroupBox</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_7">
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <item>
-               <widget class="QLabel" name="label_3">
-                <property name="text">
-                 <string>Plot Type</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="comboBox"/>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="QStackedWidget" name="stackedWidget">
-              <property name="currentIndex">
-               <number>1</number>
-              </property>
-              <widget class="QWidget" name="page_2"/>
-              <widget class="QWidget" name="page_3"/>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>174</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </widget>
@@ -540,6 +570,70 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MyTabWidget</class>
+   <extends>QTabWidget</extends>
+   <header location="global">mytabwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CodeView</class>
+   <extends>QWidget</extends>
+   <header location="global">CodeView.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NeuronListView</class>
+   <extends>QListView</extends>
+   <header location="global">ListView.h</header>
+  </customwidget>
+  <customwidget>
+   <class>GLNetworkWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">GLNetwork.h</header>
+   <container>1</container>
+   <slots>
+    <signal>update_population(int,int)</signal>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>StackWidget</class>
+   <extends>QStackedWidget</extends>
+   <header location="global">StackWidget.h</header>
+   <container>1</container>
+   <slots>
+    <slot>update_population(int,int)</slot>
+    <slot>initialize()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>VisControlWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">VisWidget.h</header>
+   <container>1</container>
+   <slots>
+    <signal>signal_change_grid(int,int)</signal>
+    <slot>initialize()</slot>
+    <slot>change_grid()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>VisualizerWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">VisWidget.h</header>
+   <container>1</container>
+   <slots>
+    <slot>change_grid()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>GLBaseWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">GLObjects.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
@@ -574,8 +668,105 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>editor</sender>
+   <signal>update_population(int,int)</signal>
+   <receiver>stackedWidget_2</receiver>
+   <slot>update_population(int,int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>330</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>stackedWidget_2</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>vis_control</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>visualizer</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>330</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>change_grid</sender>
+   <signal>pressed()</signal>
+   <receiver>vis_control</receiver>
+   <slot>change_grid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>846</x>
+     <y>200</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>vis_control</sender>
+   <signal>signal_change_grid(int,int)</signal>
+   <receiver>visualizer</receiver>
+   <slot>change_grid()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>330</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
+  <signal>initialize()</signal>
   <slot>compile()</slot>
  </slots>
 </ui>

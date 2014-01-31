@@ -1,17 +1,18 @@
 from .GLObjects import GLBaseWidget, Point2d, Quad2d, Line2d
+from PyQt4.QtCore import pyqtSignal
 
 # PyOpenGL imports
 import OpenGL.GL as gl
 import copy
 
 class GLNetworkWidget(GLBaseWidget):
+    update_population = pyqtSignal(int, int)
     """
     Main class for visualization of network.
     """    
-    def __init__(self, parent, main_window):
+    def __init__(self, parent=None):
         super(GLNetworkWidget, self).__init__(parent)
         
-        self._main_window = main_window
         self.populations = {}
         self.populations.update( { 0 : Quad2d(Point2d(0.5,0.5), 0.05) } )
         self.populations.update( { 1 : Quad2d(Point2d(0.3,0.5), 0.05) } )
@@ -69,11 +70,11 @@ class GLNetworkWidget(GLBaseWidget):
         selected = False
         for id, quad in self.populations.iteritems():
             if quad.point_within(p):
-                self._main_window.signal_net_editor_to_pop_view.emit(1, id) # 1 = population view
+                self.update_population.emit(1, id)
                 selected = True
         
         if not selected: 
-            self._main_window.signal_net_editor_to_pop_view.emit(0, 0) # 0 = population view
+            self.update_population.emit(0, 0)
             self._quad = None
             
         self.updateGL()

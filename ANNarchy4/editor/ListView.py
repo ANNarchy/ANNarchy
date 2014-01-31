@@ -4,11 +4,8 @@ from PyQt4.QtCore import SIGNAL, SLOT, pyqtSlot, pyqtSignal
 class ListView(QListView):
     _update = pyqtSignal(str)
     
-    def __init__(self, parent, main_window, type):
+    def __init__(self, parent):
         super(QListView,self).__init__(parent)
-        
-        self._type = type
-
         
     def initialize(self, entries=[]):
         
@@ -29,13 +26,12 @@ class ListView(QListView):
         self._update.emit(index.data().toString())
             
 class NeuronListView(ListView):
+    _show_template = pyqtSignal(int, str)
     
-    def __init__(self, parent, main_window, type):
-        super(ListView,self).__init__(parent, main_window, type)
-        
+    def __init__(self, parent):
+        super(ListView, self).__init__(parent)
         
     def initialize(self, entries=[]):
-        
         self._model = QStandardItemModel(self)
         
         # user elements
@@ -45,13 +41,14 @@ class NeuronListView(ListView):
             self._model.appendRow(item)
         
         item = QStandardItem("<Press here to add ...>")
+        self._model.appendRow(item)
         
         self.setModel(self._model)
         
         self.connect(self,SIGNAL("clicked(QModelIndex)"), self, SLOT("ItemClicked(QModelIndex)"))
         
     def input_dialog(self):
-        text, ok = QInputDialog.getText(self, 'New '+self._type, 'Enter '+self._type+' name:')
+        text, ok = QInputDialog.getText(self, 'New neuron definition', 'Enter neuron type name:')
         
         if ok:
             if self._model.findItems(text) != []:
@@ -59,14 +56,16 @@ class NeuronListView(ListView):
                 return
             
             item = QStandardItem( text )
-            item.setCheckable(True)    
-            #print 'Add new population:', text
             self._model.appendRow(item)
             self.setModel(self._model)
-                    
+            
+            idx = self._model.index(self._model.rowCount()-1, 0)
+            self.setCurrentIndex( idx )
+
     @pyqtSlot("QModelIndex")
     def ItemClicked(self, index):
         if index.data().toString() == "<Press here to add ...>":
             self.input_dialog()
+            self._show_template.emit( 0, self.currentIndex().data().toString() )
         else:
             self._update.emit(index.data().toString())            
