@@ -38,12 +38,17 @@
        </property>
        <widget class="MyTabWidget" name="views">
         <property name="currentIndex">
-         <number>4</number>
+         <number>0</number>
         </property>
-        <widget class="CodeView" name="objects">
+        <widget class="QWidget" name="object_page">
          <attribute name="title">
           <string>Neuron / Synapses</string>
          </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_15">
+          <item>
+           <widget class="CodeView" name="objects" native="true"/>
+          </item>
+         </layout>
         </widget>
         <widget class="QWidget" name="editor_page">
          <property name="minimumSize">
@@ -64,10 +69,15 @@
           </item>
          </layout>
         </widget>
-        <widget class="CodeView" name="environment">
+        <widget class="QWidget" name="env_page">
          <attribute name="title">
           <string>Environment</string>
          </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_16">
+          <item>
+           <widget class="CodeView" name="environment" native="true"/>
+          </item>
+         </layout>
         </widget>
         <widget class="QWidget" name="params">
          <attribute name="title">
@@ -90,10 +100,15 @@
           </item>
          </layout>
         </widget>
-        <widget class="CodeView" name="complete">
+        <widget class="QWidget" name="complet_page">
          <attribute name="title">
           <string>CompleteScript</string>
          </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_17">
+          <item>
+           <widget class="CodeView" name="complete" native="true"/>
+          </item>
+         </layout>
         </widget>
        </widget>
        <widget class="QStackedWidget" name="special">
@@ -120,7 +135,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="obj_tab">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -513,7 +528,7 @@
        <widget class="QWidget" name="page">
         <layout class="QVBoxLayout" name="verticalLayout_6">
          <item>
-          <widget class="QPushButton" name="compile_3">
+          <widget class="QPushButton" name="compile_and_run">
            <property name="text">
             <string>Compile and Run</string>
            </property>
@@ -532,7 +547,7 @@
      <x>0</x>
      <y>0</y>
      <width>1080</width>
-     <height>25</height>
+     <height>29</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -576,17 +591,30 @@
    <extends>QTabWidget</extends>
    <header location="global">mytabwidget.h</header>
    <container>1</container>
+   <slots>
+    <slot>initialize()</slot>
+   </slots>
   </customwidget>
   <customwidget>
    <class>CodeView</class>
    <extends>QWidget</extends>
    <header location="global">CodeView.h</header>
    <container>1</container>
+   <slots>
+    <signal>signal_add_entry(QString)</signal>
+    <slot>set_code()</slot>
+    <slot>initialize()</slot>
+   </slots>
   </customwidget>
   <customwidget>
    <class>NeuronListView</class>
    <extends>QListView</extends>
    <header location="global">ListView.h</header>
+   <slots>
+    <signal>signal_show_template(int,QString)</signal>
+    <slot>initialize()</slot>
+    <slot>add_entry(QString)</slot>
+   </slots>
   </customwidget>
   <customwidget>
    <class>GLNetworkWidget</class>
@@ -653,10 +681,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>compile_3</sender>
+   <sender>compile_and_run</sender>
    <signal>pressed()</signal>
    <receiver>ANNarchyEditor</receiver>
-   <slot>compile()</slot>
+   <slot>compile_and_run()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>773</x>
@@ -764,9 +792,105 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>neur_general</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>198</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>neur_general</sender>
+   <signal>signal_show_template(int,QString)</signal>
+   <receiver>objects</receiver>
+   <slot>set_code()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>198</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>views</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>general</receiver>
+   <slot>setCurrentIndex(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>318</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>views</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>318</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>objects</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>objects</sender>
+   <signal>signal_add_entry(QString)</signal>
+   <receiver>neur_general</receiver>
+   <slot>add_entry(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>334</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>198</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>initialize()</signal>
-  <slot>compile()</slot>
+  <slot>compile_and_run()</slot>
  </slots>
 </ui>

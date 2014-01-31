@@ -47,6 +47,7 @@ _visualizer = None
 annarchy_dir = os.getcwd() + '/annarchy'
 
 _compiled = False   #I know it's evil
+_repository = None
 
 # discretization timestamp
 config = dict(

@@ -18,4 +18,4 @@ def sim():
         simulate(1)
         render()
 
-ANNarchyEditor(sim, None )
+ANNarchyEditor( sim )

@@ -1,5 +1,5 @@
 from PyQt4.QtGui import QListView, QInputDialog, QStandardItemModel, QStandardItem, QMessageBox
-from PyQt4.QtCore import SIGNAL, SLOT, pyqtSlot, pyqtSignal
+from PyQt4.QtCore import SIGNAL, SLOT, pyqtSlot, pyqtSignal, QString
 
 class ListView(QListView):
     _update = pyqtSignal(str)
@@ -26,27 +26,31 @@ class ListView(QListView):
         self._update.emit(index.data().toString())
             
 class NeuronListView(ListView):
-    _show_template = pyqtSignal(int, str)
+    signal_show_template = pyqtSignal(int, QString)
     
     def __init__(self, parent):
         super(ListView, self).__init__(parent)
         
-    def initialize(self, entries=[]):
+    @pyqtSlot()
+    def initialize(self):
+
         self._model = QStandardItemModel(self)
-        
-        # user elements
-        for it in entries:
-            item = QStandardItem(it)   
-            item.setCheckable(True) 
-            self._model.appendRow(item)
-        
-        item = QStandardItem("<Press here to add ...>")
-        self._model.appendRow(item)
-        
+        self._model.appendRow(QStandardItem("<Press here to add ...>"))
         self.setModel(self._model)
         
         self.connect(self,SIGNAL("clicked(QModelIndex)"), self, SLOT("ItemClicked(QModelIndex)"))
+
+    @pyqtSlot("QString")
+    def add_entry(self, name):
+        self._model.appendRow(QStandardItem(name))
         
+    @pyqtSlot("QModelIndex")
+    def ItemClicked(self, index):
+        if index.data().toString() == "<Press here to add ...>":
+            self.input_dialog()
+            
+        self.signal_show_template.emit( 0, self.currentIndex().data().toString() )
+
     def input_dialog(self):
         text, ok = QInputDialog.getText(self, 'New neuron definition', 'Enter neuron type name:')
         
@@ -61,11 +65,3 @@ class NeuronListView(ListView):
             
             idx = self._model.index(self._model.rowCount()-1, 0)
             self.setCurrentIndex( idx )
-
-    @pyqtSlot("QModelIndex")
-    def ItemClicked(self, index):
-        if index.data().toString() == "<Press here to add ...>":
-            self.input_dialog()
-            self._show_template.emit( 0, self.currentIndex().data().toString() )
-        else:
-            self._update.emit(index.data().toString())            
