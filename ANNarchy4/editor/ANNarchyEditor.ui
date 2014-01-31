@@ -157,7 +157,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QListView" name="syn_general"/>
+          <widget class="SynapseListView" name="syn_general"/>
          </item>
         </layout>
        </widget>
@@ -172,6 +172,16 @@
             <layout class="QVBoxLayout" name="verticalLayout_10">
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_9">
+               <item>
+                <widget class="QLabel" name="label_17">
+                 <property name="text">
+                  <string>Available networks</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QListWidget" name="listWidget"/>
+               </item>
                <item>
                 <spacer name="verticalSpacer_6">
                  <property name="orientation">
@@ -584,6 +594,14 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>save</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -601,9 +619,11 @@
    <header location="global">CodeView.h</header>
    <container>1</container>
    <slots>
-    <signal>signal_add_entry(QString)</signal>
+    <signal>signal_add_entry_to_neur(QString)</signal>
+    <signal>signal_add_entry_to_syn(QString)</signal>
     <slot>set_code()</slot>
     <slot>initialize()</slot>
+    <slot>save()</slot>
    </slots>
   </customwidget>
   <customwidget>
@@ -660,6 +680,16 @@
    <extends>QWidget</extends>
    <header location="global">GLObjects.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SynapseListView</class>
+   <extends>QListView</extends>
+   <header>ListView.h</header>
+   <slots>
+    <signal>signal_show_template(int,QString)</signal>
+    <slot>initialize()</slot>
+    <slot>add_entry(QString)</slot>
+   </slots>
   </customwidget>
  </customwidgets>
  <resources/>
@@ -874,7 +904,7 @@
   </connection>
   <connection>
    <sender>objects</sender>
-   <signal>signal_add_entry(QString)</signal>
+   <signal>signal_add_entry_to_neur(QString)</signal>
    <receiver>neur_general</receiver>
    <slot>add_entry(QString)</slot>
    <hints>
@@ -885,6 +915,70 @@
     <hint type="destinationlabel">
      <x>842</x>
      <y>198</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave</sender>
+   <signal>triggered()</signal>
+   <receiver>objects</receiver>
+   <slot>save()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>syn_general</sender>
+   <signal>signal_show_template(int,QString)</signal>
+   <receiver>objects</receiver>
+   <slot>set_code()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>481</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>syn_general</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>481</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>objects</sender>
+   <signal>signal_add_entry_to_syn(QString)</signal>
+   <receiver>syn_general</receiver>
+   <slot>add_entry(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>334</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>481</y>
     </hint>
    </hints>
   </connection>

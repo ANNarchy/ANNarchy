@@ -5,6 +5,7 @@ class Repository(object):
     
     def __init__(self):
         self._neuron_defs = {}
+        self._synapse_defs = {}
 
     def save(self):
         """
@@ -12,6 +13,8 @@ class Repository(object):
         """
         root = etree.Element( 'database' )
         
+        #
+        # save neurons
         neur_tree = etree.SubElement( root, 'neurons')
         for name, code in self._neuron_defs.iteritems():
             neur_tag = etree.SubElement( neur_tree, str(name))
@@ -25,6 +28,21 @@ class Repository(object):
                 code_tag = etree.SubElement( neur_code , 'line'+str(i)  )
                 code_tag.text = line
                 i+=1                  
+
+        syn_tree = etree.SubElement( root, 'synapses')
+        for name, code in self._neuron_defs.iteritems():
+            syn_tag = etree.SubElement( syn_tree, str(name))
+            
+            syn_name = etree.SubElement( syn_tag, 'name')
+            syn_name.text = str(name)
+
+            syn_code = etree.SubElement( syn_tag, 'code')
+            i = 0
+            for line in str(code).split('\n'):
+                syn_tag = etree.SubElement( syn_code , 'line'+str(i)  )
+                syn_tag.text = line
+                i+=1                  
+
         #
         # save the data to file
         fname = open('./neur_rep.xml', 'w')
@@ -51,18 +69,47 @@ class Repository(object):
                     neur_code += '\n'
 
             self._neuron_defs[neur_name] = neur_code
-    
-    def add_neuron(self, name, code):
-        self._neuron_defs[str(name)] = code
 
-    def update_neuron(self, name, code):
-        self._neuron_defs[str(name)] = code
+        syn_root = doc.findall('synapses') # find neuron root node
+        for syn in syn_root[0].getchildren():
+            syn_name = syn.find('name').text
+            syn_code = ''
+
+            for line in syn.find('code').getchildren():
+                if line.text != None:
+                    syn_code += str(line.text)+'\n'
+                else:
+                    syn_code += '\n'
+
+            self._synapse_defs[syn_name] = syn_code
     
-    def get_neuron_entries(self):
-        return self._neuron_defs.keys()
+    def add_object(self, type, name, code):
+        if type == 'neuron':
+            self._neuron_defs[str(name)] = code
+        else:
+            self._synapse_defs[str(name)] = code
+
+    def update_object(self, type, name, code):
+        if type == 'neuron':
+            self._neuron_defs[str(name)] = code
+        else:
+            self._synapse_defs[str(name)] = code
     
-    def get_neuron(self, name):
-        return self._neuron_defs[str(name)]
-     
+    def get_entries(self, type):
+        if type == 'neuron':
+            return self._neuron_defs.keys()
+        else:
+            return self._synapse_defs.keys()
+    
+    def get_object(self, type, name):
+        if type == 'neuron':
+            return self._neuron_defs[str(name)]
+        else:
+            return self._synapse_defs[str(name)]
+          
     def entry_contained(self, name):
-        return name in self._neuron_defs.keys()
+        exist = (name in self._neuron_defs.keys()) or \
+                (name in self._synapse_defs.keys())
+                
+        return exist
+    

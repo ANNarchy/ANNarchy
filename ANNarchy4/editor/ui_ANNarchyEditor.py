@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Fri Jan 31 21:38:03 2014
+# Created: Fri Jan 31 23:29:57 2014
 #      by: PyQt4 UI code generator 4.9.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -105,7 +105,7 @@ class Ui_ANNarchyEditor(object):
         self.label_8 = QtGui.QLabel(self.obj_tab)
         self.label_8.setObjectName(_fromUtf8("label_8"))
         self.verticalLayout.addWidget(self.label_8)
-        self.syn_general = QtGui.QListView(self.obj_tab)
+        self.syn_general = SynapseListView(self.obj_tab)
         self.syn_general.setObjectName(_fromUtf8("syn_general"))
         self.verticalLayout.addWidget(self.syn_general)
         self.general.addWidget(self.obj_tab)
@@ -121,6 +121,12 @@ class Ui_ANNarchyEditor(object):
         self.verticalLayout_10.setObjectName(_fromUtf8("verticalLayout_10"))
         self.verticalLayout_9 = QtGui.QVBoxLayout()
         self.verticalLayout_9.setObjectName(_fromUtf8("verticalLayout_9"))
+        self.label_17 = QtGui.QLabel(self.page_4)
+        self.label_17.setObjectName(_fromUtf8("label_17"))
+        self.verticalLayout_9.addWidget(self.label_17)
+        self.listWidget = QtGui.QListWidget(self.page_4)
+        self.listWidget.setObjectName(_fromUtf8("listWidget"))
+        self.verticalLayout_9.addWidget(self.listWidget)
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_9.addItem(spacerItem)
         self.label_14 = QtGui.QLabel(self.page_4)
@@ -310,6 +316,8 @@ class Ui_ANNarchyEditor(object):
         self.actionOpen.setObjectName(_fromUtf8("actionOpen"))
         self.actionQuit = QtGui.QAction(ANNarchyEditor)
         self.actionQuit.setObjectName(_fromUtf8("actionQuit"))
+        self.actionSave = QtGui.QAction(ANNarchyEditor)
+        self.actionSave.setObjectName(_fromUtf8("actionSave"))
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionQuit)
         self.menubar.addAction(self.menuFile.menuAction())
@@ -333,7 +341,11 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.views, QtCore.SIGNAL(_fromUtf8("currentChanged(int)")), self.general.setCurrentIndex)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.views.initialize)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.objects.initialize)
-        QtCore.QObject.connect(self.objects, QtCore.SIGNAL(_fromUtf8("signal_add_entry(QString)")), self.neur_general.add_entry)
+        QtCore.QObject.connect(self.objects, QtCore.SIGNAL(_fromUtf8("signal_add_entry_to_neur(QString)")), self.neur_general.add_entry)
+        QtCore.QObject.connect(self.actionSave, QtCore.SIGNAL(_fromUtf8("triggered()")), self.objects.save)
+        QtCore.QObject.connect(self.syn_general, QtCore.SIGNAL(_fromUtf8("signal_show_template(int,QString)")), self.objects.set_code)
+        QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.syn_general.initialize)
+        QtCore.QObject.connect(self.objects, QtCore.SIGNAL(_fromUtf8("signal_add_entry_to_syn(QString)")), self.syn_general.add_entry)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):
@@ -346,6 +358,7 @@ class Ui_ANNarchyEditor(object):
         self.views.setTabText(self.views.indexOf(self.complet_page), QtGui.QApplication.translate("ANNarchyEditor", "CompleteScript", None, QtGui.QApplication.UnicodeUTF8))
         self.label_9.setText(QtGui.QApplication.translate("ANNarchyEditor", "Neurons", None, QtGui.QApplication.UnicodeUTF8))
         self.label_8.setText(QtGui.QApplication.translate("ANNarchyEditor", "Synapses", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_17.setText(QtGui.QApplication.translate("ANNarchyEditor", "Available networks", None, QtGui.QApplication.UnicodeUTF8))
         self.label_14.setText(QtGui.QApplication.translate("ANNarchyEditor", "Select a population", None, QtGui.QApplication.UnicodeUTF8))
         self.label_15.setText(QtGui.QApplication.translate("ANNarchyEditor", "to get detailed", None, QtGui.QApplication.UnicodeUTF8))
         self.label_16.setText(QtGui.QApplication.translate("ANNarchyEditor", "information", None, QtGui.QApplication.UnicodeUTF8))
@@ -374,11 +387,13 @@ class Ui_ANNarchyEditor(object):
         self.actionOpen.setShortcut(QtGui.QApplication.translate("ANNarchyEditor", "Ctrl+O", None, QtGui.QApplication.UnicodeUTF8))
         self.actionQuit.setText(QtGui.QApplication.translate("ANNarchyEditor", "Quit", None, QtGui.QApplication.UnicodeUTF8))
         self.actionQuit.setShortcut(QtGui.QApplication.translate("ANNarchyEditor", "Ctrl+Q", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionSave.setText(QtGui.QApplication.translate("ANNarchyEditor", "save", None, QtGui.QApplication.UnicodeUTF8))
+        self.actionSave.setShortcut(QtGui.QApplication.translate("ANNarchyEditor", "Ctrl+S", None, QtGui.QApplication.UnicodeUTF8))
 
 from mytabwidget import MyTabWidget
 from StackWidget import StackWidget
 from GLNetwork import GLNetworkWidget
 from GLObjects import GLBaseWidget
-from VisWidget import VisualizerWidget, VisControlWidget
+from VisWidget import VisControlWidget, VisualizerWidget
 from CodeView import CodeView
-from ListView import NeuronListView
+from ListView import NeuronListView, SynapseListView

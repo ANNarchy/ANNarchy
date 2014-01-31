@@ -32,39 +32,61 @@ from CodeTemplates import *
 from ANNarchy4.core import Global
 
 class CodeView(QsciScintilla):
-    signal_add_entry = pyqtSignal(QString)
+    signal_add_entry_to_neur = pyqtSignal(QString)
+    signal_add_entry_to_syn = pyqtSignal(QString)
     
     def __init__(self, parent):
         QsciScintilla.__init__(self, parent)
         self._loaded_script = None
         self._curr_name = None
+        self._curr_type = None
         self._rep = Global._repository
         self.setLexer(QsciLexerPython(self))
         
     @pyqtSlot()
     def initialize(self):
         
-        for name in self._rep.get_neuron_entries():
-            self.signal_add_entry.emit(name)
+        for name in self._rep.get_entries('neuron'):
+            self.signal_add_entry_to_neur.emit(name)
+
+        for name in self._rep.get_entries('synapse'):
+            self.signal_add_entry_to_syn.emit(name)
         
-        if len(self._rep.get_neuron_entries())>0:
-            self._curr_name = self._rep.get_neuron_entries()[0]
-            self.setText(self._rep.get_neuron(self._curr_name))
+        if len(self._rep.get_entries('neuron'))>0:
+            self._curr_name = self._rep.get_entries('neuron')[0]
+            self._curr_type = 'neuron'
+            self.setText(self._rep.get_object('neuron', self._curr_name))
+
+    @pyqtSlot()
+    def save(self):
+        print 'xxx'
+        self._rep.update( self._curr_name, self.text() )
     
     @pyqtSlot(int, QString)
     def set_code(self, type, name):
+        if type == 0 :
+            obj = 'neuron'
+        elif type == 2:
+            obj = 'synapse'
+
+        print type, obj, name
+
         #
         # create the new entry
         if not self._rep.entry_contained(name):
-            code = rate_neuron_def % { 'name': name }
-            self._rep.add_neuron(name, code)
+            if type == 0 :
+                code = rate_neuron_def % { 'name': name }
+            elif type == 2:
+                code = rate_synapse_def % { 'name': name }
+                
+            self._rep.add_object(obj, name, code)
             if self._curr_name == None:
                 self.setText(code)
 
         #
         # check if an other definition is remain                
         if self._rep.entry_contained(self._curr_name):
-            if self._rep.get_neuron(self._curr_name) != self.text():
+            if self._rep.get_object(self._curr_type, self._curr_name) != self.text():
                 reply = QMessageBox.question(self, 'Save changes', 'You want to save the modified object?', QMessageBox.Yes, QMessageBox.No )
              
                 #
@@ -73,9 +95,10 @@ class CodeView(QsciScintilla):
                     self._rep.update_neuron(self._curr_name, self.text())
     
             # show the new data set
-            self.setText( self._rep.get_neuron(name))
+            self.setText( self._rep.get_object( obj, name) )
             
         self._curr_name = name
+        self._curr_type = obj
 
     def load_file(self):
         filename = QFileDialog.getOpenFileName(self, 'Open File', os.getcwd())

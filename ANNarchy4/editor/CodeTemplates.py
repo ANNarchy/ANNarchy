@@ -32,3 +32,15 @@ rate_neuron_def = \
     '''
 )
 """
+
+rate_synapse_def = \
+"""
+%(name)s = RateSynapse(
+    parameters=''' 
+
+    ''',
+    equations='''
+
+    '''
+)  
+"""
