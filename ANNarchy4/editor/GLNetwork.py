@@ -23,6 +23,7 @@ class GLNetworkWidget(GLBaseWidget):
         
         self._quad = None
         self._drawing = False
+        self._selected = -1
 
     def set_repository(self, repo):
         self._rep = repo
@@ -61,13 +62,20 @@ class GLNetworkWidget(GLBaseWidget):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT) 
         
         gl.glColor3f(0.0,0.0,0.0)
-        for quad in self.populations.itervalues():
+        for id, quad in self.populations.iteritems():
+            if id == self._selected:
+                gl.glColor3f(1.0,0.0,0.0)
+                
             gl.glBegin(gl.GL_LINE_LOOP)
             gl.glVertex2f(quad.p1._x, quad.p1._y)
             gl.glVertex2f(quad.p2._x, quad.p2._y)
             gl.glVertex2f(quad.p3._x, quad.p3._y)
             gl.glVertex2f(quad.p4._x, quad.p4._y)
             gl.glEnd()
+
+            if id == self._selected:
+                gl.glColor3f(0.0,0.0,0.0)
+                
 
         for line in self.projections:
             gl.glBegin(gl.GL_LINES)
@@ -102,14 +110,14 @@ class GLNetworkWidget(GLBaseWidget):
         # the mouse and view coord system are invers to each other
         p = Point2d(mousePos.x()/float(self.width), 1.0 - mousePos.y()/float(self.height))
         
-        selected = False
+        self._selected = -1
         for id, quad in self.populations.iteritems():
             if quad.point_within(p):
                 print 'selected quad', id
                 self.update_population.emit(1, id)
-                selected = True
+                self._selected = id
         
-        if not selected: 
+        if self._selected == -1: 
             self.update_population.emit(0, 0)
             self._quad = None
             
