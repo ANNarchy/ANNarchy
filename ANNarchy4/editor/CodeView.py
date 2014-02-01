@@ -41,7 +41,6 @@ class CodeView(QsciScintilla):
 
     def set_repository(self, repo=None):
         self._rep = repo
-        print repo
         
     @pyqtSlot()
     def initialize(self):

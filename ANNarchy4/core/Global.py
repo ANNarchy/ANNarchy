@@ -98,7 +98,7 @@ def compile(clean=False, debug_build=False, cpp_stand_alone=False, profile_enabl
     
 def render():
     if _visualizer:
-        _visualizer.render()
+        _visualizer.render_data()
         
 def reset(states=False, connections=False):
     """

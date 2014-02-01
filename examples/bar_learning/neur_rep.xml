@@ -13,6 +13,12 @@
         <line7>    """</line7>
         <line8>)</line8>
         <line9></line9>
+        <line10></line10>
+        <line11></line11>
+        <line12></line12>
+        <line13></line13>
+        <line14></line14>
+        <line15></line15>
       </code>
     </LeakyNeuron>
     <InputNeuron>
@@ -28,6 +34,12 @@
         <line7>    """</line7>
         <line8>)</line8>
         <line9></line9>
+        <line10></line10>
+        <line11></line11>
+        <line12></line12>
+        <line13></line13>
+        <line14></line14>
+        <line15></line15>
       </code>
     </InputNeuron>
   </neurons>
@@ -47,6 +59,12 @@
         <line9></line9>
         <line10></line10>
         <line11></line11>
+        <line12></line12>
+        <line13></line13>
+        <line14></line14>
+        <line15></line15>
+        <line16></line16>
+        <line17></line17>
       </code>
     </AntiHebb>
     <Oja>
@@ -64,7 +82,18 @@
         <line9></line9>
         <line10></line10>
         <line11></line11>
+        <line12></line12>
+        <line13></line13>
+        <line14></line14>
+        <line15></line15>
+        <line16></line16>
+        <line17></line17>
       </code>
     </Oja>
   </synapses>
+  <networks>
+    <Bar_Learning>
+      <name>Bar_Learning</name>
+    </Bar_Learning>
+  </networks>
 </database>

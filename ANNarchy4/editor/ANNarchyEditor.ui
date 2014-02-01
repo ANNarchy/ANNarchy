@@ -394,7 +394,7 @@
                    <item>
                     <widget class="QLineEdit" name="grid_x_dim">
                      <property name="text">
-                      <string>1</string>
+                      <string>2</string>
                      </property>
                     </widget>
                    </item>
@@ -501,17 +501,35 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QComboBox" name="comboBox"/>
+                  <widget class="QComboBox" name="plot_select"/>
                  </item>
                 </layout>
                </item>
                <item>
-                <widget class="QStackedWidget" name="stackedWidget">
+                <widget class="QStackedWidget" name="plot_config">
                  <property name="currentIndex">
                   <number>1</number>
                  </property>
-                 <widget class="QWidget" name="page_2"/>
-                 <widget class="QWidget" name="page_3"/>
+                 <widget class="QWidget" name="plot_none"/>
+                 <widget class="QWidget" name="plot_1d">
+                  <layout class="QHBoxLayout" name="horizontalLayout">
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_5">
+                     <item>
+                      <widget class="QLabel" name="label_18">
+                       <property name="text">
+                        <string>Color</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="plot_1d_color"/>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                 <widget class="QWidget" name="plot_2d"/>
                 </widget>
                </item>
               </layout>
@@ -663,8 +681,10 @@
    <container>1</container>
    <slots>
     <signal>signal_change_grid(int,int)</signal>
+    <signal>change_color_plot1d(int,int,int)</signal>
     <slot>initialize()</slot>
     <slot>change_grid()</slot>
+    <slot>change_color(int)</slot>
    </slots>
   </customwidget>
   <customwidget>
@@ -674,6 +694,7 @@
    <container>1</container>
    <slots>
     <slot>change_grid()</slot>
+    <slot>change_color(int,int,int)</slot>
    </slots>
   </customwidget>
   <customwidget>
@@ -990,6 +1011,38 @@
     <hint type="destinationlabel">
      <x>308</x>
      <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>plot_select</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>plot_config</receiver>
+   <slot>setCurrentIndex(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>946</x>
+     <y>373</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>846</x>
+     <y>421</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>plot_1d_color</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>vis_control</receiver>
+   <slot>change_color(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>941</x>
+     <y>421</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
     </hint>
    </hints>
   </connection>

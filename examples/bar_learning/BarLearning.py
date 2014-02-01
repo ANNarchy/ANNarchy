@@ -110,4 +110,4 @@ if __name__=='__main__':
     plot3 = {'proj': input_feature, 'var': 'value', 
          'max': 0.1, 'title': 'Receptive fields'}
 
-    ANNarchyEditor(simulate_sth, [plot1, plot2, plot3 ] )
+    ANNarchyEditor( simulate_sth )

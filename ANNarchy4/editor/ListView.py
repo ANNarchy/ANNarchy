@@ -22,15 +22,12 @@ class NeuronListView(QListView):
         self.setModel(self._model)
         self.connect(self,SIGNAL("clicked(QModelIndex)"), self, SLOT("ItemClicked(QModelIndex)"))
 
-    @pyqtSlot("QString")
-    def add_entry(self, name):
-        self._model.appendRow(QStandardItem(name))
-        
     @pyqtSlot("QModelIndex")
     def ItemClicked(self, index):
         if index.data().toString() == "<Press here to add ...>":
             self.input_dialog()
             
+        # will update the repository !!
         self.signal_show_template.emit( 0, self.currentIndex().data().toString() )
 
     def input_dialog(self):
@@ -67,16 +64,13 @@ class SynapseListView(QListView):
         self.setModel(self._model)
         
         self.connect(self,SIGNAL("clicked(QModelIndex)"), self, SLOT("ItemClicked(QModelIndex)"))
-
-    @pyqtSlot("QString")
-    def add_entry(self, name):
-        self._model.appendRow(QStandardItem(name))
         
     @pyqtSlot("QModelIndex")
     def ItemClicked(self, index):
         if index.data().toString() == "<Press here to add ...>":
             self.input_dialog()
             
+        # will update the repository !!
         self.signal_show_template.emit( 2, self.currentIndex().data().toString() )
 
     def input_dialog(self):
@@ -108,13 +102,15 @@ class NetworkListView(QListView):
         
     @pyqtSlot()
     def initialize(self):
+        self._model = QStandardItemModel(self)
+        self._model.appendRow(QStandardItem("<Press here to add ...>"))
+
+        for name in self._rep.get_entries('network'):
+            self._model.appendRow(QStandardItem( name ))            
+        self.setModel(self._model)
+
         self.connect(self,SIGNAL("clicked(QModelIndex)"), self, SLOT("ItemClicked(QModelIndex)"))
 
-    @pyqtSlot("QString")
-    def add_entry(self, name):
-        self._model.appendRow(QStandardItem(name))
-        self._rep.add_object('network', name)
-        
     @pyqtSlot("QModelIndex")
     def ItemClicked(self, index):
         if index.data().toString() == "<Press here to add ...>":
@@ -133,6 +129,7 @@ class NetworkListView(QListView):
             item = QStandardItem( text )
             self._model.appendRow(item)
             self.setModel(self._model)
+            self._rep.add_object('network', text, {})
             
             idx = self._model.index(self._model.rowCount()-1, 0)
             self.setCurrentIndex( idx )

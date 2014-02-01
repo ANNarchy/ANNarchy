@@ -3,8 +3,8 @@ import math
 
 def sim():
 
-    Global._visualizer.set_color(0, 0, 0.0, 0.6, 0.0)
-    Global._visualizer.set_color(1, 0, 0.6, 0.0, 0.0)
+    #Global._visualizer.set_color(0, 0, 0.0, 0.6, 0.0)
+    #Global._visualizer.set_color(1, 0, 0.6, 0.0, 0.0)
     
     for t in range(10000):
         

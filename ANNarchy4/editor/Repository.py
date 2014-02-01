@@ -9,6 +9,7 @@ class Repository(QObject):
         
         self._neuron_defs = {}
         self._synapse_defs = {}
+        self._network_defs = {}
         
         #
         # function calls
@@ -45,32 +46,53 @@ class Repository(QObject):
         #
         # save neurons
         neur_tree = etree.SubElement( root, 'neurons')
-        for name, code in self._neuron_defs.iteritems():
+        for name, data in self._neuron_defs.iteritems():
             neur_tag = etree.SubElement( neur_tree, str(name))
             
             neur_name = etree.SubElement( neur_tag, 'name')
             neur_name.text = str(name)
 
-            neur_code = etree.SubElement( neur_tag, 'code')
+            neur_data = etree.SubElement( neur_tag, 'code')
             i = 0
-            for line in str(code).split('\n'):
-                code_tag = etree.SubElement( neur_code , 'line'+str(i)  )
-                code_tag.text = line
+            for line in str(data).split('\n'):
+                data_tag = etree.SubElement( neur_data , 'line'+str(i)  )
+                data_tag.text = line
                 i+=1                  
 
+        #
+        # save neurons
         syn_tree = etree.SubElement( root, 'synapses')
-        for name, code in self._synapse_defs.iteritems():
+        for name, data in self._synapse_defs.iteritems():
             syn_tag = etree.SubElement( syn_tree, str(name))
             
             syn_name = etree.SubElement( syn_tag, 'name')
             syn_name.text = str(name)
 
-            syn_code = etree.SubElement( syn_tag, 'code')
+            syn_data = etree.SubElement( syn_tag, 'code')
             i = 0
-            for line in str(code).split('\n'):
-                syn_tag = etree.SubElement( syn_code , 'line'+str(i)  )
+            for line in str(data).split('\n'):
+                syn_tag = etree.SubElement( syn_data , 'line'+str(i)  )
                 syn_tag.text = line
                 i+=1                  
+
+        #
+        # save network
+        net_tree = etree.SubElement( root, 'networks')
+        for name, data in self._network_defs.iteritems():
+            net_tag = etree.SubElement( net_tree, str(name))
+            net_name = etree.SubElement( net_tag, 'name')
+            net_name.text = str(name)
+            
+#===============================================================================
+# 
+#             syn_data = etree.SubElement( syn_tag, 'data')
+#             i = 0
+#             for line in str(data).split('\n'):
+#                 syn_tag = etree.SubElement( syn_data , 'line'+str(i)  )
+#                 syn_tag.text = line
+#                 i+=1                  
+#===============================================================================
+
 
         #
         # save the data to file
@@ -87,41 +109,58 @@ class Repository(QObject):
             return
         
         neur_root = doc.findall('neurons') # find neuron root node
-        for neur in neur_root[0].getchildren():
-            neur_name = neur.find('name').text
-            neur_code = ''
+        if neur_root != []:
+            for neur in neur_root[0].getchildren():
+                neur_name = neur.find('name').text
+                neur_data = ''
+    
+                for line in neur.find('code').getchildren():
+                    if line.text != None:
+                        neur_data += str(line.text)+'\n'
+                    else:
+                        neur_data += '\n'
+    
+                self._neuron_defs[neur_name] = neur_data
 
-            for line in neur.find('code').getchildren():
-                if line.text != None:
-                    neur_code += str(line.text)+'\n'
-                else:
-                    neur_code += '\n'
-
-            self._neuron_defs[neur_name] = neur_code
-
-        syn_root = doc.findall('synapses') # find neuron root node
+        syn_root = doc.findall('synapses') # find synapse root node
         if syn_root != []:
             for syn in syn_root[0].getchildren():
                 syn_name = syn.find('name').text
-                syn_code = ''
+                syn_data = ''
     
                 for line in syn.find('code').getchildren():
                     if line.text != None:
-                        syn_code += str(line.text)+'\n'
+                        syn_data += str(line.text)+'\n'
                     else:
-                        syn_code += '\n'
+                        syn_data += '\n'
     
-                self._synapse_defs[syn_name] = syn_code
+                self._synapse_defs[syn_name] = syn_data
 
-    def add_object(self, type, name, code=None):
+        net_root = doc.findall('networks') # find network root node
+        if net_root != []:
+            for net in net_root[0].getchildren():
+                net_name = net.find('name').text
+    #===========================================================================
+    #             syn_data = ''
+    # 
+    #             for line in syn.find('data').getchildren():
+    #                 if line.text != None:
+    #                     syn_data += str(line.text)+'\n'
+    #                 else:
+    #                     syn_data += '\n'
+    #===========================================================================
+    
+                self._network_defs[net_name] = {}
+
+    def add_object(self, type, name, data):
         try:
-            self._add_obj[type](name, code)
+            self._add_obj[type](name, data)
         except KeyError:
             print 'Update object: type', type, 'not known.'
 
-    def update_object(self, type, name, code):
+    def update_object(self, type, name, data):
         try:
-            self._update_obj[type](name, code)
+            self._update_obj[type](name, data)
         except KeyError:
             print 'Update object: type', type, 'not known.'
     
@@ -148,23 +187,23 @@ class Repository(QObject):
     #    Object handling
     #
     #######################################################
-    def _add_neuron(self, name, code):
-        self._neuron_defs[str(name)] = code
+    def _add_neuron(self, name, data):
+        self._neuron_defs[str(name)] = data
         
-    def _add_synapse(self, name, code):
-        self._synapse_defs[str(name)] = code
+    def _add_synapse(self, name, data):
+        self._synapse_defs[str(name)] = data
         
-    def _add_network(self, name):
-        self._network_defs[str(name)] = {}
+    def _add_network(self, name, data):
+        self._network_defs[str(name)] = data
 
-    def _update_neuron(self, name, code):
-        self._neuron_defs[str(name)] = code
+    def _update_neuron(self, name, data):
+        self._neuron_defs[str(name)] = data
         
-    def _update_synapse(self, name, code):
-        self._synapse_defs[str(name)] = code
+    def _update_synapse(self, name, data):
+        self._synapse_defs[str(name)] = data
         
-    def _update_network(self, name, code):
-        print code
+    def _update_network(self, name, data):
+        print data
 
     def _neuron_entries(self):
         return self._neuron_defs.keys()

@@ -29,7 +29,7 @@ class GLPlot1d(GLBaseWidget):
         self.updateGL()
         
     def set_color(self, r, g, b):
-        self._color = [ r, g, b];
+        self._color = [ r, g, b ];
 
     def set_data(self, x_data, y_data=[]):
         self._y_data = y_data
@@ -42,7 +42,7 @@ class GLPlot1d(GLBaseWidget):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         # the window corner OpenGL coordinates are (-+1, -+1)
-        gl.glOrtho(0, self._count, -1, 1, 0, 1)
+        gl.glOrtho(0, self._count, -1.2, 1.2, 0, 1)
         
     def paintGL(self):
         """
