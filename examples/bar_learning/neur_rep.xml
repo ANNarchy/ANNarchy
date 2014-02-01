@@ -13,11 +13,6 @@
         <line7>    """</line7>
         <line8>)</line8>
         <line9></line9>
-        <line10></line10>
-        <line11></line11>
-        <line12></line12>
-        <line13></line13>
-        <line14></line14>
       </code>
     </LeakyNeuron>
     <InputNeuron>
@@ -33,11 +28,6 @@
         <line7>    """</line7>
         <line8>)</line8>
         <line9></line9>
-        <line10></line10>
-        <line11></line11>
-        <line12></line12>
-        <line13></line13>
-        <line14></line14>
       </code>
     </InputNeuron>
   </neurons>
@@ -55,6 +45,8 @@
         <line7>    """</line7>
         <line8>)  </line8>
         <line9></line9>
+        <line10></line10>
+        <line11></line11>
       </code>
     </AntiHebb>
     <Oja>
@@ -70,6 +62,8 @@
         <line7>    """</line7>
         <line8>)  </line8>
         <line9></line9>
+        <line10></line10>
+        <line11></line11>
       </code>
     </Oja>
   </synapses>

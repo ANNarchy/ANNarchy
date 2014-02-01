@@ -62,7 +62,7 @@ class SynapseListView(QListView):
         self._model = QStandardItemModel(self)
         self._model.appendRow(QStandardItem("<Press here to add ...>"))
 
-        for name in self._rep.get_entries('synapses'):
+        for name in self._rep.get_entries('synapse'):
             self._model.appendRow(QStandardItem( name ))            
         self.setModel(self._model)
         
@@ -113,6 +113,7 @@ class NetworkListView(QListView):
     @pyqtSlot("QString")
     def add_entry(self, name):
         self._model.appendRow(QStandardItem(name))
+        self._rep.add_object('network', name)
         
     @pyqtSlot("QModelIndex")
     def ItemClicked(self, index):

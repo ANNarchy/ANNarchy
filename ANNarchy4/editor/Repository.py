@@ -9,6 +9,32 @@ class Repository(QObject):
         
         self._neuron_defs = {}
         self._synapse_defs = {}
+        
+        #
+        # function calls
+        self._add_obj = { 
+         'neuron' : self._add_neuron, 
+         'synapse' : self._add_synapse,
+         'network' : self._add_network
+        }
+
+        self._update_obj = { 
+         'neuron' : self._update_neuron, 
+         'synapse' : self._update_synapse,
+         'network' : self._update_network
+        }
+        
+        self._get_entries = {
+         'neuron' : self._neuron_entries, 
+         'synapse' : self._synapse_entries,
+         'network' : self._network_entries
+        }
+
+        self._get_obj = {
+         'neuron' : self._get_neuron, 
+         'synapse' : self._get_synapse,
+         'network' : self._get_network
+        }
 
     def save(self):
         """
@@ -86,34 +112,74 @@ class Repository(QObject):
                         syn_code += '\n'
     
                 self._synapse_defs[syn_name] = syn_code
-    
-    def add_object(self, type, name, code):
-        if type == 'neuron':
-            self._neuron_defs[str(name)] = code
-        else:
-            self._synapse_defs[str(name)] = code
+
+    def add_object(self, type, name, code=None):
+        try:
+            self._add_obj[type](name, code)
+        except KeyError:
+            print 'Update object: type', type, 'not known.'
 
     def update_object(self, type, name, code):
-        if type == 'neuron':
-            self._neuron_defs[str(name)] = code
-        else:
-            self._synapse_defs[str(name)] = code
+        try:
+            self._update_obj[type](name, code)
+        except KeyError:
+            print 'Update object: type', type, 'not known.'
     
     def get_entries(self, type):
-        if type == 'neuron':
-            return self._neuron_defs.keys()
-        else:
-            return self._synapse_defs.keys()
+        try:
+            return self._get_entries[type]()
+        except KeyError:
+            print 'Get entries: type', type, 'not known.'
     
     def get_object(self, type, name):
-        if type == 'neuron':
-            return self._neuron_defs[str(name)]
-        else:
-            return self._synapse_defs[str(name)]
+        try:
+            return self._get_obj[type](name)
+        except KeyError:
+            print 'Get entries: type', type, 'not known.'
           
     def entry_contained(self, name):
         exist = (name in self._neuron_defs.keys()) or \
                 (name in self._synapse_defs.keys())
                 
         return exist
-    
+
+    #######################################################
+    #
+    #    Object handling
+    #
+    #######################################################
+    def _add_neuron(self, name, code):
+        self._neuron_defs[str(name)] = code
+        
+    def _add_synapse(self, name, code):
+        self._synapse_defs[str(name)] = code
+        
+    def _add_network(self, name):
+        self._network_defs[str(name)] = {}
+
+    def _update_neuron(self, name, code):
+        self._neuron_defs[str(name)] = code
+        
+    def _update_synapse(self, name, code):
+        self._synapse_defs[str(name)] = code
+        
+    def _update_network(self, name, code):
+        print code
+
+    def _neuron_entries(self):
+        return self._neuron_defs.keys()
+        
+    def _synapse_entries(self):
+        return self._synapse_defs.keys()
+        
+    def _network_entries(self):
+        return self._network_defs.keys()
+        
+    def _get_neuron(self, name):
+        return self._neuron_defs[str(name)]
+        
+    def _get_synapse(self, name):
+        return self._synapse_defs[str(name)]
+        
+    def _get_network(self, name):
+        return self._network_defs[str(name)]

@@ -84,7 +84,7 @@ class EditorMainWindow(QMainWindow):
         
 
     def closeEvent(self, event):
-        ANNarchy4.Global._repository.save()
+        self._rep.save()
         
         return QMainWindow.closeEvent(self, event)
 

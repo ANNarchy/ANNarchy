@@ -63,8 +63,6 @@ class CodeView(QsciScintilla):
         elif type == 2:
             obj = 'synapse'
 
-        print type, obj, name
-
         #
         # create the new entry
         if not self._rep.entry_contained(name):
@@ -89,7 +87,7 @@ class CodeView(QsciScintilla):
                     self._rep.update_object(self._curr_type, self._curr_name, self.text())
     
             # show the new data set
-            self.setText( self._rep.get_object( obj, name) )
+            self.setText( self._rep.get_object( obj, name ) )
             
         self._curr_name = name
         self._curr_type = obj
