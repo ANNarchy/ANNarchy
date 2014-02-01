@@ -1,5 +1,5 @@
 from .GLObjects import GLBaseWidget, Point2d, Quad2d, Line2d
-from PyQt4.QtCore import pyqtSignal
+from PyQt4.QtCore import pyqtSignal, pyqtSlot, QString
 
 # PyOpenGL imports
 import OpenGL.GL as gl
@@ -14,13 +14,19 @@ class GLNetworkWidget(GLBaseWidget):
         super(GLNetworkWidget, self).__init__(parent)
         
         self.populations = {}
-        self.populations.update( { 0 : Quad2d(Point2d(0.5,0.5), 0.05) } )
-        self.populations.update( { 1 : Quad2d(Point2d(0.3,0.5), 0.05) } )
+        #=======================================================================
+        # self.populations.update( { 0 : Quad2d(Point2d(0.5,0.5), 0.05) } )
+        # self.populations.update( { 1 : Quad2d(Point2d(0.3,0.5), 0.05) } )
+        #=======================================================================
         
-        self.projections = [];
-        self.projections.append(Line2d(Point2d(0.5,0.5), Point2d(0.3,0.5)))
+        self.projections = {};
+        #self.projections.append(Line2d(Point2d(0.5,0.5), Point2d(0.3,0.5)))
         
         self._quad = None
+
+    @pyqtSlot(QString)
+    def show_network(self, name):
+        print 'visualize', name
 
     def paintGL(self):
         """

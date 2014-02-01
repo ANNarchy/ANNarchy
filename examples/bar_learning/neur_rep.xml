@@ -15,6 +15,9 @@
         <line9></line9>
         <line10></line10>
         <line11></line11>
+        <line12></line12>
+        <line13></line13>
+        <line14></line14>
       </code>
     </LeakyNeuron>
     <InputNeuron>
@@ -32,6 +35,9 @@
         <line9></line9>
         <line10></line10>
         <line11></line11>
+        <line12></line12>
+        <line13></line13>
+        <line14></line14>
       </code>
     </InputNeuron>
   </neurons>

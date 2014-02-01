@@ -29,28 +29,22 @@ from PyQt4.QtCore import pyqtSlot, pyqtSignal, QString
 
 from CodeTemplates import *
 
-from ANNarchy4.core import Global
-
 class CodeView(QsciScintilla):
-    signal_add_entry_to_neur = pyqtSignal(QString)
-    signal_add_entry_to_syn = pyqtSignal(QString)
     
     def __init__(self, parent):
         QsciScintilla.__init__(self, parent)
         self._loaded_script = None
         self._curr_name = None
         self._curr_type = None
-        self._rep = Global._repository
+
         self.setLexer(QsciLexerPython(self))
+
+    def set_repository(self, repo=None):
+        self._rep = repo
+        print repo
         
     @pyqtSlot()
     def initialize(self):
-        
-        for name in self._rep.get_entries('neuron'):
-            self.signal_add_entry_to_neur.emit(name)
-
-        for name in self._rep.get_entries('synapse'):
-            self.signal_add_entry_to_syn.emit(name)
         
         if len(self._rep.get_entries('neuron'))>0:
             self._curr_name = self._rep.get_entries('neuron')[0]
@@ -92,7 +86,7 @@ class CodeView(QsciScintilla):
                 #
                 # ask the user if he want to save   
                 if reply == QMessageBox.Yes:
-                    self._rep.update_neuron(self._curr_name, self.text())
+                    self._rep.update_object(self._curr_type, self._curr_name, self.text())
     
             # show the new data set
             self.setText( self._rep.get_object( obj, name) )

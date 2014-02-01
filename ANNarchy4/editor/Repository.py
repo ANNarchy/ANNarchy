@@ -1,9 +1,12 @@
 from lxml import etree 
 from PyQt4 import QtGui
+from PyQt4.QtCore import QObject
 
-class Repository(object):
+class Repository(QObject):
     
     def __init__(self):
+        super(Repository, self).__init__()
+        
         self._neuron_defs = {}
         self._synapse_defs = {}
 
@@ -30,7 +33,7 @@ class Repository(object):
                 i+=1                  
 
         syn_tree = etree.SubElement( root, 'synapses')
-        for name, code in self._neuron_defs.iteritems():
+        for name, code in self._synapse_defs.iteritems():
             syn_tag = etree.SubElement( syn_tree, str(name))
             
             syn_name = etree.SubElement( syn_tag, 'name')
@@ -71,17 +74,18 @@ class Repository(object):
             self._neuron_defs[neur_name] = neur_code
 
         syn_root = doc.findall('synapses') # find neuron root node
-        for syn in syn_root[0].getchildren():
-            syn_name = syn.find('name').text
-            syn_code = ''
-
-            for line in syn.find('code').getchildren():
-                if line.text != None:
-                    syn_code += str(line.text)+'\n'
-                else:
-                    syn_code += '\n'
-
-            self._synapse_defs[syn_name] = syn_code
+        if syn_root != []:
+            for syn in syn_root[0].getchildren():
+                syn_name = syn.find('name').text
+                syn_code = ''
+    
+                for line in syn.find('code').getchildren():
+                    if line.text != None:
+                        syn_code += str(line.text)+'\n'
+                    else:
+                        syn_code += '\n'
+    
+                self._synapse_defs[syn_name] = syn_code
     
     def add_object(self, type, name, code):
         if type == 'neuron':

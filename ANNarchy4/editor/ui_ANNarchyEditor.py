@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Fri Jan 31 23:29:57 2014
+# Created: Sat Feb  1 08:22:51 2014
 #      by: PyQt4 UI code generator 4.9.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -124,9 +124,9 @@ class Ui_ANNarchyEditor(object):
         self.label_17 = QtGui.QLabel(self.page_4)
         self.label_17.setObjectName(_fromUtf8("label_17"))
         self.verticalLayout_9.addWidget(self.label_17)
-        self.listWidget = QtGui.QListWidget(self.page_4)
-        self.listWidget.setObjectName(_fromUtf8("listWidget"))
-        self.verticalLayout_9.addWidget(self.listWidget)
+        self.net_select = NetworkListView(self.page_4)
+        self.net_select.setObjectName(_fromUtf8("net_select"))
+        self.verticalLayout_9.addWidget(self.net_select)
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_9.addItem(spacerItem)
         self.label_14 = QtGui.QLabel(self.page_4)
@@ -324,8 +324,8 @@ class Ui_ANNarchyEditor(object):
         self.menubar.addAction(self.menuConfig.menuAction())
 
         self.retranslateUi(ANNarchyEditor)
-        self.views.setCurrentIndex(0)
-        self.general.setCurrentIndex(0)
+        self.views.setCurrentIndex(1)
+        self.general.setCurrentIndex(1)
         self.stackedWidget_2.setCurrentIndex(0)
         self.stackedWidget.setCurrentIndex(1)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), ANNarchyEditor.close)
@@ -341,11 +341,11 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.views, QtCore.SIGNAL(_fromUtf8("currentChanged(int)")), self.general.setCurrentIndex)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.views.initialize)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.objects.initialize)
-        QtCore.QObject.connect(self.objects, QtCore.SIGNAL(_fromUtf8("signal_add_entry_to_neur(QString)")), self.neur_general.add_entry)
         QtCore.QObject.connect(self.actionSave, QtCore.SIGNAL(_fromUtf8("triggered()")), self.objects.save)
         QtCore.QObject.connect(self.syn_general, QtCore.SIGNAL(_fromUtf8("signal_show_template(int,QString)")), self.objects.set_code)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.syn_general.initialize)
-        QtCore.QObject.connect(self.objects, QtCore.SIGNAL(_fromUtf8("signal_add_entry_to_syn(QString)")), self.syn_general.add_entry)
+        QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.net_select.initialize)
+        QtCore.QObject.connect(self.net_select, QtCore.SIGNAL(_fromUtf8("signal_show_network(QString)")), self.editor.show_network)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):
@@ -396,4 +396,4 @@ from GLNetwork import GLNetworkWidget
 from GLObjects import GLBaseWidget
 from VisWidget import VisControlWidget, VisualizerWidget
 from CodeView import CodeView
-from ListView import NeuronListView, SynapseListView
+from ListView import NeuronListView, NetworkListView, SynapseListView

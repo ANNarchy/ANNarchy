@@ -22,7 +22,7 @@
     
 """
 from PyQt4.QtGui import QApplication, QMainWindow
-from PyQt4.QtCore import pyqtSignal, pyqtSlot
+from PyQt4.QtCore import pyqtSignal, pyqtSlot, QObject, SIGNAL
 
 import sys
 import ANNarchy4
@@ -53,8 +53,9 @@ class EditorMainWindow(QMainWindow):
         super(QMainWindow, self).__init__()
 
         ANNarchy4.Global._visualizer = self
-        ANNarchy4.Global._repository = Repository() 
-        ANNarchy4.Global._repository.load()
+        
+        self._rep = Repository()
+        self._rep.load()
         
         self.setWindowTitle('ANNarchy4.1 ultimate editor') 
         
@@ -62,9 +63,25 @@ class EditorMainWindow(QMainWindow):
         self._ui.setupUi(self)
         self._func = func
 
+        self._connect_signals()
+
         #
-        # initialize all child widgets        
+        # initialize all child widgets
+        self.emit(SIGNAL("set_repository(PyQt_PyObject)"), self._rep)
         self.initialize.emit()
+
+    def _connect_signals(self):
+        """
+        Signals for standard types and Qt objects are working fine by the editor tool. For own classes
+        etc. we need the old style of SIGNAL emitation.
+        
+        .. hint: please note, that the receiving functions are not decorated by @pyqtSlot
+        """
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.objects.set_repository)
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.neur_general.set_repository)
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.syn_general.set_repository)
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.net_select.set_repository)
+        
 
     def closeEvent(self, event):
         ANNarchy4.Global._repository.save()

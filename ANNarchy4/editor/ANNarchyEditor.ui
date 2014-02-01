@@ -38,7 +38,7 @@
        </property>
        <widget class="MyTabWidget" name="views">
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="object_page">
          <attribute name="title">
@@ -135,7 +135,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="obj_tab">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -180,7 +180,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QListWidget" name="listWidget"/>
+                <widget class="NetworkListView" name="net_select"/>
                </item>
                <item>
                 <spacer name="verticalSpacer_6">
@@ -643,6 +643,7 @@
    <container>1</container>
    <slots>
     <signal>update_population(int,int)</signal>
+    <slot>show_network(QString)</slot>
    </slots>
   </customwidget>
   <customwidget>
@@ -689,6 +690,16 @@
     <signal>signal_show_template(int,QString)</signal>
     <slot>initialize()</slot>
     <slot>add_entry(QString)</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>NetworkListView</class>
+   <extends>QListView</extends>
+   <header>ListView.h</header>
+   <slots>
+    <signal>signal_show_network(QString)</signal>
+    <slot>initialize()</slot>
+    <slot>set_repository(QObject)</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -903,22 +914,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>objects</sender>
-   <signal>signal_add_entry_to_neur(QString)</signal>
-   <receiver>neur_general</receiver>
-   <slot>add_entry(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>308</x>
-     <y>334</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>842</x>
-     <y>198</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionSave</sender>
    <signal>triggered()</signal>
    <receiver>objects</receiver>
@@ -967,24 +962,41 @@
    </hints>
   </connection>
   <connection>
-   <sender>objects</sender>
-   <signal>signal_add_entry_to_syn(QString)</signal>
-   <receiver>syn_general</receiver>
-   <slot>add_entry(QString)</slot>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>net_select</receiver>
+   <slot>initialize()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>308</x>
-     <y>334</y>
+     <x>539</x>
+     <y>311</y>
     </hint>
     <hint type="destinationlabel">
      <x>842</x>
-     <y>481</y>
+     <y>179</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>net_select</sender>
+   <signal>signal_show_network(QString)</signal>
+   <receiver>editor</receiver>
+   <slot>show_network(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>179</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>334</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
   <signal>initialize()</signal>
+  <signal>set_repository(QObject)</signal>
   <slot>compile_and_run()</slot>
  </slots>
 </ui>
