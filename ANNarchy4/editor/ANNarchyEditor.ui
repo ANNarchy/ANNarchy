@@ -233,52 +233,58 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="pop_view">
+           <widget class="QWidget" name="page_5">
             <layout class="QGridLayout" name="gridLayout_2">
              <item row="0" column="0">
-              <widget class="QLabel" name="label_5">
-               <property name="text">
-                <string>Name</string>
-               </property>
+              <widget class="PopView" name="pop_view" native="true">
+               <layout class="QGridLayout" name="gridLayout_5">
+                <item row="1" column="0" colspan="2">
+                 <widget class="QLabel" name="label_6">
+                  <property name="text">
+                   <string>Geometry</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QLineEdit" name="pop_size">
+                  <property name="readOnly">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_5">
+                  <property name="text">
+                   <string>Name</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1" colspan="2">
+                 <widget class="QLineEdit" name="pop_name">
+                  <property name="readOnly">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="2">
+                 <spacer name="verticalSpacer_3">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>446</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
               </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_6">
-               <property name="text">
-                <string>Geometry</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QLineEdit" name="pop_name">
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="pop_size">
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <spacer name="verticalSpacer_3">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="page_5">
+           <widget class="QWidget" name="page_6">
             <layout class="QGridLayout" name="gridLayout_3">
              <item row="0" column="0">
               <widget class="QLabel" name="label_11">
@@ -706,7 +712,7 @@
   <customwidget>
    <class>SynapseListView</class>
    <extends>QListView</extends>
-   <header>ListView.h</header>
+   <header location="global">ListView.h</header>
    <slots>
     <signal>signal_show_template(int,QString)</signal>
     <slot>initialize()</slot>
@@ -716,12 +722,18 @@
   <customwidget>
    <class>NetworkListView</class>
    <extends>QListView</extends>
-   <header>ListView.h</header>
+   <header location="global">NetWidget.h</header>
    <slots>
     <signal>signal_show_network(QString)</signal>
     <slot>initialize()</slot>
     <slot>set_repository(QObject)</slot>
    </slots>
+  </customwidget>
+  <customwidget>
+   <class>PopView</class>
+   <extends>QWidget</extends>
+   <header location="global">NetWidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

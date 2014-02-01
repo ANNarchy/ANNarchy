@@ -11,33 +11,42 @@ class GLNetworkWidget(GLBaseWidget):
     Main class for visualization of network.
     """    
     def __init__(self, parent=None):
+        """
+        Constructor.
+        
+        initializes GL widget and all the basic stuff needed.
+        """
         super(GLNetworkWidget, self).__init__(parent)
         
         self.populations = {}
-        #=======================================================================
-        # self.populations.update( { 0 : Quad2d(Point2d(0.5,0.5), 0.05) } )
-        # self.populations.update( { 1 : Quad2d(Point2d(0.3,0.5), 0.05) } )
-        #=======================================================================
-        
         self.projections = {};
-        #self.projections.append(Line2d(Point2d(0.5,0.5), Point2d(0.3,0.5)))
         
         self._quad = None
+        self._drawing = False
 
     @pyqtSlot(QString)
     def show_network(self, name):
+        """
+        """
         print 'visualize', name
 
     def paintGL(self):
         """
-        Paint the scene.
+        Overloaded PyQt function.
+        
+        Rendering the current scene. In contrast to common GL window implementations, 
+        e. g. GLut, the PyQt OpenGL has no destinct rendering loop. This function is emitted
+        through an updateGL() call.
+        
+        This function is called explicitly through:
+        
+        * *resize event*, *mouseMoveEvent*, *VisualizerWidget.render_data*
         """
         # clear the buffer
         gl.glClear(gl.GL_COLOR_BUFFER_BIT) 
         
         gl.glColor3f(0.0,0.0,0.0)
         for quad in self.populations.itervalues():
-
             gl.glBegin(gl.GL_LINE_LOOP)
             gl.glVertex2f(quad.p1._x, quad.p1._y)
             gl.glVertex2f(quad.p2._x, quad.p2._y)
@@ -45,16 +54,13 @@ class GLNetworkWidget(GLBaseWidget):
             gl.glVertex2f(quad.p4._x, quad.p4._y)
             gl.glEnd()
 
-        #gl.glColor3f(0.0,0.6,0.0)
         for line in self.projections:
-
             gl.glBegin(gl.GL_LINES)
             gl.glVertex2f(line.p1._x, line.p1._y)
             gl.glVertex2f(line.p2._x, line.p2._y)
             gl.glEnd()
 
         if self._quad != None:
-            #gl.glColor3f(0.0,0.0,0.0)
             gl.glBegin(gl.GL_LINE_LOOP)
             gl.glVertex2f(self._quad.p1._x, self._quad.p1._y)
             gl.glVertex2f(self._quad.p2._x, self._quad.p2._y)
@@ -63,8 +69,16 @@ class GLNetworkWidget(GLBaseWidget):
             gl.glEnd()
     
     def mousePressEvent(self, event):
+        """
+        Overloaded PyQt function.
+        
+        This event function is emitted if a mouse button is pressed, we differ two functions, depending on
+        the sequel action:
+        
+        * *release*: the user want to select a population
+        * *move*: the user want to draw a new population
+        """
         mousePos = event.pos()
-        print 'start', mousePos
         
         self._start_x = mousePos.x()/float(self.width)
         self._start_y = 1.0 - mousePos.y()/float(self.height)
@@ -76,6 +90,7 @@ class GLNetworkWidget(GLBaseWidget):
         selected = False
         for id, quad in self.populations.iteritems():
             if quad.point_within(p):
+                print 'selected quad', id
                 self.update_population.emit(1, id)
                 selected = True
         
@@ -86,6 +101,14 @@ class GLNetworkWidget(GLBaseWidget):
         self.updateGL()
 
     def mouseMoveEvent(self, event):
+        """
+        Overloaded PyQt function.
+
+        While the user presses the mouse key and moves around, we update the visualization. We draw
+        a quad with the left buttom corner (where he clicked) and the right upper corner (current mouse
+        position)
+        """
+        self._drawing = True
         mousePos = event.pos()
         
         self._stop_x = float(mousePos.x()/float(self.width))
@@ -102,12 +125,26 @@ class GLNetworkWidget(GLBaseWidget):
         #print mousePos
         
     def mouseReleaseEvent(self, event):
+        """
+        Overloaded PyQt function.
+
+        We distinguish between a draw attempt and a select by the occurance of a mouseMoveEvent. Through several
+        issues it occurs, that a mouse click although emit a minimal mouse movement. To avoid a creation of minimal
+        quads we define a minimal size a quad need to have. 
+        
+        0.1 percent of the visible screen need to be covered by the new quad, else it is ignored. 
+        """
         mousePos = event.pos()
         
         try:
-            #TODO: maybe a certain percentage of view field
-            if self._quad.comp_area() > 0.001: 
-                self.populations.update({ len(self.populations): copy.deepcopy(self._quad)})
+            if self._drawing:
+                #TODO: maybe a certain percentage of view field
+                if self._quad.comp_area() > 0.001: 
+                    self.populations.update({ len(self.populations): copy.deepcopy(self._quad)})
+            
+            self._quad = None
+            self._drawing = False
+            
         except AttributeError:
             pass # no real quad
         

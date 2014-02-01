@@ -26,7 +26,10 @@ class StackWidget(QStackedWidget):
     @pyqtSlot(int, int)
     def update_population(self, tab, pop_id):
         self.setCurrentIndex(tab)
-
+        
+        if tab == 0:
+            return
+        
         try:
             pop_obj = get_population('Population'+str(pop_id))
             

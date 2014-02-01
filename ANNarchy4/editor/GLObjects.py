@@ -83,7 +83,7 @@ class Quad2d(object):
             #print ('\tx_test failed')
             return False;
 
-        if (p._y < self.p1._y) or (p._y > self.p3._y):
+        if (p._y < self.p3._y) or (p._y > self.p1._y):
             #print ('\ty_test failed')
             return False;
         

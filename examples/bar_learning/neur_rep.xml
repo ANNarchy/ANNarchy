@@ -19,6 +19,8 @@
         <line13></line13>
         <line14></line14>
         <line15></line15>
+        <line16></line16>
+        <line17></line17>
       </code>
     </LeakyNeuron>
     <InputNeuron>
@@ -40,6 +42,8 @@
         <line13></line13>
         <line14></line14>
         <line15></line15>
+        <line16></line16>
+        <line17></line17>
       </code>
     </InputNeuron>
   </neurons>
@@ -65,6 +69,8 @@
         <line15></line15>
         <line16></line16>
         <line17></line17>
+        <line18></line18>
+        <line19></line19>
       </code>
     </AntiHebb>
     <Oja>
@@ -88,6 +94,8 @@
         <line15></line15>
         <line16></line16>
         <line17></line17>
+        <line18></line18>
+        <line19></line19>
       </code>
     </Oja>
   </synapses>
