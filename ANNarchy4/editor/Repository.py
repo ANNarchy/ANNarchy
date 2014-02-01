@@ -83,6 +83,27 @@ class Repository(QObject):
             net_name = etree.SubElement( net_tag, 'name')
             net_name.text = str(name)
             
+            net_pop_data = etree.SubElement( net_tag, 'populations')
+            for id, pop in data.iteritems():
+                pop_data = etree.SubElement( net_pop_data, 'pop'+str(id))
+                
+                pop_name = etree.SubElement( pop_data, 'name')
+                pop_name.text = str(pop['name'])
+                
+                pop_geo = etree.SubElement( pop_data, 'geometry')
+                pop_geo.text = str(pop['geometry'])
+                
+                pop_coords = etree.SubElement( pop_data, 'coords')
+
+                pop_p1 = etree.SubElement( pop_coords, 'p1')
+                pop_p1.text = str(pop['coords'].p1)
+                pop_p2 = etree.SubElement( pop_coords, 'p2')
+                pop_p2.text = str(pop['coords'].p2)
+                pop_p3 = etree.SubElement( pop_coords, 'p3')
+                pop_p3.text = str(pop['coords'].p3)
+                pop_p4 = etree.SubElement( pop_coords, 'p4')
+                pop_p4.text = str(pop['coords'].p4)
+                
 #===============================================================================
 # 
 #             syn_data = etree.SubElement( syn_tag, 'data')
@@ -140,17 +161,21 @@ class Repository(QObject):
         if net_root != []:
             for net in net_root[0].getchildren():
                 net_name = net.find('name').text
-    #===========================================================================
-    #             syn_data = ''
-    # 
-    #             for line in syn.find('data').getchildren():
-    #                 if line.text != None:
-    #                     syn_data += str(line.text)+'\n'
-    #                 else:
-    #                     syn_data += '\n'
-    #===========================================================================
+
+                self._network_defs = { net_name : {} }
+                pop_data = net.find('populations')
+                
+                i = 0
+                for pop in pop_data.getchildren():
+                    name = pop.find('name').text
+                    geometry = eval(pop.find('geometry').text) # I know, eval is not so good, but I dont know an other conversion 
+                    
+                    coords = []
+                    for p in pop.find('coords').getchildren():
+                        coords.append(eval(p.text))
     
-                self._network_defs[net_name] = {}
+                    self._network_defs[net_name].update( { i: { 'name': name, 'geometry': geometry, 'coords': coords } } )
+                    i += 1
 
     def add_object(self, type, name, data):
         try:

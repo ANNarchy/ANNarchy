@@ -14,13 +14,6 @@
         <line8>)</line8>
         <line9></line9>
         <line10></line10>
-        <line11></line11>
-        <line12></line12>
-        <line13></line13>
-        <line14></line14>
-        <line15></line15>
-        <line16></line16>
-        <line17></line17>
       </code>
     </LeakyNeuron>
     <InputNeuron>
@@ -34,16 +27,7 @@
         <line5>    equations="""</line5>
         <line6>        tau * drate/dt + rate = baseline : min=0.0</line6>
         <line7>    """</line7>
-        <line8>)</line8>
-        <line9></line9>
-        <line10></line10>
-        <line11></line11>
-        <line12></line12>
-        <line13></line13>
-        <line14></line14>
-        <line15></line15>
-        <line16></line16>
-        <line17></line17>
+        <line8></line8>
       </code>
     </InputNeuron>
   </neurons>
@@ -62,15 +46,6 @@
         <line8>)  </line8>
         <line9></line9>
         <line10></line10>
-        <line11></line11>
-        <line12></line12>
-        <line13></line13>
-        <line14></line14>
-        <line15></line15>
-        <line16></line16>
-        <line17></line17>
-        <line18></line18>
-        <line19></line19>
       </code>
     </AntiHebb>
     <Oja>
@@ -86,22 +61,34 @@
         <line7>    """</line7>
         <line8>)  </line8>
         <line9></line9>
-        <line10></line10>
-        <line11></line11>
-        <line12></line12>
-        <line13></line13>
-        <line14></line14>
-        <line15></line15>
-        <line16></line16>
-        <line17></line17>
-        <line18></line18>
-        <line19></line19>
       </code>
     </Oja>
   </synapses>
   <networks>
     <Bar_Learning>
       <name>Bar_Learning</name>
+      <populations>
+        <pop0>
+          <name>Population0</name>
+          <geometry>(1, 1)</geometry>
+          <coords>
+            <p1>[ 0.271971496437, 0.608527131783 ]</p1>
+            <p2>[ 0.469121140143, 0.608527131783 ]</p2>
+            <p3>[ 0.469121140143, 0.395348837209 ]</p3>
+            <p4>[ 0.271971496437, 0.395348837209 ]</p4>
+          </coords>
+        </pop0>
+        <pop1>
+          <name>Population1</name>
+          <geometry>(1, 1)</geometry>
+          <coords>
+            <p1>[ 0.622327790974, 0.610465116279 ]</p1>
+            <p2>[ 0.813539192399, 0.610465116279 ]</p2>
+            <p3>[ 0.813539192399, 0.383720930233 ]</p3>
+            <p4>[ 0.622327790974, 0.383720930233 ]</p4>
+          </coords>
+        </pop1>
+      </populations>
     </Bar_Learning>
   </networks>
 </database>

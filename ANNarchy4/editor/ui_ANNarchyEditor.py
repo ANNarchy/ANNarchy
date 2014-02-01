@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Sat Feb  1 20:57:31 2014
+# Created: Sat Feb  1 22:04:08 2014
 #      by: PyQt4 UI code generator 4.9.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -350,7 +350,7 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), ANNarchyEditor.close)
         QtCore.QObject.connect(self.compile_and_run, QtCore.SIGNAL(_fromUtf8("pressed()")), ANNarchyEditor.compile_and_run)
         QtCore.QObject.connect(self.editor, QtCore.SIGNAL(_fromUtf8("update_population(int,int)")), self.stackedWidget_2.update_population)
-        QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.stackedWidget_2.initialize)
+        QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.pop_view.initialize)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.vis_control.initialize)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.visualizer.initialize)
         QtCore.QObject.connect(self.change_grid, QtCore.SIGNAL(_fromUtf8("pressed()")), self.vis_control.change_grid)
@@ -367,6 +367,7 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.net_select, QtCore.SIGNAL(_fromUtf8("signal_show_network(QString)")), self.editor.show_network)
         QtCore.QObject.connect(self.plot_select, QtCore.SIGNAL(_fromUtf8("currentIndexChanged(int)")), self.plot_config.setCurrentIndex)
         QtCore.QObject.connect(self.plot_1d_color, QtCore.SIGNAL(_fromUtf8("currentIndexChanged(int)")), self.vis_control.change_color)
+        QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_population(int)")), self.pop_view.update_population)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):

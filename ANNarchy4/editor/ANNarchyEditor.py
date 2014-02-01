@@ -84,6 +84,8 @@ class EditorMainWindow(QMainWindow):
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.neur_general.set_repository)
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.syn_general.set_repository)
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.net_select.set_repository)
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.editor.set_repository)        
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.pop_view.set_repository)
 
     def set_data(self, x, y, x_data, y_data):
         """

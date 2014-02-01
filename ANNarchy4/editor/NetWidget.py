@@ -1,4 +1,4 @@
-from PyQt4.QtGui import QListView, QInputDialog, QStandardItemModel, QStandardItem, QMessageBox, QWidget
+from PyQt4.QtGui import QListView, QInputDialog, QLineEdit, QStandardItemModel, QStandardItem, QMessageBox, QWidget
 from PyQt4.QtCore import SIGNAL, SLOT, pyqtSlot, pyqtSignal, QString, QObject
 
 class NetworkListView(QListView):
@@ -52,10 +52,38 @@ class PopView(QWidget):
     def __init__(self, parent):
         super(QWidget, self).__init__(parent)
 
-    def set_repository(self, repo=None):
+        self._population_data = {}
+
+    def set_repository(self, repo):
         self._rep = repo
         
     @pyqtSlot()
     def initialize(self):
-        pass
-    
+        """
+        Initialization of links etc, after full initialization of ANNarchyEditor.
+        """
+        #
+        # create short cut links to appended widgets
+        self._pop_name = self.findChild(QLineEdit, 'pop_name')
+        self._pop_size = self.findChild(QLineEdit, 'pop_size')
+         
+    @pyqtSlot(int)
+    def update_population(self, pop_id):
+        """
+        Set the informations of the selected population.
+        
+        Emitted by:
+        
+        *stackedWiget_2.signal_update_population*
+        """
+        try:
+            # in our data storage?
+            self._population_data[pop_id] 
+        except KeyError:
+            # get the data from repository
+            obj = self._rep.get_object('network', 'Bar_Learning')[pop_id]
+            self._population_data.update( { pop_id : { 'name': obj['name'], 'geometry' : obj['geometry'] } } ) 
+            
+        finally:
+            self._pop_name.setText(str(self._population_data[pop_id]['name']))
+            self._pop_size.setText(str(self._population_data[pop_id]['geometry']))

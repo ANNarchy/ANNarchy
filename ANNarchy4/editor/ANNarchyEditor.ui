@@ -676,6 +676,7 @@
    <header location="global">StackWidget.h</header>
    <container>1</container>
    <slots>
+    <signal>signal_update_population(int)</signal>
     <slot>update_population(int,int)</slot>
     <slot>initialize()</slot>
    </slots>
@@ -734,6 +735,10 @@
    <extends>QWidget</extends>
    <header location="global">NetWidget.h</header>
    <container>1</container>
+   <slots>
+    <slot>update_population(int)</slot>
+    <slot>initialize()</slot>
+   </slots>
   </customwidget>
  </customwidgets>
  <resources/>
@@ -782,14 +787,14 @@
     </hint>
     <hint type="destinationlabel">
      <x>842</x>
-     <y>324</y>
+     <y>326</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>ANNarchyEditor</sender>
    <signal>initialize()</signal>
-   <receiver>stackedWidget_2</receiver>
+   <receiver>pop_view</receiver>
    <slot>initialize()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -798,7 +803,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>842</x>
-     <y>324</y>
+     <y>326</y>
     </hint>
    </hints>
   </connection>
@@ -1051,6 +1056,22 @@
     <hint type="sourcelabel">
      <x>941</x>
      <y>421</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stackedWidget_2</sender>
+   <signal>signal_update_population(int)</signal>
+   <receiver>pop_view</receiver>
+   <slot>update_population(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>326</y>
     </hint>
     <hint type="destinationlabel">
      <x>842</x>

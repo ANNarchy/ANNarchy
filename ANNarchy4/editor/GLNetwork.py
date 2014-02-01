@@ -24,11 +24,26 @@ class GLNetworkWidget(GLBaseWidget):
         self._quad = None
         self._drawing = False
 
+    def set_repository(self, repo):
+        self._rep = repo
+
     @pyqtSlot(QString)
     def show_network(self, name):
         """
         """
-        print 'visualize', name
+        data = self._rep.get_object('network', name)
+        
+        # load all data for selected network
+        for id, pop in data.iteritems():            
+            points = [ Point2d(p[0],p[1]) for p in pop['coords'] ]
+            quad = Quad2d().from_p(points[0],
+                                   points[1],
+                                   points[2],
+                                   points[3])
+            
+            self.populations.update( { id : quad } )
+            
+        self.updateGL()
 
     def paintGL(self):
         """
@@ -140,7 +155,12 @@ class GLNetworkWidget(GLBaseWidget):
             if self._drawing:
                 #TODO: maybe a certain percentage of view field
                 if self._quad.comp_area() > 0.001: 
-                    self.populations.update({ len(self.populations): copy.deepcopy(self._quad)})
+                    pop_id = len(self.populations)
+                    self.populations.update({ pop_id: copy.deepcopy(self._quad)})
+            
+                    # create a new entry in repository
+                    self._rep.get_object('network','Bar_Learning').update( { pop_id: { 'name': 'Population'+str(pop_id), 'geometry': (1,1), 'coords': copy.deepcopy(self._quad) } } )
+                    
             
             self._quad = None
             self._drawing = False
