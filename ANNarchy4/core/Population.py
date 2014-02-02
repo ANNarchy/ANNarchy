@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy4.parser.Analyser import NeuronAnalyser
+from ANNarchy4.parser.Analyser import analyse_population
 from ANNarchy4.core.PopulationView import PopulationView
 from ANNarchy4.core.Random import RandomDistribution
 from ANNarchy4.core.Neuron import IndividualNeuron
@@ -32,7 +32,7 @@ import ANNarchy4.core.Global as Global
 import traceback
 import numpy as np
 
-class Population(object):#Descriptor):
+class Population(object):
     """
     Represents a population of neurons.
     """
@@ -61,18 +61,27 @@ class Population(object):#Descriptor):
         
         # Attribute a name if not provided
         self._id = len(Global._populations)
+        self.class_name = 'Population'+str(self._id)
         if name:
             self.name = name
         else:
-            self.name = 'Population'+str(self._id)
+            self.name = self.class_name
                 
         # Add the population to the global variable
         Global._populations.append(self)
         
         # Get a list of parameters and variables
-        analyser = NeuronAnalyser(self.neuron_type)
-        self.parameters = analyser.parameters()
-        self.variables = analyser.variables()
+        self.description = analyse_population(self)
+        self.parameters = []
+        self.init = {}
+        for param in self.description['parameters']:
+            self.parameters.append(param['name'])
+            self.init[param['name']] = param['init']
+        self.variables = []
+        for var in self.description['variables']:
+            self.variables.append(var['name'])
+            self.init[var['name']] = var['init']
+        self.attributes = self.parameters + self.variables
         
         # List of targets actually connected
         self.targets = []
@@ -83,12 +92,96 @@ class Population(object):#Descriptor):
             self._recorded_variables[var] = Record(var)
 
         # Finalize initialization
-        self.initialized = True        
+        self.initialized = False        
         
-#     def _init_attributes(self):
-#         """ Method used after compilation to initialize the attributes."""
-#         for var in self.variables + self.parameters:
-#             setattr(self, var, Attribute(var))
+    def _init_attributes(self):
+        """ Method used after compilation to initialize the attributes."""
+        self.initialized = True  
+        for attr in self.attributes:
+            if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
+                if isinstance(self.init[attr], list) or isinstance(self.init[attr], np.ndarray):
+                    self._set_cython_attribute(attr, self.init[attr])
+
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+        if not hasattr(self, 'initialized'): # Before the end of the constructor
+            return object.__getattribute__(self, name)
+        elif name == 'attributes':
+            return object.__getattribute__(self, 'attributes')
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                if not self.initialized:
+                    if name in self.description['local']:
+                        return np.array([self.init[name]] * self.size).reshape(self.geometry)
+                    else:
+                        return self.init[name]
+                else:
+                    return self._get_cython_attribute( name)
+            else:
+                return object.__getattribute__(self, name)
+        return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if not hasattr(self, 'initialized'): # Before the end of the constructor
+            object.__setattr__(self, name, value)
+        elif name == 'attributes':
+            object.__setatt__(self, name, value)
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                if not self.initialized:
+                    self.init[name] = value
+                else:
+                    self._set_cython_attribute(name, value)      
+            else:
+                object.__setattr__(self, name, value)     
+        else:
+            object.__setattr__(self, name, value)
+        
+    def _get_cython_attribute(self, attribute):
+        """
+        Returns the value of the given attribute for all neurons in the population, 
+        as a NumPy array having the same geometry as the population if it is local.
+        
+        Parameter:
+        
+        * *attribute*: should be a string representing the variables's name.
+        
+        """
+        if hasattr(self, 'cyInstance'):
+            if hasattr(self.cyInstance, attribute):
+                if attribute in self.description['local']:
+                    return np.array(getattr(self.cyInstance, attribute)).reshape(self.geometry)
+                else:
+                    return getattr(self.cyInstance, attribute)
+            else:
+                print('Error: attribute', attribute, 'does not exist in this population.')
+                print(traceback.print_stack())
+        
+    def _set_cython_attribute(self, attribute, value):
+        """
+        Sets the value of the given attribute for all neurons in the population, 
+        as a NumPy array having the same geometry as the population if it is local.
+        
+        Parameter:
+        
+        * *attribute*: should be a string representing the variables's name.
+        
+        """
+        if hasattr(self, 'cyInstance'):
+            if hasattr(self.cyInstance, attribute):
+                if attribute in self.description['local']:
+                    if isinstance(value, np.ndarray):
+                        setattr(self.cyInstance, attribute, value.reshape(self.size) )
+                    elif isinstance(value, list):
+                        setattr(self.cyInstance, attribute, np.array(value).reshape(self.size) )
+                    else:
+                        setattr(self.cyInstance, attribute, np.array( [value]*self.size ) )
+                else:
+                    setattr(self.cyInstance, attribute, value)
+            else:
+                print('Error: variable', attribute, 'does not exist in this population.')
+                print(traceback.print_stack())
 
     @property
     def width(self):
@@ -119,41 +212,6 @@ class Population(object):#Descriptor):
             return self.geometry[2]
         else: 
             return 1
-        
-#     @property
-#     def cpp_class(self):
-#         """
-#         Returns name of cpp class.
-#         """
-#         return self.generator.class_name
-    
-#     @property
-#     def variables(self):
-#         """
-#         Returns a list of all variable names.
-#         """
-#         ret_var = [] #default        
-#         
-#         #check additional variables
-#         neur_var = self.generator.neuron_variables
-#         for name, var in neur_var.iteritems():
-#             if var['type'] == 'local':
-#                 ret_var.append(name)      
-#                 
-#         return ret_var
-
-#     @property
-#     def parameters(self):
-#         """
-#         Returns a list of all parameter names.
-#         """
-#         neur_var = self.generator.neuron_variables
-#         ret_par = []        
-#         for name, var in neur_var.iteritems():
-#             if var['type'] == 'global':
-#                 ret_par.append(name)      
-# 
-#         return ret_par
         
     @property
     def size(self):
@@ -375,47 +433,7 @@ class Population(object):#Descriptor):
             return data_dict[_variable[0]]
         else:
             return data_dict          
-        
-    def get_variable(self, variable):
-        """
-        Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
-        
-        Parameter:
-        
-        * *variable*: should be a string representing the variables's name.
-        
-        .. warning::
-        
-        In contrast to direct accessing variables, this function returns the synaptic as one dimensional array. 
-        """
-        if hasattr(self, 'cyInstance'):
-            if hasattr(self.cyInstance, variable):
-                return np.array(getattr(self.cyInstance, variable)).reshape(self.geometry)
-            else:
-                print('Error: variable', variable, 'does not exist in this population.')
-                print(traceback.print_stack())
-        else:
-            print('Error: the network is not compiled yet.')
-            print(traceback.print_stack())
-            
-    def get_parameter(self, parameter):
-        """
-        Returns the value of the given variable for all neurons in the population, as a NumPy array having the same geometry as the population.
-        
-        Parameter:
-        
-        * *parameter*: should be a string representing the variables's name.
-        """
-        
-        if hasattr(self, 'cyInstance'):
-            if hasattr(self.cyInstance, parameter):
-                return getattr(self.cyInstance, parameter)
-            else:
-                print('Error: parameter', parameter, 'does not exist in this population.')
-                print(traceback.print_stack())
-        else:
-            print('Error: the network is not compiled yet.')
-            print(traceback.print_stack())
+
     
     def rank_from_coordinates(self, coord):
         """
@@ -468,9 +486,7 @@ class Population(object):#Descriptor):
             if self.geometry[dim] > 1:
                 normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
             else:
-                normal += (0.0,) # default?
-
-        #print self.geometry,'=> (1.0,1.0):',coord,'=>', normal               
+                normal += (0.0,) # default?            
         return normal
 
     def set(self, value):
@@ -483,41 +499,27 @@ class Population(object):#Descriptor):
             
                 .. code-block:: python
                 
-                    set( 'tau' : 20, 'rate'= np.random.rand((8,8)) } )
+                    set({ 'tau' : 20.0, 'rate'= np.random.rand((8,8)) } )
         """
-        if hasattr(self, 'cyInstance'):
-            for val_key in value.keys():
-                if hasattr(self, val_key):
-                    # Check the type of the data
-                    if isinstance(value[val_key], RandomDistribution):
-                        val = value[val_key].getValues(self.size) 
-                    else: 
-                        val = value[val_key] 
-                    setattr(self.cyInstance, val_key, val)
-                else:
-                    Global._error("population does not have the attribute: ",val_key,".")
-        else:
-            Global._error("the network is not compiled yet.")
-            Global._print(traceback.print_stack())
+        for name in value.keys():
+            if hasattr(self, 'cyInstance'):
+                if name in self.attributes:
+                    self._set_cython_attribute(name, value[name])
+            else:
+                self.init[name] = value[name]
         
-    def get(self, value):
+    def get(self, name):
         """
         Gets current variable/parameter values.
         
         Parameter:
         
-        * *value*: value name as string
+        * *name*: attribute name as string
         """
         if hasattr(self, 'cyInstance'):
-            if value in self.variables:
-                return self.get_variable(value)
-            elif value in self.parameters:
-                return self.get_parameter(value)
-            else:
-                Global._error("population does not contain attribute: '"+value+"'")   
+            return self._get_cython_attribute(name) 
         else:
-            Global._error("the network is not compiled yet.'")
-            Global._print(traceback.print_stack())
+            return self.init[name]
             
     def neuron(self, coord):  
         " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  

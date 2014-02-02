@@ -27,10 +27,9 @@ from ANNarchy4.core.Random import *
 
 class PopulationGenerator(object):
     """ Base class for generating C++ code from a population description. """
-    def __init__(self, name, desc, targets):
+    def __init__(self, name, desc):
         self.name = name
         self.desc = desc
-        self.targets = targets
         
         # Names of the files to be generated
         self.header = Global.annarchy_dir+'/generate/build/'+self.name+'.h'
@@ -147,29 +146,50 @@ class PopulationGenerator(object):
         constructor = ""
         reset=""
         # Attributes
-        for param in self.desc['parameters'] + self.desc['variables']:
-            
+        for param in self.desc['parameters'] + self.desc['variables']:            
             if param['name'] in self.desc['local']: # local attribute
+                # Determine the initial value
+                ctype = param['ctype']
+                if ctype == 'bool':
+                    cinit = 'true' if param['init'] else 'false'
+                elif ctype == 'int':
+                    cinit = int(param['init'])
+                elif ctype == 'DATA_TYPE':
+                    if isinstance(param['init'], np.ndarray): # will be set later
+                        cinit = 0.0
+                    else:
+                        cinit = float(param['init'])
+                    
+                # Initialize the attribute
                 constructor += """
     // %(name)s_ : local
     %(name)s_ = std::vector<%(type)s> (nbNeurons_, %(init)s);
     record_%(name)s_ = false; 
     recorded_%(name)s_ = std::vector< std::vector< %(type)s > >();    
-""" % {'name' : param['name'], 'type': param['ctype'], 'init' : param['init']}
+""" % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
                 reset += """
     // %(name)s_ : local
     %(name)s_ = std::vector<%(type)s> (nbNeurons_, %(init)s);   
-""" % {'name' : param['name'], 'type': param['ctype'], 'init' : param['init']}
+""" % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
 
             elif param['name'] in self.desc['global']: # global attribute
+                # Determine the initial value
+                ctype = param['ctype']
+                if ctype == 'bool':
+                    cinit = 'true' if param['init'] else 'false'
+                elif ctype == 'int':
+                    cinit = int(param['init'])
+                elif ctype == 'DATA_TYPE':
+                    cinit = float(param['init'])
+                # Initialize the attribute
                 constructor += """
     // %(name)s_ : global
     %(name)s_ = %(init)s;   
-""" % {'name' : param['name'], 'init': param['init']} 
+""" % {'name' : param['name'], 'init': str(cinit)} 
                 reset += """
     // %(name)s_ : global
     %(name)s_ = %(init)s;   
-""" % {'name' : param['name'], 'type': param['ctype'], 'init' : param['init']} 
+""" % {'name' : param['name'], 'init' : str(cinit)} 
 
         # Global operations
         for var in self.desc['global_operations']:
@@ -356,8 +376,8 @@ void %(class)s::compute_sum_%(var)s() {
 class RatePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a rate population description. """
     
-    def __init__(self, name, desc, targets):
-        PopulationGenerator.__init__(self, name, desc, targets)
+    def __init__(self, name, desc):
+        PopulationGenerator.__init__(self, name, desc)
         
     def generate_header(self):
         " Generates the C++ header file."        
@@ -433,8 +453,8 @@ class RatePopulationGenerator(PopulationGenerator):
 
 class SpikePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a spike population description. """
-    def __init__(self, name, desc, targets):
-        PopulationGenerator.__init__(self, name, desc, targets)
+    def __init__(self, name, desc):
+        PopulationGenerator.__init__(self, name, desc)
     
     def generate_header(self):
         return ""

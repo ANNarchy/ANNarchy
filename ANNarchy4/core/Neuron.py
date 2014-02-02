@@ -21,13 +21,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy4.core.Master import Master
-from ANNarchy4.core.Variable import Variable, SpikeVariable
 from ANNarchy4.core.Global import _error
 
 import pprint
 
-class RateNeuron(Master):
+class RateNeuron(object):
     """
     Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
@@ -38,49 +36,23 @@ class RateNeuron(Master):
         
         *Parameters*:
         
-            * *parameters*: stored as *key-value pairs*. For example:
-
-                .. code-block:: python
-        
-                    parameters = \"\"\"
-                        tau = 10, 
-                    \"\"\"
-
-                initializes a parameter ``tau`` with the value 10. Please note, that you may specify several constraints for a parameter:
-            
-                * *population* : 
-                
-                * *min*:
-                
-                * *max*:
-
-            * *equations*: simply as a string contain the equations
-            
-                .. code-block:: python
-        
-                    equations = \"\"\"
-                        tau * drate / dt + rate = sum(exc)
-                    \"\"\"
-
-                spcifies a variable ``rate`` bases on his excitory inputs.
+            * TODO
 
         """        
-        Master.__init__(self)
         
         # Store the parameters and equations
         self.parameters = parameters
         self.equations = equations
         self.functions = functions
         
-#        self._convert(parameters, equations, extra_values) 
 
     def __str__(self):
         """
         Customized print.
         """
-        return pprint.pformat( self._variables, depth=4 ) 
+        return pprint.pformat( self, depth=4 ) 
         
-class SpikeNeuron(Master):
+class SpikeNeuron(object):
     """
     Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
@@ -136,7 +108,6 @@ class SpikeNeuron(Master):
                         v = c
                     \"\"\"
         """        
-        Master.__init__(self)
         
         # Store the parameters and equations
         self.parameters = parameters
@@ -145,34 +116,9 @@ class SpikeNeuron(Master):
         self.spike = spike
         self.reset = reset
         
-#        # Analyse the provided strings in parameters, equations and extra_values
-#        self._convert(parameters, equations, extra_values)
-#        
-#        # Check if the reset and spike arguments were passed
-#        if not spike or not reset:
-#            _error('The *spike* and *reset* arguments must be defined for a spiking neuron')
-#            exit(0)
-#        spike_eq = self._prepare_string(spike)[0]
-#        reset_eq = self._prepare_string(reset)
-#        
-#        lside, rside = spike_eq.split('>')
-#        var_name = lside.replace(' ','')
-#        var_eq = rside.replace(' ','')
-#        
-#        old_var = self._variables[var_name]['var']
-#        new_var = SpikeVariable(
-#                            init = old_var.init,
-#                            eq = old_var.eq,
-#                            min = old_var.min,
-#                            max = old_var.max,
-#                            threshold = rside,
-#                            reset = reset_eq
-#                        )
-#        
-#        self._variables[var_name]['var'] = new_var 
         
     def __str__(self):
-        return pprint.pformat( self._variables, depth=4 )
+        return pprint.pformat( self, depth=4 )
         
 class IndividualNeuron(object):
     """Neuron object returned by the Population.neuron(rank) method.

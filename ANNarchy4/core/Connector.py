@@ -153,7 +153,6 @@ class All2All(Connector):
         """
         cython_module = __import__('ANNarchyCython')
         proj_type = int(self.proj.name.split('Projection')[1])
-        print proj_type
         
         self.cy_instance = getattr(cython_module, 'All2All')(proj_type)
             

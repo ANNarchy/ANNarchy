@@ -29,7 +29,6 @@ import time
 # ANNarchy core informations
 import ANNarchy4
 import ANNarchy4.core.Global as Global
-from ANNarchy4.core.Descriptor import Attribute 
 from ANNarchy4.parser.Analyser import Analyser  
 from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, SpikeProjectionGenerator  
@@ -111,7 +110,6 @@ def compile(clean=False, cpp_stand_alone=False, debug_build=False, profile_enabl
     * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
     * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     """
-    Global._print( 'ANNarchy', ANNarchy4.__version__, '(', ANNarchy4.__release__, ')', 'on', sys.platform, '(', os.name,')' )
    
     # first argument is python script itself.
     for arg in sys.argv[1:]:
@@ -209,17 +207,17 @@ class Generator(object):
         # create population cpp class for each neuron
         for name, desc in self.analyser.analysed_populations.iteritems():
             if desc['type'] == 'rate':
-                pop_generator = RatePopulationGenerator(name, desc, self.analyser.targets)
+                pop_generator = RatePopulationGenerator(name, desc)
             elif desc['type'] == 'spike':
-                pop_generator = SpikePopulationGenerator(name, desc, self.analyser.targets)
+                pop_generator = SpikePopulationGenerator(name, desc)
             pop_generator.generate(Global.config['verbose'])
         
         # create projections cpp class for each synapse
         for name, desc in self.analyser.analysed_projections.iteritems():
             if desc['type'] == 'rate':
-                proj_generator = RateProjectionGenerator(name, desc, self.analyser.targets)
+                proj_generator = RateProjectionGenerator(name, desc)
             elif desc['type'] == 'spike':
-                proj_generator = SpikeProjectionGenerator(name, desc, self.analyser.targets)
+                proj_generator = SpikeProjectionGenerator(name, desc)
             proj_generator.generate(Global.config['verbose'])
     
         # Create default files mainly based on the number of populations and projections
@@ -274,13 +272,13 @@ class Generator(object):
             changed = False
             # Copy the files which have changed 
             for file in os.listdir(Global.annarchy_dir+'/' + folder):
-                # If the file does not exist in build/ or pyx/, 
-                # or if the newly generated file is different, copy the new file
+                # If the file does not exist in generate/build/ or generate/pyx/
                 if not os.path.isfile(Global.annarchy_dir+'/generate/'+folder+'/'+file):
-                    os.remove(Global.annarchy_dir+'/'+folder+'/'+file)
-                    changed = True
-                    if Global.config['verbose']:
-                        Global._print(file, 'has been deleted.') 
+                    if not file.endswith('.o') and not file == 'ANNarchyCython.cpp': # skip generated files
+                        os.remove(Global.annarchy_dir+'/'+folder+'/'+file)
+                        changed = True
+                        if Global.config['verbose']:
+                            Global._print(file, 'has been deleted.') 
             return changed
         
         changed_cpp = False
@@ -314,7 +312,7 @@ class Generator(object):
             Global._print('Compiling ...')
             if Global.config['show_time']:
                 t0 = time.time()
-                
+                                
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
             if not self.debug_build:
@@ -423,14 +421,10 @@ clean:
                 Global._print('    Create population', pop.name)
             if Global.config['show_time']:
                 t0 = time.time()
-            # Get the corresponding class name
-            class_name = self.analyser._find_population_name(pop.name)
             # Create the Cython instance 
-            pop.cyInstance = eval('ANNarchyCython.py'+ class_name+'()')
-            # Create the attributes
-            # pop._init_attributes() TODO
-            # Initialize their value
-            #pop.generator._init_variables() TODO
+            pop.cyInstance = eval('ANNarchyCython.py'+ pop.class_name+'()')
+            # Create the attributes and actualize the initial values
+            pop._init_attributes()
             if Global.config['show_time']:
                 Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds') 
                             
@@ -447,7 +441,7 @@ clean:
                 proj.pre.cyInstance.set_max_delay(int(proj.connector.delays.max()))
  
             # Create the attributes
-            #proj._init_attributes()   
+            proj._init_attributes()   
             if Global.config['show_time']:
                 Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
                 
@@ -526,19 +520,16 @@ clean:
         # single cases
         cases_ptr = ''
         for name, desc in projections.iteritems():
-            id_proj = desc['id']
             cases_ptr += """
                 case %(id)s:
                     {
                 #ifdef _DEBUG
-                    std::cout << "Instantiate name=%(name)s and id=%(id)s" << std::endl;
+                    std::cout << "Instantiate name=%(name)s" << std::endl;
                 #endif
                     return new %(name)s(pre, post, postNeuronRank, target);
                     }
 
-""" % { 'id': id_proj, 
-        'name': name
-        }
+""" % { 'name': name, 'id': name.split('Projection')[1]}
 
         # complete code
         code = """class createProjInstance {

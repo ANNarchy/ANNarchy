@@ -11,7 +11,6 @@ from .core.Projection import Projection
 from .core.Dendrite import Dendrite
 from .core.Connector import Connector, One2One, All2All, Gaussian, DoG
 from .core.Random import Constant, Uniform, Normal
-from .core.Variable import Variable, SpikeVariable
 
 #
 # ANNarchy4 visualizer
@@ -24,9 +23,15 @@ from .generator.Generator import compile
 #
 # extension packages, imported as available
 from .extensions import *
-if core.Global.config['verbose']:
+if Global.config['verbose']:
     check_extensions()
 
+# Generic imports
 import numpy as np
+import os, sys
+
+# Version
 __version__ = '4.1'
 __release__ = '4.1.0.alpha'
+Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
+                   ') on ' + sys.platform + ' (' + os.name + ').' )
