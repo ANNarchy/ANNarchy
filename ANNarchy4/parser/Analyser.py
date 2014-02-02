@@ -235,18 +235,30 @@ def _extract_globalops(name, eq, proj):
     for op in glop_names:
         pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(pre\.([a-zA-Z0-9]+)\)', eq)
         post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(post\.([a-zA-Z0-9]+)\)', eq)
+        # Check if a global variable depends on pre
+        if len(pre_matches) > 0 and name in proj.description['global']:
+            _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
+            exit(0)
         for pre, var in pre_matches:
-            globs['pre'].append({'function': op, 'variable': var})
-            oldname = op + '(pre.' + var + ')'
-            newname = '__pre_' + op + '_' + var
-            eq = eq.replace(oldname, newname)
-            untouched[newname] = ' pre_population_->get'+op.capitalize()+var.capitalize()+'()'
+            if var in proj.pre.attributes:
+                globs['pre'].append({'function': op, 'variable': var})
+                oldname = op + '(pre.' + var + ')'
+                newname = '__pre_' + op + '_' + var
+                eq = eq.replace(oldname, newname)
+                untouched[newname] = ' pre_population_->get'+op.capitalize()+var.capitalize()+'()'
+            else:
+                _error(eq+'\nPopulation '+proj.name+' has no attribute '+var+'.')
+                exit(0)
         for pre, var in post_matches:
-            globs['post'].append({'function': op, 'variable': var})
-            oldname = op + '(post.' + var + ')'
-            newname = '__post_' + op + '_' + var
-            eq = eq.replace(oldname, newname)
-            untouched[newname] = ' post_population_->get'+op.capitalize()+var.capitalize()+'()'
+            if var in proj.pre.attributes:
+                globs['post'].append({'function': op, 'variable': var})
+                oldname = op + '(post.' + var + ')'
+                newname = '__post_' + op + '_' + var
+                eq = eq.replace(oldname, newname)
+                untouched[newname] = ' post_population_->get'+op.capitalize()+var.capitalize()+'()'
+            else:
+                _error(eq+'\nPopulation '+proj.pre.name+' has no attribute '+var+'.')
+                exit(0)
     return eq, untouched, globs
     
 def _extract_prepost(name, eq, proj):
@@ -260,10 +272,9 @@ def _extract_prepost(name, eq, proj):
         exit(0)
     # Replace all pre.* occurences with a temporary variable
     for var in list(set(pre_matches)):
-        prepop = proj.pre
         if var == 'sum': # pre.sum(exc)
             pass
-        elif var in prepop.attributes:
+        elif var in proj.pre.attributes:
             target = 'pre.' + var
             eq = eq.replace(target, '_pre_'+var+'_')
             untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
@@ -272,10 +283,9 @@ def _extract_prepost(name, eq, proj):
             exit(0)
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
-        prepop = proj.post
         if var == 'sum': # pre.sum(exc)
             pass
-        elif var in prepop.attributes:
+        elif var in proj.post.attributes:
             target = 'post.' + var
             eq = eq.replace(target, '_post_'+var+'_')
             untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
@@ -399,7 +409,6 @@ def _extract_parameters(description):
                 ctype = 'bool'
             else:
                 init = eval(ctype.replace('DATA_TYPE', 'float') + '(' + init + ')')
-                cinit = ctype + '(' + str(init) + ')'
         else: # Nothing is given: baseline : population
             if ctype == 'bool':
                 init = False
