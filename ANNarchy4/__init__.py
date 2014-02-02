@@ -16,7 +16,13 @@ from .core.Variable import Variable, SpikeVariable
 #
 # ANNarchy4 visualizer
 from .visualization import Visualization
-from .editor import ANNarchyEditor
+
+try:
+    import PyQt4
+    import OpenGL
+    from .editor import ANNarchyEditor
+except ImportError:
+    print "ANNarchy4 editor is not available through missing dependencies."
 
 #
 # ANNarchy4 compilation
