@@ -2,6 +2,8 @@ from lxml import etree
 from PyQt4 import QtGui
 from PyQt4.QtCore import QObject
 
+from GLObjects import Quad2d, Point2d
+
 class Repository(QObject):
     
     def __init__(self):
@@ -55,9 +57,10 @@ class Repository(QObject):
             neur_data = etree.SubElement( neur_tag, 'code')
             i = 0
             for line in str(data).split('\n'):
-                data_tag = etree.SubElement( neur_data , 'line'+str(i)  )
-                data_tag.text = line
-                i+=1                  
+                if len(line) > 0:
+                    data_tag = etree.SubElement( neur_data , 'line'+str(i)  )
+                    data_tag.text = line
+                    i+=1                  
 
         #
         # save neurons
@@ -71,9 +74,10 @@ class Repository(QObject):
             syn_data = etree.SubElement( syn_tag, 'code')
             i = 0
             for line in str(data).split('\n'):
-                syn_tag = etree.SubElement( syn_data , 'line'+str(i)  )
-                syn_tag.text = line
-                i+=1                  
+                if len(line) > 0:
+                    syn_tag = etree.SubElement( syn_data , 'line'+str(i)  )
+                    syn_tag.text = line
+                    i+=1                  
 
         #
         # save network
@@ -89,6 +93,9 @@ class Repository(QObject):
                 
                 pop_name = etree.SubElement( pop_data, 'name')
                 pop_name.text = str(pop['name'])
+
+                pop_type = etree.SubElement( pop_data, 'type')
+                pop_type.text = str(pop['type'])
                 
                 pop_geo = etree.SubElement( pop_data, 'geometry')
                 pop_geo.text = str(pop['geometry'])
@@ -168,13 +175,25 @@ class Repository(QObject):
                 i = 0
                 for pop in pop_data.getchildren():
                     name = pop.find('name').text
+                    
+                    type = pop.find('type').text
+                    
                     geometry = eval(pop.find('geometry').text) # I know, eval is not so good, but I dont know an other conversion 
                     
-                    coords = []
+                    points = []
                     for p in pop.find('coords').getchildren():
-                        coords.append(eval(p.text))
-    
-                    self._network_defs[net_name].update( { i: { 'name': name, 'geometry': geometry, 'coords': coords } } )
+                        tmp = eval(p.text)
+                        points.append(Point2d(tmp[0], tmp[1]))
+                    quad = Quad2d().from_p(points[0],
+                                           points[1],
+                                           points[2],
+                                           points[3])
+                        
+                    self._network_defs[net_name].update( { i: {'name': name, 
+                                                               'geometry': geometry, 
+                                                               'coords': quad, 
+                                                               'type' : type
+                                                               } } )
                     i += 1
 
     def add_object(self, type, name, data):

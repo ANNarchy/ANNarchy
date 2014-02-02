@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Sat Feb  1 22:04:08 2014
+# Created: Sun Feb  2 11:02:29 2014
 #      by: PyQt4 UI code generator 4.9.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -150,6 +150,8 @@ class Ui_ANNarchyEditor(object):
         self.pop_view.setObjectName(_fromUtf8("pop_view"))
         self.gridLayout_5 = QtGui.QGridLayout(self.pop_view)
         self.gridLayout_5.setObjectName(_fromUtf8("gridLayout_5"))
+        spacerItem2 = QtGui.QSpacerItem(20, 446, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.gridLayout_5.addItem(spacerItem2, 3, 2, 1, 1)
         self.label_6 = QtGui.QLabel(self.pop_view)
         self.label_6.setObjectName(_fromUtf8("label_6"))
         self.gridLayout_5.addWidget(self.label_6, 1, 0, 1, 2)
@@ -164,8 +166,12 @@ class Ui_ANNarchyEditor(object):
         self.pop_name.setReadOnly(False)
         self.pop_name.setObjectName(_fromUtf8("pop_name"))
         self.gridLayout_5.addWidget(self.pop_name, 0, 1, 1, 2)
-        spacerItem2 = QtGui.QSpacerItem(20, 446, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.gridLayout_5.addItem(spacerItem2, 2, 2, 1, 1)
+        self.neur_type = QtGui.QComboBox(self.pop_view)
+        self.neur_type.setObjectName(_fromUtf8("neur_type"))
+        self.gridLayout_5.addWidget(self.neur_type, 2, 2, 1, 1)
+        self.label_19 = QtGui.QLabel(self.pop_view)
+        self.label_19.setObjectName(_fromUtf8("label_19"))
+        self.gridLayout_5.addWidget(self.label_19, 2, 0, 1, 1)
         self.gridLayout_2.addWidget(self.pop_view, 0, 0, 1, 1)
         self.stackedWidget_2.addWidget(self.page_5)
         self.page_6 = QtGui.QWidget()
@@ -317,6 +323,9 @@ class Ui_ANNarchyEditor(object):
         self.page.setObjectName(_fromUtf8("page"))
         self.verticalLayout_6 = QtGui.QVBoxLayout(self.page)
         self.verticalLayout_6.setObjectName(_fromUtf8("verticalLayout_6"))
+        self.generate_script = QtGui.QPushButton(self.page)
+        self.generate_script.setObjectName(_fromUtf8("generate_script"))
+        self.verticalLayout_6.addWidget(self.generate_script)
         self.compile_and_run = QtGui.QPushButton(self.page)
         self.compile_and_run.setObjectName(_fromUtf8("compile_and_run"))
         self.verticalLayout_6.addWidget(self.compile_and_run)
@@ -343,8 +352,8 @@ class Ui_ANNarchyEditor(object):
         self.menubar.addAction(self.menuConfig.menuAction())
 
         self.retranslateUi(ANNarchyEditor)
-        self.views.setCurrentIndex(1)
-        self.general.setCurrentIndex(1)
+        self.views.setCurrentIndex(5)
+        self.general.setCurrentIndex(5)
         self.stackedWidget_2.setCurrentIndex(0)
         self.plot_config.setCurrentIndex(1)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), ANNarchyEditor.close)
@@ -368,6 +377,10 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.plot_select, QtCore.SIGNAL(_fromUtf8("currentIndexChanged(int)")), self.plot_config.setCurrentIndex)
         QtCore.QObject.connect(self.plot_1d_color, QtCore.SIGNAL(_fromUtf8("currentIndexChanged(int)")), self.vis_control.change_color)
         QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_population(int)")), self.pop_view.update_population)
+        QtCore.QObject.connect(self.neur_type, QtCore.SIGNAL(_fromUtf8("currentIndexChanged(QString)")), self.pop_view.neur_type_changed)
+        QtCore.QObject.connect(self.pop_name, QtCore.SIGNAL(_fromUtf8("editingFinished()")), self.pop_view.pop_name_changed)
+        QtCore.QObject.connect(self.pop_size, QtCore.SIGNAL(_fromUtf8("editingFinished()")), self.pop_view.pop_geo_changed)
+        QtCore.QObject.connect(self.generate_script, QtCore.SIGNAL(_fromUtf8("pressed()")), self.complete.generate_script)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):
@@ -386,6 +399,7 @@ class Ui_ANNarchyEditor(object):
         self.label_16.setText(QtGui.QApplication.translate("ANNarchyEditor", "information", None, QtGui.QApplication.UnicodeUTF8))
         self.label_6.setText(QtGui.QApplication.translate("ANNarchyEditor", "Geometry", None, QtGui.QApplication.UnicodeUTF8))
         self.label_5.setText(QtGui.QApplication.translate("ANNarchyEditor", "Name", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_19.setText(QtGui.QApplication.translate("ANNarchyEditor", "Neuron type", None, QtGui.QApplication.UnicodeUTF8))
         self.label_11.setText(QtGui.QApplication.translate("ANNarchyEditor", "Pre populaution", None, QtGui.QApplication.UnicodeUTF8))
         self.label_12.setText(QtGui.QApplication.translate("ANNarchyEditor", "Post population", None, QtGui.QApplication.UnicodeUTF8))
         self.label_13.setText(QtGui.QApplication.translate("ANNarchyEditor", "Target", None, QtGui.QApplication.UnicodeUTF8))
@@ -402,6 +416,7 @@ class Ui_ANNarchyEditor(object):
         self.groupBox_3.setTitle(QtGui.QApplication.translate("ANNarchyEditor", "GroupBox", None, QtGui.QApplication.UnicodeUTF8))
         self.label_3.setText(QtGui.QApplication.translate("ANNarchyEditor", "Plot Type", None, QtGui.QApplication.UnicodeUTF8))
         self.label_18.setText(QtGui.QApplication.translate("ANNarchyEditor", "Color", None, QtGui.QApplication.UnicodeUTF8))
+        self.generate_script.setText(QtGui.QApplication.translate("ANNarchyEditor", "Generate script", None, QtGui.QApplication.UnicodeUTF8))
         self.compile_and_run.setText(QtGui.QApplication.translate("ANNarchyEditor", "Compile and Run", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("ANNarchyEditor", "File", None, QtGui.QApplication.UnicodeUTF8))
         self.menuConfig.setTitle(QtGui.QApplication.translate("ANNarchyEditor", "Config", None, QtGui.QApplication.UnicodeUTF8))

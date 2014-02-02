@@ -12,8 +12,6 @@
         <line6>        tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0</line6>
         <line7>    """</line7>
         <line8>)</line8>
-        <line9></line9>
-        <line10></line10>
       </code>
     </LeakyNeuron>
     <InputNeuron>
@@ -27,7 +25,7 @@
         <line5>    equations="""</line5>
         <line6>        tau * drate/dt + rate = baseline : min=0.0</line6>
         <line7>    """</line7>
-        <line8></line8>
+        <line8>)</line8>
       </code>
     </InputNeuron>
   </neurons>
@@ -44,8 +42,6 @@
         <line6>        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min = 0.0</line6>
         <line7>    """</line7>
         <line8>)  </line8>
-        <line9></line9>
-        <line10></line10>
       </code>
     </AntiHebb>
     <Oja>
@@ -60,7 +56,6 @@
         <line6>        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value</line6>
         <line7>    """</line7>
         <line8>)  </line8>
-        <line9></line9>
       </code>
     </Oja>
   </synapses>
@@ -69,8 +64,9 @@
       <name>Bar_Learning</name>
       <populations>
         <pop0>
-          <name>Population0</name>
-          <geometry>(1, 1)</geometry>
+          <name>Input</name>
+          <type>InputNeuron</type>
+          <geometry>(16, 16)</geometry>
           <coords>
             <p1>[ 0.271971496437, 0.608527131783 ]</p1>
             <p2>[ 0.469121140143, 0.608527131783 ]</p2>
@@ -79,8 +75,9 @@
           </coords>
         </pop0>
         <pop1>
-          <name>Population1</name>
-          <geometry>(1, 1)</geometry>
+          <name>Output</name>
+          <type>LeakyNeuron</type>
+          <geometry>(16, 4)</geometry>
           <coords>
             <p1>[ 0.622327790974, 0.610465116279 ]</p1>
             <p2>[ 0.813539192399, 0.610465116279 ]</p2>

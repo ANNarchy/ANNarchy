@@ -38,7 +38,7 @@
        </property>
        <widget class="MyTabWidget" name="views">
         <property name="currentIndex">
-         <number>1</number>
+         <number>5</number>
         </property>
         <widget class="QWidget" name="object_page">
          <attribute name="title">
@@ -135,7 +135,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>1</number>
+        <number>5</number>
        </property>
        <widget class="QWidget" name="obj_tab">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -238,6 +238,19 @@
              <item row="0" column="0">
               <widget class="PopView" name="pop_view" native="true">
                <layout class="QGridLayout" name="gridLayout_5">
+                <item row="3" column="2">
+                 <spacer name="verticalSpacer_3">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>446</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
                 <item row="1" column="0" colspan="2">
                  <widget class="QLabel" name="label_6">
                   <property name="text">
@@ -267,17 +280,14 @@
                  </widget>
                 </item>
                 <item row="2" column="2">
-                 <spacer name="verticalSpacer_3">
-                  <property name="orientation">
-                   <enum>Qt::Vertical</enum>
+                 <widget class="QComboBox" name="neur_type"/>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_19">
+                  <property name="text">
+                   <string>Neuron type</string>
                   </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>20</width>
-                    <height>446</height>
-                   </size>
-                  </property>
-                 </spacer>
+                 </widget>
                 </item>
                </layout>
               </widget>
@@ -562,6 +572,13 @@
        <widget class="QWidget" name="page">
         <layout class="QVBoxLayout" name="verticalLayout_6">
          <item>
+          <widget class="QPushButton" name="generate_script">
+           <property name="text">
+            <string>Generate script</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="compile_and_run">
            <property name="text">
             <string>Compile and Run</string>
@@ -648,6 +665,7 @@
     <slot>set_code()</slot>
     <slot>initialize()</slot>
     <slot>save()</slot>
+    <slot>generate_script()</slot>
    </slots>
   </customwidget>
   <customwidget>
@@ -738,6 +756,9 @@
    <slots>
     <slot>update_population(int)</slot>
     <slot>initialize()</slot>
+    <slot>neur_type_changed(QString)</slot>
+    <slot>pop_name_changed()</slot>
+    <slot>pop_geo_changed()</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -1076,6 +1097,70 @@
     <hint type="destinationlabel">
      <x>842</x>
      <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>neur_type</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>pop_view</receiver>
+   <slot>neur_type_changed(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>889</x>
+     <y>154</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pop_name</sender>
+   <signal>editingFinished()</signal>
+   <receiver>pop_view</receiver>
+   <slot>pop_name_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>886</x>
+     <y>80</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pop_size</sender>
+   <signal>editingFinished()</signal>
+   <receiver>pop_view</receiver>
+   <slot>pop_geo_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>889</x>
+     <y>117</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>generate_script</sender>
+   <signal>pressed()</signal>
+   <receiver>complete</receiver>
+   <slot>generate_script()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>225</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>334</y>
     </hint>
    </hints>
   </connection>

@@ -36,13 +36,7 @@ class GLNetworkWidget(GLBaseWidget):
         
         # load all data for selected network
         for id, pop in data.iteritems():            
-            points = [ Point2d(p[0],p[1]) for p in pop['coords'] ]
-            quad = Quad2d().from_p(points[0],
-                                   points[1],
-                                   points[2],
-                                   points[3])
-            
-            self.populations.update( { id : quad } )
+            self.populations.update( { id : pop['coords'] } )
             
         self.updateGL()
 
@@ -167,7 +161,11 @@ class GLNetworkWidget(GLBaseWidget):
                     self.populations.update({ pop_id: copy.deepcopy(self._quad)})
             
                     # create a new entry in repository
-                    self._rep.get_object('network','Bar_Learning').update( { pop_id: { 'name': 'Population'+str(pop_id), 'geometry': (1,1), 'coords': copy.deepcopy(self._quad) } } )
+                    self._rep.get_object('network','Bar_Learning').update( { pop_id: {'name': 'Population'+str(pop_id), 
+                                                                                      'geometry': (1,1), 
+                                                                                      'coords': copy.deepcopy(self._quad),
+                                                                                      'type' : 'None' 
+                                                                                      } } )
                     
             
             self._quad = None

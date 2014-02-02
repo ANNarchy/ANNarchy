@@ -51,6 +51,34 @@ class CodeView(QsciScintilla):
             self.setText(self._rep.get_object('neuron', self._curr_name))
 
     @pyqtSlot()
+    def generate_script(self):
+        code = ''
+        network = self._rep.get_object('network', 'Bar_Learning')
+         
+        # get all needed neurons
+        neurons = []
+        for pop in network.itervalues():
+            neurons.append(pop['type'])
+        neurons = list(set(neurons))
+        
+        # add all neuron definitions to script
+        for neur in neurons:
+            code += self._rep.get_object('neuron', neur)
+            code += '\n'
+
+        # population creation
+        template = """%(name)s = Population(neuron=%(type)s, geometry=%(geo)s, name=\"%(name)s\")\n"""
+        for pop in network.itervalues():
+            code += template % { 'name': pop['name'],
+                                 'type': pop['type'],
+                                 'geo': pop['geometry']
+                                }
+            code += '\n'
+        
+        # show the result
+        self.setText(code)
+        
+    @pyqtSlot()
     def save(self):
         print 'xxx'
         self._rep.update( self._curr_name, self.text() )
