@@ -29,7 +29,7 @@ class Connector(object):
     """
     The connector class manages all information and operations related to connection patterns.
     """
-    def __init__(self, weights, delays=0, **parameters):
+    def __init__(self, weights=None, delays=None, **parameters):
         """
         Initialize a connection object.
 
@@ -130,8 +130,8 @@ class All2All(Connector):
             * *pre*: the presynaptic population (python Population instance)            
             * *post*: the postsynaptic population (python Population instance)            
             * *target*: string describing the connection type
-            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.            
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.                        
+            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or a single value.            
+            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or a single value.                        
             * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
 
         
@@ -188,18 +188,14 @@ class Gaussian(Connector):
     Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
     the neuron with the same rank and width weights following a gaussians distribution.    
     """
-    def __init__(self, weights, delays=0, **parameters):
+    def __init__(self, delays=None, **parameters):
         """
-        Initialize an One2One connection object.
+        Initialize an gaussian connector object.
 
         Parameters:
         
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.            
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.                        
-            * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
+            * *delays*: synaptic delay for all synapses of one projection. Could be either a single value to set the same synaptic delay for all synapses or a ``RandomDistribution`` object (default = None).                        
+            * *parameters*: connection pattern specific parameters provided as key-value pairs
 
         Specific parameters:
         
@@ -208,7 +204,7 @@ class Gaussian(Connector):
             * *limit*: percentage of amplitude below which the connection is not created (default = 0.01)
             * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """        
-        super(self.__class__, self).__init__(weights, delays, **parameters)
+        super(self.__class__, self).__init__(delays=delays, **parameters)
         
     def connect(self):
         """
@@ -223,7 +219,6 @@ class Gaussian(Connector):
         tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
                                           target,
-                                          self.weights,
                                           self.delays,
                                           self.parameters
                                           )
@@ -245,19 +240,14 @@ class DoG(Connector):
     Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
     the neuron with the same rank and width weights following a difference-of-gaussians distribution.
     """    
-    def __init__(self, weights, delays=0, **parameters):
+    def __init__(self, delays=None, **parameters):
         """
-        Initialize an One2One connection object.
+        Initialize an DoG connector object.
 
         Parameters:
         
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.            
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.                        
-            * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
-
+            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or a single value.                        
+            * *parameters*: any pattern specific parameters provided as key-value pairs
         
         Specific parameters:
         
@@ -268,7 +258,7 @@ class DoG(Connector):
             * *limit*: percentage of ``amp_pos - amp_neg`` below which the connection is not created (default = 0.01)
             * *allow_self_connections*: if self-connections are allowed or not (default = False) 
         """
-        super(self.__class__, self).__init__(weights, delays, **parameters)
+        super(self.__class__, self).__init__(delays, **parameters)
         
     def connect(self):
         """
@@ -283,7 +273,6 @@ class DoG(Connector):
         tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
                                           target,
-                                          self.weights,
                                           self.delays,
                                           self.parameters
                                           )

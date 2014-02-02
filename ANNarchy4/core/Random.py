@@ -32,10 +32,16 @@ class RandomDistribution(object):
         pass
 
     def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
         Global._error('instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
     def get_value(self):
+        """
+        Returns a single float value.
+        """
         Global._error('instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
@@ -60,10 +66,16 @@ class Constant(RandomDistribution):
         self._value = value
         
     def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
         return self._value * np.ones(shape)
     
     def get_value(self):
-        return self.get_values((1))
+        """
+        Returns a single float value.
+        """
+        return self.get_values((1))[0]
     
     def _gen_cpp(self):
         return 'Constant<DATA_TYPE>('+str(self._value)+')'
@@ -92,10 +104,16 @@ class Uniform(RandomDistribution):
         self._cpp_seed = cpp_seed
         
     def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
         return np.random.uniform(self._min, self._max, shape)
     
     def get_value(self):
-        return self.get_values((1))
+        """
+        Returns a single float value.
+        """
+        return self.get_values((1))[0]
     
     def _gen_cpp(self):
         if(self._cpp_seed == -1):
@@ -127,10 +145,16 @@ class Normal(RandomDistribution):
         self._cpp_seed = cpp_seed
         
     def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
         return np.random.normal(self._mu, self._sigma, shape)
     
     def get_value(self):
-        return self.get_values((1))
+        """
+        Returns a single float value.
+        """
+        return self.get_values((1))[0]
     
     def _gen_cpp(self):
         if(self._cpp_seed == -1):

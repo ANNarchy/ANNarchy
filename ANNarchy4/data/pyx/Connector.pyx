@@ -207,7 +207,7 @@ cdef class Gaussian(PyxConnector):
         """
         PyxConnector.__init__(proj_type)
       
-    def connect(self, pre, post, target, weights, delays, parameters):
+    def connect(self, pre, post, target, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
         """        
@@ -273,7 +273,8 @@ cdef class Gaussian(PyxConnector):
                 if (abs(value) > self.limit*abs(self.amp)):
                     ranks.push_back(j)
                     values.push_back(value)
-                    delay.push_back(self.delay_dist.get_value())
+                    if self.delay_dist != None:
+                        delay.push_back(self.delay_dist.get_value())
                     
         return ranks, values, delay
     
@@ -305,7 +306,7 @@ cdef class DoG(PyxConnector):
         """
         PyxConnector.__init__(proj_type)
       
-    def connect(self, pre, post, target, weights, delays, parameters):
+    def connect(self, pre, post, target, delays, parameters):
         """
         Create the connection informations and instantiate the c++ classes.
         """        
@@ -373,6 +374,7 @@ cdef class DoG(PyxConnector):
                 if (abs(value) > self.limit*abs(self.amp_pos-self.amp_neg)):
                     ranks.push_back(j)
                     values.push_back(value)
-                    delay.push_back(self.delay_dist.get_value())
+                    if self.delay_dist != None:
+                        delay.push_back(self.delay_dist.get_value())
                     
         return ranks, values, delay
