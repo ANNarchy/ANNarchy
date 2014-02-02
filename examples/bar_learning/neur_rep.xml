@@ -86,6 +86,13 @@
           </coords>
         </pop1>
       </populations>
+      <projections>
+        <proj0>
+          <pre>0</pre>
+          <post>1</post>
+          <target>None</target>
+        </proj0>
+      </projections>
     </Bar_Learning>
   </networks>
 </database>

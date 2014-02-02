@@ -38,7 +38,7 @@
        </property>
        <widget class="MyTabWidget" name="views">
         <property name="currentIndex">
-         <number>5</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="object_page">
          <attribute name="title">
@@ -135,7 +135,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>5</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="obj_tab">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -297,59 +297,65 @@
            <widget class="QWidget" name="page_6">
             <layout class="QGridLayout" name="gridLayout_3">
              <item row="0" column="0">
-              <widget class="QLabel" name="label_11">
-               <property name="text">
-                <string>Pre populaution</string>
-               </property>
+              <widget class="ProjView" name="proj_view" native="true">
+               <layout class="QGridLayout" name="gridLayout_6">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_11">
+                  <property name="text">
+                   <string>Pre populaution</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QLineEdit" name="pre_name">
+                  <property name="acceptDrops">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_12">
+                  <property name="text">
+                   <string>Post population</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLineEdit" name="post_name">
+                  <property name="acceptDrops">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_13">
+                  <property name="text">
+                   <string>Target</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QLineEdit" name="target">
+                  <property name="acceptDrops">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <spacer name="verticalSpacer_4">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>443</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
               </widget>
-             </item>
-             <item row="0" column="2">
-              <widget class="QLineEdit" name="pre_name">
-               <property name="acceptDrops">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0" colspan="2">
-              <widget class="QLabel" name="label_12">
-               <property name="text">
-                <string>Post population</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="2">
-              <widget class="QLineEdit" name="post_name">
-               <property name="acceptDrops">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_13">
-               <property name="text">
-                <string>Target</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="2">
-              <widget class="QLineEdit" name="target">
-               <property name="acceptDrops">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1">
-              <spacer name="verticalSpacer_4">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>443</height>
-                </size>
-               </property>
-              </spacer>
              </item>
             </layout>
            </widget>
@@ -695,6 +701,7 @@
    <container>1</container>
    <slots>
     <signal>signal_update_population(int)</signal>
+    <signal>signal_update_projection(int)</signal>
     <slot>update_population(int,int)</slot>
     <slot>initialize()</slot>
    </slots>
@@ -759,6 +766,16 @@
     <slot>neur_type_changed(QString)</slot>
     <slot>pop_name_changed()</slot>
     <slot>pop_geo_changed()</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>ProjView</class>
+   <extends>QWidget</extends>
+   <header>NetWidget.h</header>
+   <container>1</container>
+   <slots>
+    <slot>initialize()</slot>
+    <slot>update_projection(int)</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -1161,6 +1178,38 @@
     <hint type="destinationlabel">
      <x>308</x>
      <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>proj_view</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stackedWidget_2</sender>
+   <signal>signal_update_projection(int)</signal>
+   <receiver>proj_view</receiver>
+   <slot>update_projection(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
     </hint>
    </hints>
   </connection>

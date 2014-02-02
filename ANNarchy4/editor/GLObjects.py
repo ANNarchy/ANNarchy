@@ -66,12 +66,16 @@ class Quad2d(object):
         self.p2 = center - Point2d(-radius,  radius)
         self.p3 = center - Point2d(-radius, -radius)
         self.p4 = center - Point2d( radius, -radius)
+        self.center = center
 
     def from_p(self, p1, p2, p3, p4):
         self.p1 = p1
         self.p2 = p2
         self.p3 = p3
         self.p4 = p4
+        self.center = Point2d(self.p1._x + (self.p2._x - self.p1._x)/2.0,
+                              self.p1._y + (self.p4._y - self.p1._y)/2.0,
+                              )
         return self
     
     def __repr__(self):
@@ -95,12 +99,38 @@ class Quad2d(object):
         
 class Line2d(object):
     def __init__(self, p1, p2):
+        """
+        Constructor.
+        """
         self.p1 = p1 
         self.p2 = p2
         
     @property
     def length(self):
+        """
+        Length of two dimensional line.
+        """
         return (self.p2 - self.p1).length
+
+    def is_on_line(self, check_point, prec_error=0.01):
+        """
+        To determine if the point is on the line we use the linear function.
+        
+        Parameter:
+        
+        * *check_point*: the point needed to checked
+        * *prec_error*: determine the window in which a selection is correct (default = 0.01)
+        """
+        #calculate slope m
+        m = (self.p2._y - self.p1._y) / (self.p2._x - self.p1._x)
+
+        # y - y_1 = m * (x - x_1)        
+        lside = check_point._y - self.p1._y
+        rside = m * (check_point._x - self.p1._x)
+
+        # to ensure a positive result even if the precision error
+        # occurs we use a certain window
+        return abs(lside - rside) < prec_error;
 
 class GLBaseWidget(QGLWidget):
     """

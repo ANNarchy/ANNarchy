@@ -87,8 +87,9 @@ class Repository(QObject):
             net_name = etree.SubElement( net_tag, 'name')
             net_name.text = str(name)
             
+            populations = data['pop_data']
             net_pop_data = etree.SubElement( net_tag, 'populations')
-            for id, pop in data.iteritems():
+            for id, pop in populations.iteritems():
                 pop_data = etree.SubElement( net_pop_data, 'pop'+str(id))
                 
                 pop_name = etree.SubElement( pop_data, 'name')
@@ -110,18 +111,21 @@ class Repository(QObject):
                 pop_p3.text = str(pop['coords'].p3)
                 pop_p4 = etree.SubElement( pop_coords, 'p4')
                 pop_p4.text = str(pop['coords'].p4)
+
+            projections = data['proj_data']
+            net_proj_data = etree.SubElement( net_tag, 'projections')
+            for id, proj in projections.iteritems():
+                proj_data = etree.SubElement( net_proj_data, 'proj'+str(id))
                 
-#===============================================================================
-# 
-#             syn_data = etree.SubElement( syn_tag, 'data')
-#             i = 0
-#             for line in str(data).split('\n'):
-#                 syn_tag = etree.SubElement( syn_data , 'line'+str(i)  )
-#                 syn_tag.text = line
-#                 i+=1                  
-#===============================================================================
+                proj_pre = etree.SubElement( proj_data, 'pre')
+                proj_pre.text = str(proj['pre'])
 
-
+                proj_post = etree.SubElement( proj_data, 'post')
+                proj_post.text = str(proj['post'])
+                
+                proj_target = etree.SubElement( proj_data, 'target')
+                proj_target.text = str(proj['target'])
+                
         #
         # save the data to file
         fname = open('./neur_rep.xml', 'w')
@@ -169,7 +173,7 @@ class Repository(QObject):
             for net in net_root[0].getchildren():
                 net_name = net.find('name').text
 
-                self._network_defs = { net_name : {} }
+                self._network_defs = { net_name : { 'pop_data': {}, 'proj_data': {} } }
                 pop_data = net.find('populations')
                 
                 i = 0
@@ -189,10 +193,25 @@ class Repository(QObject):
                                            points[2],
                                            points[3])
                         
-                    self._network_defs[net_name].update( { i: {'name': name, 
+                    self._network_defs[net_name]['pop_data'].update( { i: {'name': name, 
                                                                'geometry': geometry, 
                                                                'coords': quad, 
                                                                'type' : type
+                                                               } } )
+                    i += 1
+
+                proj_data = net.find('projections')
+                i = 0
+                for proj in proj_data.getchildren():
+                    pre = int(proj.find('pre').text)
+                    
+                    post = int(proj.find('post').text)
+                    
+                    target = str(proj.find('target').text)
+                        
+                    self._network_defs[net_name]['proj_data'].update( { i: {'pre': pre, 
+                                                               'post': post, 
+                                                               'target' : target
                                                                } } )
                     i += 1
 

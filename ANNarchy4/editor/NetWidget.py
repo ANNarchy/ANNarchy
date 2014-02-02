@@ -98,7 +98,7 @@ class PopView(QWidget):
             self._population_data[pop_id] 
         except KeyError:
             # get the data from repository
-            obj = self._rep.get_object('network', 'Bar_Learning')[pop_id]
+            obj = self._rep.get_object('network', 'Bar_Learning')['pop_data'][pop_id]
             self._population_data.update( { pop_id : { 'name': obj['name'], 'geometry' : obj['geometry'], 'type': obj['type'] } } ) 
             
         finally:
@@ -121,7 +121,7 @@ class PopView(QWidget):
             self._population_data[self._pop_id]['type'] = type
 
             # update repository
-            self._rep.get_object('network', 'Bar_Learning')[self._pop_id]['type'] = type
+            self._rep.get_object('network', 'Bar_Learning')['pop_data'][self._pop_id]['type'] = type
             
     @pyqtSlot()
     def pop_name_changed(self):
@@ -134,7 +134,7 @@ class PopView(QWidget):
             self._population_data[self._pop_id]['name'] = name
 
             # update repository
-            self._rep.get_object('network', 'Bar_Learning')[self._pop_id]['name'] = name
+            self._rep.get_object('network', 'Bar_Learning')['pop_data'][self._pop_id]['name'] = name
 
     @pyqtSlot()
     def pop_geo_changed(self):
@@ -149,6 +149,66 @@ class PopView(QWidget):
                 self._population_data[self._pop_id]['geometry'] = geo
     
                 # update repository
-                self._rep.get_object('network', 'Bar_Learning')[self._pop_id]['geometry'] = geo
+                self._rep.get_object('network', 'Bar_Learning')['pop_data'][self._pop_id]['geometry'] = geo
         except:
             print 'Invalid input for edit field'
+            
+class ProjView(QWidget):
+    """
+    Visualizes all the information of a selected population.
+    """
+    def __init__(self, parent):
+        """
+        Constructor.
+        """
+        super(QWidget, self).__init__(parent)
+
+        self._projection_data = {}
+        self._proj_id = -1
+
+    def set_repository(self, repo):
+        """
+        Set the link to the application wide accessible object repository. 
+        """
+        self._rep = repo
+        
+    @pyqtSlot()
+    def initialize(self):
+        """
+        Initialization of links etc, after full initialization of ANNarchyEditor.
+        
+        Emitted by:
+        
+        *ANNarchyEditor.initialize*
+        """
+        #
+        # create short cut links to appended widgets
+        self._pre_name = self.findChild(QLineEdit, 'pre_name')
+        self._post_name = self.findChild(QLineEdit, 'post_name')
+        self._target = self.findChild(QLineEdit, 'target')
+        
+    @pyqtSlot(int)
+    def update_projection(self, proj_id):
+        """
+        Set the informations of the selected population.
+        
+        Emitted by:
+        
+        *stackedWiget_2.signal_update_population*
+        """
+        self._proj_id = proj_id
+        try:
+            # in our data storage?
+            self._projection_data[proj_id] 
+        except KeyError:
+            # get the data from repository
+            obj = self._rep.get_object('network', 'Bar_Learning')['proj_data'][proj_id]
+            
+            pre = self._rep.get_object('network', 'Bar_Learning')['pop_data'][obj['pre']]
+            post = self._rep.get_object('network', 'Bar_Learning')['pop_data'][obj['post']]
+            self._projection_data.update( { proj_id : { 'pre': pre['name'], 'post': post['name'], 'target': obj['target'] } } ) 
+            
+        finally:
+            self._pre_name.setText(str(self._projection_data[proj_id]['pre']))
+            self._post_name.setText(str(self._projection_data[proj_id]['post']))
+            self._target.setText(str(self._projection_data[proj_id]['target']))

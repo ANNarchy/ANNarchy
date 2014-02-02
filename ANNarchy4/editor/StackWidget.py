@@ -5,6 +5,7 @@ from ANNarchy4 import *
 
 class StackWidget(QStackedWidget):
     signal_update_population = pyqtSignal(int)
+    signal_update_projection = pyqtSignal(int)
     
     def __init__(self, parent=None):
         """
@@ -23,7 +24,10 @@ class StackWidget(QStackedWidget):
              
     @pyqtSlot(int, int)
     def update_population(self, tab, pop_id):
+        print tab, pop_id
         self.setCurrentIndex(tab)
         
         if tab == 1:
             self.signal_update_population.emit( pop_id )
+        elif tab == 2:
+            self.signal_update_projection.emit( pop_id )

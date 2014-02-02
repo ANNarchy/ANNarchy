@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Sun Feb  2 11:02:29 2014
+# Created: Sun Feb  2 14:04:30 2014
 #      by: PyQt4 UI code generator 4.9.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -178,29 +178,34 @@ class Ui_ANNarchyEditor(object):
         self.page_6.setObjectName(_fromUtf8("page_6"))
         self.gridLayout_3 = QtGui.QGridLayout(self.page_6)
         self.gridLayout_3.setObjectName(_fromUtf8("gridLayout_3"))
-        self.label_11 = QtGui.QLabel(self.page_6)
+        self.proj_view = ProjView(self.page_6)
+        self.proj_view.setObjectName(_fromUtf8("proj_view"))
+        self.gridLayout_6 = QtGui.QGridLayout(self.proj_view)
+        self.gridLayout_6.setObjectName(_fromUtf8("gridLayout_6"))
+        self.label_11 = QtGui.QLabel(self.proj_view)
         self.label_11.setObjectName(_fromUtf8("label_11"))
-        self.gridLayout_3.addWidget(self.label_11, 0, 0, 1, 1)
-        self.pre_name = QtGui.QLineEdit(self.page_6)
+        self.gridLayout_6.addWidget(self.label_11, 0, 0, 1, 1)
+        self.pre_name = QtGui.QLineEdit(self.proj_view)
         self.pre_name.setAcceptDrops(False)
         self.pre_name.setObjectName(_fromUtf8("pre_name"))
-        self.gridLayout_3.addWidget(self.pre_name, 0, 2, 1, 1)
-        self.label_12 = QtGui.QLabel(self.page_6)
+        self.gridLayout_6.addWidget(self.pre_name, 0, 1, 1, 1)
+        self.label_12 = QtGui.QLabel(self.proj_view)
         self.label_12.setObjectName(_fromUtf8("label_12"))
-        self.gridLayout_3.addWidget(self.label_12, 1, 0, 1, 2)
-        self.post_name = QtGui.QLineEdit(self.page_6)
+        self.gridLayout_6.addWidget(self.label_12, 1, 0, 1, 1)
+        self.post_name = QtGui.QLineEdit(self.proj_view)
         self.post_name.setAcceptDrops(False)
         self.post_name.setObjectName(_fromUtf8("post_name"))
-        self.gridLayout_3.addWidget(self.post_name, 1, 2, 1, 1)
-        self.label_13 = QtGui.QLabel(self.page_6)
+        self.gridLayout_6.addWidget(self.post_name, 1, 1, 1, 1)
+        self.label_13 = QtGui.QLabel(self.proj_view)
         self.label_13.setObjectName(_fromUtf8("label_13"))
-        self.gridLayout_3.addWidget(self.label_13, 2, 0, 1, 1)
-        self.target = QtGui.QLineEdit(self.page_6)
+        self.gridLayout_6.addWidget(self.label_13, 2, 0, 1, 1)
+        self.target = QtGui.QLineEdit(self.proj_view)
         self.target.setAcceptDrops(False)
         self.target.setObjectName(_fromUtf8("target"))
-        self.gridLayout_3.addWidget(self.target, 2, 2, 1, 1)
+        self.gridLayout_6.addWidget(self.target, 2, 1, 1, 1)
         spacerItem3 = QtGui.QSpacerItem(20, 443, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.gridLayout_3.addItem(spacerItem3, 3, 1, 1, 1)
+        self.gridLayout_6.addItem(spacerItem3, 3, 1, 1, 1)
+        self.gridLayout_3.addWidget(self.proj_view, 0, 0, 1, 1)
         self.stackedWidget_2.addWidget(self.page_6)
         self.verticalLayout_4.addWidget(self.stackedWidget_2)
         self.general.addWidget(self.net_tab)
@@ -352,8 +357,8 @@ class Ui_ANNarchyEditor(object):
         self.menubar.addAction(self.menuConfig.menuAction())
 
         self.retranslateUi(ANNarchyEditor)
-        self.views.setCurrentIndex(5)
-        self.general.setCurrentIndex(5)
+        self.views.setCurrentIndex(1)
+        self.general.setCurrentIndex(1)
         self.stackedWidget_2.setCurrentIndex(0)
         self.plot_config.setCurrentIndex(1)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), ANNarchyEditor.close)
@@ -381,6 +386,8 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.pop_name, QtCore.SIGNAL(_fromUtf8("editingFinished()")), self.pop_view.pop_name_changed)
         QtCore.QObject.connect(self.pop_size, QtCore.SIGNAL(_fromUtf8("editingFinished()")), self.pop_view.pop_geo_changed)
         QtCore.QObject.connect(self.generate_script, QtCore.SIGNAL(_fromUtf8("pressed()")), self.complete.generate_script)
+        QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.proj_view.initialize)
+        QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_projection(int)")), self.proj_view.update_projection)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):
@@ -429,7 +436,7 @@ class Ui_ANNarchyEditor(object):
         self.actionSave.setShortcut(QtGui.QApplication.translate("ANNarchyEditor", "Ctrl+S", None, QtGui.QApplication.UnicodeUTF8))
 
 from mytabwidget import MyTabWidget
-from NetWidget import PopView, NetworkListView
+from NetWidget import PopView, NetworkListView, ProjView
 from StackWidget import StackWidget
 from GLNetwork import GLNetworkWidget
 from GLObjects import GLBaseWidget
