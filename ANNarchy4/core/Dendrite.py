@@ -43,6 +43,10 @@ class Dendrite(object):
         self.post_rank = post_rank
         self.proj = proj
         self.pre = proj.pre
+        
+        self.parameters = self.proj.parameters
+        self.variables = self.proj.variables
+        self.attributes = self.proj.attributes
 
         if cython_instance != None:
             self.cy_instance = cython_instance
@@ -67,6 +71,33 @@ class Dendrite(object):
 #                 max_delay = np.amax(delays)
 #                 self.proj.pre.cyInstance.set_max_delay(int(max_delay))
 
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+        if name == 'proj':
+            return object.__getattribute__(self, name)
+        elif name == 'attributes':
+            return object.__getattribute__(self, 'attributes')
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                return getattr(self.cy_instance, name)
+            else:
+                return object.__getattribute__(self, name)
+        else:
+            return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if name == 'proj':
+            object.__setattr__(self, 'proj', value)
+        elif name == 'attributes':
+            object.__setattr__(self, name, value)
+        elif hasattr(self, 'attributes'):
+            if name in self.proj.attributes:
+                setattr(self.cy_instance, name, value)
+            else:
+                object.__setattr__(self, name, value)
+        else:
+            object.__setattr__(self, name, value)
     
     def set(self, value):
         """
@@ -106,20 +137,6 @@ class Dendrite(object):
             return self.get_parameter(value)
         else:
             Global._error("dendrite has no parameter/variable called", value)     
-               
-    @property
-    def variables(self):
-        """
-        Returns a list of all variable names.
-        """
-        return self.proj.variables
-
-    @property
-    def parameters(self):
-        """
-        Returns a list of all parameter names.
-        """
-        return self.proj.parameters
     
     @property
     def size(self):

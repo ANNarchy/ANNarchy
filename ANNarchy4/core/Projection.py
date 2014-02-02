@@ -128,7 +128,7 @@ class Projection(object):#Descriptor):
         if not hasattr(self, 'initialized'): # Before the end of the constructor
             object.__setattr__(self, name, value)
         elif name == 'attributes':
-            object.__setatt__(self, name, value)
+            object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
                 if not self.initialized:
@@ -188,7 +188,7 @@ class Projection(object):#Descriptor):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        return np.array([dendrite.get(attribute) for dendrite in self._dendrites])
+        return np.array([getattr(dendrite, attribute) for dendrite in self._dendrites])
         
     def _set_cython_attribute(self, attribute, value):
         """
@@ -201,12 +201,21 @@ class Projection(object):#Descriptor):
         
         """
         if isinstance(value, np.ndarray):
-            print 'not implemented'
+            if value.dim == 1:
+                if value.shape == (self.size, ):
+                    for n in range(self.size):
+                        setattr(self._dendrites[n], attribute, value[n])
+                else:
+                    Global._error('The projection has '+self.size+ ' dendrites.')
         elif isinstance(value, list):
-            print 'not implemented'
+            if len(value) == self.size:
+                for n in range(self.size):
+                    setattr(self._dendrites[n], attribute, value[n])
+            else:
+                Global._error('The projection has '+self.size+ ' dendrites.')
         else:
             for dendrite in self._dendrites:
-                dendrite.set({attribute: value})
+                setattr(dendrite, attribute,  value)
            
                 
     def dendrite(self, pos):
@@ -238,7 +247,7 @@ class Projection(object):#Descriptor):
     def __iter__(self):
         " Returns iteratively each dendrite in the population in ascending rank order."
         for n in range(self.size):
-            yield self._dendrites(n)  
+            yield self._dendrites[n] 
         
     @property
     def size(self):
