@@ -307,10 +307,83 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         ProjectionGenerator.__init__(self, name, desc)
             
     def generate_header(self):
-        return ""
+        " Generates the C++ header file."        
+        # Private members declarations
+        members = self.generate_members_declaration()
+        
+        # Access method for attributes
+        access = self.generate_members_access()
+                
+        # Generate the code
+        template = spike_projection_header
+        dictionary = { 
+            'class': self.name, 
+            'pre_name': self.desc['pre_class'],
+            'post_name': self.desc['post_class'],
+            'access': access,
+            'member': members }
+        return template % dictionary
     
     def generate_body(self):
-        return ""
+        # Initialize parameters and variables
+        constructor = self.generate_constructor()
+        
+        # Computation of psp for the weighted sum
+        psp = self.generate_psp()
+        
+        # Generate code for the global variables
+        global_learn = self.generate_globallearn()
+        
+        # Generate code for the local variables
+        local_learn = self.generate_locallearn()
+        
+        # Generate the code
+        template = spike_projection_body
+        dictionary = {         
+            'class': self.name,
+            'destructor': '' ,
+            'pre_type': self.desc['pre_class'],
+            'post_type': self.desc['post_class'],
+            'init': constructor, 
+            'init_val': '', # contains nothing
+            'sum': psp, 
+            'local': local_learn, 
+            'global': global_learn }
+        return template % dictionary
     
     def generate_pyx(self):
-        return ""        
+        
+        # Get the C++ methods
+        cwrappers = self.generate_cwrappers()
+        # Get the python functions
+        pyfunctions = self.generate_pyfunctions()
+        # Generate the code
+        template = spike_projection_pyx
+        dictionary = { 
+            'name': self.name, 
+            'cFunction': cwrappers, 
+            'pyFunction': pyfunctions
+        }
+        return template % dictionary    
+    
+    def generate_psp(self):
+        " Generates code for the computeSum() method depending on psp variable of the synapse."
+        # Get the psp information
+        if 'psp' in self.desc.keys():
+            psp_code = self.desc['psp']['cpp']
+        else:
+            psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
+        # Generate the code
+        template = psp_code_body
+        dictionary = {
+            'psp': psp_code, 
+            'psp_const_delay': psp_code,
+            'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
+        }    
+        return template % dictionary
+    
+    def generate_globallearn(self):
+        return ""
+    
+    def generate_locallearn(self):
+        return ""

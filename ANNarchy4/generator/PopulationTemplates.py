@@ -53,6 +53,66 @@ private:
 #endif
 """
 
+# Header for a Spike population.
+# 
+# Depends on:
+# 
+#     * class : the class name (e.g. Population1)
+#    
+#     * access : public access methods for all parameters and variables
+#    
+#     * global_ops_access : access to the global operations (min, max, mean, etc)
+#    
+#     * global_ops_method : methods for the global operations (min, max, mean, etc)
+#    
+#     * member : private definition of parameters and variables    
+#    
+#     * random : private definition of RandomDistribution arrays    
+spike_population_header = \
+"""#ifndef __ANNarchy_%(class)s_H__
+#define __ANNarchy_%(class)s_H__
+
+#include "Global.h"
+
+class %(class)s: public Population
+{
+public:
+    %(class)s(std::string name, int nbNeurons);
+    
+    ~%(class)s();
+    
+    int getNeuronCount() { return nbNeurons_; }
+    
+    void resetToInit();
+    
+    void metaStep();
+    
+    void globalOperations();
+    
+    void record();
+
+    void propagateSpike();
+    
+    void reset();
+
+%(global_ops_access)s
+    
+%(access)s
+
+private:
+
+%(member)s
+
+%(global_ops_method)s
+
+%(random)s
+
+    std::vector<int> propagate_;    ///< neurons which will propagate their spike
+    std::vector<int> reset_;    ///< neurons which will reset after current eval
+};
+#endif
+"""
+
 # Template for a local variable
 # 
 # Depends on:
@@ -153,6 +213,85 @@ void %(class)s::record() {
 %(single_global_ops)s
 """
 
+# Body for a Spike population
+#
+# Depends on:
+#
+#    * class : the class name
+#
+#    * constructor : code for the constructor where all variables are initialized
+#
+#    * destructor : code for the destructor where all variables are freed
+# 
+#    * resetToInit : code for the reinitialization
+# 
+#    * metaStep : code for the metastep function
+# 
+#    * global_ops : code for computing the global operations
+# 
+#    * record : code for the recording
+#
+#    * single_global_ops : code for the single global operations
+spike_population_body = """#include "%(class)s.h"
+#include "Global.h"
+using namespace ANNarchy_Global;
+
+%(class)s::%(class)s(std::string name, int nbNeurons):Population(name, nbNeurons)
+{
+#ifdef _DEBUG
+    std::cout << "%(class)s::%(class)s called." << std::endl;
+#endif
+%(constructor)s
+    Network::instance()->addPopulation(this);
+}
+
+%(class)s::~%(class)s() {
+#ifdef _DEBUG
+    std::cout << "%(class)s::Destructor" << std::endl;
+#endif
+%(destructor)s
+}
+
+void %(class)s::resetToInit() {
+%(resetToInit)s
+}
+
+void %(class)s::metaStep() {
+%(metaStep)s    
+}
+
+void %(class)s::globalOperations() {
+%(global_ops)s
+}
+
+void %(class)s::record() {
+%(record)s
+}
+
+void %(class)s::propagateSpike() {
+
+    if (!propagate_.empty())
+    {
+
+        propagate_.erase(propagate_.begin(), propagate_.end());
+    }
+        
+}
+
+void %(class)s::reset() {
+
+    if (!reset_.empty())
+    {
+%(reset_event)s
+
+        reset_.erase(reset_.begin(), reset_.end());
+    }
+    
+}
+
+%(single_global_ops)s
+"""
+
 # Cython file for a rate population
 #
 # Depends on:
@@ -166,6 +305,63 @@ void %(class)s::record() {
 #    * pyFunction
 # 
 rate_population_pyx = """from libcpp cimport bool
+from libcpp.vector cimport vector
+from libcpp.string cimport string
+import numpy as np
+
+cdef extern from "../build/%(name)s.h":
+    cdef cppclass %(name)s:
+        %(name)s(string name, int N)
+
+        int getNeuronCount()
+        
+        string getName()
+        
+        void resetToInit()
+        
+        void setMaxDelay(int)
+
+%(cFunction)s
+
+
+cdef class py%(name)s:
+
+    cdef %(name)s* cInstance
+
+    def __cinit__(self):
+        self.cInstance = new %(name)s('%(name)s', %(neuron_count)s)
+
+    def name(self):
+        return self.cInstance.getName()
+
+    def reset(self):
+        self.cInstance.resetToInit()
+
+    def set_max_delay(self, delay):
+        self.cInstance.setMaxDelay(delay)
+
+    property size:
+        def __get__(self):
+            return self.cInstance.getNeuronCount()
+        def __set__(self, value):
+            print "py%(name)s.size is a read-only attribute."
+            
+%(pyFunction)s
+"""
+
+# Cython file for a Spike population
+#
+# Depends on:
+#
+#    * name : the class name
+#
+#    * cFunction : 
+#
+#    * neuron_count
+# 
+#    * pyFunction
+# 
+spike_population_pyx = """from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 import numpy as np

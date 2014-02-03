@@ -431,7 +431,6 @@ class RatePopulationGenerator(PopulationGenerator):
         }
         return template % dictionary
     
-    
     def generate_pyx(self):
         # Get the size of the population
         size  = Global.get_population(self.desc['name']).size
@@ -457,11 +456,77 @@ class SpikePopulationGenerator(PopulationGenerator):
         PopulationGenerator.__init__(self, name, desc)
     
     def generate_header(self):
-        return ""
+        " Generates the C++ header file."        
+        # Private members declarations
+        members = self.generate_members_declaration()
+        
+        # Access method for attributes
+        access = self.generate_members_access()
+        
+        # Global operations
+        global_ops_access, global_ops_method = self.generate_globalops_header()
+        
+        # Random variables
+        randoms = self.generate_random_definition()
+                
+        # Generate the code
+        template = spike_population_header
+        dictionary = {
+            'class' : self.name,
+            'access' : access,
+            'global_ops_access' : global_ops_access,
+            'global_ops_method' : global_ops_method,
+            'member' : members,
+            'random' : randoms
+        }
+        return template % dictionary
+
     
     def generate_body(self):
-        return ""
+        " Generates the C++ .cpp file"
+        # Constructor
+        constructor, reset = self.generate_constructor()
+        # Destructor
+        destructor = self.generate_destructor()
+        # Single operations
+        singleops, globalops = self.generate_globalops()
+        # Record
+        record = self.generate_record()
+        # Meta-step
+        metastep = self.generate_metastep()
+        # reset event
+        reset_event = self.generate_reset_event()
+        # Generate the code
+        template = spike_population_body
+        dictionary = {
+            'class' : self.name,
+            'constructor' : constructor,
+            'destructor' : destructor,
+            'resetToInit' : reset,
+            'metaStep' : metastep,
+            'global_ops' : globalops,
+            'record' : record,
+            'reset_event': reset_event,
+            'single_global_ops' : singleops
+        }
+        return template % dictionary
     
     def generate_pyx(self):
+        # Get the size of the population
+        size  = Global.get_population(self.desc['name']).size
+        # Get the C++ methods
+        cwrappers = self.generate_cwrappers()
+        # Get the python functions
+        pyfunctions = self.generate_pyfunctions()
+        # Generate the code
+        template = spike_population_pyx
+        dictionary = {
+            'name' : self.name,
+            'cFunction' : cwrappers, 
+            'neuron_count' : size,
+            'pyFunction' : pyfunctions,
+        }
+        return template % dictionary
+
+    def generate_reset_event(self):
         return ""
-        
