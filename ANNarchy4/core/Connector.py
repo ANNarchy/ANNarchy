@@ -89,11 +89,11 @@ class One2One(Connector):
         Build up the defined connection pattern for all postsynaptic neurons.
         """
         cython_module = __import__('ANNarchyCython')
-        proj_type = self.proj.generator.proj_class['ID']
+        proj_type = self.proj.name
         
         self.cy_instance = getattr(cython_module, 'One2One')(proj_type)
             
-        target = self.proj.post.generator.targets.index(self.proj.target)
+        target = self.proj.post.targets.index(self.proj.target)
         tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
                                           target,
@@ -152,11 +152,11 @@ class All2All(Connector):
         Build up the defined connection pattern for all postsynaptic neurons.
         """
         cython_module = __import__('ANNarchyCython')
-        proj_type = self.proj.generator.proj_class['ID']
+        proj_type = int(self.proj.name.split('Projection')[1])
         
         self.cy_instance = getattr(cython_module, 'All2All')(proj_type)
             
-        target = self.proj.post.generator.targets.index(self.proj.target)
+        target = self.proj.post.targets.index(self.proj.target)
         tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
                                           target,
@@ -211,11 +211,11 @@ class Gaussian(Connector):
         Build up the defined connection pattern for all postsynaptic neurons.
         """
         cython_module = __import__('ANNarchyCython')
-        proj_type = self.proj.generator.proj_class['ID']
+        proj_type = self.proj.name
         
         self.cy_instance = getattr(cython_module, 'Gaussian')(proj_type)
             
-        target = self.proj.post.generator.targets.index(self.proj.target)
+        target = self.proj.post.targets.index(self.proj.target)
         tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
                                           target,
@@ -265,11 +265,11 @@ class DoG(Connector):
         Build up the defined connection pattern for all postsynaptic neurons.
         """
         cython_module = __import__('ANNarchyCython')
-        proj_type = self.proj.generator.proj_class['ID']
+        proj_type = self.proj.name
         
         self.cy_instance = getattr(cython_module, 'DoG')(proj_type)
             
-        target = self.proj.post.generator.targets.index(self.proj.target)
+        target = self.proj.post.targets.index(self.proj.target)
         tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
                                           target,

@@ -334,7 +334,7 @@ def _warning(*var_text):
     """
     text = 'WARNING: '
     for var in var_text:
-        text += var + ' '
+        text += str(var) + ' '
 
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         p = print        
@@ -348,7 +348,7 @@ def _error(*var_text):
     """
     text = 'ERROR: '
     for var in var_text:
-        text += var + ' '
+        text += str(var) + ' '
     
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         p = print        

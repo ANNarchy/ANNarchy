@@ -21,326 +21,560 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from .Definitions import *
-from . import Tree
+from ANNarchy4.core.Neuron import RateNeuron
+from ANNarchy4.core.Synapse import RateSynapse
+from ANNarchy4.core.Global import _error, _warning
+from ANNarchy4.core.Random import available_distributions
+from ANNarchy4.parser.Equation import Equation
+
+from pprint import pprint
 import re
 
-from ANNarchy4.core import Global
-from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.Variable import SpikeVariable
 
-def get_value_and_type(name, value):
+class Analyser(object):
+    """ Main class which analyses the network structure and equations in order to generate the C++ files."""
+
+    def __init__(self, populations, projections):
+        """ Constructor, called with Global._populations and Global._projections by default."""
     
-    if 'var' in value.keys():
-         # variables
-        if value['var'].init != None:
-            if isinstance(value['var'].init, RandomDistribution):
-                 init_value = 0.0
-            else:
-                 init_value = value['var'].init
-        else:
-            init_value = 0.0
+        self.populations = populations
+        self.projections = projections
         
-        if value['var'].type != None:
-            cpp_type = value['var'].type
-        else:
-            cpp_type = type(init_value)
+        self.analysed_populations = {}
+        self.analysed_projections = {}
+        
+    def analyse(self):
+        """ Extracts all the relevant information in the network to prepare code generation."""
+                       
+        # Generate C++ code for all population variables 
+        for pop in self.populations:      
             
-        if value['var'].type != type(init_value) and value['var'].type != None:
-            if not Global.config['suppress_warnings']:
-                Global._warning( " type mismatch between provided type and initialization value of '", name,"' ('", value['var'].type,",", type(init_value),")." )
+            # Make sure population have targets declared only once 
+            pop.targets = list(set(pop.targets))  
+            
+            # Actualize initial values
+            for variable in pop.description['parameters']:
+                if isinstance(pop.init[variable['name']], bool) or \
+                   isinstance(pop.init[variable['name']], int) or \
+                   isinstance(pop.init[variable['name']], float) :
+                    variable['init'] = pop.init[variable['name']]
+            for variable in pop.description['variables']:
+                if isinstance(pop.init[variable['name']], bool) or \
+                   isinstance(pop.init[variable['name']], int) or \
+                   isinstance(pop.init[variable['name']], float) :
+                    variable['init'] = pop.init[variable['name']]
+               
+            # Extract RandomDistribution objects
+            pop.description['random_distributions'] = _extract_randomdist(pop)
+                    
+            # Translate the equation to C++
+            for variable in pop.description['variables']:
+                # Find the numerical method if any
+                if 'implicit' in variable['flags']:
+                    method = 'implicit'
+                elif 'exponential' in variable['flags']:
+                    method = 'exponential'
+                else:
+                    method = 'explicit'
+                
+                # Analyse the equation
+                translator = Equation(variable['name'], variable['eq'], pop.description['attributes'], 
+                                      pop.description['local'], pop.description['global'], method = method)
+                code = translator.parse()
+                
+                # Replace sum(target) with sum(i, rk_target)
+                for target in pop.description['targets']:
+                    if target in pop.targets:
+                        code = code.replace('sum('+target+')', 'sum(i, ' + \
+                                            str(pop.targets.index(target))+')')
+                    else: # used in the eq, but not connected
+                        code = code.replace('sum('+target+')', '0.0')
+                        
+                # Store the result
+                variable['cpp'] = code
+       
+            
+        # Generate C++ code for all projection variables 
+        for proj in self.projections:
+            
+            # Actualize initial values
+            for variable in proj.description['parameters']:
+                if isinstance(proj.init[variable['name']], bool) or \
+                   isinstance(proj.init[variable['name']], int) or \
+                   isinstance(proj.init[variable['name']], float) :
+                    variable['init'] = proj.init[variable['name']]
+            for variable in proj.description['variables']:
+                if isinstance(proj.init[variable['name']], bool) or \
+                   isinstance(proj.init[variable['name']], int) or \
+                   isinstance(proj.init[variable['name']], float) :
+                    variable['init'] = proj.init[variable['name']]        
              
-    else:
-        # parameter, have always an initial value,
-        # but no type information
-        init_value = value['init']
-        cpp_type = type(init_value)
-         
-    return cpp_type, init_value
-
-# Main analyser class for neurons
-class NeuronAnalyser(object):
-
-    def __init__(self, neuron, targets, pop_name):
-
-        self.neuron = neuron
-        self.pop_name = pop_name
-        self.targets = targets
-        self.analysed_neuron = {}
-        self.parameters_names = []
-        self.variables_names = []
-        self.trees = []
-        self.global_operations = {'pre': [], 'post': []}
-
-    def parse(self):
-        # Determine parameters and variables
-        for name, value in self.neuron.iteritems():
-            if value['type'] == 'local':
-                self.variables_names.append(name)
-            else: # A parameter
-                self.parameters_names.append(name)
-
-        # Perform the analysis
-        for name, value in self.neuron.iteritems():
+            # Extract RandomDistribution objects
+            proj.description['random_distributions'] = _extract_randomdist(proj)
+                        
+            # Variables names for the parser which should be left untouched
+            untouched = {}   
             
-            if name in self.variables_names:
-                cpp_type, init_value = get_value_and_type(name, value)
-
-                #
-                # basic stuff
-                neur = {}
-                neur['type'] = 'local'
-                neur['cpp_type'] = cpp_type
-                neur['def'] = self.def_variable(name)
+            # Iterate over all variables
+            for variable in proj.description['variables']:
+                eq = variable['eq']
                 
-                #
-                # eq stuff
-                if value['var'].eq != None:
-                    
-                    if isinstance(value['var'].eq, RandomDistribution):
-                        neur['type'] = 'rand_variable'
-                        neur['eq'] = value['var'].eq
-                        self.analysed_neuron[name] = neur
-                        continue
-                    
-                    neur['eq'] = value['var'].eq
-                    tree = Tree.Tree(self, name, value['var'].eq, self.pop_name)
-                    if not tree.success: # Error while processing the equation
-                        return None, None
-                    self.trees.append(tree)
-
-                    neur['init'] = self.init_variable(name, init_value)
-                    neur['cpp'] = tree.cpp() + ';'
-                else:
-                    neur['init'] = self.init_variable(name, init_value)
-                    neur['cpp'] = ''
-
-                #
-                # min, max
-                if value['var'].min != None:
-                    neur['min'] = value['var'].min
-
-                if value['var'].max != None:
-                    neur['max'] = value['var'].max
-
-                if isinstance(value['var'],SpikeVariable):
-                    neur['threshold'] = value['var'].threshold
-                    neur['reset'] = value['var'].reset
-
-                self.analysed_neuron[name] = neur
-
-            else: # A parameter
-                cpp_type, init_value = get_value_and_type(name, value)
-                    
-                self.analysed_neuron[name] =  {
-                    'type': 'global',
-                    'init': self.init_parameter(name, init_value),
-                    'def': self.def_parameter(name),
-                    'cpp' : '',
-                    'cpp_type': cpp_type 
-                }
-
-#        for cpp in self.analysed_neuron:
-#            print cpp['cpp']
-
-        # Process the global operations
-        self.global_operations = sort_global_operations(self.global_operations)
-
-        return self.analysed_neuron, self.global_operations
-
-    def def_parameter(self, name):
-        return DATA_TYPE +' '+ name+'_;'
-
-    def def_variable(self, name):
-        return 'std::vector<'+DATA_TYPE+'> '+ name+'_;'
-
-    def init_parameter(self, name, value):
-        if isinstance(value, RandomDistribution):
-            return name + '_ = ('+ value.genCPP() +').getValue();'
-        else:
-            return name + '_ = ' + str(value) + ';'
-
-    def init_variable(self, name, value):
-        if isinstance(value, RandomDistribution):
-            return name+'_ = ('+ value.genCPP() +').getValues(nbNeurons_);' # after this call the instantiation object still remains in memory -_-
-        else:
-            return name+'_ = std::vector<' + DATA_TYPE + '> ' +  '(nbNeurons_, '+str(value)+');'
-
-    def latex(self):
-        code =""
-        for tree in self.trees:
-            code += '    ' + tree.latex() + '\n\n'
-        return code
-
-# Main analyser class for synapses
-class SynapseAnalyser(object):
-
-    def __init__(self, synapse, targets_pre=[], targets_post=[]):
-
-        self.synapse = synapse
-        self.analysed_synapse = []
-        self.parameters_names = []
-        self.variables_names = []
-        self.targets_pre=targets_pre # Need the list of targets for each population to allow pre.sum(exc) or post.sum(dopa)
-        self.targets_post=targets_post
-        self.targets = list(set(self.targets_pre + self.targets_post))
-        self.targetIDs=None # What is it doing?
-        self.trees = []
-        self.global_operations = {'pre': [], 'post': []}
-
-    def parse(self):
-        # Determine parameters and variables
-        for name, value in self.synapse.iteritems():
-            if value['type'] == 'local':
-                self.variables_names.append(name)
-            elif value['type'] == 'global':
-                self.parameters_names.append(name)
-            else:
-                continue
+                # Replace %(target) by its actual value
+                eq = eq.replace('%(target)', proj.target)
                 
-        # Identify the local variables (synapse-specific) from the global ones (neuron-specific)
-        dependencies={}
-        for name, value in self.synapse.iteritems():
-            if name in self.variables_names: # only variables count
-                dep = []
-                if value['var'].eq == None:
-                    continue
+                # Extract global operations
+                eq, untouched_globs, global_ops = _extract_globalops(variable['name'], eq, proj)
+                proj.pre.description['global_operations'] += global_ops['pre']
+                proj.post.description['global_operations'] += global_ops['post']
+                
+                # Replace pre- and post_synaptic variables
+                eq, untouched_var = _extract_prepost(variable['name'], eq, proj)
+                
+                # Add the untouched variables to the global list
+                for name, val in untouched_globs.iteritems():
+                    if not untouched.has_key(name):
+                        untouched[name] = val
+                for name, val in untouched_var.iteritems():
+                    if not untouched.has_key(name):
+                        untouched[name] = val
+                        
+                # Find the numerical method if any
+                if 'implicit' in variable['flags']:
+                    method = 'implicit'
+                elif 'exponential' in variable['flags']:
+                    method = 'exponential'
                 else:
-                    value['var'].eq += ' ' # in case a variable to be extracted is at the end...
-                if not value['var'].eq.find('pre.') == -1: # directly depends on pre
-                    dep.append('pre')
-                elif not value['var'].eq.find('value') == -1: # depends on value, but maybe as part of the name
-                    code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])value(?P<post>[^\_a-zA-Z0-9])', value['var'].eq)
-                    if len(code) > 0:
-                        dep.append('value')
-                else:
-                    for ovar in self.variables_names: # check indirect dependencies
-                        if ovar != name: # self-dependencies do not count
-                            code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+ovar+'(?P<post>[^\_a-zA-Z0-9])', value['var'].eq)
-                            if len(code) > 0: # wont work
-                                dep.append(ovar)
-                dependencies[name] = dep
-
-        #self.local_variables_names, self.global_variables_names = self.sort_dependencies(dependencies)
-        self.local_variables_names = self.variables_names
-        self.global_variables_names = self.parameters_names
+                    method = 'explicit'
+                    
+                # Analyse the equation
+                translator = Equation(variable['name'], eq, proj.description['attributes'], 
+                                      proj.description['local'], proj.description['global'], 
+                                      method = method, untouched = untouched.keys())
+                code = translator.parse()
+                
+                # Replace untouched variables with their original name
+                for prev, next in untouched.iteritems():
+                    code = code.replace(prev, next) 
+                    
+                # Store the result
+                variable['cpp'] = code
+                
+            # Translate the psp code if any
+            if 'raw_psp' in proj.description.keys():
+                print proj.description.keys()
+                print proj.description['raw_psp']
+                
+                psp = {'eq' : proj.description['raw_psp'].strip()}
+                # Replace pre- and post_synaptic variables
+                eq = psp['eq']
+                eq, untouched = _extract_prepost(variable['name'], eq, proj)
+                # Analyse the equation
+                translator = Equation('psp', eq, 
+                                      proj.description['attributes'], 
+                                      proj.description['local'], 
+                                      proj.description['global'], 
+                                      method = 'explicit', 
+                                      untouched = untouched.keys(),
+                                      type='return')
+                code = translator.parse()
+                # Replace _pre_rate_ with (*pre_rates_)[rank_[i]]
+                code = code.replace('_pre_rate_', '(*pre_rates_)[rank_[i]]')
+                # Store the result
+                psp['cpp'] = code
+                proj.description['psp'] = psp               
         
-        # Perform the analysis
-        for name, value in self.synapse.iteritems():
+        # Store the result of analysis for generating the code
+        for pop in self.populations:
+            # Make sure global operations are generated only once
+            glops = []
+            for op in pop.description['global_operations']:
+                if not op in glops:
+                    glops.append(op)
+            pop.description['global_operations'] = glops
+            # Store the result for generation
+            self.analysed_populations[pop.class_name] = pop.description  
+        for proj in self.projections:
+            self.analysed_projections[proj.name] = proj.description  
+        return True # success
 
-            if value['type'] == 'local' and value['var'].eq != None:
-                synapse = { }
-                cpp_type, init_value = get_value_and_type(name, value)
-                    
-                tree = Tree.Tree(self, name, value['var'].eq)
-                if not tree.success: # Error while processing the equation
-                    return None, None
-                self.trees.append(tree)
-
-                # base data: name, type, init, cpp, cpp_type
-                synapse['type'] = 'local'
-                synapse['init'] = self.init_local_variable(name, init_value)                                
-                
-                synapse['name'] = name
-                synapse['cpp'] = tree.cpp() +';'
-                synapse['cpp_type'] = cpp_type
-                synapse['eq'] = value['var'].eq
-                
-                #
-                # extend by optional parameters
-                if value['var'].min != None:
-                    synapse['min'] = value['var'].min
-
-                if value['var'].max != None:
-                    synapse['max'] = value['var'].max
-
-                self.analysed_synapse.append(synapse)
-                
-            elif value['type'] == 'global' and value['var'].eq != None: # A parameter with equation
-                cpp_type, init_value = get_value_and_type(name, value)
-
-                tree = Tree.Tree(self, name, value['var'].eq)
-                if not tree.success: # Error while processing the equation
-                    return None, None
-                self.trees.append(tree)
-                self.analysed_synapse.append(
-                    {'name': name,
-                     'type': 'global',
-                     'init': self.init_parameter(name, init_value),
-                     'cpp' : tree.cpp()+';',
-                     'cpp_type': cpp_type
-                     } )
-                
+def _extract_randomdist(pop):
+    " Extracts RandomDistribution objects from all variables"
+    rk_rand = 0
+    random_objects = []
+    for variable in pop.description['variables']:
+        eq = variable['eq']
+        # Search for all distributions
+        for dist in available_distributions:
+            matches = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+dist+'\(([^()]+)\)', eq)
+            for l, v in matches:
+                # Store its definition
+                desc = {'name': '__rand_' + str(rk_rand) + '_',
+                        'definition': dist + '(' + v + ')',
+                        'args' : v}
+                rk_rand += 1
+                random_objects.append(desc)
+                # Replace its definition by its temporary name
+                # Problem: when one uses twice the same RD in a single equation (perverse...)
+                eq = eq.replace(desc['definition'], desc['name'])
+                # Add the new variable to the vocabulary
+                pop.description['attributes'].append(desc['name'])
+                if variable['name'] in pop.description['local']:
+                    pop.description['local'].append(desc['name'])
+                else: # Why not on a population-wide variable?
+                    pop.description['global'].append(desc['name'])
+        variable['eq'] = eq
+        
+    return random_objects
+    
+def _extract_globalops(name, eq, proj):
+    """ Replaces global operations (mean(pre.rate), etc)  with arbitrary names and 
+    returns a dictionary of changes.
+    """
+    untouched = {}    
+    globs = {'pre' : [],
+             'post' : [] }   
+    glop_names = ['min', 'max', 'mean']
+    eq=eq.replace(' ', '')
+    for op in glop_names:
+        pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(pre\.([a-zA-Z0-9]+)\)', eq)
+        post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(post\.([a-zA-Z0-9]+)\)', eq)
+        # Check if a global variable depends on pre
+        if len(pre_matches) > 0 and name in proj.description['global']:
+            _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
+            exit(0)
+        for pre, var in pre_matches:
+            if var in proj.pre.attributes:
+                globs['pre'].append({'function': op, 'variable': var})
+                oldname = op + '(pre.' + var + ')'
+                newname = '__pre_' + op + '_' + var
+                eq = eq.replace(oldname, newname)
+                untouched[newname] = ' pre_population_->get'+op.capitalize()+var.capitalize()+'()'
             else:
-                cpp_type, init_value = get_value_and_type(name, value)
-                self.analysed_synapse.append(
-                    {'name': name,
-                     'type': 'global',
-                     'init': self.init_parameter(name, init_value),
-                     'cpp' : '',
-                     'cpp_type': cpp_type
-                     } )
-                
-        # Process the global operations
-        self.global_operations = sort_global_operations(self.global_operations)
-
-        return self.analysed_synapse, self.global_operations
-
-    def init_parameter(self, name, value):
-        return name + '_ = ' + str(value) + ';';
-
-    def init_local_variable(self, name, value):
-        return name +'_ = std::vector< '+DATA_TYPE+' >(pre_population_->getNeuronCount(), '+str(value)+');\n'
-
-    def init_global_variable(self, name, value):
-        return name + '_ = '+str(value)+';'
-
-    def latex(self):
-        code =""
-        for tree in self.trees:
-            code += '    ' + tree.latex() + '\n\n'
-        return code
-
-    def sort_dependencies(self, dependencies):
-        """ Inspects the dependencies between all variables to decide whether they are local or global."""
-
-        sorted_dependencies = {}
-        for name, deps in dependencies.items():
-            sorted_dependencies[name] = False
-        for name, deps in dependencies.items():
-            if 'pre' in deps or 'value' in deps:
-                sorted_dependencies[name] = True
-        stable = False
-        while not stable:
-            stable = True
-            for name, deps in dependencies.items():
-                is_dep_pre = False
-                for dep in deps:
-                    if not dep == 'pre' and not dep == 'value':
-                        is_dep_pre = is_dep_pre or sorted_dependencies[dep]
-                        if not is_dep_pre == sorted_dependencies[name]:
-                            stable = False
-                            sorted_dependencies[name] = is_dep_pre
-
-        localvar = ['value']
-        globalvar = []
-        for name in dependencies.keys():
-            if name == 'value':
-                continue # already sorted in
-
-            if sorted_dependencies[name]:
-                localvar.append(name)
+                _error(eq+'\nPopulation '+proj.name+' has no attribute '+var+'.')
+                exit(0)
+        for pre, var in post_matches:
+            if var in proj.pre.attributes:
+                globs['post'].append({'function': op, 'variable': var})
+                oldname = op + '(post.' + var + ')'
+                newname = '__post_' + op + '_' + var
+                eq = eq.replace(oldname, newname)
+                untouched[newname] = ' post_population_->get'+op.capitalize()+var.capitalize()+'()'
             else:
-                globalvar.append(name)
-        return localvar, globalvar
+                _error(eq+'\nPopulation '+proj.pre.name+' has no attribute '+var+'.')
+                exit(0)
+    return eq, untouched, globs
+    
+def _extract_prepost(name, eq, proj):
+    " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."
+    untouched = {}                
+    pre_matches = re.findall('pre\.([a-zA-Z0-9]+)', eq)
+    post_matches = re.findall('post\.([a-zA-Z0-9]+)', eq)
+    # Check if a global variable depends on pre
+    if len(pre_matches) > 0 and name in proj.description['global']:
+        _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
+        exit(0)
+    # Replace all pre.* occurences with a temporary variable
+    for var in list(set(pre_matches)):
+        if var == 'sum': # pre.sum(exc)
+            pass
+        elif var in proj.pre.attributes:
+            target = 'pre.' + var
+            eq = eq.replace(target, '_pre_'+var+'_')
+            untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
+        else:
+            _error(eq+'\nPopulation '+proj.pre.description['name']+' has no attribute '+var+'.')
+            exit(0)
+    # Replace all post.* occurences with a temporary variable
+    for var in list(set(post_matches)):
+        if var == 'sum': # pre.sum(exc)
+            pass
+        elif var in proj.post.attributes:
+            target = 'post.' + var
+            eq = eq.replace(target, '_post_'+var+'_')
+            untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
+        else:
+            _error(eq+'\nPopulation '+proj.post.description['name']+' has no attribute '+var+'.')
+            exit(0)
+    return eq, untouched
+            
+def analyse_population(pop):
+    """ Performs the initial analysis for a single population."""
+    # Identify the population type
+    pop_type = 'rate' if isinstance(pop.neuron_type, RateNeuron) else 'spike'
+    # Store basic information
+    description = {
+        'pop': pop,
+        'name': pop.name,
+        'type': pop_type,
+        'raw_parameters': pop.neuron_type.parameters,
+        'raw_equations': pop.neuron_type.equations,
+        'raw_functions': pop.neuron_type.functions
+    }
+    if pop_type == 'spike': # Additionally store reset and spike
+        description['raw_reset'] = pop.neuron_type.reset
+        description['raw_spike'] = pop.neuron_type.spike
+        
+    # Extract parameters and variables names
+    parameters = _extract_parameters(pop.neuron_type.parameters)
+    variables = _extract_variables(pop.neuron_type.equations)
+    # Build lists of all attributes (param+var), which are local or global
+    attributes, local_var, global_var = _get_attributes(parameters, variables)
+    # Extract all targets
+    targets = _extract_targets(variables)
+    # Add this info to the description
+    description['parameters'] = parameters
+    description['variables'] = variables
+    description['attributes'] = attributes
+    description['local'] = local_var
+    description['global'] = global_var
+    description['targets'] = targets
+    description['global_operations'] = []
+    return description
 
-def sort_global_operations(operations):
-    global_operations = {'pre': [], 'post': []}
-    for ope in operations['pre']:
-        if not ope in global_operations['pre']: #does not already exist
-            global_operations['pre'].append(ope)
-    for ope in operations['post']:
-        if not ope in global_operations['post']: #does not already exist
-            global_operations['post'].append(ope)
+def analyse_projection(proj):  
+    """ Performs the analysis for a single projection."""      
+    # Identify the synapse type
+    proj_type = 'rate' if isinstance(proj.synapse_type, RateSynapse) else 'spike'
+    # Store basic information
+    description = {
+        'pre': proj.pre.name,
+        'pre_class': proj.pre.class_name,
+        'post': proj.post.name,
+        'post_class': proj.post.class_name,
+        'target': proj.target,
+        'type': proj_type,
+        'raw_parameters': proj.synapse_type.parameters,
+        'raw_equations': proj.synapse_type.equations,
+        'raw_functions': proj.synapse_type.functions
+    }
+    if proj_type == 'spike': # Additionally store pre_spike and post_spike
+        description['raw_pre_spike'] = proj.synapse_type.pre_spike
+        description['raw_post_spike'] = proj.synapse_type.post_spike
+    else: # Additionally store psp
+        if proj.synapse_type.psp:
+            description['raw_psp'] = proj.synapse_type.psp
+        
+    # Extract parameters and variables names
+    parameters = _extract_parameters(proj.synapse_type.parameters)
+    variables = _extract_variables(proj.synapse_type.equations)
+    # Build lists of all attributes (param+var), which are local or global
+    attributes, local_var, global_var = _get_attributes(parameters, variables)
+    # Add this info to the description
+    description['parameters'] = parameters
+    description['variables'] = variables
+    description['attributes'] = attributes
+    description['local'] = local_var
+    description['global'] = global_var
+    description['global_operations'] = []
+    return description            
 
-    return global_operations
+    
+    
+def _extract_parameters(description):
+    """ Extracts all variable information from a multiline description."""
+    parameters = []
+    # Split the multilines into individual lines
+    parameter_list = _prepare_string(description)
+    # Analyse all variables
+    for definition in parameter_list:
+        # Check if there are flags after the : symbol
+        equation, constraint = _split_equation(definition)
+        # Extract the name of the variable
+        name = _extract_name(equation)
+        if name == '_undefined':
+            exit(0)
+        # Process the flags if any
+        bounds, flags = _extract_flags(constraint)
+        # Get the type of the variable (float/int/bool)
+        if 'int' in flags:
+            ctype = 'int'
+        elif 'bool' in flags:
+            ctype = 'bool'
+        else:
+            ctype = 'DATA_TYPE'
+        # For parameters, the initial value can be given in the equation
+        if 'init' in bounds.keys(): # if init is provided, it wins
+            init = bounds['init']
+            if ctype == 'bool':
+                if init in ['false', 'False', '0']:
+                    init = False
+                elif init in ['true', 'True', '1']:
+                    init = True
+            elif ctype == 'int':
+                init = int(init)
+            else:
+                init = float(init)
+        elif '=' in equation: # the value is in the equation
+            init = equation.split('=')[1].strip()
+            if init in ['false', 'False']:
+                init = False
+                ctype = 'bool'
+            elif init in ['true', 'True']:
+                init = True
+                ctype = 'bool'
+            else:
+                init = eval(ctype.replace('DATA_TYPE', 'float') + '(' + init + ')')
+        else: # Nothing is given: baseline : population
+            if ctype == 'bool':
+                init = False
+            elif ctype == 'int':
+                init = 0
+            elif ctype == 'DATA_TYPE':
+                init = 0.0
+            
+        # Store the result
+        desc = {'name': name,
+                'eq': equation,
+                'bounds': bounds,
+                'flags' : flags,
+                'ctype' : ctype,
+                'init' : init}
+        parameters.append(desc)              
+    return parameters
+    
+def _extract_variables(description):
+    """ Extracts all variable information from a multiline description."""
+    variables = []
+    # Split the multilines into individual lines
+    variable_list = _prepare_string(description)
+    # Analyse all variables
+    for definition in variable_list:
+        # Check if there are flags after the : symbol
+        equation, constraint = _split_equation(definition)
+        # Extract the name of the variable
+        name = _extract_name(equation)
+        if name == '_undefined':
+            exit(0)
+        # Process the flags if any
+        bounds, flags = _extract_flags(constraint)
+        # Get the type of the variable (float/int/bool)
+        if 'int' in flags:
+            ctype = 'int'
+        elif 'bool' in flags:
+            ctype = 'bool'
+        else:
+            ctype = 'DATA_TYPE'
+        # Get the init value if declared
+        if 'init' in bounds.keys():
+            init = bounds['init']
+            if ctype == 'bool':
+                if init in ['false', 'False', '0']:
+                    init = False
+                elif init in ['true', 'True', '1']:
+                    init = True
+            elif ctype == 'int':
+                init = int(init)
+            else:
+                init = float(init)
+        else: # Default = 0 according to ctype
+            if ctype == 'bool':
+                init = False
+            elif ctype == 'int':
+                init = 0
+            elif ctype == 'DATA_TYPE':
+                init = 0.0
+        # Store the result
+        desc = {'name': name,
+                'eq': equation,
+                'bounds': bounds,
+                'flags' : flags,
+                'ctype' : ctype,
+                'init' : init }
+        variables.append(desc)              
+    return variables        
+    
+def _get_attributes(parameters, variables):
+    """ Returns a list of all attributes names, plus the lists of local/global variables."""
+    attributes = []; local_var = []; global_var = []
+    for p in parameters + variables:
+        attributes.append(p['name'])
+        if 'population' in p['flags'] or 'postsynaptic' in p['flags']:
+            global_var.append(p['name'])
+        else:
+            local_var.append(p['name'])
+    return attributes, local_var, global_var
+
+def _extract_targets(variables):
+    targets = []
+    for var in variables:
+        code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])sum\(([^()]+)\)', var['eq'])
+        for l, t in code:
+            targets.append(t)
+    return list(set(targets))
+
+
+####################################
+# Functions for string manipulation
+####################################
+        
+def _split_equation(definition):
+    " Splits a description into equation and flags."
+    try:
+        equation, constraint = definition.split(':')
+        equation = equation.strip()
+        constraint = constraint.strip()
+    except ValueError:
+        equation = definition.strip() # there are no constraints
+        constraint = None
+    finally:
+        return equation, constraint
+    
+def _prepare_string(stream):
+    """ Splits up a multiline equation, remove comments and unneeded spaces or tabs."""
+    expr_set = []        
+    # replace the ,,, by empty space and split the result up
+    tmp_set = re.sub('\s+\.\.\.\s+', ' ', stream).split('\n')
+    for expr in tmp_set:
+        expr = re.sub('\#[\s\S]+', ' ', expr)   # remove comments
+        expr = re.sub('\s+', ' ', expr)     # remove additional tabs etc.
+        if expr == ' ' or len(expr)==0: # through beginning line breaks or something similar empty strings are contained in the set
+            continue           
+        expr_set.append(''.join(expr))        
+    return expr_set 
+
+def _extract_name(equation):
+    " Extracts the name of a parameter/variable by looking the left term of an equation."
+    equation = equation.replace(' ','')
+    try:
+        name = equation.split('=')[0]
+    except: # No equal sign. Eg: baseline : init=0.0
+        return equation.strip()
+    # Search for increments
+    operators = ['+=', '-=', '*=', '/=']
+    for op in operators:
+        if op in equation: 
+            return equation.split(op)[0]        
+    # Search for any operation in the left side
+    operators = ['+', '-', '*', '/']
+    ode = False
+    for op in operators:
+        if not name.find(op) == -1: 
+            ode = True
+    if not ode: # variable name is alone on the left side
+        return name
+    # ODE: the variable name is between d and /dt
+    name = re.findall("(?<=d)[\w\s]+(?=/dt)", name)
+    if len(name) == 1:
+        return name[0].strip()
+    else:
+        _error('No variable name can be found in ' + equation)
+        return '_undefined'   
+    
+                
+def _extract_flags(constraint):
+    """ Extracts from all attributes given after : which are bounds (eg min=0.0 or init=0.1) 
+        and which are flags (eg postsynaptic, implicit...).
+    """
+    bounds = {}
+    flags = []
+    # Check if there are constraints at all
+    if not constraint:
+        return bounds, flags
+    # Split according to ','
+    for con in constraint.split(','):
+        try: # bound of the form key = val
+            key, value = con.split('=')
+            bounds[key.strip()] = value.strip()
+        except ValueError: # No equal sign = flag
+            flags.append(con.strip())
+    return bounds, flags    

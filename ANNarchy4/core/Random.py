@@ -22,6 +22,12 @@
     
 """
 import numpy as np
+from ANNarchy4.core import Global
+
+# List of available distributions
+available_distributions = [ 'Constant',
+                            'Uniform',
+                            'Normal' ]
 
 class RandomDistribution(object):
     """ 

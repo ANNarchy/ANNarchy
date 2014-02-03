@@ -21,17 +21,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from . import Global
-
-from .Master import Master
-from .Variable import Variable
-
-from ANNarchy4 import parser
-from ANNarchy4 import parser
-
 import pprint
 
-class RateSynapse(Master):
+class RateSynapse(object):
     """
     Definition of a rate coded synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
@@ -42,47 +34,15 @@ class RateSynapse(Master):
         
         *Parameters*:
         
-            * *key_value_args*: dictionary contain the variable / parameter declarations as key-value pairs. For example:
-
-                .. code-block:: python
-        
-                    tau = 5.0, 
-
-                initializes a parameter ``tau`` with the value 5.0 
-
-                .. code-block:: python
-        
-                    value = Variable( init=0.0, rate="tau * drate / dt + value = pre.rate * 0.1" )
-
-                and a simple update of the synaptic weight.
-                
-                .. warning::
-                    
-                    Please note, that automatically all key-value pairs provided to the function, except ``debug`` and ``order``, are assigned to *key_value_args*.
-
-            * *order*: execution order of update rules.
-
-                .. warning::
-                    
-                    if you use the order key, the value need to contain **all** variable names.
-                            
-            * *debug*: prints all defined variables/parameters to standard out (default = False)
-
-                .. hint::            
-                    
-                    An experimental feature, currently not fully implemented.
+            * TODO
             
-        """        
-        Master.__init__(self)
+        """                
+        # Store the parameters and equations
+        self.parameters = parameters
+        self.equations = equations
+        self.functions = functions
+        self.psp = psp
         
-        self._convert(parameters, equations, extra_values)
-        
-        if psp:
-            psp = 'psp = ' + self._prepare_string(psp)[0]
-            var = Variable(init=0.0, eq=psp)
-            var._validate() 
-            
-            self._variables[ 'psp' ] = {'type' : 'local' ,'var': var } 
          
     def __add__(self, synapse):
         if not isinstance(synapse, RateSynapse):
@@ -91,40 +51,22 @@ class RateSynapse(Master):
         self._variables.update(synapse.variables) 
 
     def __str__(self):
-        return pprint.pformat( self._variables, depth=4 )
-            
-    def _global_operations(self):
-        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()
-        return g_op
+        return pprint.pformat( self, depth=4 ) #TODO
         
-class SpikeSynapse(Master):
+class SpikeSynapse(object):
     """
     Definition of a spiking synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
 
     def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, psp = None, extra_values=None, functions=None ):
-        Master.__init__(self)
         
-        self._convert(parameters, equations, extra_values)
-        
-        if psp:
-            psp = 'psp = ' + self._prepare_string(psp)[0]
-            var = Variable(init=0.0, eq=psp)
-            var._validate() 
-            
-            self._variables['psp'] = { 'type':'local', 'var': var }
-            
-        if pre_spike:
-            var = Variable(init=0.0, eq=self._prepare_string(pre_spike))
-            var._validate() 
-            
-            self._variables['pre_spike'] = { 'type':'local', 'var': var }
-
-        if post_spike:
-            var = Variable(init=0.0, eq=self._prepare_string(post_spike))
-            var._validate() 
-
-            self._variables['post_spike'] = { 'type':'local', 'var': var }
+        # Store the parameters and equations
+        self.parameters = parameters
+        self.equations = equations
+        self.functions = functions
+        self.pre_spike = pre_spike
+        self.post_spike = post_spike
+        self.psp = psp
 
     def __add__(self, synapse):
         if not isinstance(synapse, SpikeSynapse):
@@ -133,8 +75,5 @@ class SpikeSynapse(Master):
         self._variables.update(synapse.variables) 
 
     def __str__(self):
-        return pprint.pformat( self._variables, depth=4 )
-            
-    def _global_operations(self):
-        var, g_op = parser.SynapseAnalyser(self._variables, [], []).parse()        
-        return g_op
+        return pprint.pformat( self, depth=4 ) #TODO
+

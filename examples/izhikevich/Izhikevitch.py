@@ -18,13 +18,13 @@ param_dict = {
 Izhikevitch = SpikeNeuron(
 parameters="""
     I_in = 0.0
-    noise_scale = 'noise_factor'
-    a = 'a'
-    b = 'b'
+    noise_scale = 5.0
+    a = 0.02
+    b = 0.2
     c = -65.0
     d = 2.0
     threshold= 30.0
-    u = b * c 
+    u = 0.2 * -65.0 
 """,
 extra_values = param_dict,
 equations="""
@@ -49,17 +49,21 @@ Simple = SpikeSynapse(
     """
 )
 
-Excitatory = Population(name='Excitatory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
-re = np.random.random(nb_exc_neurons)
-Excitatory.c = -65.0 + 15.0*re**2
-Excitatory.d = 8.0 - 6.0*re**2
+Excitatory = Population(name='Excitatory', geometry=(800), neuron=Izhikevitch)
+#===============================================================================
+# re = np.random.random(nb_exc_neurons)
+# Excitatory.c = -65.0 + 15.0*re**2
+# Excitatory.d = 8.0 - 6.0*re**2
+#===============================================================================
 
-Inhibitory = Population(name='Inhibitory', geometry=(nb_inh_neurons), neuron=Izhikevitch)
-ri = np.random.random(nb_inh_neurons)
-Inhibitory.noise_scale=2.0
-Inhibitory.b = 0.25 - 0.05*ri
-Inhibitory.a = 0.02 + 0.08*ri
-Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
+Inhibitory = Population(name='Inhibitory', geometry=(200), neuron=Izhikevitch)
+#===============================================================================
+# ri = np.random.random(nb_inh_neurons)
+# Inhibitory.noise_scale=2.0
+# Inhibitory.b = 0.25 - 0.05*ri
+# Inhibitory.a = 0.02 + 0.08*ri
+# Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
+#===============================================================================
 
 exc_exc = Projection(
     pre=Excitatory, 

@@ -21,17 +21,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
+import traceback
 import numpy as np
 
-from . import Global
-from .Dendrite import Dendrite
+from ANNarchy4.core import Global
+from ANNarchy4.parser.Analyser import analyse_projection
 
-from ANNarchy4 import generator
-from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.Variable import Variable
-from ANNarchy4.core.Descriptor import Descriptor, Attribute
-
-class Projection(Descriptor):
+class Projection(object):#Descriptor):
     """
     Python class representing the projection between two populations.
     """
@@ -48,7 +44,7 @@ class Projection(Descriptor):
             * *connector*: connection pattern object
             * *synapse*: synapse object
         """
-        
+        # Store the pre and post synaptic populations
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object 
         if isinstance(pre, str):
@@ -65,33 +61,91 @@ class Projection(Descriptor):
         else:
             self.post = post
             
-        self.post.generator._add_target(target)
+        # Store the arguments
         self.target = target
         self.connector = connector
         self.connector.proj = self # set reference to projection
-        self.synapse = synapse
+        self.synapse_type = synapse
         self._dendrites = []
         self._post_ranks = []
 
-        self.name = 'Projection'+str(len(Global._projections))
-        self.generator = generator.Projection(self, self.synapse)
+        # Create a default name
+        self._id = len(Global._projections)
+        self.name = 'Projection'+str(self._id)
+        
+        # Add the target to the postsynaptic population
+        self.post.targets.append(self.target)
+        
+        # Get a list of parameters and variables
+        self.description = analyse_projection(self)
+        self.parameters = []
+        self.init = {}
+        for param in self.description['parameters']:
+            self.parameters.append(param['name'])
+            self.init[param['name']] = param['init']
+        self.variables = []
+        for var in self.description['variables']:
+            self.variables.append(var['name'])
+            self.init[var['name']] = var['init']
+        self.attributes = self.parameters + self.variables
+        
+        
+        # Add the population to the global variable
         Global._projections.append(self)
-        self.initialized = True
+        
+        # Finalize initialization
+        self.initialized = False
         
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
-        for var in self.variables + self.parameters:
-            setattr(self, var, Attribute(var))
+        self.initialized = True  
+        for attr in self.attributes:
+            if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
+                if isinstance(self.init[attr], list) or isinstance(self.init[attr], np.ndarray):
+                    self._set_cython_attribute(attr, self.init[attr])
+
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+        if not hasattr(self, 'initialized'): # Before the end of the constructor
+            return object.__getattribute__(self, name)
+        elif name == 'attributes':
+            return object.__getattribute__(self, 'attributes')
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                if not self.initialized:
+                    if name in self.description['local']:
+                        return self.init[name] # Dendrites are not initialized
+                    else:
+                        return self.init[name]
+                else:
+                    return self._get_cython_attribute( name)
+            else:
+                return object.__getattribute__(self, name)
+        return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if not hasattr(self, 'initialized'): # Before the end of the constructor
+            object.__setattr__(self, name, value)
+        elif name == 'attributes':
+            object.__setattr__(self, name, value)
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                if not self.initialized:
+                    self.init[name] = value
+                else:
+                    self._set_cython_attribute(name, value)      
+            else:
+                object.__setattr__(self, name, value)     
+        else:
+            object.__setattr__(self, name, value)
             
     def get(self, name):
         """ Returns a list of parameters/variables values for each dendrite in the projection.
         
         The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.        
-        """
-        ret=[]
-        for dendrite in self.dendrites:
-            ret.append(dendrite.get(name))        
-        return np.array(ret)
+        """       
+        return self.__getattr__(name)
             
     def set(self, value):
         """ Sets the parameters/variables values for each dendrite in the projection.
@@ -121,14 +175,48 @@ class Projection(Descriptor):
         
         """
         
-        for val_key in value.keys():
-            if isinstance(value[val_key], list) or isinstance(value[val_key], np.ndarray):
-                for rk in range(len(self._dendrites)):
-                    self._dendrites[rk].set({val_key: value[val_key][rk] })
-            else:
-                for dendrite in self._dendrites:
-                    dendrite.set({val_key: value[val_key] })
+        for name, val in value:
+            self.__setattr__(name, val)
             
+    def _get_cython_attribute(self, attribute):
+        """
+        Returns the value of the given attribute for all neurons in the population, 
+        as a NumPy array having the same geometry as the population if it is local.
+        
+        Parameter:
+        
+        * *attribute*: should be a string representing the variables's name.
+        
+        """
+        return np.array([getattr(dendrite, attribute) for dendrite in self._dendrites])
+        
+    def _set_cython_attribute(self, attribute, value):
+        """
+        Sets the value of the given attribute for all neurons in the population, 
+        as a NumPy array having the same geometry as the population if it is local.
+        
+        Parameter:
+        
+        * *attribute*: should be a string representing the variables's name.
+        
+        """
+        if isinstance(value, np.ndarray):
+            if value.dim == 1:
+                if value.shape == (self.size, ):
+                    for n in range(self.size):
+                        setattr(self._dendrites[n], attribute, value[n])
+                else:
+                    Global._error('The projection has '+self.size+ ' dendrites.')
+        elif isinstance(value, list):
+            if len(value) == self.size:
+                for n in range(self.size):
+                    setattr(self._dendrites[n], attribute, value[n])
+            else:
+                Global._error('The projection has '+self.size+ ' dendrites.')
+        else:
+            for dendrite in self._dendrites:
+                setattr(dendrite, attribute,  value)
+           
                 
     def dendrite(self, pos):
         """
@@ -145,7 +233,7 @@ class Projection(Descriptor):
         if rank in self._post_ranks:
             return self._dendrites[rank]
         else:
-            Global._ANNarchyError("neuron of rank", str(rank),"has no synapse in this projection.")
+            Global._error("neuron of rank", str(rank),"has no synapse in this projection.")
             return None
     
     # Iterators
@@ -159,7 +247,7 @@ class Projection(Descriptor):
     def __iter__(self):
         " Returns iteratively each dendrite in the population in ascending rank order."
         for n in range(self.size):
-            yield self._dendrites(n)  
+            yield self._dendrites[n] 
         
     @property
     def size(self):
@@ -183,41 +271,6 @@ class Projection(Descriptor):
         List of postsynaptic neuron ranks having synapses in this projection.
         """
         return self._post_ranks
-
-    def _parsed_variables(self):
-        """
-        Returns parsed variables in case of an attached synapse.
-        """
-        if self.synapse:
-            return self.generator.parsed_variables
-        else:
-            return []
-            
-    @property
-    def variables(self):
-        """
-        Returns a list of all variable names.
-        """
-        ret_var = ['rank','value', 'delay']
-        
-        # check for additional variables        
-        for var in self._parsed_variables():
-            if not var['type'] == 'parameter' and not var['name'] in ret_var:
-                ret_var.append(var['name'])        
-        return ret_var
-
-    @property
-    def parameters(self):
-        """
-        Returns a list of all parameter names.
-        """
-        ret_par = []
-                
-        for var in self._parsed_variables():
-            if var['type'] == 'parameter' and not var['name'] in ret_par:
-                ret_par.append(var['name'])    
-                
-        return ret_par
 
     def connect(self):
         self._dendrites, self._post_ranks = self.connector.connect()

@@ -194,9 +194,8 @@ class VisualizePopulationVar(Render):
         self.pop = plot_data['pop']
         self.var = plot_data['var']
         
-        self.cmd ='self.pop.get_variable(self.var)'
         self.handle.set_title(self.title)
-        self.image = self.handle.imshow(eval(self.cmd), 
+        self.image = self.handle.imshow(getattr(self.pop, self.var), 
                                         cmap= self.p_map, 
                                         interpolation='nearest', 
                                         vmin= self.p_min, 
@@ -207,7 +206,7 @@ class VisualizePopulationVar(Render):
         """
         Update current plot.
         """
-        self.image.set_data(eval(self.cmd))        
+        self.image.set_data(getattr(self.pop, self.var))        
         
 class VisualizeProjectionVar(Render):
     """

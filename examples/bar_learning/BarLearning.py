@@ -5,11 +5,13 @@
 #
 from ANNarchy4 import *
 
+setup()
+
 # Defining the neurons
 InputNeuron = RateNeuron(
     parameters=""" 
         tau = 10.0 : population
-        baseline = 0.0 
+        baseline = 0.0 : toto
     """,
     equations="""
         tau * drate/dt + rate = baseline : min=0.0
@@ -19,7 +21,6 @@ InputNeuron = RateNeuron(
 LeakyNeuron = RateNeuron(
     parameters=""" 
         tau = 10.0 : population
-        baseline = 0.0 
     """,
     equations="""
         tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0
@@ -29,7 +30,7 @@ LeakyNeuron = RateNeuron(
 # Defining the synapses
 Oja = RateSynapse(
     parameters=""" 
-        tau = 2000 : postsynaptic
+        tau = 2000.0 : postsynaptic
         alpha = 8.0 : postsynaptic
     """,
     equations="""
@@ -39,7 +40,7 @@ Oja = RateSynapse(
 
 AntiHebb = RateSynapse(
     parameters=""" 
-        tau = 2000 : postsynaptic
+        tau = 2000.0 : postsynaptic
         alpha = 0.3 : postsynaptic
     """,
     equations="""
@@ -86,7 +87,17 @@ def set_input():
 # visualization meanwhile yes/no
 vis_during_sim=True
 
-def simulate_sth():
+if __name__=='__main__':
+
+    compile()
+    
+    # Collect visualizing information
+    plot1 = {'pop': input_pop, 'var': 'rate'}
+    plot2 = {'pop': feature_pop, 'var': 'rate'}
+    plot3 = {'proj': input_feature, 'var': 'value', 
+         'max': 0.1, 'title': 'Receptive fields'}
+
+    vis = Visualization( [plot1, plot2, plot3])
     
     # Run the simulation        
     for trial in range(5000):
@@ -98,16 +109,7 @@ def simulate_sth():
         render()
 
     # Visualize the result of learning
-    #vis.render()  
+    vis.render()  
 
     print 'simulation finished.'
-
-if __name__=='__main__':
-
-    # Collect visualizing information
-    plot1 = {'pop': input_pop, 'var': 'rate'}
-    plot2 = {'pop': feature_pop, 'var': 'rate'}
-    plot3 = {'proj': input_feature, 'var': 'value', 
-         'max': 0.1, 'title': 'Receptive fields'}
-
-    ANNarchyEditor( simulate_sth )
+    raw_input()

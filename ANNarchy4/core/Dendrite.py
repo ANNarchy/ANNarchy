@@ -20,14 +20,15 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from .Descriptor import Descriptor, Attribute
+#from .Descriptor import Descriptor, Attribute
+import ANNarchy4.core.Global as Global
 from ANNarchy4.core.Random import RandomDistribution
 import numpy as np
 import traceback
 
-class Dendrite(Descriptor):
+class Dendrite(object):
     """
-    A dendrite encapsulates all synapses of one neuron.
+    A dendrite encapsulates all synapses of one neuron coming from a single projection.
     
     *Hint*: this class will be created from projection class.
     
@@ -38,38 +39,65 @@ class Dendrite(Descriptor):
     * *cython_instance*: instance of the cythonized dendrite class.
     """
     def __init__(self, proj, post_rank, cython_instance=None, ranks=None, weights=None, delays=None):
-        Descriptor.__init__(self)
-        
+
         self.post_rank = post_rank
         self.proj = proj
         self.pre = proj.pre
+        
+        self.parameters = self.proj.parameters
+        self.variables = self.proj.variables
+        self.attributes = self.proj.attributes
 
         if cython_instance != None:
             self.cy_instance = cython_instance
-        else:
-            cython_module = __import__('ANNarchyCython')
-            proj_id = self.proj.generator.proj_class['ID']   
-            proj_class_name = 'LocalProjection'+str(proj_id)
-            local_proj = getattr(cython_module, proj_class_name)
-            
-            self.cy_instance = local_proj(
-                proj_id, 
-                self.proj.pre.rank, 
-                self.proj.post.rank, 
-                post_rank, 
-                self.proj.post.generator.targets.index(self.proj.target) 
-            )
+#         else:
+#             cython_module = __import__('ANNarchyCython')
+#             proj_id = self.proj.generator.proj_class['ID']   
+#             proj_class_name = 'LocalProjection'+str(proj_id)
+#             local_proj = getattr(cython_module, proj_class_name)
+#             
+#             self.cy_instance = local_proj(
+#                 proj_id, 
+#                 self.proj.pre.rank, 
+#                 self.proj.post.rank, 
+#                 post_rank, 
+#                 self.proj.post.generator.targets.index(self.proj.target) 
+#             )
+# 
+#             self.cy_instance.rank = ranks
+#             self.cy_instance.value = weights
+#             if delays != None:
+#                 self.cy_instance.delay = delays
+#                 max_delay = np.amax(delays)
+#                 self.proj.pre.cyInstance.set_max_delay(int(max_delay))
 
-            self.cy_instance.rank = ranks
-            self.cy_instance.value = weights
-            if delays != None:
-                self.cy_instance.delay = delays
-                max_delay = np.amax(delays)
-                self.proj.pre.cyInstance.set_max_delay(int(max_delay))
-            
-        # synapse variables           
-        for value in self.variables + self.parameters:
-            setattr(self, value, Attribute(value))   
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+        if name == 'proj':
+            return object.__getattribute__(self, name)
+        elif name == 'attributes':
+            return object.__getattribute__(self, 'attributes')
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                return getattr(self.cy_instance, name)
+            else:
+                return object.__getattribute__(self, name)
+        else:
+            return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if name == 'proj':
+            object.__setattr__(self, 'proj', value)
+        elif name == 'attributes':
+            object.__setattr__(self, name, value)
+        elif hasattr(self, 'attributes'):
+            if name in self.proj.attributes:
+                setattr(self.cy_instance, name, value)
+            else:
+                object.__setattr__(self, name, value)
+        else:
+            object.__setattr__(self, name, value)
     
     def set(self, value):
         """
@@ -108,21 +136,7 @@ class Dendrite(Descriptor):
         elif value in self.parameters:
             return self.get_parameter(value)
         else:
-            Global._error("dendrite has no parameter/variable called", val_key)     
-               
-    @property
-    def variables(self):
-        """
-        Returns a list of all variable names.
-        """
-        return self.proj.variables
-
-    @property
-    def parameters(self):
-        """
-        Returns a list of all parameter names.
-        """
-        return self.proj.parameters
+            Global._error("dendrite has no parameter/variable called", value)     
     
     @property
     def size(self):

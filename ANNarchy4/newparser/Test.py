@@ -37,12 +37,4 @@ proj = Projection(
     connector = All2All(weights= Uniform (-0.5, 0.5 ) ) 
 )
 
-# Call only the analyser
-from ANNarchy4.core.Global import _populations, _projections
-from ANNarchy4.parser.Analyser import Analyser
-from pprint import pprint
-
-analyser = Analyser(_populations, _projections)
-analyser.analyse()
-pprint(analyser.analysed_populations)
-pprint(analyser.analysed_projections)
+compile()
