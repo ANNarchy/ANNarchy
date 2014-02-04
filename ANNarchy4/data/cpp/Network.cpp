@@ -78,27 +78,38 @@ void Network::run(int steps) {
         std::cout << "Run simulation with "<< omp_get_max_threads() << " thread(s)." << std::endl;
 #endif
 
-    for(int i =0; i<steps; i++) {
-        // update time in all populations
-        for(int p=0; p<(int)populations_.size(); p++) {
-            populations_[p]->metaSum();
+    #pragma omp parallel
+    {
+        for(int i =0; i<steps; i++)
+        {
+            // update time in all populations
+            for(int p=0; p<(int)populations_.size(); p++)
+            {
+                populations_[p]->metaSum();
+            }
+
+            for(int p=0; p<(int)populations_.size(); p++)
+            {
+                populations_[p]->metaStep();
+            }
+
+            for(int p=0; p<(int)populations_.size(); p++)
+            {
+                populations_[p]->globalOperations();
+            }
+
+            for(int p=0; p<(int)populations_.size(); p++)
+            {
+                populations_[p]->metaLearn();
+            }
+
+            for(int p=0; p<(int)populations_.size(); p++)
+            {
+                populations_[p]->record();
+            }
+
+            ANNarchy_Global::time++;
         }
-
-        for(int p=0; p<(int)populations_.size(); p++)
-            populations_[p]->metaStep();
-
-        for(int p=0; p<(int)populations_.size(); p++)
-            populations_[p]->globalOperations();
-
-        for(int p=0; p<(int)populations_.size(); p++) {
-            populations_[p]->metaLearn();
-        }
-
-        for(int p=0; p<(int)populations_.size(); p++) {
-            populations_[p]->record();
-        }
-
-        ANNarchy_Global::time++;
     }
-	
+
 }

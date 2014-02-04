@@ -207,7 +207,7 @@ void Population::metaSum() {
     std::cout << "###########################"<< std::endl;
 #endif
 
-    #pragma omp parallel for
+    #pragma omp for
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
@@ -275,7 +275,7 @@ void Population::metaLearn() {
     std::cout << "# Global learning         #"<< std::endl;
     std::cout << "###########################"<< std::endl;
 #endif
-    #pragma omp parallel for
+    #pragma omp for
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
@@ -303,7 +303,7 @@ void Population::metaLearn() {
     std::cout << "###########################"<< std::endl;
 #endif
 
-    #pragma omp parallel for
+    #pragma omp for
     for(int n=0; n<nbNeurons_; n++) {
     #ifdef _DEBUG
         std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;

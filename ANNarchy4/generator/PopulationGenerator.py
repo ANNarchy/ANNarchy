@@ -311,6 +311,7 @@ void %(class)s::compute_sum_%(var)s() {
 
         # Local variables
         code += """
+    #pragma omp for
     for(int i=0; i<nbNeurons_; i++)
     {
 """

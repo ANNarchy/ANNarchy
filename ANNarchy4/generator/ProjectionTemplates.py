@@ -312,10 +312,8 @@ psp_code_body = \
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
                     
-        #pragma omp parallel for
         for(int i=0; i<(int)rank_.size(); i++) 
         {
-            std::cout << "Thread " << omp_get_thread_num() << "of" << omp_get_max_threads()<< std::endl; 
             sum_ += %(psp)s
         }
     }
@@ -331,6 +329,7 @@ psp_code_body = \
             }
             std::cout << std::endl;
         #endif
+            #pragma omp for schedule(static)
             for(int i=0; i<(int)rank_.size(); i++) {
                 sum_ += %(psp_const_delay)s
             }
@@ -339,6 +338,7 @@ psp_code_body = \
         {
             std::vector<DATA_TYPE> delayedRates = pre_population_->getRates(delay_, rank_);
 
+            #pragma omp for schedule(static)
             for(int i=0; i<(int)rank_.size(); i++) {
                 sum_ += %(psp_dyn_delay)s
             }
