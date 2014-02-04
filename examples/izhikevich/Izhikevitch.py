@@ -33,7 +33,7 @@ equations="""
     du/dt = a * (b*v - u) : init = 0.2
 """,
 spike = """
-    v > 30.0
+    v >= 30.0
 """,
 reset = """
     v = c

@@ -60,6 +60,18 @@ config = dict(
    }
 )
 
+# Authorized keywork for attributes
+authorized_keywords = [
+    'init',                   
+    'min',
+    'max',
+    'population',
+    'postsynaptic',
+    'explicit',
+    'implicit',
+    'exponential',
+]
+
 def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy4 simulation environment. It takes various optional arguments: 
@@ -78,29 +90,8 @@ def setup(**keyValueArgs):
 
         if key in config.keys():
             config[key] = keyValueArgs[key]
-
-def compile(clean=False, debug_build=False, cpp_stand_alone=False, profile_enabled=False):
-    """
-    Compile all classes and setup the network
-
-    Parameters:
     
-    * *clean*: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
-    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
-
-    .. hint: these parameters are also available but should only used if performance issues exists
-
-        * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
-        * *profile_enabled*: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
-    
-    """
-    generator.compile(clean, _populations, _projections, cpp_standalone, debug_build, profile_enabled)
-    
-def render():
-    if _visualizer:
-        _visualizer.render_data()
-        
-def reset(states=False, connections=False):
+def reset(states=True, connections=False):
     """
     Reinitialises the network, runs each object's reset() method (resetting them to 0).
 
@@ -161,19 +152,30 @@ def get_projection(pre, post, target):
 
 def simulate(duration):
     """
-    Runs the network for the given duration.
+    Runs the network for the given duration. 
+    
+    If an integer is given, the argument represents the number of time steps.
+    
+    If a floating point value is given, it represents a duration in milliseconds computed relative to the discretization step declared in setup() (default: 1ms). 
     """
-    nb_steps = ceil(duration / config['dt'])
-    import ANNarchyCython
-    
-    #
-    # check if user defined a certain number of threads.
-    if config['num_threads'] != None:
-        ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
-    
-    for i in xrange(int(nb_steps)):
-        QCoreApplication.processEvents() # handle user events
-        ANNarchyCython.pyNetwork().Run(1)
+    if isinstance(duration, int):
+        nb_steps = duration
+    elif isinstance(duration, float):
+        nb_steps = ceil(duration / config['dt'])
+    else:
+        _error('simulate() require either integers or floats.')
+        return
+    try:
+        import ANNarchyCython
+    except:
+        _error('simulate(): the network is not compiled yet.')
+        return
+    else:
+        # check if user defined a certain number of threads.
+        if config['num_threads'] != None:
+            ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
+        
+        ANNarchyCython.pyNetwork().Run(nb_steps)
     
 def current_time():
     """
@@ -181,15 +183,21 @@ def current_time():
     
     **Note**: computed as number of simulation steps times dt
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().get_time() * config['dt']
+    try:
+        import ANNarchyCython
+        return ANNarchyCython.pyNetwork().get_time() * config['dt']
+    except:
+        return 0.0
 
 def current_step():
     """
     Returns current simulation step.
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().get_time()
+    try:
+        import ANNarchyCython
+        return ANNarchyCython.pyNetwork().get_time()
+    except:
+        return 0
 
 def set_current_time(time):
     """
@@ -197,15 +205,21 @@ def set_current_time(time):
     
     **Note**: computed as number of simulation steps times dt
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+    try:
+        import ANNarchyCython
+        ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+    except:
+        _warning('the network is not compiled yet')
     
 def set_current_step(time):
     """
     set current simulation step.
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().set_time( time )
+    try:
+        import ANNarchyCython
+        ANNarchyCython.pyNetwork().set_time( time )
+    except:
+        _warning('the network is not compiled yet')
         
 def record(to_record):
     """
@@ -265,37 +279,37 @@ def get_record(to_record):
     
     return data
 
-def current_time():
-    """
-    Returns current simulation time in ms.
-    
-    **Note**: computed as number of simulation steps times dt
-    """
-    import ANNarchyCython
-    return ANNarchyCython.pyNetwork().get_time() * config['dt']
-
-def current_step():
-    """
-    Returns current simulation step.
-    """
-    import ANNarchyCython    
-    return ANNarchyCython.pyNetwork().get_time()    
-
-def set_current_time(time):
-    """
-    Set current simulation time in ms.
-    
-    **Note**: computed as number of simulation steps times dt
-    """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
-
-def set_current_step(time):
-    """
-    set current simulation step.
-    """
-    import ANNarchyCython    
-    ANNarchyCython.pyNetwork().set_time( time )    
+# def current_time():
+#     """
+#     Returns current simulation time in ms.
+#     
+#     **Note**: computed as number of simulation steps times dt
+#     """
+#     import ANNarchyCython
+#     return ANNarchyCython.pyNetwork().get_time() * config['dt']
+# 
+# def current_step():
+#     """
+#     Returns current simulation step.
+#     """
+#     import ANNarchyCython    
+#     return ANNarchyCython.pyNetwork().get_time()    
+# 
+# def set_current_time(time):
+#     """
+#     Set current simulation time in ms.
+#     
+#     **Note**: computed as number of simulation steps times dt
+#     """
+#     import ANNarchyCython
+#     ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+# 
+# def set_current_step(time):
+#     """
+#     set current simulation step.
+#     """
+#     import ANNarchyCython    
+#     ANNarchyCython.pyNetwork().set_time( time )    
 
 def _print(*var_text):
     """

@@ -319,6 +319,14 @@ void %(class)s::compute_sum_%(var)s() {
                 code += """
         %(cpp)s
 """ % { 'cpp': param['cpp'] }
+
+            if self.desc.has_key('spike'):
+                if param['name'] == self.desc['spike']['name']:
+                    code += """
+        if( %(cond)s )
+            this->propagate_.push_back(i); 
+""" % {'cond' : self.desc['spike']['spike_cond'] } #TODO: check code
+
             for bound, val in param['bounds'].iteritems():
                 if bound == 'min':
                     code += """
@@ -453,8 +461,6 @@ class RatePopulationGenerator(PopulationGenerator):
 class SpikePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a spike population description. """
     def __init__(self, name, desc):
-        import pprint
-        pprint.pprint(desc)
         PopulationGenerator.__init__(self, name, desc)
     
     def generate_header(self):

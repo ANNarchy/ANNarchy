@@ -11,7 +11,7 @@ setup()
 InputNeuron = RateNeuron(
     parameters=""" 
         tau = 10.0 : population
-        baseline = 0.0 : toto
+        baseline = 0.0 
     """,
     equations="""
         tau * drate/dt + rate = baseline : min=0.0
@@ -91,13 +91,15 @@ if __name__=='__main__':
 
     compile()
     
-    # Collect visualizing information
-    plot1 = {'pop': input_pop, 'var': 'rate'}
-    plot2 = {'pop': feature_pop, 'var': 'rate'}
-    plot3 = {'proj': input_feature, 'var': 'value', 
-         'max': 0.1, 'title': 'Receptive fields'}
-
-    vis = Visualization( [plot1, plot2, plot3])
+#===============================================================================
+#     # Collect visualizing information
+#     plot1 = {'pop': input_pop, 'var': 'rate'}
+#     plot2 = {'pop': feature_pop, 'var': 'rate'}
+#     plot3 = {'proj': input_feature, 'var': 'value', 
+#          'max': 0.1, 'title': 'Receptive fields'}
+# 
+#     vis = Visualization( [plot1, plot2, plot3])
+#===============================================================================
     
     # Run the simulation        
     for trial in range(5000):
@@ -106,10 +108,10 @@ if __name__=='__main__':
         simulate(50) 
 
         #if vis_during_sim:
-        render()
+        #vis.render()
 
     # Visualize the result of learning
-    vis.render()  
+    #vis.render()  
 
     print 'simulation finished.'
     raw_input()

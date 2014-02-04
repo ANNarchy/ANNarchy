@@ -22,6 +22,7 @@
     
 """
 from ANNarchy4.core.Global import _error
+from ANNarchy4.core.PopulationView import PopulationView
 
 import pprint
 
@@ -130,42 +131,55 @@ class IndividualNeuron(object):
     
     This only a wrapper around the Population data. It has the same attributes (parameter and variable) as the original population.
     """
-    def __init__(self, pop, rank):
-        self.__dict__['pop']  = pop
-        self.__dict__['rank']  = rank
-        self.__dict__['__members__'] = pop.parameters + pop.variables
-        self.__dict__['__methods__'] = []
+    def __init__(self, population, rank):
+        self.population  = population
+        self.rank  = rank
         
     def __getattr__(self, name):
-        if name in self.pop.variables:
-            return eval('self.pop.cyInstance._get_single_'+name+'(self.rank)')
-        elif name in self.pop.parameters:
-            return self.pop.__getattribute__(name)
-        print('Error: population has no attribute called', name)
-        print('Parameters:', self.pop.parameters)
-        print('Variables:', self.pop.variables) 
-                       
-    def __setattr__(self, name, val):
-        if hasattr(getattr(self.__class__, name, None), '__set__'):
-            return object.__setattr__(self, name, val)
+        " Method called when accessing an attribute."
+        if name == 'population':
+            return object.__getattribute__(self, name)
+        elif hasattr(self.population, 'attributes'):
+            if name in self.population.attributes:
+                return self.population.get(name)[self.rank]
+            else:
+                return object.__getattribute__(self, name)
+        else:
+            return object.__getattribute__(self, name)
         
-        # old version:
-        #if name in self.pop.variables:
-        #    eval('self.pop.cyInstance._set_single_'+name+'(self.rank, val)')
-            
-        #TODO: check if this works !!!
-        if name in self.pop.variables:
-            getattr(self.pop.cyInstance, '_set_single_'+name)(self.rank, val)
-        elif name in self.pop.parameters:
-            print('Warning: parameters are population-wide, this will affect all other neurons.')
-            self.pop.__setattr__(name, val)
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if name == 'population':
+            object.__setattr__(self, name, value)
+        elif name == 'rank':
+            object.__setattr__(self, name, value)
+        elif hasattr(self.population, 'attributes'):
+            if name in self.population.attributes:
+                val = self.population.get(name).reshape(self.population.size)
+                val[self.rank] = value
+                self.population.set({name: val})
+            else:
+                object.__setattr__(self, name, value)
+        else:
+            object.__setattr__(self, name, value) 
             
     def __repr__(self):
-        desc = 'Neuron of the population ' + self.pop.name + ' with rank ' + str(self.rank) + ' (coordinates ' + str(self.pop.coordinates_from_rank(self.rank)) + ').\n'
+        desc = 'Neuron of the population ' + self.population.name + ' with rank ' + str(self.rank) + ' (coordinates ' + str(self.population.coordinates_from_rank(self.rank)) + ').\n'
         desc += 'Parameters:\n'
-        for param in self.pop.parameters:
+        for param in self.population.parameters:
             desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + ';'
         desc += '\nVariables:\n'
-        for param in self.pop.variables:
+        for param in self.population.variables:
             desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + ';'
         return desc
+    
+    def __add__(self, other):
+        """Allows to join two neurons if they have the same population."""
+        if other.population == self.population:
+            if isinstance(other, IndividualNeuron):
+                return PopulationView(self.population, list(set([self.rank, other.rank])))
+            elif isinstance(other, PopulationView):
+                return PopulationView(self.population, list(set([self.rank] + other.ranks)))
+        else:
+            _error("can only add two PopulationViews of the same population.")
+            return None

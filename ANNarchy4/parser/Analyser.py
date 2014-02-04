@@ -23,7 +23,7 @@
 """
 from ANNarchy4.core.Neuron import RateNeuron
 from ANNarchy4.core.Synapse import RateSynapse
-from ANNarchy4.core.Global import _error, _warning
+from ANNarchy4.core.Global import _error, _warning, authorized_keywords
 from ANNarchy4.core.Random import available_distributions
 from ANNarchy4.parser.Equation import Equation
 
@@ -58,6 +58,7 @@ class Analyser(object):
                    isinstance(pop.init[variable['name']], int) or \
                    isinstance(pop.init[variable['name']], float) :
                     variable['init'] = pop.init[variable['name']]
+                
             for variable in pop.description['variables']:
                 if isinstance(pop.init[variable['name']], bool) or \
                    isinstance(pop.init[variable['name']], int) or \
@@ -66,9 +67,17 @@ class Analyser(object):
                
             # Extract RandomDistribution objects
             pop.description['random_distributions'] = _extract_randomdist(pop)
-                    
+                   
+            if 'raw_spike' in pop.description.keys() and 'raw_reset' in pop.description.keys():
+                pop.description['spike'] = _extract_spike_variable(pop.description)
+            
             # Translate the equation to C++
             for variable in pop.description['variables']:
+                eq = variable['transformed_eq']
+                
+                # Extract if-then-else statements
+                eq, condition = _extract_ite(variable['name'], eq, pop)
+                
                 # Find the numerical method if any
                 if 'implicit' in variable['flags']:
                     method = 'implicit'
@@ -78,9 +87,15 @@ class Analyser(object):
                     method = 'explicit'
                 
                 # Analyse the equation
-                translator = Equation(variable['name'], variable['eq'], pop.description['attributes'], 
-                                      pop.description['local'], pop.description['global'], method = method)
-                code = translator.parse()
+                if condition == []:
+                    translator = Equation(variable['name'], eq, 
+                                          pop.description['attributes'], 
+                                          pop.description['local'], 
+                                          pop.description['global'], 
+                                          method = method)
+                    code = translator.parse()
+                else: # An if-then-else statement
+                    code = self._translate_ITE(variable['name'], eq, condition, pop, {})
                 
                 # Replace sum(target) with sum(i, rk_target)
                 for target in pop.description['targets']:
@@ -89,7 +104,7 @@ class Analyser(object):
                                             str(pop.targets.index(target))+')')
                     else: # used in the eq, but not connected
                         code = code.replace('sum('+target+')', '0.0')
-                        
+                
                 # Store the result
                 variable['cpp'] = code
        
@@ -117,7 +132,7 @@ class Analyser(object):
             
             # Iterate over all variables
             for variable in proj.description['variables']:
-                eq = variable['eq']
+                eq = variable['transformed_eq']
                 
                 # Replace %(target) by its actual value
                 eq = eq.replace('%(target)', proj.target)
@@ -127,8 +142,11 @@ class Analyser(object):
                 proj.pre.description['global_operations'] += global_ops['pre']
                 proj.post.description['global_operations'] += global_ops['post']
                 
-                # Replace pre- and post_synaptic variables
+                # Extract pre- and post_synaptic variables
                 eq, untouched_var = _extract_prepost(variable['name'], eq, proj)
+                
+                # Extract if-then-else statements
+                eq, condition = _extract_ite(variable['name'], eq, proj)
                 
                 # Add the untouched variables to the global list
                 for name, val in untouched_globs.iteritems():
@@ -137,6 +155,9 @@ class Analyser(object):
                 for name, val in untouched_var.iteritems():
                     if not untouched.has_key(name):
                         untouched[name] = val
+                        
+                # Save the tranformed equation 
+                variable['transformed_eq'] = eq
                         
                 # Find the numerical method if any
                 if 'implicit' in variable['flags']:
@@ -147,15 +168,19 @@ class Analyser(object):
                     method = 'explicit'
                     
                 # Analyse the equation
-                translator = Equation(variable['name'], eq, proj.description['attributes'], 
-                                      proj.description['local'], proj.description['global'], 
-                                      method = method, untouched = untouched.keys())
-                code = translator.parse()
-                
+                if condition == []: # Call Equation
+                    translator = Equation(variable['name'], eq, proj.description['attributes'], 
+                                          proj.description['local'], proj.description['global'], 
+                                          method = method, untouched = untouched.keys())
+                    code = translator.parse()
+                        
+                else: # An if-then-else statement
+                    code = self._translate_ITE(variable['name'], eq, condition, proj, untouched)
+                                         
                 # Replace untouched variables with their original name
-                for prev, next in untouched.iteritems():
-                    code = code.replace(prev, next) 
-                    
+                for prev, new in untouched.iteritems():
+                    code = code.replace(prev, new)     
+                
                 # Store the result
                 variable['cpp'] = code
                 
@@ -196,6 +221,115 @@ class Analyser(object):
         for proj in self.projections:
             self.analysed_projections[proj.name] = proj.description  
         return True # success
+    
+    def _translate_ITE(self, name, eq, condition, proj, untouched):
+        " Recursively processes the different parts of an ITE statement"
+        def process_ITE(condition):
+            if_statement = condition[0]
+            then_statement = condition[1]
+            else_statement = condition[2]
+            if_code = Equation(name, if_statement, proj.description['attributes'], 
+                              proj.description['local'], proj.description['global'], 
+                              method = 'explicit', untouched = untouched.keys(),
+                              type='cond').parse()
+            if isinstance(then_statement, list): # nested conditional
+                then_code =  process_ITE(then_statement)
+            else:
+                then_code = Equation(name, then_statement, proj.description['attributes'], 
+                              proj.description['local'], proj.description['global'], 
+                              method = 'explicit', untouched = untouched.keys(),
+                              type='return').parse().split(';')[0]
+            if isinstance(else_statement, list): # nested conditional
+                else_code =  process_ITE(else_statement)
+            else:
+                else_code = Equation(name, else_statement, proj.description['attributes'], 
+                              proj.description['local'], proj.description['global'], 
+                              method = 'explicit', untouched = untouched.keys(),
+                              type='return').parse().split(';')[0]
+                              
+            code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
+            return code
+              
+        # Main equation, wehere the right part is __conditional__
+        translator = Equation(name, eq, proj.description['attributes'], 
+                              proj.description['local'], proj.description['global'], 
+                              method = 'explicit', untouched = untouched.keys())
+        code = translator.parse() 
+        # Process the ITE
+        itecode =  process_ITE(condition)
+        # Replace
+        code = code.replace('__conditional__', itecode)
+        return code
+
+def _extract_ite(name, eq, proj):
+    """ Extracts if-then-else statements and processes them.
+    
+    If-then-else statements must be of the form:
+    
+    .. code-block:: python
+    
+        variable = if condition: ...
+                       val1 ...
+                   else: ...
+                       val2
+                       
+    Conditional statements can be nested, but they should return only one value!
+    """
+    
+    def transform(code):
+        " Transforms the code into a list of lines."
+        res = []
+        items = []
+        for arg in code.split(':'):
+            items.append( arg.strip())
+        for i in range(len(items)):
+            if items[i].startswith('if '):
+                res.append( items[i].strip() )
+            elif items[i].endswith('else'):
+                res.append(items[i].split('else')[0].strip() )
+                res.append('else' )
+            else: # the last then
+                res.append( items[i].strip() )    
+        return res
+        
+        
+    def parse(lines):
+        " Recursive analysis of if-else statmenets"
+        result = []
+        while lines:
+            if lines[0].startswith('if'):
+                block = [lines.pop(0).split('if')[1], parse(lines)]
+                if lines[0].startswith('else'):
+                    lines.pop(0)
+                    block.append(parse(lines))
+                result.append(block)
+            elif not lines[0].startswith(('else')):
+                result.append(lines.pop(0))
+            else:
+                break
+        return result[0]
+    
+    # Process the equation            
+    condition = []   
+    # Check that there are as many : as else, otherwise throw an error
+    left, right =  eq.split('=')
+    nb_then = len(re.findall(':', right))
+    nb_else = len(re.findall('else', right))
+    # The equation contains a conditional statement
+    if nb_then > 0:
+        # A if must be right after the equal sign
+        if not right[0:2] == 'if':
+            _error(eq, '\nThe right term must directly start with a if statement.')
+            exit(0)
+        # It must have the same number of : and of else
+        if not nb_then == 2*nb_else:
+            _error(eq, '\nConditional statements must use both : and else.')
+            exit(0)
+        multilined = transform(right)
+        condition = parse(multilined)
+        right = '__conditional__'
+        eq = left + '=' + right
+    return eq, condition
 
 def _extract_randomdist(pop):
     " Extracts RandomDistribution objects from all variables"
@@ -222,7 +356,7 @@ def _extract_randomdist(pop):
                     pop.description['local'].append(desc['name'])
                 else: # Why not on a population-wide variable?
                     pop.description['global'].append(desc['name'])
-        variable['eq'] = eq
+        variable['transformed_eq'] = eq
         
     return random_objects
     
@@ -319,6 +453,10 @@ def analyse_population(pop):
     variables = _extract_variables(pop.neuron_type.equations)
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = _get_attributes(parameters, variables)
+    # Test if attributes are declared only once
+    if len(attributes) != len(list(set(attributes))):
+        _error(pop.name, ': attributes must be declared only once.', attributes)
+        exit(0)
     # Extract all targets
     targets = _extract_targets(variables)
     # Add this info to the description
@@ -350,15 +488,19 @@ def analyse_projection(proj):
     if proj_type == 'spike': # Additionally store pre_spike and post_spike
         description['raw_pre_spike'] = proj.synapse_type.pre_spike
         description['raw_post_spike'] = proj.synapse_type.post_spike
-    else: # Additionally store psp
+    else: # Additionally store psp if exists
         if proj.synapse_type.psp:
             description['raw_psp'] = proj.synapse_type.psp
-        
+
     # Extract parameters and variables names
     parameters = _extract_parameters(proj.synapse_type.parameters)
     variables = _extract_variables(proj.synapse_type.equations)
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = _get_attributes(parameters, variables)
+    # Test if attributes are declared only once
+    if len(attributes) != len(list(set(attributes))):
+        _error(proj.name, ': attributes must be declared only once.', attributes)
+        exit(0)
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
@@ -502,6 +644,29 @@ def _extract_targets(variables):
             targets.append(t)
     return list(set(targets))
 
+def _extract_spike_variable(pop_desc):
+    spike_name = _extract_name(pop_desc['raw_spike'].strip())
+    translator = Equation('raw_spike_cond', pop_desc['raw_spike'], 
+                          pop_desc['attributes'], 
+                          pop_desc['local'], 
+                          pop_desc['global'], 
+                          type = 'cond')
+    raw_spike_code = translator.parse()
+    
+    raw_reset_code = ''
+    for tmp in _prepare_string(pop_desc['raw_reset']):
+        name = _extract_name(tmp)
+        translator = Equation(name, tmp, 
+                              pop_desc['attributes'], 
+                              pop_desc['local'], 
+                              pop_desc['global'], 
+                              type = 'simple')
+        raw_reset_code += translator.parse() +'\n'
+    
+    print spike_name
+    print raw_spike_code
+    print raw_reset_code
+    return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': raw_reset_code}
 
 ####################################
 # Functions for string manipulation
@@ -510,12 +675,21 @@ def _extract_targets(variables):
 def _split_equation(definition):
     " Splits a description into equation and flags."
     try:
-        equation, constraint = definition.split(':')
-        equation = equation.strip()
-        constraint = constraint.strip()
+        equation, constraint = definition.rsplit(':', 1)
     except ValueError:
         equation = definition.strip() # there are no constraints
         constraint = None
+    else:
+        has_constraint = False
+        for keyword in authorized_keywords:
+            if keyword in constraint:
+                has_constraint = True
+        if has_constraint:
+            equation = equation.strip()
+            constraint = constraint.strip()
+        else:
+            equation = definition.strip() # there are no constraints
+            constraint = None            
     finally:
         return equation, constraint
     
@@ -540,7 +714,7 @@ def _extract_name(equation):
     except: # No equal sign. Eg: baseline : init=0.0
         return equation.strip()
     # Search for increments
-    operators = ['+=', '-=', '*=', '/=']
+    operators = ['+=', '-=', '*=', '/=', '>=', '<=']
     for op in operators:
         if op in equation: 
             return equation.split(op)[0]        

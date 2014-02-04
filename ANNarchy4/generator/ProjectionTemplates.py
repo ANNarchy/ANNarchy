@@ -311,7 +311,11 @@ psp_code_body = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-        for(int i=0; i<(int)rank_.size(); i++) {
+                    
+        #pragma omp parallel for
+        for(int i=0; i<(int)rank_.size(); i++) 
+        {
+            std::cout << "Thread " << omp_get_thread_num() << "of" << omp_get_max_threads()<< std::endl; 
             sum_ += %(psp)s
         }
     }
@@ -327,7 +331,6 @@ psp_code_body = \
             }
             std::cout << std::endl;
         #endif
-
             for(int i=0; i<(int)rank_.size(); i++) {
                 sum_ += %(psp_const_delay)s
             }

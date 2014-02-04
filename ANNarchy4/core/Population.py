@@ -77,10 +77,18 @@ class Population(object):
         self.init = {}
         for param in self.description['parameters']:
             self.parameters.append(param['name'])
+            
+            # TODO: 
+            # pre evaluate init to 
+            # transform expressions into their value
             self.init[param['name']] = param['init']
         self.variables = []
         for var in self.description['variables']:
             self.variables.append(var['name'])
+            
+            # TODO: 
+            # pre evaluate init to 
+            # transform expressions into their value
             self.init[var['name']] = var['init']
         self.attributes = self.parameters + self.variables
         
@@ -112,11 +120,13 @@ class Population(object):
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
                 if not self.initialized:
+                    # access before compile()
                     if name in self.description['local']:
                         return np.array([self.init[name]] * self.size).reshape(self.geometry)
                     else:
                         return self.init[name]
                 else:
+                    # access after compile()
                     return self._get_cython_attribute( name)
             else:
                 return object.__getattribute__(self, name)
@@ -522,16 +532,19 @@ class Population(object):
         else:
             return self.init[name]
             
-    def neuron(self, coord):  
+    def neuron(self, *coord):  
         " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  
-    
         # Transform arguments
-        if isinstance(coord, int):
-            rank = coord
-            if not rank < self.size:
-                Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
-                return None
-
+        if len(coord) == 1:
+            if isinstance(coord[0], int):
+                rank = coord[0]
+                if not rank < self.size:
+                    Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+                    return None
+            else:
+                rank = self.rank_from_coordinates( coord[0] )
+                if rank == None:
+                    return None
         else: # a tuple
             rank = self.rank_from_coordinates( coord )
             if rank == None:
@@ -566,7 +579,7 @@ class Population(object):
         """
         indices =  args[0]
         if isinstance(indices, int): # a single neuron
-            return self.neuron(indices)
+            return IndividualNeuron(self, indices)
         elif isinstance(indices, slice): # a slice of ranks
             start, stop, step = indices.start, indices.stop, indices.step
             if indices.start is None:
