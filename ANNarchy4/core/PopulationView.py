@@ -25,7 +25,7 @@ from ANNarchy4.core import Global as Global
 from ANNarchy4.core.Random import RandomDistribution
 import numpy as np
 
-class PopulationView(object):#Descriptor):
+class PopulationView(object):
     """ Container representing a subset of neurons of a Population."""
     
     def __init__(self, population, ranks):
@@ -41,8 +41,29 @@ class PopulationView(object):#Descriptor):
         self.ranks = ranks
         self.size = len(self.ranks)
         
-#         for var in self.population.variables + self.population.parameters:
-#             setattr(self, var, Attribute(var))
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+        if name == 'population':
+            return object.__getattribute__(self, name)
+        elif hasattr(self.population, 'attributes'):
+            if name in self.population.attributes:
+                return self.get(name)
+            else:
+                return object.__getattribute__(self, name)
+        else:
+            return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if name == 'population':
+            object.__setattr__(self, name, value)
+        elif hasattr(self, 'population'):
+            if name in self.population.attributes:
+                self.set({name: value})
+            else:
+                object.__setattr__(self, name, value)
+        else:
+            object.__setattr__(self, name, value)    
         
     def get(self, name):
         """
@@ -52,11 +73,9 @@ class PopulationView(object):#Descriptor):
         
             * *name*: name of the parameter/variable.
         """
-        if name in self.population.variables:
-            all_val = getattr(self.population, name).reshape(self.population.size) #directly access the one-dimensional array
+        if name in self.population.attributes:
+            all_val = getattr(self.population, name).reshape(self.population.size)
             return all_val[self.ranks] 
-        elif name in self.population.parameters:
-            return self.population.get_parameter(name)
         else:
             Global._error("Population does not have a parameter/variable called " + name + ".")
         
@@ -76,38 +95,35 @@ class PopulationView(object):#Descriptor):
         
             If you modify the value of a parameter, this will be the case for ALL neurons of the population, not only the subset.
         """
-#         for val_key in value.keys():
-#             if hasattr(self.population, val_key):
-#                 # Check the value
-#                 if isinstance(value[val_key], np.ndarray): # np.array
-#                     if value[val_key].ndim >1 or len(value[val_key]) != self.size:
-#                         Global._ANNarchyError("you can only provide a 1D list/array of the same size as the PopulationView", self.size)
-#                         return None
-#                     if val_key in self.population.parameters:
-#                         Global._ANNarchyError("you can only provide a single value for parameters.")
-#                         return None
-#                     # Assign the value
-#                     for rk in self.ranks:
-#                         setattr(self.population.neuron(rk), value[val_key][rk])
-#                 elif isinstance(value[val_key], list): # list
-#                     if value[val_key].ndim >1 or len(value[val_key]) != self.size:
-#                         Global._ANNarchyError("you can only provide a 1D list/array of the same size as the PopulationView", self.size)
-#                         return None
-#                     if val_key in self.population.parameters:
-#                         Global._ANNarchyError("you can only provide a single value for parameters.")
-#                         return None                    
-#                     # Assign the value
-#                     for rk in self.ranks:
-#                         setattr(self.population.neuron(rk), value[val_key][rk])   
-#                 elif isinstance(value[val_key], RandomDistribution): # random distribution
-#                     for rk in self.ranks:
-#                         setattr(self.population.neuron(rk), float(value[val_key].getValue()))
-#                 else: # single value
-#                     for rk in self.ranks:
-#                         setattr(self.population.neuron(rk), value[val_key])
-#             else:
-#                 Global._ANNarchyError("population does not contain value: ", val_key)
-#                 return None
+        for val_key in value.keys():
+            if hasattr(self.population, val_key):
+                # Check the value
+                if isinstance(value[val_key], np.ndarray): # np.array
+                    if value[val_key].ndim >1 or len(value[val_key]) != self.size:
+                        Global._error("You can only provide an array of the same size as the PopulationView", self.size)
+                        return None
+                    if val_key in self.population.description['global']:
+                        Global._error("Global attributes can only have one value in a population.")
+                        return None
+                    # Assign the value
+                    for rk in self.ranks:
+                        setattr(self.population.neuron(rk), val_key, value[val_key][rk])
+                elif isinstance(value[val_key], list): # list
+                    if len(value[val_key]) != self.size:
+                        Global._error("You can only provide a list of the same size as the PopulationView", self.size)
+                        return None
+                    if val_key in self.population.description['global']:
+                        Global._error("Global attributes can only have one value in a population.")
+                        return None                    
+                    # Assign the value
+                    for rk in range(self.size):
+                        setattr(self.population.neuron(self.ranks[rk]), val_key, value[val_key][rk])   
+                else: # single value
+                    for rk in self.ranks:
+                        setattr(self.population.neuron(rk), val_key, value[val_key])
+            else:
+                Global._error("population does not contain value: ", val_key)
+                return None
                 
     def __add__(self, other):
         """Allows to join two PopulationViews if they have the same population."""

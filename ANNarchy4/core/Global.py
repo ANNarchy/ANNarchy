@@ -57,6 +57,18 @@ config = dict(
    }
 )
 
+# Authorized keywork for attributes
+authorized_keywords = [
+    'init',                   
+    'min',
+    'max',
+    'population',
+    'postsynaptic',
+    'explicit',
+    'implicit',
+    'exponential',
+]
+
 def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy4 simulation environment. It takes various optional arguments: 
@@ -75,14 +87,8 @@ def setup(**keyValueArgs):
 
         if key in config.keys():
             config[key] = keyValueArgs[key]
-
-def compile(self):
-    """
-    Compile all classes and setup the network
-    """
-    generator.compile(populations = self._populations, projections = self._projections)
     
-def reset(states=False, connections=False):
+def reset(populations=True, projections=False):
     """
     Reinitialises the network, runs each object's reset() method (resetting them to 0).
 
@@ -96,7 +102,7 @@ def reset(states=False, connections=False):
             pop.reset()
             
     if projections:
-        print('currently not implemented')
+        _print(' resetting projections is currently not implemented')
         
 def get_population(name):
     """
@@ -143,17 +149,29 @@ def get_projection(pre, post, target):
 
 def simulate(duration):
     """
-    Runs the network for the given duration.
+    Runs the network for the given duration. 
+    
+    If an integer is given, the argument represents the number of time steps.
+    
+    If a floating point value is given, it represents a duration in milliseconds computed relative to the discretization step declared in setup() (default: 1ms). 
     """
-    nb_steps = ceil(duration / config['dt'])
-    import ANNarchyCython
-    
-    #
-    # check if user defined a certain number of threads.
-    if config['num_threads'] != None:
-        ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
-    
-    ANNarchyCython.pyNetwork().Run(nb_steps)
+    if isinstance(duration, int):
+        nb_steps = duration
+    elif isinstance(duration, float):
+        nb_steps = ceil(duration / config['dt'])
+    else:
+        _error('simulate() require either integers or floats.')
+    try:
+        import ANNarchyCython
+    except:
+        _error('simulate(): the network is not compiled yet.')
+        exit(0)
+    else:
+        # check if user defined a certain number of threads.
+        if config['num_threads'] != None:
+            ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
+        
+        ANNarchyCython.pyNetwork().Run(nb_steps)
     
 def current_time():
     """
@@ -161,15 +179,21 @@ def current_time():
     
     **Note**: computed as number of simulation steps times dt
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().get_time() * config['dt']
+    try:
+        import ANNarchyCython
+        return ANNarchyCython.pyNetwork().get_time() * config['dt']
+    except:
+        return 0.0
 
 def current_step():
     """
     Returns current simulation step.
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().get_time()
+    try:
+        import ANNarchyCython
+        return ANNarchyCython.pyNetwork().get_time()
+    except:
+        return 0
 
 def set_current_time(time):
     """
@@ -177,15 +201,21 @@ def set_current_time(time):
     
     **Note**: computed as number of simulation steps times dt
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+    try:
+        import ANNarchyCython
+        ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+    except:
+        _warning('the network is not compiled yet')
     
 def set_current_step(time):
     """
     set current simulation step.
     """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().set_time( time )
+    try:
+        import ANNarchyCython
+        ANNarchyCython.pyNetwork().set_time( time )
+    except:
+        _warning('the network is not compiled yet')
         
 def record(to_record):
     """
@@ -245,37 +275,37 @@ def get_record(to_record):
     
     return data
 
-def current_time():
-    """
-    Returns current simulation time in ms.
-    
-    **Note**: computed as number of simulation steps times dt
-    """
-    import ANNarchyCython
-    return ANNarchyCython.pyNetwork().get_time() * config['dt']
-
-def current_step():
-    """
-    Returns current simulation step.
-    """
-    import ANNarchyCython    
-    return ANNarchyCython.pyNetwork().get_time()    
-
-def set_current_time(time):
-    """
-    Set current simulation time in ms.
-    
-    **Note**: computed as number of simulation steps times dt
-    """
-    import ANNarchyCython
-    ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
-
-def set_current_step(time):
-    """
-    set current simulation step.
-    """
-    import ANNarchyCython    
-    ANNarchyCython.pyNetwork().set_time( time )    
+# def current_time():
+#     """
+#     Returns current simulation time in ms.
+#     
+#     **Note**: computed as number of simulation steps times dt
+#     """
+#     import ANNarchyCython
+#     return ANNarchyCython.pyNetwork().get_time() * config['dt']
+# 
+# def current_step():
+#     """
+#     Returns current simulation step.
+#     """
+#     import ANNarchyCython    
+#     return ANNarchyCython.pyNetwork().get_time()    
+# 
+# def set_current_time(time):
+#     """
+#     Set current simulation time in ms.
+#     
+#     **Note**: computed as number of simulation steps times dt
+#     """
+#     import ANNarchyCython
+#     ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+# 
+# def set_current_step(time):
+#     """
+#     set current simulation step.
+#     """
+#     import ANNarchyCython    
+#     ANNarchyCython.pyNetwork().set_time( time )    
 
 def _print(*var_text):
     """
@@ -314,7 +344,7 @@ def _warning(*var_text):
     """
     text = 'WARNING: '
     for var in var_text:
-        text += var + ' '
+        text += str(var) + ' '
 
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         p = print        
@@ -328,7 +358,7 @@ def _error(*var_text):
     """
     text = 'ERROR: '
     for var in var_text:
-        text += var + ' '
+        text += str(var) + ' '
     
     if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
         p = print        
