@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Sun Feb  2 14:04:30 2014
-#      by: PyQt4 UI code generator 4.9.3
+# Created: Tue Feb  4 12:12:25 2014
+#      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -338,7 +338,7 @@ class Ui_ANNarchyEditor(object):
         self.verticalLayout_14.addWidget(self.splitter_2)
         ANNarchyEditor.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(ANNarchyEditor)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1080, 29))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1080, 25))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -363,7 +363,6 @@ class Ui_ANNarchyEditor(object):
         self.plot_config.setCurrentIndex(1)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), ANNarchyEditor.close)
         QtCore.QObject.connect(self.compile_and_run, QtCore.SIGNAL(_fromUtf8("pressed()")), ANNarchyEditor.compile_and_run)
-        QtCore.QObject.connect(self.editor, QtCore.SIGNAL(_fromUtf8("update_population(int,int)")), self.stackedWidget_2.update_population)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.pop_view.initialize)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.vis_control.initialize)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.visualizer.initialize)
@@ -388,6 +387,7 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.generate_script, QtCore.SIGNAL(_fromUtf8("pressed()")), self.complete.generate_script)
         QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.proj_view.initialize)
         QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_projection(int)")), self.proj_view.update_projection)
+        QtCore.QObject.connect(self.editor, QtCore.SIGNAL(_fromUtf8("update_object(QString,int,int)")), self.stackedWidget_2.update_population)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):

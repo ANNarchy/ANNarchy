@@ -6,7 +6,8 @@ import OpenGL.GL as gl
 import copy
 
 class GLNetworkWidget(GLBaseWidget):
-    update_population = pyqtSignal(int, int)
+    update_object = pyqtSignal(QString, int, int)
+    
     """
     Main class for visualization of network.
     """    
@@ -28,6 +29,7 @@ class GLNetworkWidget(GLBaseWidget):
         self._drawing_line = False
         self._selected_quad = -1
         self._selected_line = -1
+        self._net_name = 'None'
 
     def set_repository(self, repo):
         self._rep = repo
@@ -36,6 +38,7 @@ class GLNetworkWidget(GLBaseWidget):
     def show_network(self, name):
         """
         """
+        self._net_name = name
         data = self._rep.get_object('network', name)
         
         # load all data for selected network
@@ -91,7 +94,7 @@ class GLNetworkWidget(GLBaseWidget):
             gl.glEnd()
 
             if id == self._selected_line:
-                gl.glColor3f(0.0,1.0,0.0)
+                gl.glColor3f(0.0,0.0,0.0)
 
         #
         # temporary objects
@@ -138,20 +141,20 @@ class GLNetworkWidget(GLBaseWidget):
             p2 = self.populations[line[1]].center
             
             if Line2d(p1,p2).is_on_line(p):
-                self.update_population.emit(2, id)
+                self.update_object.emit(self._net_name, 2, id)
                 self._selected_line = id
 
         for id, quad in self.populations.iteritems():
             if quad.point_within(p):
                 # update population view
-                self.update_population.emit(1, id)
+                self.update_object.emit(self._net_name, 1, id)
                 
                 # user feed back
                 self._selected_quad = id
                 self._drawing_line = True #line drawing could be only start from quad
                 
         if self._selected_quad == -1 and self._selected_line == -1: 
-            self.update_population.emit(0, 0)
+            self.update_object.emit(self._net_name, 0, 0)
             self._quad = None
             self._line = None
             self._drawing_quad = True
@@ -223,6 +226,8 @@ class GLNetworkWidget(GLBaseWidget):
 
                             proj_id = len(self.projections)
                             self.projections.update( { proj_id : (self._selected_quad, id) } )
+                            import pprint
+                            pprint.pprint(self.projections)
 
                             proj_obj = {
                                       'pre': self._selected_quad, 

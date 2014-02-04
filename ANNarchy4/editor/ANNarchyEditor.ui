@@ -604,7 +604,7 @@
      <x>0</x>
      <y>0</y>
      <width>1080</width>
-     <height>29</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -690,7 +690,7 @@
    <header location="global">GLNetwork.h</header>
    <container>1</container>
    <slots>
-    <signal>update_population(int,int)</signal>
+    <signal>update_object(QString,int,int)</signal>
     <slot>show_network(QString)</slot>
    </slots>
   </customwidget>
@@ -702,7 +702,7 @@
    <slots>
     <signal>signal_update_population(int)</signal>
     <signal>signal_update_projection(int)</signal>
-    <slot>update_population(int,int)</slot>
+    <slot>update_population(QString,int,int)</slot>
     <slot>initialize()</slot>
    </slots>
   </customwidget>
@@ -810,22 +810,6 @@
     <hint type="destinationlabel">
      <x>516</x>
      <y>311</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>editor</sender>
-   <signal>update_population(int,int)</signal>
-   <receiver>stackedWidget_2</receiver>
-   <slot>update_population(int,int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>308</x>
-     <y>330</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>842</x>
-     <y>326</y>
     </hint>
    </hints>
   </connection>
@@ -1210,6 +1194,22 @@
     <hint type="destinationlabel">
      <x>842</x>
      <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editor</sender>
+   <signal>update_object(QString,int,int)</signal>
+   <receiver>stackedWidget_2</receiver>
+   <slot>update_population(QString,int,int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>308</x>
+     <y>330</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>324</y>
     </hint>
    </hints>
   </connection>

@@ -1,11 +1,11 @@
 from PyQt4.QtGui import QStackedWidget, QLineEdit
-from PyQt4.QtCore import pyqtSlot, pyqtSignal
+from PyQt4.QtCore import pyqtSlot, pyqtSignal, QString
 
 from ANNarchy4 import *
 
 class StackWidget(QStackedWidget):
-    signal_update_population = pyqtSignal(int)
-    signal_update_projection = pyqtSignal(int)
+    signal_update_population = pyqtSignal(QString, int)
+    signal_update_projection = pyqtSignal(QString, int)
     
     def __init__(self, parent=None):
         """
@@ -22,8 +22,8 @@ class StackWidget(QStackedWidget):
         """
         pass
              
-    @pyqtSlot(int, int)
-    def update_population(self, tab, pop_id):
+    @pyqtSlot(QString, int, int)
+    def update_population(self, net_name, tab, pop_id):
         print tab, pop_id
         self.setCurrentIndex(tab)
         

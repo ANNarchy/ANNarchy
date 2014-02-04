@@ -453,6 +453,8 @@ class RatePopulationGenerator(PopulationGenerator):
 class SpikePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a spike population description. """
     def __init__(self, name, desc):
+        import pprint
+        pprint.pprint(desc)
         PopulationGenerator.__init__(self, name, desc)
     
     def generate_header(self):

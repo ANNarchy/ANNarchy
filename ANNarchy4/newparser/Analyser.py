@@ -238,6 +238,7 @@ class Analyser(object):
         if pop_type == 'spike': # Additionally store reset and spike
             description['raw_reset'] = pop.neuron_type.reset
             description['raw_spike'] = pop.neuron_type.spike
+            
         # Extract parameters and variables names
         parameters = self._extract_parameters(pop.neuron_type.parameters)
         variables = self._extract_variables(pop.neuron_type.equations)

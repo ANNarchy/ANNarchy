@@ -24,14 +24,13 @@ parameters="""
     c = -65.0
     d = 2.0
     threshold= 30.0
-    u = 0.2 * -65.0 
 """,
 extra_values = param_dict,
 equations="""
     noise = Normal(0.0,1.0)
     I = sum(exc) + sum(inh) + noise * noise_scale : init = 0.0
     dv/dt = 0.04 * v * v + 5*v + 140 -u + I
-    du/dt = a * (b*v - u)
+    du/dt = a * (b*v - u) : init = 0.2
 """,
 spike = """
     v > 30.0
@@ -50,48 +49,54 @@ Simple = SpikeSynapse(
 )
 
 Excitatory = Population(name='Excitatory', geometry=(800), neuron=Izhikevitch)
-re = np.random.random(nb_exc_neurons)
-Excitatory.c = -65.0 + 15.0*re**2
-Excitatory.d = 8.0 - 6.0*re**2
+#===============================================================================
+# re = np.random.random(nb_exc_neurons)
+# Excitatory.c = -65.0 + 15.0*re**2
+# Excitatory.d = 8.0 - 6.0*re**2
+#===============================================================================
 
 Inhibitory = Population(name='Inhibitory', geometry=(200), neuron=Izhikevitch)
-ri = np.random.random(nb_inh_neurons)
-Inhibitory.noise_scale=2.0
-Inhibitory.b = 0.25 - 0.05*ri
-Inhibitory.a = 0.02 + 0.08*ri
-Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
+#===============================================================================
+# ri = np.random.random(nb_inh_neurons)
+# Inhibitory.noise_scale=2.0
+# Inhibitory.b = 0.25 - 0.05*ri
+# Inhibitory.a = 0.02 + 0.08*ri
+# Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
+#===============================================================================
 
-exc_exc = Projection(
-    pre=Excitatory, 
-    post=Excitatory, 
-    target='exc',
-    synapse = Simple,
-    connector=All2All(weights=Uniform(0,0.5))
-)
-  
-exc_inh = Projection(
-    pre=Excitatory, 
-    post=Inhibitory, 
-    target='exc',
-    synapse = Simple,
-    connector=All2All(weights=Uniform(0,0.5))
-)
- 
-inh_exc = Projection(
-    pre=Inhibitory, 
-    post=Excitatory, 
-    target='inh',
-    synapse = Simple,
-    connector=All2All(weights= Uniform(-1.0,0.0))
-)
- 
-inh_inh = Projection(
-    pre=Inhibitory, 
-    post=Inhibitory, 
-    target='inh',
-    synapse = Simple,
-    connector=All2All(weights=Uniform(-1.0,0.0))
-)
+#===============================================================================
+# exc_exc = Projection(
+#     pre=Excitatory, 
+#     post=Excitatory, 
+#     target='exc',
+#     synapse = Simple,
+#     connector=All2All(weights=Uniform(0,0.5))
+# )
+#   
+# exc_inh = Projection(
+#     pre=Excitatory, 
+#     post=Inhibitory, 
+#     target='exc',
+#     synapse = Simple,
+#     connector=All2All(weights=Uniform(0,0.5))
+# )
+#  
+# inh_exc = Projection(
+#     pre=Inhibitory, 
+#     post=Excitatory, 
+#     target='inh',
+#     synapse = Simple,
+#     connector=All2All(weights= Uniform(-1.0,0.0))
+# )
+#  
+# inh_inh = Projection(
+#     pre=Inhibitory, 
+#     post=Inhibitory, 
+#     target='inh',
+#     synapse = Simple,
+#     connector=All2All(weights=Uniform(-1.0,0.0))
+# )
+#===============================================================================
 
 # Compile
 compile()
