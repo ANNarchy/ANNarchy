@@ -186,7 +186,7 @@ class Analyser(object):
                 
             # Translate the psp code if any
             if 'raw_psp' in proj.description.keys():                
-                psp = {'eq' : proj.description['raw_psp'].strip()}
+                psp = {'eq' : proj.description['raw_psp'].strip() }
                 # Replace pre- and post_synaptic variables
                 eq = psp['eq']
                 eq, untouched = _extract_prepost(variable['name'], eq, proj)
@@ -221,6 +221,7 @@ class Analyser(object):
             pop.description['global_operations'] = glops
             # Store the result for generation
             self.analysed_populations[pop.class_name] = pop.description  
+            
         for proj in self.projections:
             self.analysed_projections[proj.name] = proj.description  
         return True # success

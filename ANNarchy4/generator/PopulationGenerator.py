@@ -199,7 +199,6 @@ class PopulationGenerator(object):
 """ % {'variable' : var['variable'],
        'function' : var['function']}
         
-
         # Initialize dt
         constructor += """
     // dt : integration step
@@ -550,4 +549,6 @@ class SpikePopulationGenerator(PopulationGenerator):
         return template % dictionary
 
     def generate_reset_event(self):
-        return ""
+        code = self.desc['spike']['spike_reset'].replace('[i]','[(*it)]')
+        
+        return code 
