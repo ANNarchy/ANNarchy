@@ -94,8 +94,6 @@ class One2One(Connector):
         proj_type = int(self.proj.name.split('Projection')[1])
         
         self.cy_instance = getattr(cython_module, 'One2One')(proj_type)
-            
-        print self.delays
         
         target = self.proj.post.targets.index(self.proj.target)
         tmp = self.cy_instance.connect(self.proj.pre,

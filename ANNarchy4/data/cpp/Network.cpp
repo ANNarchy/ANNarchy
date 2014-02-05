@@ -111,13 +111,12 @@ void Network::run(int steps) {
                 populations_[p]->metaLearn();
             }
 
-        #ifdef _DEBUG
+
             #pragma omp master
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->record();
             }
-        #endif
 
             #pragma omp barrier
 
