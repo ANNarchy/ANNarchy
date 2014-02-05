@@ -318,7 +318,7 @@ def _extract_ite(name, eq, proj):
     # The equation contains a conditional statement
     if nb_then > 0:
         # A if must be right after the equal sign
-        if not right[0:2] == 'if':
+        if not right.strip().startswith('if'):
             _error(eq, '\nThe right term must directly start with a if statement.')
             exit(0)
         # It must have the same number of : and of else
@@ -401,8 +401,8 @@ def _extract_globalops(name, eq, proj):
 def _extract_prepost(name, eq, proj):
     " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."
     untouched = {}                
-    pre_matches = re.findall('pre\.([a-zA-Z0-9]+)', eq)
-    post_matches = re.findall('post\.([a-zA-Z0-9]+)', eq)
+    pre_matches = re.findall('pre\.([a-zA-Z0-9_]+)', eq)
+    post_matches = re.findall('post\.([a-zA-Z0-9_]+)', eq)
     # Check if a global variable depends on pre
     if len(pre_matches) > 0 and name in proj.description['global']:
         _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
@@ -470,7 +470,7 @@ def analyse_population(pop):
     return description
 
 def analyse_projection(proj):  
-    """ Performs the analysis for a single projection."""      
+    """ Performs the analysis for a single projection.""" 
     # Identify the synapse type
     proj_type = 'rate' if isinstance(proj.synapse_type, RateSynapse) else 'spike'
     # Store basic information

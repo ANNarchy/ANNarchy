@@ -25,6 +25,7 @@ import traceback
 import numpy as np
 
 from ANNarchy4.core import Global
+from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy4.parser.Analyser import analyse_projection
 
 class Projection(object):#Descriptor):
@@ -65,7 +66,13 @@ class Projection(object):#Descriptor):
         self.target = target
         self.connector = connector
         self.connector.proj = self # set reference to projection
-        self.synapse_type = synapse
+        if not synapse:
+            if isinstance(self.pre, RateSynapse):
+                self.synapse_type = RateSynapse(parameters = "", equations = "")
+            else:
+                self.synapse_type = SpikeSynapse(parameters = "", equations = "")
+        else:
+            self.synapse_type = synapse
         self._dendrites = []
         self._post_ranks = []
 
