@@ -663,9 +663,6 @@ def _extract_spike_variable(pop_desc):
                               type = 'simple')
         raw_reset_code += translator.parse() +'\n'
     
-    print spike_name
-    print raw_spike_code
-    print raw_reset_code
     return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': raw_reset_code}
 
 ####################################

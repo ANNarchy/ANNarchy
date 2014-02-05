@@ -4,7 +4,7 @@ from pylab import show, figure, subplot, legend, close
 #
 # experiment setup
 setup(dt=1)
-nb_steps = 1000
+nb_steps = 10000
 nb_exc_neurons = 800
 nb_inh_neurons = 200
 
@@ -18,12 +18,11 @@ param_dict = {
 Izhikevitch = SpikeNeuron(
 parameters="""
     I_in = 0.0
-    noise_scale = 5.0
-    a = 0.02
-    b = 0.2
-    c = -65.0
-    d = 2.0
-    threshold= 30.0
+    noise_scale = 5.0 : population
+    a = 0.02 : population
+    b = 0.2 : population
+    c = -65.0 : population
+    d = 2.0 : population
 """,
 extra_values = param_dict,
 equations="""
@@ -99,7 +98,7 @@ Inhibitory = Population(name='Inhibitory', geometry=(200), neuron=Izhikevitch)
 #===============================================================================
 
 # Compile
-compile()
+compile(debug_build = True)
 
 def plot(population, data):
     """
@@ -179,8 +178,10 @@ if __name__ == '__main__':
     for i in xrange(nb_steps):
         
         # first 20 ms no input
-        Excitatory.I_in = I[i,:]    
+        Excitatory.I_in = I[i,:]   
+        print 'py: start' 
         simulate(1)
+        print 'py: stop'
         
     data = get_record( to_record )
     

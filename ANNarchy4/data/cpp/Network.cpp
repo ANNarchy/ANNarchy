@@ -82,6 +82,10 @@ void Network::run(int steps) {
     {
         for(int i =0; i<steps; i++)
         {
+        #ifdef _DEBUG
+            #pragma omp master
+            std::cout << "current step " << i << " ANNarchy "<< ANNarchy_Global::time << std::endl;
+        #endif
             // update time in all populations
             for(int p=0; p<(int)populations_.size(); p++)
             {
@@ -103,12 +107,20 @@ void Network::run(int steps) {
                 populations_[p]->metaLearn();
             }
 
+        #ifdef _DEBUG
+            #pragma omp master
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->record();
             }
+        #endif
 
-            ANNarchy_Global::time++;
+            #pragma omp barrier
+
+            #pragma omp master
+            {
+                ANNarchy_Global::time++;
+            }
         }
     }
 

@@ -59,7 +59,7 @@ input_feature = Projection(
     post=feature_pop, 
     target='exc', 
     synapse = Oja,
-    connector=All2All(weights = Uniform(-0.5, 0.5))
+    connector=One2One(weights = Uniform(-0.5, 0.5))
 )
                      
 feature_feature = Projection(
@@ -105,8 +105,8 @@ if __name__=='__main__':
         set_input()
         simulate(50) 
 
-        #if vis_during_sim:
-        #vis.render()
+        if (trial % 10) and vis_during_sim:
+            vis.render()
 
     # Visualize the result of learning
     vis.render()  

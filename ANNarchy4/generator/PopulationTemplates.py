@@ -256,8 +256,9 @@ void %(class)s::resetToInit() {
 %(resetToInit)s
 }
 
-void %(class)s::metaStep() {
-%(metaStep)s    
+void %(class)s::metaStep() 
+{
+%(metaStep)s
 }
 
 void %(class)s::globalOperations() {
