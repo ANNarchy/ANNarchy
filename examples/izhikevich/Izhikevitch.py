@@ -43,7 +43,7 @@ reset = """
 
 Simple = SpikeSynapse(
     psp = """ 
-        if t is (t_spike+1) then value else 0.0 
+        if (t - (tspike + 1) > 0) : 0.0 else : value 
     """
 )
 
@@ -173,7 +173,7 @@ if __name__ == '__main__':
         
         # first 20 ms no input
         Excitatory.I_in = I[i,:]
-        print i
+        #print i
         simulate(1)
         
     data = get_record( to_record )

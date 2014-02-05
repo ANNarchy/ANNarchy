@@ -130,6 +130,9 @@ class Analyser(object):
             # Variables names for the parser which should be left untouched
             untouched = {}   
             
+            pprint(proj.description)
+            
+            
             # Iterate over all variables
             for variable in proj.description['variables']:
                 eq = variable['transformed_eq']
@@ -485,12 +488,13 @@ def analyse_projection(proj):
         'raw_equations': proj.synapse_type.equations,
         'raw_functions': proj.synapse_type.functions
     }
+
     if proj_type == 'spike': # Additionally store pre_spike and post_spike
         description['raw_pre_spike'] = proj.synapse_type.pre_spike
         description['raw_post_spike'] = proj.synapse_type.post_spike
-    else: # Additionally store psp if exists
-        if proj.synapse_type.psp:
-            description['raw_psp'] = proj.synapse_type.psp
+
+    if proj.synapse_type.psp:
+        description['raw_psp'] = proj.synapse_type.psp
 
     # Extract parameters and variables names
     parameters = _extract_parameters(proj.synapse_type.parameters)
@@ -508,6 +512,8 @@ def analyse_projection(proj):
     description['local'] = local_var
     description['global'] = global_var
     description['global_operations'] = []
+    
+    pprint(description)
     return description            
 
     

@@ -370,8 +370,10 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         " Generates code for the computeSum() method depending on psp variable of the synapse."
         # Get the psp information
         if 'psp' in self.desc.keys():
+            print 'yyy'
             psp_code = self.desc['psp']['cpp']
         else:
+            print 'xxx'
             psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
         # Generate the code
         template = psp_code_body

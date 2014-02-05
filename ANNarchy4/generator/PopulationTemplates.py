@@ -250,6 +250,9 @@ using namespace ANNarchy_Global;
     std::cout << "%(class)s::%(class)s called." << std::endl;
 #endif
 %(constructor)s
+
+    std::vector<bool>(nbNeurons_, false);
+    
     Network::instance()->addPopulation(this);
 }
 
@@ -269,6 +272,8 @@ void %(class)s::localMetaStep(int i) {
 }
 
 void %(class)s::globalMetaStep() {
+    spiked_ = std::vector<bool>(nbNeurons_, false);
+
 %(globalMetaStep)s    
 }
 

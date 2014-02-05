@@ -32,6 +32,7 @@ from sympy.parsing.sympy_parser import parse_expr, standard_transformations, con
 global_dict = {
     'dt' : Symbol('dt_'),
     't' : Symbol('ANNarchy_Global::time'), 
+    'tspike': Symbol('pre_population_->getLastSpikeTime(rank_[i]'),
     'pos': Function('positive'),
     'positive': Function('positive'), 
     'neg': Function('negative'), 
