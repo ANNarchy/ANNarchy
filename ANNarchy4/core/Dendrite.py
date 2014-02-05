@@ -50,26 +50,25 @@ class Dendrite(object):
 
         if cython_instance != None:
             self.cy_instance = cython_instance
-#         else:
-#             cython_module = __import__('ANNarchyCython')
-#             proj_id = self.proj.generator.proj_class['ID']   
-#             proj_class_name = 'LocalProjection'+str(proj_id)
-#             local_proj = getattr(cython_module, proj_class_name)
-#             
-#             self.cy_instance = local_proj(
-#                 proj_id, 
-#                 self.proj.pre.rank, 
-#                 self.proj.post.rank, 
-#                 post_rank, 
-#                 self.proj.post.generator.targets.index(self.proj.target) 
-#             )
-# 
-#             self.cy_instance.rank = ranks
-#             self.cy_instance.value = weights
-#             if delays != None:
-#                 self.cy_instance.delay = delays
-#                 max_delay = np.amax(delays)
-#                 self.proj.pre.cyInstance.set_max_delay(int(max_delay))
+        else:
+            cython_module = __import__('ANNarchyCython') 
+            proj_class_name = 'Local' + self.proj.name
+            local_proj = getattr(cython_module, proj_class_name)
+             
+            self.cy_instance = local_proj(
+                self.proj._id, 
+                self.proj.pre.rank, 
+                self.proj.post.rank, 
+                post_rank, 
+                self.proj.post.targets.index(self.proj.target) 
+            )
+ 
+            self.cy_instance.rank = ranks
+            self.cy_instance.value = weights
+            if delays != None:
+                self.cy_instance.delay = delays
+                max_delay = np.amax(delays)
+                self.proj.pre.cyInstance.set_max_delay(int(max_delay))
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
