@@ -4,7 +4,7 @@ from pylab import show, figure, subplot, legend, close
 #
 # experiment setup
 setup(dt=1)
-nb_steps = 10000
+nb_steps = 1000
 nb_exc_neurons = 800
 nb_inh_neurons = 200
 
@@ -48,57 +48,51 @@ Simple = SpikeSynapse(
 )
 
 Excitatory = Population(name='Excitatory', geometry=(800), neuron=Izhikevitch)
-#===============================================================================
-# re = np.random.random(nb_exc_neurons)
-# Excitatory.c = -65.0 + 15.0*re**2
-# Excitatory.d = 8.0 - 6.0*re**2
-#===============================================================================
+re = np.random.random(nb_exc_neurons)
+Excitatory.c = -65.0 + 15.0*re**2
+Excitatory.d = 8.0 - 6.0*re**2
 
 Inhibitory = Population(name='Inhibitory', geometry=(200), neuron=Izhikevitch)
-#===============================================================================
-# ri = np.random.random(nb_inh_neurons)
-# Inhibitory.noise_scale=2.0
-# Inhibitory.b = 0.25 - 0.05*ri
-# Inhibitory.a = 0.02 + 0.08*ri
-# Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
-#===============================================================================
+ri = np.random.random(nb_inh_neurons)
+Inhibitory.noise_scale=2.0
+Inhibitory.b = 0.25 - 0.05*ri
+Inhibitory.a = 0.02 + 0.08*ri
+Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
 
-#===============================================================================
-# exc_exc = Projection(
-#     pre=Excitatory, 
-#     post=Excitatory, 
-#     target='exc',
-#     synapse = Simple,
-#     connector=All2All(weights=Uniform(0,0.5))
-# )
-#   
-# exc_inh = Projection(
-#     pre=Excitatory, 
-#     post=Inhibitory, 
-#     target='exc',
-#     synapse = Simple,
-#     connector=All2All(weights=Uniform(0,0.5))
-# )
-#  
-# inh_exc = Projection(
-#     pre=Inhibitory, 
-#     post=Excitatory, 
-#     target='inh',
-#     synapse = Simple,
-#     connector=All2All(weights= Uniform(-1.0,0.0))
-# )
-#  
-# inh_inh = Projection(
-#     pre=Inhibitory, 
-#     post=Inhibitory, 
-#     target='inh',
-#     synapse = Simple,
-#     connector=All2All(weights=Uniform(-1.0,0.0))
-# )
-#===============================================================================
+exc_exc = Projection(
+    pre=Excitatory, 
+    post=Excitatory, 
+    target='exc',
+    synapse = Simple,
+    connector=All2All(weights=Uniform(0,0.5))
+)
+   
+exc_inh = Projection(
+    pre=Excitatory, 
+    post=Inhibitory, 
+    target='exc',
+    synapse = Simple,
+    connector=All2All(weights=Uniform(0,0.5))
+)
+  
+inh_exc = Projection(
+    pre=Inhibitory, 
+    post=Excitatory, 
+    target='inh',
+    synapse = Simple,
+    connector=All2All(weights= Uniform(-1.0,0.0))
+)
+  
+inh_inh = Projection(
+    pre=Inhibitory, 
+    post=Inhibitory, 
+    target='inh',
+    synapse = Simple,
+    connector=All2All(weights=Uniform(-1.0,0.0))
+)
 
 # Compile
-compile(debug_build = True)
+compile()
 
 def plot(population, data):
     """
@@ -178,10 +172,9 @@ if __name__ == '__main__':
     for i in xrange(nb_steps):
         
         # first 20 ms no input
-        Excitatory.I_in = I[i,:]   
-        print 'py: start' 
+        Excitatory.I_in = I[i,:]
+        print i
         simulate(1)
-        print 'py: stop'
         
     data = get_record( to_record )
     

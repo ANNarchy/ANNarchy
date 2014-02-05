@@ -59,7 +59,7 @@ input_feature = Projection(
     post=feature_pop, 
     target='exc', 
     synapse = Oja,
-    connector=One2One(weights = Uniform(-0.5, 0.5))
+    connector=All2All(weights = Uniform(-0.5, 0.5))
 )
                      
 feature_feature = Projection(

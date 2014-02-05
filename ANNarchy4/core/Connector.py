@@ -23,6 +23,8 @@
 """
 from .Random import Constant
 from .Dendrite import Dendrite
+from .Global import _error
+
 import numpy as np
 
 class Connector(object):
@@ -64,7 +66,7 @@ class One2One(Connector):
     One2One connector.
     """
     
-    def __init__(self, weights, delays=0, **parameters):
+    def __init__(self, weights, delays=0):
         """
         Initialize an One2One connection object.
 
@@ -82,7 +84,7 @@ class One2One(Connector):
         
             * None for this pattern.
         """        
-        super(self.__class__, self).__init__(weights, delays, **parameters)
+        super(self.__class__, self).__init__(weights, delays)
 
     def connect(self):
         """
@@ -93,16 +95,20 @@ class One2One(Connector):
         
         self.cy_instance = getattr(cython_module, 'One2One')(proj_type)
             
+        print self.delays
+        
         target = self.proj.post.targets.index(self.proj.target)
         tmp = self.cy_instance.connect(self.proj.pre,
                                           self.proj.post,
                                           target,
                                           self.weights,
-                                          self.delays,
-                                          self.parameters
+                                          self.delays
                                           )
         
         #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
+        if tmp == None:
+            _error("Populations have different geometries.")
+            return [],[]
 
         dendrites = []
         post_ranks = []

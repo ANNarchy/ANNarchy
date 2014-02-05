@@ -32,11 +32,14 @@ public:
 	virtual ~Population();
 
 	virtual void metaSum();
-	virtual void metaStep();
+	virtual void localMetaStep(int neur_rank) {};
+	virtual void globalMetaStep() {};
 	virtual void metaLearn();
 	virtual void globalOperations();
 	virtual void record() {}
 	virtual void resetToInit() {}
+
+	void metaStep();
 
 	std::string getName() { return name_; }
 

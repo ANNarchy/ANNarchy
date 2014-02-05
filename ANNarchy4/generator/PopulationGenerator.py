@@ -283,101 +283,69 @@ void %(class)s::compute_sum_%(var)s() {
         return code
     
 
-    def generate_metastep(self):
-        " Code for the metastep."
-        def rand_part(desc):
-            code = ""
-            for var in self.desc['random_distributions']:
-                try:
-                    dist = eval(var['definition'])
-                except:
-                    Global._error('Random distribution ' + var['definition'] + ' is not valid.')
-                    exit(0)
-                code +="""
-        %(name)s_ = %(call)s.getValues(nbNeurons_);
-    """ % {'name' : var['name'], 'call' : dist._gen_cpp() }
-            return code
-            
-        def global_part(desc):
-            # Global variables
-            code = ""
-            for param in self.desc['variables']:            
-                if param['name'] in self.desc['global']: # global attribute
-                    if '[i]' in param['cpp']:
-                        Global._error('The global variable ' + param['cpp'] + \
-                                      ' can not depend on local ones!')
-                    else:
-                        code += """
-    %(cpp)s
-    """ % { 'cpp': param['cpp'] }
-            return code        
-            
-        def local_part(desc):   
-            code = ""         
-            for param in desc['variables']:            
-                if param['name'] in desc['local']: # local attribute
+    def generate_global_metastep(self):
+        """
+        Code for the metastep.
+        """
+        code = ""
+        for var in self.desc['random_distributions']:
+            try:
+                dist = eval(var['definition'])
+            except:
+                Global._error('Random distribution ' + var['definition'] + ' is not valid.')
+                exit(0)
+            code +="""
+    %(name)s_ = %(call)s.getValues(nbNeurons_);
+""" % {'name' : var['name'], 'call' : dist._gen_cpp() }
+
+        code += "\
+        "
+        for param in self.desc['variables']:            
+            if param['name'] in self.desc['global']: # global attribute
+                if '[i]' in param['cpp']:
+                    Global._error('The global variable ' + param['cpp'] + \
+                                  ' can not depend on local ones!')
+                else:
                     code += """
-        %(cpp)s
-    """ % { 'cpp': param['cpp'] }
+%(cpp)s
+""" % { 'cpp': param['cpp'] }
+        return code
     
-                if desc.has_key('spike'):
-                    if param['name'] == desc['spike']['name']:
-                        code += """
-        if( %(cond)s )
+    def generate_local_metastep(self):
+        """
+        Code for the metastep.
+        """
+        code = ""         
+        for param in self.desc['variables']:            
+            if param['name'] in self.desc['local']: # local attribute
+                code += """
+    %(cpp)s
+""" % { 'cpp': param['cpp'] }
+
+            if self.desc.has_key('spike'):
+                if param['name'] == self.desc['spike']['name']:
+                    code += """
+    if( %(cond)s )
+    {
+        #pragma omp critical
         {
-            #pragma omp critical
             this->propagate_.push_back(i);
-        } 
-    """ % {'cond' : desc['spike']['spike_cond'] } #TODO: check code
-    
-                for bound, val in param['bounds'].iteritems():
-                    if bound == 'min':
-                        code += """
-        if(%(var)s_[i] < %(val)s)
-            %(var)s_[i] = %(val)s;
-    """ % {'var' : param['name'], 'val' : val}
-                    if bound == 'max':
-                        code += """
-        if(%(var)s_[i] > %(val)s)
-            %(var)s_[i] = %(val)s;
-    """ % {'var' : param['name'], 'val' : val}
-            return code
-        
-        
-        #
-        # build final meta step function
-        code = """
-    // Random generators
-    #pragma omp master
-    {
-        %(rand_num)s
-        
-        %(global)s
-    } // end of master region
-    #pragma omp barrier
-    
-#ifdef _DEBUG
-    #pragma omp master
-    {
-    std::cout << "global computation done."<< std::endl;
-    }
-#endif
-    
-    #pragma omp for
-    for(int i=0; i<nbNeurons_; i++)
-    {
-        //std::cout << "Thread " << omp_get_thread_num() << " of " << omp_get_num_threads() << std::endl;
-        %(local)s
-    }
-    
-    #pragma omp barrier
-#ifdef _DEBUG
-    #pragma omp master
-    {
-    std::cout << "local computation done."<< std::endl;
-    }
-#endif
-""" % { 'rand_num': rand_part(self.desc), 'global' : global_part(self.desc), 'local': local_part(self.desc) }
+            this->reset_.push_back(i);
+        }
+    } 
+""" % {'cond' : self.desc['spike']['spike_cond'] } #TODO: check code
+
+            for bound, val in param['bounds'].iteritems():
+                if bound == 'min':
+                    code += """
+    if(%(var)s_[i] < %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+                if bound == 'max':
+                    code += """
+    if(%(var)s_[i] > %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
         return code
     
     def generate_cwrappers(self):
@@ -460,7 +428,9 @@ class RatePopulationGenerator(PopulationGenerator):
         # Record
         record = self.generate_record()
         # Meta-step
-        metastep = self.generate_metastep()
+        local_metastep = self.generate_local_metastep()
+        global_metastep = self.generate_global_metastep()
+        
         # Generate the code
         template = rate_population_body
         dictionary = {
@@ -468,7 +438,8 @@ class RatePopulationGenerator(PopulationGenerator):
             'constructor' : constructor,
             'destructor' : destructor,
             'resetToInit' : reset,
-            'metaStep' : metastep,
+            'localMetaStep' : local_metastep,
+            'globalMetaStep' : global_metastep,
             'global_ops' : globalops,
             'record' : record,
             'single_global_ops' : singleops
@@ -537,7 +508,9 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Record
         record = self.generate_record()
         # Meta-step
-        metastep = self.generate_metastep()
+        local_metastep = self.generate_local_metastep()
+        global_metastep = self.generate_global_metastep()
+
         # reset event
         reset_event = self.generate_reset_event()
         # Generate the code
@@ -547,7 +520,8 @@ class SpikePopulationGenerator(PopulationGenerator):
             'constructor' : constructor,
             'destructor' : destructor,
             'resetToInit' : reset,
-            'metaStep' : metastep,
+            'localMetaStep' : local_metastep,
+            'globalMetaStep' : global_metastep,
             'global_ops' : globalops,
             'record' : record,
             'reset_event': reset_event,

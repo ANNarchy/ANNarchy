@@ -76,7 +76,7 @@ cdef class One2One(PyxConnector):
 
         return ranks
 
-    def connect(self, pre, post, target, weights, delays, parameters):
+    def connect(self, pre, post, target, weights, delays):
         """
         Create the connection informations and instantiate the c++ classes.
         """
@@ -91,8 +91,8 @@ cdef class One2One(PyxConnector):
         
         for p in xrange(self.postSize):
             local = self.create_local_proj(self.proj_type, pre.rank, post.rank, p, target)
-            v = weights.get_value()
-            d = delays.get_value()
+            v = [weights.get_value()]
+            d = [delays.get_value()]
             
             local.init(r[p], v, d)
             

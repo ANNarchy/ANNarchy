@@ -414,8 +414,9 @@ clean:
         # Import the Cython library
         try:
             import ANNarchyCython
-        except ImportError:
+        except ImportError, e:
             if not self.cpp_stand_alone:
+                Global._print(e)
                 Global._error('The Cython library was not correctly compiled.\n Check the compilation logs in annarchy/compile_sterr.log')
                 exit(0)
         # Bind the py extensions to the corresponding python objects

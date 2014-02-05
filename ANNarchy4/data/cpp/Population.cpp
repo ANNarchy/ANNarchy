@@ -214,11 +214,8 @@ void Population::metaSum() {
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        #pragma omp master
-        {
-        if (projections_[n].size() > 0)
+        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
             std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
-        }
     #endif
         for(int p=0; p< (int)projections_[n].size();p++)
         {
@@ -266,6 +263,33 @@ void Population::metaSum() {
 }
 
 void Population::metaStep() {
+    // Random generators
+    #pragma omp master
+    {
+        globalMetaStep();
+    } // end of master region
+    #pragma omp barrier
+
+#ifdef _DEBUG
+    #pragma omp master
+    {
+    std::cout << "global computation done."<< std::endl;
+    }
+#endif
+
+    #pragma omp for
+    for(int i=0; i<nbNeurons_; i++)
+    {
+        localMetaStep(i);
+    }
+
+    #pragma omp barrier
+#ifdef _DEBUG
+    #pragma omp master
+    {
+    std::cout << "local computation done."<< std::endl;
+    }
+#endif
 
 }
 
@@ -291,17 +315,16 @@ void Population::metaLearn() {
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        #pragma omp master
-        {
-        if (projections_[n].size() > 0)
+        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
             std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
-        }
     #endif
         for(int p=0; p< (int)projections_[n].size();p++)
         {
             projections_[n][p]->globalLearn();
         }
     }
+
+    #pragma omp barrier
 
 #ifdef ANNAR_PROFILE
     double stop = omp_get_wtime();
@@ -327,17 +350,15 @@ void Population::metaLearn() {
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        #pragma omp master
-        {
-        if (projections_[n].size() > 0)
+        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
             std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
-        }
     #endif
         for(int p=0; p< (int)projections_[n].size();p++) {
             projections_[n][p]->localLearn();
         }
     }
 
+    #pragma omp barrier
 #ifdef ANNAR_PROFILE
     double stop2 = omp_get_wtime();
 

@@ -97,10 +97,14 @@ void Network::run(int steps) {
                 populations_[p]->metaStep();
             }
 
-            for(int p=0; p<(int)populations_.size(); p++)
+            #pragma omp master
             {
-                populations_[p]->globalOperations();
+                for(int p=0; p<(int)populations_.size(); p++)
+                {
+                    populations_[p]->globalOperations();
+                }
             }
+            #pragma omp barrier
 
             for(int p=0; p<(int)populations_.size(); p++)
             {

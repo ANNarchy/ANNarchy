@@ -31,7 +31,9 @@ public:
     
     void resetToInit();
     
-    void metaStep();
+    void localMetaStep(int neur_rank);
+    
+    void globalMetaStep();
     
     void globalOperations();
     
@@ -85,7 +87,9 @@ public:
     
     void resetToInit();
     
-    void metaStep();
+    void localMetaStep(int neur_rank);
+    
+    void globalMetaStep();
     
     void globalOperations();
     
@@ -198,8 +202,12 @@ void %(class)s::resetToInit() {
 %(resetToInit)s
 }
 
-void %(class)s::metaStep() {
-%(metaStep)s    
+void %(class)s::localMetaStep(int i) {
+%(localMetaStep)s
+}
+
+void %(class)s::globalMetaStep() {
+%(globalMetaStep)s        
 }
 
 void %(class)s::globalOperations() {
@@ -256,12 +264,20 @@ void %(class)s::resetToInit() {
 %(resetToInit)s
 }
 
-void %(class)s::metaStep() 
-{
-%(metaStep)s
+void %(class)s::localMetaStep(int i) {
+%(localMetaStep)s    
+}
+
+void %(class)s::globalMetaStep() {
+%(globalMetaStep)s    
 }
 
 void %(class)s::globalOperations() {
+    
+    propagateSpike();
+    
+    reset();
+
 %(global_ops)s
 }
 
@@ -283,8 +299,11 @@ void %(class)s::reset() {
 
     if (!reset_.empty())
     {
+        for (auto it = reset_.begin(); it != reset_.end(); it++)
+        {
 %(reset_event)s
-
+        }
+        
         reset_.erase(reset_.begin(), reset_.end());
     }
     
@@ -375,6 +394,8 @@ cdef extern from "../build/%(name)s.h":
         
         string getName()
         
+        vector[ vector[int] ] getSpikeTimings()
+        
         void resetToInit()
         
         void setMaxDelay(int)
@@ -391,6 +412,9 @@ cdef class py%(name)s:
 
     def name(self):
         return self.cInstance.getName()
+
+    def get_spike_timings(self):
+        return np.array( self.cInstance.getSpikeTimings() )
 
     def reset(self):
         self.cInstance.resetToInit()
