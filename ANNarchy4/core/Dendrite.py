@@ -50,7 +50,7 @@ class Dendrite(object):
 
         if cython_instance != None:
             self.cy_instance = cython_instance
-        else:
+        else: #TODO: comment
             cython_module = __import__('ANNarchyCython') 
             proj_class_name = 'Local' + self.proj.name
             local_proj = getattr(cython_module, proj_class_name)

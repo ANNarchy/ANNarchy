@@ -129,10 +129,7 @@ class Analyser(object):
                         
             # Variables names for the parser which should be left untouched
             untouched = {}   
-            
-            pprint(proj.description)
-            
-            
+                       
             # Iterate over all variables
             for variable in proj.description['variables']:
                 eq = variable['transformed_eq']
@@ -188,23 +185,26 @@ class Analyser(object):
                 variable['cpp'] = code
                 
             # Translate the psp code if any
-            if 'raw_psp' in proj.description.keys():
-                print proj.description.keys()
-                print proj.description['raw_psp']
-                
+            if 'raw_psp' in proj.description.keys():                
                 psp = {'eq' : proj.description['raw_psp'].strip()}
                 # Replace pre- and post_synaptic variables
                 eq = psp['eq']
                 eq, untouched = _extract_prepost(variable['name'], eq, proj)
+                # Extract if-then-else statements
+                eq, condition = _extract_ite(variable['name'], eq, proj, split=False)
                 # Analyse the equation
-                translator = Equation('psp', eq, 
-                                      proj.description['attributes'], 
-                                      proj.description['local'], 
-                                      proj.description['global'], 
-                                      method = 'explicit', 
-                                      untouched = untouched.keys(),
-                                      type='return')
-                code = translator.parse()
+                if condition == []:
+                    translator = Equation('psp', eq, 
+                                          proj.description['attributes'], 
+                                          proj.description['local'], 
+                                          proj.description['global'], 
+                                          method = 'explicit', 
+                                          untouched = untouched.keys(),
+                                          type='return')
+                    code = translator.parse()
+                else:
+                    code = self._translate_ITE('psp', eq, condition, proj, untouched, split=False)
+
                 # Replace _pre_rate_ with (*pre_rates_)[rank_[i]]
                 code = code.replace('_pre_rate_', '(*pre_rates_)[rank_[i]]')
                 # Store the result
@@ -225,7 +225,7 @@ class Analyser(object):
             self.analysed_projections[proj.name] = proj.description  
         return True # success
     
-    def _translate_ITE(self, name, eq, condition, proj, untouched):
+    def _translate_ITE(self, name, eq, condition, proj, untouched, split=True):
         " Recursively processes the different parts of an ITE statement"
         def process_ITE(condition):
             if_statement = condition[0]
@@ -253,18 +253,21 @@ class Analyser(object):
             code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
             return code
               
-        # Main equation, wehere the right part is __conditional__
-        translator = Equation(name, eq, proj.description['attributes'], 
-                              proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys())
-        code = translator.parse() 
+        if split:
+            # Main equation, where the right part is __conditional__
+            translator = Equation(name, eq, proj.description['attributes'], 
+                                  proj.description['local'], proj.description['global'], 
+                                  method = 'explicit', untouched = untouched.keys())
+            code = translator.parse() 
+        else:
+            code = '__conditional__'
         # Process the ITE
         itecode =  process_ITE(condition)
         # Replace
         code = code.replace('__conditional__', itecode)
         return code
 
-def _extract_ite(name, eq, proj):
+def _extract_ite(name, eq, proj, split=True):
     """ Extracts if-then-else statements and processes them.
     
     If-then-else statements must be of the form:
@@ -311,11 +314,17 @@ def _extract_ite(name, eq, proj):
             else:
                 break
         return result[0]
-    
+    # If no if, no need to go further
+    if not 'if ' in eq:
+        return eq, []
     # Process the equation            
     condition = []   
-    # Check that there are as many : as else, otherwise throw an error
-    left, right =  eq.split('=')
+    # Eventually split around =
+    if split:
+        left, right =  eq.split('=', 1)
+    else:
+        left = ''
+        right = eq
     nb_then = len(re.findall(':', right))
     nb_else = len(re.findall('else', right))
     # The equation contains a conditional statement
@@ -330,8 +339,9 @@ def _extract_ite(name, eq, proj):
             exit(0)
         multilined = transform(right)
         condition = parse(multilined)
-        right = '__conditional__'
-        eq = left + '=' + right
+        right = ' __conditional__ '
+        if split:
+            eq = left + '=' + right
     return eq, condition
 
 def _extract_randomdist(pop):
@@ -371,10 +381,10 @@ def _extract_globalops(name, eq, proj):
     globs = {'pre' : [],
              'post' : [] }   
     glop_names = ['min', 'max', 'mean']
-    eq=eq.replace(' ', '')
+    
     for op in glop_names:
-        pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(pre\.([a-zA-Z0-9]+)\)', eq)
-        post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(post\.([a-zA-Z0-9]+)\)', eq)
+        pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*pre\.([a-zA-Z0-9]+)\s*\)', eq)
+        post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*post\.([a-zA-Z0-9]+)\s*\)', eq)
         # Check if a global variable depends on pre
         if len(pre_matches) > 0 and name in proj.description['global']:
             _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
@@ -383,9 +393,9 @@ def _extract_globalops(name, eq, proj):
             if var in proj.pre.attributes:
                 globs['pre'].append({'function': op, 'variable': var})
                 oldname = op + '(pre.' + var + ')'
-                newname = '__pre_' + op + '_' + var
+                newname = '__pre_' + op + '_' + var 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = ' pre_population_->get'+op.capitalize()+var.capitalize()+'()'
+                untouched[newname] = ' pre_population_->get'+op.capitalize()+var.capitalize()+'() '
             else:
                 _error(eq+'\nPopulation '+proj.name+' has no attribute '+var+'.')
                 exit(0)
@@ -393,9 +403,9 @@ def _extract_globalops(name, eq, proj):
             if var in proj.pre.attributes:
                 globs['post'].append({'function': op, 'variable': var})
                 oldname = op + '(post.' + var + ')'
-                newname = '__post_' + op + '_' + var
+                newname = '__post_' + op + '_' + var 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = ' post_population_->get'+op.capitalize()+var.capitalize()+'()'
+                untouched[newname] = ' post_population_->get'+op.capitalize()+var.capitalize()+'() '
             else:
                 _error(eq+'\nPopulation '+proj.pre.name+' has no attribute '+var+'.')
                 exit(0)
@@ -416,7 +426,7 @@ def _extract_prepost(name, eq, proj):
             pass
         elif var in proj.pre.attributes:
             target = 'pre.' + var
-            eq = eq.replace(target, '_pre_'+var+'_')
+            eq = eq.replace(target, ' _pre_'+var+'_ ')
             untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
         else:
             _error(eq+'\nPopulation '+proj.pre.description['name']+' has no attribute '+var+'.')
@@ -427,7 +437,7 @@ def _extract_prepost(name, eq, proj):
             pass
         elif var in proj.post.attributes:
             target = 'post.' + var
-            eq = eq.replace(target, '_post_'+var+'_')
+            eq = eq.replace(target, ' _post_'+var+'_ ')
             untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
         else:
             _error(eq+'\nPopulation '+proj.post.description['name']+' has no attribute '+var+'.')
@@ -513,7 +523,6 @@ def analyse_projection(proj):
     description['global'] = global_var
     description['global_operations'] = []
     
-    pprint(description)
     return description            
 
     

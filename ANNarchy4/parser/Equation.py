@@ -31,13 +31,18 @@ from sympy.parsing.sympy_parser import parse_expr, standard_transformations, con
 # Dictionary of built-in symbols or functions
 global_dict = {
     'dt' : Symbol('dt_'),
-    't' : Symbol('ANNarchy_Global::time'), 
-    'tspike': Symbol('pre_population_->getLastSpikeTime(rank_[i]'),
+    't' : Symbol('ANNarchy_Global::time'),
+    'weight' : Symbol('value_[i]'), 
+    'value' : Symbol('value_[i]'), 
+    't_spike': Symbol('pre_population_->getLastSpikeTime(rank_[i])'),
     'pos': Function('positive'),
     'positive': Function('positive'), 
     'neg': Function('negative'), 
     'negative': Function('negative'), 
 }
+
+# Predefined symbols which must not be declared by the user, but used in the equations
+_predefined = ['weight', 'value']
 
 class Equation(object):
     '''
@@ -76,6 +81,8 @@ class Equation(object):
             if var in self.local_variables:
                 self.local_dict[var] = Symbol(var+'_[i]')
             elif var in self.global_variables:
+                if var in _predefined:
+                    continue
                 self.local_dict[var] = Symbol(var+'_')
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)

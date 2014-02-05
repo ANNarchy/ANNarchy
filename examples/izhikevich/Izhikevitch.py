@@ -43,7 +43,7 @@ reset = """
 
 Simple = SpikeSynapse(
     psp = """ 
-        if (t - (tspike + 1) > 0) : 0.0 else : value 
+        if (t - (t_spike + 1) > 0) : 0.0 else : weight 
     """
 )
 
