@@ -89,7 +89,7 @@ class One2One(Connector):
         Build up the defined connection pattern for all postsynaptic neurons.
         """
         cython_module = __import__('ANNarchyCython')
-        proj_type = self.proj.name
+        proj_type = int(self.proj.name.split('Projection')[1])
         
         self.cy_instance = getattr(cython_module, 'One2One')(proj_type)
             
@@ -211,7 +211,7 @@ class Gaussian(Connector):
         Build up the defined connection pattern for all postsynaptic neurons.
         """
         cython_module = __import__('ANNarchyCython')
-        proj_type = self.proj.name
+        proj_type = int(self.proj.name.split('Projection')[1])
         
         self.cy_instance = getattr(cython_module, 'Gaussian')(proj_type)
             
@@ -265,7 +265,7 @@ class DoG(Connector):
         Build up the defined connection pattern for all postsynaptic neurons.
         """
         cython_module = __import__('ANNarchyCython')
-        proj_type = self.proj.name
+        proj_type = int(self.proj.name.split('Projection')[1])
         
         self.cy_instance = getattr(cython_module, 'DoG')(proj_type)
             
