@@ -22,6 +22,7 @@
 """
 #from .Descriptor import Descriptor, Attribute
 import ANNarchy4.core.Global as Global
+from ANNarchy4.core.Neuron import RateNeuron
 from ANNarchy4.core.Random import RandomDistribution
 import numpy as np
 import traceback
@@ -38,7 +39,7 @@ class Dendrite(object):
     * *post_rank*: rank of the postsynaptic neuron
     * *cython_instance*: instance of the cythonized dendrite class.
     """
-    def __init__(self, proj, post_rank, cython_instance=None, ranks=None, weights=None, delays=None):
+    def __init__(self, proj, post_rank, ranks=None, weights=None, delays=None):
 
         self.post_rank = post_rank
         self.proj = proj
@@ -48,13 +49,11 @@ class Dendrite(object):
         self.variables = self.proj.variables
         self.attributes = self.proj.attributes
 
-        if cython_instance != None:
-            self.cy_instance = cython_instance
-        else: #TODO: comment
-            cython_module = __import__('ANNarchyCython') 
-            proj_class_name = 'Local' + self.proj.name
-            local_proj = getattr(cython_module, proj_class_name)
-             
+        cython_module = __import__('ANNarchyCython') 
+        proj_class_name = 'Local' + self.proj.name
+        local_proj = getattr(cython_module, proj_class_name)
+        
+        if isinstance(self.proj.pre.neuron_type, RateNeuron) and isinstance(self.proj.post.neuron_type, RateNeuron): 
             self.cy_instance = local_proj(
                 self.proj._id, 
                 self.proj.pre.rank, 
@@ -62,13 +61,21 @@ class Dendrite(object):
                 post_rank, 
                 self.proj.post.targets.index(self.proj.target) 
             )
- 
-            self.cy_instance.rank = ranks
-            self.cy_instance.value = weights
-            if delays != None:
-                self.cy_instance.delay = delays
-                max_delay = np.amax(delays)
-                self.proj.pre.cyInstance.set_max_delay(int(max_delay))
+        else:
+            self.cy_instance = local_proj(
+                self.proj._id, 
+                self.proj.post.rank, 
+                self.proj.pre.rank, 
+                post_rank, 
+                self.proj.post.targets.index(self.proj.target) 
+            )
+                    
+        self.cy_instance.rank = ranks
+        self.cy_instance.value = weights
+        if delays != None:
+            self.cy_instance.delay = delays
+            max_delay = np.amax(delays)
+            self.proj.pre.cyInstance.set_max_delay(int(max_delay))
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
