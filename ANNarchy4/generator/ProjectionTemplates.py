@@ -299,9 +299,11 @@ void %(class)s::globalLearn() {
 
 void %(class)s::propagateSpike() 
 {
-    for(auto it=rank_.begin(); it != rank_.end(); it++)
+    auto s_it = value_.begin();
+    auto n_it = rank_.begin();
+    for(n_it, s_it; n_it != rank_.end(); n_it++,s_it++)
     {
-        pre_population_->receiveSpike(*it);
+        pre_population_->inc_g_%(target)s((*n_it), (*s_it));
     }
 }
 

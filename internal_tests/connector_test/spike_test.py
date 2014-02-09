@@ -31,7 +31,7 @@ testAll2AllSpike = Projection(
     pre = Small, 
     post = Middle, 
     target = 'exc', 
-    connector = all2all(pre = Small, post = Middle, weights=1.0 )
+    connector = all2all(pre = Small, post = Middle, weights=Uniform(0,1) )
 )
 
 compile()

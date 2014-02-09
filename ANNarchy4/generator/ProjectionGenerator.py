@@ -348,7 +348,8 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'init_val': '', # contains nothing
             'sum': psp, 
             'local': local_learn, 
-            'global': global_learn }
+            'global': global_learn,
+            'target': self.desc['target'] }
         return template % dictionary
     
     def generate_pyx(self):

@@ -99,7 +99,7 @@ public:
     
     void reset();
 
-    void receiveSpike(int i);
+%(inc_targets)s
 
 %(global_ops_access)s
     
@@ -321,11 +321,6 @@ void %(class)s::reset() {
         reset_.erase(reset_.begin(), reset_.end());
     }
     
-}
-
-void %(class)s::receiveSpike(int i)
-{
-    std::cout << "Neuron " << i << " received spike " << std::endl;
 }
 
 %(single_global_ops)s

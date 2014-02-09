@@ -328,7 +328,7 @@ void %(class)s::compute_sum_%(var)s() {
     {
         #pragma omp critical
         {
-            std::cout << "emit spike (pop " << name_ <<")["<<i<<"]" << std::endl;
+            //std::cout << "emit spike (pop " << name_ <<")["<<i<<"]" << std::endl;
             this->propagate_.push_back(i);
             this->reset_.push_back(i);
             
@@ -472,6 +472,29 @@ class SpikePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a spike population description. """
     def __init__(self, name, desc):
         PopulationGenerator.__init__(self, name, desc)
+
+    def generate_constructor(self):
+        constructor, reset = PopulationGenerator.generate_constructor(self)
+    
+        for target in self.desc['targets']:
+            code = """
+    g_%(target)s_ = std::vector<DATA_TYPE>(nbNeurons_, 0);
+""" % {'target': target } 
+            
+            constructor += code
+            reset += code
+            
+        return constructor, reset
+    
+    def generate_members_declaration(self):
+        code = PopulationGenerator.generate_members_declaration(self)
+        
+        for target in self.desc['targets']:
+            code += """
+    std::vector<DATA_TYPE> g_%(target)s_;
+""" % {'target': target } 
+        
+        return code
     
     def generate_header(self):
         " Generates the C++ header file."        
@@ -486,7 +509,9 @@ class SpikePopulationGenerator(PopulationGenerator):
         
         # Random variables
         randoms = self.generate_random_definition()
-                
+        
+        inc_targets = self.generate_inc_targets()
+        
         # Generate the code
         template = spike_population_header
         dictionary = {
@@ -495,7 +520,8 @@ class SpikePopulationGenerator(PopulationGenerator):
             'global_ops_access' : global_ops_access,
             'global_ops_method' : global_ops_method,
             'member' : members,
-            'random' : randoms
+            'random' : randoms,
+            'inc_targets' : inc_targets,
         }
         return template % dictionary
 
@@ -552,4 +578,17 @@ class SpikePopulationGenerator(PopulationGenerator):
     def generate_reset_event(self):
         code = self.desc['spike']['spike_reset'].replace('[i]','[(*it)]')
         
-        return code 
+        return code
+    
+    def generate_inc_targets(self):
+        code = ''
+        for target in self.desc['targets']:
+            code += """
+    void inc_g_%(target)s(int rank, DATA_TYPE value) 
+    { 
+        g_%(target)s_[rank] += value; 
+        //std::cout << rank << ", " << value << std::endl; 
+    }
+""" % {'target': target } 
+
+        return code
