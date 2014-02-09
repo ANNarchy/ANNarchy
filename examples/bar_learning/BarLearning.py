@@ -49,7 +49,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 16 
+nb_neurons = 16
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -59,7 +59,7 @@ input_feature = Projection(
     post=feature_pop, 
     target='exc', 
     synapse = Oja,
-    connector=All2All(weights = Uniform(-0.5, 0.5))
+    connector = all2all(pre=input_pop, post = feature_pop, weights = Uniform(-0.5, 0.5))
 )
                      
 feature_feature = Projection(
@@ -67,7 +67,7 @@ feature_feature = Projection(
     post=feature_pop, 
     target='inh', 
     synapse = AntiHebb,
-    connector=All2All(weights = Uniform(0.0, 1.0))
+    connector = all2all(pre=feature_pop, post = feature_pop, weights = Uniform(0.0, 1.0))
 ) 
 
 # Definition of the environment
@@ -96,18 +96,19 @@ if __name__=='__main__':
     plot2 = {'pop': feature_pop, 'var': 'rate'}
     plot3 = {'proj': input_feature, 'var': 'value', 
          'max': 0.1, 'title': 'Receptive fields'}
- 
+  
     vis = Visualization( [plot1, plot2, plot3])
-    
-    # Run the simulation        
+     
+    #Run the simulation        
     for trial in range(5000):
-        print trial
+        if (trial > 0) and (trial % 100==0):
+            print trial
         set_input()
         simulate(50) 
-
-        if (trial % 10) and vis_during_sim:
+ 
+        if (trial % 20) and vis_during_sim:
             vis.render()
-
+ 
     # Visualize the result of learning
     vis.render()  
 

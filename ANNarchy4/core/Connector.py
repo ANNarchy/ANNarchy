@@ -21,272 +21,113 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from .Random import Constant
 from .Dendrite import Dendrite
-from .Global import _error
+from math import exp
 
-import numpy as np
+def one2one(pre, post, weights, delays=0.0):
+    synapses = {}
+    
+    for pre_neur in xrange(pre.size):
+        try:
+            w = weights.get_value()
+        except:
+            w = weights
+            
+        try:
+            d = delays.get_value()
+        except:
+            d = delays
+        synapses[(pre_neur, pre_neur)] = { 'w': w, 'd': d }
+            
+    return synapses
 
-class Connector(object):
-    """
-    The connector class manages all information and operations related to connection patterns.
-    """
-    def __init__(self, weights=None, delays=None, **parameters):
-        """
-        Initialize a connection object.
+def all2all(pre, post, weights, delays=0.0, allow_self_connections=False):
+    allow_self_connections = (pre!=post) and not allow_self_connections
+    synapses = {}
 
-        Parameters:
+    for post_neur in xrange(post.size):
+        for pre_neur in xrange(pre.size):
+            if (pre_neur == post_neur) and not allow_self_connections:
+                continue
+            
+            try:
+                w = weights.get_value()
+            except:
+                w = weights
                 
-        * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.
-        * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.
-        * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
-        """
-        if isinstance(weights, float) or isinstance(weights, int):
-            self.weights = Constant( float(weights) )
-        else:
-            self.weights = weights
+            try:
+                d = delays.get_value()
+            except:
+                d = delays
+
+            synapses[(post_neur, pre_neur)] = { 'w': w, 'd': d }
+                
+    return synapses
+
+def gaussian(pre, post, sigma, amp, delays=0.0, limit=0.01):
+    def compDist(pre, post):
+        res = 0.0
+
+        for i in range(len(pre)):
+            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
+
+        return res
+    
+    allow_self_connections = (pre!=post) and not allow_self_connections
+    synapses = {}
+    
+    for post_neur in xrange(post.size):
+        normPost = post.normalized_coordinates_from_rank(post_neur)
         
-        if isinstance(delays, float) or isinstance(delays, int):
-            self.delays = Constant( int(delays) )
-        else:
-            self.delays = delays
+        for pre_neur in range(pre.size):
+            if (pre_neur == post_neur) and not allow_self_connections:
+                continue
+
+            normPre = pre.normalized_coordinates_from_rank(pre_neur)
+
+            dist = compDist(normPre, normPost)
             
-        self.parameters = parameters
-        self.cy_instance = None
-        self.proj = None    # set externally
-
-    def cpp_call(self):
-        """
-        Returns the instantiation call for cpp only mode.
-        """
-        return None
-
-class One2One(Connector):
-    """
-    One2One connector.
-    """
+            value = amp * exp(-dist/2.0/sigma/sigma)
+            if (abs(value) > limit * abs(amp)):
+                    
+                try:
+                    d = delays.get_value()
+                except:
+                    d = delays
+                synapses[(post_neur, pre_neur)] = { 'w': value, 'd': d }
+                    
+    return synapses
     
-    def __init__(self, weights, delays=0):
-        """
-        Initialize an One2One connection object.
+def dog(pre, post, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01):
+    def compDist(pre, post):
+        res = 0.0
 
-        Parameters:
-        
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of weight values.            
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or an array with the corresponding amount of delay values.                        
-            * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
+        for i in range(len(pre)):
+            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
 
-        
-        Specific parameters:
-        
-            * None for this pattern.
-        """        
-        super(self.__class__, self).__init__(weights, delays)
-
-    def connect(self):
-        """
-        Build up the defined connection pattern for all postsynaptic neurons.
-        """
-        cython_module = __import__('ANNarchyCython')
-        proj_type = int(self.proj.name.split('Projection')[1])
-        
-        self.cy_instance = getattr(cython_module, 'One2One')(proj_type)
-        
-        target = self.proj.post.targets.index(self.proj.target)
-        tmp = self.cy_instance.connect(self.proj.pre,
-                                          self.proj.post,
-                                          target,
-                                          self.weights,
-                                          self.delays
-                                          )
-        
-        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
-        if tmp == None:
-            _error("Populations have different geometries.")
-            return [],[]
-
-        dendrites = []
-        post_ranks = []
-        for i in xrange(len(tmp)):
-            dendrites.append(Dendrite(self.proj, tmp[i].post_rank, tmp[i]))
-            post_ranks.append(tmp[i].post_rank)
-
-        return dendrites, post_ranks
+        return res
     
-    def cpp_call(self):
-        return '&(One2OneConnector(new ' + self.weights._gen_cpp() +'))'
-
-class All2All(Connector):
-    """
-    All2All projection between two populations. Each neuron in the postsynaptic 
-    population is connected to all neurons of the presynaptic population.
+    allow_self_connections = (pre!=post) and not allow_self_connections
+    synapses = {}
     
-    """
-    def __init__(self, weights, delays=0, **parameters):
-        """
-        Initialize an All2All connection object.
-
-        Parameters:
+    for post_neur in xrange(post.size):
+        normPost = post.normalized_coordinates_from_rank(post_neur)
         
-            * *pre*: the presynaptic population (python Population instance)            
-            * *post*: the postsynaptic population (python Population instance)            
-            * *target*: string describing the connection type
-            * *weights*: synaptic weights for all synapses of one projection. Could be either a RandomDistribution object or a single value.            
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or a single value.                        
-            * *parameters*: any key-value pairs, except the previous ones, given to this function are interpreted as parameters for the connection pattern.
+        for pre_neur in range(pre.size):
+            if (pre_neur == post_neur) and not allow_self_connections:
+                continue
 
-        
-        Specific parameters:
-        
-            * *allow_self_connections*: if the ranks of two neurons are equal and within the same population, this parameter determines wether a connection is build up or not.
-        """        
-        super(self.__class__, self).__init__(weights, delays, **parameters)
+            normPre = pre.normalized_coordinates_from_rank(pre_neur)
 
-        if 'allow_self_connections' in parameters.keys():
-            self._allow_self_connections = parameters['allow_self_connections']
-        else:
-            # print "ALL2ALL: assume 'allow_self_connections = False'"
-            self._allow_self_connections = False
-    
-    def connect(self):
-        """
-        Build up the defined connection pattern for all postsynaptic neurons.
-        """
-        cython_module = __import__('ANNarchyCython')
-        proj_type = int(self.proj.name.split('Projection')[1])
-        
-        self.cy_instance = getattr(cython_module, 'All2All')(proj_type)
-            
-        target = self.proj.post.targets.index(self.proj.target)
-        tmp = self.cy_instance.connect(self.proj.pre,
-                                          self.proj.post,
-                                          target,
-                                          self.weights,
-                                          self.delays,
-                                          self.parameters
-                                          )
+            dist = compDist(normPre, normPost)
 
-        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
-        
-        dendrites = []
-        post_ranks = []
-        for i in xrange(len(tmp)):
-            dendrites.append(Dendrite(self.proj, tmp[i].post_rank, tmp[i]))
-            post_ranks.append(tmp[i].post_rank)
-
-        return dendrites, post_ranks
-
-    def cpp_call(self):
-        if self._allow_self_connections:
-            return '&(All2AllConnector(true, new ' + self.weights._gen_cpp() +'))'
-        else:
-            return '&(All2AllConnector(false, new ' + self.weights._gen_cpp() +'))'
-
-class Gaussian(Connector):
-    """
-    gaussians projection between to populations.
-    
-    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-    the neuron with the same rank and width weights following a gaussians distribution.    
-    """
-    def __init__(self, delays=None, **parameters):
-        """
-        Initialize an gaussian connector object.
-
-        Parameters:
-        
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a single value to set the same synaptic delay for all synapses or a ``RandomDistribution`` object (default = None).                        
-            * *parameters*: connection pattern specific parameters provided as key-value pairs
-
-        Specific parameters:
-        
-            * *amp*: the maximal value of the gaussian distribution for the connection weights.
-            * *sigma*: the standard deviation of the gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
-            * *limit*: percentage of amplitude below which the connection is not created (default = 0.01)
-            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
-        """        
-        super(self.__class__, self).__init__(delays=delays, **parameters)
-        
-    def connect(self):
-        """
-        Build up the defined connection pattern for all postsynaptic neurons.
-        """
-        cython_module = __import__('ANNarchyCython')
-        proj_type = int(self.proj.name.split('Projection')[1])
-        
-        self.cy_instance = getattr(cython_module, 'Gaussian')(proj_type)
-            
-        target = self.proj.post.targets.index(self.proj.target)
-        tmp = self.cy_instance.connect(self.proj.pre,
-                                          self.proj.post,
-                                          target,
-                                          self.delays,
-                                          self.parameters
-                                          )
-
-        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
-
-        dendrites = []
-        post_ranks = []
-        for i in xrange(len(tmp)):
-            dendrites.append(Dendrite(self.proj, tmp[i].post_rank, tmp[i]))
-            post_ranks.append(tmp[i].post_rank)
-
-        return dendrites, post_ranks        
-
-class DoG(Connector):
-    """
-    Difference-of-gaussians projection between to populations.
-    
-    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-    the neuron with the same rank and width weights following a difference-of-gaussians distribution.
-    """    
-    def __init__(self, delays=None, **parameters):
-        """
-        Initialize an DoG connector object.
-
-        Parameters:
-        
-            * *delays*: synaptic delay for all synapses of one projection. Could be either a RandomDistribution object or a single value.                        
-            * *parameters*: any pattern specific parameters provided as key-value pairs
-        
-        Specific parameters:
-        
-            * *amp_pos*: the maximal value of the positive gaussian distribution for the connection weights.
-            * *sigma_pos*: the standard deviation of the positive gaussian distribution (normalized by the number of neurons in each dimension of the presynaptic population) 
-            * *amp_pos*: the maximal value of the negative gaussian distribution for the connection weights.
-            * *sigma_pos*: the standard deviation of the negative gaussian distribution (normalized by the number of neurons)
-            * *limit*: percentage of ``amp_pos - amp_neg`` below which the connection is not created (default = 0.01)
-            * *allow_self_connections*: if self-connections are allowed or not (default = False) 
-        """
-        super(self.__class__, self).__init__(delays, **parameters)
-        
-    def connect(self):
-        """
-        Build up the defined connection pattern for all postsynaptic neurons.
-        """
-        cython_module = __import__('ANNarchyCython')
-        proj_type = int(self.proj.name.split('Projection')[1])
-        
-        self.cy_instance = getattr(cython_module, 'DoG')(proj_type)
-            
-        target = self.proj.post.targets.index(self.proj.target)
-        tmp = self.cy_instance.connect(self.proj.pre,
-                                          self.proj.post,
-                                          target,
-                                          self.delays,
-                                          self.parameters
-                                          )
-        
-        #self.proj.pre.cyInstance.set_max_delay(int(self.delays.max()))
-
-        dendrites = []
-        post_ranks = []
-        for i in xrange(len(tmp)):
-            dendrites.append(Dendrite(self.proj, tmp[i].post_rank, tmp[i]))
-            post_ranks.append(tmp[i].post_rank)
-
-        return dendrites, post_ranks        
+            value = amp_pos * exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * exp(-dist/2.0/sigma_neg/sigma_neg)
+            if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
+                    
+                try:
+                    d = delays.get_value()
+                except:
+                    d = delays
+                synapses[(post_neur, pre_neur)] = { 'w': value, 'd': d }
+                    
+    return synapses    

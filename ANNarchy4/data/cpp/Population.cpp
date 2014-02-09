@@ -20,6 +20,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Population.h"
+#include <exception>
+#include <typeinfo>
 
 Population::Population(std::string name, int nbNeurons) {
 	name_ = std::move(name);
@@ -184,7 +186,17 @@ void Population::addProjection(int postRankID, Projection* proj) {
 #ifdef _DEBUG
 	std::cout << name_ << ": added projection to neuron " << postRankID << std::endl;
 #endif
-	projections_[postRankID].push_back(proj);
+	try
+	{
+		projections_.at(postRankID).push_back(proj);
+	}
+	catch (std::exception &e)
+	{
+		std::cout << std::endl;
+		std::cout << "Caught: " << e.what( ) << std::endl;
+		std::cout << "Tried to attach projection to neuron " << postRankID <<" but there only " << nbNeurons_ << " neurons" << std::endl;
+		std::cout << std::endl;
+	};
 }
 
 void Population::removeProjection(Population* pre) {
@@ -223,7 +235,7 @@ void Population::metaSum() {
             std::cout << "reference: " << projections_[n][p] << std::endl;
             std::cout << "\tpost = " << name_ << std::endl;
             std::cout << "\tpre = " << projections_[n][p]->getPrePopulation()->getName() << std::endl;
-            std::cout << "\tsynaseCount = " << projections_[n][p]->getSynapseCount() << std::endl;
+            std::cout << "\tsynaseCount = " << (int)(projections_[n][p]->getSynapseCount()) << std::endl;
         #endif
             projections_[n][p]->computeSum();
 		}

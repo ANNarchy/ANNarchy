@@ -9,47 +9,59 @@ setup(verbose=True)
 #
 # Define the neuron classes
 #
-Input = Neuron(   
-    tau = 1.0,
-    noise = Variable(eq=Uniform(0,1)),
-    baseline = Variable(init = 0.0),
-    mp = Variable(eq = "tau * dmp / dt + mp = baseline + noise"),
-    rate = Variable(eq = "rate = pos(mp)"),
-    order = ['mp','rate'] 
+Input = RateNeuron(   
+parameters="""
+    tau = 1.0
+    baseline = 0.0
+""",
+equations="""
+    noise = Uniform(0,1)
+    tau * dmp / dt + mp = baseline + noise
+    rate = pos(mp)
+""" 
 )
 
-Focus = Neuron( 
-    tau = 20.0,
-    noise = 0.0,
-    baseline = Variable(init=0.0),
-    threshold_min = 0.0,
-    threshold_max = 1.0,
-    mp = Variable(eq = "tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise"),
-    rate = Variable(eq = "rate = if mp > threshold_max then threshold_max else pos(mp)", init = 0.0),
-    order = ['mp', 'rate']
+Focus = RateNeuron(
+parameters=""" 
+    tau = 20.0
+    noise = 0.0
+    baseline = 0.0
+    threshold_min = 0.0
+    threshold_max = 1.0
+""",
+equations="""
+    tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise
+    rate = if mp > threshold_max : threshold_max else: pos(mp) : init = 0.0
+"""
 )
 
-InputPop = Population((20,20), Input)
-FocusPop = Population((20,20), Focus)
+nb_neurons = 10
+
+InputPop = Population((nb_neurons, nb_neurons), Input)
+FocusPop = Population((nb_neurons, nb_neurons), Focus)
 
 Proj1 = Projection( 
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc', 
-    connector = One2One( weights=1.0 )
+    connector = one2one(pre = InputPop, post = FocusPop, weights=1.0 )
 )
                     
 Proj2 = Projection(
     pre = FocusPop, 
     post = FocusPop, 
     target = 'inh', 
-    connector = DoG( 
-                   weights=Uniform(0.0,0.1), 
-                   amp_pos=0.2, 
-                   sigma_pos=0.1, 
-                   amp_neg=0.1, 
-                   sigma_neg=0.7 
-                ) 
+    #connector = all2all(pre = FocusPop, post = FocusPop, weights=1.0)
+    #===========================================================================
+    # connector = dog(
+    #                pre = FocusPop,
+    #                post = FocusPop, 
+    #                amp_pos=0.2, 
+    #                sigma_pos=0.2, 
+    #                amp_neg=0.1, 
+    #                sigma_neg=0.3
+    #             ) 
+    #===========================================================================
 )
 
 # Main program
@@ -61,4 +73,6 @@ if __name__ == "__main__":
     import pyximport; pyximport.install()
     import BubbleWorld
     
-    BubbleWorld.run(InputPop, FocusPop)
+    BubbleWorld.run(InputPop, FocusPop, Proj2)
+    
+    raw_input()

@@ -27,6 +27,7 @@ import numpy as np
 from ANNarchy4.core import Global
 from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy4.parser.Analyser import analyse_projection
+from ANNarchy4.core.Dendrite import Dendrite
 
 class Projection(object):#Descriptor):
     """
@@ -64,8 +65,7 @@ class Projection(object):#Descriptor):
             
         # Store the arguments
         self.target = target
-        self.connector = connector
-        self.connector.proj = self # set reference to projection
+        
         if not synapse:
             if isinstance(self.pre, RateSynapse):
                 self.synapse_type = RateSynapse(parameters = "", equations = "")
@@ -73,6 +73,8 @@ class Projection(object):#Descriptor):
                 self.synapse_type = SpikeSynapse(parameters = "", equations = "")
         else:
             self.synapse_type = synapse
+        
+        self._connector = connector;
         self._dendrites = []
         self._post_ranks = []
 
@@ -110,6 +112,30 @@ class Projection(object):#Descriptor):
         
         # Finalize initialization
         self.initialized = False
+      
+    def _build_pattern_from_dict(self, synapses):
+        """
+        build up the dendrites from the list of synapses
+        """
+        #
+        # the synapse objects are stored as pre-post pairs. For mean_rate
+        dendrites = {} 
+        
+        for conn, data in synapses.iteritems():
+            try:
+                dendrites[conn[0]]['rank'].append(conn[1])
+                dendrites[conn[0]]['weight'].append(data['w'])
+                dendrites[conn[0]]['delay'].append(data['d'])
+            except KeyError:
+                dendrites[conn[0]] = { 'rank': [conn[1]], 'weight': [data['w']], 'delay': [data['d']] }
+        
+        ret_value = []
+        ret_ranks = []
+        for post_id, data in dendrites.iteritems():
+            ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
+            ret_ranks.append(post_id)
+        
+        return ret_value, ret_ranks
         
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -155,6 +181,9 @@ class Projection(object):#Descriptor):
         else:
             object.__setattr__(self, name, value)
             
+    def connect(self):
+        self._dendrites, self._post_ranks = self._build_pattern_from_dict(self._connector)
+        
     def get(self, name):
         """ Returns a list of parameters/variables values for each dendrite in the projection.
         
@@ -287,9 +316,6 @@ class Projection(object):#Descriptor):
         """
         return self._post_ranks
 
-    def connect(self):
-        self._dendrites, self._post_ranks = self.connector.connect()
-
     def gather_data(self, variable):
         blank_col=np.zeros((self.pre.geometry[1], 1))
         blank_row=np.zeros((1,self.post.geometry[0]*self.pre.geometry[0]+self.post.geometry[0] +1))
@@ -301,7 +327,16 @@ class Projection(object):#Descriptor):
             m_row = None
             
             for x in xrange(self.post.geometry[0]):
-                m = self._dendrites[i].get_variable(variable)
+                m = self._dendrites[i].cy_instance.value
+                
+                if m.shape != self.pre.geometry:
+                    new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
+                    
+                    j = 0
+                    for r in self._dendrites[i].cy_instance.rank:
+                        new_m[r] = m[j]
+                        j+=1 
+                    m = new_m
                 
                 if m_row == None:
                     m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )

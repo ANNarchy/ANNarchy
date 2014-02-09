@@ -3,7 +3,7 @@ import numpy as np
 cimport numpy as np
 import math
 
-def run(InputPop, FocusPop):
+def run(InputPop, FocusPop, proj):
 
     cdef int w = InputPop.geometry[0]
     cdef int h = InputPop.geometry[1]
@@ -18,8 +18,11 @@ def run(InputPop, FocusPop):
 
     cdef np.ndarray data = np.zeros(w*h)
     
-    vis = Visualization( [ { 'pop': InputPop, 'var': 'baseline' }, 
-                           { 'pop': FocusPop, 'var': 'rate' } ] 
+    vis = Visualization( [ #{ 'pop': InputPop, 'var': 'baseline' }, 
+                           #{ 'pop': FocusPop, 'var': 'rate' },
+                           { 'proj': proj, 'var': 'value', 
+                             'min': 0.0, 'max': 0.1, 'title': 'Receptive fields'} ]
+                         
                        )
 
     for i in xrange (10000):
