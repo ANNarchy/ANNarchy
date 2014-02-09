@@ -95,6 +95,7 @@ public:
 	 */
     virtual int removeSynapse(int rank);
     
+    virtual void propagateSpike() {}
 protected:
     int post_neuron_rank_;
     int target_;

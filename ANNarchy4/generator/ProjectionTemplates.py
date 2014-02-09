@@ -89,6 +89,8 @@ public:
     
     void localLearn();
 
+    void propagateSpike();
+    
 %(access)s
 private:
 %(member)s
@@ -293,6 +295,14 @@ void %(class)s::localLearn() {
 
 void %(class)s::globalLearn() {
 %(global)s
+}
+
+void %(class)s::propagateSpike() 
+{
+    for(auto it=rank_.begin(); it != rank_.end(); it++)
+    {
+        pre_population_->receiveSpike(*it);
+    }
 }
 
 """

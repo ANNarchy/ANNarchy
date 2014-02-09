@@ -328,6 +328,7 @@ void %(class)s::compute_sum_%(var)s() {
     {
         #pragma omp critical
         {
+            std::cout << "emit spike (pop " << name_ <<")["<<i<<"]" << std::endl;
             this->propagate_.push_back(i);
             this->reset_.push_back(i);
             

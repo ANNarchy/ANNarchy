@@ -99,6 +99,8 @@ public:
     
     void reset();
 
+    void receiveSpike(int i);
+
 %(global_ops_access)s
     
 %(access)s
@@ -278,7 +280,7 @@ void %(class)s::globalMetaStep() {
 }
 
 void %(class)s::globalOperations() {
-    
+        
     propagateSpike();
     
     reset();
@@ -294,7 +296,14 @@ void %(class)s::propagateSpike() {
 
     if (!propagate_.empty())
     {
-
+        for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
+        {
+            for( auto p_it = projections_[(*n_it)].begin(); p_it != projections_[(*n_it)].end(); p_it++)
+            { 
+                (*p_it)->propagateSpike();
+            }
+        }
+        
         propagate_.erase(propagate_.begin(), propagate_.end());
     }
         
@@ -312,6 +321,11 @@ void %(class)s::reset() {
         reset_.erase(reset_.begin(), reset_.end());
     }
     
+}
+
+void %(class)s::receiveSpike(int i)
+{
+    std::cout << "Neuron " << i << " received spike " << std::endl;
 }
 
 %(single_global_ops)s
