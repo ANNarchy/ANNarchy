@@ -94,6 +94,7 @@ class Population(object):
         
         # List of targets actually connected
         self.targets = []
+        self.sources = []
                 
         # Allow recording of variables
         self._recorded_variables = {}        

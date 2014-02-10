@@ -25,10 +25,11 @@
 
 #include <iostream>
 
-Projection* Connector::instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID, int target ) {
-	return createProjInstance().getInstanceOf(projectionID, prePopulation, postPopulation, postID, target);
+Projection* Connector::instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID, int target, bool spike ) {
+	return createProjInstance().getInstanceOf(projectionID, prePopulation, postPopulation, postID, target, spike);
 }
 
+/*
 All2AllConnector::All2AllConnector(bool allowSelfConnections, Distribution<DATA_TYPE> *weight, Distribution<int> *delay) {
 	allowSelfConnections_ = allowSelfConnections;
 	weight_ = weight;
@@ -134,3 +135,4 @@ void One2OneConnector::connect(Population *prePopulation, Population *postPopula
 		postPopulation->addProjection(postID, proj);
 	}
 }
+*/

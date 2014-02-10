@@ -29,7 +29,8 @@ Population::Population(std::string name, int nbNeurons) {
 	nbNeurons_ = nbNeurons;
 	rate_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
 	projections_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
-	
+	spikeTargets_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
+
 	maxDelay_ = 0;
 	dt_ = 1.0;
 	delayedRates_ = std::deque< std::vector<DATA_TYPE> >();
@@ -197,6 +198,17 @@ void Population::addProjection(int postRankID, Projection* proj) {
 		std::cout << "Tried to attach projection to neuron " << postRankID <<" but there only " << nbNeurons_ << " neurons" << std::endl;
 		std::cout << std::endl;
 	};
+}
+
+void Population::addSpikeTarget(Projection* proj)
+{
+#ifdef _DEBUG
+    std::cout << name_ << ": added projection to neuron " << postRankID << std::endl;
+#endif
+    for(unsigned int n=0; n< nbNeurons_; n++)
+    {
+        spikeTargets_.at(n).push_back(proj);
+    }
 }
 
 void Population::removeProjection(Population* pre) {

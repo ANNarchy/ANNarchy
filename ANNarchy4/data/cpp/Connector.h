@@ -45,12 +45,12 @@ public:
 	 */
 	virtual void connect(Population *pre, Population *post, int projectionID, int target)=0;
 
-	class Projection* instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID, int target );
+	class Projection* instantiateProj(int projectionID, Population *prePopulation, Population *postPopulation, int postID, int target, bool spike );
 };
 
 /**
  *	\brief		All2All pattern
- */
+
 class All2AllConnector: public Connector {
 public:
 	All2AllConnector(bool allowSelfConnections, Distribution<DATA_TYPE> *weight, Distribution<int> *delay=NULL);
@@ -64,9 +64,9 @@ private:
 	Distribution<int>* delay_;
 };
 
-/**
+*
  *	\brief		One2One pattern
- */
+
 class One2OneConnector: public Connector {
 public:
 	One2OneConnector(Distribution<DATA_TYPE> *weight, Distribution<int> *delay=NULL);
@@ -77,5 +77,5 @@ public:
 private:
 	Distribution<DATA_TYPE>* weight_;
 	Distribution<int>* delay_;
-};
+};*/
 #endif

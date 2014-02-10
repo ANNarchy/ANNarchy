@@ -61,7 +61,7 @@ def all2all(pre, post, weights, delays=0.0, allow_self_connections=False):
                 d = delays
 
             synapses[(post_neur, pre_neur)] = { 'w': w, 'd': d }
-                
+            
     return synapses
 
 def gaussian(pre, post, sigma, amp, delays=0.0, limit=0.01):

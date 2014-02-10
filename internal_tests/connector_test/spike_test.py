@@ -36,7 +36,9 @@ testAll2AllSpike = Projection(
 
 compile()
 
-simulate(10)
+for i in range(1000):
+    print '\n',i,'\n'
+    simulate(1)
 
 print 'done'
 raw_input()

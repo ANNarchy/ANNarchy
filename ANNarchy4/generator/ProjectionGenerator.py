@@ -369,19 +369,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
     
     def generate_psp(self):
         " Generates code for the computeSum() method depending on psp variable of the synapse."
-        # Get the psp information
-        if 'psp' in self.desc.keys():
-            psp_code = self.desc['psp']['cpp'] + ';'
-        else:
-            psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
-        # Generate the code
-        template = psp_code_body
-        dictionary = {
-            'psp': psp_code, 
-            'psp_const_delay': psp_code,
-            'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
-        }    
-        return template % dictionary
+        return ""
     
     def generate_globallearn(self):
         return ""

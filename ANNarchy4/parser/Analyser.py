@@ -51,6 +51,7 @@ class Analyser(object):
             
             # Make sure population have targets declared only once 
             pop.targets = list(set(pop.targets))  
+            pop.sources = list(set(pop.sources))
             
             # Actualize initial values
             for variable in pop.description['parameters']:
@@ -100,8 +101,12 @@ class Analyser(object):
                 # Replace sum(target) with sum(i, rk_target)
                 for target in pop.description['targets']:
                     if target in pop.targets:
-                        code = code.replace('sum('+target+')', 'sum(i, ' + \
+                        if pop.description['type']=='rate':
+                            code = code.replace('sum('+target+')', 'sum(i, ' + \
                                             str(pop.targets.index(target))+')')
+                        else:
+                            code = code.replace('sum('+target+')', 'g_'+\
+                                            target+'_[i]')
                     else: # used in the eq, but not connected
                         code = code.replace('sum('+target+')', '0.0')
                 
@@ -485,8 +490,19 @@ def analyse_population(pop):
 
 def analyse_projection(proj):  
     """ Performs the analysis for a single projection.""" 
-    # Identify the synapse type
-    proj_type = 'rate' if isinstance(proj.synapse_type, RateSynapse) else 'spike'
+    #proj_type = 'rate' if isinstance(proj.synapse_type, RateSynapse) else 'spike'
+
+    # Identify the synapse type depending on pre and postsynaptic population
+    if proj.post.description['type'] == 'rate':
+        proj_type = 'rate'
+        if not isinstance(proj.synapse_type, RateSynapse):
+            print proj.synapse_type
+            _error("SpikeSynapse attached to rate coded populations.")        
+    else:
+        proj_type = 'spike'
+        if isinstance(proj.synapse_type, RateSynapse):
+            _error("RateSynapse attached to spike coded populations.")        
+
     # Store basic information
     description = {
         'pre': proj.pre.name,
@@ -501,6 +517,7 @@ def analyse_projection(proj):
     }
 
     if proj_type == 'spike': # Additionally store pre_spike and post_spike
+        proj.pre.sources.append(proj.target) 
         description['raw_pre_spike'] = proj.synapse_type.pre_spike
         description['raw_post_spike'] = proj.synapse_type.post_spike
 

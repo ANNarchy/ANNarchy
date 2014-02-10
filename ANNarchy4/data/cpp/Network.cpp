@@ -91,11 +91,13 @@ void Network::run(int steps) {
             {
                 populations_[p]->metaSum();
             }
+            #pragma omp barrier
 
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->metaStep();
             }
+            #pragma omp barrier
 
             #pragma omp master
             {
@@ -110,7 +112,7 @@ void Network::run(int steps) {
             {
                 populations_[p]->metaLearn();
             }
-
+            #pragma omp barrier
 
             #pragma omp master
             for(int p=0; p<(int)populations_.size(); p++)

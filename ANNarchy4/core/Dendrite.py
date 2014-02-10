@@ -59,16 +59,25 @@ class Dendrite(object):
                 self.proj.pre.rank, 
                 self.proj.post.rank, 
                 post_rank, 
-                self.proj.post.targets.index(self.proj.target) 
+                self.proj.post.targets.index(self.proj.target),
+                False 
             )
         else:
             self.cy_instance = local_proj(
                 self.proj._id, 
-                self.proj.post.rank, 
                 self.proj.pre.rank, 
+                self.proj.post.rank, 
                 post_rank, 
-                self.proj.post.targets.index(self.proj.target) 
+                self.proj.post.targets.index(self.proj.target),
+                True
             )
+            
+        #=======================================================================
+        # print 'post', post_rank
+        # tmp = [ r for r in ranks] 
+        # print 'pre', tmp
+        #=======================================================================
+        #pre.cy_instance.
                     
         self.cy_instance.rank = ranks
         self.cy_instance.value = weights

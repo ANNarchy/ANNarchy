@@ -95,7 +95,11 @@ public:
 	 */
     virtual int removeSynapse(int rank);
     
-    virtual void propagateSpike() {}
+    virtual bool isPreSynaptic(class Population *pop) {}
+
+    virtual void preEvent(int rank) {}
+
+    virtual void postEvent() {}
 protected:
     int post_neuron_rank_;
     int target_;

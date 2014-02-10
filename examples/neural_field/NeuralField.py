@@ -35,7 +35,7 @@ equations="""
 """
 )
 
-nb_neurons = 10
+nb_neurons = 15
 
 InputPop = Population((nb_neurons, nb_neurons), Input)
 FocusPop = Population((nb_neurons, nb_neurons), Focus)
@@ -51,17 +51,14 @@ Proj2 = Projection(
     pre = FocusPop, 
     post = FocusPop, 
     target = 'inh', 
-    #connector = all2all(pre = FocusPop, post = FocusPop, weights=1.0)
-    #===========================================================================
-    # connector = dog(
-    #                pre = FocusPop,
-    #                post = FocusPop, 
-    #                amp_pos=0.2, 
-    #                sigma_pos=0.2, 
-    #                amp_neg=0.1, 
-    #                sigma_neg=0.3
-    #             ) 
-    #===========================================================================
+    connector = dog(
+                   pre = FocusPop,
+                   post = FocusPop, 
+                   amp_pos=0.2, 
+                   sigma_pos=0.2, 
+                   amp_neg=0.1, 
+                   sigma_neg=0.3
+                ) 
 )
 
 # Main program

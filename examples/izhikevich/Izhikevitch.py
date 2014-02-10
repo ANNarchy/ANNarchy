@@ -27,7 +27,7 @@ parameters="""
 extra_values = param_dict,
 equations="""
     noise = Normal(0.0,1.0)
-    I = sum(exc) + sum(inh) + noise * noise_scale : init = 0.0
+    I = sum(exc) - sum(inh) + noise * noise_scale : init = 0.0
     dv/dt = 0.04 * v * v + 5*v + 140 -u + I
     du/dt = a * (b*v - u) : init = 0.2
 """,
@@ -38,12 +38,11 @@ reset = """
     v = c
     u = u+d
 """
-#    order = ['I', 'v','u']
 )
 
 Simple = SpikeSynapse(
-    psp = """ 
-        if (t - (t_spike + 1) > 0) : 0.0 else : weight 
+    pre_spike = """ 
+        g_%target += 1 
     """
 )
 

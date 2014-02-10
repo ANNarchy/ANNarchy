@@ -49,6 +49,8 @@ public:
 
 	class Projection* getProjection(int neuron, int type, Population* pre);
 
+    void addSpikeTarget(Projection* proj);
+
 	void addProjection(int postRankID, Projection* proj);
 
 	void removeProjection(Population *pre);
@@ -117,6 +119,7 @@ protected:
 	std::vector<DATA_TYPE>	rate_;
 	std::deque< std::vector<DATA_TYPE> > delayedRates_;
 	std::vector< std::vector<class Projection*> > projections_;	// first dimension, neuron wise
+	std::vector< std::vector<class Projection*> > spikeTargets_; // first dimension, neuron wise
 
 	std::vector< bool > spiked_;
 	std::vector< std::vector<int> > spike_timings_;

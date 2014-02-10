@@ -280,10 +280,12 @@ void %(class)s::globalMetaStep() {
 }
 
 void %(class)s::globalOperations() {
-        
-    propagateSpike();
-    
+
     reset();
+
+    %(reset_targets)s
+       
+    propagateSpike();
 
 %(global_ops)s
 }
@@ -298,9 +300,12 @@ void %(class)s::propagateSpike() {
     {
         for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
         {
-            for( auto p_it = projections_[(*n_it)].begin(); p_it != projections_[(*n_it)].end(); p_it++)
+            for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
             { 
-                (*p_it)->propagateSpike();
+                if((*p_it)->isPreSynaptic(this))
+                    (*p_it)->preEvent(*n_it);
+                else
+                    (*p_it)->postEvent();
             }
         }
         

@@ -23,9 +23,9 @@ rate_projection_header = \
 
 class %(class)s : public Projection {
 public:
-    %(class)s(Population* pre, Population* post, int postRank, int target);
+    %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
     
-    %(class)s(int preID, int postID, int postRank, int target);
+    %(class)s(int preID, int postID, int postRank, int target, bool spike);
     
     ~%(class)s();
     
@@ -73,9 +73,9 @@ spike_projection_header = \
 
 class %(class)s : public Projection {
 public:
-    %(class)s(Population* pre, Population* post, int postRank, int target);
+    %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
     
-    %(class)s(int preID, int postID, int postRank, int target);
+    %(class)s(int preID, int postID, int postRank, int target, bool spike);
     
     ~%(class)s();
     
@@ -89,7 +89,11 @@ public:
     
     void localLearn();
 
-    void propagateSpike();
+    void preEvent(int rank);
+    
+    void postEvent();
+    
+    bool isPreSynaptic(Population* pop) { return pop == pre_population_; }
     
 %(access)s
 private:
@@ -160,7 +164,7 @@ rate_projection_body = \
 #include "Global.h"
 using namespace ANNarchy_Global;
         
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : Projection() {
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : Projection() {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
     
@@ -175,7 +179,7 @@ using namespace ANNarchy_Global;
 %(init)s
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target) : Projection() {
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() {
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
@@ -242,7 +246,7 @@ spike_projection_body = \
 #include "Global.h"
 using namespace ANNarchy_Global;
         
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : Projection() {
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : Projection() {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
     
@@ -253,11 +257,14 @@ using namespace ANNarchy_Global;
     post_neuron_rank_ = postRank;
 
     post_population_->addProjection(postRank, this);
-    
+    if(spike)
+    {
+        pre_population_->addSpikeTarget(this);
+    }
 %(init)s
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target) : Projection() {
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() {
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
@@ -268,6 +275,10 @@ using namespace ANNarchy_Global;
     post_neuron_rank_ = postRank;
 
     post_population_->addProjection(postRank, this);
+    if(spike)
+    {
+        pre_population_->addSpikeTarget(this);
+    }
     
 %(init)s
 }
@@ -297,16 +308,22 @@ void %(class)s::globalLearn() {
 %(global)s
 }
 
-void %(class)s::propagateSpike() 
+void %(class)s::preEvent(int rank) 
 {
-    auto s_it = value_.begin();
-    auto n_it = rank_.begin();
-    for(n_it, s_it; n_it != rank_.end(); n_it++,s_it++)
-    {
-        pre_population_->inc_g_%(target)s((*n_it), (*s_it));
-    }
+#ifdef _DEBUG
+    std::cout << "Emitted a pre-synaptic event" << std::endl;
+    std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
+    std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
+#endif
+    post_population_->inc_g_%(target)s(rank, 0.1);
 }
 
+void %(class)s::postEvent() 
+{
+#ifdef _DEBUG
+    std::cout << "Emitted a post-synaptic event" << std::endl;
+#endif
+}
 """
 
 # Template for the computeSum() method of a projection
@@ -385,8 +402,8 @@ cdef class Local%(name)s(LocalProjection):
 
     cdef %(name)s* cInhInstance
 
-    def __cinit__(self, proj_type, preID, postID, rank, target):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target))
+    def __cinit__(self, proj_type, preID, postID, rank, target, spike):
+        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike))
 
 %(pyFunction)s
 
@@ -419,8 +436,8 @@ cdef class Local%(name)s(LocalProjection):
 
     cdef %(name)s* cInhInstance
 
-    def __cinit__(self, proj_type, preID, postID, rank, target):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target))
+    def __cinit__(self, proj_type, preID, postID, rank, target, spike):
+        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike))
 
 %(pyFunction)s
 

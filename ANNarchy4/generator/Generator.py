@@ -532,7 +532,7 @@ clean:
                 #ifdef _DEBUG
                     std::cout << "Instantiate name=%(name)s" << std::endl;
                 #endif
-                    return new %(name)s(pre, post, postNeuronRank, target);
+                    return new %(name)s(pre, post, postNeuronRank, target, spike);
                     }
 
 """ % { 'name': name, 'id': name.split('Projection')[1]}
@@ -547,7 +547,7 @@ public:
      *    @details    called by cpp method ANNarchy::ANNarchy() or by 
      *                createProjInstance::getInstanceOf(int, int, int, int, int)
      */
-    Projection* getInstanceOf(int ID, Population *pre, Population *post, int postNeuronRank, int target) {
+    Projection* getInstanceOf(int ID, Population *pre, Population *post, int postNeuronRank, int target, bool spike) {
         
         if(pre == NULL || post == NULL) {
             std::cout << "Critical error: invalid pointer in c++ core library." << std::endl;
@@ -580,11 +580,11 @@ public:
      *  @brief          instantiate a projection object or returns previous exsisting one.
      *  @details        called by cython wrapper.
      */
-    Projection* getInstanceOf(int ID, int preID, int postID, int postNeuronRank, int target) {
+    Projection* getInstanceOf(int ID, int preID, int postID, int postNeuronRank, int target, bool spike) {
         Population *pre  = Network::instance()->getPopulation(preID);
         Population *post = Network::instance()->getPopulation(postID);
         
-        return getInstanceOf(ID, pre, post, postNeuronRank, target);
+        return getInstanceOf(ID, pre, post, postNeuronRank, target, spike);
     }
 
 };

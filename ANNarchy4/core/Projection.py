@@ -67,8 +67,11 @@ class Projection(object):#Descriptor):
         # Store the arguments
         self.target = target
         
+        #
+        # No synapse attached assume default synapse based on
+        # presynaptic population.
         if not synapse:
-            if isinstance(self.pre, RateSynapse):
+            if isinstance(self.pre.neuron_type, RateNeuron):
                 self.synapse_type = RateSynapse(parameters = "", equations = "")
             else:
                 self.synapse_type = SpikeSynapse(parameters = "", equations = "")
@@ -148,11 +151,11 @@ class Projection(object):#Descriptor):
             
             for conn, data in synapses.iteritems():
                 try:
-                    dendrites[conn[1]]['rank'].append(conn[0])
-                    dendrites[conn[1]]['weight'].append(data['w'])
-                    dendrites[conn[1]]['delay'].append(data['d'])
+                    dendrites[conn[0]]['rank'].append(conn[1])
+                    dendrites[conn[0]]['weight'].append(data['w'])
+                    dendrites[conn[0]]['delay'].append(data['d'])
                 except KeyError:
-                    dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [data['w']], 'delay': [data['d']] }
+                    dendrites[conn[0]] = { 'rank': [conn[1]], 'weight': [data['w']], 'delay': [data['d']] }
             
             ret_value = []
             ret_ranks = []

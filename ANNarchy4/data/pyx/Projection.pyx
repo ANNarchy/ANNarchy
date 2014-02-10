@@ -64,7 +64,7 @@ cdef extern from "../build/ANNarchy.h":
     cdef cppclass createProjInstance:
         createProjInstance()
         
-        Projection* getInstanceOf(int id, int pre, int post, int postNeuronRank, int target)
+        Projection* getInstanceOf(int id, int pre, int post, int postNeuronRank, int target, spike)
 
 #
 # wrapper to c++ class, contains connection data of one neuron
@@ -73,9 +73,9 @@ cdef class LocalProjection:
     cdef Projection* cInstance
     cdef post_rank
     
-    def __cinit__(self, proj_type, preID, postID, rank, target):
+    def __cinit__(self, proj_type, preID, postID, rank, target, spike=False):
         self.post_rank = rank
-        self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target)
+        self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike)
         
     def init(self, ranks, values, delays):
         self.cInstance.initValues(ranks, values, delays)

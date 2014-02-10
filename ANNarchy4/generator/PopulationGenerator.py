@@ -335,7 +335,7 @@ void %(class)s::compute_sum_%(var)s() {
             spike_timings_[i].push_back(ANNarchy_Global::time);
             spiked_[i] = true;
         }
-    } 
+    }
 """ % {'cond' : self.desc['spike']['spike_cond'] } #TODO: check code
 
             for bound, val in param['bounds'].iteritems():
@@ -542,6 +542,8 @@ class SpikePopulationGenerator(PopulationGenerator):
 
         # reset event
         reset_event = self.generate_reset_event()
+        reset_targets = self.generate_reset_targets_body()
+        
         # Generate the code
         template = spike_population_body
         dictionary = {
@@ -554,6 +556,7 @@ class SpikePopulationGenerator(PopulationGenerator):
             'global_ops' : globalops,
             'record' : record,
             'reset_event': reset_event,
+            'reset_targets': reset_targets,
             'single_global_ops' : singleops
         }
         return template % dictionary
@@ -580,14 +583,39 @@ class SpikePopulationGenerator(PopulationGenerator):
         
         return code
     
+    def generate_reset_targets(self):
+        code = ''
+        for target in self.desc['targets']:
+            code += """
+        g_%(target)s_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
+""" % {'target': target } 
+
+        return code
+
+    def generate_reset_targets_body(self):
+        code = ''
+        for target in self.desc['targets']:
+            code += """
+    for(auto it = g_%(target)s_.begin(); it != g_%(target)s_.end(); it++)
+    {
+        (*it) = 0.0;
+    }       
+""" % {'target': target } 
+        return code
+        
     def generate_inc_targets(self):
         code = ''
         for target in self.desc['targets']:
             code += """
     void inc_g_%(target)s(int rank, DATA_TYPE value) 
     { 
-        g_%(target)s_[rank] += value; 
-        //std::cout << rank << ", " << value << std::endl; 
+        #pragma omp critical
+        {
+            g_%(target)s_[rank] += value; 
+        #ifdef _DEBUG
+            std::cout << rank << ", " << value << " => "<< g_%(target)s_[rank] << std::endl;
+        #endif
+        } 
     }
 """ % {'target': target } 
 
