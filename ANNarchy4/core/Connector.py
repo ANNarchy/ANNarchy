@@ -60,7 +60,7 @@ def all2all(pre, post, weights, delays=0.0, allow_self_connections=False):
             except:
                 d = delays
 
-            synapses[(post_neur, pre_neur)] = { 'w': w, 'd': d }
+            synapses[(pre_neur, post_neur)] = { 'w': w, 'd': d }
             
     return synapses
 
@@ -94,7 +94,7 @@ def gaussian(pre, post, sigma, amp, delays=0.0, limit=0.01):
                     d = delays.get_value()
                 except:
                     d = delays
-                synapses[(post_neur, pre_neur)] = { 'w': value, 'd': d }
+                synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }
                     
     return synapses
     
@@ -128,6 +128,6 @@ def dog(pre, post, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.0
                     d = delays.get_value()
                 except:
                     d = delays
-                synapses[(post_neur, pre_neur)] = { 'w': value, 'd': d }
+                synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }
                     
     return synapses    
