@@ -121,54 +121,26 @@ class Projection(object):#Descriptor):
         """
         build up the dendrites from the list of synapses
         """
-        if isinstance(self.pre.neuron_type, RateNeuron) and isinstance(self.post.neuron_type, RateNeuron):
-            print 'connections between rate coded populations'
-            #
-            # the synapse objects are stored as pre-post pairs.
-            dendrites = {} 
-            
-            for conn, data in synapses.iteritems():
-                try:
-                    dendrites[conn[0]]['rank'].append(conn[1])
-                    dendrites[conn[0]]['weight'].append(data['w'])
-                    dendrites[conn[0]]['delay'].append(data['d'])
-                except KeyError:
-                    dendrites[conn[0]] = { 'rank': [conn[1]], 'weight': [data['w']], 'delay': [data['d']] }
-            
-            ret_value = []
-            ret_ranks = []
-            for post_id, data in dendrites.iteritems():
-                ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
-                ret_ranks.append(post_id)
-            
-            return ret_value, ret_ranks
-            
-        elif isinstance(self.pre.neuron_type, SpikeNeuron) and isinstance(self.post.neuron_type, SpikeNeuron):
-            print 'connections between spike coded populations'
-            #
-            # the synapse objects are stored as pre-post pairs. For mean_rate, so we need to invert the creation.
-            dendrites = {} 
-            
-            for conn, data in synapses.iteritems():
-                try:
-                    dendrites[conn[0]]['rank'].append(conn[1])
-                    dendrites[conn[0]]['weight'].append(data['w'])
-                    dendrites[conn[0]]['delay'].append(data['d'])
-                except KeyError:
-                    dendrites[conn[0]] = { 'rank': [conn[1]], 'weight': [data['w']], 'delay': [data['d']] }
-            
-            ret_value = []
-            ret_ranks = []
-            for post_id, data in dendrites.iteritems():
-                ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
-                ret_ranks.append(post_id)
-            
-            return ret_value, ret_ranks
-            
-        else:
-            Global._error("pattern between spike and rate populations are not allowed")
-            return [],[]
+        #
+        # the synapse objects are stored as pre-post pairs.
+        dendrites = {} 
         
+        for conn, data in synapses.iteritems():
+            try:
+                dendrites[conn[1]]['rank'].append(conn[0])
+                dendrites[conn[1]]['weight'].append(data['w'])
+                dendrites[conn[1]]['delay'].append(data['d'])
+            except KeyError:
+                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [data['w']], 'delay': [data['d']] }
+        
+        ret_value = []
+        ret_ranks = []
+        for post_id, data in dendrites.iteritems():
+            ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
+            ret_ranks.append(post_id)
+        
+        return ret_value, ret_ranks
+            
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
         self.initialized = True  
