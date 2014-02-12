@@ -85,6 +85,8 @@ public:
     
     int getNeuronCount() { return nbNeurons_; }
     
+    void prepareNeurons();
+    
     void resetToInit();
     
     void localMetaStep(int neur_rank);
@@ -98,8 +100,6 @@ public:
     void propagateSpike();
     
     void reset();
-
-%(inc_targets)s
 
 %(global_ops_access)s
     
@@ -115,6 +115,8 @@ private:
 
     std::vector<int> propagate_;    ///< neurons which will propagate their spike
     std::vector<int> reset_;    ///< neurons which will reset after current eval
+    
+    %(friend)s
 };
 #endif
 """
@@ -193,30 +195,36 @@ using namespace ANNarchy_Global;
     Network::instance()->addPopulation(this);
 }
 
-%(class)s::~%(class)s() {
+%(class)s::~%(class)s() 
+{
 #ifdef _DEBUG
     std::cout << "%(class)s::Destructor" << std::endl;
 #endif
 %(destructor)s
 }
 
-void %(class)s::resetToInit() {
+void %(class)s::resetToInit() 
+{
 %(resetToInit)s
 }
 
-void %(class)s::localMetaStep(int i) {
+void %(class)s::localMetaStep(int i) 
+{
 %(localMetaStep)s
 }
 
-void %(class)s::globalMetaStep() {
+void %(class)s::globalMetaStep() 
+{
 %(globalMetaStep)s        
 }
 
-void %(class)s::globalOperations() {
+void %(class)s::globalOperations() 
+{
 %(global_ops)s
 }
 
-void %(class)s::record() {
+void %(class)s::record() 
+{
 %(record)s
 }
 
@@ -253,44 +261,52 @@ using namespace ANNarchy_Global;
 #endif
 %(constructor)s
 
-    std::vector<bool>(nbNeurons_, false);
+    spiked_ = std::vector<bool>(nbNeurons_, false);
     
     Network::instance()->addPopulation(this);
 }
 
-%(class)s::~%(class)s() {
+%(class)s::~%(class)s() 
+{
 #ifdef _DEBUG
     std::cout << "%(class)s::Destructor" << std::endl;
 #endif
 %(destructor)s
 }
 
-void %(class)s::resetToInit() {
+void %(class)s::prepareNeurons() 
+{
+%(prepare)s
+}
+
+void %(class)s::resetToInit() 
+{
 %(resetToInit)s
 }
 
-void %(class)s::localMetaStep(int i) {
+void %(class)s::localMetaStep(int i) 
+{
 %(localMetaStep)s    
 }
 
-void %(class)s::globalMetaStep() {
+void %(class)s::globalMetaStep() 
+{
     spiked_ = std::vector<bool>(nbNeurons_, false);
 
 %(globalMetaStep)s    
 }
 
-void %(class)s::globalOperations() {
-
+void %(class)s::globalOperations() 
+{
     reset();
-
-    %(reset_targets)s
-       
+    
     propagateSpike();
 
 %(global_ops)s
 }
 
-void %(class)s::record() {
+void %(class)s::record() 
+{
 %(record)s
 }
 

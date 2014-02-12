@@ -1,5 +1,8 @@
 from ANNarchy4 import *
 
+from pylab import show, figure, subplot, legend, close
+
+
 Izhikevitch = SpikeNeuron(
 parameters="""
     I_in = 0.0
@@ -8,10 +11,12 @@ parameters="""
     b = 0.2 : population
     c = -65.0 : population
     d = 2.0 : population
+    tau = 10.0 : population
 """,
 equations="""
     noise = Normal(0.0,1.0)
-    I = sum(exc) + sum(inh) + noise * noise_scale : init = 0.0
+    I = g_exc + noise * noise_scale : init = 0.0
+    tau * dg_exc / dt = -g_exc
     dv/dt = 0.04 * v * v + 5*v + 140 -u + I
     du/dt = a * (b*v - u) : init = 0.2
 """,
@@ -24,8 +29,14 @@ reset = """
 """
 )
 
-Small = Population((4, 4), Izhikevitch)
-Middle = Population((2,2), Izhikevitch)
+Simple=SpikeSynapse(
+pre_spike="""
+    g_target += value
+"""                    
+)
+
+Small = Population(10, Izhikevitch)
+Middle = Population(5, Izhikevitch)
 
 testAll2AllSpike = Projection( 
     pre = Small, 
@@ -36,9 +47,54 @@ testAll2AllSpike = Projection(
 
 compile()
 
+to_record = [{'pop': Small, 'var': 'v'}, 
+             {'pop': Small, 'var': 'g_exc'},
+             {'pop': Middle, 'var': 'v'}, 
+             {'pop': Middle, 'var': 'g_exc'} ]
+
+record ( to_record )
+
 for i in range(1000):
-    print '\n',i,'\n'
+    print i
     simulate(1)
 
+data = get_record( to_record )
+
+close('all')
+#
+# plot pre neurons
+for i in range(Small.size):
+    fig = figure()
+    fig.suptitle(Small.name+', neuron '+str(i))
+    
+    ax = subplot(211)
+    
+    ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
+    ax.legend(loc=2)
+    
+    ax = subplot(212)
+    
+    ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
+    ax.legend(loc=2)
+
+#
+# plot post neurons
+for i in range(Middle.size):
+    fig = figure()
+    fig.suptitle(Middle.name+', neuron '+str(i))
+    
+    ax = subplot(211)
+    
+    ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
+    ax.legend(loc=2)
+    
+    ax = subplot(212)
+    
+    ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
+    ax.legend(loc=2)
+
+show()
+
+print data
 print 'done'
 raw_input()

@@ -31,6 +31,7 @@ public:
 
 	virtual ~Population();
 
+	virtual void prepareNeurons() {};
 	virtual void metaSum();
 	virtual void localMetaStep(int neur_rank) {};
 	virtual void globalMetaStep() {};

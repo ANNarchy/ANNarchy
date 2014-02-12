@@ -23,11 +23,14 @@ parameters="""
     b = 0.2 : population
     c = -65.0 : population
     d = 2.0 : population
+    tau = 10: population
 """,
 extra_values = param_dict,
 equations="""
+    tau * dg_exc / dt = -g_exc
+    tau * dg_inh / dt = -g_inh
     noise = Normal(0.0,1.0)
-    I = sum(exc) - sum(inh) + noise * noise_scale : init = 0.0
+    I = g_exc + g_inh + noise * noise_scale : init = 0.0
     dv/dt = 0.04 * v * v + 5*v + 140 -u + I
     du/dt = a * (b*v - u) : init = 0.2
 """,
@@ -38,12 +41,6 @@ reset = """
     v = c
     u = u+d
 """
-)
-
-Simple = SpikeSynapse(
-    pre_spike = """ 
-        g_%target += 1 
-    """
 )
 
 Excitatory = Population(name='Excitatory', geometry=(800), neuron=Izhikevitch)
@@ -62,7 +59,6 @@ exc_exc = Projection(
     pre=Excitatory, 
     post=Excitatory, 
     target='exc',
-    synapse = Simple,
     connector=all2all(pre=Excitatory, post=Excitatory, weights=Uniform(0,0.5))
 )
    
@@ -70,7 +66,6 @@ exc_inh = Projection(
     pre=Excitatory, 
     post=Inhibitory, 
     target='exc',
-    synapse = Simple,
     connector=all2all(pre=Excitatory, post=Inhibitory, weights=Uniform(0,0.5))
 )
   
@@ -78,7 +73,6 @@ inh_exc = Projection(
     pre=Inhibitory, 
     post=Excitatory, 
     target='inh',
-    synapse = Simple,
     connector= all2all(pre=Inhibitory, post=Excitatory, weights= Uniform(-1.0,0.0))
 )
   
@@ -86,7 +80,6 @@ inh_inh = Projection(
     pre=Inhibitory, 
     post=Inhibitory, 
     target='inh',
-    synapse = Simple,
     connector=all2all(pre=Inhibitory, post=Inhibitory, weights=Uniform(-1.0,0.0) )
 )
 

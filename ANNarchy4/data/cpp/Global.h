@@ -26,6 +26,8 @@
 //	stl and other common things
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <functional>
 #include <deque>
 #include <iostream>
 

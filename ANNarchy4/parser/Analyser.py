@@ -101,18 +101,13 @@ class Analyser(object):
                 # Replace sum(target) with sum(i, rk_target)
                 for target in pop.description['targets']:
                     if target in pop.targets:
-                        if pop.description['type']=='rate':
-                            code = code.replace('sum('+target+')', 'sum(i, ' + \
+                        code = code.replace('sum('+target+')', 'sum(i, ' + \
                                             str(pop.targets.index(target))+')')
-                        else:
-                            code = code.replace('sum('+target+')', 'g_'+\
-                                            target+'_[i]')
                     else: # used in the eq, but not connected
                         code = code.replace('sum('+target+')', '0.0')
                 
                 # Store the result
                 variable['cpp'] = code
-       
             
         # Generate C++ code for all projection variables 
         for proj in self.projections:

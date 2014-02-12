@@ -86,41 +86,54 @@ void Network::run(int steps) {
             #pragma omp master
             std::cout << "current step " << i << " ANNarchy "<< ANNarchy_Global::time << std::endl;
         #endif
-            // update time in all populations
+
+            //
+            // parallel population wise
+            #pragma omp for
+            for(int p=0; p<(int)populations_.size(); p++)
+            {
+                populations_[p]->prepareNeurons();
+            }
+
+            //
+            // parallel neuron wise
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->metaSum();
             }
             #pragma omp barrier
 
+            //
+            // parallel neuron wise
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->metaStep();
             }
             #pragma omp barrier
 
-            #pragma omp master
+            //
+            // parallel population wise
+            #pragma omp for
+            for(int p=0; p<(int)populations_.size(); p++)
             {
-                for(int p=0; p<(int)populations_.size(); p++)
-                {
-                    populations_[p]->globalOperations();
-                }
+                populations_[p]->globalOperations();
             }
-            #pragma omp barrier
 
+            //
+            // parallel neuron wise
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->metaLearn();
             }
             #pragma omp barrier
 
-            #pragma omp master
+            //
+            // parallel population wise
+            #pragma omp for
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->record();
             }
-
-            #pragma omp barrier
 
             #pragma omp master
             {

@@ -25,6 +25,8 @@ from ANNarchy4.core import Global
 from ANNarchy4.generator.PopulationTemplates import *
 from ANNarchy4.core.Random import *
 
+import re
+
 class PopulationGenerator(object):
     """ Base class for generating C++ code from a population description. """
     def __init__(self, name, desc):
@@ -472,30 +474,65 @@ class SpikePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a spike population description. """
     def __init__(self, name, desc):
         PopulationGenerator.__init__(self, name, desc)
-
-    def generate_constructor(self):
-        constructor, reset = PopulationGenerator.generate_constructor(self)
-    
-        for target in self.desc['targets']:
-            code = """
-    g_%(target)s_ = std::vector<DATA_TYPE>(nbNeurons_, 0);
-""" % {'target': target } 
-            
-            constructor += code
-            reset += code
-            
-        return constructor, reset
+        
+        self._app_proj = []
+        for proj in Global._projections:
+            if (self.desc['name'] == proj.post.name) and \
+               (proj.target in proj.post.targets):
+                self._app_proj.append(proj)
     
     def generate_members_declaration(self):
-        code = PopulationGenerator.generate_members_declaration(self)
-        
-        for target in self.desc['targets']:
-            code += """
-    std::vector<DATA_TYPE> g_%(target)s_;
-""" % {'target': target } 
-        
-        return code
+        members = PopulationGenerator.generate_members_declaration(self)
+
+        if self._app_proj:
+            for variable in self.desc['variables']:
+                if re.findall("(?<=g_)[A-Za-z]+", variable['name']):
+                     members += """
+    // %(name)s_ : local
+    std::vector<%(type)s> %(name)s_;
+""" % {'name' : variable['name']+'_new', 'type': variable['ctype']}
+
+        return members
     
+    def generate_constructor(self):
+        constructor, reset = PopulationGenerator.generate_constructor(self)
+
+        if self._app_proj:
+            for variable in self.desc['variables']:
+                if re.findall("(?<=g_)[A-Za-z]+", variable['name']):
+                    constructor += """
+    %(name)s_new_ = std::vector<%(type)s> (nbNeurons_, %(init)s);
+""" % {'name' : variable['name'], 
+       'type': variable['ctype'], 
+       'init' : str(0.0)
+       }
+                    reset += """
+    %(name)s_new_ = std::vector<%(type)s> (nbNeurons_, %(init)s);
+""" % {'name' : variable['name'], 
+       'type': variable['ctype'], 
+       'init' : str(0.0)
+       }       
+ 
+        return constructor, reset
+    
+    def generate_prepare_neurons(self):
+        prepare = ""
+        if self._app_proj:
+            for variable in self.desc['variables']:
+                if re.findall("(?<=g_)[A-Za-z]+", variable['name']):
+                     prepare += """
+    
+    // add the new conductance to the old one
+    // and reset the new conductance values
+    std::transform(%(name)s_.begin(), %(name)s_.end(),
+                   %(name)s_new_.begin(), %(name)s_.begin(),
+                   std::plus<%(type)s>());
+    std::fill(%(name)s_new_.begin(), %(name)s_new_.end(), 0.0);
+    
+""" % {'name' : variable['name'], 'type': variable['ctype']}
+        
+        return prepare
+        
     def generate_header(self):
         " Generates the C++ header file."        
         # Private members declarations
@@ -510,8 +547,8 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Random variables
         randoms = self.generate_random_definition()
         
-        inc_targets = self.generate_inc_targets()
-        
+        # connected projections
+        friends = self.generate_friend_decl()
         # Generate the code
         template = spike_population_header
         dictionary = {
@@ -521,10 +558,19 @@ class SpikePopulationGenerator(PopulationGenerator):
             'global_ops_method' : global_ops_method,
             'member' : members,
             'random' : randoms,
-            'inc_targets' : inc_targets,
+            'friend' : friends
         }
         return template % dictionary
 
+    def generate_friend_decl(self):
+        code = ""
+        
+        for proj in Global._projections:
+            if (self.desc['name'] == proj.post.name) and \
+               (proj.target in proj.post.targets):
+                code+= """friend class %(name)s;""" % { 'name': proj.name }
+                
+        return code    
     
     def generate_body(self):
         " Generates the C++ .cpp file"
@@ -532,6 +578,8 @@ class SpikePopulationGenerator(PopulationGenerator):
         constructor, reset = self.generate_constructor()
         # Destructor
         destructor = self.generate_destructor()
+        # prepare neurons
+        prepare = self.generate_prepare_neurons()
         # Single operations
         singleops, globalops = self.generate_globalops()
         # Record
@@ -542,7 +590,6 @@ class SpikePopulationGenerator(PopulationGenerator):
 
         # reset event
         reset_event = self.generate_reset_event()
-        reset_targets = self.generate_reset_targets_body()
         
         # Generate the code
         template = spike_population_body
@@ -550,13 +597,13 @@ class SpikePopulationGenerator(PopulationGenerator):
             'class' : self.name,
             'constructor' : constructor,
             'destructor' : destructor,
+            'prepare': prepare,
             'resetToInit' : reset,
             'localMetaStep' : local_metastep,
             'globalMetaStep' : global_metastep,
             'global_ops' : globalops,
             'record' : record,
             'reset_event': reset_event,
-            'reset_targets': reset_targets,
             'single_global_ops' : singleops
         }
         return template % dictionary
@@ -581,42 +628,4 @@ class SpikePopulationGenerator(PopulationGenerator):
     def generate_reset_event(self):
         code = self.desc['spike']['spike_reset'].replace('[i]','[(*it)]')
         
-        return code
-    
-    def generate_reset_targets(self):
-        code = ''
-        for target in self.desc['targets']:
-            code += """
-        g_%(target)s_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
-""" % {'target': target } 
-
-        return code
-
-    def generate_reset_targets_body(self):
-        code = ''
-        for target in self.desc['targets']:
-            code += """
-    for(auto it = g_%(target)s_.begin(); it != g_%(target)s_.end(); it++)
-    {
-        (*it) = 0.0;
-    }       
-""" % {'target': target } 
-        return code
-        
-    def generate_inc_targets(self):
-        code = ''
-        for target in self.desc['targets']:
-            code += """
-    void inc_g_%(target)s(int rank, DATA_TYPE value) 
-    { 
-        #pragma omp critical
-        {
-            g_%(target)s_[rank] += value; 
-        #ifdef _DEBUG
-            std::cout << rank << ", " << value << " => "<< g_%(target)s_[rank] << std::endl;
-        #endif
-        } 
-    }
-""" % {'target': target } 
-
         return code

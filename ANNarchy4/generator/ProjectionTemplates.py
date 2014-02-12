@@ -315,7 +315,8 @@ void %(class)s::preEvent(int rank)
     std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
     std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
 #endif
-    post_population_->inc_g_%(target)s(rank, 0.1);
+    post_population_->g_%(target)s_new_[post_neuron_rank_] += value_[rank];
+    //std::cout << post_population_->g_%(target)s_new_[post_neuron_rank_] << std::endl;
 }
 
 void %(class)s::postEvent() 
