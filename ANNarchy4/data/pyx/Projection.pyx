@@ -58,6 +58,8 @@ cdef extern from "../build/Projection.h":
         int removeSynapse(int rank)
         
         int getTarget() 
+        
+        void invertRanks()
 #
 # c++ class
 cdef extern from "../build/ANNarchy.h":
@@ -72,9 +74,11 @@ cdef class LocalProjection:
 
     cdef Projection* cInstance
     cdef post_rank
+    cdef spike
     
     def __cinit__(self, proj_type, preID, postID, rank, target, spike=False):
         self.post_rank = rank
+        self.spike = spike
         self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike)
         
     def init(self, ranks, values, delays):
@@ -147,3 +151,5 @@ cdef class LocalProjection:
 
         def __set__(self, rank):
             self.cInstance.setRank(rank)
+            if(self.spike):
+                self.cInstance.invertRanks()

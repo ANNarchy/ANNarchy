@@ -79,6 +79,8 @@ public:
     
     ~%(class)s();
     
+    void invertRanks();
+    
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
     void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
@@ -94,7 +96,7 @@ public:
     void postEvent();
     
     bool isPreSynaptic(Population* pop) { return pop == pre_population_; }
-    
+        
 %(access)s
 private:
 %(member)s
@@ -246,7 +248,8 @@ spike_projection_body = \
 #include "Global.h"
 using namespace ANNarchy_Global;
         
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : Projection() {
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : Projection() 
+{
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
     
@@ -261,10 +264,12 @@ using namespace ANNarchy_Global;
     {
         pre_population_->addSpikeTarget(this);
     }
+    
 %(init)s
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() {
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() 
+{
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
@@ -283,12 +288,25 @@ using namespace ANNarchy_Global;
 %(init)s
 }
 
-%(class)s::~%(class)s() {
+%(class)s::~%(class)s() 
+{
 #ifdef _DEBUG
     std::cout<<"%(class)s::Destructor"<<std::endl;
 #endif
 
 %(destructor)s
+}
+
+void %(class)s::invertRanks()
+{
+    inv_rank_.clear();
+    
+    for(int i = 0; i < rank_.size(); i++)
+    {
+        auto tmp = std::pair<int,int>(rank_[i], i);
+        inv_rank_.insert( tmp );
+        
+    }
 }
 
 void %(class)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
@@ -311,12 +329,11 @@ void %(class)s::globalLearn() {
 void %(class)s::preEvent(int rank) 
 {
 #ifdef _DEBUG
-    std::cout << "Emitted a pre-synaptic event" << std::endl;
+    std::cout << "Emitted a pre-synaptic event: "<< rank << " to " << post_neuron_rank_  << std::endl;
     std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
     std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
 #endif
-    post_population_->g_%(target)s_new_[post_neuron_rank_] += value_[rank];
-    //std::cout << post_population_->g_%(target)s_new_[post_neuron_rank_] << std::endl;
+    post_population_->g_%(target)s_new_[post_neuron_rank_] += value_[inv_rank_[rank]];
 }
 
 void %(class)s::postEvent() 

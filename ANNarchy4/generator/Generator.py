@@ -391,7 +391,7 @@ clean:
                     Global._error('No correct setup could be found. Do you have Python installed?')
                     exit(0)
             except subprocess.CalledProcessError:
-                Global._error('Compilation failed.\nCheck the compilation logs in annarchy/compile_sterr.log')
+                Global._error('Compilation failed.\nCheck the compilation logs in annarchy/compile_stderr.log')
                 exit(0)
     
         else: # Windows: to test....

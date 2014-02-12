@@ -100,11 +100,16 @@ public:
     virtual void preEvent(int rank) {}
 
     virtual void postEvent() {}
+
+    virtual void invertRanks() { }
+
 protected:
     int post_neuron_rank_;
     int target_;
 
-    std::vector<int> rank_;
+    std::vector<int> rank_; ///< pre ranks for connection post->pre
+    std::map<int, int> inv_rank_; ///< pre-ranks of synapses
+
     std::vector<int> delay_;
     std::vector<DATA_TYPE> value_;
 

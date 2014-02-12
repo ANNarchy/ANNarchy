@@ -6,7 +6,7 @@ from pylab import show, figure, subplot, legend, close
 Izhikevitch = SpikeNeuron(
 parameters="""
     I_in = 0.0
-    noise_scale = 5.0 : population
+    noise_scale = 0.0 : population
     a = 0.02 : population
     b = 0.2 : population
     c = -65.0 : population
@@ -17,7 +17,7 @@ equations="""
     noise = Normal(0.0,1.0)
     I = g_exc + noise * noise_scale : init = 0.0
     tau * dg_exc / dt = -g_exc
-    dv/dt = 0.04 * v * v + 5*v + 140 -u + I
+    dv/dt = 0.04 * v * v + 5*v + 140 -u + I : init = -65.0
     du/dt = a * (b*v - u) : init = 0.2
 """,
 spike = """
@@ -30,13 +30,32 @@ reset = """
 )
 
 Simple=SpikeSynapse(
+parameters="""
+    value = 0.0
+    tau_pre = 10
+    tau_post = 1
+    cApre = 1
+    cApost = 0
+""",
+equations = """
+    tau_pre * dApre/dt = -Apre
+    tau_post * dAPost/dt = -Apost
+""",
 pre_spike="""
+    Apre += cApre
     g_target += value
-"""                    
+    value += Apost
+""",              
+post_spike="""
+    Apost += cApost
+    value += Apre
+"""      
 )
 
-Small = Population(10, Izhikevitch)
-Middle = Population(5, Izhikevitch)
+Small = Population(5, Izhikevitch)
+Small.noise_scale = 5.0
+Middle = Population(1, Izhikevitch)
+Middle.noise_scale = 0.0
 
 testAll2AllSpike = Projection( 
     pre = Small, 
@@ -55,46 +74,47 @@ to_record = [{'pop': Small, 'var': 'v'},
 record ( to_record )
 
 for i in range(1000):
-    print i
     simulate(1)
 
 data = get_record( to_record )
 
 close('all')
-#
-# plot pre neurons
-for i in range(Small.size):
-    fig = figure()
-    fig.suptitle(Small.name+', neuron '+str(i))
-    
-    ax = subplot(211)
-    
-    ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
-    ax.legend(loc=2)
-    
-    ax = subplot(212)
-    
-    ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
-    ax.legend(loc=2)
 
+#===============================================================================
+# #
+# #plot pre neurons
+# for i in range(Small.size):
+#     fig = figure()
+#     fig.suptitle(Small.name+', neuron '+str(i))
+#      
+#     ax = subplot(211)
+#      
+#     ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
+#     ax.legend(loc=2)
+#      
+#     ax = subplot(212)
+#      
+#     ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
+#     ax.legend(loc=2)
+#===============================================================================
+ 
 #
 # plot post neurons
 for i in range(Middle.size):
     fig = figure()
     fig.suptitle(Middle.name+', neuron '+str(i))
-    
+     
     ax = subplot(211)
-    
+     
     ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
     ax.legend(loc=2)
-    
+     
     ax = subplot(212)
-    
+     
     ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
     ax.legend(loc=2)
-
+ 
 show()
 
-print data
 print 'done'
 raw_input()
