@@ -328,12 +328,7 @@ void %(class)s::globalLearn() {
 
 void %(class)s::preEvent(int rank) 
 {
-#ifdef _DEBUG
-    std::cout << "Emitted a pre-synaptic event: "<< rank << " to " << post_neuron_rank_  << std::endl;
-    std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
-    std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
-#endif
-    post_population_->g_%(target)s_new_[post_neuron_rank_] += value_[inv_rank_[rank]];
+%(pre_event)s
 }
 
 void %(class)s::postEvent() 
@@ -392,6 +387,20 @@ psp_code_body = \
         }
     }
 """ 
+
+# Template for the preEvent() method of a projection
+#
+# * target: projection target name 
+#
+pre_event_body="""
+#ifdef _DEBUG
+    std::cout << "Emitted a pre-synaptic event: "<< rank << " to " << post_neuron_rank_  << std::endl;
+    std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
+    std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
+#endif
+
+%(eq)s
+"""
 
 # Cython file for a rate population
 #

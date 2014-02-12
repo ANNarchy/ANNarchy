@@ -71,7 +71,7 @@ class Analyser(object):
                    
             if 'raw_spike' in pop.description.keys() and 'raw_reset' in pop.description.keys():
                 pop.description['spike'] = _extract_spike_variable(pop.description)
-            
+
             # Translate the equation to C++
             for variable in pop.description['variables']:
                 eq = variable['transformed_eq']
@@ -126,6 +126,12 @@ class Analyser(object):
              
             # Extract RandomDistribution objects
             proj.description['random_distributions'] = _extract_randomdist(proj)
+             
+            if proj.description['raw_pre_spike']:          
+                proj.description['pre_spike'] = _extract_pre_spike_variable(proj.description)
+            
+            if proj.description['raw_post_spike']:
+                proj.description['post_spike'] = _extract_post_spike_variable(proj.description)
                         
             # Variables names for the parser which should be left untouched
             untouched = {}   
@@ -693,6 +699,44 @@ def _extract_spike_variable(pop_desc):
     
     return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': raw_reset_code}
 
+def _extract_pre_spike_variable(proj_desc):
+    pre_spike_var = []
+    
+    for tmp in _prepare_string(proj_desc['raw_pre_spike']):
+
+        name = _extract_name(tmp)
+        if name == "g_target":
+            name = name.replace("target", proj_desc['target'])
+            
+            translator = Equation(name, tmp, 
+                                  proj_desc['attributes'], 
+                                  proj_desc['local'], 
+                                  proj_desc['global'], 
+                                  type = 'inc')
+            eq = translator.parse()
+            lside, rside = eq.split('=')
+            
+            eq = "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_] =" +rside
+        else:
+            translator = Equation(name, tmp, 
+                                  proj_desc['attributes'], 
+                                  proj_desc['local'], 
+                                  proj_desc['global'], 
+                                  type = 'simple')
+            eq = translator.parse()
+            
+        #
+        # now we replace the [i] by presynaptic access
+        eq = eq.replace('[i]','[inv_rank_[rank]]')
+        pre_spike_var.append( { 'name': name, 'eq': eq } )
+
+    return pre_spike_var 
+
+def _extract_post_spike_variable(proj_desc):
+
+    for post_spike_line in proj_desc['raw_post_spike'].split('\n'):
+        print post_spike_line 
+    
 ####################################
 # Functions for string manipulation
 ####################################

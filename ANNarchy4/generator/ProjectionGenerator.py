@@ -337,6 +337,8 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         # Generate code for the local variables
         local_learn = self.generate_locallearn()
         
+        pre_event = self.generate_pre_event()
+        
         # Generate the code
         template = spike_projection_body
         dictionary = {         
@@ -349,7 +351,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'sum': psp, 
             'local': local_learn, 
             'global': global_learn,
-            'target': self.desc['target'] }
+            'pre_event': pre_event }
         return template % dictionary
     
     def generate_pyx(self):
@@ -367,6 +369,24 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         }
         return template % dictionary    
     
+    def generate_pre_event(self):
+        """ """
+        code = ""
+
+        # generate additional statements        
+        if 'pre_spike' in self.desc.keys():
+            for tmp in self.desc['pre_spike']:
+                code += """
+    %(eq)s
+""" % { 'eq' : tmp['eq'] }
+        
+        template = pre_event_body
+        dictionary = {
+            'eq' : code,
+            'target': self.desc['target']
+        }
+        return template % dictionary
+     
     def generate_psp(self):
         " Generates code for the computeSum() method depending on psp variable of the synapse."
         return ""

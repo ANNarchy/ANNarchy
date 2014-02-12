@@ -29,27 +29,32 @@ reset = """
 """
 )
 
-Simple=SpikeSynapse(
+Simple =SpikeSynapse(
+pre_spike="""
+    g_target += 1.0
+"""              
+)
+ 
+SimpleLearn=SpikeSynapse(
 parameters="""
-    value = 0.0
-    tau_pre = 10
-    tau_post = 1
-    cApre = 1
-    cApost = 0
+    tau_pre = 10 : population
+    tau_post = 1 : population
+    cApre = 1 : population
+    cApost = 0 : population
 """,
 equations = """
     tau_pre * dApre/dt = -Apre
-    tau_post * dAPost/dt = -Apost
+    tau_post * dApost/dt = -Apost
 """,
 pre_spike="""
     Apre += cApre
     g_target += value
     value += Apost
-""",              
-post_spike="""
-    Apost += cApost
-    value += Apre
-"""      
+"""#,              
+#post_spike="""
+#    Apost += cApost
+#    value += Apre
+#"""      
 )
 
 Small = Population(5, Izhikevitch)
@@ -60,7 +65,8 @@ Middle.noise_scale = 0.0
 testAll2AllSpike = Projection( 
     pre = Small, 
     post = Middle, 
-    target = 'exc', 
+    target = 'exc',
+    synapse = Simple,
     connector = all2all(pre = Small, post = Middle, weights=Uniform(0,1) )
 )
 
