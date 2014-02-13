@@ -734,10 +734,22 @@ def _extract_pre_spike_variable(proj_desc):
     return pre_spike_var 
 
 def _extract_post_spike_variable(proj_desc):
-
-    for post_spike_line in proj_desc['raw_post_spike'].split('\n'):
-        print post_spike_line 
+    post_spike_var = []
     
+    for tmp in _prepare_string(proj_desc['raw_post_spike']):
+
+        name = _extract_name(tmp)
+        translator = Equation(name, tmp, 
+                              proj_desc['attributes'], 
+                              proj_desc['local'], 
+                              proj_desc['global'], 
+                              type = 'simple')
+        eq = translator.parse()
+            
+        post_spike_var.append( { 'name': name, 'eq': eq } )
+
+    return post_spike_var    
+
 ####################################
 # Functions for string manipulation
 ####################################

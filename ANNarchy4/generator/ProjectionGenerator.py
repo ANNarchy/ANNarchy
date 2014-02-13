@@ -365,7 +365,9 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         # Generate code for the local variables
         local_learn = self.generate_locallearn()
         
+        # Generate code for the pre- and postsynaptic events
         pre_event = self.generate_pre_event()
+        post_event = self.generate_post_event()
         
         record = self.generate_record()
         
@@ -382,6 +384,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'local': local_learn, 
             'global': global_learn,
             'pre_event': pre_event,
+            'post_event': post_event,
             'record' : record }
         return template % dictionary
     
@@ -406,6 +409,9 @@ class SpikeProjectionGenerator(ProjectionGenerator):
 
         if 'post_spike' in self.desc.keys():
             for param in self.desc['post_spike']:
+                if param['name'] in self.desc['local']:
+                    continue
+                
                 code += """
     if ( record_%(var)s_ )
         recorded_%(var)s_.push_back(%(var)s_);
@@ -441,6 +447,24 @@ class SpikeProjectionGenerator(ProjectionGenerator):
 """ % { 'eq' : tmp['eq'] }
         
         template = pre_event_body
+        dictionary = {
+            'eq' : code,
+            'target': self.desc['target']
+        }
+        return template % dictionary
+
+    def generate_post_event(self):
+        """ """
+        code = ""
+
+        # generate additional statements        
+        if 'post_spike' in self.desc.keys():
+            for tmp in self.desc['post_spike']:
+                code += """
+    %(eq)s
+""" % { 'eq' : tmp['eq'] }
+        
+        template = post_event_body
         dictionary = {
             'eq' : code,
             'target': self.desc['target']

@@ -355,9 +355,7 @@ void %(class)s::preEvent(int rank)
 
 void %(class)s::postEvent() 
 {
-#ifdef _DEBUG
-    std::cout << "Emitted a post-synaptic event" << std::endl;
-#endif
+%(post_event)s
 }
 """
 
@@ -412,7 +410,7 @@ psp_code_body = \
 
 # Template for the preEvent() method of a projection
 #
-# * target: projection target name 
+# * eq: equations for the update 
 #
 pre_event_body="""
 #ifdef _DEBUG
@@ -422,6 +420,21 @@ pre_event_body="""
 #endif
 
 %(eq)s
+"""
+
+# Template for the postEvent() method of a projection
+#
+# * eq: equations for the update
+#
+post_event_body="""
+#ifdef _DEBUG
+    std::cout << "Emitted a post-synaptic event" << std::endl;
+#endif
+    for(int i = 0; i < rank_.size(); i++)
+    {
+%(eq)s
+    }
+    
 """
 
 # Cython file for a rate population

@@ -38,10 +38,10 @@ pre_spike="""
  
 SimpleLearn=SpikeSynapse(
 parameters="""
-    tau_pre = 100 : postsynaptic
-    tau_post = 1 : postsynaptic
+    tau_pre = 5 : postsynaptic
+    tau_post = 5 : postsynaptic
     cApre = 1 : postsynaptic
-    cApost = 0 : postsynaptic
+    cApost = 1 : postsynaptic
     value = 0.0
 """,
 equations = """
@@ -52,17 +52,17 @@ pre_spike="""
     Apre = Apre + cApre
     g_target += value
     value = value + Apost
-"""#,                  
-#post_spike="""
-#    Apost += cApost
-#    value += Apre
-#"""      
+""",                  
+post_spike="""
+    Apost = Apost + cApost
+    value = value + Apre
+"""      
 )
 
 Small = Population(5, Izhikevitch)
 Small.noise_scale = 5.0
 Middle = Population(1, Izhikevitch)
-Middle.noise_scale = 0.0
+Middle.noise_scale = 5.0
 
 testAll2AllSpike = Projection( 
     pre = Small, 

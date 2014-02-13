@@ -324,12 +324,16 @@ void %(class)s::propagateSpike() {
     {
         for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
         {
+            // emit a postsynaptic spike on outgoing projections
             for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
-            { 
-                if((*p_it)->isPreSynaptic(this))
-                    (*p_it)->preEvent(*n_it);
-                else
-                    (*p_it)->postEvent();
+            {
+                (*p_it)->preEvent(*n_it);
+            }
+            
+            // emit a postsynaptic spike on receiving projections
+            for( auto p_it = projections_[(*n_it)].begin(); p_it != projections_[(*n_it)].end(); p_it++)
+            {
+                (*p_it)->postEvent();
             }
         }
         
