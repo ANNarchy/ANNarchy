@@ -2,6 +2,7 @@ from ANNarchy4 import *
 
 from pylab import show, figure, subplot, legend, close
 
+#setup(verbose=True)
 
 Izhikevitch = SpikeNeuron(
 parameters="""
@@ -78,6 +79,8 @@ to_record = [{'pop': Small, 'var': 'v'},
              {'pop': Middle, 'var': 'g_exc'} ]
 
 record ( to_record )
+
+#testAll2AllSpike.dendrite(0).start_record('Apre')
 
 for i in range(1000):
     simulate(1)

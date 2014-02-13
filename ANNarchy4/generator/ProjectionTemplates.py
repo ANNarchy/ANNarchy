@@ -122,6 +122,15 @@ local_variable_access = \
     // Access methods for the local variable %(name)s
     std::vector<%(type)s> get%(Name)s() { return this->%(name)s_; }
     void set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
+    
+    %(type)s getSingle%(Name)s(int rank) { return this->%(name)s_[rank]; }
+    void setSingle%(Name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
+
+    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
+    void startRecord%(Name)s() { this->record_%(name)s_ = true; }
+    void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
+    void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
+    
 """
 
 # Template for a global variable
@@ -491,22 +500,22 @@ local_property_pyx = """
             else:
                 self.cInhInstance.set%(Name)s(np.ones(self.size)*value)
 
-#    def _get_single_%(name)s(self, rank):
-#        return self.cInhInstance.getSingle%(Name)s(rank)
-#
-#    def _set_single_%(name)s(self, rank, value):
-#        self.cInhInstance.setSingle%(Name)s(rank, value)
-#
-#    def _start_record_%(name)s(self):
-#        self.cInhInstance.startRecord%(Name)s()
+    def _get_single_%(name)s(self, rank):
+        return self.cInhInstance.getSingle%(Name)s(rank)
 
-#    def _stop_record_%(name)s(self):
-#        self.cInhInstance.stopRecord%(Name)s()
+    def _set_single_%(name)s(self, rank, value):
+        self.cInhInstance.setSingle%(Name)s(rank, value)
 
-#    def _get_recorded_%(name)s(self):
-#        tmp = np.array(self.cInhInstance.getRecorded%(Name)s())
-#        self.cInhInstance.clearRecorded%(Name)s()
-#        return tmp
+    def _start_record_%(name)s(self):
+        self.cInhInstance.startRecord%(Name)s()
+
+    def _stop_record_%(name)s(self):
+        self.cInhInstance.stopRecord%(Name)s()
+
+    def _get_recorded_%(name)s(self):
+        tmp = np.array(self.cInhInstance.getRecorded%(Name)s())
+        self.cInhInstance.clearRecorded%(Name)s()
+        return tmp
         
 """
 
@@ -540,12 +549,12 @@ local_wrapper_pyx = """
         # Local %(name)s
         vector[%(type)s] get%(Name)s()
         void set%(Name)s(vector[%(type)s] values)
-        #%(type)s getSingle%(Name)s(int rank)
-        #void setSingle%(Name)s(int rank, %(type)s values)
-        #void startRecord%(Name)s()
-        #void stopRecord%(Name)s()
-        #void clearRecorded%(Name)s()
-        #vector[vector[%(type)s]] getRecorded%(Name)s()
+        %(type)s getSingle%(Name)s(int rank)
+        void setSingle%(Name)s(int rank, %(type)s values)
+        void startRecord%(Name)s()
+        void stopRecord%(Name)s()
+        void clearRecorded%(Name)s()
+        vector[vector[%(type)s]] getRecorded%(Name)s()
 """
 
 # Global Cython wrapper

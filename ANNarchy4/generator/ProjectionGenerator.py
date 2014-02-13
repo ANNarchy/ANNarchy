@@ -54,16 +54,26 @@ class ProjectionGenerator(object):
     def generate_members_declaration(self):
         """ Returns private members declaration. 
         
-        Depend only on locality. rate should not be defined twice.
+        Depend only on locality. value should not be defined twice.
         """
         members = ""
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] in ['value', 'rank', 'delay', 'psp']: # Already declared
+            if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
-            if param['name'] in self.desc['local']: # local attribute
+
+            if param['name'] == 'value': # the vector is already declared
+                members += """
+    // value_ : local
+    bool record_%(name)s_; 
+    std::vector< std::vector<%(type)s> > recorded_%(name)s_;    
+""" % {'name' : param['name'], 'type': param['ctype']}
+
+            elif param['name'] in self.desc['local']: # local attribute
                 members += """
     // %(name)s_ : local
     std::vector<%(type)s> %(name)s_;  
+    bool record_%(name)s_; 
+    std::vector< std::vector<%(type)s> > recorded_%(name)s_;    
 """ % {'name' : param['name'], 'type': param['ctype']}
 
             elif param['name'] in self.desc['global']: # global attribute
@@ -81,13 +91,12 @@ class ProjectionGenerator(object):
         """
         members = ""
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] in ['value', 'rank', 'delay', 'psp']: # Already declared
+            if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
             if param['name'] in self.desc['local']: # local attribute
                 members += local_variable_access % {'name' : param['name'], 
                                                     'Name': param['name'].capitalize(),
                                                     'type': param['ctype']}
-
             elif param['name'] in self.desc['global']: # global attribute
                 members += global_variable_access % {'name' : param['name'], 
                                                      'Name': param['name'].capitalize(),
@@ -132,7 +141,7 @@ class ProjectionGenerator(object):
     def generate_cwrappers(self):
         "Parts of the C++ header which should be acessible to Cython"
         code = ""
-        
+
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
@@ -216,7 +225,6 @@ class RateProjectionGenerator(ProjectionGenerator):
         return template % dictionary
     
     def generate_pyx(self):
-        
         # Get the C++ methods
         cwrappers = self.generate_cwrappers()
         # Get the python functions
@@ -358,6 +366,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         
         # Get the C++ methods
         cwrappers = self.generate_cwrappers()
+        
         # Get the python functions
         pyfunctions = self.generate_pyfunctions()
         # Generate the code

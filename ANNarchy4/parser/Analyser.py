@@ -126,12 +126,13 @@ class Analyser(object):
              
             # Extract RandomDistribution objects
             proj.description['random_distributions'] = _extract_randomdist(proj)
-             
-            if proj.description['raw_pre_spike']:          
-                proj.description['pre_spike'] = _extract_pre_spike_variable(proj.description)
             
-            if proj.description['raw_post_spike']:
-                proj.description['post_spike'] = _extract_post_spike_variable(proj.description)
+            if proj.description['type'] == 'spike': 
+                if proj.description['raw_pre_spike']:          
+                    proj.description['pre_spike'] = _extract_pre_spike_variable(proj.description)
+                
+                if proj.description['raw_post_spike']:
+                    proj.description['post_spike'] = _extract_post_spike_variable(proj.description)
                         
             # Variables names for the parser which should be left untouched
             untouched = {}   

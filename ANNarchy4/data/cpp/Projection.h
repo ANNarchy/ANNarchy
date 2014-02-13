@@ -72,7 +72,6 @@ public:
 	void setRank(std::vector<int> rank) { rank_ = rank; }
     
 	std::vector<DATA_TYPE> getValue() { return value_; }
-	
 	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
 	
 	DATA_TYPE getDt() { return dt_; }
