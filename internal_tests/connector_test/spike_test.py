@@ -38,20 +38,21 @@ pre_spike="""
  
 SimpleLearn=SpikeSynapse(
 parameters="""
-    tau_pre = 10 : population
+    tau_pre = 100 : population
     tau_post = 1 : population
     cApre = 1 : population
     cApost = 0 : population
+    weight = 1.0
 """,
 equations = """
     tau_pre * dApre/dt = -Apre
     tau_post * dApost/dt = -Apost
 """,
 pre_spike="""
-    Apre += cApre
-    g_target += value
-    value += Apost
-"""#,              
+    Apre = Apre + cApre
+    g_target += weight
+
+"""#,    weight += Apost              
 #post_spike="""
 #    Apost += cApost
 #    value += Apre
@@ -67,9 +68,10 @@ testAll2AllSpike = Projection(
     pre = Small, 
     post = Middle, 
     target = 'exc',
-    synapse = Simple,
+    synapse = SimpleLearn,
     connector = all2all(pre = Small, post = Middle, weights=Uniform(0,1) )
 )
+testAll2AllSpike.weight = Normal(0.0,1.0)
 
 compile()
 
@@ -80,32 +82,33 @@ to_record = [{'pop': Small, 'var': 'v'},
 
 record ( to_record )
 
-#testAll2AllSpike.dendrite(0).start_record('Apre')
+testAll2AllSpike.dendrite(0).start_record('Apre')
+testAll2AllSpike.dendrite(0).start_record('Apost')
 
 for i in range(1000):
     simulate(1)
 
 data = get_record( to_record )
+Apre = testAll2AllSpike.dendrite(0).get_record('Apre', as_1D=True)
+Apost = testAll2AllSpike.dendrite(0).get_record('Apost', as_1D=True)
 
 close('all')
 
-#===============================================================================
-# #
-# #plot pre neurons
-# for i in range(Small.size):
-#     fig = figure()
-#     fig.suptitle(Small.name+', neuron '+str(i))
-#      
-#     ax = subplot(211)
-#      
-#     ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
-#     ax.legend(loc=2)
-#      
-#     ax = subplot(212)
-#      
-#     ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
-#     ax.legend(loc=2)
-#===============================================================================
+#
+#plot pre neurons
+for i in range(Small.size):
+    fig = figure()
+    fig.suptitle(Small.name+', neuron '+str(i))
+      
+    ax = subplot(211)
+      
+    ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
+    ax.legend(loc=2)
+      
+    ax = subplot(212)
+      
+    ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
+    ax.legend(loc=2)
  
 #
 # plot post neurons
@@ -113,15 +116,29 @@ for i in range(Middle.size):
     fig = figure()
     fig.suptitle(Middle.name+', neuron '+str(i))
      
-    ax = subplot(211)
+    ax = subplot(411)
      
     ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
     ax.legend(loc=2)
      
-    ax = subplot(212)
+    ax = subplot(412)
      
     ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
     ax.legend(loc=2)
+    
+    ax = subplot(413)
+     
+    for j in range(Small.size):
+        ax.plot( Apre['data'][j,:], label = "Apre ("+str(j)+")")
+        
+    ax.legend(loc=2)    
+
+    ax = subplot(414)
+     
+    for j in range(Small.size):
+        ax.plot( Apost['data'][j,:], label = "Apost ("+str(j)+")")
+        
+    ax.legend(loc=2)    
  
 show()
 

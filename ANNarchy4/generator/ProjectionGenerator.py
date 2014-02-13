@@ -25,6 +25,8 @@ from ANNarchy4.core import Global
 from ANNarchy4.generator.ProjectionTemplates import *
 from ANNarchy4.core.Random import *
 
+import re
+
 class ProjectionGenerator(object):
     """ Base class for generating C++ code from a population description. """
     def __init__(self, name, desc):
@@ -57,6 +59,7 @@ class ProjectionGenerator(object):
         Depend only on locality. value should not be defined twice.
         """
         members = ""
+        
         for param in self.desc['parameters'] + self.desc['variables']:
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
@@ -173,6 +176,19 @@ class ProjectionGenerator(object):
                                                 'name': param['name'] }
         return code
 
+    def generate_record(self):
+        " Code for recording."
+        code = ""
+        # Attributes
+        for param in self.desc['parameters'] + self.desc['variables']:
+            if param['name'] in self.desc['local']: # local attribute
+                code += """
+    if(record_%(var)s_)
+        recorded_%(var)s_.push_back(%(var)s_);
+""" % { 'var': param['name'] }
+
+        return code
+  
 
 class RateProjectionGenerator(ProjectionGenerator):
     """ Class for generating C++ code from a rate population description. """
@@ -284,7 +300,8 @@ class RateProjectionGenerator(ProjectionGenerator):
 
         # Generate the code
         code = """
-    for(int i=0; i<(int)rank_.size();i++) {
+    for(int i=0; i<(int)rank_.size();i++) 
+    {
 """
         for param in self.desc['variables']:
             if param['name'] in self.desc['local']: # local attribute 
@@ -347,6 +364,8 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         
         pre_event = self.generate_pre_event()
         
+        record = self.generate_record()
+        
         # Generate the code
         template = spike_projection_body
         dictionary = {         
@@ -359,9 +378,36 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'sum': psp, 
             'local': local_learn, 
             'global': global_learn,
-            'pre_event': pre_event }
+            'pre_event': pre_event,
+            'record' : record }
         return template % dictionary
     
+    def generate_record(self):
+        code = ProjectionGenerator.generate_record(self)
+
+        if 'pre_spike' in self.desc.keys():
+            for param in self.desc['pre_spike']:
+                
+                #
+                # if a variable matches g_exc, g_inh ... we skip
+                if re.findall("(?<=g\_)[A-Za-z]+", param['name']) != []:
+                    #print 'skipped', param['name']
+                    continue
+                
+                code += """
+    if ( record_%(var)s_ )
+        recorded_%(var)s_.push_back(%(var)s_);
+""" % { 'var': param['name'] }
+
+        if 'post_spike' in self.desc.keys():
+            for param in self.desc['post_spike']:
+                code += """
+    if ( record_%(var)s_ )
+        recorded_%(var)s_.push_back(%(var)s_);
+""" % { 'var': param['name'] }
+
+        return code
+        
     def generate_pyx(self):
         
         # Get the C++ methods
@@ -404,4 +450,29 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         return ""
     
     def generate_locallearn(self):
-        return ""
+        code = """
+    for(int i=0; i<(int)rank_.size();i++) 
+    {
+"""
+        for param in self.desc['variables']:
+            if param['name'] in self.desc['local']: # local attribute 
+                # The code is already in 'cpp'
+                code +="""
+        %(code)s   
+""" % {'code' : param['cpp']}
+                # Set the min and max values 
+                for bound, val in param['bounds'].iteritems():
+                    if bound == 'min':
+                        code += """
+        if(%(var)s_[i] < %(val)s)
+            %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+                    if bound == 'max':
+                        code += """
+        if(%(var)s_[i] > %(val)s)
+            %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+        code+="""
+    }
+"""
+        return code

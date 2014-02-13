@@ -308,6 +308,14 @@ void %(class)s::globalOperations()
 void %(class)s::record() 
 {
 %(record)s
+    
+    for (int n=0; n < projections_.size(); n++ )
+    {
+        for(int p=0; p< projections_[n].size(); p++)
+        {
+            projections_[n][p]->record();
+        }
+    }
 }
 
 void %(class)s::propagateSpike() {

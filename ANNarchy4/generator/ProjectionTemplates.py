@@ -39,6 +39,8 @@ public:
     
     void localLearn();
 
+    void record();
+
 %(access)s
 private:
 %(member)s
@@ -97,6 +99,8 @@ public:
     
     bool isPreSynaptic(Population* pop) { return pop == pre_population_; }
         
+    void record();
+    
 %(access)s
 private:
 %(member)s
@@ -230,6 +234,10 @@ void %(class)s::globalLearn() {
 %(global)s
 }
 
+void %(class)s::record() 
+{
+%(record)s
+}
 """
 
 # Body for a Spike projection
@@ -333,6 +341,11 @@ void %(class)s::localLearn() {
 
 void %(class)s::globalLearn() {
 %(global)s
+}
+
+void %(class)s::record() 
+{
+%(record)s
 }
 
 void %(class)s::preEvent(int rank) 

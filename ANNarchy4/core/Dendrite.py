@@ -255,7 +255,7 @@ class Dendrite(object):
         for var in _variable:
 
             if not var in var in self._recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
+                Global._print(var, 'is not a recordable variable of', self.name)
                 continue
             
             if self._recorded_variables[var].is_running:
@@ -263,7 +263,7 @@ class Dendrite(object):
             
             try:
                 if Global.config['verbose']:
-                    print('get record of', var, '(', self.name, ')')
+                    Global._print('get record of '+var+' ('+self.proj.name+')')
                     
                 data = getattr(self.cy_instance, '_get_recorded_'+var)()
                 
@@ -271,17 +271,19 @@ class Dendrite(object):
                     #
                     # [ time, data(1D) ] => [ time, data(1D) ] 
                     mat1 = data.T
-
+    
                     data_dict[var] = { 
                         'data': mat1,
                         'start': self._recorded_variables[var].start_time,
                         'stop': self._recorded_variables[var].stop_time
                     }
                 else:
+                    print "Please use the as1D function."
+                    return []
                     #
                     # [ time, data(1D) ] => [ time, data(geometry) ] 
                     mat1 = data.reshape((data.shape[0],)+self.geometry)
-
+    
                     data_dict[var] = { 
                                 #
                                 # [ time, data(geometry) ] => [  data(geometry), time ]                 

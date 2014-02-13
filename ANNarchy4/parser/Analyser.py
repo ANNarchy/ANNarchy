@@ -717,7 +717,7 @@ def _extract_pre_spike_variable(proj_desc):
             eq = translator.parse()
             lside, rside = eq.split('=')
             
-            eq = "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_] =" +rside
+            eq = "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_] +=" +rside
         else:
             translator = Equation(name, tmp, 
                                   proj_desc['attributes'], 

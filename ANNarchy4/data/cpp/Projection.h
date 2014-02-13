@@ -102,6 +102,7 @@ public:
 
     virtual void invertRanks() { }
 
+    virtual void record() { }
 protected:
     int post_neuron_rank_;
     int target_;
