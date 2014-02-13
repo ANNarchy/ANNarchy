@@ -38,11 +38,11 @@ pre_spike="""
  
 SimpleLearn=SpikeSynapse(
 parameters="""
-    tau_pre = 100 : population
-    tau_post = 1 : population
-    cApre = 1 : population
-    cApost = 0 : population
-    weight = 1.0
+    tau_pre = 100 : postsynaptic
+    tau_post = 1 : postsynaptic
+    cApre = 1 : postsynaptic
+    cApost = 0 : postsynaptic
+    value = 0.0
 """,
 equations = """
     tau_pre * dApre/dt = -Apre
@@ -50,9 +50,9 @@ equations = """
 """,
 pre_spike="""
     Apre = Apre + cApre
-    g_target += weight
-
-"""#,    weight += Apost              
+    g_target += value
+    value = value + Apost
+"""#,                  
 #post_spike="""
 #    Apost += cApost
 #    value += Apre
@@ -71,7 +71,6 @@ testAll2AllSpike = Projection(
     synapse = SimpleLearn,
     connector = all2all(pre = Small, post = Middle, weights=Uniform(0,1) )
 )
-testAll2AllSpike.weight = Normal(0.0,1.0)
 
 compile()
 
@@ -84,6 +83,7 @@ record ( to_record )
 
 testAll2AllSpike.dendrite(0).start_record('Apre')
 testAll2AllSpike.dendrite(0).start_record('Apost')
+testAll2AllSpike.dendrite(0).start_record('value')
 
 for i in range(1000):
     simulate(1)
@@ -91,6 +91,7 @@ for i in range(1000):
 data = get_record( to_record )
 Apre = testAll2AllSpike.dendrite(0).get_record('Apre', as_1D=True)
 Apost = testAll2AllSpike.dendrite(0).get_record('Apost', as_1D=True)
+weight = testAll2AllSpike.dendrite(0).get_record('value', as_1D=True)
 
 close('all')
 
@@ -116,27 +117,34 @@ for i in range(Middle.size):
     fig = figure()
     fig.suptitle(Middle.name+', neuron '+str(i))
      
-    ax = subplot(411)
+    ax = subplot(511)
      
     ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
     ax.legend(loc=2)
      
-    ax = subplot(412)
+    ax = subplot(512)
      
     ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
     ax.legend(loc=2)
     
-    ax = subplot(413)
+    ax = subplot(513)
      
     for j in range(Small.size):
         ax.plot( Apre['data'][j,:], label = "Apre ("+str(j)+")")
         
     ax.legend(loc=2)    
 
-    ax = subplot(414)
+    ax = subplot(514)
      
     for j in range(Small.size):
         ax.plot( Apost['data'][j,:], label = "Apost ("+str(j)+")")
+        
+    ax.legend(loc=2)    
+
+    ax = subplot(515)
+     
+    for j in range(Small.size):
+        ax.plot( weight['data'][j,:], label = "value ("+str(j)+")")
         
     ax.legend(loc=2)    
  

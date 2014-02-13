@@ -226,6 +226,8 @@ class RateProjectionGenerator(ProjectionGenerator):
         # Generate code for the local variables
         local_learn = self.generate_locallearn()
         
+        record = ""
+        
         # Generate the code
         template = rate_projection_body
         dictionary = {         
@@ -237,7 +239,8 @@ class RateProjectionGenerator(ProjectionGenerator):
             'init_val': '', # contains nothing
             'sum': psp, 
             'local': local_learn, 
-            'global': global_learn }
+            'global': global_learn,
+            'record' : record }
         return template % dictionary
     
     def generate_pyx(self):
@@ -387,6 +390,8 @@ class SpikeProjectionGenerator(ProjectionGenerator):
 
         if 'pre_spike' in self.desc.keys():
             for param in self.desc['pre_spike']:
+                if param['name'] in self.desc['local']:
+                    continue
                 
                 #
                 # if a variable matches g_exc, g_inh ... we skip

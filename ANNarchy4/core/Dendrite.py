@@ -83,7 +83,7 @@ class Dendrite(object):
             self.proj.pre.cyInstance.set_max_delay(int(max_delay))
 
         self._recorded_variables = {}        
-        for var in self.variables:
+        for var in list(set(self.variables + ['value'])):
             self._recorded_variables[var] = Record(var)
 
     def __getattr__(self, name):
@@ -134,7 +134,7 @@ class Dendrite(object):
         for var in _variable:
             
             if not var in self._recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
+                print(var, 'is not a recordable variable of', self.proj.name)
                 continue
 
             if not self._recorded_variables[var].is_inited:
@@ -255,7 +255,8 @@ class Dendrite(object):
         for var in _variable:
 
             if not var in var in self._recorded_variables.keys():
-                Global._print(var, 'is not a recordable variable of', self.name)
+                Global._print(var, 'is not a recordable variable of', self.proj.name)
+                data_dict[var] = { 'start': -1, 'stop': -1, 'data': None }
                 continue
             
             if self._recorded_variables[var].is_running:
