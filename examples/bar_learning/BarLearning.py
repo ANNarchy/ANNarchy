@@ -59,7 +59,8 @@ input_feature = Projection(
     post=feature_pop, 
     target='exc', 
     synapse = Oja,
-    connector = all2all(pre=input_pop, post = feature_pop, weights = Uniform(-0.5, 0.5))
+    method = all2all,
+    weights = Uniform(-0.5, 0.5)
 )
                      
 feature_feature = Projection(
@@ -67,7 +68,8 @@ feature_feature = Projection(
     post=feature_pop, 
     target='inh', 
     synapse = AntiHebb,
-    connector = all2all(pre=feature_pop, post = feature_pop, weights = Uniform(0.0, 1.0))
+    method = all2all,
+    weights = Uniform(0.0, 1.0)
 ) 
 
 # Definition of the environment

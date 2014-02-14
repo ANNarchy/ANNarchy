@@ -35,7 +35,7 @@ class Projection(object):#Descriptor):
     Python class representing the projection between two populations.
     """
 
-    def __init__(self, pre, post, target, connector, synapse=None):
+    def __init__(self, pre, post, target, method, **parameter):
         """
         Constructor of a Projection object.
 
@@ -45,7 +45,13 @@ class Projection(object):#Descriptor):
             * *post*: post synaptic layer (either name or Population object)
             * *target*: connection type
             * *connector*: connection pattern object
+            
+        Optional parameter:
+        
             * *synapse*: synapse object
+            * *weight*: weight
+            * *delays*: delay
+            
         """
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
@@ -66,22 +72,6 @@ class Projection(object):#Descriptor):
             
         # Store the arguments
         self.target = target
-        
-        #
-        # No synapse attached assume default synapse based on
-        # presynaptic population.
-        if not synapse:
-            if isinstance(self.pre.neuron_type, RateNeuron):
-                self.synapse_type = RateSynapse(parameters = "", equations = "")
-            else:
-                self.synapse_type = SpikeSynapse(parameters = "", equations = "")
-        else:
-            self.synapse_type = synapse
-        
-        self._connector = connector;
-        self._dendrites = []
-        self._post_ranks = []
-
         # Create a default name
         self._id = len(Global._projections)
         self.name = 'Projection'+str(self._id)
@@ -89,6 +79,28 @@ class Projection(object):#Descriptor):
         # Add the target to the postsynaptic population
         self.post.targets.append(self.target)
         
+        #
+        # check if a synapse description is attached
+        try:
+            self.synapse_type = parameter['synapse']
+            del parameter['synapse']
+        except KeyError:
+            #
+            # No synapse attached assume default synapse based on
+            # presynaptic population.
+            if isinstance(self.pre.neuron_type, RateNeuron):
+                self.synapse_type = RateSynapse(parameters = "", equations = "")
+            else:
+                self.synapse_type = SpikeSynapse(parameters = "", equations = "")
+        
+        #
+        # store the
+        self._connector = method;
+        self._connector_params = parameter
+
+        self._dendrites = []
+        self._post_ranks = []
+
         # Get a list of parameters and variables
         self.description = analyse_projection(self)
         self.parameters = []
@@ -117,13 +129,14 @@ class Projection(object):#Descriptor):
         # Finalize initialization
         self.initialized = False
       
-    def _build_pattern_from_dict(self, synapses):
+    def _build_pattern_from_dict(self):
         """
         build up the dendrites from the list of synapses
         """
         #
         # the synapse objects are stored as pre-post pairs.
         dendrites = {} 
+        synapses = self._connector(self.pre, self.post, **self._connector_params)
         
         for conn, data in synapses.iteritems():
             try:
@@ -186,7 +199,7 @@ class Projection(object):#Descriptor):
             object.__setattr__(self, name, value)
             
     def connect(self):
-        self._dendrites, self._post_ranks = self._build_pattern_from_dict(self._connector)
+        self._dendrites, self._post_ranks = self._build_pattern_from_dict()
         
     def get(self, name):
         """ Returns a list of parameters/variables values for each dendrite in the projection.

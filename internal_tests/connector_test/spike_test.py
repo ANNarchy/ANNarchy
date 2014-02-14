@@ -69,7 +69,8 @@ testAll2AllSpike = Projection(
     post = Middle, 
     target = 'exc',
     synapse = SimpleLearn,
-    connector = all2all(pre = Small, post = Middle, weights=Uniform(0,1) )
+    method = all2all,
+    weights = Uniform(0,1)
 )
 
 compile()
