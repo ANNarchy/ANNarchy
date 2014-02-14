@@ -41,42 +41,42 @@ class Profile:
     def last_step_sum(self, name):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.lastTimeSum(pop.generator.class_name)
+            return self._profile_instance.lastTimeSum(pop.class_name)
         
     def average_sum(self, name, begin, end):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeSum(pop.generator.class_name, begin, end)
+            return self._profile_instance.avgTimeSum(pop.class_name, begin, end)
 
     def last_step_step(self, name):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.lastTimeStep(pop.generator.class_name)
+            return self._profile_instance.lastTimeStep(pop.class_name)
         
     def average_step(self, name, begin, end):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeStep(pop.generator.class_name, begin, end)
+            return self._profile_instance.avgTimeStep(pop.class_name, begin, end)
 
     def last_step_local(self, name):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.lastTimeLocal(pop.generator.class_name)
+            return self._profile_instance.lastTimeLocal(pop.class_name)
         
     def average_local(self, name, begin, end):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeLocal(pop.generator.class_name, begin, end)
+            return self._profile_instance.avgTimeLocal(pop.class_name, begin, end)
 
     def last_step_global(self, name):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.lastTimeGlobal(pop.generator.class_name)
+            return self._profile_instance.lastTimeGlobal(pop.class_name)
         
     def average_global(self, name, begin, end):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeGlobal(pop.generator.class_name, begin, end)
+            return self._profile_instance.avgTimeGlobal(pop.class_name, begin, end)
 
     def set_num_threads(self, threads):
         self._network.set_num_threads(threads)

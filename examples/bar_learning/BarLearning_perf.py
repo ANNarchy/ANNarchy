@@ -58,7 +58,8 @@ input_feature = Projection(
     post=feature_pop, 
     target='exc', 
     synapse = Oja,
-    connector=All2All(weights = Uniform(-0.5, 0.5))
+    method=all2all,
+    weights = Uniform(-0.5, 0.5)
 )
                      
 feature_feature = Projection(
@@ -66,7 +67,8 @@ feature_feature = Projection(
     post=feature_pop, 
     target='inh', 
     synapse = AntiHebb,
-    connector=All2All(weights = Uniform(0.0, 1.0))
+    method=all2all,
+    weights = Uniform(0.0, 1.0)
 ) 
 
 # Definition of the environment
@@ -89,7 +91,7 @@ vis_during_sim=True
 if __name__=='__main__':
 
     # Compiling the network
-    compile(cpp_stand_alone=False, profile_enabled=True)
+    compile(debug_build=False, cpp_stand_alone=False, profile_enabled=True)
 
     # Collect visualizing information
     plot1 = {'pop': input_pop, 'var': 'rate'}

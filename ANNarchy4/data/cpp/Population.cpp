@@ -167,7 +167,7 @@ void Population::setMaxDelay(int delay) {
 	// TODO:
 	// maybe we should take the current fire rate as initial value
 #ifdef _DEBUG
-        std::cout << "Population " << name_ << " got new max delay: " << delay << std::endl;
+    std::cout << "Population " << name_ << " got new max delay: " << delay << std::endl;
 #endif
 	if(delay > maxDelay_) {
 		for(int oldSize = delayedRates_.size(); oldSize < delay; oldSize++)
@@ -177,9 +177,9 @@ void Population::setMaxDelay(int delay) {
 	}
 
 #ifdef _DEBUG
-        std::cout << "current delay vec: " << delayedRates_.size() << std::endl;
-        for(int i=0; i<delayedRates_.size(); i++)
-                std::cout << "   Delay: " << i << " rates: " << delayedRates_[i].size() << std::endl;
+    std::cout << "current delay vec: " << delayedRates_.size() << std::endl;
+    for(int i=0; i<delayedRates_.size(); i++)
+            std::cout << "   Delay: " << i << " rates: " << delayedRates_[i].size() << std::endl;
 #endif
 }
 
@@ -203,7 +203,7 @@ void Population::addProjection(int postRankID, Projection* proj) {
 void Population::addSpikeTarget(Projection* proj)
 {
 #ifdef _DEBUG
-    std::cout << name_ << ": added projection to neuron " << postRankID << std::endl;
+    std::cout << name_ << ": added projection as spike target " << std::endl;
 #endif
     for(unsigned int n=0; n< nbNeurons_; n++)
     {
@@ -221,8 +221,15 @@ void Population::removeProjection(Population* pre) {
 }
 
 void Population::metaSum() {
+
 #ifdef ANNAR_PROFILE
-    double start = omp_get_wtime();
+    double start = 0, stop = 0;
+    #pragma omp barrier
+
+    #pragma omp master
+    {
+        start = omp_get_wtime();
+    }
 #endif
 
 #ifdef _DEBUG
@@ -266,9 +273,14 @@ void Population::metaSum() {
 	}
 
 #ifdef ANNAR_PROFILE
-    double stop = omp_get_wtime();
+    #pragma omp barrier
 
-    Profile::profileInstance()->appendTimeSum(name_, (stop-start)*1000.0);
+    #pragma omp master
+    {
+        stop = omp_get_wtime();
+
+        Profile::profileInstance()->appendTimeSum(name_, (stop-start)*1000.0);
+    }
 #endif
 
 #ifdef ANNAR_SCHEDULE
@@ -297,7 +309,7 @@ void Population::metaStep() {
 #ifdef _DEBUG
     #pragma omp master
     {
-    std::cout << "global computation done."<< std::endl;
+        std::cout << "global computation done."<< std::endl;
     }
 #endif
 
@@ -311,7 +323,7 @@ void Population::metaStep() {
 #ifdef _DEBUG
     #pragma omp master
     {
-    std::cout << "local computation done."<< std::endl;
+        std::cout << "local computation done."<< std::endl;
     }
 #endif
 
@@ -319,13 +331,20 @@ void Population::metaStep() {
 
 //
 // projection update for post neuron based variables
-void Population::metaLearn() {
+void Population::metaLearn()
+{
+    double start = 0.0, stop = 0.0;
+
 #ifdef ANNAR_PROFILE
-    double start = omp_get_wtime();
+    #pragma omp barrier
+
+    #pragma omp master
+    {
+        double start = omp_get_wtime();
+    }
 #endif
 
 #ifdef _DEBUG
-    #pragma barrier
     #pragma omp master
     {
     std::cout << "###########################"<< std::endl;
@@ -351,13 +370,13 @@ void Population::metaLearn() {
     #pragma omp barrier
 
 #ifdef ANNAR_PROFILE
-    double stop = omp_get_wtime();
+    #pragma omp master
+    {
+        stop = omp_get_wtime();
 
-    Profile::profileInstance()->appendTimeGlobal(name_, (stop-start)*1000.0);
-#endif
-
-#ifdef ANNAR_PROFILE
-    double start2 = omp_get_wtime();
+        Profile::profileInstance()->appendTimeGlobal(name_, (stop-start)*1000.0);
+        start = omp_get_wtime();
+    }
 #endif
 
 #ifdef _DEBUG
@@ -384,9 +403,12 @@ void Population::metaLearn() {
 
     #pragma omp barrier
 #ifdef ANNAR_PROFILE
-    double stop2 = omp_get_wtime();
+    #pragma omp master
+    {
+        stop = omp_get_wtime();
 
-    Profile::profileInstance()->appendTimeLocal(name_, (stop2-start2)*1000.0);
+        Profile::profileInstance()->appendTimeLocal(name_, (stop - start)*1000.0);
+    }
 #endif
 }
 
