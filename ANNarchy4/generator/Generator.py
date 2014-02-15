@@ -309,6 +309,34 @@ class Generator(object):
             
         return changed_cpp, changed_pyx
     
+    def check_output(*popenargs, **kwargs):
+        """Run command with arguments and return its output as a byte string.
+         
+        Backported from Python 2.7 as it's implemented as pure python on stdlib.
+         
+        >>> check_output(['/usr/bin/python', '--version'])
+        Python 2.6.2
+
+        adapted from: https://gist.github.com/edufelipe/1027906
+
+        Modifications: Popen(cmd, stdout=...)
+        """
+        cmd = popenargs[1]
+
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, **kwargs)
+        output, unused_err = process.communicate()
+        retcode = process.poll()
+
+        if retcode:
+            cmd = kwargs.get("args")
+
+        if cmd is None:
+            cmd = popenargs[0]
+            error = subprocess.CalledProcessError(retcode, cmd)
+            error.output = output
+            raise error
+        return output
+
     def partial_compilation(self, changed_cpp, changed_pyx):
         """ Create ANNarchyCore.so and py extensions if something has changed."""
         if changed_cpp or changed_pyx:   
@@ -379,7 +407,7 @@ clean:
                     subprocess.check_output('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log', 
                                             shell=True)
                 elif sys.version_info[:2] == (2, 6):
-                    subprocess.check_output('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log', 
+                    self.check_output('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log', 
                                             shell=True)
                 elif sys.version_info[:2] == (2, 7):
                     subprocess.check_output("make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log", 
