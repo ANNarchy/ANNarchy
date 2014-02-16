@@ -35,7 +35,7 @@ class Projection(object):#Descriptor):
     Python class representing the projection between two populations.
     """
 
-    def __init__(self, pre, post, target, method, **parameter):
+    def __init__(self, pre, post, target, method=None, **parameter):
         """
         Constructor of a Projection object.
 
@@ -128,6 +128,14 @@ class Projection(object):#Descriptor):
         
         # Finalize initialization
         self.initialized = False
+
+    def connect_with_func(self, method, **args):
+	print method
+	print args
+        self._connector = method
+        self._connector_params = args
+
+	return self
       
     def _build_pattern_from_dict(self):
         """
