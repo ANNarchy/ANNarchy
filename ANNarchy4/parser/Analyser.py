@@ -613,13 +613,13 @@ def _extract_variables(description):
     """ Extracts all variable information from a multiline description."""
     variables = []
     # Split the multilines into individual lines
-    variable_list = _prepare_string(description)
+    variable_list = _process_equations(description)
     # Analyse all variables
     for definition in variable_list:
-        # Check if there are flags after the : symbol
-        equation, constraint = _split_equation(definition)
-        # Extract the name of the variable
-        name = _extract_name(equation)
+        # Retrieve the name, equation and constraints for the variable
+        equation = definition['eq']
+        constraint = definition['constraint']
+        name = definition['name']
         if name == '_undefined':
             exit(0)
         # Process the flags if any
@@ -689,9 +689,9 @@ def _extract_spike_variable(pop_desc):
     raw_spike_code = translator.parse()
     
     raw_reset_code = ''
-    for tmp in _prepare_string(pop_desc['raw_reset']):
-        name = _extract_name(tmp)
-        translator = Equation(name, tmp, 
+    for var in _prepare_string(pop_desc['raw_reset']):
+        name = _extract_name(var)
+        translator = Equation(name, var, 
                               pop_desc['attributes'], 
                               pop_desc['local'], 
                               pop_desc['global'])
@@ -701,30 +701,27 @@ def _extract_spike_variable(pop_desc):
 
 def _extract_pre_spike_variable(proj_desc):
     pre_spike_var = []
-    
-    for tmp in _prepare_string(proj_desc['raw_pre_spike']):
-
-        name = _extract_name(tmp)
+    # For all variables influenced by a presynaptic spike
+    for var in _prepare_string(proj_desc['raw_pre_spike']):
+        # Get its name
+        name = _extract_name(var)
+        # Replace target by its value
+        post_target = False
         if name == "g_target":
             name = name.replace("target", proj_desc['target'])
+            post_target = True
             
-            translator = Equation(name, tmp, 
-                                  proj_desc['attributes'], 
-                                  proj_desc['local'], 
-                                  proj_desc['global'])
-            eq = translator.parse()
-            lside, rside = eq.split('=')
-            
-            eq = "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_] +=" +rside
-        else:
-            translator = Equation(name, tmp, 
-                                  proj_desc['attributes'], 
-                                  proj_desc['local'], 
-                                  proj_desc['global'])
-            eq = translator.parse()
-            
-        #
-        # now we replace the [i] by presynaptic access
+        translator = Equation(name, var, 
+                              proj_desc['attributes'], 
+                              proj_desc['local'], 
+                              proj_desc['global'])
+        eq = translator.parse()
+        
+        if post_target: # the left side has to be modified
+            eq = eq.replace( "g_" + proj_desc['target'] + "_[i]",
+                        "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_]")
+
+        # Replace the [i] by presynaptic access 
         eq = eq.replace('[i]','[inv_rank_[rank]]')
         pre_spike_var.append( { 'name': name, 'eq': eq } )
 
@@ -733,15 +730,13 @@ def _extract_pre_spike_variable(proj_desc):
 def _extract_post_spike_variable(proj_desc):
     post_spike_var = []
     
-    for tmp in _prepare_string(proj_desc['raw_post_spike']):
-
-        name = _extract_name(tmp)
-        translator = Equation(name, tmp, 
+    for var in _prepare_string(proj_desc['raw_post_spike']):
+        name = _extract_name(var)
+        translator = Equation(name, var, 
                               proj_desc['attributes'], 
                               proj_desc['local'], 
                               proj_desc['global'])
-        eq = translator.parse()
-            
+        eq = translator.parse()            
         post_spike_var.append( { 'name': name, 'eq': eq } )
 
     return post_spike_var    
@@ -784,18 +779,27 @@ def _prepare_string(stream):
         expr_set.append(''.join(expr))        
     return expr_set 
 
-def _extract_name(equation):
+def _extract_name(equation, left=False):
     " Extracts the name of a parameter/variable by looking the left term of an equation."
     equation = equation.replace(' ','')
-    try:
-        name = equation.split('=')[0]
-    except: # No equal sign. Eg: baseline : init=0.0
-        return equation.strip()
-    # Search for increments
-    operators = ['+=', '-=', '*=', '/=', '>=', '<=']
-    for op in operators:
-        if op in equation: 
-            return equation.split(op)[0]        
+    if not left: # there is potentially an equal sign
+        try:
+            name = equation.split('=')[0]
+        except: # No equal sign. Eg: baseline : init=0.0
+            return equation.strip()
+        
+        # Search for increments
+        operators = ['+=', '-=', '*=', '/=', '>=', '<=']
+        for op in operators:
+            if op in equation: 
+                return equation.split(op)[0]  
+    else:
+        name = equation.strip()          
+        # Search for increments
+        operators = ['+', '-', '*', '/']
+        for op in operators:
+            if equation.endswith(op): 
+                return equation.split(op)[0]      
     # Search for any operation in the left side
     operators = ['+', '-', '*', '/']
     ode = False
@@ -805,11 +809,10 @@ def _extract_name(equation):
     if not ode: # variable name is alone on the left side
         return name
     # ODE: the variable name is between d and /dt
-    name = re.findall("(?<=d)[\w\s]+(?=/dt)", name)
+    name = re.findall("d([\w]+)/dt", name)
     if len(name) == 1:
         return name[0].strip()
     else:
-        _error('No variable name can be found in ' + equation)
         return '_undefined'   
     
                 
@@ -829,4 +832,76 @@ def _extract_flags(constraint):
             bounds[key.strip()] = value.strip()
         except ValueError: # No equal sign = flag
             flags.append(con.strip())
-    return bounds, flags    
+    return bounds, flags     
+        
+def _process_equations(equations):
+    """ Takes a multi-string describing equations and returns a list of dictionaries, where:
+    
+    * 'name' is the name of the variable
+    
+    * 'eq' is the equation
+    
+    * 'constraints' is all the constraints given after the last :. _extract_flags() should be called on it.
+    
+    Warning: one equation can now be on multiple lines, without needing the ... newline symbol.
+    
+    TODO: should this be used for other arguments as equations? pre_event and so on
+    """
+    def is_constraint(eq):
+        " Internal method to determine if a string contains reserved keywords." 
+        eq = ',' +  eq.replace(' ', '') + ','
+        for key in authorized_keywords:
+            pattern = '([,]+)' + key + '([=,]+)'
+            if re.match(pattern, eq):
+                return True
+        return False
+    # All equations will be stored there, in the order of their definition
+    variables = []        
+    
+    # Iterate over all lines
+    for line in equations.splitlines():
+        # Skip empty lines
+        definition = line.strip()
+        if definition == '':
+            continue
+        # Remove comments
+        com = definition.split('#')
+        if len(com) > 1:
+            definition = com[0]
+            if definition.strip() == '':
+                continue
+        # Process the line
+        try:
+            equation, constraint = definition.rsplit(':', 1)
+        except ValueError: # There is no :, only equation is concerned 
+            equation = line
+            constraint = ''
+        else:   # there is a :
+            # Check if the constraint contains the reserved keywords
+            has_constraint = is_constraint(constraint)
+            # If the right part of : is a constraint, just store it
+            # Otherwise, it is an if-then-else statement
+            if has_constraint:
+                equation = equation.strip()
+                constraint = constraint.strip()
+            else:
+                equation = definition.strip() # there are no constraints
+                constraint = '' 
+        # Split the equation around operators = += -= *= /=, but not ==
+        split_operators = re.findall('([\s\w\+\-\*\/]+)=([^=])', equation)
+        if len(split_operators) == 1: # definition of a new variable
+            # Retrieve the name
+            name = _extract_name(split_operators[0][0], left=True)
+            if name == '_undefined':
+                _error('No variable name can be found in ' + equation)
+                return []
+            # Append the result
+            variables.append({'name': name, 'eq': equation.strip(), 'constraint': constraint.strip()})
+        elif len(split_operators) == 0: 
+            # Continuation of the equation on a new line: append the equation to the previous variable
+            variables[-1]['eq'] += ' ' + equation.strip()
+            variables[-1]['constraint'] += constraint
+        else:
+            print 'Error: only one assignement operator is allowed per equation.'
+            return []
+    return variables  
