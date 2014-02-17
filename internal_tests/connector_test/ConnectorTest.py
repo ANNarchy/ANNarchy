@@ -24,41 +24,64 @@ testOne2One = Projection(
     pre = In, 
     post = Middle, 
     target = 'exc',
-    method = one2one,
-    synapse = Simple2,
-    weights = 1.0,
-    delays = 0.0
-)
+).connect_with_func(method=one2one, weights=1.0)
 
 testAll2All = Projection( 
     pre = In, 
     post = Out, 
     target = 'exc',
-    method = all2all,
     synapse = Simple2,
-    weights = 1.0,
-    delays = 0.0
-)
+).connect_all_to_all( weights = 1.0, delays = 0.0 )
+#===============================================================================
+# testAll2All = Projection( 
+#     pre = In, 
+#     post = Out, 
+#     target = 'exc',
+#     method = all2all,
+#     synapse = Simple2,
+#     weights = 1.0,
+#     delays = 0.0
+# )
+#===============================================================================
 
 testGaussian = Projection(
     pre = In, 
     post = Out, 
-    target = 'inh',
-    method = gaussian,
-    sigma=0.3,
-    amp=0.1 
-)
+    target = 'inh'
+).connect_gaussian( sigma=0.3, amp=0.1 )
+#===============================================================================
+# testGaussian = Projection(
+#     pre = In, 
+#     post = Out, 
+#     target = 'inh',
+#     method = gaussian,
+#     sigma=0.3,
+#     amp=0.1 
+# )
+#===============================================================================
  
 testDog = Projection(
     pre = In, 
     post = Out, 
-    target = 'inh', 
-    method = dog,
+    target = 'inh' 
+).connect_dog(    
     amp_pos=0.2, 
     sigma_pos=0.2, 
     amp_neg=0.1, 
     sigma_neg=0.3
 )
+#===============================================================================
+# testDog = Projection(
+#     pre = In, 
+#     post = Out, 
+#     target = 'inh', 
+#     method = dog,
+#     amp_pos=0.2, 
+#     sigma_pos=0.2, 
+#     amp_neg=0.1, 
+#     sigma_neg=0.3
+# )
+#===============================================================================
 
 compile()
 
