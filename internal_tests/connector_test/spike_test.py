@@ -6,7 +6,6 @@ from pylab import show, figure, subplot, legend, close
 
 Izhikevitch = SpikeNeuron(
 parameters="""
-    I_in = 0.0
     noise_scale = 0.0 : population
     a = 0.02 : population
     b = 0.2 : population
@@ -68,10 +67,8 @@ testAll2AllSpike = Projection(
     pre = Small, 
     post = Middle, 
     target = 'exc',
-    synapse = SimpleLearn,
-    method = all2all,
-    weights = Uniform(0,1)
-)
+    synapse = SimpleLearn
+).connect_all_to_all(weights=Uniform(0.0, 1.0))
 
 compile()
 

@@ -3,10 +3,10 @@ from pylab import show, figure, subplot, legend, close
 
 #
 # experiment setup
-setup(dt=1)
+setup(dt=1.0)
 nb_steps = 1000
-nb_exc_neurons = 160
-nb_inh_neurons = 40
+nb_exc_neurons = 800
+nb_inh_neurons = 200
 
 param_dict = {
     'noise_factor': 5.0,
@@ -16,31 +16,30 @@ param_dict = {
 
 # Define the neurons
 Izhikevitch = SpikeNeuron(
-parameters="""
-    I_in = 0.0
-    noise_scale = 5.0 : population
-    a = 0.02 : population
-    b = 0.2 : population
-    c = -65.0 : population
-    d = 2.0 : population
-    tau = 10: population
-""",
-extra_values = param_dict,
-equations="""
-    tau * dg_exc / dt = -g_exc
-    tau * dg_inh / dt = -g_inh
-    noise = Normal(0.0,1.0)
-    I = g_exc + g_inh + noise * noise_scale : init = 0.0
-    dv/dt = 0.04 * v * v + 5*v + 140 -u + I
-    du/dt = a * (b*v - u) : init = 0.2
-""",
-spike = """
-    v >= 30.0
-""",
-reset = """
-    v = c
-    u = u+d
-"""
+    parameters="""
+        noise_scale = 5.0 : population
+        a = 0.02 
+        b = 0.2 
+        c = -65.0 
+        d = 2.0 
+        tau = 5.0: population
+    """,
+    extra_values = param_dict,
+    equations="""
+        noise = Normal(0.0,1.0)
+        I = g_exc + g_inh + noise * noise_scale : init = 0.0
+        dv/dt = 0.04 * v * v + 5.0*v + 140.0 -u + I : init=-65.0
+        du/dt = a * (b*v - u) : init = 0.2
+        g_exc = 0.0
+        g_inh = 0.0 
+    """,
+    spike = """
+        v >= 30.0
+    """,
+    reset = """
+        v = c
+        u += d
+    """
 )
 
 Excitatory = Population(name='Excitatory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
@@ -59,25 +58,25 @@ exc_exc = Projection(
     pre=Excitatory, 
     post=Excitatory, 
     target='exc'
-).connect_all_to_all(weights=Uniform(0,0.5))
+).connect_all_to_all(weights=Uniform(0.0, 0.5))
    
 exc_inh = Projection(
     pre=Excitatory, 
     post=Inhibitory, 
     target='exc',
-).connect_all_to_all(weights=Uniform(0,0.5))
+).connect_all_to_all(weights=Uniform(0.0, 0.5))
   
 inh_exc = Projection(
     pre=Inhibitory, 
     post=Excitatory, 
     target='inh'
-).connect_all_to_all(weights=Uniform(-1.0,0.0))
+).connect_all_to_all(weights=Uniform(-1.0, 0.0))
   
 inh_inh = Projection(
     pre=Inhibitory, 
     post=Inhibitory, 
     target='inh'
-).connect_all_to_all(weights=Uniform(-1.0,0.0))
+).connect_all_to_all(weights=Uniform(-1.0, 0.0))
 
 # Compile
 compile()
@@ -151,24 +150,16 @@ if __name__ == '__main__':
         { 'pop': Inhibitory, 'var': 'v' },
         { 'pop': Inhibitory, 'var': 'I', 'as_1D': True }        
     ]
-    
-    # 20-100ms is an input
-    I = np.zeros((nb_steps,nb_exc_neurons))
-    if nb_steps > 10:
-        I[10:nb_steps,:] = 20.0 # 15mV as input
+
     
     record( to_record )
-    for i in xrange(nb_steps):
-        
-        # first 20 ms no input
-        Excitatory.I_in = I[i,:]
-        #print i
-        print 'trial', i, 'of', nb_steps
-        simulate(1)
-        
-    data = get_record( to_record )
     
+    # Simulate 1s    
+    simulate(nb_steps)
+        
+    print 'Done'
+    # Plot data
+    data = get_record( to_record )
     plot( Excitatory, data )
     plot( Inhibitory, data )
-    
     show()

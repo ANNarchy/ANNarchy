@@ -694,8 +694,7 @@ def _extract_spike_variable(pop_desc):
         translator = Equation(name, tmp, 
                               pop_desc['attributes'], 
                               pop_desc['local'], 
-                              pop_desc['global'], 
-                              type = 'simple')
+                              pop_desc['global'])
         raw_reset_code += translator.parse() +'\n'
     
     return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': raw_reset_code}
@@ -712,8 +711,7 @@ def _extract_pre_spike_variable(proj_desc):
             translator = Equation(name, tmp, 
                                   proj_desc['attributes'], 
                                   proj_desc['local'], 
-                                  proj_desc['global'], 
-                                  type = 'inc')
+                                  proj_desc['global'])
             eq = translator.parse()
             lside, rside = eq.split('=')
             
@@ -722,8 +720,7 @@ def _extract_pre_spike_variable(proj_desc):
             translator = Equation(name, tmp, 
                                   proj_desc['attributes'], 
                                   proj_desc['local'], 
-                                  proj_desc['global'], 
-                                  type = 'simple')
+                                  proj_desc['global'])
             eq = translator.parse()
             
         #
@@ -742,8 +739,7 @@ def _extract_post_spike_variable(proj_desc):
         translator = Equation(name, tmp, 
                               proj_desc['attributes'], 
                               proj_desc['local'], 
-                              proj_desc['global'], 
-                              type = 'simple')
+                              proj_desc['global'])
         eq = translator.parse()
             
         post_spike_var.append( { 'name': name, 'eq': eq } )
