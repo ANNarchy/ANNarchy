@@ -62,7 +62,7 @@ post_spike="""
 Small = Population(3, Izhikevitch)
 Small.noise_scale = 5.0
 Middle = Population(1, Izhikevitch)
-Middle.noise_scale = 0.0
+Middle.noise_scale = 5.0
 
 testAll2AllSpike = Projection( 
     pre = Small, 

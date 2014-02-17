@@ -58,19 +58,15 @@ input_feature = Projection(
     pre=input_pop, 
     post=feature_pop, 
     target='exc', 
-    synapse = Oja,
-    method = all2all,
-    weights = Uniform(-0.5, 0.5)
-)
+    synapse = Oja    
+).connect_all_to_all( weights = Uniform(-0.5, 0.5) )
                      
 feature_feature = Projection(
     pre=feature_pop, 
     post=feature_pop, 
     target='inh', 
-    synapse = AntiHebb,
-    method = all2all,
-    weights = Uniform(0.0, 1.0)
-) 
+    synapse = AntiHebb
+).connect_all_to_all( weights = Uniform(0.0, 1.0) )
 
 # Definition of the environment
 def set_input():

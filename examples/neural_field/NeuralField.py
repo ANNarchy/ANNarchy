@@ -43,22 +43,18 @@ FocusPop = Population((nb_neurons, nb_neurons), Focus)
 Proj1 = Projection( 
     pre = InputPop, 
     post = FocusPop, 
-    target = 'exc', 
-    connector = one2one(pre = InputPop, post = FocusPop, weights=1.0 )
-)
+    target = 'exc'
+).connect_one_to_one( weights=1.0 )
                     
 Proj2 = Projection(
     pre = FocusPop, 
     post = FocusPop, 
-    target = 'inh', 
-    connector = dog(
-                   pre = FocusPop,
-                   post = FocusPop, 
-                   amp_pos=0.2, 
-                   sigma_pos=0.2, 
-                   amp_neg=0.1, 
-                   sigma_neg=0.3
-                ) 
+    target = 'inh'     
+).connect_dog(    
+    amp_pos=0.2, 
+    sigma_pos=0.2, 
+    amp_neg=0.1, 
+    sigma_neg=0.3                     
 )
 
 # Main program

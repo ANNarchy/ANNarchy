@@ -31,12 +31,12 @@ from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy4.parser.Analyser import analyse_projection
 from ANNarchy4.core.Dendrite import Dendrite
 
-class Projection(object):#Descriptor):
+class Projection(object):
     """
     Python class representing the projection between two populations.
     """
 
-    def __init__(self, pre, post, target, method=None, **parameter):
+    def __init__(self, pre, post, target, synapse=None):
         """
         Constructor of a Projection object.
 
@@ -45,14 +45,7 @@ class Projection(object):#Descriptor):
             * *pre*: pre synaptic layer (either name or Population object)
             * *post*: post synaptic layer (either name or Population object)
             * *target*: connection type
-            * *connector*: connection pattern object
-            
-        Optional parameter:
-        
-            * *synapse*: synapse object
-            * *weight*: weight
-            * *delays*: delay
-            
+            * *synapse*: synapse description
         """
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
@@ -82,10 +75,7 @@ class Projection(object):#Descriptor):
         
         #
         # check if a synapse description is attached
-        try:
-            self.synapse_type = parameter['synapse']
-            del parameter['synapse']
-        except KeyError:
+        if not synapse:
             #
             # No synapse attached assume default synapse based on
             # presynaptic population.
@@ -93,12 +83,11 @@ class Projection(object):#Descriptor):
                 self.synapse_type = RateSynapse(parameters = "", equations = "")
             else:
                 self.synapse_type = SpikeSynapse(parameters = "", equations = "", pre_spike="g_target += value", post_spike="")
-        
-        #
-        # store the
-        self._connector = method;
-        self._connector_params = parameter
-
+        else:
+            self.synapse_type = synapse
+            
+        self._synapses = {}
+        self._connector = None
         self._dendrites = []
         self._post_ranks = []
 
@@ -130,31 +119,151 @@ class Projection(object):#Descriptor):
         # Finalize initialization
         self.initialized = False
 
-    def connect_one_to_one(self, **args):
-        self._connector = one2one
-        self._connector_params = args
+    def connect_one_to_one(self, weights=1.0, delays=0.0):
+        """
+        Establish one to one connections within the two projections.
         
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+        """
+        synapses = {}
+    
+        for pre_neur in xrange(self.pre.size):
+            try:
+                w = weights.get_value()
+            except:
+                w = weights
+                
+            try:
+                d = delays.get_value()
+            except:
+                d = delays
+            self._synapses[(pre_neur, pre_neur)] = { 'w': w, 'd': d }
+            
         return self
     
-    def connect_all_to_all(self, **args):
-        self._connector = all2all
-        self._connector_params = args
+    def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
         
-        return self
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
     
-    def connect_gaussian(self, **args):
-        self._connector = gaussian
-        self._connector_params = args
+        for post_neur in xrange(self.post.size):
+            for pre_neur in xrange(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+                
+                try:
+                    w = weights.get_value()
+                except:
+                    w = weights
+                    
+                try:
+                    d = delays.get_value()
+                except:
+                    d = delays
+    
+                self._synapses[(pre_neur, post_neur)] = { 'w': w, 'd': d }
         
         return self
 
-    def connect_dog(self, **args):
-        self._connector = dog
-        self._connector_params = args
+    def _comp_dist(self, pre, post):
+        res = 0.0
+
+        for i in range(len(pre)):
+            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
+
+        return res
+    
+    def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a gaussians distribution.
         
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *sigma*: sigma value
+            * *amp*: amp value
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        synapses = {}
+        
+        for post_neur in xrange(self.post.size):
+            normPost = self.post.normalized_coordinates_from_rank(post_neur)
+            
+            for pre_neur in range(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+    
+                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
+    
+                dist = self._comp_dist(normPre, normPost)
+                
+                value = amp * exp(-dist/2.0/sigma/sigma)
+                if (abs(value) > limit * abs(amp)):
+                        
+                    try:
+                        d = delays.get_value()
+                    except:
+                        d = delays
+                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }   
+                         
+        return self
+
+    def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *sigma*_pos: sigma of positive gaussian function
+            * *sigma_neg*: sigma of negative gaussian function
+            * *amp_pos*: amp of positive gaussian function
+            * *amp_neg*: amp of negative gaussian function
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        for post_neur in xrange(self.post.size):
+            normPost = self.post.normalized_coordinates_from_rank(post_neur)
+            
+            for pre_neur in range(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+    
+                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
+    
+                dist = self._comp_dist(normPre, normPost)
+    
+                value = amp_pos * exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * exp(-dist/2.0/sigma_neg/sigma_neg)
+                if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
+                        
+                    try:
+                        d = delays.get_value()
+                    except:
+                        d = delays
+                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }
+
         return self
     
     def connect_with_func(self, method, **args):
+        
         self._connector = method
         self._connector_params = args
 
@@ -167,7 +276,10 @@ class Projection(object):#Descriptor):
         #
         # the synapse objects are stored as pre-post pairs.
         dendrites = {} 
-        synapses = self._connector(self.pre, self.post, **self._connector_params)
+        if self._connector:
+            synapses = self._connector(self.pre, self.post, **self._connector_params)
+        else:
+            synapses = self._synapses    
         
         for conn, data in synapses.iteritems():
             try:
@@ -230,6 +342,9 @@ class Projection(object):#Descriptor):
             object.__setattr__(self, name, value)
             
     def connect(self):
+        """
+        build up dendrites
+        """
         self._dendrites, self._post_ranks = self._build_pattern_from_dict()
         
     def get(self, name):

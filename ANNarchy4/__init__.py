@@ -9,7 +9,6 @@ from .core.Population import Population
 from .core.PopulationView import PopulationView
 from .core.Projection import Projection
 from .core.Dendrite import Dendrite
-from .core.Connector import all2all, one2one, gaussian, dog
 from .core.Random import Constant, Uniform, Normal
 
 #

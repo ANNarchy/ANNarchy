@@ -110,6 +110,7 @@ if __name__=='__main__':
     num_trials = 10
     thread_count = [6,4,2,1]
     trial_dur = 50
+    log = profiler.init_log(thread_count, num_trials)
 
     #
     # pre setup
@@ -129,8 +130,10 @@ if __name__=='__main__':
             if vis_during_sim:
                vis.render()
     
+            log[thread_count[test], trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            
             diff_runs[test][trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
-            print profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            #print profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
 
         profiler.reset_timer()
 
@@ -148,4 +151,6 @@ if __name__=='__main__':
     print diff_runs
     print 'all simulation finished.'
 
+    log.save_to_file()
+     
     raw_input()

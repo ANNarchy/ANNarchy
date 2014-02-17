@@ -24,63 +24,49 @@ testOne2One = Projection(
     pre = In, 
     post = Middle, 
     target = 'exc',
-).connect_with_func(method=one2one, weights=1.0)
+)
+testOne2One.connect_one_to_one( weights=1.0 )
 
 testAll2All = Projection( 
     pre = In, 
     post = Out, 
-    target = 'exc',
-    synapse = Simple2,
+    target = 'exc2',
 ).connect_all_to_all( weights = 1.0, delays = 0.0 )
-#===============================================================================
-# testAll2All = Projection( 
-#     pre = In, 
-#     post = Out, 
-#     target = 'exc',
-#     method = all2all,
-#     synapse = Simple2,
-#     weights = 1.0,
-#     delays = 0.0
-# )
-#===============================================================================
 
 testGaussian = Projection(
     pre = In, 
     post = Out, 
     target = 'inh'
 ).connect_gaussian( sigma=0.3, amp=0.1 )
-#===============================================================================
-# testGaussian = Projection(
-#     pre = In, 
-#     post = Out, 
-#     target = 'inh',
-#     method = gaussian,
-#     sigma=0.3,
-#     amp=0.1 
-# )
-#===============================================================================
  
 testDog = Projection(
     pre = In, 
     post = Out, 
-    target = 'inh' 
-).connect_dog(    
+    target = 'dog', 
+).connect_dog(
     amp_pos=0.2, 
     sigma_pos=0.2, 
     amp_neg=0.1, 
     sigma_neg=0.3
 )
+
 #===============================================================================
-# testDog = Projection(
+# def stochastic_pattern(pre, post, weight, propability):
+#  
+#     synapse_dict = {}
+#  
+#     for post_rank in xrange(post.size):
+#         for pre_rank in xrange(pre.size):
+#             if np.random.random() < propability:
+#                 synapse_dict[(pre_rank, post_rank)] = { 'w': weight, 'd': 0.0 }
+#                  
+#     return synapse_dict
+#  
+# testUserPattern = Projection(
 #     pre = In, 
 #     post = Out, 
-#     target = 'inh', 
-#     method = dog,
-#     amp_pos=0.2, 
-#     sigma_pos=0.2, 
-#     amp_neg=0.1, 
-#     sigma_neg=0.3
-# )
+#     target = 'inh' 
+# ).connect_with_func(method=stochastic_pattern, weight=1.0, propability=0.3)   
 #===============================================================================
 
 compile()
@@ -96,5 +82,10 @@ visGaussian.render()
  
 visDog = Visualization( [ { 'proj': testDog, 'var': 'value', 'min': 0.0, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
 visDog.render()
+
+#===============================================================================
+# visTestUserPattern = Visualization( [ { 'proj': testUserPattern, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'stochastic pattern'} ] )
+# visTestUserPattern.render()
+#===============================================================================
 
 raw_input()
