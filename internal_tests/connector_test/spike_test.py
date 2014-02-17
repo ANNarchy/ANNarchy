@@ -41,7 +41,7 @@ parameters="""
     tau_pre = 5 : postsynaptic
     tau_post = 5 : postsynaptic
     cApre = 1 : postsynaptic
-    cApost = 1 : postsynaptic
+    cApost = -1 : postsynaptic
     value = 0.0
 """,
 equations = """
@@ -59,10 +59,10 @@ post_spike="""
 """      
 )
 
-Small = Population(5, Izhikevitch)
+Small = Population(3, Izhikevitch)
 Small.noise_scale = 5.0
 Middle = Population(1, Izhikevitch)
-Middle.noise_scale = 5.0
+Middle.noise_scale = 0.0
 
 testAll2AllSpike = Projection( 
     pre = Small, 
@@ -98,57 +98,107 @@ close('all')
 
 #
 #plot pre neurons
-for i in range(Small.size):
-    fig = figure()
-    fig.suptitle(Small.name+', neuron '+str(i))
-      
-    ax = subplot(211)
-      
-    ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
-    ax.legend(loc=2)
-      
-    ax = subplot(212)
-      
-    ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
-    ax.legend(loc=2)
+#===============================================================================
+# for i in range(Small.size):
+#     fig = figure()
+#     fig.suptitle(Small.name+', neuron '+str(i))
+#       
+#     ax = subplot(211)
+#       
+#     ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
+#     ax.legend(loc=2)
+#       
+#     ax = subplot(212)
+#       
+#     ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
+#     ax.legend(loc=2)
+#===============================================================================
  
+#
+# The synapse are not ordered ascending in relation to presynaptic ranks
+# to correctly identify the data we need to take this in mind
+pre_ranks = testAll2AllSpike.dendrite(0).cy_instance.rank
+neur_col = ['b','g','r']
 #
 # plot post neurons
 for i in range(Middle.size):
     fig = figure()
-    fig.suptitle(Middle.name+', neuron '+str(i))
+    fig.suptitle(Middle.name+', neuron '+str(i) + 'Apre, Apost')
+     
+    ax = subplot(811)
+     
+    ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
+    ax.legend(loc=2)
+
+    ax = subplot(812)
+     
+    ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
+    ax.legend(loc=2)
+
+    ax = subplot(813)
+     
+    ax.plot( data['Population0']['v']['data'][0,:], label = "membrane potential (Pop0, n=0)", color=neur_col[pre_ranks[0]])
+    ax.legend(loc=2)
+
+    ax = subplot(814)
+     
+    ax.plot( data['Population0']['v']['data'][1,:], label = "membrane potential (Pop0, n=1)", color=neur_col[pre_ranks[1]])
+    ax.legend(loc=2)
+
+    ax = subplot(815)
+     
+    ax.plot( data['Population0']['v']['data'][2,:], label = "membrane potential (Pop0, n=2)", color=neur_col[pre_ranks[2]])
+    ax.legend(loc=2)
+
+    #
+    # Apost    
+    ax = subplot(816)
+    ax.plot( Apost['data'][0,:], label = "Apost")
+    ax.legend(loc=2)    
+
+    #
+    # Apre    
+    ax = subplot(817)
+    for j in range(Small.size):
+        ax.plot( Apre['data'][j,:], label = "Apre ("+str(pre_ranks[j])+")", color=neur_col[j])
+    ax.legend(loc=2)    
+
+    #
+    # value    
+    ax = subplot(818)
+    for j in range(Small.size):
+        ax.plot( weight['data'][j,:], label = "value ("+str(pre_ranks[j])+")", color=neur_col[j])
+    ax.legend(loc=2)    
+ 
+for i in range(Middle.size):
+    fig = figure()
+    fig.suptitle(Middle.name+', neuron '+str(i)+' (conductance)')
      
     ax = subplot(511)
      
     ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
     ax.legend(loc=2)
-     
+
     ax = subplot(512)
      
     ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
     ax.legend(loc=2)
-    
+
     ax = subplot(513)
      
-    for j in range(Small.size):
-        ax.plot( Apre['data'][j,:], label = "Apre ("+str(j)+")")
-        
-    ax.legend(loc=2)    
+    ax.plot( data['Population0']['v']['data'][0,:], label = "membrane potential (Pop0, n="+str(pre_ranks[0])+")", color='b')
+    ax.legend(loc=2)
 
     ax = subplot(514)
      
-    for j in range(Small.size):
-        ax.plot( Apost['data'][j,:], label = "Apost ("+str(j)+")")
-        
-    ax.legend(loc=2)    
+    ax.plot( data['Population0']['v']['data'][1,:], label = "membrane potential (Pop0, n="+str(pre_ranks[1])+")", color='g')
+    ax.legend(loc=2)
 
     ax = subplot(515)
      
-    for j in range(Small.size):
-        ax.plot( weight['data'][j,:], label = "value ("+str(j)+")")
-        
-    ax.legend(loc=2)    
- 
+    ax.plot( data['Population0']['v']['data'][2,:], label = "membrane potential (Pop0, n="+str(pre_ranks[2])+")", color='r')
+    ax.legend(loc=2)
+    
 show()
 
 print 'done'

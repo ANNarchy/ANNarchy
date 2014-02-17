@@ -58,30 +58,26 @@ Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
 exc_exc = Projection(
     pre=Excitatory, 
     post=Excitatory, 
-    target='exc',
-    connector=all2all(pre=Excitatory, post=Excitatory, weights=Uniform(0,0.5))
-)
+    target='exc'
+).connect_all_to_all(weights=Uniform(0,0.5))
    
 exc_inh = Projection(
     pre=Excitatory, 
     post=Inhibitory, 
     target='exc',
-    connector=all2all(pre=Excitatory, post=Inhibitory, weights=Uniform(0,0.5))
-)
+).connect_all_to_all(weights=Uniform(0,0.5))
   
 inh_exc = Projection(
     pre=Inhibitory, 
     post=Excitatory, 
-    target='inh',
-    connector= all2all(pre=Inhibitory, post=Excitatory, weights= Uniform(-1.0,0.0))
-)
+    target='inh'
+).connect_all_to_all(weights=Uniform(-1.0,0.0))
   
 inh_inh = Projection(
     pre=Inhibitory, 
     post=Inhibitory, 
-    target='inh',
-    connector=all2all(pre=Inhibitory, post=Inhibitory, weights=Uniform(-1.0,0.0) )
-)
+    target='inh'
+).connect_all_to_all(weights=Uniform(-1.0,0.0))
 
 # Compile
 compile()
