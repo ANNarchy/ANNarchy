@@ -24,6 +24,7 @@
 import traceback
 import numpy as np
 
+from ANNarchy4.core.Connector import *
 from ANNarchy4.core import Global
 from ANNarchy4.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse
@@ -129,13 +130,35 @@ class Projection(object):#Descriptor):
         # Finalize initialization
         self.initialized = False
 
+    def connect_one_to_one(self, **args):
+        self._connector = one2one
+        self._connector_params = args
+        
+        return self
+    
+    def connect_all_to_all(self, **args):
+        self._connector = all2all
+        self._connector_params = args
+        
+        return self
+    
+    def connect_gaussian(self, **args):
+        self._connector = gaussian
+        self._connector_params = args
+        
+        return self
+
+    def connect_dog(self, **args):
+        self._connector = dog
+        self._connector_params = args
+        
+        return self
+    
     def connect_with_func(self, method, **args):
-	print method
-	print args
         self._connector = method
         self._connector_params = args
 
-	return self
+        return self
       
     def _build_pattern_from_dict(self):
         """

@@ -30,49 +30,71 @@ testAll2All = Projection(
     pre = In, 
     post = Out, 
     target = 'exc',
-    method = all2all,
     synapse = Simple2,
-    weights = 1.0,
-    delays = 0.0
-)
+).connect_all_to_all( weights = 1.0, delays = 0.0 )
+#===============================================================================
+# testAll2All = Projection( 
+#     pre = In, 
+#     post = Out, 
+#     target = 'exc',
+#     method = all2all,
+#     synapse = Simple2,
+#     weights = 1.0,
+#     delays = 0.0
+# )
+#===============================================================================
 
 testGaussian = Projection(
     pre = In, 
     post = Out, 
-    target = 'inh',
-    method = gaussian,
-    sigma=0.3,
-    amp=0.1 
-)
+    target = 'inh'
+).connect_gaussian( sigma=0.3, amp=0.1 )
+#===============================================================================
+# testGaussian = Projection(
+#     pre = In, 
+#     post = Out, 
+#     target = 'inh',
+#     method = gaussian,
+#     sigma=0.3,
+#     amp=0.1 
+# )
+#===============================================================================
  
 testDog = Projection(
     pre = In, 
     post = Out, 
-    target = 'inh', 
-    method = dog,
+    target = 'inh' 
+).connect_dog(    
     amp_pos=0.2, 
     sigma_pos=0.2, 
     amp_neg=0.1, 
     sigma_neg=0.3
 )
+#===============================================================================
+# testDog = Projection(
+#     pre = In, 
+#     post = Out, 
+#     target = 'inh', 
+#     method = dog,
+#     amp_pos=0.2, 
+#     sigma_pos=0.2, 
+#     amp_neg=0.1, 
+#     sigma_neg=0.3
+# )
+#===============================================================================
 
 compile()
 
-print testOne2One
-for dendrite in testOne2One:
-    print dendrite.cy_instance.post_rank
-    print dendrite.cy_instance.rank
-
-#visOne2One = Visualization( [ { 'proj': testOne2One, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights one2one'} ] )
-#visOne2One.render()
+visOne2One = Visualization( [ { 'proj': testOne2One, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights one2one'} ] )
+visOne2One.render()
  
-#visAll2All = Visualization( [ { 'proj': testAll2All, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights all2all'} ] )
-#visAll2All.render()
+visAll2All = Visualization( [ { 'proj': testAll2All, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights all2all'} ] )
+visAll2All.render()
  
-#visGaussian = Visualization( [ { 'proj': testGaussian, 'var': 'value', 'min': 0.0, 'max': 0.1, 'title': 'weights gaussian'} ] )
-#visGaussian.render()
+visGaussian = Visualization( [ { 'proj': testGaussian, 'var': 'value', 'min': 0.0, 'max': 0.1, 'title': 'weights gaussian'} ] )
+visGaussian.render()
  
-#visDog = Visualization( [ { 'proj': testDog, 'var': 'value', 'min': 0.0, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
-#visDog.render()
+visDog = Visualization( [ { 'proj': testDog, 'var': 'value', 'min': 0.0, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
+visDog.render()
 
 raw_input()
