@@ -5,8 +5,8 @@ from pylab import show, figure, subplot, legend, close
 # experiment setup
 setup(dt=1)
 nb_steps = 1000
-nb_exc_neurons = 800
-nb_inh_neurons = 200
+nb_exc_neurons = 160
+nb_inh_neurons = 40
 
 param_dict = {
     'noise_factor': 5.0,
@@ -43,12 +43,12 @@ reset = """
 """
 )
 
-Excitatory = Population(name='Excitatory', geometry=(800), neuron=Izhikevitch)
+Excitatory = Population(name='Excitatory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
 re = np.random.random(nb_exc_neurons)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
 
-Inhibitory = Population(name='Inhibitory', geometry=(200), neuron=Izhikevitch)
+Inhibitory = Population(name='Inhibitory', geometry=(nb_inh_neurons), neuron=Izhikevitch)
 ri = np.random.random(nb_inh_neurons)
 Inhibitory.noise_scale=2.0
 Inhibitory.b = 0.25 - 0.05*ri
@@ -137,6 +137,7 @@ def plot(population, data):
                 
 if __name__ == '__main__':
     
+    print 'start simulation'
     #
     # close previous opened figures
     close('all')
@@ -162,6 +163,7 @@ if __name__ == '__main__':
         # first 20 ms no input
         Excitatory.I_in = I[i,:]
         #print i
+        print 'trial', i, 'of', nb_steps
         simulate(1)
         
     data = get_record( to_record )

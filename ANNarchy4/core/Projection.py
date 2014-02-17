@@ -92,7 +92,7 @@ class Projection(object):#Descriptor):
             if isinstance(self.pre.neuron_type, RateNeuron):
                 self.synapse_type = RateSynapse(parameters = "", equations = "")
             else:
-                self.synapse_type = SpikeSynapse(parameters = "", equations = "")
+                self.synapse_type = SpikeSynapse(parameters = "", equations = "", pre_spike="g_target += value", post_spike="")
         
         #
         # store the
