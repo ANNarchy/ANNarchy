@@ -8,12 +8,6 @@ nb_steps = 1000
 nb_exc_neurons = 800
 nb_inh_neurons = 200
 
-param_dict = {
-    'noise_factor': 5.0,
-    'a' : 0.02,
-    'b' : 0.2,
-}
-
 # Define the neurons
 Izhikevitch = SpikeNeuron(
     parameters="""
@@ -24,12 +18,11 @@ Izhikevitch = SpikeNeuron(
         d = 2.0 
         tau = 5.0: population
     """,
-    extra_values = param_dict,
     equations="""
         noise = Normal(0.0,1.0)
         I = g_exc + g_inh + noise * noise_scale : init = 0.0
-        dv/dt = 0.04 * v * v + 5.0*v + 140.0 -u + I : init=-65.0
-        du/dt = a * (b*v - u) : init = 0.2
+        v += 0.04 * v * v + 5.0*v + 140.0 -u + I : init=-65.0
+        u += a * (b*v - u) : init = -13.0
         g_exc = 0.0
         g_inh = 0.0 
     """,
@@ -49,10 +42,10 @@ Excitatory.d = 8.0 - 6.0*re**2
 
 Inhibitory = Population(name='Inhibitory', geometry=(nb_inh_neurons), neuron=Izhikevitch)
 ri = np.random.random(nb_inh_neurons)
-Inhibitory.noise_scale=2.0
+Inhibitory.noise_scale = 2.0
 Inhibitory.b = 0.25 - 0.05*ri
 Inhibitory.a = 0.02 + 0.08*ri
-Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * -65
+Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * v
 
 exc_exc = Projection(
     pre=Excitatory, 
