@@ -46,6 +46,10 @@ class Projection(object):
             * *target*: connection type
             * *synapse*: synapse description
         """
+        if Global.get_projection(pre, post, target, suppress_error=True) != None:
+            Global._error('population from', pre.name, 'to', post.name, 'with target', target, 'already exists.')
+            exit(0)
+        
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object 
@@ -65,6 +69,7 @@ class Projection(object):
             
         # Store the arguments
         self.target = target
+        
         # Create a default name
         self._id = len(Global._projections)
         self.name = 'Projection'+str(self._id)

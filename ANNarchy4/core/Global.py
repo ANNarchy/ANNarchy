@@ -129,7 +129,7 @@ def get_population(name):
     print("Error: no population",name,"found.")
     return None
 
-def get_projection(pre, post, target):
+def get_projection(pre, post, target, suppress_error=False):
     """
     Returns projection corresponding to the arguments.
     
@@ -138,6 +138,7 @@ def get_projection(pre, post, target):
     * *pre*: presynaptic population
     * *post*: postsynaptic population
     * *target*: connection type
+    * *suppress_error*: if suppress_error is True the potential error will not prompted.
     
     Returns:
     
@@ -150,7 +151,9 @@ def get_projection(pre, post, target):
                 if proj.target == target:
                     return proj
     
-    print("Error: no projection",pre.name,"->",post.name,"with target ",target,"found.")
+    if not suppress_error:
+        print("Error: no projection",pre.name,"->",post.name,"with target ",target,"found.")
+    
     return None
 
 def simulate(duration):
