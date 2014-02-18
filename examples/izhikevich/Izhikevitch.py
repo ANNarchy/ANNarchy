@@ -85,16 +85,15 @@ def plot(population, data):
     nb_neurons = population.size
     
     X = np.arange(nb_steps)
-    spikes = np.ones((nb_neurons, nb_steps))
+    spikes = np.zeros((nb_neurons, nb_steps))
     timing = population.cyInstance.get_spike_timings()
         
-    #
     # reformat data for plot  
     if timing.shape == (nb_neurons,):  
         for i in xrange(nb_neurons):
             if len(timing[i])>1:
-                neur_v[ i, timing[i] ] = 60
-                spikes[ i, timing[i] ] = 0
+                neur_v[ i, timing[i] ] = 60.0
+                spikes[ i, timing[i] ] = 1.0
         
     rest_pot = np.ones((nb_steps,1)) * -65.0
     threshold = np.ones((nb_steps,1)) * 30.0
@@ -117,14 +116,14 @@ def plot(population, data):
         #ax.set_ylim([-70,70])
         
         ax = subplot(313)
-        ax.bar( X, spikes[i,:] )
+        ax.plot( X, spikes.sum(axis=0) )
         ax.set_xlim([0,nb_steps])
 
     fig = figure()
     fig.suptitle('Population '+population.name)
     
     ax = subplot(111)
-    ax.imshow( spikes, cmap='hot' )
+    ax.imshow( 1.0 - spikes, cmap='gray' )
     ax.set_xlim([0,nb_steps])
                 
 if __name__ == '__main__':
@@ -143,14 +142,12 @@ if __name__ == '__main__':
         { 'pop': Inhibitory, 'var': 'v' },
         { 'pop': Inhibitory, 'var': 'I', 'as_1D': True }        
     ]
-
-    
     record( to_record )
     
     # Simulate 1s    
     simulate(nb_steps)
-        
     print 'Done'
+    
     # Plot data
     data = get_record( to_record )
     plot( Excitatory, data )

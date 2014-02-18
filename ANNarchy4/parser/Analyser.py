@@ -712,17 +712,17 @@ def _extract_pre_spike_variable(proj_desc):
             post_target = True
             
         translator = Equation(name, var, 
-                              proj_desc['attributes'], 
-                              proj_desc['local'], 
-                              proj_desc['global'])
+                              proj_desc['attributes'] + [name], 
+                              proj_desc['local'] + [name], 
+                              proj_desc['global'],
+                              index = '[inv_rank_[rank]]')
         eq = translator.parse()
         
         if post_target: # the left side has to be modified
-            eq = eq.replace( "g_" + proj_desc['target'] + "_[i]",
+            eq = eq.replace( "g_" + proj_desc['target'] + "_[inv_rank_[rank]]",
                         "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_]")
 
-        # Replace the [i] by presynaptic access 
-        eq = eq.replace('[i]','[inv_rank_[rank]]')
+        # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq } )
 
     return pre_spike_var 
