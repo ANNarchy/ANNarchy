@@ -24,6 +24,10 @@
 import traceback
 import numpy as np
 
+import pyximport
+pyximport.install()
+import cy_functions
+
 from ANNarchy4.core import Global
 from ANNarchy4.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse
@@ -188,6 +192,7 @@ class Projection(object):
             
         return self
     
+    @profile
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -219,6 +224,7 @@ class Projection(object):
         
         return self
 
+    @profile
     def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -247,6 +253,7 @@ class Projection(object):
                 normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
     
                 dist = self._comp_dist(normPre, normPost)
+                dist2 = cy_functions.comp_dist(normPre, normPost)
                 
                 value = amp * np.exp(-dist/2.0/sigma/sigma)
                 if (abs(value) > limit * abs(amp)):
@@ -259,6 +266,7 @@ class Projection(object):
                          
         return self
 
+    @profile
     def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -286,6 +294,7 @@ class Projection(object):
                 normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
     
                 dist = self._comp_dist(normPre, normPost)
+                dist2 = cy_functions.comp_dist(normPre, normPost)
     
                 value = amp_pos * np.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * np.exp(-dist/2.0/sigma_neg/sigma_neg)
                 if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
@@ -298,6 +307,7 @@ class Projection(object):
 
         return self
     
+    @profile
     def connect_with_func(self, method, **args):
         """
         Establish connections provided by user defined function.

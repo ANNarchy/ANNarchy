@@ -16,8 +16,8 @@ Simple2 = RateSynapse(
 psp = """ value * (1.0-pre.rate) """                      
 )
 
-In = Population((20, 20), Simple)
-Middle = Population((20, 20), Simple)
+In = Population((30, 30), Simple)
+Middle = Population((30, 30), Simple)
 Out = Population((3, 3), Simple)
 
 testOne2One = Projection( 
@@ -50,6 +50,7 @@ testDog = Projection(
     sigma_neg=0.7
 )
 
+@profile
 def stochastic_pattern(pre, post, weight, propability):
   
     synapse_dict = {}
@@ -58,7 +59,7 @@ def stochastic_pattern(pre, post, weight, propability):
         for pre_rank in xrange(pre.size):
             if np.random.random() < propability:
                 synapse_dict[(pre_rank, post_rank)] = { 'w': weight, 'd': 0.0 }
-                  
+
     return synapse_dict
   
 testUserPattern = Projection(
