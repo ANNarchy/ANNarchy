@@ -467,7 +467,7 @@ clean:
             if Global.config['show_time']:
                 t0 = time.time()
             # Create the synapses
-            proj.connect() 
+            proj._connect() 
             
             #TODO:
             #if proj.connector.delays != None:

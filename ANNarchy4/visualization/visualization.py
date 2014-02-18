@@ -227,7 +227,7 @@ class VisualizeProjectionVar(Render):
         if 'ranks' in plot_data.keys():
             self.ranks = plot_data['ranks']
         
-        self.cmd = 'self.proj.gather_data(\''+self.var+'\')'
+        self.cmd = 'self.proj._gather_data(\''+self.var+'\')'
         self.handle.set_title(self.title)
         self.image = self.handle.imshow(eval(self.cmd), 
                                         cmap= self.p_map, 
