@@ -41,4 +41,5 @@ def run(InputPop, FocusPop, proj):
         InputPop.baseline = data
 
         simulate(1)
-        vis.render(interval=250)
+#         if i%100 == 0:
+#             vis.render()

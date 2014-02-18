@@ -73,6 +73,8 @@ authorized_keywords = [
     'explicit',
     'implicit',
     'exponential',
+    'int',
+    'bool'
 ]
 
 def setup(**keyValueArgs):

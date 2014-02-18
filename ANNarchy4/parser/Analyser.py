@@ -594,8 +594,11 @@ def _extract_parameters(description, extra_values):
                 try:
                     init = eval(ctype.replace('DATA_TYPE', 'float') + '(' + init + ')')
                 except:
-                    var = init.replace("'","")
-                    init = extra_values[var]
+                    try:
+                        init = eval('int(' + init + ')')
+                    except:
+                        var = init.replace("'","")
+                        init = extra_values[var]
                     
         else: # Nothing is given: baseline : population
             if ctype == 'bool':
