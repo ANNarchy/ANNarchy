@@ -18,10 +18,10 @@ def run(InputPop, FocusPop, proj):
 
     cdef np.ndarray data = np.zeros(w*h)
     
-    vis = Visualization( [ { 'pop': InputPop, 'var': 'baseline' }, 
-                           { 'pop': FocusPop, 'var': 'rate' },
+    vis = Visualization( [ { 'pop': InputPop, 'var': 'rate' }, 
+                           { 'pop': FocusPop, 'var': 'rate','min': 0.0, 'max': 1.0 },
                            { 'proj': proj, 'var': 'value', 
-                             'min': 0.0, 'max': 0.1, 'title': 'Receptive fields'} ]
+                             'min': -0.1, 'max': 0.1, 'title': 'Receptive fields'} ]
                          
                        )
 

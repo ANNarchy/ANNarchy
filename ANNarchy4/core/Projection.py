@@ -303,6 +303,7 @@ class Projection(object):
         """
         self._connector = method
         self._connector_params = args
+        self._synapses = self._connector(self.pre, self.post, **self._connector_params)
 
         return self
       
@@ -368,12 +369,8 @@ class Projection(object):
         #
         # the synapse objects are stored as pre-post pairs.
         dendrites = {} 
-        if self._connector:
-            synapses = self._connector(self.pre, self.post, **self._connector_params)
-        else:
-            synapses = self._synapses    
         
-        for conn, data in synapses.iteritems():
+        for conn, data in self._synapses.iteritems():
             try:
                 dendrites[conn[1]]['rank'].append(conn[0])
                 dendrites[conn[1]]['weight'].append(data['w'])
