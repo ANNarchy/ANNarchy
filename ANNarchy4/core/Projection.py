@@ -118,6 +118,47 @@ class Projection(object):
         # Finalize initialization
         self.initialized = False
 
+    @property
+    def size(self):
+        " Number of postsynaptic neurons receiving synapses in this projection."
+        return len(self._dendrites)
+        
+    def __len__(self):
+        " Number of postsynaptic neurons receiving synapses in this projection."
+        return len(self._dendrites)
+        
+    @property
+    def dendrites(self):
+        """
+        List of dendrites corresponding to this projection.
+        """
+        return self._dendrites
+        
+    @property
+    def post_ranks(self):
+        """
+        List of postsynaptic neuron ranks having synapses in this projection.
+        """
+        return self._post_ranks
+    
+    def dendrite(self, pos):
+        """
+        Returns the dendrite of a postsynaptic neuron according to its rank.
+
+        Parameters:
+
+            * *pos*: could be either rank or coordinate of the requested postsynaptic neuron
+        """
+        if isinstance(pos, int):
+            rank = pos
+        else:
+            rank = self.post.rank_from_coordinates(pos)
+        if rank in self._post_ranks:
+            return self._dendrites[rank]
+        else:
+            Global._error("neuron of rank", str(rank),"has no synapse in this projection.")
+            return None
+    
     def connect_one_to_one(self, weights=1.0, delays=0.0):
         """
         Establish one to one connections within the two projections.
@@ -174,14 +215,6 @@ class Projection(object):
         
         return self
 
-    def _comp_dist(self, pre, post):
-        res = 0.0
-
-        for i in range(len(pre)):
-            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
-
-        return res
-    
     def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -233,7 +266,7 @@ class Projection(object):
         
             * *weights*: synaptic value, either one value or a random distribution.
             * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma*_pos: sigma of positive gaussian function
+            * *sigma_pos*: sigma of positive gaussian function
             * *sigma_neg*: sigma of negative gaussian function
             * *amp_pos*: amp of positive gaussian function
             * *amp_neg*: amp of negative gaussian function
@@ -262,11 +295,71 @@ class Projection(object):
         return self
     
     def connect_with_func(self, method, **args):
-        
+        """
+        Establish connections provided by user defined function.
+
+        * *method*: function handle. The function **need** to return a dictionary of synapses.
+        * *args*: list of arguments needed by the function 
+        """
         self._connector = method
         self._connector_params = args
 
         return self
+      
+    def get(self, name):
+        """ Returns a list of parameters/variables values for each dendrite in the projection.
+        
+        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.        
+        """       
+        return self.__getattr__(name)
+            
+    def set(self, value):
+        """ Sets the parameters/variables values for each dendrite in the projection.
+        
+        For parameters, you can provide:
+        
+            * a single value, which will be the same for all dendrites.
+            
+            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
+            
+        For variables, you can provide:
+        
+            * a single value, which will be the same for all synapses of all dendrites.
+            
+            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will have the same value.
+            
+            * a list of lists or 2D numpy array representing for each connected postsynaptic neuron, the value to be taken by each synapse. The first dimension must be self.size, while the second must correspond to the number of synapses in each particular dendrite.
+            
+        .. hint::
+        
+            In the latter case, it would be less error-prone to iterate over all dendrites in the projection:
+            
+            .. code-block:: python
+            
+                for dendrite in proj.dendrites:
+                    dendrite.set( ... )    
+        
+        """
+        
+        for name, val in value:
+            self.__setattr__(name, val)
+
+    def _connect(self):
+        """
+        build up dendrites
+        """
+        self._dendrites, self._post_ranks = self._build_pattern_from_dict()
+
+    def _comp_dist(self, pre, post):
+        """
+        Compute euklidean distance between two coordinates. 
+        """
+        res = 0.0
+
+        for i in range(len(pre)):
+            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
+
+        return res
       
     def _build_pattern_from_dict(self):
         """
@@ -295,9 +388,56 @@ class Projection(object):
             ret_ranks.append(post_id)
         
         return ret_value, ret_ranks
+
+    def _gather_data(self, variable):
+        """ 
+        Gathers synaptic values for visualization
+        
+        *Paramater*:
+        
+            * *variable*: name of variable
+        """
+        blank_col=np.zeros((self.pre.geometry[1], 1))
+        blank_row=np.zeros((1,self.post.geometry[0]*self.pre.geometry[0]+self.post.geometry[0] +1))
+        
+        m_ges = None
+        i=0
+        
+        for y in xrange(self.post.geometry[1]):
+            m_row = None
             
+            for x in xrange(self.post.geometry[0]):
+                m = self._dendrites[i].cy_instance.value
+                
+                if m.shape != self.pre.geometry:
+                    new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
+                    
+                    j = 0
+                    for r in self._dendrites[i].cy_instance.rank:
+                        new_m[r] = m[j]
+                        j+=1 
+                    m = new_m
+                
+                if m_row == None:
+                    m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
+                else:
+                    m_row = np.ma.concatenate( [ m_row, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
+                m_row = np.ma.concatenate( [ m_row , blank_col], axis = 1 )
+                
+                i += 1
+            
+            if m_ges == None:
+                m_ges = np.ma.concatenate( [ blank_row, m_row ] )
+            else:
+                m_ges = np.ma.concatenate( [ m_ges, m_row ] )
+            m_ges = np.ma.concatenate( [ m_ges, blank_row ] )
+        
+        return m_ges
+                
     def _init_attributes(self):
-        """ Method used after compilation to initialize the attributes."""
+        """ 
+        Method used after compilation to initialize the attributes.
+        """
         self.initialized = True  
         for attr in self.attributes:
             if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
@@ -340,50 +480,6 @@ class Projection(object):
         else:
             object.__setattr__(self, name, value)
             
-    def connect(self):
-        """
-        build up dendrites
-        """
-        self._dendrites, self._post_ranks = self._build_pattern_from_dict()
-        
-    def get(self, name):
-        """ Returns a list of parameters/variables values for each dendrite in the projection.
-        
-        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.        
-        """       
-        return self.__getattr__(name)
-            
-    def set(self, value):
-        """ Sets the parameters/variables values for each dendrite in the projection.
-        
-        For parameters, you can provide:
-        
-            * a single value, which will be the same for all dendrites.
-            
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
-            
-        For variables, you can provide:
-        
-            * a single value, which will be the same for all synapses of all dendrites.
-            
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will have the same value.
-            
-            * a list of lists or 2D numpy array representing for each connected postsynaptic neuron, the value to be taken by each synapse. The first dimension must be self.size, while the second must correspond to the number of synapses in each particular dendrite.
-            
-        .. hint::
-        
-            In the latter case, it would be less error-prone to iterate over all dendrites in the projection:
-            
-            .. code-block:: python
-            
-                for dendrite in proj.dendrites:
-                    dendrite.set( ... )    
-        
-        """
-        
-        for name, val in value:
-            self.__setattr__(name, val)
-            
     def _get_cython_attribute(self, attribute):
         """
         Returns the value of the given attribute for all neurons in the population, 
@@ -423,25 +519,6 @@ class Projection(object):
             for dendrite in self._dendrites:
                 setattr(dendrite, attribute,  value)
            
-                
-    def dendrite(self, pos):
-        """
-        Returns the dendrite of a postsynaptic neuron according to its rank.
-
-        Parameters:
-
-            * *pos*: could be either rank or coordinate of the requested postsynaptic neuron
-        """
-        if isinstance(pos, int):
-            rank = pos
-        else:
-            rank = self.post.rank_from_coordinates(pos)
-        if rank in self._post_ranks:
-            return self._dendrites[rank]
-        else:
-            Global._error("neuron of rank", str(rank),"has no synapse in this projection.")
-            return None
-    
     # Iterators
     def __getitem__(self, *args, **kwds):
         """ Returns dendrite of the given position in the postsynaptic population. 
@@ -454,64 +531,3 @@ class Projection(object):
         " Returns iteratively each dendrite in the population in ascending rank order."
         for n in range(self.size):
             yield self._dendrites[n] 
-        
-    @property
-    def size(self):
-        " Number of postsynaptic neurons receiving synapses in this projection."
-        return len(self._dendrites)
-        
-    def __len__(self):
-        " Number of postsynaptic neurons receiving synapses in this projection."
-        return len(self._dendrites)
-        
-    @property
-    def dendrites(self):
-        """
-        List of dendrites corresponding to this projection.
-        """
-        return self._dendrites
-        
-    @property
-    def post_ranks(self):
-        """
-        List of postsynaptic neuron ranks having synapses in this projection.
-        """
-        return self._post_ranks
-
-    def gather_data(self, variable):
-        blank_col=np.zeros((self.pre.geometry[1], 1))
-        blank_row=np.zeros((1,self.post.geometry[0]*self.pre.geometry[0]+self.post.geometry[0] +1))
-        
-        m_ges = None
-        i=0
-        
-        for y in xrange(self.post.geometry[1]):
-            m_row = None
-            
-            for x in xrange(self.post.geometry[0]):
-                m = self._dendrites[i].cy_instance.value
-                
-                if m.shape != self.pre.geometry:
-                    new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
-                    
-                    j = 0
-                    for r in self._dendrites[i].cy_instance.rank:
-                        new_m[r] = m[j]
-                        j+=1 
-                    m = new_m
-                
-                if m_row == None:
-                    m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
-                else:
-                    m_row = np.ma.concatenate( [ m_row, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
-                m_row = np.ma.concatenate( [ m_row , blank_col], axis = 1 )
-                
-                i += 1
-            
-            if m_ges == None:
-                m_ges = np.ma.concatenate( [ blank_row, m_row ] )
-            else:
-                m_ges = np.ma.concatenate( [ m_ges, m_row ] )
-            m_ges = np.ma.concatenate( [ m_ges, blank_row ] )
-        
-        return m_ges

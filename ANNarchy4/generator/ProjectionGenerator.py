@@ -302,14 +302,11 @@ class RateProjectionGenerator(ProjectionGenerator):
         " Generates code for the localLearn() method for local variables."
 
         # Generate the code
-        code = """
-    for(int i=0; i<(int)rank_.size();i++) 
-    {
-"""
+        local_learn = ""
         for param in self.desc['variables']:
             if param['name'] in self.desc['local']: # local attribute 
                 # The code is already in 'cpp'
-                code +="""
+                local_learn +="""
         %(code)s   
 """ % {'code' : param['cpp']}
                 # Set the min and max values 
@@ -320,13 +317,23 @@ class RateProjectionGenerator(ProjectionGenerator):
             %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
                     if bound == 'max':
-                        code += """
+                        local_learn += """
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
-        code+="""
-    }
-"""
+        
+        if len(local_learn) > 1:
+            #
+            # build final code
+            code="""
+        for(int i=0; i<(int)rank_.size();i++) 
+        {
+            %(code)s
+        }
+    """ % local_learn
+        else:
+            code = ""
+            
         return code
 
 class SpikeProjectionGenerator(ProjectionGenerator):

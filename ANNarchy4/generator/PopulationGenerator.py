@@ -428,6 +428,8 @@ class RatePopulationGenerator(PopulationGenerator):
         constructor, reset = self.generate_constructor()
         # Destructor
         destructor = self.generate_destructor()
+        # prepare neurons (shift delayed rates)
+        prepare = self.generate_prepare_neurons()
         # Single operations
         singleops, globalops = self.generate_globalops()
         # Record
@@ -442,6 +444,7 @@ class RatePopulationGenerator(PopulationGenerator):
             'class' : self.name,
             'constructor' : constructor,
             'destructor' : destructor,
+            'prepare': prepare,
             'resetToInit' : reset,
             'localMetaStep' : local_metastep,
             'globalMetaStep' : global_metastep,
@@ -468,7 +471,8 @@ class RatePopulationGenerator(PopulationGenerator):
         }
         return template % dictionary
 
-        
+    def generate_prepare_neurons(self):
+        return rate_prepare_neurons
 
 class SpikePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a spike population description. """

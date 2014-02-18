@@ -66,21 +66,23 @@ public:
 		return &rate_;
 	}
 
-	std::vector<DATA_TYPE>* getRates(int delay) {
+	std::vector<DATA_TYPE>* getRates(int delay)
+	{
 		if ( delay <= (int)delayedRates_.size()) 
-                {
-                #ifdef _DEBUG
-                        for(int i=0; i < delayedRates_.size(); i++)
-                                std::cout << &(delayedRates_[i]) << std::endl;
-                #endif
-                        return &(delayedRates_[delay-1]);
-                }       
+        {
+        #ifdef _DEBUG
+            std::cout << name_ << ": rates for delay "<< delay << "(" << maxDelay_ <<")" << std::endl;
+            for(int i=0; i < delayedRates_.size(); i++)
+                    std::cout << "   data-addr: " << &(delayedRates_[i]) << std::endl;
+        #endif
+            return &(delayedRates_[delay-1]);
+        }
 		else
-                {
-                        std::cout << "Invalid delay " << delay << " (maxDelay is "<< maxDelay_ << ")"<< std::endl;
-			return NULL;
-                }
-	}
+        {
+            std::cout << "Invalid delay " << delay << " (maxDelay is "<< maxDelay_ << ")"<< std::endl;
+            return NULL;
+        }
+    }
 
 	std::vector< std::vector<int> > getSpikeTimings() { return spike_timings_;}
 
