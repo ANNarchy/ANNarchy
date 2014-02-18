@@ -33,6 +33,10 @@ import ANNarchy4.core.Global as Global
 import traceback
 import numpy as np
 
+import pyximport
+pyximport.install()
+import cy_functions
+
 class Population(object):
     """
     Represents a population of neurons.
@@ -52,11 +56,35 @@ class Population(object):
         
         """
         # Store the provided geometry
-        if isinstance(geometry, int): # 1D
+        # automatically defines w, h, d, size
+        if isinstance(geometry, int): 
+            # 1D
             self.geometry = (geometry, )
-        else: # a tuple is given
+            self._width = geometry[0]
+            self._height = 1
+            self._depth = 1
+            self._dimension = 1
+        else: 
+            # a tuple is given, can be 1 .. N dimensional
             self.geometry = geometry
+            self._width = geometry[0]
+            if len(geometry)>=2:
+                self._height = geometry[1]
+            else:
+                self._height = 1
+            if len(geometry)>=3:                
+                self._depth = geometry[2]
+            else:
+                self._depth = 1
+                
+            self._dimension = len(geometry)
+
+        size = 1        
+        for i in range(len(self.geometry)):
+            size *= self.geometry[i]
             
+        self._size = size
+        
         # Store the neuron type
         self.neuron_type = neuron
         
@@ -102,7 +130,19 @@ class Population(object):
             self._recorded_variables[var] = Record(var)
 
         # Finalize initialization
-        self.initialized = False        
+        self.initialized = False
+
+        self._coord_dict = {
+            1 : cy_functions.get_1d_coord,
+            2 : cy_functions.get_2d_coord,
+            3 : cy_functions.get_3d_coord
+        }
+
+        self._norm_coord_dict = {
+            1 : cy_functions.get_normalized_1d_coord,
+            2 : cy_functions.get_normalized_2d_coord,
+            3 : cy_functions.get_normalized_3d_coord
+        }        
         
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -200,40 +240,28 @@ class Population(object):
         """
         Width of population.
         """
-        if self.dimension >= 1:
-            return self.geometry[0]
-        else:
-            return 1
+        return self._width
 
     @property
     def height(self):
         """
         Height of population.
         """
-        if self.dimension >= 2:
-            return self.geometry[1]
-        else: 
-            return 1
+        return self._height
 
     @property
     def depth(self):
         """
         Depth of population.
         """
-        if self.dimension == 3:
-            return self.geometry[2]
-        else: 
-            return 1
+        return self._depth
         
     @property
     def size(self):
         """
         Number of neurons in the population.
         """
-        size = 1
-        for i in range(len(self.geometry)):
-            size *= self.geometry[i]
-        return size
+        return self._size
         
     def __len__(self):
         """
@@ -246,7 +274,7 @@ class Population(object):
         """
         Dimension of the population (1, 2 or 3)
         """
-        return len(self.geometry)
+        return self._dimension
         
     @property 
     def rank(self):
@@ -476,6 +504,23 @@ class Population(object):
             return None
         
         coord = np.unravel_index(rank, self.geometry)
+        
+        return coord
+
+    def coordinates_from_rank_optimized(self, rank):
+        """
+        Returns a tuple representing the spatial coordinates corresponding to the geometry of the population.
+        """
+        # Check the rank
+        if not rank < self.size:
+            Global._warning('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
+            return None
+        
+        try:        
+            coord = self._coord_dict[self.dimension](rank, self.geometry)
+        except KeyError:
+            coord = np.unravel_index(rank, self.geometry)
+        
         return coord
 
     def normalized_coordinates_from_rank(self, pos, norm=1.):
@@ -499,6 +544,30 @@ class Population(object):
                 normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
             else:
                 normal += (0.0,) # default?            
+        return normal
+
+    def normalized_coordinates_from_rank_optimized(self, rank, norm=1.):
+        """
+        Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
+        
+        Parameters:
+        
+        * *rank*: position to normalize
+        * *norm*: upper limit (default = 1.0)
+        
+        """
+        try:
+            normal = self._norm_coord_dict[self.dimension](rank, self.geometry)
+        except KeyError:
+            coord = self.coordinates_from_rank_optimized(rank)
+                
+            normal = tuple()
+            for dim in range(self.dimension):
+                if self.geometry[dim] > 1:
+                    normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
+                else:
+                    normal += (0.0,) # default?
+     
         return normal
 
     def set(self, value):

@@ -50,7 +50,7 @@ Proj2 = Projection(
     pre = FocusPop, 
     post = FocusPop, 
     target = 'inh'     
-).connect_dog(    
+).connect_dog_optimized(    
     amp_pos=0.2, 
     sigma_pos=0.1, 
     amp_neg=0.1, 
