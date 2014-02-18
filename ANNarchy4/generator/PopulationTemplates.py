@@ -27,6 +27,8 @@ public:
     
     ~%(class)s();
     
+    void prepareNeurons();
+    
     int getNeuronCount() { return nbNeurons_; }
     
     void resetToInit();
@@ -203,6 +205,11 @@ using namespace ANNarchy_Global;
 %(destructor)s
 }
 
+void %(class)s::prepareNeurons() 
+{
+%(prepare)s
+}
+
 void %(class)s::resetToInit() 
 {
 %(resetToInit)s
@@ -229,6 +236,18 @@ void %(class)s::record()
 }
 
 %(single_global_ops)s
+"""
+
+rate_prepare_neurons="""
+    if (maxDelay_ > 1)
+    {
+    #ifdef _DEBUG
+        std::cout << name_ << ": got delayed rates = " << maxDelay_ << std::endl;
+    #endif
+    
+        delayedRates_.push_front(rate_);
+        delayedRates_.pop_back();
+    }
 """
 
 # Body for a Spike population

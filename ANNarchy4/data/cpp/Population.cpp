@@ -272,9 +272,8 @@ void Population::metaSum() {
 
 	}
 
-#ifdef ANNAR_PROFILE
     #pragma omp barrier
-
+#ifdef ANNAR_PROFILE
     #pragma omp master
     {
         stop = omp_get_wtime();

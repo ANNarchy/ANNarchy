@@ -209,7 +209,8 @@ using namespace ANNarchy_Global;
 %(init)s
 }
 
-%(class)s::~%(class)s() {
+%(class)s::~%(class)s() 
+{
 #ifdef _DEBUG
     std::cout<<"%(class)s::Destructor"<<std::endl;
 #endif
@@ -217,20 +218,24 @@ using namespace ANNarchy_Global;
 %(destructor)s
 }
 
-void %(class)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
+void %(class)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) 
+{
     Projection::initValues(rank, value, delay);
 %(init_val)s
 }
 
-void %(class)s::computeSum() {   
+void %(class)s::computeSum() 
+{   
 %(sum)s
 }
 
-void %(class)s::localLearn() {
+void %(class)s::localLearn() 
+{
 %(local)s
 }
 
-void %(class)s::globalLearn() {
+void %(class)s::globalLearn() 
+{
 %(global)s
 }
 
@@ -373,7 +378,6 @@ psp_code_body = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-                    
         for(int i=0; i<(int)rank_.size(); i++) 
         {
             sum_ += %(psp)s
@@ -384,6 +388,7 @@ psp_code_body = \
         if(constDelay_) // one delay for all connections
         {
             pre_rates_ = pre_population_->getRates(delay_[0]);
+            
         #ifdef _DEBUG
             std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
             for(int i=0; i<(int)(*pre_rates_).size(); i++) {
@@ -391,8 +396,9 @@ psp_code_body = \
             }
             std::cout << std::endl;
         #endif
-            #pragma omp for schedule(static)
-            for(int i=0; i<(int)rank_.size(); i++) {
+            
+            for(int i=0; i<(int)rank_.size(); i++) 
+            {
                 sum_ += %(psp_const_delay)s
             }
         }
@@ -400,8 +406,8 @@ psp_code_body = \
         {
             std::vector<DATA_TYPE> delayedRates = pre_population_->getRates(delay_, rank_);
 
-            #pragma omp for schedule(static)
-            for(int i=0; i<(int)rank_.size(); i++) {
+            for(int i=0; i<(int)rank_.size(); i++) 
+            {
                 sum_ += %(psp_dyn_delay)s
             }
         }
