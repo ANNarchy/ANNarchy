@@ -340,7 +340,7 @@ class Generator(object):
     def partial_compilation(self, changed_cpp, changed_pyx):
         """ Create ANNarchyCore.so and py extensions if something has changed."""
         if changed_cpp or changed_pyx:   
-            Global._print('Compiling ...')
+            Global._print('Compiling ... ')
             if Global.config['show_time']:
                 t0 = time.time()
                                 
@@ -431,6 +431,7 @@ clean:
         Global._compiled = True
     
         if changed_cpp or changed_pyx:   
+            Global._print('OK')
             if Global.config['show_time']:
                 Global._print('Compilation took', time.time() - t0, 'seconds.')
                 

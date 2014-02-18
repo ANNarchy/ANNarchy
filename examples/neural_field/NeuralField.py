@@ -5,7 +5,7 @@
 #
 from ANNarchy4 import *
 
-setup(verbose=True)
+setup(dt=1.0)
 #
 # Define the neuron classes
 #
@@ -15,7 +15,7 @@ parameters="""
     baseline = 0.0
 """,
 equations="""
-    noise = Uniform(0,1)
+    noise = Uniform(0.0, 1.0)
     tau * dmp / dt + mp = baseline + noise
     rate = pos(mp)
 """ 

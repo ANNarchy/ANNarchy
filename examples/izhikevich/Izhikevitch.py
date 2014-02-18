@@ -19,7 +19,7 @@ Izhikevitch = SpikeNeuron(
         tau = 5.0: population
     """,
     equations="""
-        noise = Normal(0.0,1.0)
+        noise = Normal(0.0, 1.0)
         I = g_exc + g_inh + noise * noise_scale : init = 0.0
         v += 0.04 * v * v + 5.0*v + 140.0 -u + I : init=-65.0
         u += a * (b*v - u) : init = -13.0
