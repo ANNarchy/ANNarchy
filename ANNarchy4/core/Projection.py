@@ -76,7 +76,6 @@ class Projection(object):
         #
         # check if a synapse description is attached
         if not synapse:
-            #
             # No synapse attached assume default synapse based on
             # presynaptic population.
             if isinstance(self.pre.neuron_type, RateNeuron):
@@ -245,7 +244,7 @@ class Projection(object):
     
                 dist = self._comp_dist(normPre, normPost)
                 
-                value = amp * exp(-dist/2.0/sigma/sigma)
+                value = amp * np.exp(-dist/2.0/sigma/sigma)
                 if (abs(value) > limit * abs(amp)):
                         
                     try:
@@ -284,7 +283,7 @@ class Projection(object):
     
                 dist = self._comp_dist(normPre, normPost)
     
-                value = amp_pos * exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * exp(-dist/2.0/sigma_neg/sigma_neg)
+                value = amp_pos * np.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * np.exp(-dist/2.0/sigma_neg/sigma_neg)
                 if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
                         
                     try:
