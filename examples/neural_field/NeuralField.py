@@ -15,7 +15,7 @@ parameters="""
     baseline = 0.0
 """,
 equations="""
-    noise = Uniform(0.0, 1.0)
+    noise = Uniform(-0.5, 0.5)
     tau * dmp / dt + mp = baseline + noise
     rate = pos(mp)
 """ 
@@ -30,12 +30,12 @@ parameters="""
     threshold_max = 1.0
 """,
 equations="""
-    tau * dmp / dt + mp = sum(exc) - sum(inh) + baseline + noise
+    tau * dmp / dt + mp = sum(exc) + sum(inh) + baseline + noise
     rate = if mp > threshold_max : threshold_max else: pos(mp) : init = 0.0
 """
 )
 
-nb_neurons = 15
+nb_neurons = 20
 
 InputPop = Population((nb_neurons, nb_neurons), Input)
 FocusPop = Population((nb_neurons, nb_neurons), Focus)
@@ -52,9 +52,9 @@ Proj2 = Projection(
     target = 'inh'     
 ).connect_dog(    
     amp_pos=0.2, 
-    sigma_pos=0.2, 
+    sigma_pos=0.1, 
     amp_neg=0.1, 
-    sigma_neg=0.3                     
+    sigma_neg=0.7                    
 )
 
 # Main program
