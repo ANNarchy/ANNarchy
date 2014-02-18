@@ -27,20 +27,6 @@ from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 
 
-
-# Dictionary of built-in symbols or functions
-global_dict = {
-    'dt' : Symbol('dt_'),
-    't' : Symbol('ANNarchy_Global::time'),
-    'weight' : Symbol('value_[i]'), 
-    'value' : Symbol('value_[i]'), 
-    't_spike': Symbol('pre_population_->getLastSpikeTime(rank_[i])'),
-    'pos': Function('positive'),
-    'positive': Function('positive'), 
-    'neg': Function('negative'), 
-    'negative': Function('negative'), 
-}
-
 # Predefined symbols which must not be declared by the user, but used in the equations
 _predefined = ['weight', 'value']
 
@@ -49,7 +35,8 @@ class Equation(object):
     Class to analyse one equation.
     '''
     def __init__(self, name, expression, variables, 
-                 local_variables, global_variables, untouched = [], method='explicit', type=None):
+                 local_variables, global_variables, untouched = [], 
+                 method='explicit', type=None, index='[i]'):
         '''
         Parameters:
         
@@ -59,6 +46,8 @@ class Equation(object):
         * local_variables: a list of the local variables
         * global_variables: a list of the global variables
         * method: the numerical method to use for ODEs
+        * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
+        * index: index to be used for variables (default: [i])
         '''
         # Store attributes
         self.name = name
@@ -75,17 +64,28 @@ class Equation(object):
         else:
             self.type = type
         
-        # Build the default dictionary for the analysis
-        self.local_dict = global_dict
+        # Build the default dictionary for the analysis# Dictionary of built-in symbols or functions
+        self.local_dict = {
+            'dt' : Symbol('dt_'),
+            't' : Symbol('ANNarchy_Global::time'),
+            'weight' : Symbol('value_' + index), 
+            'value' : Symbol('value_'+index), 
+            't_spike': Symbol('pre_population_->getLastSpikeTime(rank_'+index+')'),
+            'pos': Function('positive'),
+            'positive': Function('positive'), 
+            'neg': Function('negative'), 
+            'negative': Function('negative'), 
+        }
         for var in self.variables: # Add each variable of the neuron
             if var in self.local_variables:
-                self.local_dict[var] = Symbol(var+'_[i]')
+                self.local_dict[var] = Symbol(var+'_' + index)
             elif var in self.global_variables:
                 if var in _predefined:
                     continue
                 self.local_dict[var] = Symbol(var+'_')
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)
+            
         
     def parse(self):
         if self.type == 'ODE':
