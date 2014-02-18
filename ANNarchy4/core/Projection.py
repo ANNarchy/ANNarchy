@@ -24,7 +24,6 @@
 import traceback
 import numpy as np
 
-from ANNarchy4.core.Connector import *
 from ANNarchy4.core import Global
 from ANNarchy4.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse

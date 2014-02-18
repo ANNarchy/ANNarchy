@@ -312,7 +312,7 @@ class RateProjectionGenerator(ProjectionGenerator):
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
                     if bound == 'min':
-                        code += """
+                        local_learn += """
         if(%(var)s_[i] < %(val)s)
             %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
@@ -328,9 +328,9 @@ class RateProjectionGenerator(ProjectionGenerator):
             code="""
         for(int i=0; i<(int)rank_.size();i++) 
         {
-            %(code)s
+            %(local_learn)s
         }
-    """ % local_learn
+    """ % { 'local_learn': local_learn }
         else:
             code = ""
             

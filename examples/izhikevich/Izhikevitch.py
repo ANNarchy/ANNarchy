@@ -8,14 +8,21 @@ nb_steps = 1000
 nb_exc_neurons = 800
 nb_inh_neurons = 200
 
+param_dict = {
+    'a' : 0.02,
+    'b' : 0.2, 
+    'c' : -65.0, 
+    'd' : 2.0  
+}
+
 # Define the neurons
 Izhikevitch = SpikeNeuron(
     parameters="""
         noise_scale = 5.0 : population
-        a = 0.02 
-        b = 0.2 
-        c = -65.0 
-        d = 2.0 
+        a = 'a'
+        b = 'b'
+        c = 'c'
+        d = 'd' 
         tau = 5.0: population
     """,
     equations="""
@@ -26,6 +33,7 @@ Izhikevitch = SpikeNeuron(
         g_exc = 0.0
         g_inh = 0.0 
     """,
+    extra_values=param_dict,
     spike = """
         v >= 30.0
     """,

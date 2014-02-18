@@ -42,7 +42,7 @@ class RateSynapse(object):
         self.equations = equations
         self.functions = functions
         self.psp = psp
-        
+        self.extra_values = extra_values        
          
     def __add__(self, synapse):
         if not isinstance(synapse, RateSynapse):
@@ -67,6 +67,7 @@ class SpikeSynapse(object):
         self.pre_spike = pre_spike
         self.post_spike = post_spike
         self.psp = psp
+        self.extra_values = extra_values
 
     def __add__(self, synapse):
         if not isinstance(synapse, SpikeSynapse):

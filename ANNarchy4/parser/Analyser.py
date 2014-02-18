@@ -463,14 +463,14 @@ def analyse_population(pop):
         'type': pop_type,
         'raw_parameters': pop.neuron_type.parameters,
         'raw_equations': pop.neuron_type.equations,
-        'raw_functions': pop.neuron_type.functions
+        'raw_functions': pop.neuron_type.functions,
     }
     if pop_type == 'spike': # Additionally store reset and spike
         description['raw_reset'] = pop.neuron_type.reset
         description['raw_spike'] = pop.neuron_type.spike
         
     # Extract parameters and variables names
-    parameters = _extract_parameters(pop.neuron_type.parameters)
+    parameters = _extract_parameters(pop.neuron_type.parameters, pop.neuron_type.extra_values)
     variables = _extract_variables(pop.neuron_type.equations)
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = _get_attributes(parameters, variables)
@@ -527,7 +527,7 @@ def analyse_projection(proj):
         description['raw_psp'] = proj.synapse_type.psp
 
     # Extract parameters and variables names
-    parameters = _extract_parameters(proj.synapse_type.parameters)
+    parameters = _extract_parameters(proj.synapse_type.parameters, proj.synapse_type.extra_values)
     variables = _extract_variables(proj.synapse_type.equations)
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = _get_attributes(parameters, variables)
@@ -545,13 +545,12 @@ def analyse_projection(proj):
     
     return description            
 
-    
-    
-def _extract_parameters(description):
+def _extract_parameters(description, extra_values):
     """ Extracts all variable information from a multiline description."""
     parameters = []
     # Split the multilines into individual lines
     parameter_list = _prepare_string(description)
+    
     # Analyse all variables
     for definition in parameter_list:
         # Check if there are flags after the : symbol
@@ -562,6 +561,7 @@ def _extract_parameters(description):
             exit(0)
         # Process the flags if any
         bounds, flags = _extract_flags(constraint)
+
         # Get the type of the variable (float/int/bool)
         if 'int' in flags:
             ctype = 'int'
@@ -583,6 +583,7 @@ def _extract_parameters(description):
                 init = float(init)
         elif '=' in equation: # the value is in the equation
             init = equation.split('=')[1].strip()
+            
             if init in ['false', 'False']:
                 init = False
                 ctype = 'bool'
@@ -590,7 +591,12 @@ def _extract_parameters(description):
                 init = True
                 ctype = 'bool'
             else:
-                init = eval(ctype.replace('DATA_TYPE', 'float') + '(' + init + ')')
+                try:
+                    init = eval(ctype.replace('DATA_TYPE', 'float') + '(' + init + ')')
+                except:
+                    var = init.replace("'","")
+                    init = extra_values[var]
+                    
         else: # Nothing is given: baseline : population
             if ctype == 'bool':
                 init = False

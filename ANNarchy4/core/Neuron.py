@@ -45,7 +45,7 @@ class RateNeuron(object):
         self.parameters = parameters
         self.equations = equations
         self.functions = functions
-        
+        self.extra_values = extra_values    
 
     def __add__(self, neuron):
         if not isinstance(neuron, RateNeuron):
@@ -122,6 +122,7 @@ class SpikeNeuron(object):
         self.functions = functions
         self.spike = spike
         self.reset = reset
+        self.extra_values = extra_values
         
     def __str__(self):
         return pprint.pformat( self, depth=4 )
