@@ -45,24 +45,41 @@ Out = Population((3, 3), Simple)
 #     target = 'exc',
 # )
 # testOne2One.connect_one_to_one( weights=1.0 )
-# 
+#  
 # testAll2All = Projection( 
 #     pre = In, 
 #     post = Out, 
 #     target = 'exc2',
 # ).connect_all_to_all( weights = 1.0, delays = 0.0 )
-# 
-# testGaussian = Projection(
-#     pre = In, 
-#     post = Out, 
-#     target = 'inh'
-# ).connect_gaussian( sigma=0.7, amp=0.1 )
 #===============================================================================
+ 
+testGaussian = Projection(
+    pre = In, 
+    post = Out, 
+    target = 'gauss'
+).connect_gaussian_raw( sigma=0.7, amp=0.1 )
+
+testGaussian2 = Projection(
+    pre = In, 
+    post = Out, 
+    target = 'gauss2'
+).connect_gaussian( sigma=0.7, amp=0.1 )
  
 testDog = Projection(
     pre = In, 
     post = Out, 
     target = 'dog', 
+).connect_dog_raw(
+    amp_pos=0.2, 
+    sigma_pos=0.1, 
+    amp_neg=0.1, 
+    sigma_neg=0.7
+)
+ 
+testDog2 = Projection(
+    pre = In, 
+    post = Out, 
+    target = 'dog2', 
 ).connect_dog(
     amp_pos=0.2, 
     sigma_pos=0.1, 
@@ -70,16 +87,6 @@ testDog = Projection(
     sigma_neg=0.7
 )
 
-testDog2 = Projection(
-    pre = In, 
-    post = Out, 
-    target = 'dog2', 
-).connect_dog_optimized(
-    amp_pos=0.2, 
-    sigma_pos=0.1, 
-    amp_neg=0.1, 
-    sigma_neg=0.7
-)
 #===============================================================================
 # @profile
 # def stochastic_pattern(pre, post, weight, propability):
@@ -106,17 +113,20 @@ compile()
 #===============================================================================
 # visOne2One = Visualization( [ { 'proj': testOne2One, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights one2one'} ] )
 # visOne2One.render()
-#  
+#   
 # visAll2All = Visualization( [ { 'proj': testAll2All, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights all2all'} ] )
 # visAll2All.render()
-#  
-# visGaussian = Visualization( [ { 'proj': testGaussian, 'var': 'value', 'min': 0.0, 'max': 0.2, 'title': 'weights gaussian'} ] )
-# visGaussian.render()
 #===============================================================================
+  
+visGaussian = Visualization( [ { 'proj': testGaussian, 'var': 'value', 'min': 0.0, 'max': 0.2, 'title': 'weights gaussian'} ] )
+visGaussian.render()
+
+visGaussian = Visualization( [ { 'proj': testGaussian2, 'var': 'value', 'min': 0.0, 'max': 0.2, 'title': 'weights gaussian'} ] )
+visGaussian.render()
  
 visDog = Visualization( [ { 'proj': testDog, 'var': 'value', 'min': -0.1, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
 visDog.render()
-
+ 
 visDog = Visualization( [ { 'proj': testDog2, 'var': 'value', 'min': -0.1, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
 visDog.render()
 

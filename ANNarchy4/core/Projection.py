@@ -126,6 +126,12 @@ class Projection(object):
         
         # Finalize initialization
         self.initialized = False
+        
+        self._comp_dict = {
+            1: cy_functions.comp_dist1D,
+            2: cy_functions.comp_dist2D,
+            3: cy_functions.comp_dist3D
+        }
 
     @property
     def size(self):
@@ -224,6 +230,7 @@ class Projection(object):
         
         return self
 
+    @profile
     def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -240,19 +247,73 @@ class Projection(object):
             * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
         """
         allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        synapses = {}
         
+        #
+        # choose the right euklidean distance function depending on 
+        # population dimension
+        try:
+            # dim = (1 .. 3)
+            comp_func = self._comp_dict[self.pre.dimension]
+        except KeyError:
+            # 4 and higher dimensionality
+            comp_func = cy_functions.comp_distND
+
+        if isinstance(delays, (int, float)):
+            delay_values = [ delays for n in range(self.pre.size) ]
+        
+        #
+        # create dog pattern by iterating over both populations
+        #
+        # 1st post ranks
         for post_neur in xrange(self.post.size):
             normPost = self.post.normalized_coordinates_from_rank(post_neur)
+
+            # get a new array of random values
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+            
+            delay_iter = iter(delay_values)
+            
+            for pre_neur in range(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+
+                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
+                dist = comp_func(normPre, normPost)
+                
+                value = amp * math.exp(-dist/2.0/sigma/sigma)
+                if (math.fabs(value) > limit * math.fabs(amp)):
+                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }   
+                         
+        return self
+    
+    @profile
+    def connect_gaussian_raw(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a gaussians distribution.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *sigma*: sigma value
+            * *amp*: amp value
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        for post_neur in xrange(self.post.size):
+            normPost = self.post.normalized_coordinates_from_rank_raw(post_neur)
             
             for pre_neur in range(self.pre.size):
                 if (pre_neur == post_neur) and not allow_self_connections:
                     continue
     
-                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
-    
+                normPre = self.pre.normalized_coordinates_from_rank_raw(pre_neur)
                 dist = self._comp_dist(normPre, normPost)
-                dist2 = cy_functions.comp_distND( normPre, normPost )
                 
                 value = amp * np.exp(-dist/2.0/sigma/sigma)
                 if (abs(value) > limit * abs(amp)):
@@ -265,6 +326,50 @@ class Projection(object):
                          
         return self
 
+    @profile
+    def connect_dog_raw(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *sigma_pos*: sigma of positive gaussian function
+            * *sigma_neg*: sigma of negative gaussian function
+            * *amp_pos*: amp of positive gaussian function
+            * *amp_neg*: amp of negative gaussian function
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        #
+        # create pattern
+        for post_neur in xrange(self.post.size):
+            normPost = self.post.normalized_coordinates_from_rank_raw(post_neur)
+            
+            for pre_neur in range(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+    
+                normPre = self.pre.normalized_coordinates_from_rank_raw(pre_neur)
+    
+                dist = self._comp_dist(normPre, normPost)
+    
+                value = amp_pos * np.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * np.exp(-dist/2.0/sigma_neg/sigma_neg)
+                if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
+                        
+                    try:
+                        d = delays.get_value()
+                    except:
+                        d = delays
+                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }
+
+        return self
+    
     @profile
     def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
@@ -283,60 +388,14 @@ class Projection(object):
             * *amp_neg*: amp of negative gaussian function
             * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
         """
-        #
-        # create pattern
-        for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank(post_neur)
-            
-            for pre_neur in range(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-    
-                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
-    
-                dist = self._comp_dist(normPre, normPost)
-    
-                value = amp_pos * np.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * np.exp(-dist/2.0/sigma_neg/sigma_neg)
-                if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
-                        
-                    try:
-                        d = delays.get_value()
-                    except:
-                        d = delays
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }
-
-        return self
-    
-    
-    @profile
-    def connect_dog_optimized(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-
-        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
         
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma_pos*: sigma of positive gaussian function
-            * *sigma_neg*: sigma of negative gaussian function
-            * *amp_pos*: amp of positive gaussian function
-            * *amp_neg*: amp of negative gaussian function
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
         #
-        # preparation of comparison functions and        
-        # choose the right function depending on population dimension
-        comp_dict={
-            1: cy_functions.comp_dist1D,
-            2: cy_functions.comp_dist2D,
-            3: cy_functions.comp_dist3D
-        }
+        # choose the right euklidean distance function depending on 
+        # population dimension
         try:
             # dim = (1 .. 3)
-            comp_func = comp_dict[self.pre.dimension]
+            comp_func = self._comp_dict[self.pre.dimension]
         except KeyError:
             # 4 and higher dimensionality
             comp_func = cy_functions.comp_distND
@@ -349,7 +408,7 @@ class Projection(object):
         #
         # 1st post ranks
         for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank_optimized(post_neur)
+            normPost = self.post.normalized_coordinates_from_rank(post_neur)
 
             # get a new array of random values
             if not isinstance(delays, (int, float)):
@@ -363,7 +422,7 @@ class Projection(object):
                 if (pre_neur == post_neur) and not allow_self_connections:
                     continue
     
-                normPre = self.pre.normalized_coordinates_from_rank_optimized(pre_neur)
+                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
                 dist = comp_func( normPre, normPost )
     
                 value = amp_pos * math.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * math.exp(-dist/2.0/sigma_neg/sigma_neg)
