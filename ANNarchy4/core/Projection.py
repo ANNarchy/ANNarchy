@@ -23,6 +23,7 @@
 """
 import traceback
 import numpy as np
+import math
 
 import pyximport
 pyximport.install()
@@ -264,6 +265,7 @@ class Projection(object):
                          
         return self
 
+    @profile
     def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -305,6 +307,8 @@ class Projection(object):
 
         return self
     
+    
+    @profile
     def connect_dog_optimized(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -322,27 +326,39 @@ class Projection(object):
             * *amp_neg*: amp of negative gaussian function
             * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
         """
-        
+        #
+        # preparation of comparison functions and        
+        # choose the right function depending on population dimension
         comp_dict={
             1: cy_functions.comp_dist1D,
             2: cy_functions.comp_dist2D,
             3: cy_functions.comp_dist3D
         }
-        
-        #
-        # choose the right function depending on population dimension
         try:
             # dim = (1 .. 3)
             comp_func = comp_dict[self.pre.dimension]
         except KeyError:
             # 4 and higher dimensionality
             comp_func = cy_functions.comp_distND
+
+        if isinstance(delays, (int, float)):
+            delay_values = [ delays for n in range(self.pre.size) ]
         
         #
-        # create pattern
+        # create dog pattern by iterating over both populations
+        #
+        # 1st post ranks
         for post_neur in xrange(self.post.size):
             normPost = self.post.normalized_coordinates_from_rank_optimized(post_neur)
+
+            # get a new array of random values
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+                
+            # set iterator on begin of the array
+            delay_iter = iter(delay_values)
             
+            # 2nd pre ranks
             for pre_neur in range(self.pre.size):
                 if (pre_neur == post_neur) and not allow_self_connections:
                     continue
@@ -350,14 +366,12 @@ class Projection(object):
                 normPre = self.pre.normalized_coordinates_from_rank_optimized(pre_neur)
                 dist = comp_func( normPre, normPost )
     
-                value = amp_pos * np.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * np.exp(-dist/2.0/sigma_neg/sigma_neg)
-                if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
-                        
-                    try:
-                        d = delays.get_value()
-                    except:
-                        d = delays
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }
+                value = amp_pos * math.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * math.exp(-dist/2.0/sigma_neg/sigma_neg)
+                
+                #
+                # important: math.fabs is only a well solution in float case
+                if ( math.fabs(value) > limit * math.fabs( amp_pos - amp_neg ) ):
+                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }
 
         return self
         

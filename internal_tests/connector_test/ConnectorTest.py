@@ -36,7 +36,7 @@ psp = """ value * (1.0-pre.rate) """
 
 In = Population((100, 100), Simple)
 Middle = Population((50, 50), Simple)
-Out = Population((10, 5), Simple)
+Out = Population((3, 3), Simple)
 
 #===============================================================================
 # testOne2One = Projection( 
