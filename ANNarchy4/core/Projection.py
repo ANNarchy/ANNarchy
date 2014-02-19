@@ -199,7 +199,45 @@ class Projection(object):
             
         return self
     
+    @profile
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+    
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(self.pre.size) ]
+        if isinstance(delays, (int, float)):
+            delay_values = [ delays for n in range(self.pre.size) ]
+    
+        for post_neur in xrange(self.post.size):
+
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((self.pre.size))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            for pre_neur in xrange(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+
+                self._synapses[(pre_neur, post_neur)] = { 'w': next(weight_iter), 
+                                                          'd': next(delay_iter) }
+        
+        return self
+    
+    @profile
+    def connect_all_to_all_raw(self, weights, delays=0.0, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
         
@@ -228,9 +266,8 @@ class Projection(object):
     
                 self._synapses[(pre_neur, post_neur)] = { 'w': w, 'd': d }
         
-        return self
+        return self    
 
-    @profile
     def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -287,7 +324,6 @@ class Projection(object):
                          
         return self
     
-    @profile
     def connect_gaussian_raw(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -326,7 +362,6 @@ class Projection(object):
                          
         return self
 
-    @profile
     def connect_dog_raw(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -370,7 +405,6 @@ class Projection(object):
 
         return self
     
-    @profile
     def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.

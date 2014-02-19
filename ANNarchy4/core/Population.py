@@ -494,7 +494,6 @@ class Population(object):
         # Return the rank
         return np.ravel_multi_index( coord, self.geometry)
 
-    @profile
     def coordinates_from_rank_raw(self, rank):
         """
         Returns a tuple representing the spatial coordinates corresponding to the geometry of the population.
@@ -508,7 +507,6 @@ class Population(object):
         
         return coord
 
-    @profile
     def coordinates_from_rank(self, rank):
         """
         Returns a tuple representing the spatial coordinates corresponding to the geometry of the population.
@@ -525,7 +523,6 @@ class Population(object):
         
         return coord
 
-    @profile
     def normalized_coordinates_from_rank_raw(self, pos, norm=1.):
         """
         Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
@@ -537,7 +534,7 @@ class Population(object):
         
         """
         if isinstance(pos, int):
-            coord = self.coordinates_from_rank(pos)
+            coord = self.coordinates_from_rank_raw(pos)
         else:
             coord = pos
             
@@ -549,7 +546,6 @@ class Population(object):
                 normal += (0.0,) # default?            
         return normal
 
-    @profile
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """
         Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
@@ -563,7 +559,7 @@ class Population(object):
         try:
             normal = self._norm_coord_dict[self.dimension](rank, self.geometry)
         except KeyError:
-            coord = self.coordinates_from_rank_optimized(rank)
+            coord = self.coordinates_from_rank(rank)
                 
             normal = tuple()
             for dim in range(self.dimension):
