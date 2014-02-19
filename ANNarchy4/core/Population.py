@@ -60,7 +60,7 @@ class Population(object):
         if isinstance(geometry, int): 
             # 1D
             self.geometry = (geometry, )
-            self._width = geometry[0]
+            self._width = geometry
             self._height = 1
             self._depth = 1
             self._dimension = 1
@@ -494,19 +494,6 @@ class Population(object):
         # Return the rank
         return np.ravel_multi_index( coord, self.geometry)
 
-    def coordinates_from_rank_raw(self, rank):
-        """
-        Returns a tuple representing the spatial coordinates corresponding to the geometry of the population.
-        """
-        # Check the rank
-        if not rank < self.size:
-            Global._warning('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
-            return None
-        
-        coord = np.unravel_index(rank, self.geometry)
-        
-        return coord
-
     def coordinates_from_rank(self, rank):
         """
         Returns a tuple representing the spatial coordinates corresponding to the geometry of the population.
@@ -522,29 +509,6 @@ class Population(object):
             coord = np.unravel_index(rank, self.geometry)
         
         return coord
-
-    def normalized_coordinates_from_rank_raw(self, pos, norm=1.):
-        """
-        Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
-        
-        Parameters:
-        
-        * *pos*: position to normalize
-        * *norm*: upper limit (default = 1.0)
-        
-        """
-        if isinstance(pos, int):
-            coord = self.coordinates_from_rank_raw(pos)
-        else:
-            coord = pos
-            
-        normal = tuple()
-        for dim in range(self.dimension):
-            if self.geometry[dim] > 1:
-                normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
-            else:
-                normal += (0.0,) # default?            
-        return normal
 
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """

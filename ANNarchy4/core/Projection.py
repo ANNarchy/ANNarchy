@@ -199,7 +199,6 @@ class Projection(object):
             
         return self
     
-    @profile
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
@@ -236,7 +235,6 @@ class Projection(object):
         
         return self
     
-    @profile
     def connect_all_to_all_raw(self, weights, delays=0.0, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.

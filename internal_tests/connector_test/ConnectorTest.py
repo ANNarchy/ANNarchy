@@ -97,7 +97,6 @@ testDog = Projection(
 # )
 #===============================================================================
   
-@profile
 def stochastic_pattern(pre, post, weight, propability):
    
     synapse_dict = {}
