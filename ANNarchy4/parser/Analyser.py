@@ -76,6 +76,15 @@ class Analyser(object):
             for variable in pop.description['variables']:
                 eq = variable['transformed_eq']
                 
+                # Replace sum(target) with sum(i, rk_target)
+                additional_dict={}
+                for target in pop.description['targets']:
+                    if target in pop.targets:
+                        eq = eq.replace('sum('+target+')', '_sum_'+target )                        
+                        additional_dict['_sum_'+target] = 'sum(i, ' + str(pop.targets.index(target))+')'
+                    else: # used in the eq, but not connected
+                        eq = eq.replace('sum('+target+')', '0.0' ) 
+                
                 # Extract if-then-else statements
                 eq, condition = _extract_ite(variable['name'], eq, pop)
                 
@@ -93,18 +102,11 @@ class Analyser(object):
                                           pop.description['attributes'], 
                                           pop.description['local'], 
                                           pop.description['global'], 
-                                          method = method)
+                                          method = method,
+                                          additional_dict = additional_dict)
                     code = translator.parse()
                 else: # An if-then-else statement
-                    code = self._translate_ITE(variable['name'], eq, condition, pop, {})
-                
-                # Replace sum(target) with sum(i, rk_target)
-                for target in pop.description['targets']:
-                    if target in pop.targets:
-                        code = code.replace('sum('+target+')', 'sum(i, ' + \
-                                            str(pop.targets.index(target))+')')
-                    else: # used in the eq, but not connected
-                        code = code.replace('sum('+target+')', '0.0')
+                    code = self._translate_ITE(variable['name'], eq, condition, pop, {}, additional_dict=additional_dict)
                 
                 # Store the result
                 variable['cpp'] = code
@@ -233,7 +235,7 @@ class Analyser(object):
             self.analysed_projections[proj.name] = proj.description  
         return True # success
     
-    def _translate_ITE(self, name, eq, condition, proj, untouched, split=True):
+    def _translate_ITE(self, name, eq, condition, proj, untouched, additional_dict={}, split=True):
         " Recursively processes the different parts of an ITE statement"
         def process_ITE(condition):
             if_statement = condition[0]
@@ -241,21 +243,21 @@ class Analyser(object):
             else_statement = condition[2]
             if_code = Equation(name, if_statement, proj.description['attributes'], 
                               proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(),
+                              method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict,
                               type='cond').parse()
             if isinstance(then_statement, list): # nested conditional
                 then_code =  process_ITE(then_statement)
             else:
                 then_code = Equation(name, then_statement, proj.description['attributes'], 
                               proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(),
+                              method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict,
                               type='return').parse().split(';')[0]
             if isinstance(else_statement, list): # nested conditional
                 else_code =  process_ITE(else_statement)
             else:
                 else_code = Equation(name, else_statement, proj.description['attributes'], 
                               proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(),
+                              method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict,
                               type='return').parse().split(';')[0]
                               
             code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
@@ -265,7 +267,7 @@ class Analyser(object):
             # Main equation, where the right part is __conditional__
             translator = Equation(name, eq, proj.description['attributes'], 
                                   proj.description['local'], proj.description['global'], 
-                                  method = 'explicit', untouched = untouched.keys())
+                                  method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict)
             code = translator.parse() 
         else:
             code = '__conditional__'
