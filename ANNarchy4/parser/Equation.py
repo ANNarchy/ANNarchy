@@ -37,7 +37,6 @@ class Equation(object):
     def __init__(self, name, expression, variables, 
                  local_variables, global_variables, 
                  untouched = [], 
-                 additional_dict = {},
                  method='explicit', type=None, index='[i]'):
         '''
         Parameters:
@@ -50,7 +49,7 @@ class Equation(object):
         * method: the numerical method to use for ODEs
         * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
         * index: index to be used for variables (default: [i])
-        * additional_dict: dict containing pairs of math_string/c++_equivalents to add to the local dictionary
+        * untouched: list of terms which should not be modified
         '''
         # Store attributes
         self.name = name
@@ -88,8 +87,6 @@ class Equation(object):
                 self.local_dict[var] = Symbol(var+'_')
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)
-        for var, cpp in additional_dict.iteritems(): # Add each untouched variable
-            self.local_dict[var] = Symbol(cpp)
             
         
     def parse(self):

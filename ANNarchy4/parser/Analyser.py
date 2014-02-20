@@ -75,15 +75,23 @@ class Analyser(object):
             # Translate the equation to C++
             for variable in pop.description['variables']:
                 eq = variable['transformed_eq']
+                untouched={}
                 
                 # Replace sum(target) with sum(i, rk_target)
-                additional_dict={}
                 for target in pop.description['targets']:
                     if target in pop.targets:
                         eq = eq.replace('sum('+target+')', '_sum_'+target )                        
-                        additional_dict['_sum_'+target] = 'sum(i, ' + str(pop.targets.index(target))+')'
+                        untouched['_sum_'+target] = 'sum(i, ' + str(pop.targets.index(target))+')'
                     else: # used in the eq, but not connected
                         eq = eq.replace('sum('+target+')', '0.0' ) 
+                
+                # Extract global operations
+                eq, untouched_globs, global_ops = _extract_globalops_neuron(variable['name'], eq, pop)
+                # Add the untouched variables to the global list
+                for name, val in untouched_globs.iteritems():
+                    if not untouched.has_key(name):
+                        untouched[name] = val
+                pop.description['global_operations'] += global_ops
                 
                 # Extract if-then-else statements
                 eq, condition = _extract_ite(variable['name'], eq, pop)
@@ -103,10 +111,15 @@ class Analyser(object):
                                           pop.description['local'], 
                                           pop.description['global'], 
                                           method = method,
-                                          additional_dict = additional_dict)
+                                          untouched = untouched.keys())
                     code = translator.parse()
                 else: # An if-then-else statement
-                    code = self._translate_ITE(variable['name'], eq, condition, pop, {}, additional_dict=additional_dict)
+                    code = self._translate_ITE(variable['name'], eq, condition, pop, untouched)
+                    
+                
+                # Replace untouched variables with their original name
+                for prev, new in untouched.iteritems():
+                    code = code.replace(prev, new) 
                 
                 # Store the result
                 variable['cpp'] = code
@@ -147,7 +160,7 @@ class Analyser(object):
                 eq = eq.replace('%(target)', proj.target)
                 
                 # Extract global operations
-                eq, untouched_globs, global_ops = _extract_globalops(variable['name'], eq, proj)
+                eq, untouched_globs, global_ops = _extract_globalops_synapse(variable['name'], eq, proj)
                 proj.pre.description['global_operations'] += global_ops['pre']
                 proj.post.description['global_operations'] += global_ops['post']
                 
@@ -235,7 +248,7 @@ class Analyser(object):
             self.analysed_projections[proj.name] = proj.description  
         return True # success
     
-    def _translate_ITE(self, name, eq, condition, proj, untouched, additional_dict={}, split=True):
+    def _translate_ITE(self, name, eq, condition, proj, untouched, split=True):
         " Recursively processes the different parts of an ITE statement"
         def process_ITE(condition):
             if_statement = condition[0]
@@ -243,21 +256,21 @@ class Analyser(object):
             else_statement = condition[2]
             if_code = Equation(name, if_statement, proj.description['attributes'], 
                               proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict,
+                              method = 'explicit', untouched = untouched.keys(),
                               type='cond').parse()
             if isinstance(then_statement, list): # nested conditional
                 then_code =  process_ITE(then_statement)
             else:
                 then_code = Equation(name, then_statement, proj.description['attributes'], 
                               proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict,
+                              method = 'explicit', untouched = untouched.keys(),
                               type='return').parse().split(';')[0]
             if isinstance(else_statement, list): # nested conditional
                 else_code =  process_ITE(else_statement)
             else:
                 else_code = Equation(name, else_statement, proj.description['attributes'], 
                               proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict,
+                              method = 'explicit', untouched = untouched.keys(),
                               type='return').parse().split(';')[0]
                               
             code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
@@ -267,7 +280,7 @@ class Analyser(object):
             # Main equation, where the right part is __conditional__
             translator = Equation(name, eq, proj.description['attributes'], 
                                   proj.description['local'], proj.description['global'], 
-                                  method = 'explicit', untouched = untouched.keys(), additional_dict=additional_dict)
+                                  method = 'explicit', untouched = untouched.keys())
             code = translator.parse() 
         else:
             code = '__conditional__'
@@ -383,7 +396,29 @@ def _extract_randomdist(pop):
         
     return random_objects
     
-def _extract_globalops(name, eq, proj):
+def _extract_globalops_neuron(name, eq, pop):
+    """ Replaces global operations (mean(rate), etc)  with arbitrary names and 
+    returns a dictionary of changes.
+    """
+    untouched = {}    
+    globs = []  
+    glop_names = ['min', 'max', 'mean']
+    
+    for op in glop_names:
+        matches = re.findall('([^\w]*)'+op+'\(([\w]*)\)', eq)
+        for pre, var in matches:
+            if var in pop.description['local']:
+                globs.append({'function': op, 'variable': var})
+                oldname = op + '(' + var + ')'
+                newname = '__' + op + '_' + var 
+                eq = eq.replace(oldname, newname)
+                untouched[newname] = ' this->get'+op.capitalize()+var.capitalize()+'() '
+            else:
+                _error(eq+'\nPopulation '+pop.name+' has no local attribute '+var+'.')
+                exit(0)
+    return eq, untouched, globs
+    
+def _extract_globalops_synapse(name, eq, proj):
     """ Replaces global operations (mean(pre.rate), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
