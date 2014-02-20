@@ -54,7 +54,7 @@ def get_1d_coord(rank, geometry):
     """
     row ordered
     """
-    return rank
+    return (rank, )
 
 def get_2d_coord(rank, geometry):
     """
@@ -74,6 +74,29 @@ def get_3d_coord(rank, geometry):
     x = (rank / ((geometry[1])*(geometry[2]))) % geometry[0]
     
     return (x,y,z) 
+
+##########################################################
+#                                                        #
+# computation of coordinates from rank                   #
+# (c-style indexed !!!!)                                 #
+##########################################################
+def get_rank_from_1d_coord(coord, geometry):
+    """
+    row ordered
+    """
+    return coord[0]
+
+def get_rank_from_2d_coord(coord, geometry):
+    """
+    row ordered
+    """
+    return coord[1] + geometry[1] * coord[0] 
+
+def get_rank_from_3d_coord(coord, geometry):
+    """
+    row ordered
+    """
+    return coord[2] + geometry[2]*coord[1] + coord[0] * geometry[1] * geometry[2]
 
 ##########################################################
 #                                                        #

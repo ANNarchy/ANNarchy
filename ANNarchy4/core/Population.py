@@ -59,14 +59,14 @@ class Population(object):
         # automatically defines w, h, d, size
         if isinstance(geometry, int): 
             # 1D
-            self.geometry = (geometry, )
+            self._geometry = (geometry, )
             self._width = geometry
             self._height = 1
             self._depth = 1
             self._dimension = 1
         else: 
             # a tuple is given, can be 1 .. N dimensional
-            self.geometry = geometry
+            self._geometry = geometry
             self._width = geometry[0]
             if len(geometry)>=2:
                 self._height = geometry[1]
@@ -80,8 +80,8 @@ class Population(object):
             self._dimension = len(geometry)
 
         size = 1        
-        for i in range(len(self.geometry)):
-            size *= self.geometry[i]
+        for i in range(len(self._geometry)):
+            size *= self._geometry[i]
             
         self._size = size
         
@@ -132,17 +132,26 @@ class Population(object):
         # Finalize initialization
         self.initialized = False
 
-        self._coord_dict = {
-            1 : cy_functions.get_1d_coord,
-            2 : cy_functions.get_2d_coord,
-            3 : cy_functions.get_3d_coord
-        }
+        #
+        # for the one till three dimensional case we use cython optimized functions. 
+        if self._dimension==1:
+            self._rank_from_coord = cy_functions.get_rank_from_1d_coord
+            self._coord_from_rank = cy_functions.get_1d_coord
+        elif self._dimension==2:
+            self._rank_from_coord = cy_functions.get_rank_from_2d_coord
+            self._coord_from_rank = cy_functions.get_2d_coord
+        elif self._dimension==3:
+            self._rank_from_coord = cy_functions.get_rank_from_3d_coord
+            self._coord_from_rank = cy_functions.get_3d_coord
+        else:
+            self._rank_from_coord = np.ravel_multi_index
+            self._coord_from_rank = np.unravel_index
 
         self._norm_coord_dict = {
-            1 : cy_functions.get_normalized_1d_coord,
-            2 : cy_functions.get_normalized_2d_coord,
-            3 : cy_functions.get_normalized_3d_coord
-        }        
+            1: cy_functions.get_normalized_1d_coord,
+            2: cy_functions.get_normalized_2d_coord,
+            3: cy_functions.get_normalized_3d_coord
+        }
         
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -163,7 +172,7 @@ class Population(object):
                 if not self.initialized:
                     # access before compile()
                     if name in self.description['local']:
-                        return np.array([self.init[name]] * self.size).reshape(self.geometry)
+                        return np.array([self.init[name]] * self.size).reshape(self._geometry)
                     else:
                         return self.init[name]
                 else:
@@ -203,7 +212,7 @@ class Population(object):
         if hasattr(self, 'cyInstance'):
             if hasattr(self.cyInstance, attribute):
                 if attribute in self.description['local']:
-                    return np.array(getattr(self.cyInstance, attribute)).reshape(self.geometry)
+                    return np.array(getattr(self.cyInstance, attribute)).reshape(self._geometry)
                 else:
                     return getattr(self.cyInstance, attribute)
             else:
@@ -234,6 +243,13 @@ class Population(object):
             else:
                 print('Error: variable', attribute, 'does not exist in this population.')
                 print(traceback.print_stack())
+
+    @property
+    def geometry(self):
+        """
+        Width of population.
+        """
+        return self._geometry
 
     @property
     def width(self):
@@ -455,7 +471,7 @@ class Population(object):
                 else:
                     #
                     # [ time, data(1D) ] => [ time, data(geometry) ] 
-                    mat1 = data.reshape((data.shape[0],)+self.geometry)
+                    mat1 = data.reshape((data.shape[0],)+self._geometry)
 
                     data_dict[var] = { 
                                 #
@@ -474,7 +490,6 @@ class Population(object):
         else:
             return data_dict          
 
-    
     def rank_from_coordinates(self, coord):
         """
         Returns rank corresponding to the given coordinates.
@@ -483,16 +498,13 @@ class Population(object):
         
             * *coord*: coordinate tuple, can be multidimensional.
         """
-        # Check the coordinates
-        if not len(coord) == self.dimension:
-            Global._warning('Error when accessing neuron', str(coord), ': the population', self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+        rank = self._rank_from_coord( coord, self._geometry )
+        
+        if rank > self.size:
+            Global._warning('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self._geometry) +').')
             return None
-        for dim in range(len(coord)):
-            if not coord[dim] < self.geometry[dim]:
-                Global._warning('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
-                return None
-        # Return the rank
-        return np.ravel_multi_index( coord, self.geometry)
+        else:
+            return rank
 
     def coordinates_from_rank(self, rank):
         """
@@ -503,12 +515,7 @@ class Population(object):
             Global._warning('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
             return None
         
-        try:        
-            coord = self._coord_dict[self.dimension](rank, self.geometry)
-        except KeyError:
-            coord = np.unravel_index(rank, self.geometry)
-        
-        return coord
+        return self._coord_from_rank( rank, self._geometry )
 
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """
@@ -521,14 +528,14 @@ class Population(object):
         
         """
         try:
-            normal = self._norm_coord_dict[self.dimension](rank, self.geometry)
+            normal = self._norm_coord_dict[self.dimension](rank, self._geometry)
         except KeyError:
             coord = self.coordinates_from_rank(rank)
                 
             normal = tuple()
             for dim in range(self.dimension):
-                if self.geometry[dim] > 1:
-                    normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
+                if self._geometry[dim] > 1:
+                    normal += ( norm * float(coord[dim])/float(self._geometry[dim]-1), )
                 else:
                     normal += (0.0,) # default?
      
@@ -573,7 +580,7 @@ class Population(object):
             if isinstance(coord[0], int):
                 rank = coord[0]
                 if not rank < self.size:
-                    Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+                    Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self._geometry) +').')
                     return None
             else:
                 rank = self.rank_from_coordinates( coord[0] )
@@ -643,7 +650,7 @@ class Population(object):
                         if idx.start is None:
                             start = 0
                         if idx.stop is None:
-                            stop = self.geometry[rank]
+                            stop = self._geometry[rank]
                         if idx.step is None:
                             step = 1
                         rk_range = list(range(start, stop, step))
@@ -654,7 +661,7 @@ class Population(object):
                 elif self.dimension == 3:
                     ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for z in coords[2]]
                 if not max(ranks) < self.size:
-                    Global._error("Indices do not match the geometry of the population", self.geometry)
+                    Global._error("Indices do not match the geometry of the population", self._geometry)
                     return 
                 return PopulationView(self, ranks)
                 

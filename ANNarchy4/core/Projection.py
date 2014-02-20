@@ -234,37 +234,6 @@ class Projection(object):
                                                           'd': next(delay_iter) }
         
         return self
-    
-    def connect_all_to_all_raw(self, weights, delays=0.0, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-    
-        for post_neur in xrange(self.post.size):
-            for pre_neur in xrange(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-                
-                try:
-                    w = weights.get_value()
-                except:
-                    w = weights
-                    
-                try:
-                    d = delays.get_value()
-                except:
-                    d = delays
-    
-                self._synapses[(pre_neur, post_neur)] = { 'w': w, 'd': d }
-        
-        return self    
 
     def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
@@ -320,87 +289,6 @@ class Projection(object):
                 if (math.fabs(value) > limit * math.fabs(amp)):
                     self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }   
                          
-        return self
-    
-    def connect_gaussian_raw(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-
-        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a gaussians distribution.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma*: sigma value
-            * *amp*: amp value
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank_raw(post_neur)
-            
-            for pre_neur in range(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-    
-                normPre = self.pre.normalized_coordinates_from_rank_raw(pre_neur)
-                dist = self._comp_dist(normPre, normPost)
-                
-                value = amp * np.exp(-dist/2.0/sigma/sigma)
-                if (abs(value) > limit * abs(amp)):
-                        
-                    try:
-                        d = delays.get_value()
-                    except:
-                        d = delays
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }   
-                         
-        return self
-
-    def connect_dog_raw(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-
-        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma_pos*: sigma of positive gaussian function
-            * *sigma_neg*: sigma of negative gaussian function
-            * *amp_pos*: amp of positive gaussian function
-            * *amp_neg*: amp of negative gaussian function
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        #
-        # create pattern
-        for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank_raw(post_neur)
-            
-            for pre_neur in range(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-    
-                normPre = self.pre.normalized_coordinates_from_rank_raw(pre_neur)
-    
-                dist = self._comp_dist(normPre, normPost)
-    
-                value = amp_pos * np.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * np.exp(-dist/2.0/sigma_neg/sigma_neg)
-                if ( abs(value) > limit * abs( amp_pos - amp_neg ) ):
-                        
-                    try:
-                        d = delays.get_value()
-                    except:
-                        d = delays
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': d }
-
         return self
     
     def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -465,7 +353,7 @@ class Projection(object):
                     self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }
 
         return self
-        
+       
     def connect_with_func(self, method, **args):
         """
         Establish connections provided by user defined function.
