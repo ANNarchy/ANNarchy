@@ -75,6 +75,23 @@ class Analyser(object):
             # Translate the equation to C++
             for variable in pop.description['variables']:
                 eq = variable['transformed_eq']
+                untouched={}
+                
+                # Replace sum(target) with sum(i, rk_target)
+                for target in pop.description['targets']:
+                    if target in pop.targets:
+                        eq = eq.replace('sum('+target+')', '_sum_'+target )                        
+                        untouched['_sum_'+target] = 'sum(i, ' + str(pop.targets.index(target))+')'
+                    else: # used in the eq, but not connected
+                        eq = eq.replace('sum('+target+')', '0.0' ) 
+                
+                # Extract global operations
+                eq, untouched_globs, global_ops = _extract_globalops_neuron(variable['name'], eq, pop)
+                # Add the untouched variables to the global list
+                for name, val in untouched_globs.iteritems():
+                    if not untouched.has_key(name):
+                        untouched[name] = val
+                pop.description['global_operations'] += global_ops
                 
                 # Extract if-then-else statements
                 eq, condition = _extract_ite(variable['name'], eq, pop)
@@ -93,18 +110,16 @@ class Analyser(object):
                                           pop.description['attributes'], 
                                           pop.description['local'], 
                                           pop.description['global'], 
-                                          method = method)
+                                          method = method,
+                                          untouched = untouched.keys())
                     code = translator.parse()
                 else: # An if-then-else statement
-                    code = self._translate_ITE(variable['name'], eq, condition, pop, {})
+                    code = self._translate_ITE(variable['name'], eq, condition, pop, untouched)
+                    
                 
-                # Replace sum(target) with sum(i, rk_target)
-                for target in pop.description['targets']:
-                    if target in pop.targets:
-                        code = code.replace('sum('+target+')', 'sum(i, ' + \
-                                            str(pop.targets.index(target))+')')
-                    else: # used in the eq, but not connected
-                        code = code.replace('sum('+target+')', '0.0')
+                # Replace untouched variables with their original name
+                for prev, new in untouched.iteritems():
+                    code = code.replace(prev, new) 
                 
                 # Store the result
                 variable['cpp'] = code
@@ -145,7 +160,7 @@ class Analyser(object):
                 eq = eq.replace('%(target)', proj.target)
                 
                 # Extract global operations
-                eq, untouched_globs, global_ops = _extract_globalops(variable['name'], eq, proj)
+                eq, untouched_globs, global_ops = _extract_globalops_synapse(variable['name'], eq, proj)
                 proj.pre.description['global_operations'] += global_ops['pre']
                 proj.post.description['global_operations'] += global_ops['post']
                 
@@ -381,7 +396,29 @@ def _extract_randomdist(pop):
         
     return random_objects
     
-def _extract_globalops(name, eq, proj):
+def _extract_globalops_neuron(name, eq, pop):
+    """ Replaces global operations (mean(rate), etc)  with arbitrary names and 
+    returns a dictionary of changes.
+    """
+    untouched = {}    
+    globs = []  
+    glop_names = ['min', 'max', 'mean']
+    
+    for op in glop_names:
+        matches = re.findall('([^\w]*)'+op+'\(([\w]*)\)', eq)
+        for pre, var in matches:
+            if var in pop.description['local']:
+                globs.append({'function': op, 'variable': var})
+                oldname = op + '(' + var + ')'
+                newname = '__' + op + '_' + var 
+                eq = eq.replace(oldname, newname)
+                untouched[newname] = ' this->get'+op.capitalize()+var.capitalize()+'() '
+            else:
+                _error(eq+'\nPopulation '+pop.name+' has no local attribute '+var+'.')
+                exit(0)
+    return eq, untouched, globs
+    
+def _extract_globalops_synapse(name, eq, proj):
     """ Replaces global operations (mean(pre.rate), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """

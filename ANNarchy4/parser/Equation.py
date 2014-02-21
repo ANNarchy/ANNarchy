@@ -35,7 +35,8 @@ class Equation(object):
     Class to analyse one equation.
     '''
     def __init__(self, name, expression, variables, 
-                 local_variables, global_variables, untouched = [], 
+                 local_variables, global_variables, 
+                 untouched = [], 
                  method='explicit', type=None, index='[i]'):
         '''
         Parameters:
@@ -48,6 +49,7 @@ class Equation(object):
         * method: the numerical method to use for ODEs
         * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
         * index: index to be used for variables (default: [i])
+        * untouched: list of terms which should not be modified
         '''
         # Store attributes
         self.name = name
