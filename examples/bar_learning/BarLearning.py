@@ -102,11 +102,9 @@ if __name__=='__main__':
         if (trial > 0) and (trial % 100==0):
             print trial
         set_input()
-        simulate(100) 
+        simulate(50) 
  
-        if (trial % 100 ==0) and vis_during_sim:
-            print 'render'
-            vis.render()
+        vis.render()
  
     # Visualize the result of learning
     vis.render()  

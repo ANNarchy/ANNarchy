@@ -33,12 +33,24 @@ from ANNarchy4.core import Global
 from pkg_resources import parse_version
 
 enable_vis = True
+use_pause_mode = False
+
 
 try:
     import matplotlib
+    
     if parse_version(matplotlib.__version__) < parse_version('1.0'):
         enable_vis = False
         Global._print('Insufficient matplotlib version. Visualization features will be disabled.')
+    elif parse_version(matplotlib.__version__) > parse_version('1.3'):
+        broken_backends = ['Qt4Agg', 'TkAgg']   # in order to the spyderlib Issue 620 and own experiments,
+                                                # these backends does not support plt.draw() in matplotlib 1.3.x
+
+        if matplotlib.rcParams['backend'] in broken_backends:
+            use_pause_mode = True
+
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
     else:
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
@@ -156,6 +168,7 @@ class Visualization(object):
         
         * interval      all plots are updated each #interval steps.
         * show_time     how long the visualition
+        
         """
         if not enable_vis:
             return 
@@ -165,13 +178,22 @@ class Visualization(object):
             for plot in self.plots:
                 plot.update()
             self.figure.canvas.draw()
-            plt.draw()
+            
+            if use_pause_mode:
+                plt.pause(0.01)
+            else:
+                plt.draw()
 
         elif self.time % interval == 0:
             for plot in self.plots:
                 plot.update()
             self.figure.canvas.draw()
-            plt.draw()
+
+            if use_pause_mode:
+                plt.pause(0.01)
+            else:
+                plt.draw()
+
 
         t_stop = datetime.now()
         if show_time:
