@@ -14,8 +14,9 @@
 #
 #    author: hdin
 #
+EPSILON = 0.000001
+
 data = {
-'EPSILON' : 0.000001,
 'SYN_TAU' : 4.0,
 'NEUR_TAU' : 10.0
 }
@@ -35,26 +36,28 @@ Input = RateNeuron(
     parameters = """
         tau = 'NEUR_TAU' : population
         test_var = 0.1
+        rate = 1.0
     """,
     extra_values = data,
     equations = """
-        rate = 1.0
+        
     """              
 )
 
+#
+# bool variables are currently not supportd
 TestSynapse = RateSynapse(
     parameters = """
         tau = 'SYN_TAU' : population
-        boolVar = True : type = bool, population
-        boolVar2 = False : type = bool
-        intVar = 1.0 : type = int
+        boolVar = 0 : int, population
+        boolVar2 = 1 : int
+        intVar = 1.0 : int
     """,
     extra_values = data,
     equations = """
-        value = if boolVar then 1.0 else 0.0 : type = float
+        value = if boolVar > 0.5 : 1.0 else: 0.0 
     """              
 )
-print TestSynapse
 
 InputPop = Population(name="Input", geometry=(2,2), neuron=Input)
 OutputPop = Population(name="Input", geometry=(2,2), neuron=Input)
@@ -62,9 +65,8 @@ OutputPop = Population(name="Input", geometry=(2,2), neuron=Input)
 InputProj = Projection(pre=InputPop, 
                        post=OutputPop, 
                        target='exc',
-                       synapse = TestSynapse,
-                       connector=All2All(weights=0.2)                       
-                       )
+                       synapse = TestSynapse                                 
+                       ).connect_all_to_all(weights=0.2)
                        
 #
 # Analyse and compile everything, initialize the parameters/variables...
@@ -74,32 +76,28 @@ compile()
 #
 #   Test some code generation stuff
 #
-def test_proj_variable_bool_detection():
-    assert ( type(InputProj.dendrites[0].boolVar2) == bool)
-
-def test_proj_variable_bool_definition():
-    assert ( type(InputProj.dendrites[0].boolVar) == bool)
+#===============================================================================
+# def test_proj_variable_bool_detection():
+#     assert ( type(InputProj.dendrites[0].boolVar2) == bool)
+# 
+# def test_proj_variable_bool_definition():
+#     assert ( type(InputProj.dendrites[0].boolVar) == bool)
+#===============================================================================
 
 #
 #   Test population functions
 #
 def test_pop_direct_access_parameter_tau():
-    assert (fabs(InputPop.tau - NEUR_TAU) < EPSILON)
+    assert (fabs(InputPop.tau - data['NEUR_TAU']) < EPSILON)
 
 def test_pop_access_parameter_tau_with_get():
-    assert (fabs(InputPop.get('tau') - NEUR_TAU) < EPSILON)
+    assert (fabs(InputPop.get('tau') - data['NEUR_TAU']) < EPSILON)
 
-def test_pop_access_parameter_tau_with_get_parameter():
-    assert (fabs(InputPop.get_parameter('tau') - NEUR_TAU) < EPSILON)
-    
 def test_pop_direct_access_variable_rate():
     assert np.allclose(InputPop.rate, np.ones((2,2)))
 
 def test_pop_access_variable_rate_with_get():
     assert np.allclose(InputPop.get('rate'), np.ones((2,2)))
-
-def test_pop_access_variable_rate_with_get_variable():
-    assert np.allclose(InputPop.get_variable('rate'), np.ones((2,2)))
 
 def test_pop_direct_modify1_variable_rate():
     InputPop.rate = 0.1
@@ -121,10 +119,6 @@ def test_pop_access_variable_test_var_with_get():
     tmp = np.ones((2,2))*0.1
     assert np.allclose(InputPop.get('test_var'), tmp)
 
-def test_pop_access_variable_test_var_with_get_variable():
-    tmp = (np.ones((2,2)))*0.1
-    assert np.allclose(InputPop.get_variable('test_var'), tmp)
-
 def test_pop_direct_modify1_variable_test_var():
     InputPop.test_var = 0.1
     result = (np.ones((2,2)))*0.1
@@ -142,13 +136,10 @@ def test_pop_direct_modify3_variable_test_var():
 #   Test projection functions
 #
 def test_proj_direct_access_parameter_tau():
-    assert InputProj.dendrites[0].tau == SYN_TAU
+    assert (InputProj.dendrites[0].tau - data['SYN_TAU'] < EPSILON)
 
 def test_proj_access_parameter_tau_with_get():
-    assert InputProj.dendrites[0].get('tau') == SYN_TAU
-
-def test_proj_access_parameter_tau_with_get_parameter():
-    assert InputProj.dendrites[0].get_parameter('tau') == SYN_TAU
+    assert (InputProj.dendrites[0].get('tau') - data['SYN_TAU'] < EPSILON)
 
 def test_proj_direct_access_variable_value():
     assert np.allclose(InputProj.dendrites[0].value, [0.2])
@@ -168,12 +159,14 @@ def test_proj_direct_modify_variable_int_variable():
     InputProj.dendrites[0].intVar = 2
     assert np.allclose(InputProj.dendrites[0].intVar, 2)
 
-def test_proj_direct_access_bool_variable():
-    assert np.allclose(InputProj.dendrites[0].boolVar, [True])
-
-def test_proj_direct_modify_bool_variable():
-    InputProj.dendrites[0].boolVar = False
-    assert np.allclose(InputProj.dendrites[0].boolVar, [False])
+#===============================================================================
+# def test_proj_direct_access_bool_variable():
+#     assert np.allclose(InputProj.dendrites[0].boolVar, [True])
+# 
+# def test_proj_direct_modify_bool_variable():
+#     InputProj.dendrites[0].boolVar = False
+#     assert np.allclose(InputProj.dendrites[0].boolVar, [False])
+#===============================================================================
     
 #
 #   Test time
