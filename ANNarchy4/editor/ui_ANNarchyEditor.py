@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Fri Feb 21 13:33:32 2014
+# Created: Fri Feb 21 13:54:53 2014
 #      by: PyQt4 UI code generator 4.9.1
 #
 # WARNING! All changes made in this file will be lost!
@@ -388,6 +388,7 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.editor, QtCore.SIGNAL(_fromUtf8("update_object(QString,int,int)")), self.stackedWidget_2.update_population)
         QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_population(QString,int)")), self.pop_view.update_population)
         QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_projection(QString,int)")), self.proj_view.update_projection)
+        QtCore.QObject.connect(self.net_select, QtCore.SIGNAL(_fromUtf8("signal_show_network(QString)")), self.complete.set_network)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):

@@ -56,7 +56,6 @@ class ProfileLog(object):
         
         numpy.savetxt(out_file, self._data, delimiter=',')
 
-    
 class Profile:
     def __init__(self):
         try:

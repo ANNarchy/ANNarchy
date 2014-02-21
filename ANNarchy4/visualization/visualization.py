@@ -42,7 +42,7 @@ try:
     if parse_version(matplotlib.__version__) < parse_version('1.0'):
         enable_vis = False
         Global._print('Insufficient matplotlib version. Visualization features will be disabled.')
-    elif parse_version(matplotlib.__version__) > parse_version('1.3'):
+    elif parse_version(matplotlib.__version__) >= parse_version('1.3'):
         broken_backends = ['Qt4Agg', 'TkAgg']   # in order to the spyderlib Issue 620 and own experiments,
                                                 # these backends does not support plt.draw() in matplotlib 1.3.x
 

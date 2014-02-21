@@ -79,7 +79,7 @@ def _folder_management(profile_enabled, clean):
         profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')    
         shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/generate/build')
         shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/generate/build')
-        shutil.copy(profile_sources_dir+'/Profile.pyx', Global.annarchy_dir+'/generate/pyx')
+        shutil.copy(profile_sources_dir+'/cy_profile.pyx', Global.annarchy_dir+'/generate/pyx')
 
     sys.path.append(Global.annarchy_dir)
 
@@ -675,7 +675,7 @@ include "Projection.pyx"
 include "Connector.pyx"
 """ % { 'pop_inc': pop_include,
         'proj_inc': proj_include,
-        'profile': 'include "Profile.pyx"' if self.profile_enabled else '' 
+        'profile': 'include "cy_profile.pyx"' if self.profile_enabled else '' 
         }
     
         with open(Global.annarchy_dir+'/generate/pyx/ANNarchyCython.pyx', mode='w') as w_file:

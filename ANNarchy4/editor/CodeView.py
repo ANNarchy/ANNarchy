@@ -41,23 +41,41 @@ class CodeView(QsciScintilla):
 
     def set_repository(self, repo=None):
         self._rep = repo
-        
+        self._net_name = None
+         
     @pyqtSlot()
     def initialize(self):
+        """
+        Initialize the additional widget data.
         
+        emited by:
+        
+        main window
+        """
         if len(self._rep.get_entries('neuron'))>0:
             self._curr_name = self._rep.get_entries('neuron')[0]
             self._curr_type = 'neuron'
             self.setText(self._rep.get_object('neuron', self._curr_name))
 
+    @pyqtSlot(QString)
+    def set_network(self, net_name):
+        """
+        Set the current network.
+        
+        emited by:
+        
+        net_select
+        """
+        self._net_name = net_name
+        
     @pyqtSlot()
     def generate_script(self):
         code = ''
-        network = self._rep.get_object('network', 'Bar_Learning')
+        network = self._rep.get_object('network', self._net_name)
          
         # get all needed neurons
         neurons = []
-        for pop in network.itervalues():
+        for pop in network['pop_data'].itervalues():
             neurons.append(pop['type'])
         neurons = list(set(neurons))
         
@@ -66,9 +84,10 @@ class CodeView(QsciScintilla):
             code += self._rep.get_object('neuron', neur)
             code += '\n'
 
+        #
         # population creation
         template = """%(name)s = Population(neuron=%(type)s, geometry=%(geo)s, name=\"%(name)s\")\n"""
-        for pop in network.itervalues():
+        for pop in network['pop_data'].itervalues():
             code += template % { 'name': pop['name'],
                                  'type': pop['type'],
                                  'geo': pop['geometry']

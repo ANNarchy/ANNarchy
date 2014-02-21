@@ -166,7 +166,7 @@
          <item>
           <widget class="StackWidget" name="stackedWidget_2">
            <property name="currentIndex">
-            <number>0</number>
+            <number>2</number>
            </property>
            <widget class="QWidget" name="page_4">
             <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -313,6 +313,19 @@
                   </property>
                  </widget>
                 </item>
+                <item row="4" column="1">
+                 <spacer name="verticalSpacer_4">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>443</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
                 <item row="1" column="0">
                  <widget class="QLabel" name="label_12">
                   <property name="text">
@@ -341,18 +354,15 @@
                   </property>
                  </widget>
                 </item>
+                <item row="3" column="0">
+                 <widget class="QLabel" name="label_20">
+                  <property name="text">
+                   <string>Synapse type</string>
+                  </property>
+                 </widget>
+                </item>
                 <item row="3" column="1">
-                 <spacer name="verticalSpacer_4">
-                  <property name="orientation">
-                   <enum>Qt::Vertical</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>20</width>
-                    <height>443</height>
-                   </size>
-                  </property>
-                 </spacer>
+                 <widget class="QComboBox" name="synapse_type"/>
                 </item>
                </layout>
               </widget>
@@ -672,6 +682,7 @@
     <slot>initialize()</slot>
     <slot>save()</slot>
     <slot>generate_script()</slot>
+    <slot>set_network(QString)</slot>
    </slots>
   </customwidget>
   <customwidget>
@@ -1210,6 +1221,22 @@
     <hint type="destinationlabel">
      <x>842</x>
      <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>net_select</sender>
+   <signal>signal_show_network(QString)</signal>
+   <receiver>complete</receiver>
+   <slot>set_network(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>171</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>330</y>
     </hint>
    </hints>
   </connection>
