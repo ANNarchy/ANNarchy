@@ -700,8 +700,8 @@
    <header location="global">StackWidget.h</header>
    <container>1</container>
    <slots>
-    <signal>signal_update_population(int)</signal>
-    <signal>signal_update_projection(int)</signal>
+    <signal>signal_update_population(QString,int)</signal>
+    <signal>signal_update_projection(QString,int)</signal>
     <slot>update_population(QString,int,int)</slot>
     <slot>initialize()</slot>
    </slots>
@@ -761,7 +761,7 @@
    <header location="global">NetWidget.h</header>
    <container>1</container>
    <slots>
-    <slot>update_population(int)</slot>
+    <slot>update_population(QString,int)</slot>
     <slot>initialize()</slot>
     <slot>neur_type_changed(QString)</slot>
     <slot>pop_name_changed()</slot>
@@ -775,7 +775,7 @@
    <container>1</container>
    <slots>
     <slot>initialize()</slot>
-    <slot>update_projection(int)</slot>
+    <slot>update_projection(QString,int)</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -1086,22 +1086,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>stackedWidget_2</sender>
-   <signal>signal_update_population(int)</signal>
-   <receiver>pop_view</receiver>
-   <slot>update_population(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>842</x>
-     <y>326</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>842</x>
-     <y>326</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>neur_type</sender>
    <signal>currentIndexChanged(QString)</signal>
    <receiver>pop_view</receiver>
@@ -1182,22 +1166,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>stackedWidget_2</sender>
-   <signal>signal_update_projection(int)</signal>
-   <receiver>proj_view</receiver>
-   <slot>update_projection(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>842</x>
-     <y>326</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>842</x>
-     <y>326</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>editor</sender>
    <signal>update_object(QString,int,int)</signal>
    <receiver>stackedWidget_2</receiver>
@@ -1206,6 +1174,38 @@
     <hint type="sourcelabel">
      <x>308</x>
      <y>330</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stackedWidget_2</sender>
+   <signal>signal_update_population(QString,int)</signal>
+   <receiver>pop_view</receiver>
+   <slot>update_population(QString,int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>324</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stackedWidget_2</sender>
+   <signal>signal_update_projection(QString,int)</signal>
+   <receiver>proj_view</receiver>
+   <slot>update_projection(QString,int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>324</y>
     </hint>
     <hint type="destinationlabel">
      <x>842</x>

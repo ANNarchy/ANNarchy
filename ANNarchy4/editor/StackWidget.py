@@ -24,10 +24,12 @@ class StackWidget(QStackedWidget):
              
     @pyqtSlot(QString, int, int)
     def update_population(self, net_name, tab, pop_id):
-        print tab, pop_id
+        """
+        Update either population or projection view depending on selected objects. 
+        """
         self.setCurrentIndex(tab)
         
         if tab == 1:
-            self.signal_update_population.emit( pop_id )
+            self.signal_update_population.emit( net_name, pop_id )
         elif tab == 2:
-            self.signal_update_projection.emit( pop_id )
+            self.signal_update_projection.emit( net_name, pop_id )

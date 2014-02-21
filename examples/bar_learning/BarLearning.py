@@ -85,10 +85,7 @@ def set_input():
 # visualization meanwhile yes/no
 vis_during_sim=True
 
-if __name__=='__main__':
-
-    compile()
-    
+def simulate_sth():
     # Collect visualizing information
     plot1 = {'pop': input_pop, 'var': 'rate'}
     plot2 = {'pop': feature_pop, 'var': 'rate'}
@@ -110,4 +107,11 @@ if __name__=='__main__':
     vis.render()  
 
     print 'simulation finished.'
+        
+if __name__=='__main__':
+
+    compile()
+    
+    ANNarchyEditor(simulate_sth)
+
     raw_input()

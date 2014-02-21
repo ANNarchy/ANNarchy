@@ -65,6 +65,7 @@ class PopView(QWidget):
         """
         self._rep = repo
         self._pop_id = -1
+        self._net_name = None
         
     @pyqtSlot()
     def initialize(self):
@@ -83,8 +84,8 @@ class PopView(QWidget):
         
         self._neur_type.addItems(['None'] + self._rep.get_entries('neuron'))
         
-    @pyqtSlot(int)
-    def update_population(self, pop_id):
+    @pyqtSlot(QString, int)
+    def update_population(self, net_name, pop_id):
         """
         Set the informations of the selected population.
         
@@ -93,12 +94,14 @@ class PopView(QWidget):
         *stackedWiget_2.signal_update_population*
         """
         self._pop_id = pop_id
+        self._net_name = net_name
+        
         try:
             # in our data storage?
             self._population_data[pop_id] 
         except KeyError:
             # get the data from repository
-            obj = self._rep.get_object('network', 'Bar_Learning')['pop_data'][pop_id]
+            obj = self._rep.get_object('network', net_name)['pop_data'][pop_id]
             self._population_data.update( { pop_id : { 'name': obj['name'], 'geometry' : obj['geometry'], 'type': obj['type'] } } ) 
             
         finally:
@@ -121,7 +124,7 @@ class PopView(QWidget):
             self._population_data[self._pop_id]['type'] = type
 
             # update repository
-            self._rep.get_object('network', 'Bar_Learning')['pop_data'][self._pop_id]['type'] = type
+            self._rep.get_object('network', self._net_name)['pop_data'][self._pop_id]['type'] = type
             
     @pyqtSlot()
     def pop_name_changed(self):
@@ -134,7 +137,7 @@ class PopView(QWidget):
             self._population_data[self._pop_id]['name'] = name
 
             # update repository
-            self._rep.get_object('network', 'Bar_Learning')['pop_data'][self._pop_id]['name'] = name
+            self._rep.get_object('network', self._net_name)['pop_data'][self._pop_id]['name'] = name
 
     @pyqtSlot()
     def pop_geo_changed(self):
@@ -149,7 +152,7 @@ class PopView(QWidget):
                 self._population_data[self._pop_id]['geometry'] = geo
     
                 # update repository
-                self._rep.get_object('network', 'Bar_Learning')['pop_data'][self._pop_id]['geometry'] = geo
+                self._rep.get_object('network', self._net_name)['pop_data'][self._pop_id]['geometry'] = geo
         except:
             print 'Invalid input for edit field'
             
@@ -187,8 +190,8 @@ class ProjView(QWidget):
         self._post_name = self.findChild(QLineEdit, 'post_name')
         self._target = self.findChild(QLineEdit, 'target')
         
-    @pyqtSlot(int)
-    def update_projection(self, proj_id):
+    @pyqtSlot(QString, int)
+    def update_projection(self, net_name, proj_id):
         """
         Set the informations of the selected population.
         
@@ -197,15 +200,16 @@ class ProjView(QWidget):
         *stackedWiget_2.signal_update_population*
         """
         self._proj_id = proj_id
+        self._net_name = net_name
         try:
             # in our data storage?
             self._projection_data[proj_id] 
         except KeyError:
             # get the data from repository
-            obj = self._rep.get_object('network', 'Bar_Learning')['proj_data'][proj_id]
+            obj = self._rep.get_object('network', net_name)['proj_data'][proj_id]
             
-            pre = self._rep.get_object('network', 'Bar_Learning')['pop_data'][obj['pre']]
-            post = self._rep.get_object('network', 'Bar_Learning')['pop_data'][obj['post']]
+            pre = self._rep.get_object('network', net_name)['pop_data'][obj['pre']]
+            post = self._rep.get_object('network', net_name)['pop_data'][obj['post']]
             self._projection_data.update( { proj_id : { 'pre': pre['name'], 'post': post['name'], 'target': obj['target'] } } ) 
             
         finally:
