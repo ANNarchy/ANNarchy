@@ -78,6 +78,7 @@ void Network::run(int steps) {
         std::cout << "Run simulation with "<< omp_get_max_threads() << " thread(s)." << std::endl;
 #endif
 
+    double start, stop;
     #pragma omp parallel
     {
         for(int i =0; i<steps; i++)
@@ -86,6 +87,11 @@ void Network::run(int steps) {
             #pragma omp master
             std::cout << "current step " << i << " ANNarchy "<< ANNarchy_Global::time << std::endl;
         #endif
+			#pragma omp barrier
+			#pragma omp master
+            {
+            start = omp_get_wtime();
+            }
 
             //
             // parallel population wise
@@ -135,9 +141,12 @@ void Network::run(int steps) {
                 populations_[p]->record();
             }
 
-            #pragma omp master
+			#pragma omp barrier
+			#pragma omp master
             {
                 ANNarchy_Global::time++;
+                stop = omp_get_wtime();
+                Profile::profileInstance()->appendTimeNet( (stop - start)*1000.0 );
             }
         }
     }

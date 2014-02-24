@@ -31,6 +31,10 @@ cdef extern from "../build/Profile.h":
 
         void resetTimer()
 
+        float getAvgTimeNet(int begin, int end)
+        
+        float lastRecordedTimeNet()
+
         float getAvgTimeSum(string name, int begin, int end)
         
         float lastRecordedTimeSum(string name)
@@ -59,6 +63,15 @@ cdef class pyProfile:
 
     def resetTimer(self):
         self.cInstance.resetTimer()
+
+    def lastTimeNet(self):
+        return self.cInstance.lastRecordedTimeNet()
+    
+    def avgTimeNet(self, begin, end):
+        return self.cInstance.getAvgTimeNet( begin, end )
+
+    def lastTimeStep(self, name):
+        return self.cInstance.lastRecordedTimeStep(name)
 
     def lastTimeSum(self, name):
         return self.cInstance.lastRecordedTimeSum(name)

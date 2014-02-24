@@ -35,7 +35,7 @@ equations="""
 """
 )
 
-nb_neurons = 20
+nb_neurons = 30
 
 InputPop = Population((nb_neurons, nb_neurons), Input)
 FocusPop = Population((nb_neurons, nb_neurons), Focus)
@@ -61,7 +61,7 @@ Proj2 = Projection(
 if __name__ == "__main__":
 
     # Analyse and compile everything, initialize the parameters/variables...
-    compile()    
+    compile(profile_enabled=True)    
 
     import pyximport; pyximport.install()
     import BubbleWorld

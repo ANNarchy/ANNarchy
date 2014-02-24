@@ -28,31 +28,32 @@ import numpy
 import datetime
 
 class ProfileLog(object):
-    def __init__(self, profiler, threads, num_trials):
+    def __init__(self, profiler, threads, num_trials, name):
         self._profiler = profiler
+        self._name = name
         
         self._threads = {}
         for i in range(len(threads)):
             self._threads.update({ threads[i]: i })
             
-        self._data = numpy.zeros((len(threads), num_trials)) 
+        self._data = numpy.zeros((num_trials, len(threads))) 
         
     def __getitem__(self, idx):
         if not isinstance(idx, tuple) or len(idx) != 2:
             raise IndexError
         
-        return self._data[self._threads[idx[0]], idx[1]]
+        return self._data[ idx[1], self._threads[idx[0]] ]
 
     def __setitem__(self, idx, value):
         if not isinstance(idx, tuple) or len(idx) != 2:
             raise IndexError
 
-        self._data[self._threads[idx[0]], idx[1]] = value
+        self._data[ idx[1], self._threads[idx[0]] ] = value
 
     def save_to_file(self):
         time = datetime.datetime.now().strftime("%Y%m%d_%H-%M")
         
-        out_file = 'profile_'+time+'.csv'
+        out_file = time+'_'+self._name+'.csv'
         
         numpy.savetxt(out_file, self._data, delimiter=',')
 
@@ -67,11 +68,17 @@ class Profile:
             self._profile_instance = ANNarchyCython.pyProfile()
             self._network = ANNarchyCython.pyNetwork()
             
-    def init_log(self, num_threads, num_trials):
-        return ProfileLog(self, num_threads, num_trials)
+    def init_log(self, num_threads, num_trials, name='profile'):
+        return ProfileLog(self, num_threads, num_trials, name)
         
     def reset_timer(self):
         self._profile_instance.resetTimer()
+
+    def last_step_net(self):
+        return self._profile_instance.lastTimeNet()
+        
+    def average_net(self, begin, end):
+        return self._profile_instance.avgTimeNet( begin, end )
 
     def last_step_sum(self, name):
         if isinstance(name, str):

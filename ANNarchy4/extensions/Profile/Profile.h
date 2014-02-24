@@ -44,7 +44,9 @@ public:
     }
 
     void resetTimer() {
-        for (auto it = timesSum_.begin(); it != timesSum_.end(); it++)
+        timesNetwork_.clear();
+
+    	for (auto it = timesSum_.begin(); it != timesSum_.end(); it++)
                 it->second.clear();
         for (auto it = timesStep_.begin(); it != timesStep_.end(); it++)
                 it->second.clear();
@@ -62,6 +64,25 @@ public:
         timesStep_.insert(std::pair<std::string, std::vector<double> >(name, std::vector<double>()));
         timesLocal_.insert(std::pair<std::string, std::vector<double> >(name, std::vector<double>()));
         timesGlobal_.insert(std::pair<std::string, std::vector<double> >(name, std::vector<double>()));
+    }
+
+    void appendTimeNet(double time)
+    {
+        timesNetwork_.push_back(time);
+    }
+
+    /*
+     * exported to python
+     */
+    double getAvgTimeNet(int begin, int end) {
+        return mean(timesNetwork_, begin, end);
+    }
+
+    /*
+     * exported to python
+     */
+    double lastRecordedTimeNet() {
+    	return timesNetwork_.back();
     }
 
     void appendTimeSum(std::string name, double time) {
@@ -205,6 +226,7 @@ public:
     }
 protected:
     Profile() {
+    	timesNetwork_ = std::vector<double> ();
         timesSum_ = std::map< std::string, std::vector<double> >();
         timesStep_ = std::map< std::string, std::vector<double> >();
         timesGlobal_ = std::map< std::string, std::vector<double> >();
@@ -223,6 +245,7 @@ protected:
     }
 private:
     static Profile* instance_;
+    std::vector < double > timesNetwork_;
     std::map< std::string, std::vector<double> > timesSum_; /// [ pop_name, [times] ]
     std::map< std::string, std::vector<double> > timesStep_; /// [ pop_name, [times] ]
     std::map< std::string, std::vector<double> > timesGlobal_; /// [ pop_name, [times] ]

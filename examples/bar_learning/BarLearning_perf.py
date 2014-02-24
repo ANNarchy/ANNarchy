@@ -48,7 +48,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 64  
+nb_neurons = 32  
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -103,10 +103,15 @@ if __name__=='__main__':
 
     #
     # setup the test
-    num_trials = 10
-    thread_count = [6,4,2,1]
+    num_trials = 30
+    thread_count = [4,3,2,1]
     trial_dur = 50
-    log = profiler.init_log(thread_count, num_trials)
+    log_sum = profiler.init_log(thread_count, num_trials, 'Bar_sum_')
+    log_net = profiler.init_log(thread_count, num_trials, 'Bar_net_')
+    log_step = profiler.init_log(thread_count, num_trials, 'Bar_meta_step_')
+    log_local = profiler.init_log(thread_count, num_trials, 'Bar_local_')
+    log_global = profiler.init_log(thread_count, num_trials, 'Bar_global_')
+    
 
     #
     # pre setup
@@ -126,7 +131,11 @@ if __name__=='__main__':
             if vis_during_sim:
                vis.render()
     
-            log[thread_count[test], trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            log_net[thread_count[test], trial] = profiler.average_net( trial*trial_dur, (trial+1)*trial_dur )
+            log_sum[thread_count[test], trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            log_step[thread_count[test], trial] = profiler.average_step("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            log_local[thread_count[test], trial] = profiler.average_local("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            log_global[thread_count[test], trial] = profiler.average_global("Population1", trial*trial_dur, (trial+1)*trial_dur)
             
             diff_runs[test][trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
             #print profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
@@ -147,6 +156,10 @@ if __name__=='__main__':
     print diff_runs
     print 'all simulation finished.'
 
-    log.save_to_file()
+    log_net.save_to_file()
+    log_sum.save_to_file()
+    log_step.save_to_file()
+    log_local.save_to_file()
+    log_global.save_to_file()
      
     raw_input()

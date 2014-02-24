@@ -298,6 +298,15 @@ void Population::metaSum() {
 }
 
 void Population::metaStep() {
+	double start, stop = 0.0;
+
+#ifdef ANNAR_PROFILE
+	#pragma omp master
+	{
+		start = omp_get_wtime();
+	}
+#endif
+
     // Random generators
     #pragma omp master
     {
@@ -319,6 +328,15 @@ void Population::metaStep() {
     }
 
     #pragma omp barrier
+
+#ifdef ANNAR_PROFILE
+	#pragma omp master
+	{
+		stop = omp_get_wtime();
+		Profile::profileInstance()->appendTimeStep(name_, (stop-start)*1000.0);
+	}
+#endif
+
 #ifdef _DEBUG
     #pragma omp master
     {
