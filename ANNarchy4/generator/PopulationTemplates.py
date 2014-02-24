@@ -19,8 +19,9 @@ rate_population_header = \
 #define __ANNarchy_%(class)s_H__
 
 #include "Global.h"
+#include "MeanPopulation.h"
 
-class %(class)s: public Population
+class %(class)s: public MeanPopulation
 {
 public:
     %(class)s(std::string name, int nbNeurons);
@@ -188,13 +189,22 @@ rate_population_body = """#include "%(class)s.h"
 #include "Global.h"
 using namespace ANNarchy_Global;
 
-%(class)s::%(class)s(std::string name, int nbNeurons):Population(name, nbNeurons)
+%(class)s::%(class)s(std::string name, int nbNeurons): MeanPopulation(name, nbNeurons)
 {
 #ifdef _DEBUG
     std::cout << "%(class)s::%(class)s called." << std::endl;
 #endif
 %(constructor)s
-    Network::instance()->addPopulation(this);
+
+    try
+    {
+        Network::instance()->addPopulation(this);
+    }
+    catch(std::exception e)
+    {
+        std::cout << "Failed to attach population"<< std::endl;
+        std::cout << e.what() << std::endl;
+    }
 }
 
 %(class)s::~%(class)s() 

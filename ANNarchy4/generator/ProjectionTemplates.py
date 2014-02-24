@@ -387,11 +387,12 @@ psp_code_body = \
     {
         if(constDelay_) // one delay for all connections
         {
-            pre_rates_ = pre_population_->getRates(delay_[0]);
+            pre_rates_ = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_[0]);
             
         #ifdef _DEBUG
             std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
-            for(int i=0; i<(int)(*pre_rates_).size(); i++) {
+            for(int i=0; i<(int)(*pre_rates_).size(); i++) 
+            {
                 std::cout << (*pre_rates_)[i] << " ";
             }
             std::cout << std::endl;
@@ -404,7 +405,7 @@ psp_code_body = \
         }
         else    // different delays [0..maxDelay]
         {
-            std::vector<DATA_TYPE> delayedRates = pre_population_->getRates(delay_, rank_);
+            std::vector<DATA_TYPE> delayedRates = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_, rank_);
 
             for(int i=0; i<(int)rank_.size(); i++) 
             {

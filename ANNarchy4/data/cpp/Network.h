@@ -39,27 +39,20 @@ public:
 
 	class Population* getPopulation(std::string name);
 
-	class Population* getPopulation(unsigned int id) {
-		if ( id < populations_.size() ) {
-			return populations_[id];
-		}else{
-           #ifdef _DEBUG
-                 std::cout << "Population id="<<id<<" not exist."<<std::endl;
-           #endif
-			return NULL;
-           }
-	}
+	class Population* getPopulation(unsigned int id);
 
 	void setNumThreads(int threads)
 	{
 	    omp_set_num_threads(threads);
 	}
 
+	/*
 	std::vector<DATA_TYPE> getRates(int populationID);
 
 	std::vector<DATA_TYPE> getRates(int populationID,int delay);
 
 	std::vector<DATA_TYPE> getRates(int populationID, std::vector<int> delays, std::vector<int> ranks);
+    */
 
 	void connect(int prePopulationID, int postPopulationID, class Connector *connector, int projectionID, int target);
 
@@ -79,6 +72,10 @@ private:
 	static Network *instance_;
 
 	// data
-	std::vector<class Population*>	populations_;
+	//std::vector<class SpikePopulation*>  spike_populations_;
+	std::vector<class Population*> populations_;
+
+	std::vector<class MeanPopulation*> mean_populations_;
+	std::vector<class SpikePopulation*> spike_populations_;
 };
 #endif

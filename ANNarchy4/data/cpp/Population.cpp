@@ -19,10 +19,105 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "Population.h"
 #include <exception>
 #include <typeinfo>
 
+Population::Population( std::string name, int nbNeurons, bool isRateType )
+{
+    name_ = name;
+    nbNeurons_ = nbNeurons;
+    dt_ = 1.0;
+    maxDelay_ = 0;
+    isRateType_ = isRateType;
+
+    projections_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
+
+#ifdef ANNAR_PROFILE
+    try{
+        Profile::profileInstance()->addLayer(name_);
+    }catch(std::exception e){
+        std::cout << "Can't attach population to profile instance." << std::endl;
+        std::cout << e.what() << std::endl;
+    }
+#endif
+
+}
+
+Population::~Population()
+{
+
+}
+
+void Population::addProjection(int postRankID, Projection* proj)
+{
+#ifdef _DEBUG
+    std::cout << name_ << ": added projection to neuron " << postRankID << std::endl;
+#endif
+    try
+    {
+        projections_.at(postRankID).push_back(proj);
+    }
+    catch (std::exception &e)
+    {
+        std::cout << std::endl;
+        std::cout << "Caught: " << e.what( ) << std::endl;
+        std::cout << "caused by: attach a projection to neuron " << postRankID <<" but there only " << nbNeurons_ << " neurons" << std::endl;
+        std::cout << std::endl;
+    };
+}
+
+void Population::removeProjection(Population* pre)
+{
+    for(int n=0; n<nbNeurons_; n++)
+    {
+        for(int p=0; p< (int)projections_[n].size();p++)
+        {
+            if(projections_[n][p]->getPrePopulation() == pre)
+                projections_[n].erase(projections_[n].begin()+p);
+        }
+    }
+}
+
+Projection* Population::getProjection(int neuron, int type, Population *pre)
+{
+    if (neuron < projections_.size())
+    {
+        for(int p=0; p< projections_[neuron].size(); p++)
+        {
+            if ( (projections_[neuron][p]->getTarget() == type) &&
+                 (projections_[neuron][p]->getPrePopulation() == pre) )
+            {
+                return projections_[neuron][p];
+            }
+        }
+    }
+
+    return NULL;
+}
+
+std::vector<Projection*> Population::getProjections(int neuron, int type)
+{
+    std::vector<Projection*> vec = std::vector<Projection*>();
+
+    if (neuron < projections_.size())
+    {
+        for(int p=0; p< projections_[neuron].size(); p++)
+        {
+            if(projections_[neuron][p]->getTarget() == type)
+            {
+                vec.push_back(projections_[neuron][p]);
+            }
+        }
+    }
+
+    return vec;
+}
+
+
+
+/*
 Population::Population(std::string name, int nbNeurons) {
 	name_ = std::move(name);
 
@@ -432,3 +527,4 @@ void Population::metaLearn()
 void Population::globalOperations() {
 
 }
+*/

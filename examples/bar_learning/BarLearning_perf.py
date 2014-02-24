@@ -104,7 +104,7 @@ if __name__=='__main__':
     #
     # setup the test
     num_trials = 30
-    thread_count = [4,3,2,1]
+    thread_count = [ x+1 for x in range(6) ]
     trial_dur = 50
     log_sum = profiler.init_log(thread_count, num_trials, 'Bar_sum_')
     log_net = profiler.init_log(thread_count, num_trials, 'Bar_net_')

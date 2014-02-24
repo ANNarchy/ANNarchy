@@ -21,24 +21,32 @@
  */
 #include "Network.h"
 
-Network::Network() {
+#include "SpikePopulation.h"
+#include "MeanPopulation.h"
+
+Network::Network()
+{
 	populations_.clear();
 
 	ANNarchy_Global::time = 0;
 }
 
-Network::~Network() {
+Network::~Network()
+{
 
     std::cout << "Network destructor." << std::endl;
 
-	while(!populations_.empty()) {
+	while(!populations_.empty())
+	{
 		delete populations_.back();
 		populations_.pop_back();
 	}
 }
 
-class Population* Network::getPopulation(std::string name) {
-	for(auto it = populations_.cbegin(); it != populations_.end(); it++) {
+class Population* Network::getPopulation(std::string name)
+{
+	for(auto it = populations_.cbegin(); it != populations_.cend(); it++)
+	{
 		if((*it)->getName().compare(name)==0)
 			return (*it);
 	}
@@ -46,6 +54,25 @@ class Population* Network::getPopulation(std::string name) {
 	return NULL;
 }
 
+class Population* Network::getPopulation(unsigned int id)
+{
+    if ( id < populations_.size() )
+    {
+        if(populations_[id]->isMeanRateCoded())
+            return populations_[id];
+        else
+            return NULL;
+    }
+    else
+    {
+    #ifdef _DEBUG
+        std::cout << "Population id="<<id<<" not exist."<<std::endl;
+    #endif
+        return NULL;
+    }
+}
+
+/*
 std::vector<DATA_TYPE> Network::getRates(int populationID) {
 	return *(populations_[populationID]->getRates());
 }
@@ -57,12 +84,18 @@ std::vector<DATA_TYPE> Network::getRates(int populationID,int delay) {
 std::vector<DATA_TYPE> Network::getRates(int populationID, std::vector<int> delays, std::vector<int> ranks) {
 	return populations_[populationID]->getRates(delays, ranks);
 }
+*/
 
 void Network::addPopulation(class Population* population) {
 #ifdef _DEBUG
     std::cout << "Added population '"<< population->getName()<<"' on place " << populations_.size()<<std::endl;
 #endif
     populations_.push_back(population);
+
+    if(population->isMeanRateCoded())
+        mean_populations_.push_back(static_cast<MeanPopulation*>(population));
+    else
+        spike_populations_.push_back(static_cast<SpikePopulation*>(population));
 }
 
 void Network::connect(int prePopulationID, int postPopulationID, Connector *connector, int projectionID, int targetID) {
@@ -98,50 +131,52 @@ void Network::run(int steps) {
 
             //
             // parallel population wise
+            /* spike
             #pragma omp for
             for(int p=0; p<(int)populations_.size(); p++)
             {
                 populations_[p]->prepareNeurons();
             }
+            */
 
             //
             // parallel neuron wise
-            for(int p=0; p<(int)populations_.size(); p++)
+            for(int p=0; p<(int)mean_populations_.size(); p++)
             {
-                populations_[p]->metaSum();
+                mean_populations_[p]->metaSum();
             }
             #pragma omp barrier
 
             //
             // parallel neuron wise
-            for(int p=0; p<(int)populations_.size(); p++)
+            for(int p=0; p<(int)mean_populations_.size(); p++)
             {
-                populations_[p]->metaStep();
-            }
-            #pragma omp barrier
-
-            //
-            // parallel population wise
-            #pragma omp for
-            for(int p=0; p<(int)populations_.size(); p++)
-            {
-                populations_[p]->globalOperations();
-            }
-
-            //
-            // parallel neuron wise
-            for(int p=0; p<(int)populations_.size(); p++)
-            {
-                populations_[p]->metaLearn();
+                mean_populations_[p]->metaStep();
             }
             #pragma omp barrier
 
             //
             // parallel population wise
             #pragma omp for
-            for(int p=0; p<(int)populations_.size(); p++)
+            for(int p=0; p<(int)mean_populations_.size(); p++)
             {
-                populations_[p]->record();
+                mean_populations_[p]->globalOperations();
+            }
+
+            //
+            // parallel neuron wise
+            for(int p=0; p<(int)mean_populations_.size(); p++)
+            {
+                mean_populations_[p]->metaLearn();
+            }
+            #pragma omp barrier
+
+            //
+            // parallel population wise
+            #pragma omp for
+            for(int p=0; p<(int)mean_populations_.size(); p++)
+            {
+                mean_populations_[p]->record();
             }
 
         #ifdef ANNAR_PROFILE

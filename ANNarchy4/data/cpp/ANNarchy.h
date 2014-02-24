@@ -36,9 +36,11 @@ public:
         delete net_;
     }
 
+    /*
     std::vector<DATA_TYPE> getRates(int populationID) {
 	return (*net_->getPopulation(populationID)->getRates());
     }
+    */
 
     void run(int nbSteps) {
         net_->run(nbSteps);

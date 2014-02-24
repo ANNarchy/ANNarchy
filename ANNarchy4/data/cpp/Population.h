@@ -24,6 +24,47 @@
 
 #include "Global.h"
 
+class Population
+{
+public:
+    Population( std::string name, int nbNeurons, bool isRateType );
+
+    virtual ~Population();
+
+    std::string getName() { return name_; }
+
+    int getNeuronCount() { return nbNeurons_; }
+
+    DATA_TYPE getDt() { return dt_; }
+
+    void setDt(DATA_TYPE dt) { dt_ = dt; }
+
+    //
+    //  Projection handling
+    //
+    void addProjection(int postRankID, class Projection* proj);
+
+    void removeProjection(Population *pre);
+
+    class Projection* getProjection(int neuron, int type, Population* pre);
+
+    std::vector<class Projection*> getProjections(int neuron, int type);
+
+    //
+    //  pure virtuals
+    //
+    bool isMeanRateCoded() { return isRateType_; }
+protected:
+    int nbNeurons_; ///< amount of neurons in the layer
+    std::string name_;  ///< name of layer
+    int maxDelay_;
+    DATA_TYPE dt_;
+    bool isRateType_;
+
+    std::vector< std::vector<class Projection*> > projections_; ///< list of afferent dendrites ordered neuron wise
+};
+
+/*
 class Population{
 public:
 	// functions
@@ -35,10 +76,11 @@ public:
 	virtual void metaSum();
 	virtual void localMetaStep(int neur_rank) {};
 	virtual void globalMetaStep() {};
-	virtual void metaLearn();
 	virtual void globalOperations();
 	virtual void record() {}
 	virtual void resetToInit() {}
+
+	void metaLearn();
 
 	void metaStep();
 
@@ -127,5 +169,5 @@ protected:
 	std::vector< bool > spiked_;
 	std::vector< std::vector<int> > spike_timings_;
 };
-
+*/
 #endif

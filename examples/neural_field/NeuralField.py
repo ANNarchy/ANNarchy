@@ -35,7 +35,7 @@ equations="""
 """
 )
 
-nb_neurons = 30
+nb_neurons = 20
 
 InputPop = Population((nb_neurons, nb_neurons), Input)
 FocusPop = Population((nb_neurons, nb_neurons), Focus)

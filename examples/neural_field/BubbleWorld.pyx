@@ -30,7 +30,7 @@ def run(InputPop, FocusPop, proj):
 
     #
     # setup the test
-    thread_count = [4,3,2,1]
+    thread_count = [ 6-x for x in xrange(6) ] 
     num_steps = 30
     
     log_sum = profiler.init_log(thread_count, num_steps, 'NF_sum_')
