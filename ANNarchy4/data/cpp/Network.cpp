@@ -87,11 +87,14 @@ void Network::run(int steps) {
             #pragma omp master
             std::cout << "current step " << i << " ANNarchy "<< ANNarchy_Global::time << std::endl;
         #endif
-			#pragma omp barrier
+
+        #ifdef ANNAR_PROFILE
+            #pragma omp barrier
 			#pragma omp master
             {
             start = omp_get_wtime();
             }
+        #endif
 
             //
             // parallel population wise
@@ -141,12 +144,18 @@ void Network::run(int steps) {
                 populations_[p]->record();
             }
 
+        #ifdef ANNAR_PROFILE
 			#pragma omp barrier
 			#pragma omp master
             {
-                ANNarchy_Global::time++;
                 stop = omp_get_wtime();
                 Profile::profileInstance()->appendTimeNet( (stop - start)*1000.0 );
+            }
+        #endif
+
+            #pragma omp master
+            {
+                ANNarchy_Global::time++;
             }
         }
     }
