@@ -72,7 +72,6 @@ private:
 	static Network *instance_;
 
 	// data
-	//std::vector<class SpikePopulation*>  spike_populations_;
 	std::vector<class Population*> populations_;
 
 	std::vector<class MeanPopulation*> mean_populations_;

@@ -21,8 +21,8 @@
  */
 #include "Network.h"
 
-#include "SpikePopulation.h"
 #include "MeanPopulation.h"
+#include "SpikePopulation.h"
 
 Network::Network()
 {
@@ -58,10 +58,7 @@ class Population* Network::getPopulation(unsigned int id)
 {
     if ( id < populations_.size() )
     {
-        if(populations_[id]->isMeanRateCoded())
-            return populations_[id];
-        else
-            return NULL;
+        return populations_[id];
     }
     else
     {
@@ -87,15 +84,22 @@ std::vector<DATA_TYPE> Network::getRates(int populationID, std::vector<int> dela
 */
 
 void Network::addPopulation(class Population* population) {
-#ifdef _DEBUG
-    std::cout << "Added population '"<< population->getName()<<"' on place " << populations_.size()<<std::endl;
-#endif
     populations_.push_back(population);
 
     if(population->isMeanRateCoded())
-        mean_populations_.push_back(static_cast<MeanPopulation*>(population));
+    {
+	#ifdef _DEBUG
+		std::cout << "Added rate population '"<< population->getName()<<"' on place " << mean_populations_.size()<<std::endl;
+	#endif
+		mean_populations_.push_back(static_cast<MeanPopulation*>(population));
+    }
     else
+    {
+	#ifdef _DEBUG
+		std::cout << "Added spike population '"<< population->getName()<<"' on place " << spike_populations_.size()<<std::endl;
+	#endif
         spike_populations_.push_back(static_cast<SpikePopulation*>(population));
+    }
 }
 
 void Network::connect(int prePopulationID, int postPopulationID, Connector *connector, int projectionID, int targetID) {
@@ -131,13 +135,11 @@ void Network::run(int steps) {
 
             //
             // parallel population wise
-            /* spike
             #pragma omp for
-            for(int p=0; p<(int)populations_.size(); p++)
+            for(int p=0; p<(int)spike_populations_.size(); p++)
             {
-                populations_[p]->prepareNeurons();
+                spike_populations_[p]->prepareNeurons();
             }
-            */
 
             //
             // parallel neuron wise
@@ -156,12 +158,26 @@ void Network::run(int steps) {
             #pragma omp barrier
 
             //
+            // parallel neuron wise
+            for(int p=0; p<(int)spike_populations_.size(); p++)
+            {
+                spike_populations_[p]->metaStep();
+            }
+            #pragma omp barrier
+
+            //
             // parallel population wise
             #pragma omp for
             for(int p=0; p<(int)mean_populations_.size(); p++)
             {
                 mean_populations_[p]->globalOperations();
             }
+
+			#pragma omp for
+			for(int p=0; p<(int)spike_populations_.size(); p++)
+			{
+				spike_populations_[p]->globalOperations();
+			}
 
             //
             // parallel neuron wise
@@ -178,6 +194,11 @@ void Network::run(int steps) {
             {
                 mean_populations_[p]->record();
             }
+			#pragma omp for
+			for(int p=0; p<(int)spike_populations_.size(); p++)
+			{
+				spike_populations_[p]->record();
+			}
 
         #ifdef ANNAR_PROFILE
 			#pragma omp barrier

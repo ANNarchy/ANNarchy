@@ -97,7 +97,7 @@ public:
     
     void postEvent();
     
-    bool isPreSynaptic(Population* pop) { return pop == pre_population_; }
+    bool isPreSynaptic(Population* pop) { return pop == static_cast<Population*>(pre_population_); }
         
     void record();
     
@@ -274,9 +274,6 @@ using namespace ANNarchy_Global;
 {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
-    
-    pre_rates_ = pre_population_->getRates();
-    post_rates_ = post_population_->getRates();
 
     target_ = target;
     post_neuron_rank_ = postRank;
@@ -294,9 +291,6 @@ using namespace ANNarchy_Global;
 {
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
-
-    pre_rates_ = pre_population_->getRates();
-    post_rates_ = post_population_->getRates();
 
     target_ = target;
     post_neuron_rank_ = postRank;

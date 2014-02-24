@@ -78,8 +78,9 @@ spike_population_header = \
 #define __ANNarchy_%(class)s_H__
 
 #include "Global.h"
+#include "SpikePopulation.h"
 
-class %(class)s: public Population
+class %(class)s: public SpikePopulation
 {
 public:
     %(class)s(std::string name, int nbNeurons);
@@ -283,7 +284,7 @@ spike_population_body = """#include "%(class)s.h"
 #include "Global.h"
 using namespace ANNarchy_Global;
 
-%(class)s::%(class)s(std::string name, int nbNeurons):Population(name, nbNeurons)
+%(class)s::%(class)s(std::string name, int nbNeurons): SpikePopulation(name, nbNeurons)
 {
 #ifdef _DEBUG
     std::cout << "%(class)s::%(class)s called." << std::endl;
