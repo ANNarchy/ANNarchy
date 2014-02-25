@@ -186,6 +186,11 @@ void Network::run(int steps) {
                 mean_populations_[p]->metaLearn();
             }
             #pragma omp barrier
+            for(int p=0; p<(int)spike_populations_.size(); p++)
+            {
+                spike_populations_[p]->metaLearn();
+            }
+            #pragma omp barrier
 
             //
             // parallel population wise

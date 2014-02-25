@@ -19,6 +19,7 @@ public:
 	void setMaxDelay(int delay);
 
 	void metaStep();
+	void metaLearn();
 
 	// override
 	virtual void prepareNeurons() {}
