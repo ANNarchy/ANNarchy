@@ -248,14 +248,14 @@ def _net_description(variables, connections):
     
             varias = {}
             for var in pop.variables:
-                varias[var] = pop.get_variable(var)
+                varias[var] = pop.get(var)
 
             if varias != {}:
                 pop_desc['variables'] = varias
                 
             params = {}
             for par in pop.parameters:
-                params[par] = pop.get_parameter(par)
+                params[par] = pop.get(par)
             
             if params != {}:
                 pop_desc['parameter'] = params
@@ -276,14 +276,14 @@ def _net_description(variables, connections):
                 
                 varias = {}
                 for var in dendrite.variables:
-                    varias[var] = dendrite.get_variable(var)
+                    varias[var] = dendrite.get(var)
                 
                 if varias != {}:
                     dendrite_desc['variables'] = varias
                     
                 params = {}
                 for par in dendrite.parameters:
-                    params[par] = dendrite.get_parameter(par)
+                    params[par] = dendrite.get(par)
                 
                 if params != {}:
                     dendrite_desc['parameter'] = params

@@ -277,7 +277,7 @@ using namespace ANNarchy_Global;
 
     target_ = target;
     post_neuron_rank_ = postRank;
-
+    
     post_population_->addProjection(postRank, this);
     if(spike)
     {
@@ -294,7 +294,7 @@ using namespace ANNarchy_Global;
 
     target_ = target;
     post_neuron_rank_ = postRank;
-
+    
     post_population_->addProjection(postRank, this);
     if(spike)
     {
@@ -372,10 +372,10 @@ psp_code_body = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-        for(int i=0; i<(int)rank_.size(); i++) 
+        for(int i=0; i < nbWeights_; i++) 
         {
             sum_ += %(psp)s
-        }
+        }        
     }
     else    // delayed connections
     {
@@ -392,7 +392,7 @@ psp_code_body = \
             std::cout << std::endl;
         #endif
             
-            for(int i=0; i<(int)rank_.size(); i++) 
+            for(int i=0; i < nbWeights_; i++) 
             {
                 sum_ += %(psp_const_delay)s
             }
@@ -401,7 +401,7 @@ psp_code_body = \
         {
             std::vector<DATA_TYPE> delayedRates = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_, rank_);
 
-            for(int i=0; i<(int)rank_.size(); i++) 
+            for(int i=0; i < nbWeights_; i++) 
             {
                 sum_ += %(psp_dyn_delay)s
             }

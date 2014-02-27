@@ -49,7 +49,7 @@ public:
 	std::vector<int> getDelay() { return delay_; };
 
 	void setDelay(std::vector<int> delay) 
-        { 
+    {
         #ifdef _DEBUG
                 std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl; 
         #endif
@@ -65,11 +65,11 @@ public:
                 std::cout << "NEW: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl; 
         #endif
                 delay_ = delay;
-        };
+    };
     	
 	std::vector<int> getRank() { return rank_; }
 
-	void setRank(std::vector<int> rank) { rank_ = rank; }
+	void setRank(std::vector<int> rank) { rank_ = rank; nbWeights_ = rank.size(); }
     
 	std::vector<DATA_TYPE> getValue() { return value_; }
 	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
@@ -106,6 +106,7 @@ public:
 protected:
     int post_neuron_rank_;
     int target_;
+    int nbWeights_;
 
     std::vector<int> rank_; ///< pre ranks for connection post->pre
     std::map<int, int> inv_rank_; ///< pre-ranks of synapses

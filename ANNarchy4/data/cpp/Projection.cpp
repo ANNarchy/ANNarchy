@@ -24,8 +24,8 @@
 Projection::Projection()
 {
      constDelay_ = true;
-     maxDelay_ =0;
-
+     maxDelay_ = 0;
+     nbWeights_ = 0;
 }
 
 Projection::~Projection() {
@@ -46,6 +46,8 @@ void Projection::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value,
 	rank_ = rank;
 	value_ = value;
 	delay_ = delay;
+
+	nbWeights_ = rank_.size();
 
 	constDelay_ = true;
 	maxDelay_ =0;
@@ -79,6 +81,7 @@ int Projection::addSynapse(int rank, DATA_TYPE value, int delay) {
         rank_.push_back(rank);
         value_.push_back(value);
         delay_.push_back(delay);
+        nbWeights_++;
         return 0;
     }else{
         return -1;
@@ -100,6 +103,7 @@ int Projection::removeSynapse(int rank) {
            if (delay_.size() > 1)
                delay_.erase(delay_.begin()+i);
 
+           nbWeights_--;
            return 0;
         }
     }

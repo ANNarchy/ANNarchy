@@ -117,7 +117,10 @@ std::vector<Projection*> Population::getProjections(int neuron, int type)
 
 
 
-/*
+/*TODEL
+ *
+ * Old implementation of population class containing both mean and spike coding.
+ *
 Population::Population(std::string name, int nbNeurons) {
 	name_ = std::move(name);
 

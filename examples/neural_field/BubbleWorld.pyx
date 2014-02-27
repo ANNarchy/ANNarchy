@@ -24,7 +24,7 @@ def run(InputPop, FocusPop, proj):
                              'min': -0.1, 'max': 0.1, 'title': 'Receptive fields'} ]
                          
                        )
-
+    """
     # profile instance
     profiler = Profile()
 
@@ -46,26 +46,30 @@ def run(InputPop, FocusPop, proj):
         diff_runs.append( [0 for x in range(num_steps) ] )
 
         profiler.set_num_threads(thread_count[test])   
+    """
+    num_steps = 5000
+    
+    for step in xrange (num_steps):
+        angle += 1.0/float(num_steps)
 
-        for step in xrange (num_steps):
-            angle += 1.0/float(num_steps)
-    
-            cw = w / 2.0 * ( 1.0 + radius * np.cos(2 * math.pi * angle ) )
-            ch = h / 2.0 * ( 1.0 + radius * np.sin(2 * math.pi * angle ) )
-    
-            for x in xrange(w):
-                for y in xrange(h):
-                    dist = (x-cw)**2 + (y-ch)**2
-                    value = 0.5 * np.exp(-dist/2.0/sigma**2)
-                    idx = x+y*w
-                    data[idx] = value
-    
-            InputPop.baseline = data
-    
-            simulate(1)
-            if step%250 == 0:
-                vis.render()
-            
+        cw = w / 2.0 * ( 1.0 + radius * np.cos(2 * math.pi * angle ) )
+        ch = h / 2.0 * ( 1.0 + radius * np.sin(2 * math.pi * angle ) )
+
+        for x in xrange(w):
+            for y in xrange(h):
+                dist = (x-cw)**2 + (y-ch)**2
+                value = 0.5 * np.exp(-dist/2.0/sigma**2)
+                idx = x+y*w
+                data[idx] = value
+
+        InputPop.baseline = data
+
+        simulate(1)
+        if step%250 == 0:
+            vis.render()
+
+        #save('tmp.mat')
+        """            
             log_net[thread_count[test], step] = profiler.average_net( step, (step+1) )
             log_sum[thread_count[test], step] = profiler.average_sum("Population1", step, (step+1))
             log_step[thread_count[test], step] = profiler.average_step("Population1", step, (step+1))
@@ -88,3 +92,5 @@ def run(InputPop, FocusPop, proj):
     log_net.save_to_file()
     log_sum.save_to_file()
     log_step.save_to_file()
+    """
+    print 'done'

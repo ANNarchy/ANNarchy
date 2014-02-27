@@ -64,7 +64,10 @@ protected:
     std::vector< std::vector<class Projection*> > projections_; ///< list of afferent dendrites ordered neuron wise
 };
 
-/*
+/*TODEL
+ *
+ * Old implementation of population class containing both mean and spike coding.
+ *
 class Population{
 public:
 	// functions
