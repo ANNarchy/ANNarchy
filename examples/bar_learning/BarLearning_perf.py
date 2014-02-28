@@ -48,7 +48,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 32  
+nb_neurons = 64  
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -101,10 +101,14 @@ if __name__=='__main__':
     # profile instance
     profiler = Profile()
 
+    
+    save('init.mat')
+    
     #
     # setup the test
     num_trials = 30
-    thread_count = [ x+1 for x in range(6) ]
+    #thread_count = [ x+1 for x in range(6) ]
+    thread_count = [ 6-x for x in range(6) ]
     trial_dur = 50
     log_sum = profiler.init_log(thread_count, num_trials, 'Bar_sum_')
     log_net = profiler.init_log(thread_count, num_trials, 'Bar_net_')

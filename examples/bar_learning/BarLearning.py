@@ -49,7 +49,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 16
+nb_neurons = 64
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -94,6 +94,7 @@ def simulate_sth():
   
     vis = Visualization( [plot1, plot2, plot3])
      
+    save('init.mat')
     #Run the simulation        
     for trial in range(5000):
         if (trial > 0) and (trial % 100==0):

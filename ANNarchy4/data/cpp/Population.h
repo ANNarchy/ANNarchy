@@ -61,7 +61,10 @@ protected:
     DATA_TYPE dt_;
     bool isRateType_;
 
+
     std::vector< std::vector<class Projection*> > projections_; ///< list of afferent dendrites ordered neuron wise
+
+    std::vector< std::vector< std::vector<class Projection*> > > typedProjections_;
 };
 
 /*TODEL

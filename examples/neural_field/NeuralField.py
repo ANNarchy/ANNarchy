@@ -15,7 +15,7 @@ parameters="""
     baseline = 0.0
 """,
 equations="""
-    noise = Uniform(-0.5, 0.5)
+    noise = 0.0 #Uniform(-0.5, 0.5)
     tau * dmp / dt + mp = baseline + noise
     rate = pos(mp)
 """ 
@@ -44,8 +44,8 @@ Proj1 = Projection(
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc'
-).connect_one_to_one( weights=1.0 )
-                    
+).connect_one_to_one( weights=0.5 )
+
 Proj2 = Projection(
     pre = FocusPop, 
     post = FocusPop, 
@@ -64,8 +64,15 @@ if __name__ == "__main__":
     compile(profile_enabled=True)    
 
     import pyximport; pyximport.install()
-    import BubbleWorld
+    import BubbleWorld_perf
     
-    BubbleWorld.run(InputPop, FocusPop, Proj2)
+    BubbleWorld_perf.run(InputPop, FocusPop, Proj2)
+    
+    #===========================================================================
+    # import pyximport; pyximport.install()
+    # import BubbleWorld
+    # 
+    # BubbleWorld.run(InputPop, FocusPop, Proj2)
+    #===========================================================================
     
     raw_input()

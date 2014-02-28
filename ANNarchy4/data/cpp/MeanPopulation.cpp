@@ -76,9 +76,16 @@ void MeanPopulation::setMaxDelay(int delay)
 DATA_TYPE MeanPopulation::sum(int neur, int typeID) {
     DATA_TYPE sum=0.0;
 
+    /*
     for(int i=0; i< projections_[neur].size(); i++)
         if(projections_[neur][i]->getTarget() == typeID)
             sum += projections_[neur][i]->getSum();
+    */
+
+    auto it = typedProjections_[neur][typeID].begin();
+    int end = typedProjections_[neur][typeID].size();
+    for(int i=0; i != end; i++ )
+        sum += (*(it++))->getSum();
 
     return sum;
 }

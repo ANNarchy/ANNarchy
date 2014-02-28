@@ -33,6 +33,7 @@ Population::Population( std::string name, int nbNeurons, bool isRateType )
     isRateType_ = isRateType;
 
     projections_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
+    typedProjections_ = std::vector< std::vector< std::vector<class Projection*> > >(nbNeurons_, std::vector< std::vector<class Projection*> >());
 
 #ifdef ANNAR_PROFILE
     try{
@@ -58,6 +59,13 @@ void Population::addProjection(int postRankID, Projection* proj)
     try
     {
         projections_.at(postRankID).push_back(proj);
+
+        while(typedProjections_.at(postRankID).size() <= proj->getTarget())
+        {
+            typedProjections_.at(postRankID).push_back(std::vector<Projection*>());
+        }
+
+        typedProjections_.at(postRankID).at(proj->getTarget()).push_back(proj);
     }
     catch (std::exception &e)
     {
