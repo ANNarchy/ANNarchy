@@ -198,7 +198,7 @@ class Analyser(object):
                         
                 else: # An if-then-else statement
                     code = self._translate_ITE(variable['name'], eq, condition, proj, untouched)
-                                         
+                       
                 # Replace untouched variables with their original name
                 for prev, new in untouched.iteritems():
                     code = code.replace(prev, new)     
@@ -472,7 +472,10 @@ def _extract_prepost(name, eq, proj):
         elif var in proj.pre.attributes:
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var+'_ ')
-            untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
+            if var=='rate':
+                untouched['_pre_rate_'] = ' (*pre_rates_)[ rank_[i] ] '
+            else:
+                untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
         else:
             _error(eq+'\nPopulation '+proj.pre.description['name']+' has no attribute '+var+'.')
             exit(0)
@@ -483,7 +486,11 @@ def _extract_prepost(name, eq, proj):
         elif var in proj.post.attributes:
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var+'_ ')
-            untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
+            if var=='rate':
+                #the firing rates are solved in a slightly different way
+                untouched['_post_rate_'] = ' post_rate_ '
+            else:
+                untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
         else:
             _error(eq+'\nPopulation '+proj.post.description['name']+' has no attribute '+var+'.')
             exit(0)

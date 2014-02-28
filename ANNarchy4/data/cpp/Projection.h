@@ -115,8 +115,11 @@ protected:
     std::vector<DATA_TYPE> value_;
 
     DATA_TYPE sum_;
-    std::vector<DATA_TYPE>* pre_rates_;
+
+    DATA_TYPE post_rate_;
     std::vector<DATA_TYPE>* post_rates_;
+    std::vector<DATA_TYPE>* pre_rates_;
+
 
     DATA_TYPE dt_;
 

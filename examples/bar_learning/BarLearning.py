@@ -5,7 +5,7 @@
 #
 from ANNarchy4 import *
 
-setup()
+setup(num_threads=1)
 
 # Defining the neurons
 InputNeuron = RateNeuron(
@@ -96,11 +96,11 @@ def simulate_sth():
      
     save('init.mat')
     #Run the simulation        
-    for trial in range(5000):
+    for trial in range(1):
         if (trial > 0) and (trial % 100==0):
             print trial
         set_input()
-        simulate(50) 
+        simulate(1) 
  
         vis.render()
  
@@ -113,6 +113,6 @@ if __name__=='__main__':
 
     compile()
     
-    ANNarchyEditor(simulate_sth)
-
+    #ANNarchyEditor(simulate_sth)
+    simulate_sth()
     raw_input()
