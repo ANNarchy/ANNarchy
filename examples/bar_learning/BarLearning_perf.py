@@ -144,6 +144,6 @@ if __name__=='__main__':
 
     print 'all simulation finished.'
 
-    profiler.save_to_file()
-    
+    profiler.analyse_data()
+        
     raw_input()

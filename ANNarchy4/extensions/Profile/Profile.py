@@ -28,6 +28,12 @@ import numpy
 import datetime
 import matplotlib.pyplot as plt
 
+"""
+TODO:
+
++ Fix the global learning measurements.
+"""
+
 class DataLog(object):
     def __init__(self, threads, num_trials):
         """
@@ -36,6 +42,9 @@ class DataLog(object):
         self._num_trials = threads
         self._threads = threads            
         self._data = numpy.zeros((num_trials, len(threads))) 
+
+        self._mean = [ 0.0 for x in xrange(len(self._threads))]
+        self._std = [ 0.0 for x in xrange(len(self._threads))]
         
     def __getitem__(self, idx):
         if not isinstance(idx, tuple) or len(idx) != 2:
@@ -51,37 +60,16 @@ class DataLog(object):
 
     def analyse_data(self):
         """
+        Calculate mean and standard deviation for logged data.
         """
-        mean = [ 0.0 for x in xrange(len(self._threads))]
-        std = [ 0.0 for x in xrange(len(self._threads))]
-        X = [ x for x in xrange(len(self._threads))]
-        
         for t in xrange(len(self._threads)):
-            mean[t] = numpy.mean(self._data[:,t], axis=0)
-            std[t] = numpy.std(self._data[:,t], axis=0)
-
-        # First illustrate basic pyplot interface, using defaults where possible.
-        print X
-        print mean
+            self._mean[t] = numpy.mean(self._data[:,t], axis=0)
+            self._std[t] = numpy.std(self._data[:,t], axis=0)
         
-        fig = plt.figure()
-        
-        print self._threads
-        
-        x_ticks = [ 0.0 for x in xrange(len(self._threads))]
-        for k,v in self._threads.iteritems():
-            x_ticks[v] = k
-            
-        #for 
-        #x_ticks = [ self._threads[len(self._threads)-x] for x in xrange(len(self._threads))] 
-        plt.xticks(X, x_ticks)
-        plt.errorbar(X, mean, yerr=std)
-        fig.canvas.draw()
-        
-        plt.draw()
-
     def save_to_file(self, name):
-
+        """
+        Save the data to file *name*.
+        """
         numpy.savetxt(name, self._data, delimiter=',')
                 
 class Profile:
@@ -126,8 +114,8 @@ class Profile:
         else:
             self._pop_data[object] = { 'sum' : DataLog(self._threads, self._num_trials),
                                        'step' : DataLog(self._threads, self._num_trials), 
-                                       'local' : DataLog(self._threads, self._num_trials),
-                                       'global' : DataLog(self._threads, self._num_trials)
+                                       'local' : DataLog(self._threads, self._num_trials)
+                                       #'global' : DataLog(self._threads, self._num_trials)
                                      }
         
     def measure(self, thread, trial, begin, end):
@@ -153,7 +141,95 @@ class Profile:
             data['sum'][thread, trial] = self._average_sum(name, begin, end)
             data['step'][thread, trial] = self._average_step(name, begin, end)
             data['local'][thread, trial] = self._average_local(name, begin, end)
-            data['global'][thread, trial] = self._average_global(name, begin, end)
+            #data['global'][thread, trial] = self._average_global(name, begin, end)
+            
+    def analyse_data(self):
+        """
+        """
+        num_row = 2
+        num_col = 2
+
+        #
+        # pre setup
+        x_scale = [i for i in xrange(len(self._threads))]
+        for k,v in self._threads.iteritems():
+            x_scale[v] = k
+        # evaluate datasets - network
+        self._net_data.analyse_data()
+        # evaluate datasets - layer and operation wise
+        for pop in self._pop_data.itervalues():
+            for tmp in pop.itervalues():
+                tmp.analyse_data()
+                
+        #
+        #mean and std
+        mean_figure, mean_handles = plt.subplots(num_row, num_col)
+        plt.suptitle("Mean and STD")
+        
+        mean_handles[0,0].errorbar(x_scale, self._net_data._mean, yerr=self._net_data._std)
+        mean_handles[0,0].set_xlim([1,len(self._threads)])
+        mean_handles[0,0].set_xticks(x_scale) 
+        
+        #
+        # population data
+        pop_iter = iter(self._pop_data)
+        for y in xrange(1,num_row):
+            for x in xrange(num_col):
+                
+                try:
+                    it = next(pop_iter)
+                    
+                    
+                    mean_data = self._pop_data[it]['sum']._mean
+                    std_data = self._pop_data[it]['sum']._std
+                    p1 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+
+                    mean_data = self._pop_data[it]['step']._mean
+                    std_data = self._pop_data[it]['step']._std
+                    p2 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+
+                    mean_data = self._pop_data[it]['local']._mean
+                    std_data = self._pop_data[it]['local']._std
+                    p3 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+                    
+                except:
+                    pass
+                
+                mean_handles[y,x].set_title(it)
+                mean_handles[y,x].legend([p1, p2, p3], ["sum", "step", "local"])
+                mean_handles[y,x].set_xlim([1,len(self._threads)])
+                mean_handles[y,x].set_xticks(x_scale)
+                    
+        mean_figure.canvas.draw()
+
+        #
+        # raw data
+        num_row = 2
+        num_col = 2
+        for name, data in self._pop_data.iteritems():
+            
+            raw_figure, raw_handles = plt.subplots(num_row, num_col)
+            plt.suptitle(name, fontsize=14)
+            
+            #
+            # population data
+            pop_iter = iter(self._pop_data[name])
+            for y in xrange(num_row):
+                for x in xrange(num_col):
+                    
+                    try:
+                        it = next(pop_iter)
+                        plt_data = data[it]._data
+                        x_scale = [i for i in xrange(plt_data.shape[0])]
+                        
+                        for i in xrange( plt_data.shape[1] ):
+                            raw_handles[y,x].plot(x_scale, plt_data[:,i])
+                        
+                        raw_handles[y,x].set_title(it)
+                    except:
+                        pass
+
+            raw_figure.canvas.draw()
         
     def save_to_file(self):
         """
@@ -172,8 +248,8 @@ class Profile:
             complete = numpy.concatenate( 
                             ( data['sum']._data, empty_row,
                               data['step']._data, empty_row,
-                              data['local']._data, empty_row,
-                              data['global']._data, empty_row,
+                              data['local']._data, empty_row
+                              #data['global']._data, empty_row,
                             ), axis = 1
                         )
             
