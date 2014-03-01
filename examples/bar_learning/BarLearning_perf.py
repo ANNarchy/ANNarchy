@@ -5,7 +5,7 @@
 #
 from ANNarchy4 import *
 
-setup(num_threads=1)
+setup()
 
 # Defining the neurons
 InputNeuron = RateNeuron(
@@ -50,7 +50,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 64  
+nb_neurons = 16  
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -100,25 +100,21 @@ if __name__=='__main__':
     # Setup visualizer
     vis = Visualization( [plot1, plot2, plot3 ] )
 
-    # profile instance
-    profiler = Profile()
-
-    
     save('init.mat')
     
     #
     # setup the test
     num_trials = 30
     #thread_count = [ x+1 for x in range(6) ]
-    thread_count = [ 6-x for x in range(6) ]
+    thread_count = [ 4-x for x in range(4) ]
     trial_dur = 50
-    log_sum = profiler.init_log(thread_count, num_trials, 'Bar_sum_')
-    log_net = profiler.init_log(thread_count, num_trials, 'Bar_net_')
-    log_step = profiler.init_log(thread_count, num_trials, 'Bar_meta_step_')
-    log_local = profiler.init_log(thread_count, num_trials, 'Bar_local_')
-    log_global = profiler.init_log(thread_count, num_trials, 'Bar_global_')
     
-
+    # profile instance
+    profiler = Profile(thread_count, num_trials)
+    profiler.add_to_profile("network")
+    profiler.add_to_profile("Population0")
+    profiler.add_to_profile("Population1")
+    
     #
     # pre setup
     diff_runs = []
@@ -137,14 +133,7 @@ if __name__=='__main__':
             if vis_during_sim:
                vis.render()
     
-            log_net[thread_count[test], trial] = profiler.average_net( trial*trial_dur, (trial+1)*trial_dur )
-            log_sum[thread_count[test], trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
-            log_step[thread_count[test], trial] = profiler.average_step("Population1", trial*trial_dur, (trial+1)*trial_dur)
-            log_local[thread_count[test], trial] = profiler.average_local("Population1", trial*trial_dur, (trial+1)*trial_dur)
-            log_global[thread_count[test], trial] = profiler.average_global("Population1", trial*trial_dur, (trial+1)*trial_dur)
-            
-            diff_runs[test][trial] = profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
-            #print profiler.average_sum("Population1", trial*trial_dur, (trial+1)*trial_dur)
+            profiler.measure(thread_count[test], trial, trial*trial_dur, (trial+1)*trial_dur)
 
         profiler.reset_timer()
 
@@ -153,19 +142,8 @@ if __name__=='__main__':
 
         print 'simulation finished.'
 
-    print 'results:\n'
-    for test in range(len(thread_count)):
-        print '\ttest',test,'with',thread_count[test],'thread(s)'
-        print '\t',diff_runs[test]
-        print '\n'
-
-    print diff_runs
     print 'all simulation finished.'
 
-    log_net.save_to_file()
-    log_sum.save_to_file()
-    log_step.save_to_file()
-    log_local.save_to_file()
-    log_global.save_to_file()
-     
+    profiler.save_to_file()
+    
     raw_input()
