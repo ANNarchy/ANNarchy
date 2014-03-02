@@ -210,10 +210,7 @@ void MeanPopulation::metaLearn()
 #ifdef ANNAR_PROFILE
     #pragma omp barrier
 
-    #pragma omp master
-    {
-        double start = omp_get_wtime();
-    }
+    start = omp_get_wtime();
 #endif
 
 #ifdef _DEBUG
@@ -242,13 +239,13 @@ void MeanPopulation::metaLearn()
     #pragma omp barrier
 
 #ifdef ANNAR_PROFILE
-    #pragma omp master
-    {
-        stop = omp_get_wtime();
-
+    stop = omp_get_wtime();
+	#pragma omp master
+	{
         Profile::profileInstance()->appendTimeGlobal(name_, (stop-start)*1000.0);
-        start = omp_get_wtime();
     }
+	#pragma omp barrier
+	start = omp_get_wtime();
 #endif
 
 #ifdef _DEBUG
@@ -275,10 +272,9 @@ void MeanPopulation::metaLearn()
 
     #pragma omp barrier
 #ifdef ANNAR_PROFILE
+    stop = omp_get_wtime();
     #pragma omp master
     {
-        stop = omp_get_wtime();
-
         Profile::profileInstance()->appendTimeLocal(name_, (stop - start)*1000.0);
     }
 #endif

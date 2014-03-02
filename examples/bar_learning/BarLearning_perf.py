@@ -50,7 +50,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 16  
+nb_neurons = 32  
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -104,7 +104,7 @@ if __name__=='__main__':
     
     #
     # setup the test
-    num_trials = 30
+    num_trials = 5
     #thread_count = [ x+1 for x in range(6) ]
     thread_count = [ 4-x for x in range(4) ]
     trial_dur = 50

@@ -28,11 +28,6 @@ import numpy
 import datetime
 import matplotlib.pyplot as plt
 
-"""
-TODO:
-
-+ Fix the global learning measurements.
-"""
 
 class DataLog(object):
     def __init__(self, threads, num_trials):
@@ -114,8 +109,8 @@ class Profile:
         else:
             self._pop_data[object] = { 'sum' : DataLog(self._threads, self._num_trials),
                                        'step' : DataLog(self._threads, self._num_trials), 
-                                       'local' : DataLog(self._threads, self._num_trials)
-                                       #'global' : DataLog(self._threads, self._num_trials)
+                                       'local' : DataLog(self._threads, self._num_trials),
+                                       'global' : DataLog(self._threads, self._num_trials)
                                      }
         
     def measure(self, thread, trial, begin, end):
@@ -141,14 +136,14 @@ class Profile:
             data['sum'][thread, trial] = self._average_sum(name, begin, end)
             data['step'][thread, trial] = self._average_step(name, begin, end)
             data['local'][thread, trial] = self._average_local(name, begin, end)
-            #data['global'][thread, trial] = self._average_global(name, begin, end)
+            data['global'][thread, trial] = self._average_global(name, begin, end)
             
     def analyse_data(self):
         """
         """
         num_row = 2
         num_col = 2
-
+        
         #
         # pre setup
         x_scale = [i for i in xrange(len(self._threads))]
@@ -191,12 +186,16 @@ class Profile:
                     mean_data = self._pop_data[it]['local']._mean
                     std_data = self._pop_data[it]['local']._std
                     p3 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+
+                    mean_data = self._pop_data[it]['global']._mean
+                    std_data = self._pop_data[it]['global']._std
+                    p4 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
                     
                 except:
                     pass
                 
                 mean_handles[y,x].set_title(it)
-                mean_handles[y,x].legend([p1, p2, p3], ["sum", "step", "local"])
+                mean_handles[y,x].legend([p1, p2, p3, p4], ["sum", "step", "local", "global"])
                 mean_handles[y,x].set_xlim([1,len(self._threads)])
                 mean_handles[y,x].set_xticks(x_scale)
                     
@@ -231,6 +230,9 @@ class Profile:
 
             raw_figure.canvas.draw()
         
+        #if use_pause_mode:
+        #    plt.draw(0.01)
+            
     def save_to_file(self):
         """
         Save the recorded data to several files.
@@ -248,8 +250,8 @@ class Profile:
             complete = numpy.concatenate( 
                             ( data['sum']._data, empty_row,
                               data['step']._data, empty_row,
-                              data['local']._data, empty_row
-                              #data['global']._data, empty_row,
+                              data['local']._data, empty_row,
+                              data['global']._data, empty_row
                             ), axis = 1
                         )
             
