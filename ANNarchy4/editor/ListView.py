@@ -87,3 +87,46 @@ class SynapseListView(QListView):
             idx = self._model.index(self._model.rowCount()-1, 0)
             self.setCurrentIndex( idx )
             
+class EnvironmentListView(QListView):
+    signal_show_template = pyqtSignal(int, QString)
+    
+    def __init__(self, parent):
+        super(QListView, self).__init__(parent)
+
+    def set_repository(self, repo=None):
+        self._rep = repo
+        
+    @pyqtSlot()
+    def initialize(self):
+        self._model = QStandardItemModel(self)
+        self._model.appendRow(QStandardItem("<Press here to add ...>"))
+
+        for name in self._rep.get_entries('environment'):
+            self._model.appendRow(QStandardItem( name ))            
+        self.setModel(self._model)
+        
+        self.connect(self,SIGNAL("clicked(QModelIndex)"), self, SLOT("ItemClicked(QModelIndex)"))
+        
+    @pyqtSlot("QModelIndex")
+    def ItemClicked(self, index):
+        if index.data().toString() == "<Press here to add ...>":
+            self.input_dialog()
+            
+        # will update the repository !!
+        self.signal_show_template.emit( 3, self.currentIndex().data().toString() )
+
+    def input_dialog(self):
+        text, ok = QInputDialog.getText(self, 'New environment definition', 'Enter environment script name:')
+        
+        if ok:
+            if self._model.findItems(text) != []:
+                QMessageBox.warning(self,"Add environment", "The environment name is already existing")
+                return
+            
+            item = QStandardItem( text )
+            self._model.appendRow(item)
+            self.setModel(self._model)
+            
+            idx = self._model.index(self._model.rowCount()-1, 0)
+            self.setCurrentIndex( idx )
+            

@@ -81,13 +81,24 @@ class EditorMainWindow(QMainWindow):
         .. hint: please note, that the receiving functions are not decorated by @pyqtSlot
         """
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.objects.set_repository)
+        
+        #
+        # List views
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.neur_general.set_repository)
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.syn_general.set_repository)
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.net_select.set_repository)
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.env_select.set_repository)
+        
+        #
+        # code views
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.editor.set_repository)        
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.complete.set_repository)
+        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.environment.set_repository)
+
+        #
+        # property dialogs
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.pop_view.set_repository)
         QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.proj_view.set_repository)
-        QObject.connect(self, SIGNAL("set_repository(PyQt_PyObject)"), self._ui.complete.set_repository)
         
     def set_data(self, x, y, x_data, y_data):
         """

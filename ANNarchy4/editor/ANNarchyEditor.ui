@@ -38,7 +38,7 @@
        </property>
        <widget class="MyTabWidget" name="views">
         <property name="currentIndex">
-         <number>1</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="object_page">
          <attribute name="title">
@@ -135,7 +135,7 @@
         </size>
        </property>
        <property name="currentIndex">
-        <number>1</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="obj_tab">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -373,7 +373,13 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="env_tab"/>
+       <widget class="QWidget" name="env_tab">
+        <layout class="QVBoxLayout" name="verticalLayout_18">
+         <item>
+          <widget class="EnvironmentListView" name="env_select"/>
+         </item>
+        </layout>
+       </widget>
        <widget class="QWidget" name="par_tab">
         <layout class="QVBoxLayout" name="verticalLayout_5">
          <item>
@@ -614,7 +620,7 @@
      <x>0</x>
      <y>0</y>
      <width>1080</width>
-     <height>25</height>
+     <height>29</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -787,6 +793,15 @@
    <slots>
     <slot>initialize()</slot>
     <slot>update_projection(QString,int)</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>EnvironmentListView</class>
+   <extends>QListView</extends>
+   <header location="global">ListView.h</header>
+   <slots>
+    <signal>signal_show_template(int,QString)</signal>
+    <slot>initialize()</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -1237,6 +1252,38 @@
     <hint type="destinationlabel">
      <x>308</x>
      <y>330</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ANNarchyEditor</sender>
+   <signal>initialize()</signal>
+   <receiver>env_select</receiver>
+   <slot>initialize()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>539</x>
+     <y>311</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>env_select</sender>
+   <signal>signal_show_template(int,QString)</signal>
+   <receiver>environment</receiver>
+   <slot>set_code()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>842</x>
+     <y>326</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>308</x>
+     <y>334</y>
     </hint>
    </hints>
   </connection>

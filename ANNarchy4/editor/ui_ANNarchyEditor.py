@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ANNarchyEditor.ui'
 #
-# Created: Fri Feb 21 13:54:53 2014
-#      by: PyQt4 UI code generator 4.9.1
+# Created: Sun Mar  2 10:15:01 2014
+#      by: PyQt4 UI code generator 4.9.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -189,6 +189,8 @@ class Ui_ANNarchyEditor(object):
         self.pre_name.setAcceptDrops(False)
         self.pre_name.setObjectName(_fromUtf8("pre_name"))
         self.gridLayout_6.addWidget(self.pre_name, 0, 1, 1, 1)
+        spacerItem3 = QtGui.QSpacerItem(20, 443, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.gridLayout_6.addItem(spacerItem3, 4, 1, 1, 1)
         self.label_12 = QtGui.QLabel(self.proj_view)
         self.label_12.setObjectName(_fromUtf8("label_12"))
         self.gridLayout_6.addWidget(self.label_12, 1, 0, 1, 1)
@@ -203,14 +205,23 @@ class Ui_ANNarchyEditor(object):
         self.target.setAcceptDrops(False)
         self.target.setObjectName(_fromUtf8("target"))
         self.gridLayout_6.addWidget(self.target, 2, 1, 1, 1)
-        spacerItem3 = QtGui.QSpacerItem(20, 443, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.gridLayout_6.addItem(spacerItem3, 3, 1, 1, 1)
+        self.label_20 = QtGui.QLabel(self.proj_view)
+        self.label_20.setObjectName(_fromUtf8("label_20"))
+        self.gridLayout_6.addWidget(self.label_20, 3, 0, 1, 1)
+        self.synapse_type = QtGui.QComboBox(self.proj_view)
+        self.synapse_type.setObjectName(_fromUtf8("synapse_type"))
+        self.gridLayout_6.addWidget(self.synapse_type, 3, 1, 1, 1)
         self.gridLayout_3.addWidget(self.proj_view, 0, 0, 1, 1)
         self.stackedWidget_2.addWidget(self.page_6)
         self.verticalLayout_4.addWidget(self.stackedWidget_2)
         self.general.addWidget(self.net_tab)
         self.env_tab = QtGui.QWidget()
         self.env_tab.setObjectName(_fromUtf8("env_tab"))
+        self.verticalLayout_18 = QtGui.QVBoxLayout(self.env_tab)
+        self.verticalLayout_18.setObjectName(_fromUtf8("verticalLayout_18"))
+        self.env_select = EnvironmentListView(self.env_tab)
+        self.env_select.setObjectName(_fromUtf8("env_select"))
+        self.verticalLayout_18.addWidget(self.env_select)
         self.general.addWidget(self.env_tab)
         self.par_tab = QtGui.QWidget()
         self.par_tab.setObjectName(_fromUtf8("par_tab"))
@@ -338,7 +349,7 @@ class Ui_ANNarchyEditor(object):
         self.verticalLayout_14.addWidget(self.splitter_2)
         ANNarchyEditor.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(ANNarchyEditor)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1080, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1080, 29))
         self.menubar.setObjectName(_fromUtf8("menubar"))
         self.menuFile = QtGui.QMenu(self.menubar)
         self.menuFile.setObjectName(_fromUtf8("menuFile"))
@@ -357,9 +368,9 @@ class Ui_ANNarchyEditor(object):
         self.menubar.addAction(self.menuConfig.menuAction())
 
         self.retranslateUi(ANNarchyEditor)
-        self.views.setCurrentIndex(1)
-        self.general.setCurrentIndex(1)
-        self.stackedWidget_2.setCurrentIndex(0)
+        self.views.setCurrentIndex(2)
+        self.general.setCurrentIndex(2)
+        self.stackedWidget_2.setCurrentIndex(2)
         self.plot_config.setCurrentIndex(1)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), ANNarchyEditor.close)
         QtCore.QObject.connect(self.compile_and_run, QtCore.SIGNAL(_fromUtf8("pressed()")), ANNarchyEditor.compile_and_run)
@@ -389,6 +400,8 @@ class Ui_ANNarchyEditor(object):
         QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_population(QString,int)")), self.pop_view.update_population)
         QtCore.QObject.connect(self.stackedWidget_2, QtCore.SIGNAL(_fromUtf8("signal_update_projection(QString,int)")), self.proj_view.update_projection)
         QtCore.QObject.connect(self.net_select, QtCore.SIGNAL(_fromUtf8("signal_show_network(QString)")), self.complete.set_network)
+        QtCore.QObject.connect(ANNarchyEditor, QtCore.SIGNAL(_fromUtf8("initialize()")), self.env_select.initialize)
+        QtCore.QObject.connect(self.env_select, QtCore.SIGNAL(_fromUtf8("signal_show_template(int,QString)")), self.environment.set_code)
         QtCore.QMetaObject.connectSlotsByName(ANNarchyEditor)
 
     def retranslateUi(self, ANNarchyEditor):
@@ -411,6 +424,7 @@ class Ui_ANNarchyEditor(object):
         self.label_11.setText(QtGui.QApplication.translate("ANNarchyEditor", "Pre populaution", None, QtGui.QApplication.UnicodeUTF8))
         self.label_12.setText(QtGui.QApplication.translate("ANNarchyEditor", "Post population", None, QtGui.QApplication.UnicodeUTF8))
         self.label_13.setText(QtGui.QApplication.translate("ANNarchyEditor", "Target", None, QtGui.QApplication.UnicodeUTF8))
+        self.label_20.setText(QtGui.QApplication.translate("ANNarchyEditor", "Synapse type", None, QtGui.QApplication.UnicodeUTF8))
         self.label_7.setText(QtGui.QApplication.translate("ANNarchyEditor", "Loaded file(s):", None, QtGui.QApplication.UnicodeUTF8))
         self.groupBox.setTitle(QtGui.QApplication.translate("ANNarchyEditor", "Grid configuration", None, QtGui.QApplication.UnicodeUTF8))
         self.label.setText(QtGui.QApplication.translate("ANNarchyEditor", "x size", None, QtGui.QApplication.UnicodeUTF8))
@@ -443,4 +457,4 @@ from GLNetwork import GLNetworkWidget
 from GLObjects import GLBaseWidget
 from VisWidget import VisControlWidget, VisualizerWidget
 from CodeView import CodeView
-from ListView import NeuronListView, SynapseListView
+from ListView import NeuronListView, EnvironmentListView, SynapseListView

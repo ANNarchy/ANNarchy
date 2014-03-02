@@ -44,3 +44,13 @@ rate_synapse_def = \
     '''
 )  
 """
+
+environment_def = \
+"""
+def %(name)s():
+
+    # simulation loop
+    for trial in range(100):
+    
+        simulate(50)
+"""

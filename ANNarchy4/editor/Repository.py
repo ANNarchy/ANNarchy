@@ -12,31 +12,36 @@ class Repository(QObject):
         self._neuron_defs = {}
         self._synapse_defs = {}
         self._network_defs = {}
+        self._environment_defs = {}
         
         #
         # function calls
         self._add_obj = { 
          'neuron' : self._add_neuron, 
          'synapse' : self._add_synapse,
-         'network' : self._add_network
+         'network' : self._add_network,
+         'environment': self._add_environment
         }
 
         self._update_obj = { 
          'neuron' : self._update_neuron, 
          'synapse' : self._update_synapse,
-         'network' : self._update_network
+         'network' : self._update_network,
+         'environment': self._update_environment
         }
         
         self._get_entries = {
          'neuron' : self._neuron_entries, 
          'synapse' : self._synapse_entries,
-         'network' : self._network_entries
+         'network' : self._network_entries,
+         'environment': self._environment_entries
         }
 
         self._get_obj = {
          'neuron' : self._get_neuron, 
          'synapse' : self._get_synapse,
-         'network' : self._get_network
+         'network' : self._get_network,
+         'environment': self._get_environment
         }
 
     def save(self):
@@ -125,7 +130,25 @@ class Repository(QObject):
                 
                 proj_target = etree.SubElement( proj_data, 'target')
                 proj_target.text = str(proj['target'])
-                
+
+        #
+        # save environment
+        env_tree = etree.SubElement( root, 'environments')
+        print self._environment_defs
+        for name, data in self._environment_defs.iteritems():
+            env_tag = etree.SubElement( env_tree, str(name))
+            
+            env_name = etree.SubElement( env_tag, 'name')
+            env_name.text = str(name)
+
+            env_data = etree.SubElement( env_tag, 'code')
+            i = 0
+            for line in str(data).split('\n'):
+                if len(line) > 0:
+                    data_tag = etree.SubElement( env_data , 'line'+str(i)  )
+                    data_tag.text = line
+                    i+=1                  
+        
         #
         # save the data to file
         fname = open('./neur_rep.xml', 'w')
@@ -215,6 +238,20 @@ class Repository(QObject):
                                                                } } )
                     i += 1
 
+        env_root = doc.findall('environments') # find environment root node
+        if env_root != []:
+            for env in env_root[0].getchildren():
+                env_name = env.find('name').text
+                env_data = ''
+    
+                for line in env.find('code').getchildren():
+                    if line.text != None:
+                        env_data += str(line.text)+'\n'
+                    else:
+                        env_data += '\n'
+    
+                self._environment_defs[env_name] = env_data
+
     def add_object(self, type, name, data):
         try:
             self._add_obj[type](name, data)
@@ -241,7 +278,8 @@ class Repository(QObject):
           
     def entry_contained(self, name):
         exist = (name in self._neuron_defs.keys()) or \
-                (name in self._synapse_defs.keys())
+                (name in self._synapse_defs.keys()) or \
+                (name in self._environment_defs.keys())
                 
         return exist
 
@@ -259,6 +297,9 @@ class Repository(QObject):
     def _add_network(self, name, data):
         self._network_defs[str(name)] = data
 
+    def _add_environment(self, name, data):
+        self._environment_defs[str(name)] = data
+
     def _update_neuron(self, name, data):
         self._neuron_defs[str(name)] = data
         
@@ -268,6 +309,9 @@ class Repository(QObject):
     def _update_network(self, name, data):
         print data
 
+    def _update_environment(self, name, data):
+        self._environment_defs[str(name)] = data
+
     def _neuron_entries(self):
         return self._neuron_defs.keys()
         
@@ -276,6 +320,9 @@ class Repository(QObject):
         
     def _network_entries(self):
         return self._network_defs.keys()
+
+    def _environment_entries(self):
+        return self._environment_defs.keys()
         
     def _get_neuron(self, name):
         return self._neuron_defs[str(name)]
@@ -285,3 +332,6 @@ class Repository(QObject):
         
     def _get_network(self, name):
         return self._network_defs[str(name)]
+
+    def _get_environment(self, name):
+        return self._environment_defs[str(name)]

@@ -108,6 +108,8 @@ class CodeView(QsciScintilla):
             obj = 'neuron'
         elif type == 2:
             obj = 'synapse'
+        elif type == 3:
+            obj = 'environment'
 
         #
         # create the new entry
@@ -116,21 +118,25 @@ class CodeView(QsciScintilla):
                 code = rate_neuron_def % { 'name': name }
             elif type == 2:
                 code = rate_synapse_def % { 'name': name }
+            elif type == 3:
+                code = environment_def % { 'name': name }
                 
             self._rep.add_object(obj, name, code)
             if self._curr_name == None:
                 self.setText(code)
-
+        
         #
         # check if an other definition is remain                
-        if self._rep.entry_contained(self._curr_name):
-            if self._rep.get_object(self._curr_type, self._curr_name) != self.text():
+        if self._rep.entry_contained( name ):
+            
+            if self._rep.get_object(obj, name) != self.text() and len(self.text())>0:
                 reply = QMessageBox.question(self, 'Save changes', 'You want to save the modified object?', QMessageBox.Yes, QMessageBox.No )
              
                 #
                 # ask the user if he want to save   
                 if reply == QMessageBox.Yes:
                     self._rep.update_object(self._curr_type, self._curr_name, self.text())
+            
     
             # show the new data set
             self.setText( self._rep.get_object( obj, name ) )
