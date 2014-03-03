@@ -354,6 +354,48 @@ class Projection(object):
 
         return self
        
+    def connect_fixed_propability(self, propability, weights, delays=0.0, allow_self_connections=False):
+        """ fixed_probability projection between two populations. Subclass of Projection.
+    
+        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided.
+    
+        Parameters:
+        
+        * probability: probability that a synapse is created.
+        
+        * weights: either the value common for all connections or a RandomDistribution object.
+        
+        * delays: either the value common for all connections or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """        
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        self._synapses = {}
+        
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(self.pre.size) ]
+        if isinstance(delays, (int, float)):
+            delay_values = [ delays for n in range(self.pre.size) ]
+        
+        for post_rank in xrange(self.post.size):
+        
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((self.pre.size))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            for pre_rank in xrange(self.pre.size):
+                if (pre_rank == post_rank) and not allow_self_connections:
+                    continue
+
+                if np.random.random() < propability:
+                    self._synapses[(pre_rank, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
+  
+        return self
+
     def connect_with_func(self, method, **args):
         """
         Establish connections provided by user defined function.
