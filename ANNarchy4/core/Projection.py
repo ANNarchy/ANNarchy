@@ -413,16 +413,16 @@ class Projection(object):
         allow_self_connections = (self.pre!=self.post) and not allow_self_connections
         
         if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(self.pre.size) ]
+            weight_values = [ weights for n in range(number) ]
         if isinstance(delays, (int, float)):    
-            delay_values = [ delays for n in range(self.pre.size) ]
+            delay_values = [ delays for n in range(number) ]
         
         for post_rank in xrange(self.post.size):
         
             if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((self.pre.size))
+                weight_values = weights.get_values((number))
             if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
+                delay_values = delays.get_values((number,1))
             
             weight_iter = iter(weight_values)
             delay_iter = iter(delay_values)
@@ -435,7 +435,9 @@ class Projection(object):
                 while (not unique):
                     choice = np.random.randint(0, self.pre.size)
                     
-                    if choice in ranks:
+                    if choice == post_rank and not allow_self_connections:
+                        unique = False
+                    elif choice in ranks:
                         unique = False
                     else:
                         unique = True
@@ -445,6 +447,58 @@ class Projection(object):
                 
         return self
             
+    def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+        """ fixed_number_pre projection between two populations.
+    
+        Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
+    
+        Parameters:
+        
+        * number: number of synapses per presynaptic neuron.
+        
+        * weights: either the value common for all the connection weights or random distribution object.
+        
+        * delays : the delay of the synapse transmission, either as a float (milliseconds) or a DiscreteDistribution object (default=0).
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(number) ]
+        if isinstance(delays, (int, float)):    
+            delay_values = [ delays for n in range(number) ]
+        
+        for pre_rank in xrange(self.pre.size):
+        
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((number))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((number,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            ranks = []
+            for i in xrange(number):
+                
+                unique=False
+                choice=-1
+                while (not unique):
+                    choice = np.random.randint(0, self.post.size)
+                    
+                    if choice == pre_rank and not allow_self_connections:
+                        unique = False
+                    elif choice in ranks:
+                        unique = False
+                    else:
+                        unique = True
+                    
+                self._synapses[(pre_rank, choice)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
+                ranks.append(choice)
+                
+        return self
+                
     def connect_with_func(self, method, **args):
         """
         Establish connections provided by user defined function.

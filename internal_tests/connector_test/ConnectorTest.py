@@ -16,6 +16,9 @@ Simple2 = RateSynapse(
 psp = """ value * (1.0-pre.rate) """                      
 )
 
+OneDimIn = Population((10,1), Simple)
+OneDimOut = Population((1,3), Simple)
+
 In = Population((30, 30), Simple)
 Middle = Population((30, 30), Simple)
 Out = Population((5, 5), Simple)
@@ -48,6 +51,33 @@ testDog = Projection(
     sigma_pos=0.1, 
     amp_neg=0.1, 
     sigma_neg=0.7
+)
+
+testFixedPropability = Projection(
+    pre = In, 
+    post = Out, 
+    target = 'fixed_prob', 
+).connect_fixed_propability(
+    weights = Uniform(0.0, 1.0),
+    propability = 0.1
+)
+
+testFixedNumberPre = Projection(
+    pre = OneDimIn, 
+    post = OneDimOut, 
+    target = 'fixed_pre', 
+).connect_fixed_number_pre(
+    weights = Uniform(0.0, 1.0),
+    number = 3
+)
+
+testFixedNumberPost = Projection(
+    pre = OneDimIn, 
+    post = OneDimOut, 
+    target = 'fixed_post', 
+).connect_fixed_number_post(
+    weights = Uniform(0.0, 1.0),
+    number = 2
 )
 
 def stochastic_pattern(pre, post, weight, propability):
@@ -85,6 +115,15 @@ visGaussian.render()
  
 visDog = Visualization( [ { 'proj': testDog, 'var': 'value', 'min': -0.1, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
 visDog.render()
+
+visFixedPropPattern = Visualization( [ { 'proj': testFixedPropability, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'fixed propability'} ] )
+visFixedPropPattern.render()
+
+visFixedPrePattern = Visualization( [ { 'proj': testFixedNumberPre, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'fixed number pre'} ] )
+visFixedPrePattern.render()
+
+visFixedPostPattern = Visualization( [ { 'proj': testFixedNumberPost, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'fixed number post'} ] )
+visFixedPostPattern.render()
 
 visTestUserPattern = Visualization( [ { 'proj': testUserPattern, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'user defined pattern'} ] )
 visTestUserPattern.render()
