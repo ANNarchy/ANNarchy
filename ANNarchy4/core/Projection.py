@@ -355,7 +355,7 @@ class Projection(object):
         return self
        
     def connect_fixed_propability(self, propability, weights, delays=0.0, allow_self_connections=False):
-        """ fixed_probability projection between two populations. Subclass of Projection.
+        """ fixed_probability projection between two populations. 
     
         Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided.
     
@@ -370,11 +370,10 @@ class Projection(object):
         * allow_self_connections : defines if self-connections are allowed (default=False).
         """        
         allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        self._synapses = {}
         
         if isinstance(weights, (int, float)):
             weight_values = [ weights for n in range(self.pre.size) ]
-        if isinstance(delays, (int, float)):
+        if isinstance(delays, (int, float)):    
             delay_values = [ delays for n in range(self.pre.size) ]
         
         for post_rank in xrange(self.post.size):
@@ -396,6 +395,56 @@ class Projection(object):
   
         return self
 
+    def connect_fixed_number_pre(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+        """ fixed_number_pre projection between two populations.
+    
+        Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
+    
+        Parameters:
+        
+        * number: number of synapses per presynaptic neuron.
+        
+        * weights: either the value common for all the connection weights or random distribution object.
+        
+        * delays : the delay of the synapse transmission, either as a float (milliseconds) or a DiscreteDistribution object (default=0).
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(self.pre.size) ]
+        if isinstance(delays, (int, float)):    
+            delay_values = [ delays for n in range(self.pre.size) ]
+        
+        for post_rank in xrange(self.post.size):
+        
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((self.pre.size))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            ranks = []
+            for i in xrange(number):
+                
+                unique=False
+                choice=-1
+                while (not unique):
+                    choice = np.random.randint(0, self.pre.size)
+                    
+                    if choice in ranks:
+                        unique = False
+                    else:
+                        unique = True
+                    
+                self._synapses[(choice, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
+                ranks.append(choice)
+                
+        return self
+            
     def connect_with_func(self, method, **args):
         """
         Establish connections provided by user defined function.
