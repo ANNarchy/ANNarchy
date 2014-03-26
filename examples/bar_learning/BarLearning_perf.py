@@ -50,7 +50,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 32  
+nb_neurons = 64  
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -91,7 +91,7 @@ if __name__=='__main__':
     # Compiling the network
     compile(debug_build=False, cpp_stand_alone=False, profile_enabled=True)
 
-    # Collect visualizing information
+    #Collect visualizing information
     plot1 = {'pop': input_pop, 'var': 'rate'}
     plot2 = {'pop': feature_pop, 'var': 'rate'}
     plot3 = {'proj': input_feature, 'var': 'value', 
@@ -106,7 +106,7 @@ if __name__=='__main__':
     # setup the test
     num_trials = 5
     #thread_count = [ x+1 for x in range(6) ]
-    thread_count = [ 4-x for x in range(4) ]
+    thread_count = [ 6-x for x in range(6) ]
     trial_dur = 50
     
     # profile instance

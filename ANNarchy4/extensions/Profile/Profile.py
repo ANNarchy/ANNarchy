@@ -230,8 +230,8 @@ class Profile:
 
             raw_figure.canvas.draw()
         
-        #if use_pause_mode:
-        #    plt.draw(0.01)
+        #plt.draw()
+        plt.pause(0.01)
             
     def save_to_file(self):
         """

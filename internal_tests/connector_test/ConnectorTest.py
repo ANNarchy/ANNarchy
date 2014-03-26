@@ -92,7 +92,7 @@ def stochastic_pattern(pre, post, weight, propability):
                 for pre_w in xrange(pre.width):
                     pre_rank = pre.rank_from_coordinates( (pre_w, pre_h) )
                     if np.random.random() < propability:
-                        synapse_dict[(pre_rank, post_rank)] = { 'w': weight, 'd': 0.0 }
+                        synapse_dict[(pre_rank, post_rank)] = { 'w': weight, 'd': 2.0 }
   
     return synapse_dict
     
@@ -102,7 +102,7 @@ testUserPattern = Projection(
     target = 'user' 
 ).connect_with_func(method=stochastic_pattern, weight=1.0, propability=0.3)   
 
-compile()
+compile(debug_build=True)
 
 visOne2One = Visualization( [ { 'proj': testOne2One, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights one2one'} ] )
 visOne2One.render()

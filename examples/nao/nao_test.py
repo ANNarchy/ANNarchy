@@ -11,7 +11,7 @@
 #        sudo ifconfig eth1 192.168.1.1 up
 #
 from ANNarchy4 import *
-from pylab import ion, imshow, draw
+from pylab import ion, imshow, pause
 
 def simulate_sth(nao):
     print 'Running the simulation'
@@ -28,7 +28,7 @@ def simulate_sth(nao):
         data = np.asarray(im) # PIL to np.array
         
         image.set_data(data)
-        draw()        
+        pause(0.01)        
         print 'trial', trial
 
 if __name__ == '__main__':

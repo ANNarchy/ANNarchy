@@ -79,8 +79,9 @@ class Dendrite(object):
         self.cy_instance.value = weights
         if delays != None:
             self.cy_instance.delay = delays
-            max_delay = np.amax(delays)
-            self.proj.pre.cyInstance.set_max_delay(int(max_delay))
+            if (len(delays)>0):
+                max_delay = np.amax(delays)
+                self.proj.pre.cyInstance.set_max_delay(int(max_delay))
 
         self._recorded_variables = {}        
         for var in list(set(self.variables + ['value'])):

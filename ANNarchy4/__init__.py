@@ -14,6 +14,7 @@ from .core.Random import Constant, Uniform, Normal
 #
 # ANNarchy4 visualizer
 from .visualization import Visualization
+#from .visualization2 import Visualization2
 
 try:
     import PyQt4
