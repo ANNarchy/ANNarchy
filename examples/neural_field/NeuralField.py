@@ -61,18 +61,11 @@ Proj2 = Projection(
 if __name__ == "__main__":
 
     # Analyse and compile everything, initialize the parameters/variables...
-    compile(profile_enabled=True)    
+    compile()    
 
     import pyximport; pyximport.install()
-    import BubbleWorld_perf
+    import BubbleWorld
     
-    BubbleWorld_perf.run(InputPop, FocusPop, Proj2)
-    
-    #===========================================================================
-    # import pyximport; pyximport.install()
-    # import BubbleWorld
-    # 
-    # BubbleWorld.run(InputPop, FocusPop, Proj2)
-    #===========================================================================
+    BubbleWorld.run(InputPop, FocusPop, Proj2)
     
     raw_input()

@@ -5,8 +5,6 @@
 #
 from ANNarchy4 import *
 
-setup(num_threads=1)
-
 # Defining the neurons
 InputNeuron = RateNeuron(
     parameters=""" 
@@ -49,7 +47,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 64
+nb_neurons = 32
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -96,11 +94,11 @@ def simulate_sth():
      
     save('init.mat')
     #Run the simulation        
-    for trial in range(1):
+    for trial in range(3000):
         if (trial > 0) and (trial % 100==0):
             print trial
         set_input()
-        simulate(1) 
+        simulate(50) 
  
         vis.render()
  
