@@ -3,3 +3,5 @@
 *.py~
 *.mat
 *.data
+*.csv
+*.tar.gz
