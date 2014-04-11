@@ -347,7 +347,7 @@ class Generator(object):
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
             if not self.debug_build:
-                flags = "-O0 -g"
+                flags = "-O2"
             else:
                 flags = "-O0 -g -D_DEBUG"
     
