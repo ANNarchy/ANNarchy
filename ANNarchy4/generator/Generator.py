@@ -279,6 +279,8 @@ class Generator(object):
                 if not os.path.isfile(Global.annarchy_dir+'/generate/'+folder+'/'+file):
                     if not file.endswith('.o') and not file == 'ANNarchyCython.cpp': # skip generated files
                         os.remove(Global.annarchy_dir+'/'+folder+'/'+file)
+                        if file.endswith('.cpp') : # suppress a population or projection
+                            os.remove(Global.annarchy_dir+'/'+folder+'/'+file.replace('.cpp', '.o'))                            
                         changed = True
                         if Global.config['verbose']:
                             Global._print(file, 'has been deleted.') 
