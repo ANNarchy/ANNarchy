@@ -668,6 +668,86 @@ class Population(object):
     def __iter__(self):
         " Returns iteratively each neuron in the population in ascending rank order."
         for neur_rank in range(self.size):
-            yield self.neuron(neur_rank)  
+            yield self.neuron(neur_rank) 
+            
+    def set_variable_flags(self, name, value):
+        """ Sets the flags of a variable for the population.
+        
+        If the variable ``rate`` is defined in the Neuron description through:
+        
+            rate = sum(exc) : max=1.0  
+            
+        one can change its maximum value with:
+        
+            pop.set_variable_flags('rate', {'max': 2.0})
+            
+        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
+        
+        For positional flags (population, implicit), the value in the dictionary must be set to the empty string '':
+        
+            pop.set_variable_flags('rate', {'implicit': ''})
+        
+        A None value in the dictionary deletes the corresponding flag:
+        
+            pop.set_variable_flags('rate', {'max': None})
+            
+        """
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The population '+self.name+' has no variable called ' + name)
+            return
+            
+        for key, val in value.iteritems():
+            if val == '': # a flag
+                try:
+                    self.description['variables'][rk_var]['flags'].index(key)
+                except: # the flag does not exist yet, we can add it
+                    self.description['variables'][rk_var]['flags'].append(key)
+            elif val == None: # delete the flag
+                try:
+                    self.description['variables'][rk_var]['flags'].remove(key)
+                except: # the flag did not exist, check if it is a bound
+                    if has_key(self.description['variables'][rk_var]['bounds'], key):
+                        self.description['variables'][rk_var]['bounds'].pop(key)
+            else: # new value for init, min, max...
+                if key == 'init':
+                    self.description['variables'][rk_var]['init'] = val 
+                    self.init[name] = val              
+                else:
+                    self.description['variables'][rk_var]['bounds'][key] = val
+                
+       
+            
+    def set_variable_equation(self, name, equation):
+        """ Changes the equation of a variable for the population.
+        
+        If the variable ``rate`` is defined in the Neuron description through:
+        
+            tau * drate/dt + rate  = sum(exc) : max=1.0  
+            
+        one can change the equation with:
+        
+            pop.set_variable_equation('rate', 'rate = sum(exc)')
+            
+        Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
+        
+        .. warning::
+            
+            This method should be used with great care, it is advised to define another Neuron object instead. 
+            
+        """         
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The population '+self.name+' has no variable called ' + name)
+            return               
+        self.description['variables'][rk_var]['eq'] = equation    
+            
+            
+    def _find_variable_index(self, name):
+        " Returns the index of the variable name in self.description['variables']"
+        for idx in range(len(self.description['variables'])):
+            if self.description['variables'][idx]['name'] == name:
+                return idx
+        return -1
 
 

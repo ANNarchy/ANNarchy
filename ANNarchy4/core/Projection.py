@@ -733,3 +733,83 @@ class Projection(object):
         " Returns iteratively each dendrite in the population in ascending rank order."
         for n in range(self.size):
             yield self._dendrites[n] 
+            
+    def set_variable_flags(self, name, value):
+        """ Sets the flags of a variable for the projection.
+        
+        If the variable ``rate`` is defined in the Synapse description through:
+        
+            value = pre.rate * post.rate : max=1.0  
+            
+        one can change its maximum value with:
+        
+            proj.set_variable_flags('value', {'max': 2.0})
+            
+        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
+        
+        For positional flags (postsynaptic, implicit), the value in the dictionary must be set to the empty string '':
+        
+            proj.set_variable_flags('value', {'implicit': ''})
+        
+        A None value in the dictionary deletes the corresponding flag:
+        
+            proj.set_variable_flags('value', {'max': None})
+            
+        """
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The projection '+self.name+' has no variable called ' + name)
+            return
+            
+        for key, val in value.iteritems():
+            if val == '': # a flag
+                try:
+                    self.description['variables'][rk_var]['flags'].index(key)
+                except: # the flag does not exist yet, we can add it
+                    self.description['variables'][rk_var]['flags'].append(key)
+            elif val == None: # delete the flag
+                try:
+                    self.description['variables'][rk_var]['flags'].remove(key)
+                except: # the flag did not exist, check if it is a bound
+                    if has_key(self.description['variables'][rk_var]['bounds'], key):
+                        self.description['variables'][rk_var]['bounds'].pop(key)
+            else: # new value for init, min, max...
+                if key == 'init':
+                    self.description['variables'][rk_var]['init'] = val 
+                    self.init[name] = val              
+                else:
+                    self.description['variables'][rk_var]['bounds'][key] = val
+                
+       
+            
+    def set_variable_equation(self, name, equation):
+        """ Changes the equation of a variable for the projection.
+        
+        If the variable ``value`` is defined in the Synapse description through:
+        
+            eta * dvalue/dt = pre.rate * post.rate 
+            
+        one can change the equation with:
+        
+            proj.set_variable_equation('value', 'eta * dvalue/dt = pre.rate * (post.rate - 0.1) ')
+            
+        Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
+        
+        .. warning::
+            
+            This method should be used with great care, it is advised to define another Synapse object instead. 
+            
+        """         
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The projection '+self.name+' has no variable called ' + name)
+            return               
+        self.description['variables'][rk_var]['eq'] = equation    
+            
+            
+    def _find_variable_index(self, name):
+        " Returns the index of the variable name in self.description['variables']"
+        for idx in range(len(self.description['variables'])):
+            if self.description['variables'][idx]['name'] == name:
+                return idx
+        return -1
