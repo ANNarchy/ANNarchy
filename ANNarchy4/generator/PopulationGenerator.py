@@ -340,21 +340,31 @@ void %(class)s::compute_sum_%(var)s() {
     }
 """ % {'cond' : self.desc['spike']['spike_cond'] } #TODO: check code
 
+            # Process the bounds min and max
             for bound, val in param['bounds'].iteritems():
+                # Check if the min/max value is a float/int or another parameter/variable
+                if val in self.desc['local']:
+                    pval = val + '_[i]'
+                elif val in self.desc['global']:
+                    pval = val + '_'
+                else:
+                    pval = val
+                # Bound min
                 if bound == 'min':
                     code += """
     if(%(var)s_[i] < %(val)s)
         %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
+                # Bound max 
                 if bound == 'max':
                     code += """
     if(%(var)s_[i] > %(val)s)
         %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         return code
     
     def generate_cwrappers(self):
-        "Parts of the C++ header which should be acessible to Cython"
+        "Parts of the C++ header which should be accessible to Cython"
         code = ""
         
         for param in self.desc['parameters'] + self.desc['variables']:
