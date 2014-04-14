@@ -102,23 +102,19 @@ class Population(object):
         # Get a list of parameters and variables
         self.description = analyse_population(self)
         self.parameters = []
-        self.init = {}
+        self.variables = []
         for param in self.description['parameters']:
             self.parameters.append(param['name'])
-            
-            # TODO: 
-            # pre evaluate init to 
-            # transform expressions into their value
-            self.init[param['name']] = param['init']
-        self.variables = []
         for var in self.description['variables']:
             self.variables.append(var['name'])
-            
-            # TODO: 
-            # pre evaluate init to 
-            # transform expressions into their value
-            self.init[var['name']] = var['init']
         self.attributes = self.parameters + self.variables
+        
+        # Store initial values
+        self.init = {}
+        for param in self.description['parameters']:
+            self.init[param['name']] = param['init']
+        for var in self.description['variables']:
+            self.init[var['name']] = var['init']
         
         # List of targets actually connected
         self.targets = []

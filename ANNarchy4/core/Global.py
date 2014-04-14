@@ -74,7 +74,8 @@ authorized_keywords = [
     'implicit',
     'exponential',
     'int',
-    'bool'
+    'bool',
+    'float'
 ]
 
 def setup(**keyValueArgs):

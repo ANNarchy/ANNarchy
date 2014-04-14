@@ -26,6 +26,7 @@ from ANNarchy4.core.Synapse import RateSynapse
 from ANNarchy4.core.Global import _error, _warning, authorized_keywords
 from ANNarchy4.core.Random import available_distributions
 from ANNarchy4.parser.Equation import Equation
+from ANNarchy4.parser.Function import FunctionParser
 
 from pprint import pprint
 import re
@@ -516,6 +517,8 @@ def analyse_population(pop):
     # Extract parameters and variables names
     parameters = _extract_parameters(pop.neuron_type.parameters, pop.neuron_type.extra_values)
     variables = _extract_variables(pop.neuron_type.equations)
+    # Extract functions
+    functions = _extract_functions(pop.neuron_type.functions, pop.class_name)
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = _get_attributes(parameters, variables)
     # Test if attributes are declared only once
@@ -527,6 +530,7 @@ def analyse_population(pop):
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
+    description['functions'] = functions
     description['attributes'] = attributes
     description['local'] = local_var
     description['global'] = global_var
@@ -712,6 +716,63 @@ def _extract_variables(description):
                 'init' : init }
         variables.append(desc)              
     return variables        
+    
+def _extract_functions(description, class_name=None):
+    """ Extracts all functions from a multiline description."""
+    if not description:
+        return [] 
+    # Split the multilines into individual lines
+    function_list = _process_equations(description)
+    # Process each function
+    functions = []
+    for f in function_list:
+        eq = f['eq']
+        var_name, content = eq.split('=')
+        # Extract the name of the function
+        func_name = var_name.split('(', 1)[0].strip()
+        # Extract the arguments
+        arguments = (var_name.split('(', 1)[1].split(')')[0]).split(',')
+        arguments = [arg.strip() for arg in arguments]
+        # Extract their types
+        types = f['constraint']
+        if types == '':
+            return_type = 'DATA_TYPE'
+            arg_types = ['DATA_TYPE' for a in arguments]
+        else:
+            types = types.split(',')
+            return_type = types[0].strip()
+            if return_type == 'float':
+                return_type = 'DATA_TYPE'
+            arg_types = ['DATA_TYPE' if arg.strip() == 'float' else arg.strip() for arg in types[1:]]
+        if not len(arg_types) == len(arguments):
+            _error('You must specify exactly the types of return value and arguments in ' + eq)
+            exit(0)
+        arg_line = ""
+        for i in range(len(arguments)):
+            arg_line += arg_types[i] + " " + arguments[i]
+            if not i == len(arguments) -1:
+                arg_line += ', '
+        # Process the content
+        eq2, condition = _extract_ite('', content, None, split=False)
+        if condition == []:
+            parser = FunctionParser(content, arguments)
+            parsed_content = parser.parse()
+        else:
+            parser = FunctionParser(content, arguments)
+            parsed_content = parser.process_ITE(condition)
+        # Create the one-liner
+        fdict = {'class': class_name, 'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}
+        if class_name: # local to a class
+            oneliner = """%(return_type)s %(class)s::%(name)s (%(arg_line)s) {return %(parsed_content)s ;};
+""" % fdict
+        else: # global
+            oneliner = """inline %(return_type)s %(name)s (%(arg_line)s) {return %(parsed_content)s ;};
+""" % fdict
+        print oneliner
+        fdict['cpp'] = oneliner
+        functions.append(fdict)
+    return functions
+    
     
 def _get_attributes(parameters, variables):
     """ Returns a list of all attributes names, plus the lists of local/global variables."""
