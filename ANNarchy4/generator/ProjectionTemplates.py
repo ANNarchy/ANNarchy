@@ -13,7 +13,9 @@
 #    
 #     * member : private definition of parameters and variables    
 #    
-#     * random : private definition of RandomDistribution arrays    
+#     * random : private definition of RandomDistribution arrays   
+#    
+#     * functions : inline definition of custom functions     
 rate_projection_header = \
 """#ifndef __%(class)s_H__
 #define __%(class)s_H__
@@ -42,6 +44,9 @@ public:
     void record();
 
 %(access)s
+
+%(functions)s
+
 private:
 %(member)s
 
@@ -65,7 +70,9 @@ private:
 #    
 #     * member : private definition of parameters and variables    
 #    
-#     * random : private definition of RandomDistribution arrays    
+#     * random : private definition of RandomDistribution arrays  
+#    
+#     * functions : inline definition of custom functions      
 spike_projection_header = \
 """#ifndef __%(class)s_H__
 #define __%(class)s_H__
@@ -102,6 +109,9 @@ public:
     void record();
     
 %(access)s
+
+%(functions)s
+
 private:
 %(member)s
 

@@ -518,7 +518,7 @@ def analyse_population(pop):
     parameters = _extract_parameters(pop.neuron_type.parameters, pop.neuron_type.extra_values)
     variables = _extract_variables(pop.neuron_type.equations)
     # Extract functions
-    functions = _extract_functions(pop.neuron_type.functions, pop.class_name)
+    functions = _extract_functions(pop.neuron_type.functions, False)
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = _get_attributes(parameters, variables)
     # Test if attributes are declared only once
@@ -577,6 +577,8 @@ def analyse_projection(proj):
     # Extract parameters and variables names
     parameters = _extract_parameters(proj.synapse_type.parameters, proj.synapse_type.extra_values)
     variables = _extract_variables(proj.synapse_type.equations)
+    # Extract functions
+    functions = _extract_functions(proj.synapse_type.functions, False)
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = _get_attributes(parameters, variables)
     # Test if attributes are declared only once
@@ -586,6 +588,7 @@ def analyse_projection(proj):
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
+    description['functions'] = functions
     description['attributes'] = attributes
     description['local'] = local_var
     description['global'] = global_var
@@ -717,7 +720,7 @@ def _extract_variables(description):
         variables.append(desc)              
     return variables        
     
-def _extract_functions(description, class_name=None):
+def _extract_functions(description, local_global=False):
     """ Extracts all functions from a multiline description."""
     if not description:
         return [] 
@@ -761,14 +764,13 @@ def _extract_functions(description, class_name=None):
             parser = FunctionParser(content, arguments)
             parsed_content = parser.process_ITE(condition)
         # Create the one-liner
-        fdict = {'class': class_name, 'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}
-        if class_name: # local to a class
-            oneliner = """%(return_type)s %(class)s::%(name)s (%(arg_line)s) {return %(parsed_content)s ;};
+        fdict = {'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}
+        if not local_global: # local to a class
+            oneliner = """%(return_type)s %(name)s (%(arg_line)s) {return %(parsed_content)s ;};
 """ % fdict
         else: # global
             oneliner = """inline %(return_type)s %(name)s (%(arg_line)s) {return %(parsed_content)s ;};
 """ % fdict
-        print oneliner
         fdict['cpp'] = oneliner
         functions.append(fdict)
     return functions

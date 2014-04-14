@@ -191,6 +191,15 @@ class ProjectionGenerator(object):
 
         return code
   
+    
+    def generate_functions(self):
+        "Custom functions"
+        code = ""        
+        for func in self.desc['functions']:
+            
+            code += '    ' + func['cpp']
+            
+        return code
 
 class RateProjectionGenerator(ProjectionGenerator):
     """ Class for generating C++ code from a rate population description. """
@@ -204,6 +213,9 @@ class RateProjectionGenerator(ProjectionGenerator):
         
         # Access method for attributes
         access = self.generate_members_access()
+        
+        # Custom function
+        functions = self.generate_functions()
                 
         # Generate the code
         template = rate_projection_header
@@ -212,7 +224,8 @@ class RateProjectionGenerator(ProjectionGenerator):
             'pre_name': self.desc['pre_class'],
             'post_name': self.desc['post_class'],
             'access': access,
-            'member': members }
+            'member': members,
+            'functions': functions }
         return template % dictionary
     
     def generate_body(self):
@@ -351,6 +364,9 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         
         # Access method for attributes
         access = self.generate_members_access()
+        
+        # Custom function
+        functions = self.generate_functions()
                 
         # Generate the code
         template = spike_projection_header
@@ -359,7 +375,8 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'pre_name': self.desc['pre_class'],
             'post_name': self.desc['post_class'],
             'access': access,
-            'member': members }
+            'member': members,
+            'functions': functions }
         return template % dictionary
     
     def generate_body(self):

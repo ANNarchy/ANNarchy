@@ -13,13 +13,16 @@
 #    
 #     * member : private definition of parameters and variables    
 #    
-#     * random : private definition of RandomDistribution arrays    
+#     * random : private definition of RandomDistribution arrays   
+#    
+#     * functions : inline definition of custom functions    
 rate_population_header = \
 """#ifndef __ANNarchy_%(class)s_H__
 #define __ANNarchy_%(class)s_H__
 
 #include "Global.h"
 #include "MeanPopulation.h"
+using namespace ANNarchy_Global;
 
 class %(class)s: public MeanPopulation
 {
@@ -45,6 +48,8 @@ public:
 %(global_ops_access)s
     
 %(access)s
+
+%(functions)s
 
 private:
 
@@ -72,13 +77,16 @@ private:
 #    
 #     * member : private definition of parameters and variables    
 #    
-#     * random : private definition of RandomDistribution arrays    
+#     * random : private definition of RandomDistribution arrays  
+#    
+#     * functions : inline definition of custom functions       
 spike_population_header = \
 """#ifndef __ANNarchy_%(class)s_H__
 #define __ANNarchy_%(class)s_H__
 
 #include "Global.h"
 #include "SpikePopulation.h"
+using namespace ANNarchy_Global;
 
 class %(class)s: public SpikePopulation
 {
@@ -108,6 +116,8 @@ public:
 %(global_ops_access)s
     
 %(access)s
+
+%(functions)s
 
 private:
 
@@ -188,7 +198,6 @@ global_variable_access = \
 #    * single_global_ops : code for the single global operations
 rate_population_body = """#include "%(class)s.h"
 #include "Global.h"
-using namespace ANNarchy_Global;
 
 %(class)s::%(class)s(std::string name, int nbNeurons): MeanPopulation(name, nbNeurons)
 {
@@ -282,7 +291,6 @@ rate_prepare_neurons="""
 #    * single_global_ops : code for the single global operations
 spike_population_body = """#include "%(class)s.h"
 #include "Global.h"
-using namespace ANNarchy_Global;
 
 %(class)s::%(class)s(std::string name, int nbNeurons): SpikePopulation(name, nbNeurons)
 {

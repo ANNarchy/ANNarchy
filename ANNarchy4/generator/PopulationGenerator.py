@@ -399,6 +399,16 @@ void %(class)s::compute_sum_%(var)s() {
         return code
                 
     
+    def generate_functions(self):
+        "Custom functions"
+        code = ""        
+        for func in self.desc['functions']:
+            
+            code += '    ' + func['cpp']
+            
+        return code
+                
+    
 
 class RatePopulationGenerator(PopulationGenerator):
     """ Class for generating C++ code from a rate population description. """
@@ -419,6 +429,9 @@ class RatePopulationGenerator(PopulationGenerator):
         
         # Random variables
         randoms = self.generate_random_definition()
+        
+        # Custom function
+        functions = self.generate_functions()
                 
         # Generate the code
         template = rate_population_header
@@ -428,7 +441,8 @@ class RatePopulationGenerator(PopulationGenerator):
             'global_ops_access' : global_ops_access,
             'global_ops_method' : global_ops_method,
             'member' : members,
-            'random' : randoms
+            'random' : randoms,
+            'functions' : functions
         }
         return template % dictionary
     
@@ -561,6 +575,9 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Random variables
         randoms = self.generate_random_definition()
         
+        # Custom function
+        functions = self.generate_functions()
+        
         # connected projections
         friends = self.generate_friend_decl()
         # Generate the code
@@ -572,7 +589,8 @@ class SpikePopulationGenerator(PopulationGenerator):
             'global_ops_method' : global_ops_method,
             'member' : members,
             'random' : randoms,
-            'friend' : friends
+            'friend' : friends,
+            'functions' : functions
         }
         return template % dictionary
 
