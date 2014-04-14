@@ -30,7 +30,7 @@ public:
 
         virtual ~Projection();
 
-	virtual void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
+	virtual void initValues();
 
 	virtual void computeSum() {};
 

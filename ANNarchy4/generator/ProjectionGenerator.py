@@ -112,7 +112,9 @@ class ProjectionGenerator(object):
         constructor = ""
         # Attributes
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] in self.desc['local']: # local attribute
+            if param['name'] == "value":
+                continue
+            elif param['name'] in self.desc['local']: # local attribute
                 ctype = param['ctype']
                 if ctype == 'bool':
                     cinit = 'true' if param['init'] else 'false'
@@ -122,7 +124,7 @@ class ProjectionGenerator(object):
                     cinit = float(param['init'])
                 constructor += """
     // %(name)s_ : local
-    %(name)s_ = std::vector<%(type)s> (pre_population_->getNeuronCount(), %(init)s);    
+    %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s);    
 """ % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
 
             elif param['name'] in self.desc['global']: # global attribute
@@ -236,7 +238,6 @@ class RateProjectionGenerator(ProjectionGenerator):
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],
             'init': constructor, 
-            'init_val': '', # contains nothing
             'sum': psp, 
             'local': local_learn, 
             'global': global_learn,

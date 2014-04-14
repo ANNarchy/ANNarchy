@@ -97,9 +97,11 @@ def simulate_sth():
     for trial in range(3000):
         if (trial > 0) and (trial % 100==0):
             print trial
+            save('trial_'+str(trial)+'.mat')
         set_input()
         simulate(50) 
  
+        
         vis.render()
  
     # Visualize the result of learning

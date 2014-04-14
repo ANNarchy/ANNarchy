@@ -42,7 +42,9 @@ Projection::~Projection() {
 
 }
 
-void Projection::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
+void Projection::initValues()
+{
+    /*
 	rank_ = rank;
 	value_ = value;
 	delay_ = delay;
@@ -66,6 +68,7 @@ void Projection::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value,
 		//will be set by derived projection!!!
 		//pre_population_->setMaxDelay(maxDelay_);
 	}
+	*/
 }
 
 int Projection::addSynapse(int rank, DATA_TYPE value, int delay) {
