@@ -272,14 +272,19 @@ def _net_description(variables, connections):
 
             synapse_count = []
             dendrites = []  
+            
             for dendrite in proj.dendrites:
                 dendrite_desc = {}
                 synapse_count.append(dendrite.size)
                 dendrite_desc['post_rank'] = dendrite.post_rank
                 
                 varias = {}
+                
                 for var in dendrite.variables:
                     varias[var] = dendrite.get(var)
+
+                if 'value' not in dendrite.variables:
+                    varias['values'] = dendrite.cy_instance.value 
                 
                 varias['delays'] = dendrite.cy_instance.delay
                 varias['pre_ranks'] = dendrite.cy_instance.rank

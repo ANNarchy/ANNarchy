@@ -101,7 +101,6 @@ def simulate_sth():
         set_input()
         simulate(50) 
  
-        
         vis.render()
  
     # Visualize the result of learning
