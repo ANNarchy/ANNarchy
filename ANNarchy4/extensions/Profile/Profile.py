@@ -48,7 +48,7 @@ class IntAxis(pg.AxisItem):
             if int(floor(idx[1])) > 0:
                 return [(int(floor(idx[1])),0)]
             else:
-                return super.tickSpacing(self,minVal, maxVal, size)  
+                return pg.AxisItem.tickSpacing(self,minVal, maxVal, size)  
             
 class DataLog(object):
     def __init__(self, threads, num_trials):
