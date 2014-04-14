@@ -29,7 +29,7 @@ import time
 # ANNarchy core informations
 import ANNarchy4
 import ANNarchy4.core.Global as Global
-from ANNarchy4.parser.Analyser import Analyser  
+from ANNarchy4.parser.Analyser import Analyser, _extract_functions
 from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, SpikeProjectionGenerator  
 
@@ -635,17 +635,21 @@ public:
         """
         code = ''
         
-        if self.profile_enabled:
-            with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'r') as r_file:
-                for a_line in r_file:
-                    if (a_line.find('ANNAR_PROFILE') != -1 and 
-                        a_line.find('define') != -1):
+        with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'r') as r_file:
+            for a_line in r_file:
+                if (a_line.find('ANNAR_PROFILE') != -1 and 
+                    a_line.find('define') != -1):
+                    if self.profile_enabled:
                         code += '#define ANNAR_PROFILE\n'
-                    else:
-                        code += a_line
+                elif a_line.find('//FUNCTIONS') != -1: # Put the global functions here
+                    code += a_line
+                    for func in Global._functions:
+                        code += "    " +  _extract_functions(func, local_global=True)[0]['cpp']
+                else:
+                    code += a_line
     
-            with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'w') as w_file:
-                w_file.write(code)
+        with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'w') as w_file:
+            w_file.write(code)
                 
 
 

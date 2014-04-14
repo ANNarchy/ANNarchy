@@ -28,13 +28,14 @@ from datetime import datetime
 from math import ceil
 
 try:
-        from PyQt4.QtCore import QCoreApplication
+    from PyQt4.QtCore import QCoreApplication
 except:
-        pass
+    pass
 
 # instances
 _populations = []       # created populations
 _projections = []       # created projections
+_functions = []         # created functions
 
 # predefined variables / parameters
 _pre_def_synapse = ['value', 'rank', 'delay', 'psp']
@@ -155,10 +156,31 @@ def get_projection(pre, post, target, suppress_error=False):
                     return proj
     
     if not suppress_error:
-        print("Error: no projection",pre.name,"->",post.name,"with target ",target,"found.")
+        _error("No projection " + pre.name + " -> " + post.name + " with target " + target + " found.")
     
     return None
-
+    
+def add_function(function):
+    """
+    Defines a global function which can be used by all neurons and synapses.
+    
+    The function must have only one return value and use only the passed arguments.
+    
+    Examples of valid functions:
+    
+        logistic(x) = 1 / (1 + exp(-x))
+        
+        piecewise(x, a, b) =    if x < a:
+                                    a
+                                else:
+                                    if x > b :
+                                        b
+                                    else:
+                                        x
+    
+    Please refer to the manual to know the allowed mathematical functions.
+    """  
+    _functions.append(function)
 def simulate(duration):
     """
     Runs the network for the given duration. 
@@ -286,39 +308,7 @@ def get_record(to_record):
             else:
                 data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var']) } } )
     
-    return data
-
-# def current_time():
-#     """
-#     Returns current simulation time in ms.
-#     
-#     **Note**: computed as number of simulation steps times dt
-#     """
-#     import ANNarchyCython
-#     return ANNarchyCython.pyNetwork().get_time() * config['dt']
-# 
-# def current_step():
-#     """
-#     Returns current simulation step.
-#     """
-#     import ANNarchyCython    
-#     return ANNarchyCython.pyNetwork().get_time()    
-# 
-# def set_current_time(time):
-#     """
-#     Set current simulation time in ms.
-#     
-#     **Note**: computed as number of simulation steps times dt
-#     """
-#     import ANNarchyCython
-#     ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
-# 
-# def set_current_step(time):
-#     """
-#     set current simulation step.
-#     """
-#     import ANNarchyCython    
-#     ANNarchyCython.pyNetwork().set_time( time )    
+    return data  
 
 def _print(*var_text):
     """
