@@ -4,6 +4,7 @@
 #   authors: Julien Vitay, Helge Uelo Dinkelbach
 #
 from ANNarchy4 import *
+from pyqtgraph.Qt import QtCore, QtGui
 
 setup()
 
@@ -50,7 +51,7 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 64  
+nb_neurons = 32  
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
 feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
 
@@ -88,6 +89,8 @@ vis_during_sim=True
 
 if __name__=='__main__':
 
+    app = QtGui.QApplication([])
+
     # Compiling the network
     compile(debug_build=False, cpp_stand_alone=False, profile_enabled=True)
 
@@ -98,21 +101,22 @@ if __name__=='__main__':
          'max': 0.1, 'title': 'Receptive fields'}
 
     # Setup visualizer
-    vis = Visualization( [plot1, plot2, plot3 ] )
+    #vis = Visualization( [plot1, plot2, plot3 ] )
 
     save('init.mat')
     
     #
     # setup the test
-    num_trials = 5
+    num_trials = 100
     #thread_count = [ x+1 for x in range(6) ]
-    thread_count = [ 6-x for x in range(6) ]
+    num_cores = 4
+    thread_count = [ num_cores - x for x in range(num_cores) ]
     trial_dur = 50
     
     # profile instance
     profiler = Profile(thread_count, num_trials)
     profiler.add_to_profile("network")
-    profiler.add_to_profile("Population0")
+    #profiler.add_to_profile("Population0")
     profiler.add_to_profile("Population1")
     
     #
@@ -130,15 +134,15 @@ if __name__=='__main__':
             set_input()
             simulate(trial_dur) 
 
-            if vis_during_sim:
-               vis.render()
+            #if vis_during_sim:
+            #   vis.render()
     
             profiler.measure(thread_count[test], trial, trial*trial_dur, (trial+1)*trial_dur)
 
         profiler.reset_timer()
 
         # Visualize the result of learning
-        vis.render()  
+        #vis.render()  
 
         print 'simulation finished.'
 
@@ -146,4 +150,6 @@ if __name__=='__main__':
 
     profiler.analyse_data()
         
-    raw_input()
+    print 'x'
+    QtGui.QApplication.instance().exec_()
+    print 'xxx'
