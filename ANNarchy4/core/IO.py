@@ -241,11 +241,13 @@ def _net_description(variables, connections):
     """
     network_desc = {}
     
+    
     if variables:
         for pop in Global._populations:
             pop_desc = {}
             pop_desc['name'] = pop.name
-    
+            pop_desc['geometry'] = pop.geometry
+            
             varias = {}
             for var in pop.variables:
                 varias[var] = pop.get(var)
@@ -267,20 +269,24 @@ def _net_description(variables, connections):
     
             proj_desc = {}
             proj_desc['post_ranks'] = proj._post_ranks
-                  
+
+            synapse_count = []
             dendrites = []  
             for dendrite in proj.dendrites:
                 dendrite_desc = {}
-        
+                synapse_count.append(dendrite.size)
                 dendrite_desc['post_rank'] = dendrite.post_rank
                 
                 varias = {}
                 for var in dendrite.variables:
                     varias[var] = dendrite.get(var)
                 
+                varias['delays'] = dendrite.cy_instance.delay
+                varias['pre_ranks'] = dendrite.cy_instance.rank
+                                
                 if varias != {}:
                     dendrite_desc['variables'] = varias
-                    
+
                 params = {}
                 for par in dendrite.parameters:
                     params[par] = dendrite.get(par)
@@ -291,6 +297,7 @@ def _net_description(variables, connections):
                 dendrites.append(dendrite_desc)
             
             proj_desc['dendrites'] = dendrites
+            proj_desc['number_of_synapses'] = synapse_count
             network_desc[proj.name] = proj_desc 
 
     return network_desc

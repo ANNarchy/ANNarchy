@@ -83,6 +83,8 @@ class Dendrite(object):
                 max_delay = np.amax(delays)
                 self.proj.pre.cyInstance.set_max_delay(int(max_delay))
 
+        self.cy_instance.init_values()
+
         self._recorded_variables = {}        
         for var in list(set(self.variables + ['value'])):
             self._recorded_variables[var] = Record(var)

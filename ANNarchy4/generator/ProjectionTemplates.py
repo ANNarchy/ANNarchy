@@ -31,7 +31,7 @@ public:
     
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
-    void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
+    void initValues();
     
     void computeSum();
     
@@ -85,7 +85,7 @@ public:
     
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
-    void initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay = std::vector<int>());
+    void initValues();
     
     void computeSum();
     
@@ -168,8 +168,6 @@ global_variable_access = \
 # 
 #    * init : initial values for parameters and variables
 # 
-#    * init_val : code for rank, values, delays
-# 
 #    * local : code for local_learn 
 #
 #    * global : code for global_learn
@@ -191,7 +189,6 @@ using namespace ANNarchy_Global;
 
     post_population_->addProjection(postRank, this);
     
-%(init)s
 }
 
 %(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() {
@@ -206,7 +203,6 @@ using namespace ANNarchy_Global;
 
     post_population_->addProjection(postRank, this);
     
-%(init)s
 }
 
 %(class)s::~%(class)s() 
@@ -218,10 +214,9 @@ using namespace ANNarchy_Global;
 %(destructor)s
 }
 
-void %(class)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) 
+void %(class)s::initValues() 
 {
-    Projection::initValues(rank, value, delay);
-%(init_val)s
+%(init)s
 }
 
 void %(class)s::computeSum() 
@@ -259,8 +254,6 @@ void %(class)s::record()
 # 
 #    * init : initial values for parameters and variables
 # 
-#    * init_val : code for rank, values, delays
-# 
 #    * local : code for local_learn 
 #
 #    * global : code for global_learn
@@ -283,8 +276,6 @@ using namespace ANNarchy_Global;
     {
         pre_population_->addSpikeTarget(this);
     }
-    
-%(init)s
 }
 
 %(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() 
@@ -300,8 +291,6 @@ using namespace ANNarchy_Global;
     {
         pre_population_->addSpikeTarget(this);
     }
-    
-%(init)s
 }
 
 %(class)s::~%(class)s() 
@@ -325,9 +314,9 @@ void %(class)s::invertRanks()
     }
 }
 
-void %(class)s::initValues(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay) {
-    Projection::initValues(rank, value, delay);
-%(init_val)s
+void %(class)s::initValues() 
+{
+%(init)s
 }
 
 void %(class)s::computeSum() {   
@@ -459,6 +448,8 @@ cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(int preLayer, int postLayer, int postNeuronRank, int target)
 
+        void initValues()
+
 %(cFunction)s
 
 cdef class Local%(name)s(LocalProjection):
@@ -468,6 +459,9 @@ cdef class Local%(name)s(LocalProjection):
     def __cinit__(self, proj_type, preID, postID, rank, target, spike):
         self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike))
 
+    def init_values(self):
+        self.cInhInstance.initValues()
+        
 %(pyFunction)s
 
 """ 
@@ -493,6 +487,8 @@ cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(int preLayer, int postLayer, int postNeuronRank, int target)
 
+        void initValues()
+        
 %(cFunction)s
 
 cdef class Local%(name)s(LocalProjection):
@@ -501,6 +497,9 @@ cdef class Local%(name)s(LocalProjection):
 
     def __cinit__(self, proj_type, preID, postID, rank, target, spike):
         self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike))
+
+    def init_values(self):
+        self.cInhInstance.initValues()
 
 %(pyFunction)s
 

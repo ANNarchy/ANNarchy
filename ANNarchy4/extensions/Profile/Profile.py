@@ -28,7 +28,28 @@ import numpy
 import datetime
 import matplotlib.pyplot as plt
 
+import pyqtgraph as pg
+from math import floor, ceil, sqrt
 
+class IntAxis(pg.AxisItem):
+    """
+    Overridden class of pyqtgraph framework.
+    
+    To customize the xAxis of the plots ( refer to: customizable plots of the example pyqtgraph package ) 
+    """
+    def tickSpacing(self, minVal, maxVal, size):
+        """
+        Parameters as original, returns only major tick spacing of length 1.0
+        """
+        if maxVal <= 11.0:
+            return [(1,0)]
+        else:
+            idx = numpy.linspace(minVal, maxVal, num=11)
+            if int(floor(idx[1])) > 0:
+                return [(int(floor(idx[1])),0)]
+            else:
+                return pg.AxisItem.tickSpacing(self,minVal, maxVal, size)  
+            
 class DataLog(object):
     def __init__(self, threads, num_trials):
         """
@@ -139,6 +160,135 @@ class Profile:
             data['global'][thread, trial] = self._average_global(name, begin, end)
             
     def analyse_data(self):
+        
+        self._net_win = pg.GraphicsWindow(title="Speedup: network overall")
+        self._net_win.setBackground('w')
+        self._net_win.resize(1000,600)
+        col_array = ['r','g','b','c','w']
+        
+        x_scale = [i for i in xrange(len(self._threads))]
+        for k,v in self._threads.iteritems():
+            x_scale[v] = k
+
+        # evaluate datasets - network
+        self._net_data.analyse_data()
+                
+        p1 = self._net_win.addPlot(title = "")
+        p1.plot(x_scale, self._net_data._mean, background = 'w')
+        p1.setLabel('left', "computation time", units='ms')
+        p1.setLabel('bottom', "number of trials",)
+        p1.getAxis('bottom').setPen('r')
+
+        # evaluate datasets - layer and operation wise
+        for pop in self._pop_data.itervalues():
+            for tmp in pop.itervalues():
+                tmp.analyse_data()
+
+        self._pop_win = pg.GraphicsWindow(title="Speedup: population / operation wise")
+        self._pop_win.resize(1000,600)
+
+        num_row = int(floor(sqrt(len(self._pop_data))))
+        num_col = int(ceil(sqrt(len(self._pop_data))))
+        
+        pop_mean_label = { 'left' : '', 'bottom': 'number of trials' }
+        #
+        # plot the population data
+        col_iter = iter(col_array)
+        pop_iter = iter(self._pop_data)
+        for y in xrange( num_row ):
+            for x in xrange( num_col ):
+                
+                #try:
+                it = next(pop_iter)
+                pop_mean_plot = self._pop_win.addPlot(title = it, axisItems = {'bottom': IntAxis('bottom') })
+                pop_mean_plot.addLegend( offset = (0,50))
+                pop_mean_plot.setLabel('left', "computation time", units='ms')
+                pop_mean_plot.setLabel('bottom', "number of trials",)
+                
+                mean_data = self._pop_data[it]['sum']._mean
+                std_data = self._pop_data[it]['sum']._std
+                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'weighted sum', labels=pop_mean_label )
+                
+                mean_data = self._pop_data[it]['step']._mean
+                std_data = self._pop_data[it]['step']._std
+                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'neuron step'  )
+
+                mean_data = self._pop_data[it]['local']._mean
+                std_data = self._pop_data[it]['local']._std
+                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'local learn'  )
+
+                mean_data = self._pop_data[it]['global']._mean
+                std_data = self._pop_data[it]['global']._std
+                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'global learn'  )
+            
+            if ( num_row > 1):
+                self.pop_win.nextRow()
+        
+        thread_num = [i for i in xrange(len(self._threads))]
+        for k,v in self._threads.iteritems():
+            thread_num[v] = k
+        self._pop_win2 = []
+        for name, data in self._pop_data.iteritems():
+        
+            tmp = pg.GraphicsWindow(title="Detailed data: "+name)
+            tmp.resize(1000,600)
+
+            
+            #
+            # weighted sum
+            plt_data = data['sum']._data
+            x_scale = [i for i in xrange(plt_data.shape[0])]
+             
+            tmp_plot = tmp.addPlot(title = "sum", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('bottom', "number of trials",)
+            
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+
+            #
+            # neuron step
+            plt_data = data['step']._data
+            tmp_plot = tmp.addPlot(title = "step", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('bottom', "number of trials",)
+
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+
+            tmp.nextRow()
+
+            #
+            # global learn
+            plt_data = data['global']._data
+            tmp_plot = tmp.addPlot(title = "global", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('bottom', "number of trials",)
+            
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+            
+            #
+            # local learn
+            plt_data = data['local']._data
+            tmp_plot = tmp.addPlot(title = "local", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('bottom', "number of trials",)
+
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+            
+            self._pop_win2.append(tmp)
+
+    def analyse_data_mp(self):
         """
         """
         num_row = 2
@@ -171,28 +321,30 @@ class Profile:
         for y in xrange(1,num_row):
             for x in xrange(num_col):
                 
-                try:
-                    it = next(pop_iter)
-                    
-                    
-                    mean_data = self._pop_data[it]['sum']._mean
-                    std_data = self._pop_data[it]['sum']._std
-                    p1 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+                #try:
+                it = next(pop_iter)
+                
+                
+                mean_data = self._pop_data[it]['sum']._mean
+                std_data = self._pop_data[it]['sum']._std
+                p1 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+                mean_handles[y,x].set_xlabel('trials')
+                mean_handles[y,x].set_ylabel('time in ms')
 
-                    mean_data = self._pop_data[it]['step']._mean
-                    std_data = self._pop_data[it]['step']._std
-                    p2 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+                mean_data = self._pop_data[it]['step']._mean
+                std_data = self._pop_data[it]['step']._std
+                p2 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
 
-                    mean_data = self._pop_data[it]['local']._mean
-                    std_data = self._pop_data[it]['local']._std
-                    p3 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+                mean_data = self._pop_data[it]['local']._mean
+                std_data = self._pop_data[it]['local']._std
+                p3 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
 
-                    mean_data = self._pop_data[it]['global']._mean
-                    std_data = self._pop_data[it]['global']._std
-                    p4 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
+                mean_data = self._pop_data[it]['global']._mean
+                std_data = self._pop_data[it]['global']._std
+                p4 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
                     
-                except:
-                    pass
+                #except:
+                #    pass
                 
                 mean_handles[y,x].set_title(it)
                 mean_handles[y,x].legend([p1, p2, p3, p4], ["sum", "step", "local", "global"])

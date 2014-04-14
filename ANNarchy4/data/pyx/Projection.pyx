@@ -49,7 +49,7 @@ cdef extern from "../build/Projection.h":
         
         float getDt()
         
-        void initValues(vector[int] rank, vector[float] value, vector[int] delay)
+        void initValues()
         
         int getSynapseCount()
         
@@ -81,9 +81,11 @@ cdef class LocalProjection:
         self.spike = spike
         self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike)
         
-    def init(self, ranks, values, delays):
-        self.cInstance.initValues(ranks, values, delays)
-
+    def init(self, rank, value, delay):
+        self.cInstance.setRank(rank)
+        self.cInstance.setValue(value)
+        self.cInstance.setDelay(delay)
+        
     def add_synapse(self, rank, value, delay=0):
         err = self.cInstance.addSynapse(rank, value, delay)
         if err == -1:
