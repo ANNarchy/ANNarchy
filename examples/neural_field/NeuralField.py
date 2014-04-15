@@ -6,16 +6,15 @@
 from ANNarchy4 import *
 
 setup(dt=1.0)
-#
+
 # Define the neuron classes
-#
 Input = RateNeuron(   
 parameters="""
     tau = 1.0
     baseline = 0.0
 """,
 equations="""
-    noise = 0.0 #Uniform(-0.5, 0.5)
+    noise = Uniform(-0.1, 0.1)
     tau * dmp / dt + mp = baseline + noise
     rate = pos(mp)
 """ 
@@ -35,16 +34,17 @@ equations="""
 """
 )
 
+# Create the populations
 nb_neurons = 20
+InputPop = Population(name = 'Input', geometry = (nb_neurons, nb_neurons), neuron = Input)
+FocusPop = Population(name = 'Focus', geometry = (nb_neurons, nb_neurons), neuron = Focus)
 
-InputPop = Population((nb_neurons, nb_neurons), Input)
-FocusPop = Population((nb_neurons, nb_neurons), Focus)
-
+# Create the projections
 Proj1 = Projection( 
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc'
-).connect_one_to_one( weights=0.5 )
+).connect_one_to_one( weights=1.0 )
 
 Proj2 = Projection(
     pre = FocusPop, 
@@ -61,12 +61,11 @@ Proj2 = Projection(
 if __name__ == "__main__":
 
     # Analyse and compile everything, initialize the parameters/variables...
-    compile()    
+    compile()   
 
-    # Viz
+    # Create the GUI using PyQtGraph
     from pyqtgraph.Qt import QtGui, QtCore
-    import pyqtgraph as pg
-    
+    import pyqtgraph as pg    
     app = pg.mkQApp()
     win = QtGui.QMainWindow()
     win.resize(800,800)
@@ -75,27 +74,20 @@ if __name__ == "__main__":
     win.show()
 
     
-    freq = 10.0
-    period = 5000
-    
+    # Import the envorinment for the simulation (Cython)
     import pyximport; pyximport.install()
-    from BubbleWorld import move
-
-    angle = 0.0    
+    from BubbleWorld import World
+    world = World(pop = InputPop, radius = 0.5, sigma = 2.0, period = 5000.0)
     
+    # Method called regularly by the GUI
     def update():
-        
-        global angle, imv
-        
-        angle += freq/float(period)
-        
-        move(InputPop, angle)
-
-        simulate(freq)        
-       
+        # Simulate for 200ms
+        world.rotate(200)      
+        # Actualize the GUI
         imv.setImage(FocusPop.rate)
+        QtGui.QApplication.processEvents()
      
-                
+    # Start the simulation            
     timer = QtCore.QTimer()
     timer.timeout.connect(update)
     timer.start(0)

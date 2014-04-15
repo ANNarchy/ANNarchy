@@ -1,22 +1,37 @@
 import numpy as np
 cimport numpy as np
+from NeuralField import simulate, get_population
     
+cdef class World:
     
-cdef float angle = 0.0
-cdef float radius = 0.5
-cdef float sigma = 2.0
-
-cdef np.ndarray x = np.linspace(0, 19, 20)
-cdef np.ndarray y = np.linspace(0, 19, 20)
+    cdef pop # Input population
     
-cdef np.ndarray xx, yy 
-xx, yy = np.meshgrid(x, y)
+    cdef float angle
+    cdef float radius 
+    cdef float sigma 
+    cdef float period 
 
-
-def move(pop, float angle):   
-
-    cdef float cw = 10.0 * ( 1.0 + radius * np.cos(2 * np.pi * angle ) )
-    cdef float ch = 10.0 * ( 1.0 + radius * np.sin(2 * np.pi * angle ) )
-    cdef np.ndarray data = (0.5 * np.exp(-((xx-cw)**2 + (yy-ch)**2)/2.0/sigma**2)).reshape((400,))
-    pop.cyInstance.baseline = data
+    cdef np.ndarray xx, yy 
+    cdef float cw, ch, midw, midh
+    cdef np.ndarray data 
     
+    def __cinit__(self, pop, radius, sigma, period):
+        self.pop = pop
+        self.angle = 0.0
+        self.radius = radius
+        self.sigma = sigma
+        self.period = period
+        cdef np.ndarray x = np.linspace(0, self.pop.geometry[0]-1, self.pop.geometry[0])
+        cdef np.ndarray y = np.linspace(0, self.pop.geometry[1]-1, self.pop.geometry[1])
+        self.xx, self.yy = np.meshgrid(x, y)
+        self.midw = self.pop.geometry[0]/2
+        self.midh = self.pop.geometry[1]/2
+    
+    def rotate(self, int duration):
+        for t in range(duration):
+            self.angle += 1.0/self.period
+            self.cw = self.midw * ( 1.0 + self.radius * np.cos(2.0 * np.pi * self.angle ) )
+            self.ch = self.midh * ( 1.0 + self.radius * np.sin(2.0 * np.pi * self.angle ) )
+            self.data = (0.5 * np.exp(-((self.xx-self.cw)**2 + (self.yy-self.ch)**2)/2.0/self.sigma**2))
+            self.pop.baseline = self.data
+            simulate(1)  
