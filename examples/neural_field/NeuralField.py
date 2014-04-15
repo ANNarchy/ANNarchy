@@ -66,7 +66,6 @@ if __name__ == "__main__":
     # Viz
     from pyqtgraph.Qt import QtGui, QtCore
     import pyqtgraph as pg
-    import pyqtgraph.widgets.RemoteGraphicsView
     
     app = pg.mkQApp()
     win = QtGui.QMainWindow()
@@ -76,37 +75,24 @@ if __name__ == "__main__":
     win.show()
 
     
-    freq = 50.0
+    freq = 10.0
     period = 5000
-    w = InputPop.geometry[0]
-    h = InputPop.geometry[1]
     
-    angle = 0.0
-    radius = 0.5
-    sigma = 2.0
-    
-    
-    x = np.linspace(0, w-1, w)
-    y = np.linspace(0, h-1, h)
-    
-    xx, yy = np.meshgrid(x, y)
+    import pyximport; pyximport.install()
+    from BubbleWorld import move
+
+    angle = 0.0    
     
     def update():
         
-        global angle, InputPop, imv
+        global angle, imv
         
-        #angle
         angle += freq/float(period)
         
-        cw = w / 2.0 * ( 1.0 + radius * np.cos(2 * np.pi * angle ) )
-        ch = h / 2.0 * ( 1.0 + radius * np.sin(2 * np.pi * angle ) )
-        
-        data =  0.5 * np.exp(-((xx-cw)**2 + (yy-ch)**2)/2.0/sigma**2)   
+        move(InputPop, angle)
 
-        InputPop.baseline = data    
         simulate(freq)        
-        
-        
+       
         imv.setImage(FocusPop.rate)
      
                 
