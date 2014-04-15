@@ -63,9 +63,57 @@ if __name__ == "__main__":
     # Analyse and compile everything, initialize the parameters/variables...
     compile()    
 
-    import pyximport; pyximport.install()
-    import BubbleWorld
+    # Viz
+    from pyqtgraph.Qt import QtGui, QtCore
+    import pyqtgraph as pg
+    import pyqtgraph.widgets.RemoteGraphicsView
     
-    BubbleWorld.run(InputPop, FocusPop, Proj2)
+    app = pg.mkQApp()
+    win = QtGui.QMainWindow()
+    win.resize(800,800)
+    imv = pg.ImageView()
+    win.setCentralWidget(imv)
+    win.show()
+
     
-    raw_input()
+    freq = 50.0
+    period = 5000
+    w = InputPop.geometry[0]
+    h = InputPop.geometry[1]
+    
+    angle = 0.0
+    radius = 0.5
+    sigma = 2.0
+    
+    data = np.zeros(w*h)
+    
+    x = np.linspace(0, w-1, w)
+    y = np.linspace(0, h-1, h)
+    
+    xx, yy = np.meshgrid(x, y)
+    
+    def update():
+        
+        global angle, data, InputPop, imv
+        
+        #angle
+        angle += freq/float(period)
+        
+        cw = w / 2.0 * ( 1.0 + radius * np.cos(2 * np.pi * angle ) )
+        ch = h / 2.0 * ( 1.0 + radius * np.sin(2 * np.pi * angle ) )
+        
+        data =  0.5 * np.exp(-((xx-cw)**2 + (yy-ch)**2)/2.0/sigma**2)   
+
+        InputPop.baseline = data    
+        simulate(freq)        
+        
+        
+        imv.setImage(FocusPop.rate)
+     
+    update() 
+                
+    timer = QtCore.QTimer()
+    timer.timeout.connect(update)
+    timer.start(0)
+    QtGui.QApplication.instance().exec_()
+
