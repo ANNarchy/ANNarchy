@@ -139,7 +139,7 @@ class Equation(object):
     def parse_expression(self, expression, local_dict):
         " Parses a string with respect to the vocabulary defined in local_dict."
         
-        return parse_expr(expression,
+        return parse_expr(transform_condition(expression),
             local_dict = local_dict,
             transformations = (standard_transformations + (convert_xor,)) 
                                             # to use ^ for power functions
@@ -310,7 +310,7 @@ class Equation(object):
         " Analyzes a boolean condition (e.g. for the spike argument)."
                 
         # Parse the string
-        analysed = self.parse_expression(transform_condition(expression),
+        analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
     

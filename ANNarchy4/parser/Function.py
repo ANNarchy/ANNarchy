@@ -50,7 +50,7 @@ class FunctionParser(object):
     def parse(self, part=None):
         if not part:
             part = self.eq
-        eq = parse_expr(part,
+        eq = parse_expr(transform_condition(part),
             local_dict = self.local_dict,
             transformations = (standard_transformations + (convert_xor,)) 
                                             # to use ^ for power functions
@@ -61,7 +61,7 @@ class FunctionParser(object):
         if_statement = condition[0]
         then_statement = condition[1]
         else_statement = condition[2]
-        if_code = self.parse(transform_condition(if_statement))
+        if_code = self.parse(if_statement)
         if isinstance(then_statement, list): # nested conditional
             then_code =  self.process_ITE(then_statement)
         else:
