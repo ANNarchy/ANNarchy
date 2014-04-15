@@ -23,7 +23,7 @@
 """
 import exceptions
 from ANNarchy4 import *
-import numpy
+import numpy as np
 
 import datetime
 import matplotlib.pyplot as plt
@@ -44,7 +44,7 @@ class IntAxis(pg.AxisItem):
         if maxVal <= 11.0:
             return [(1,0)]
         else:
-            idx = numpy.linspace(minVal, maxVal, num=11)
+            idx = np.linspace(minVal, maxVal, num=11)
             if int(floor(idx[1])) > 0:
                 return [(int(floor(idx[1])),0)]
             else:
@@ -57,10 +57,12 @@ class DataLog(object):
         """
         self._num_trials = threads
         self._threads = threads            
-        self._data = numpy.zeros((num_trials, len(threads))) 
+        self._data = np.zeros((num_trials, len(threads))) 
 
-        self._mean = [ 0.0 for x in xrange(len(self._threads))]
-        self._std = [ 0.0 for x in xrange(len(self._threads))]
+        self._mean = np.array([ 0.0 for x in xrange(len(self._threads))])
+        self._std = np.array([ 0.0 for x in xrange(len(self._threads))])
+        self._min = np.array([ 0.0 for x in xrange(len(self._threads))])
+        self._max = np.array([ 0.0 for x in xrange(len(self._threads))])
         
     def __getitem__(self, idx):
         if not isinstance(idx, tuple) or len(idx) != 2:
@@ -79,14 +81,16 @@ class DataLog(object):
         Calculate mean and standard deviation for logged data.
         """
         for t in xrange(len(self._threads)):
-            self._mean[t] = numpy.mean(self._data[:,t], axis=0)
-            self._std[t] = numpy.std(self._data[:,t], axis=0)
+            self._mean[t] = np.mean(self._data[:,t], axis=0)
+            self._std[t] = np.std(self._data[:,t], axis=0)
+            self._min[t] = np.amin(self._data[:,t], axis=0)
+            self._max[t] = np.amax(self._data[:,t], axis=0)
         
     def save_to_file(self, name):
         """
         Save the data to file *name*.
         """
-        numpy.savetxt(name, self._data, delimiter=',')
+        np.savetxt(name, self._data, delimiter=',')
                 
 class Profile:
     def __init__(self, num_threads, num_trials, name='profile'):
@@ -162,11 +166,12 @@ class Profile:
     def analyse_data(self):
         
         self._net_win = pg.GraphicsWindow(title="Speedup: network overall")
-        self._net_win.setBackground('w')
+        # additional customizations        
+        #self._net_win.setBackground('w')
         self._net_win.resize(1000,600)
         col_array = ['r','g','b','c','w']
         
-        x_scale = [i for i in xrange(len(self._threads))]
+        x_scale = np.array([i for i in xrange(len(self._threads))])
         for k,v in self._threads.iteritems():
             x_scale[v] = k
 
@@ -174,74 +179,48 @@ class Profile:
         self._net_data.analyse_data()
                 
         p1 = self._net_win.addPlot(title = "")
-        p1.plot(x_scale, self._net_data._mean, background = 'w')
         p1.setLabel('left', "computation time", units='ms')
         p1.setLabel('bottom', "number of trials",)
-        p1.getAxis('bottom').setPen('r')
+        p1.plot(x_scale, self._net_data._mean)
+        # additional customizations        
+        #p1.getAxis('bottom').setPen('r')
 
         # evaluate datasets - layer and operation wise
         for pop in self._pop_data.itervalues():
             for tmp in pop.itervalues():
                 tmp.analyse_data()
 
-        self._pop_win = pg.GraphicsWindow(title="Speedup: population / operation wise")
-        self._pop_win.resize(1000,600)
+        col_iter = iter(col_array)
+        col_iter2 = iter(col_array)
 
-        num_row = int(floor(sqrt(len(self._pop_data))))
-        num_col = int(ceil(sqrt(len(self._pop_data))))
+        self._pop_win1 = []
+        self._pop_win2 = []
+
+        pop_mean_label = { 'left' : "computation time", 'bottom': "number of threads" }
         
-        pop_mean_label = { 'left' : '', 'bottom': 'number of trials' }
         #
         # plot the population data
-        col_iter = iter(col_array)
-        pop_iter = iter(self._pop_data)
-        for y in xrange( num_row ):
-            for x in xrange( num_col ):
-                
-                #try:
-                it = next(pop_iter)
-                pop_mean_plot = self._pop_win.addPlot(title = it, axisItems = {'bottom': IntAxis('bottom') })
-                pop_mean_plot.addLegend( offset = (0,50))
-                pop_mean_plot.setLabel('left', "computation time", units='ms')
-                pop_mean_plot.setLabel('bottom', "number of trials",)
-                
-                mean_data = self._pop_data[it]['sum']._mean
-                std_data = self._pop_data[it]['sum']._std
-                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'weighted sum', labels=pop_mean_label )
-                
-                mean_data = self._pop_data[it]['step']._mean
-                std_data = self._pop_data[it]['step']._std
-                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'neuron step'  )
-
-                mean_data = self._pop_data[it]['local']._mean
-                std_data = self._pop_data[it]['local']._std
-                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'local learn'  )
-
-                mean_data = self._pop_data[it]['global']._mean
-                std_data = self._pop_data[it]['global']._std
-                pop_mean_plot.plot( x_scale, mean_data, pen = next(col_iter), name = 'global learn'  )
-            
-            if ( num_row > 1):
-                self.pop_win.nextRow()
-        
-        thread_num = [i for i in xrange(len(self._threads))]
-        for k,v in self._threads.iteritems():
-            thread_num[v] = k
-        self._pop_win2 = []
         for name, data in self._pop_data.iteritems():
-        
-            tmp = pg.GraphicsWindow(title="Detailed data: "+name)
-            tmp.resize(1000,600)
-
             
+            tmp = pg.GraphicsWindow(title="raw data: "+name)
+            tmp.resize(1000,600)
+            tmp2 = pg.GraphicsWindow(title="Evaluation: "+name)
+            tmp2.resize(1000,600)
+
+            #=============================#
+            #     weighted sum            #
+            #=============================#
             #
-            # weighted sum
+            # raw data
             plt_data = data['sum']._data
             x_scale = [i for i in xrange(plt_data.shape[0])]
-             
+            thread_num = np.array([i for i in xrange(len(self._threads))])
+            for k,v in self._threads.iteritems():
+                thread_num[v] = k
+                         
             tmp_plot = tmp.addPlot(title = "sum", axisItems = {'bottom': IntAxis('bottom') })
             tmp_plot.addLegend()
-            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('left', "computation time", units='s')
             tmp_plot.setLabel('bottom', "number of trials",)
             
             col_iter = iter(col_array)
@@ -249,25 +228,66 @@ class Profile:
                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
 
             #
-            # neuron step
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "weighted sum", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of trials",)
+            err = pg.ErrorBarItem( x=thread_num, 
+                                   y=data['sum']._mean,
+                                   top=data['sum']._max, 
+                                   bottom=data['sum']._min, 
+                                   beam=0.5)
+            pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['sum']._mean, 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
+
+            #=============================#
+            #     neuron step             #
+            #=============================#
+            #
+            # raw data
             plt_data = data['step']._data
-            tmp_plot = tmp.addPlot(title = "step", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot = tmp.addPlot(title = "neuron step", axisItems = {'bottom': IntAxis('bottom') })
             tmp_plot.addLegend()
-            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('left', "computation time", units='s')
             tmp_plot.setLabel('bottom', "number of trials",)
 
             col_iter = iter(col_array)
             for i in xrange( plt_data.shape[1] ):
                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
 
-            tmp.nextRow()
+            #
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "step", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of trials",)
+            err = pg.ErrorBarItem( x=thread_num, 
+                                   y=data['step']._mean, 
+                                   top=data['step']._max, 
+                                   bottom=data['step']._min, 
+                                   beam=0.5)
+            pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['step']._mean, 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
 
             #
-            # global learn
+            # first plot row completed
+            tmp.nextRow()
+            tmp2.nextRow()
+
+            #=============================#
+            #     global learn            #
+            #=============================#
+            #
+            # raw data
             plt_data = data['global']._data
             tmp_plot = tmp.addPlot(title = "global", axisItems = {'bottom': IntAxis('bottom') })
             tmp_plot.addLegend()
-            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('left', "computation time", units='s')
             tmp_plot.setLabel('bottom', "number of trials",)
             
             col_iter = iter(col_array)
@@ -275,18 +295,54 @@ class Profile:
                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
             
             #
-            # local learn
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "global learn", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of trials",)
+            err = pg.ErrorBarItem( x=thread_num, 
+                                   y=data['global']._mean, 
+                                   top=data['global']._max, 
+                                   bottom=data['global']._min, 
+                                   beam=0.5)
+            pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['global']._mean, 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
+            
+            #=============================#
+            #     lcoal learn             #
+            #=============================#
+            #
+            # raw data
             plt_data = data['local']._data
             tmp_plot = tmp.addPlot(title = "local", axisItems = {'bottom': IntAxis('bottom') })
             tmp_plot.addLegend()
-            tmp_plot.setLabel('left', "computation time", units='ms')
+            tmp_plot.setLabel('left', "computation time", units='s')
             tmp_plot.setLabel('bottom', "number of trials",)
 
             col_iter = iter(col_array)
             for i in xrange( plt_data.shape[1] ):
                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+
+            #
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "local learn", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of trials",)
+            err = pg.ErrorBarItem( x=thread_num, 
+                                   y=data['local']._mean, 
+                                   top=data['local']._max, 
+                                   bottom=data['local']._min, 
+                                   beam=0.5)
+            pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['local']._mean, 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
             
-            self._pop_win2.append(tmp)
+            self._pop_win1.append(tmp)
+            self._pop_win2.append(tmp2)
 
     def analyse_data_mp(self):
         """
@@ -395,11 +451,11 @@ class Profile:
             out_file = time+self._name+'_overall.csv'
             self._net_data.save_to_file(out_file)
             
-        empty_row = numpy.zeros((self._num_trials,1))
+        empty_row = np.zeros((self._num_trials,1))
         for name, data in self._pop_data.iteritems():
             out_file = time+self._name+'_'+name+'.csv'
             
-            complete = numpy.concatenate( 
+            complete = np.concatenate( 
                             ( data['sum']._data, empty_row,
                               data['step']._data, empty_row,
                               data['local']._data, empty_row,
@@ -407,7 +463,7 @@ class Profile:
                             ), axis = 1
                         )
             
-            numpy.savetxt(out_file, complete, delimiter=',')        
+            np.savetxt(out_file, complete, delimiter=',')        
         
     def reset_timer(self):
         """
