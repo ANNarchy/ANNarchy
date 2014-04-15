@@ -47,9 +47,11 @@ AntiHebb = RateSynapse(
 )  
 
 # Creating the populations
-nb_neurons = 32
+nb_neurons = 16
 input_pop = Population(geometry=(nb_neurons, nb_neurons), neuron=InputNeuron)
-feature_pop = Population(geometry=(nb_neurons, 4), neuron=LeakyNeuron)
+
+# the division of two is just for a more quadratic visualization of receptive fields
+feature_pop = Population(geometry=(nb_neurons/2, 4*2), neuron=LeakyNeuron)
 
 # Creating the projections
 input_feature = Projection(
@@ -80,38 +82,55 @@ def set_input():
     # Set the input
     input_pop.baseline = values.reshape(nb_neurons**2)
 
-# visualization meanwhile yes/no
-vis_during_sim=True
-
-def simulate_sth():
-    # Collect visualizing information
-    plot1 = {'pop': input_pop, 'var': 'rate'}
-    plot2 = {'pop': feature_pop, 'var': 'rate'}
-    plot3 = {'proj': input_feature, 'var': 'value', 
-         'max': 0.1, 'title': 'Receptive fields'}
-  
-    vis = Visualization( [plot1, plot2, plot3])
-     
-    save('init.mat')
-    #Run the simulation        
-    for trial in range(3000):
-        if (trial > 0) and (trial % 100==0):
-            print trial
-            save('trial_'+str(trial)+'.mat')
-        set_input()
-        simulate(50) 
- 
-        vis.render()
- 
-    # Visualize the result of learning
-    vis.render()  
-
-    print 'simulation finished.'
-        
 if __name__=='__main__':
 
     compile()
     
-    #ANNarchyEditor(simulate_sth)
-    simulate_sth()
-    raw_input()
+    from pyqtgraph.Qt import QtGui, QtCore
+    import pyqtgraph as pg
+    
+    app = pg.mkQApp()
+
+    win = pg.GraphicsWindow(title="Bar learning ("+str(nb_neurons)+" neurons)")
+    win.resize(800,800)
+
+    win.addLabel("Input")
+    win.addLabel("Feature")
+
+    win.nextRow()
+
+    box = win.addViewBox(lockAspect=True)
+    input_vis = pg.ImageItem()
+    box.addItem(input_vis)
+
+    box = win.addViewBox(lockAspect=True)
+    feature_vis = pg.ImageItem()
+    box.addItem(feature_vis)
+
+    win.nextRow()
+    win.addLabel("Receptive field")
+
+    win.nextRow()
+    box = win.addViewBox(lockAspect=True)
+    rv_vis = pg.ImageItem()
+    box.addItem(rv_vis)
+    
+    #win.setCentralWidget(imv)
+    win.show()
+
+    def update():
+        for trial in range(3000):
+            if (trial > 0) and (trial % 100==0):
+                print trial
+            set_input()
+            simulate(50) 
+     
+            input_vis.setImage(input_pop.baseline)
+            feature_vis.setImage(feature_pop.rate)
+            rv_vis.setImage(input_feature._gather_data('value').transpose())
+            QtGui.QApplication.processEvents()
+                
+    timer = QtCore.QTimer()
+    timer.timeout.connect(update)
+    timer.start(0)
+    QtGui.QApplication.instance().exec_()
