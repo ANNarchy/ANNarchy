@@ -22,6 +22,7 @@
 
 """
 from ANNarchy4.core.Global import _warning
+from ANNarchy4.parser.Equation import transform_condition
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
@@ -60,7 +61,7 @@ class FunctionParser(object):
         if_statement = condition[0]
         then_statement = condition[1]
         else_statement = condition[2]
-        if_code = self.parse(if_statement)
+        if_code = self.parse(transform_condition(if_statement))
         if isinstance(then_statement, list): # nested conditional
             then_code =  self.process_ITE(then_statement)
         else:

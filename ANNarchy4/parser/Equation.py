@@ -153,7 +153,7 @@ class Equation(object):
             expression += ')'
     
         # Suppress spaces to extract dvar/dt
-        expression=expression.replace(' ', '')
+        expression = expression.replace(' ', '')
     
         if self.method == 'implicit':
             return self.implicit(expression)
@@ -310,7 +310,7 @@ class Equation(object):
         " Analyzes a boolean condition (e.g. for the spike argument)."
                 
         # Parse the string
-        analysed = self.parse_expression(expression,
+        analysed = self.parse_expression(transform_condition(expression),
             local_dict = self.local_dict
         )
     
@@ -379,3 +379,9 @@ class Equation(object):
         # Return result
         return code
         
+def transform_condition(expr):
+    expr = expr.replace (' and ', ' & ')
+    expr = expr.replace (' or ', ' | ')
+    expr = expr.replace (' not ', ' Not ')
+    expr = expr.replace (' not(', ' Not(')
+    return expr

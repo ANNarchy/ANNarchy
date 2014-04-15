@@ -730,7 +730,7 @@ def _extract_functions(description, local_global=False):
     functions = []
     for f in function_list:
         eq = f['eq']
-        var_name, content = eq.split('=')
+        var_name, content = eq.split('=', 1)
         # Extract the name of the function
         func_name = var_name.split('(', 1)[0].strip()
         # Extract the arguments
