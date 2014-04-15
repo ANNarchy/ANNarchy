@@ -85,7 +85,6 @@ if __name__ == "__main__":
     radius = 0.5
     sigma = 2.0
     
-    data = np.zeros(w*h)
     
     x = np.linspace(0, w-1, w)
     y = np.linspace(0, h-1, h)
@@ -94,7 +93,7 @@ if __name__ == "__main__":
     
     def update():
         
-        global angle, data, InputPop, imv
+        global angle, InputPop, imv
         
         #angle
         angle += freq/float(period)
@@ -110,7 +109,6 @@ if __name__ == "__main__":
         
         imv.setImage(FocusPop.rate)
      
-    update() 
                 
     timer = QtCore.QTimer()
     timer.timeout.connect(update)
