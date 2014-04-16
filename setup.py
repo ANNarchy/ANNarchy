@@ -57,7 +57,7 @@ except:
 ################################################
 print('Installing ANNarchy on your system')
 setup(  name='ANNarchy4',
-		version='4.1.0.alpha',
+		version='4.1.0.beta',
 		license='GPLv2 or later',
 		platforms='GNU/Linux, Windows',
 		description='Artificial Neural Networks architect',
@@ -66,6 +66,6 @@ setup(  name='ANNarchy4',
 		author_email='julien.vitay@informatik.tu-chemnitz.de',
 		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy4': ['data/compile.sh', 'data/compiled.sh', 'data/setup.py', 'data/cpp/*', 'data/pyx/*']},
+        package_data={'ANNarchy4': ['core/cy_functions.pyx','data/compile.sh', 'data/compiled.sh', 'data/setup.py', 'data/cpp/*', 'data/pyx/*']},
  )
 
