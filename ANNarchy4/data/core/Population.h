@@ -42,17 +42,54 @@ public:
     //
     //  Projection handling
     //
-    void addProjection(int postRankID, class Projection* proj);
+    /**
+     *  \brief		add a projection to a neuron
+     *  \details	the given projection is attached to the postsynaptic neuron identified by given rank.
+     *  \param[IN]	neuron	postsynaptic rank of the neuron
+     *  \param[IN]	proj	projection instance to attach
+     */
+    void addProjection(int neuron, class Projection* proj);
 
-    void removeProjection(Population *pre);
+    /**
+     *  \brief		get all projections of neuron n and a certain type
+     *  \details	iterates over all assigned projections of neuron n and delete the ones with presynaptic population pre and the given projection type.
+     *  \param[IN]	pre		reference to the presynaptic populations
+     *  \param[IN]	type	integer id of the projection type
+     */
+    void removeProjection(Population *pre, int type);
 
+    /**
+     *  \brief		get all projections of neuron n and a certain type
+     *  \details	iterates over all assigned projections of neuron n and delete the ones with presynaptic population without attention to projection type.
+     *  \param[IN]	pre		reference to the presynaptic populations
+     */
+    void removeProjections(Population *pre);
+
+    /**
+     *  \brief		get the projection of neuron n with a certain type and connected to a given presynaptic population
+     *  \details	iterates over all assigned projections of neuron n and select the one projection
+     *  			of given type and presynaptic population pre
+     *  \param[IN]	neuron	rank of the neuron
+     *  \param[IN]	type	integer id of the projection type
+     *  \param[IN]	pre		reference to the presynaptic population
+     *  \param[OUT]	std::vector of class Projection
+     */
     class Projection* getProjection(int neuron, int type, Population* pre);
 
+    /**
+     *  \brief		get all projections of neuron n and a certain type
+     *  \details	iterates over all assigned projections of neuron n and select the ones
+     *  			of given type.
+     *  \param[IN]	neuron	rank of the neuron
+     *  \param[IN]	type	integer id of the projection type
+     *  \param[OUT]	std::vector of class Projection
+     */
     std::vector<class Projection*> getProjections(int neuron, int type);
 
-    //
-    //  pure virtuals
-    //
+    /**
+     *  \brief		is the current population rate coded.
+     *  \details	the variable isRateType_ is set by the inheriting class.
+     */
     bool isMeanRateCoded() { return isRateType_; }
 protected:
     int nbNeurons_; ///< amount of neurons in the layer

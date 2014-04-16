@@ -64,9 +64,14 @@ def _folder_management(profile_enabled, clean):
     os.mkdir(Global.annarchy_dir+'/generate/pyx')
     os.mkdir(Global.annarchy_dir+'/generate/build')
 
-    # cpp / h files
-    for cfile in os.listdir(sources_dir+'/cpp'):
-        shutil.copy(sources_dir+'/cpp/'+cfile, # src
+    # core cpp / h files
+    for cfile in os.listdir(sources_dir+'/core'):
+        shutil.copy(sources_dir+'/core/'+cfile, # src
+                    Global.annarchy_dir+'/generate/build/'+cfile # dest
+                    )
+    # openmp .cpp / .h files
+    for cfile in os.listdir(sources_dir+'/openmp'):
+        shutil.copy(sources_dir+'/openmp/'+cfile, # src
                     Global.annarchy_dir+'/generate/build/'+cfile # dest
                     )
     # pyx files

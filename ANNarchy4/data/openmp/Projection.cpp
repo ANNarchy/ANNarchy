@@ -26,6 +26,12 @@ Projection::Projection()
      constDelay_ = true;
      maxDelay_ = 0;
      nbWeights_ = 0;
+
+     //
+     // learning in every time step as default
+     learnFrequency_ = 1;
+     learnOffset_ = 0;
+     learnable_ = true;
 }
 
 Projection::~Projection() {

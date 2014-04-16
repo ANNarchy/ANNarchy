@@ -230,9 +230,11 @@ void MeanPopulation::metaLearn()
         if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
             std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
     #endif
+
         for(int p=0; p< (int)projections_[n].size();p++)
         {
-            projections_[n][p]->globalLearn();
+            if ( projections_[n][p]->isLearning() )
+            	projections_[n][p]->globalLearn();
         }
     }
 
@@ -266,7 +268,8 @@ void MeanPopulation::metaLearn()
             std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
     #endif
         for(int p=0; p< (int)projections_[n].size();p++) {
-            projections_[n][p]->localLearn();
+            if ( projections_[n][p]->isLearning() )
+            	projections_[n][p]->localLearn();
         }
     }
 

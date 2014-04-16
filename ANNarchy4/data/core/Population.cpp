@@ -76,7 +76,19 @@ void Population::addProjection(int postRankID, Projection* proj)
     };
 }
 
-void Population::removeProjection(Population* pre)
+void Population::removeProjection(Population* pre, int type)
+{
+    for(int n=0; n<nbNeurons_; n++)
+    {
+        for(int p=0; p< (int)projections_[n].size();p++)
+        {
+            if(projections_[n][p]->getPrePopulation() == pre)
+                projections_[n].erase(projections_[n].begin()+p);
+        }
+    }
+}
+
+void Population::removeProjections(Population* pre)
 {
     for(int n=0; n<nbNeurons_; n++)
     {
