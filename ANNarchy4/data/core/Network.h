@@ -56,7 +56,7 @@ public:
 
 	void connect(int prePopulationID, int postPopulationID, class Connector *connector, int projectionID, int target);
 
-	void disconnect(int prePopulationID, int postPopulationID);
+	void disconnect(int prePopulationID, int postPopulationID, int target=-1);
 
 	void run(int steps);
 
