@@ -106,8 +106,11 @@ void Network::connect(int prePopulationID, int postPopulationID, Connector *conn
 	connector->connect(populations_[prePopulationID], populations_[postPopulationID], projectionID, targetID);
 }
 
-void Network::disconnect(int prePopulationID, int postPopulationID) {
-	populations_[postPopulationID]->removeProjection(populations_[prePopulationID]);
+void Network::disconnect(int prePopulationID, int postPopulationID, int targetID) {
+	if (targetID == -1)
+		populations_[postPopulationID]->removeProjections(populations_[prePopulationID]);
+	else
+		populations_[postPopulationID]->removeProjection(populations_[prePopulationID], targetID);
 }
 
 void Network::run(int steps) {
