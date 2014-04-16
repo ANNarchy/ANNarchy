@@ -183,12 +183,12 @@ void Network::run(int steps) {
             // parallel neuron wise
             for(int p=0; p<(int)mean_populations_.size(); p++)
             {
-                mean_populations_[p]->metaLearn();
+           		mean_populations_[p]->metaLearn();
             }
             #pragma omp barrier
             for(int p=0; p<(int)spike_populations_.size(); p++)
             {
-                spike_populations_[p]->metaLearn();
+           		spike_populations_[p]->metaLearn();
             }
             #pragma omp barrier
 

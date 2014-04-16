@@ -351,6 +351,30 @@ class Dendrite(object):
         """
         return self.cy_instance.size
     
+    @property 
+    def learnable(self):
+        return self.cy_instance.learnable
+    
+    @learnable.setter
+    def learnable(self, value):
+        self.cy_instance.learnable = value
+
+    @property 
+    def learn_offset(self):
+        return self.cy_instance.learn_offset
+    
+    @learn_offset.setter
+    def learn_offset(self, value):
+        self.cy_instance.learn_offset = value
+
+    @property 
+    def learn_frequency(self):
+        return self.cy_instance.learn_frequency
+    
+    @learn_frequency.setter
+    def learn_frequency(self, value):
+        self.cy_instance.learn_frequency = value
+        
     def __len__(self):
         """
         Number of synapses.

@@ -122,6 +122,7 @@ if __name__=='__main__':
         for trial in range(3000):
             if (trial > 0) and (trial % 100==0):
                 print trial
+                
             set_input()
             simulate(50) 
      
@@ -130,6 +131,8 @@ if __name__=='__main__':
             rv_vis.setImage(input_feature._gather_data('value').transpose())
             QtGui.QApplication.processEvents()
                 
+        timer.stop()
+        
     timer = QtCore.QTimer()
     timer.timeout.connect(update)
     timer.start(0)

@@ -27,6 +27,7 @@ from ANNarchy4.core.Random import *
 
 from libcpp.vector cimport vector
 from libc.stdlib cimport malloc
+from libcpp cimport bool 
 cimport numpy as np
 
 #
@@ -60,7 +61,20 @@ cdef extern from "../build/Projection.h":
         int getTarget() 
         
         void invertRanks()
-#
+        
+        void setLearnable(bool learnable)
+
+        bool isLearnable()
+
+        void setLearnFrequency(freq)
+        
+        int getLearnFrequency()
+        
+        void setLearnOffset(offset)
+        
+        int getLearnOffset()
+        
+
 # c++ class
 cdef extern from "../build/ANNarchy.h":
     cdef cppclass createProjInstance:
@@ -155,3 +169,22 @@ cdef class LocalProjection:
             self.cInstance.setRank(rank)
             if(self.spike):
                 self.cInstance.invertRanks()
+                
+    property learnable:
+        def __get__(self):
+            return self.cInstance.isLearnable()
+        def __set__(self, learnable):
+            self.cInstance.setLearnable(learnable)
+
+    property learn_frequency:
+        def __get__(self):
+            return self.cInstance.getLearnFrequency()
+        def __set__(self, learn_frequency):
+            self.cInstance.setLearnFrequency(learn_frequency)
+
+    property learn_offset:
+        def __get__(self):
+            return self.cInstance.getLearnOffset()
+        def __set__(self, learn_offset):
+            self.cInstance.setLearnOffset(learn_offset)
+                

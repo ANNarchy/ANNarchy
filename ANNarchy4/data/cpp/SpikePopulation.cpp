@@ -101,7 +101,8 @@ void SpikePopulation::metaLearn()
     #endif
         for(int p=0; p< (int)projections_[n].size();p++)
         {
-            projections_[n][p]->globalLearn();
+        	if ( projections_[n][p]->isLearning() )
+        		projections_[n][p]->globalLearn();
         }
     }
 
@@ -135,7 +136,8 @@ void SpikePopulation::metaLearn()
             std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
     #endif
         for(int p=0; p< (int)projections_[n].size();p++) {
-            projections_[n][p]->localLearn();
+        	if ( projections_[n][p]->isLearning() )
+        		projections_[n][p]->localLearn();
         }
     }
 

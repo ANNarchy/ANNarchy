@@ -141,7 +141,27 @@ class Projection(object):
     def __len__(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
         return len(self._dendrites)
+    
+    def enable_learning(self, params={ 'freq': 1, 'offset': 0} ):
+        """
+        Enable the learning for all attached dendrites
         
+        Parameter:
+        
+            * *params*: optional parameter to configure the learning
+        """
+        for dendrite in self._dendrites:
+            dendrite.learnable = True
+            #dendrite.learn_frequency = params['freq']
+            #dendrite.learn_offset = params['offset']
+            
+    def disable_learning(self):
+        """
+        Disable the learning for all attached dendrites
+        """
+        for dendrite in self._dendrites:
+            dendrite.learnable = False
+
     @property
     def dendrites(self):
         """

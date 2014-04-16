@@ -103,6 +103,25 @@ public:
     virtual void invertRanks() { }
 
     virtual void record() { }
+
+    void setLearnable( bool learnable ) { learnable_ = learnable; }
+
+    bool isLearnable() { return learnable_; }
+
+    /**
+     * 	\brief		determine if the synapses learn at current time step
+     * 	\details	only True if learnable_ is True and time % learn frequency is equal to the learn offset
+     */
+    bool isLearning() { return (learnable_ && ((time_)%learnFrequency_ == learnOffset_)); }
+
+    void setLearnFrequency(int learnFrequency) { learnFrequency_ = learnFrequency; }
+
+    int getLearnFrequency() { return learnFrequency_; }
+
+    void setLearnOffset(int learnOffset) { learnOffset_ = learnOffset; }
+
+    int getLearnOffset() { return learnOffset_; }
+
 protected:
     int post_neuron_rank_;
     int target_;
@@ -123,6 +142,9 @@ protected:
 
     DATA_TYPE dt_;
 
+    int learnFrequency_;	// amount of timesteps till next learning (default 1)
+    int learnOffset_;	// at which point in the frequence we learn (default 0)
+    bool learnable_;
     bool constDelay_;
     int maxDelay_;
     int time_;
