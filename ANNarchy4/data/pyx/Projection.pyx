@@ -66,11 +66,11 @@ cdef extern from "../build/Projection.h":
 
         bool isLearnable()
 
-        void setLearnFrequency(freq)
+        void setLearnFrequency(int frequency)
         
         int getLearnFrequency()
         
-        void setLearnOffset(offset)
+        void setLearnOffset(int offset)
         
         int getLearnOffset()
         
