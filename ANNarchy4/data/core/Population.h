@@ -24,44 +24,76 @@
 
 #include "Global.h"
 
+/**
+ * 	\brief		Basic definition of a population in ANNarchy
+ * 	\details	inherited by MeanPopulation and SpikePopulation dependent on the chosen parallelization.
+ * 				This class provides only simplest data common to all inherited classes.
+ * 				Secondly this class provides a simple interface callable by Network.
+ */
 class Population
 {
 public:
-    Population( std::string name, int nbNeurons, bool isRateType );
+	/**
+	 * 	\brief		Initialize a population object.
+	 * 	\details	Please note, that in no case this class is directly instantiated, always instantiate a child class depending on the parallelization method.
+	 */
+    Population( std::string name, unsigned int nbNeurons, bool isRateType );
 
-    virtual ~Population();
+    /**
+     * 	\brief		Destructor
+     * 	\details	No further logic implementd. The child class is COMPLETLY responsible for all the allocated data.
+     * 				For easy use, you may use the removeProjections function in order to clean all the projection vectors.
+     */
+    virtual ~Population() { }
 
+    /**
+     * 	\brief		returns the name of population.
+     * 	\details	within the CPP core this name is meaningless, it's might used by the wrappers.
+     *	\return		name of population.
+     */
     std::string getName() { return name_; }
 
-    int getNeuronCount() { return nbNeurons_; }
+    /**
+     * 	\brief		returns the number of neurons.
+     * 	\details	is not changed during runtime and set by constructor.
+     *	\return		number of neurons
+     */
+    unsigned int getNeuronCount() { return nbNeurons_; }
 
+    /**
+     * 	\brief		get discretization time constant
+     * 	\details	common to all objects, its globally changed through python.
+     * 	\return		value of dt
+     */
     DATA_TYPE getDt() { return dt_; }
 
+    /**
+     * 	\brief		set discretization time constant
+     * 	\details	common to all objects, its globally changed through python.
+     * 	\param[in]	dt 	new value of dt
+     */
     void setDt(DATA_TYPE dt) { dt_ = dt; }
 
-    //
-    //  Projection handling
-    //
     /**
      *  \brief		add a projection to a neuron
      *  \details	the given projection is attached to the postsynaptic neuron identified by given rank.
-     *  \param[IN]	neuron	postsynaptic rank of the neuron
-     *  \param[IN]	proj	projection instance to attach
+     *  \param[in]	neuron	postsynaptic rank of the neuron
+     *  \param[in]	proj	projection instance to attach
      */
-    void addProjection(int neuron, class Projection* proj);
+    void addProjection(unsigned int neuron, class Projection* proj);
 
     /**
      *  \brief		get all projections of neuron n and a certain type
      *  \details	iterates over all assigned projections of neuron n and delete the ones with presynaptic population pre and the given projection type.
-     *  \param[IN]	pre		reference to the presynaptic populations
-     *  \param[IN]	type	integer id of the projection type
+     *  \param[in]	pre		reference to the presynaptic populations
+     *  \param[in]	type	integer id of the projection type
      */
     void removeProjection(Population *pre, int type);
 
     /**
      *  \brief		get all projections of neuron n and a certain type
      *  \details	iterates over all assigned projections of neuron n and delete the ones with presynaptic population without attention to projection type.
-     *  \param[IN]	pre		reference to the presynaptic populations
+     *  \param[in]	pre		reference to the presynaptic populations
      */
     void removeProjections(Population *pre);
 
@@ -69,22 +101,22 @@ public:
      *  \brief		get the projection of neuron n with a certain type and connected to a given presynaptic population
      *  \details	iterates over all assigned projections of neuron n and select the one projection
      *  			of given type and presynaptic population pre
-     *  \param[IN]	neuron	rank of the neuron
-     *  \param[IN]	type	integer id of the projection type
-     *  \param[IN]	pre		reference to the presynaptic population
-     *  \param[OUT]	std::vector of class Projection
+     *  \param[in]	neuron	rank of the neuron
+     *  \param[in]	type	integer id of the projection type
+     *  \param[in]	pre		reference to the presynaptic population
+     *  \return		instance of the searched Projection, if one exist in the current lists, otherwise NULL.
      */
-    class Projection* getProjection(int neuron, int type, Population* pre);
+    class Projection* getProjection(unsigned int neuron, int type, Population* pre);
 
     /**
      *  \brief		get all projections of neuron n and a certain type
      *  \details	iterates over all assigned projections of neuron n and select the ones
      *  			of given type.
-     *  \param[IN]	neuron	rank of the neuron
-     *  \param[IN]	type	integer id of the projection type
-     *  \param[OUT]	std::vector of class Projection
+     *  \param[in]	neuron	rank of the neuron
+     *  \param[in]	type	integer id of the projection type
+     *  \return		std::vector of class Projection, if there some exists otherwise an empty vector is returned.
      */
-    std::vector<class Projection*> getProjections(int neuron, int type);
+    std::vector<class Projection*> getProjections(unsigned int neuron, int type);
 
     /**
      *  \brief		is the current population rate coded.
@@ -92,16 +124,13 @@ public:
      */
     bool isMeanRateCoded() { return isRateType_; }
 protected:
-    int nbNeurons_; ///< amount of neurons in the layer
-    std::string name_;  ///< name of layer
-    int maxDelay_;
-    DATA_TYPE dt_;
-    bool isRateType_;
-
-
+    unsigned int nbNeurons_; 	///< amount of neurons in the layer
+    std::string name_;  		///< name of layer
+    int maxDelay_;				///< maximum delay over all neurons. Please note, that this value is set after analyzing the attached projections.
+    DATA_TYPE dt_;				///< discretization constant
+    bool isRateType_;			///< is the current population rate coded.
     std::vector< std::vector<class Projection*> > projections_; ///< list of afferent dendrites ordered neuron wise
-
-    std::vector< std::vector< std::vector<class Projection*> > > typedProjections_;
+    std::vector< std::vector< std::vector<class Projection*> > > typedProjections_;	///< list of afferent dendrites ordered neuron and type wise, to improve performance of the weighted sum.
 };
 
 /*TODEL

@@ -86,12 +86,19 @@ private:
 template<typename T> 
 class Distribution{
 public:
-	Distribution() {
+	/**
+	 * 	\brief		Constructor.
+	 */
+	Distribution() {}
 
-	}
-
+	/**
+	 * 	\brief		retrieve a single value of type T.
+	 */
 	virtual T getValue()=0;
 
+	/**
+	 * 	\brief		retrieve N values of type T as std::vector<T>.
+	 */
 	virtual std::vector<T> getValues(int N)=0;
 };
 
@@ -102,19 +109,29 @@ public:
 template <typename T>
 class Constant : public Distribution<T> {
 public:
+	/**
+	 * 	\brief		Constructor.
+	 * 	\param[in]	value	value that will returned.
+	 */
 	Constant(T value) {
 		value_ = value;
 	}
 
+	/**
+	 * 	\brief		retrieve a single value of type T.
+	 */
 	T getValue() {
 		return value_;
 	}
 
+	/**
+	 * 	\brief		retrieve N values of type T as std::vector<T>.
+	 */
 	std::vector<T> getValues(int N) {
 		return std::vector<T>(N, value_);
 	}
 private:
-	T value_;
+	T value_;	///< constant value
 };
 
 /**
