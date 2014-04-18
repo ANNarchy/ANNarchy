@@ -22,8 +22,10 @@ rate_projection_header = \
 
 #include "Global.h"
 #include "Includes.h"
+#include "MeanProjection.h"
 
-class %(class)s : public Projection {
+class %(class)s : public MeanProjection 
+{
 public:
     %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
     
@@ -32,6 +34,10 @@ public:
     ~%(class)s();
     
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
+    
+    int addSynapse(int rank, DATA_TYPE value, int delay);
+
+    int removeSynapse(int rank);
     
     void initValues();
     
@@ -79,8 +85,9 @@ spike_projection_header = \
 
 #include "Global.h"
 #include "Includes.h"
+#include "SpikeProjection.h"
 
-class %(class)s : public Projection {
+class %(class)s : public SpikeProjection {
 public:
     %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
     
@@ -88,9 +95,11 @@ public:
     
     ~%(class)s();
     
-    void invertRanks();
-    
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
+
+    int addSynapse(int rank, DATA_TYPE value, int delay);
+
+    int removeSynapse(int rank);
     
     void initValues();
     
@@ -185,9 +194,11 @@ global_variable_access = \
 rate_projection_body = \
 """#include "%(class)s.h"        
 #include "Global.h"
+
 using namespace ANNarchy_Global;
-        
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : Projection() {
+
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : MeanProjection() 
+{
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
     
@@ -198,10 +209,10 @@ using namespace ANNarchy_Global;
     post_neuron_rank_ = postRank;
 
     post_population_->addProjection(postRank, this);
-    
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() {
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : MeanProjection() 
+{
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
@@ -212,16 +223,27 @@ using namespace ANNarchy_Global;
     post_neuron_rank_ = postRank;
 
     post_population_->addProjection(postRank, this);
-    
 }
 
 %(class)s::~%(class)s() 
 {
 #ifdef _DEBUG
-    std::cout<<"%(class)s::Destructor"<<std::endl;
+    std::cout <<"%(class)s::Destructor"<< std::endl;
 #endif
 
 %(destructor)s
+}
+
+int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
+{
+    std::cout << "to be implement ... " << std::endl;
+    return -1;
+}
+
+int %(class)s::removeSynapse(int rank)
+{
+    std::cout << "to be implement ... " << std::endl;
+    return -1;
 }
 
 void %(class)s::initValues() 
@@ -271,9 +293,10 @@ void %(class)s::record()
 spike_projection_body = \
 """#include "%(class)s.h"        
 #include "Global.h"
+
 using namespace ANNarchy_Global;
         
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : Projection() 
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : SpikeProjection() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
@@ -288,7 +311,7 @@ using namespace ANNarchy_Global;
     }
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : Projection() 
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : SpikeProjection() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
@@ -312,16 +335,16 @@ using namespace ANNarchy_Global;
 %(destructor)s
 }
 
-void %(class)s::invertRanks()
+int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
 {
-    inv_rank_.clear();
-    
-    for(int i = 0; i < rank_.size(); i++)
-    {
-        auto tmp = std::pair<int,int>(rank_[i], i);
-        inv_rank_.insert( tmp );
-        
-    }
+    std::cout << "to be implement ... " << std::endl;
+    return -1;
+}
+
+int %(class)s::removeSynapse(int rank)
+{
+    std::cout << "to be implement ... " << std::endl;
+    return -1;
 }
 
 void %(class)s::initValues() 
@@ -371,7 +394,10 @@ psp_code_body = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-        for(int i=0; i < nbWeights_; i++) 
+    #ifdef _DEBUG
+        std::cout << "sum over " << nbSynapses_ << " elements." << std::endl;
+    #endif
+        for(int i=0; i < nbSynapses_; i++) 
         {
             sum_ += %(psp)s
         }        
@@ -391,7 +417,7 @@ psp_code_body = \
             std::cout << std::endl;
         #endif
             
-            for(int i=0; i < nbWeights_; i++) 
+            for(int i=0; i < nbSynapses_; i++) 
             {
                 sum_ += %(psp_const_delay)s
             }
@@ -400,7 +426,7 @@ psp_code_body = \
         {
             std::vector<DATA_TYPE> delayedRates = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_, rank_);
 
-            for(int i=0; i < nbWeights_; i++) 
+            for(int i=0; i < nbSynapses_; i++) 
             {
                 sum_ += %(psp_dyn_delay)s
             }

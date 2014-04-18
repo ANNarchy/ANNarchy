@@ -102,9 +102,11 @@ void Network::addPopulation(class Population* population) {
     }
 }
 
+/*
 void Network::connect(int prePopulationID, int postPopulationID, Connector *connector, int projectionID, int targetID) {
 	connector->connect(populations_[prePopulationID], populations_[postPopulationID], projectionID, targetID);
 }
+*/
 
 void Network::disconnect(int prePopulationID, int postPopulationID, int targetID) {
 	if (targetID == -1)

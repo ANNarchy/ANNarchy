@@ -342,7 +342,7 @@ class RateProjectionGenerator(ProjectionGenerator):
             code="""
         post_rate_ = (*post_rates_)[post_neuron_rank_];
         
-        for(int i=0; i < nbWeights_; i++) 
+        for(int i=0; i < nbSynapses_; i++) 
         {
             %(local_learn)s
         }

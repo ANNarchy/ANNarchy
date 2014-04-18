@@ -26,9 +26,175 @@
 
 class Projection{
 public:
+	Projection(bool rateCoded);
+
+    virtual ~Projection();
+
+    /**
+     * 	\brief		returns the reference to presynaptic populations
+     * 	\details	is abstract, cause the reference is hold by child class.
+     */
+	virtual class Population* getPrePopulation() = 0;
+
+    /**
+     * 	\brief		add a synapse to this dendrite
+     * 	\details	is abstract, cause the behavior is implemented by the child class.
+     * 	\param[in]	rank	presynaptic rank
+     * 	\param[in]	value	synaptic weight
+     * 	\param[in]	delay	synaptic delay
+     */
+	virtual int addSynapse(int rank, DATA_TYPE value, int delay) = 0;
+
+    /**
+     * 	\brief		removes a synapse from this dendrite
+     * 	\details	is abstract, cause the behavior is implemented by the child class.
+     * 	\param[in]	rank	presynaptic rank, identifying the correct synapse
+     */
+    virtual int removeSynapse(int rank) = 0;
+
+    /**
+     * 	\brief		record synaptic data
+     * 	\details	is abstract, cause the behavior is implemented by the child class.
+     */
+    virtual void record() = 0;
+
+    /**
+     * 	\brief		get discretization time constant
+     * 	\details	common to all objects, its globally changed through python.
+     * 	\return		value of dt
+     */
+    DATA_TYPE getDt() { return dt_; }
+
+    /**
+     * 	\brief		set discretization time constant
+     * 	\details	common to all objects, its globally changed through python.
+     * 	\param[in]	dt 	new value of dt
+     */
+    void setDt(float dt) { dt_ = dt; }
+
+	/**
+	 * 	\brief		get number of synapses
+	 * 	\return		number of synapses
+	 */
+	int getSynapseCount() { return nbSynapses_; }
+
+	/**
+	 * 	\brief		get projection target
+	 * 	\return		integer id of projection target
+	 */
+	int getTarget() { return target_; }
+
+	/**
+	 * 	\brief		get synaptic delays
+	 * 	\return		synaptic delays
+	 */
+	std::vector<int> getDelay() { return delay_; };
+
+	/**
+	 * 	\brief		set synaptic delays
+	 * 	\details	automatically update constDelay_ and maxDelay_.
+	 * 	\param[in]	vector of synaptic delays.
+	 */
+	void setDelay(std::vector<int> delay);
+
+	/**
+	 * 	\brief		get ranks of presynaptic neurons
+	 * 	\return		ranks of presynaptic neurons
+	 */
+	std::vector<int> getRank() { return rank_; }
+
+	/**
+	 * 	\brief		set ranks of presynaptic neurons
+	 * 	\details	if the projection is spike coded, the inverted rank arrays is updated.
+	 * 	\param[in]	rank	ranks of presynaptic neurons
+	 */
+	void setRank(std::vector<int> rank);
+
+	/**
+	 * 	\brief		get synaptic weights
+	 */
+	std::vector<DATA_TYPE> getValue() { return value_; }
+
+	/**
+	 * 	\brief		set synaptic weights
+	 */
+	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
+
+    /**
+     * 	\brief		return if the projection is between rate coded or spike coded populations
+     */
+    bool isMeanRateCoded() { return isRateCoded_; }
+
+    /**
+	 * 	\brief		determine if the synapses learn at current time step
+	 * 	\details	only True if learnable_ is True and time % learn frequency is equal to the learn offset, called only internally by Population::metaLearn()
+	 */
+    bool isLearning() { return (learnable_ && ((ANNarchy_Global::time)%learnFrequency_ == learnOffset_)); }
+
+    /**
+	 * 	\brief		set learnable property
+	 * 	\details	called by cython wrapper.
+	 */
+    void setLearnable( bool learnable ) { learnable_ = learnable; }
+
+    /**
+	 * 	\brief		returns learnable property
+	 * 	\details	called by cython wrapper.
+	 */
+    bool isLearnable() { return learnable_; }
+
+    /**
+	 * 	\brief		set learn frequency
+	 * 	\details	called by cython wrapper.
+	 */
+    void setLearnFrequency(int learnFrequency) { learnFrequency_ = learnFrequency; }
+
+    /**
+	 * 	\brief		set learn frequency
+	 * 	\details	called by cython wrapper.
+	 */
+    int getLearnFrequency() { return learnFrequency_; }
+
+    /**
+     * 	\brief		set learn offset
+	 * 	\details	called by cython wrapper.
+     */
+    void setLearnOffset(int learnOffset) { learnOffset_ = learnOffset; }
+
+    /**
+     * 	\brief		get learn offset
+	 * 	\details	called by cython wrapper.
+     */
+    int getLearnOffset() { return learnOffset_; }
+
+protected:
+    int post_neuron_rank_; 	///< neuron where this dendrite is attached to
+    int target_;	///< projection type
+    int nbSynapses_;	///< number of synapses
+    DATA_TYPE dt_;	///< discretization constant
+
+    std::vector<int> rank_; ///< pre-ranks for connection post->pre
+    std::map<int, int> inv_rank_; ///< pre-ranks of synapses for connection pre->post (needed by spikes)
+
+    std::vector<int> delay_;	///< synaptic delay
+    bool constDelay_;	///< true: a delay != 0 and common to all synapses
+    int maxDelay_;	///< maximum delay value in this dendrite
+
+    std::vector<DATA_TYPE> value_;	///< synaptic weights
+
+    int learnFrequency_; 	///< the learn frequency determines after which amount of steps the next learn will executed.
+    int learnOffset_;	///< the learn offset determines the time step within the learn frequency window, where learning will be executed.
+    bool learnable_;
+    bool isRateCoded_;
+};
+#endif
+
+/*
+class Projection{
+public:
 	Projection();
 
-        virtual ~Projection();
+    virtual ~Projection();
 
 	virtual void initValues();
 
@@ -48,12 +214,12 @@ public:
 
 	std::vector<int> getDelay() { return delay_; };
 
-	void setDelay(std::vector<int> delay) 
+	void setDelay(std::vector<int> delay)
     {
         #ifdef _DEBUG
-                std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl; 
+                std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
         #endif
-		for(auto it=delay.begin(); it!=delay.end();it++) 
+		for(auto it=delay.begin(); it!=delay.end();it++)
                 {
 			if(*it>maxDelay_)
 				maxDelay_ = *it;
@@ -62,38 +228,26 @@ public:
 				constDelay_ = false;
 		}
         #ifdef _DEBUG
-                std::cout << "NEW: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl; 
+                std::cout << "NEW: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
         #endif
                 delay_ = delay;
     };
-    	
+
 	std::vector<int> getRank() { return rank_; }
 
 	void setRank(std::vector<int> rank) { rank_ = rank; nbWeights_ = rank.size(); }
-    
+
 	std::vector<DATA_TYPE> getValue() { return value_; }
 	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
-	
+
 	DATA_TYPE getDt() { return dt_; }
 
 	void setDt(DATA_TYPE dt) { dt_ = dt; }
 
-	/**
-	 *  \brief      Add synapse.
-	 *  \param[IN]  rank    rank of the presynaptic neuron
-	 *  \param[IN]  value   synaptic weight
-	 *  \param[IN]  delay   delay
-	 *  \return     error code: 0 (success), -1 (already existant)
-	 */
 	virtual int addSynapse(int rank, DATA_TYPE value, int delay);
-	
-	/**
-	 *  \brief      Remove synapse.
-	 *  \param[IN]  rank    rank of the presynaptic neuron
-	 *  \return     error code: 0 (success), -1 (not existant)
-	 */
+
     virtual int removeSynapse(int rank);
-    
+
     virtual bool isPreSynaptic(class Population *pop) {}
 
     virtual void preEvent(int rank) {}
@@ -108,10 +262,6 @@ public:
 
     bool isLearnable() { return learnable_; }
 
-    /**
-     * 	\brief		determine if the synapses learn at current time step
-     * 	\details	only True if learnable_ is True and time % learn frequency is equal to the learn offset
-     */
     bool isLearning() { return (learnable_ && ((time_)%learnFrequency_ == learnOffset_)); }
 
     void setLearnFrequency(int learnFrequency) { learnFrequency_ = learnFrequency; }
@@ -149,4 +299,4 @@ protected:
     int maxDelay_;
     int time_;
 };
-#endif
+ */

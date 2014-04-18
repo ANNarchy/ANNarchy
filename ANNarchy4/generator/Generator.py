@@ -134,6 +134,8 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
     for arg in sys.argv[1:]:
         if arg == '--clean':
             clean = True
+        elif arg == '--debug':
+            debug_build = True
         elif arg == '--profile':
             profile_enabled = True
         elif str(arg).find('-j')!= -1:

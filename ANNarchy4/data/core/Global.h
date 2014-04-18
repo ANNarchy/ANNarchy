@@ -70,7 +70,6 @@ namespace ANNarchy_Global
 #include "Random.h"
 #include "Network.h"
 #include "Population.h"
-#include "Connector.h"
 #include "Projection.h"
 
 #endif

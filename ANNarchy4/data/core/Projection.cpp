@@ -21,6 +21,74 @@
  */
 #include "Projection.h"
 
+Projection::Projection(bool rateCoded)
+{
+	isRateCoded_ = rateCoded;
+
+    constDelay_ = true;
+    maxDelay_ = 0;
+    nbSynapses_ = 0;
+
+    //
+    // learning in every time step as default
+    learnFrequency_ = 1;
+    learnOffset_ = 0;
+    learnable_ = true;
+}
+
+Projection::~Projection()
+{
+#ifdef _DEBUG
+    std::cout<<"Projection::Destructor (" << this << ")"<<std::endl;
+#endif
+
+    if(!rank_.empty())
+        rank_.erase(rank_.begin(), rank_.end());
+    if(!value_.empty())
+        value_.erase(value_.begin(), value_.end());
+    if(!delay_.empty())
+        delay_.erase(delay_.begin(), delay_.end());
+
+}
+
+void Projection::setDelay(std::vector<int> delay)
+{
+    #ifdef _DEBUG
+            std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
+    #endif
+	for(auto it=delay.begin(); it!=delay.end();it++)
+            {
+		if(*it>maxDelay_)
+			maxDelay_ = *it;
+
+		if(*it != maxDelay_)
+			constDelay_ = false;
+	}
+    #ifdef _DEBUG
+            std::cout << "NEW: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
+    #endif
+            delay_ = delay;
+};
+
+void Projection::setRank(std::vector<int> rank)
+{
+	rank_ = rank; nbSynapses_ = rank.size();
+
+	if ( !isRateCoded_ )
+	{
+		inv_rank_.clear();
+
+		for(int i = 0; i < rank_.size(); i++)
+		{
+		    auto tmp = std::pair<int,int>(rank_[i], i);
+		    inv_rank_.insert( tmp );
+
+		}
+	}
+}
+
+
+/*
 Projection::Projection()
 {
      constDelay_ = true;
@@ -75,6 +143,7 @@ void Projection::initValues()
 		//pre_population_->setMaxDelay(maxDelay_);
 	}
 	*/
+/*
 }
 
 int Projection::addSynapse(int rank, DATA_TYPE value, int delay) {
@@ -119,3 +188,4 @@ int Projection::removeSynapse(int rank) {
 
     return -1;
 }
+*/
