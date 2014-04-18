@@ -69,11 +69,22 @@ def _folder_management(profile_enabled, clean):
         shutil.copy(sources_dir+'/core/'+cfile, # src
                     Global.annarchy_dir+'/generate/build/'+cfile # dest
                     )
-    # openmp .cpp / .h files
-    for cfile in os.listdir(sources_dir+'/openmp'):
-        shutil.copy(sources_dir+'/openmp/'+cfile, # src
-                    Global.annarchy_dir+'/generate/build/'+cfile # dest
-                    )
+    
+    if Global.config['paradigm'] == "openmp":
+        # openmp .cpp / .h files
+        for cfile in os.listdir(sources_dir+'/openmp'):
+            shutil.copy(sources_dir+'/openmp/'+cfile, # src
+                        Global.annarchy_dir+'/generate/build/'+cfile # dest
+                        )
+    elif Global.config['paradigm'] == "cuda":
+        for cfile in os.listdir(sources_dir+'/cuda'):
+            shutil.copy(sources_dir+'/cuda/'+cfile, # src
+                        Global.annarchy_dir+'/generate/build/'+cfile # dest
+                        )        
+    else:
+        Global._print("unknown paradigm ... abort compilation ...")
+        exit(0)
+            
     # pyx files
     for pfile in os.listdir(sources_dir+'/pyx'):
         shutil.copy(sources_dir+'/pyx/'+pfile, #src
