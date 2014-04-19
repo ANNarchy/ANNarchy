@@ -591,6 +591,17 @@ def analyse_projection(proj):
                     { 'name': 'delay', 'init': 0, 'ctype': 'int', 'flags': [] } 
                   ]
     
+    # if no synapse was set during creation of the projection
+    # the variable value is not attached to the set of variables
+    found = False
+    for var in variables:
+        if var['name'] == "value":
+            found = True
+    
+    # value is not declared so far, so we simply add a parameter
+    if not found:
+        parameters += [ { 'name': 'value', 'init': 0, 'ctype': 'DATA_TYPE', 'flags': [] } ]
+        
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
