@@ -585,6 +585,12 @@ def analyse_projection(proj):
     if len(attributes) != len(list(set(attributes))):
         _error(proj.name, ': attributes must be declared only once.', attributes)
         exit(0)
+    
+    # extend the list of parameters by rank and delay
+    parameters += [ { 'name': 'rank', 'init': 0, 'ctype': 'int', 'flags': [] }, 
+                    { 'name': 'delay', 'init': 0, 'ctype': 'int', 'flags': [] } 
+                  ]
+    
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
