@@ -97,9 +97,9 @@ public:
     
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
 
-    int addSynapse(int rank, DATA_TYPE value, int delay);
+    int addSynapse(int rank);
 
-    int removeSynapse(int rank);
+    int removeSynapse(int rank, DATA_TYPE value, int delay);
     
     void initValues();
     
@@ -236,13 +236,63 @@ using namespace ANNarchy_Global;
 
 int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
 {
-    std::cout << "to be implement ... " << std::endl;
-    return -1;
+    for(unsigned int i=0; i < rank_.size(); i++) 
+    {
+        if(rank_[i] == rank ) 
+        {
+        #ifdef _DEBUG
+            std::cout << "synapse already exists ... " << std::endl;
+        #endif
+            return -1;
+        }
+    }
+
+    rank_.push_back(rank);
+    value_.push_back(value);
+    
+    if( delay > 0 )
+    {
+        delay_.push_back(delay);
+        if(delay > maxDelay_)
+        {
+            maxDelay_ = delay;
+            pre_population_->setMaxDelay(maxDelay_);
+        }
+    }
+    
+    %(add_synapse)s
+
+    nbSynapses_++;
+    return 0;
 }
 
 int %(class)s::removeSynapse(int rank)
 {
-    std::cout << "to be implement ... " << std::endl;
+#ifdef _DEBUG
+    std::cout << "suppress synapse - pre = " << rank << std::endl;
+    std::cout << "check "<< rank_.size() <<" synapses."<< std::endl;
+#endif
+    for(unsigned int i=0; i < rank_.size(); i++) 
+    {
+        if(rank_[i] == rank ) 
+        {
+        #ifdef _DEBUG
+           std::cout << "found the synapse at: "<< i <<std::endl;
+        #endif
+        
+           rank_.erase(rank_.begin()+i);
+           value_.erase(value_.begin()+i);
+
+           if (delay_.size() > 1)
+               delay_.erase(delay_.begin()+i);
+
+            %(rem_synapse)s
+
+           nbSynapses_--;
+           return 0;
+        }
+    }
+
     return -1;
 }
 

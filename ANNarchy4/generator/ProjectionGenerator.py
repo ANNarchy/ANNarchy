@@ -191,6 +191,31 @@ class ProjectionGenerator(object):
 
         return code
   
+    def generate_add_synapse(self):
+        code = ""
+        
+        for var in self.desc['variables']:
+            if var['name'] == 'value':
+                continue
+            if var['name'] == 'delay':
+                continue
+
+            code += """%(var)s_.push_back(%(init)s); """ % { 'var': var['name'], 'init': var['init'] }
+            
+        return code
+
+    def generate_rem_synapse(self):
+        code = ""
+        
+        for var in self.desc['variables']:
+            if var['name'] == 'value':
+                continue
+            if var['name'] == 'delay':
+                continue
+
+            code += """%(var)s_.erase(%(var)s_.begin()+i);""" % { 'var' : var['name'] }
+
+        return code
     
     def generate_functions(self):
         "Custom functions"
@@ -216,7 +241,7 @@ class RateProjectionGenerator(ProjectionGenerator):
         
         # Custom function
         functions = self.generate_functions()
-                
+        
         # Generate the code
         template = rate_projection_header
         dictionary = { 
@@ -241,6 +266,10 @@ class RateProjectionGenerator(ProjectionGenerator):
         # Generate code for the local variables
         local_learn = self.generate_locallearn()
         
+        # structural plasticity
+        add_synapse = self.generate_add_synapse()
+        rem_synapse = self.generate_rem_synapse()
+
         record = ""
         
         # Generate the code
@@ -254,7 +283,9 @@ class RateProjectionGenerator(ProjectionGenerator):
             'sum': psp, 
             'local': local_learn, 
             'global': global_learn,
-            'record' : record }
+            'record' : record,
+            'add_synapse': add_synapse,
+            'rem_synapse': rem_synapse }
         return template % dictionary
     
     def generate_pyx(self):
