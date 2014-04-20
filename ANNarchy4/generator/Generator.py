@@ -31,7 +31,7 @@ import ANNarchy4
 import ANNarchy4.core.Global as Global
 from ANNarchy4.parser.Analyser import Analyser, _extract_functions
 from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, SpikeProjectionGenerator  
+from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
 
 def _folder_management(profile_enabled, clean):
     """
@@ -235,12 +235,19 @@ class Generator(object):
         
         # create projections cpp class for each synapse
         for name, desc in self.analyser.analysed_projections.iteritems():
-            if desc['type'] == 'rate':
-                proj_generator = RateProjectionGenerator(name, desc)
-            elif desc['type'] == 'spike':
-                proj_generator = SpikeProjectionGenerator(name, desc)
-            proj_generator.generate(Global.config['verbose'])
-    
+            if Global.config['paradigm'] == "openmp":
+                if desc['type'] == 'rate':
+                    proj_generator = RateProjectionGenerator(name, desc)
+                elif desc['type'] == 'spike':
+                    proj_generator = SpikeProjectionGenerator(name, desc)
+                proj_generator.generate(Global.config['verbose'])
+            else:
+                if desc['type'] == 'rate':
+                    proj_generator = RateProjectionGeneratorCUDA(name, desc)
+                elif desc['type'] == 'spike':
+                    proj_generator = SpikeProjectionGenerator(name, desc)
+                proj_generator.generate(Global.config['verbose'])
+                
         # Create default files mainly based on the number of populations and projections
         if Global.config['verbose']:
             print('\nCreate Includes.h ...')

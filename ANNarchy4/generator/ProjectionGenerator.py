@@ -22,8 +22,11 @@
     
 """
 from ANNarchy4.core import Global
-from ANNarchy4.generator.ProjectionTemplates import *
 from ANNarchy4.core.Random import *
+
+from ANNarchy4.generator import ProjectionTemplates as Templates
+from ANNarchy4.generator import ProjectionTemplatesOMP as OMPTemplates
+from ANNarchy4.generator import ProjectionTemplatesCUDA as CUDATemplates
 
 import re
 
@@ -54,9 +57,12 @@ class ProjectionGenerator(object):
             w_file.write(self.generate_pyx()) 
     
     def generate_members_declaration(self):
-        """ Returns private members declaration. 
+        """ 
+        Returns private members declaration. 
         
-        Depend only on locality. value should not be defined twice.
+        Notes:            
+            * depend only on locality
+            * value should not be defined twice.
         """
         members = ""
         
@@ -88,22 +94,31 @@ class ProjectionGenerator(object):
         return members
     
     def generate_members_access(self):
-        """ Returns public members access. 
+        """ 
+        Returns public members access. 
         
-        Depend only on locality. 
+        Notes:
+            * depend only on locality.
+            * rank, delay access is already implemented in base class
+            * psp are skipped, hence it should not be accessible 
         """
         members = ""
+        
+        local_template = Templates.local_variable_access
+        global_template = Templates.global_variable_access
+        
         for param in self.desc['parameters'] + self.desc['variables']:
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
             if param['name'] in self.desc['local']: # local attribute
-                members += local_variable_access % {'name' : param['name'], 
-                                                    'Name': param['name'].capitalize(),
-                                                    'type': param['ctype']}
+                members += local_template % { 'name' : param['name'], 
+                                              'Name': param['name'].capitalize(),
+                                              'type': param['ctype']}
+                
             elif param['name'] in self.desc['global']: # global attribute
-                members += global_variable_access % {'name' : param['name'], 
-                                                     'Name': param['name'].capitalize(),
-                                                     'type': param['ctype']}
+                members += global_template % { 'name' : param['name'], 
+                                               'Name': param['name'].capitalize(),
+                                               'type': param['ctype']}
 
         return members
 
@@ -144,42 +159,65 @@ class ProjectionGenerator(object):
         return constructor 
         
     def generate_cwrappers(self):
-        "Parts of the C++ header which should be acessible to Cython"
+        """
+        Parts of the C++ header which are exported to Python through Cython.
+        
+        Notes:
+            * each exported function need a wrapper method, in this function the wrappers for variables and parameters are generated. 
+            * the access to GPU data is only possible through host. Through this detail the implementation of the cython wrappers are equal to all paradigms.
+        """
         code = ""
 
+        local_template = Templates.local_wrapper_pyx
+        global_template = Templates.global_wrapper_pyx
+        
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                tmp_code = local_wrapper_pyx % { 'Name': param['name'].capitalize(), 
-                                                 'name': param['name'], 
-                                                 'type': param['ctype'] }
+                tmp_code = local_template % { 'Name': param['name'].capitalize(), 
+                                              'name': param['name'], 
+                                              'type': param['ctype'] }
         
                 code += tmp_code.replace('DATA_TYPE', 'float') # no double in cython
                 
             elif param['name'] in self.desc['global']: # global attribute
-                tmp_code = global_wrapper_pyx % { 'Name': param['name'].capitalize(), 
-                                                  'name': param['name'], 
-                                                  'type': param['ctype'] }
+                tmp_code = global_template % { 'Name': param['name'].capitalize(), 
+                                               'name': param['name'], 
+                                               'type': param['ctype'] }
         
                 code += tmp_code.replace('DATA_TYPE', 'float')
+
         return code
     
     def generate_pyfunctions(self):
-        "Python functions acessing the Cython wrapper"
+        """
+        Python functions accessing the Cython wrapper
+        
+        Notes:
+            * the access to GPU data is only possible through host. Through this detail the implementation of the cython wrappers are equal to all paradigms.
+        """
         code = ""        
+
+        local_template = Templates.local_property_pyx
+        global_template = Templates.global_property_pyx
+         
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_property_pyx % { 'Name': param['name'].capitalize(), 
-                                               'name': param['name'] }
-                
+                code += local_template % { 'Name': param['name'].capitalize(), 
+                                           'name': param['name'] }
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_property_pyx % { 'Name': param['name'].capitalize(), 
-                                                'name': param['name'] }
+                code += global_template % { 'Name': param['name'].capitalize(), 
+                                            'name': param['name'] }
         return code
 
     def generate_record(self):
-        " Code for recording."
+        """ 
+        Code for recording.
+
+        Notes:
+            * only local variables / parameters are recorded.
+        """
         code = ""
         # Attributes
         for param in self.desc['parameters'] + self.desc['variables']:
@@ -192,30 +230,42 @@ class ProjectionGenerator(object):
         return code
   
     def generate_add_synapse(self):
+        """
+        Code for add synapses.
+        
+        Notes:
+            * the implemented template is only extended by local variables / parameters
+            * value and delay are skipped.
+        """
         code = ""
         
-        for var in self.desc['variables']:
-            if var['name'] == 'value':
-                continue
-            if var['name'] == 'delay':
+        for var in self.desc['variables'] + self.desc['parameters']:
+            if var['name'] == 'value' or var['name'] == 'delay':
                 continue
 
-            code += """%(var)s_.push_back(%(init)s); """ % { 'var': var['name'], 'init': var['init'] }
+            if var['name'] in self.desc['local']:
+                code += """%(var)s_.push_back(%(init)s); """ % { 'var': var['name'], 'init': var['init'] }
             
-        return code
+        return Templates.add_synapse_body % { 'add_synapse': code }
 
     def generate_rem_synapse(self):
+        """
+        Code for remove synapses.
+        
+        Notes:
+            * the implemented template is only extended by local variables / parameters
+            * value and delay are skipped.
+        """
         code = ""
         
-        for var in self.desc['variables']:
-            if var['name'] == 'value':
-                continue
-            if var['name'] == 'delay':
+        for var in self.desc['variables'] + self.desc['parameters']:
+            if var['name'] == 'value'or var['name'] == 'delay':
                 continue
 
-            code += """%(var)s_.erase(%(var)s_.begin()+i);""" % { 'var' : var['name'] }
+            if var['name'] in self.desc['local']:
+                code += """%(var)s_.erase(%(var)s_.begin()+i);""" % { 'var' : var['name'] }
 
-        return code
+        return Templates.rem_synapse_body % { 'rem_synapse': code }
     
     def generate_functions(self):
         "Custom functions"
@@ -243,7 +293,7 @@ class RateProjectionGenerator(ProjectionGenerator):
         functions = self.generate_functions()
         
         # Generate the code
-        template = rate_projection_header
+        template = OMPTemplates.rate_projection_header
         dictionary = { 
             'class': self.name, 
             'pre_name': self.desc['pre_class'],
@@ -267,13 +317,13 @@ class RateProjectionGenerator(ProjectionGenerator):
         local_learn = self.generate_locallearn()
         
         # structural plasticity
-        add_synapse = add_synapse_body % { 'add_synapse': self.generate_add_synapse() }
-        rem_synapse = rem_synapse_body % { 'rem_synapse': self.generate_rem_synapse() }
+        add_synapse = self.generate_add_synapse()
+        rem_synapse = self.generate_rem_synapse()
 
         record = ""
         
         # Generate the code
-        template = rate_projection_body
+        template = OMPTemplates.rate_projection_body
         dictionary = {         
             'class': self.name,
             'destructor': '' ,
@@ -287,14 +337,21 @@ class RateProjectionGenerator(ProjectionGenerator):
             'add_synapse_body': add_synapse,
             'rem_synapse_body': rem_synapse }
         return template % dictionary
-    
+
     def generate_pyx(self):
+        """
+        Generate complete cython wrapper class
+            
+        Notes:
+            * dependent on coding.
+        """
         # Get the C++ methods
         cwrappers = self.generate_cwrappers()
         # Get the python functions
         pyfunctions = self.generate_pyfunctions()
         # Generate the code
-        template = rate_projection_pyx
+
+        template = Templates.rate_projection_pyx
         dictionary = { 
             'name': self.name, 
             'cFunction': cwrappers, 
@@ -310,7 +367,171 @@ class RateProjectionGenerator(ProjectionGenerator):
         else:
             psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
         # Generate the code
-        template = psp_code_body
+        template = OMPTemplates.psp_code_body
+        dictionary = {
+            'psp': psp_code, 
+            'psp_const_delay': psp_code,
+            'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
+        }    
+        return template % dictionary
+    
+    def generate_globallearn(self):
+        " Generates code for the globalLearn() method for global variables."
+
+        # Generate the code
+        code = ""
+        for param in self.desc['variables']:
+            if param['name'] in self.desc['global']: # global attribute 
+                # The code is already in 'cpp'
+                code +="""
+    %(code)s   
+""" % {'code' : param['cpp']}
+                # Set the min and max values 
+                for bound, val in param['bounds'].iteritems():
+                    if bound == 'min':
+                        code += """
+    if(%(var)s_ < %(val)s)
+        %(var)s_ = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+                    if bound == 'max':
+                        code += """
+    if(%(var)s_ > %(val)s)
+        %(var)s_ = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+        return code
+    
+    def generate_locallearn(self):
+        " Generates code for the localLearn() method for local variables."
+
+        # Generate the code
+        local_learn = ""
+        for param in self.desc['variables']:
+            if param['name'] in self.desc['local']: # local attribute 
+                # The code is already in 'cpp'
+                local_learn +="""
+        %(code)s   
+""" % {'code' : param['cpp']}
+                # Set the min and max values 
+                for bound, val in param['bounds'].iteritems():
+                    if bound == 'min':
+                        local_learn += """
+        if(%(var)s_[i] < %(val)s)
+            %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+                    if bound == 'max':
+                        local_learn += """
+        if(%(var)s_[i] > %(val)s)
+            %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+        
+        if len(local_learn) > 1:
+            #
+            # build final code
+            code="""
+        post_rate_ = (*post_rates_)[post_neuron_rank_];
+        
+        for(int i=0; i < nbSynapses_; i++) 
+        {
+            %(local_learn)s
+        }
+    """ % { 'local_learn': local_learn }
+        else:
+            code = ""
+            
+        return code
+
+class RateProjectionGeneratorCUDA(ProjectionGenerator):
+    """ Class for generating CUDA/C++ code from a rate population description. """
+    def __init__(self, name, desc):
+        ProjectionGenerator.__init__(self, name, desc)
+            
+    def generate_header(self):
+        " Generates the C++ header file."        
+        # Private members declarations
+        members = self.generate_members_declaration()
+        
+        # Access method for attributes
+        access = self.generate_members_access()
+        
+        # Custom function
+        functions = self.generate_functions()
+        
+        # Generate the code
+        template = CUDATemplates.rate_projection_header
+        dictionary = { 
+            'class': self.name, 
+            'pre_name': self.desc['pre_class'],
+            'post_name': self.desc['post_class'],
+            'access': access,
+            'member': members,
+            'functions': functions }
+        return template % dictionary
+    
+    def generate_body(self):
+        # Initialize parameters and variables
+        constructor = self.generate_constructor()
+        
+        # Computation of psp for the weighted sum
+        psp = self.generate_psp()
+        
+        # Generate code for the global variables
+        global_learn = self.generate_globallearn()
+        
+        # Generate code for the local variables
+        local_learn = self.generate_locallearn()
+        
+        # structural plasticity
+        add_synapse = self.generate_add_synapse()
+        rem_synapse = self.generate_rem_synapse()
+
+        record = ""
+        
+        # Generate the code
+        template = CUDATemplates.rate_projection_body
+        dictionary = {         
+            'class': self.name,
+            'destructor': '' ,
+            'pre_type': self.desc['pre_class'],
+            'post_type': self.desc['post_class'],
+            'init': constructor, 
+            'sum': psp, 
+            'local': local_learn, 
+            'global': global_learn,
+            'record' : record,
+            'add_synapse_body': add_synapse,
+            'rem_synapse_body': rem_synapse }
+        return template % dictionary
+
+    def generate_pyx(self):
+        """
+        Generate complete cython wrapper class
+            
+        Notes:
+            * dependent on coding.
+        """
+        # Get the C++ methods
+        cwrappers = self.generate_cwrappers()
+        # Get the python functions
+        pyfunctions = self.generate_pyfunctions()
+        # Generate the code
+
+        template = Templates.rate_projection_pyx
+        dictionary = { 
+            'name': self.name, 
+            'cFunction': cwrappers, 
+            'pyFunction': pyfunctions
+        }
+        return template % dictionary    
+    
+    def generate_psp(self):
+        " Generates code for the computeSum() method depending on psp variable of the synapse."
+        # Get the psp information
+        if 'psp' in self.desc.keys():
+            psp_code = self.desc['psp']['cpp']
+        else:
+            psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
+        # Generate the code
+        template = CUDATemplates.psp_code_body
         dictionary = {
             'psp': psp_code, 
             'psp_const_delay': psp_code,
@@ -400,7 +621,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         functions = self.generate_functions()
                 
         # Generate the code
-        template = spike_projection_header
+        template = OMPTemplates.spike_projection_header
         dictionary = { 
             'class': self.name, 
             'pre_name': self.desc['pre_class'],
@@ -428,13 +649,13 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         post_event = self.generate_post_event()
 
         # structural plasticity
-        add_synapse = add_synapse_body % { 'add_synapse': self.generate_add_synapse() }
-        rem_synapse = rem_synapse_body % { 'rem_synapse': self.generate_rem_synapse() }
+        add_synapse = self.generate_add_synapse()
+        rem_synapse = self.generate_rem_synapse()
         
         record = self.generate_record()
         
         # Generate the code
-        template = spike_projection_body
+        template = OMPTemplates.spike_projection_body
         dictionary = {         
             'class': self.name,
             'destructor': '' ,
@@ -451,6 +672,27 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'rem_synapse_body': rem_synapse,
             'record' : record }
         return template % dictionary
+    
+    def generate_pyx(self):
+        """
+        Generate complete cython wrapper class
+            
+        Notes:
+            * dependent on coding and paradigm
+        """
+        # Get the C++ methods
+        cwrappers = self.generate_cwrappers()
+        # Get the python functions
+        pyfunctions = self.generate_pyfunctions()
+        # Generate the code
+
+        template = Templates.spike_projection_pyx
+        dictionary = { 
+            'name': self.name, 
+            'cFunction': cwrappers, 
+            'pyFunction': pyfunctions
+        }
+        return template % dictionary    
     
     def generate_record(self):
         code = ProjectionGenerator.generate_record(self)
@@ -483,22 +725,6 @@ class SpikeProjectionGenerator(ProjectionGenerator):
 
         return code
         
-    def generate_pyx(self):
-        
-        # Get the C++ methods
-        cwrappers = self.generate_cwrappers()
-        
-        # Get the python functions
-        pyfunctions = self.generate_pyfunctions()
-        # Generate the code
-        template = spike_projection_pyx
-        dictionary = { 
-            'name': self.name, 
-            'cFunction': cwrappers, 
-            'pyFunction': pyfunctions
-        }
-        return template % dictionary    
-    
     def generate_pre_event(self):
         """ """
         code = ""
@@ -510,7 +736,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
     %(eq)s
 """ % { 'eq' : tmp['eq'] }
         
-        template = pre_event_body
+        template = OMPTemplates.pre_event_body
         dictionary = {
             'eq' : code,
             'target': self.desc['target']
@@ -528,7 +754,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
     %(eq)s
 """ % { 'eq' : tmp['eq'] }
         
-        template = post_event_body
+        template = OMPTemplates.post_event_body
         dictionary = {
             'eq' : code,
             'target': self.desc['target']

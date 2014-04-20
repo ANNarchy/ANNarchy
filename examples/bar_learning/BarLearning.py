@@ -5,6 +5,8 @@
 #
 from ANNarchy4 import *
 
+setup(paradigm="cuda")
+
 # Defining the neurons
 InputNeuron = RateNeuron(
     parameters=""" 
