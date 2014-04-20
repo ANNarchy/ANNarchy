@@ -52,6 +52,7 @@ void Population::addProjection(unsigned int postRankID, Projection* proj)
 {
 #ifdef _DEBUG
     std::cout << name_ << ": added projection to neuron " << postRankID << std::endl;
+    std::cout << "address " << proj << std::endl;
 #endif
     try
     {

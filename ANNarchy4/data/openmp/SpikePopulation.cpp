@@ -39,6 +39,7 @@ void SpikePopulation::addSpikeTarget(Projection* proj)
 {
 #ifdef _DEBUG
     std::cout << name_ << ": added projection as spike target " << std::endl;
+    std::cout << "address " << proj << std::endl;
 #endif
     for(unsigned int n=0; n< nbNeurons_; n++)
     {

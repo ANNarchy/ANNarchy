@@ -180,7 +180,7 @@ protected:
     DATA_TYPE dt_;	///< discretization constant
 
     std::vector<int> rank_; ///< pre-ranks for connection post->pre
-    std::map<int, int> inv_rank_; ///< pre-ranks of synapses for connection pre->post (needed by spikes)
+    std::map<int, int> inv_rank_; ///< inversed access ranks, to ensure, that a presynaptic neurons accesses the right values
 
     std::vector<int> delay_;	///< synaptic delay
     bool constDelay_;	///< true: a delay != 0 and common to all synapses

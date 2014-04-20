@@ -240,64 +240,12 @@ using namespace ANNarchy_Global;
 
 int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
 {
-    for(unsigned int i=0; i < rank_.size(); i++) 
-    {
-        if(rank_[i] == rank ) 
-        {
-        #ifdef _DEBUG
-            std::cout << "synapse already exists ... " << std::endl;
-        #endif
-            return -1;
-        }
-    }
-
-    rank_.push_back(rank);
-    value_.push_back(value);
-    
-    if( delay > 0 )
-    {
-        delay_.push_back(delay);
-        if(delay > maxDelay_)
-        {
-            maxDelay_ = delay;
-            pre_population_->setMaxDelay(maxDelay_);
-        }
-    }
-    
-    %(add_synapse)s
-
-    nbSynapses_++;
-    return 0;
+%(add_synapse_body)s
 }
 
 int %(class)s::removeSynapse(int rank)
 {
-#ifdef _DEBUG
-    std::cout << "suppress synapse - pre = " << rank << std::endl;
-    std::cout << "check "<< rank_.size() <<" synapses."<< std::endl;
-#endif
-    for(unsigned int i=0; i < rank_.size(); i++) 
-    {
-        if(rank_[i] == rank ) 
-        {
-        #ifdef _DEBUG
-           std::cout << "found the synapse at: "<< i <<std::endl;
-        #endif
-        
-           rank_.erase(rank_.begin()+i);
-           value_.erase(value_.begin()+i);
-
-           if (delay_.size() > 1)
-               delay_.erase(delay_.begin()+i);
-
-            %(rem_synapse)s
-
-           nbSynapses_--;
-           return 0;
-        }
-    }
-
-    return -1;
+%(rem_synapse_body)s
 }
 
 int %(class)s::removeAllSynapses()
@@ -400,14 +348,12 @@ using namespace ANNarchy_Global;
 
 int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
 {
-    std::cout << "to be implement ... " << std::endl;
-    return -1;
+%(add_synapse_body)s
 }
 
 int %(class)s::removeSynapse(int rank)
 {
-    std::cout << "to be implement ... " << std::endl;
-    return -1;
+%(rem_synapse_body)s
 }
 
 int %(class)s::removeAllSynapses()
@@ -701,4 +647,70 @@ global_wrapper_pyx = """
         # Global %(name)s
         %(type)s get%(Name)s()
         void set%(Name)s(%(type)s value)                
+"""
+
+add_synapse_body = """
+    for(unsigned int i=0; i < rank_.size(); i++) 
+    {
+        if(rank_[i] == rank ) 
+        {
+        #ifdef _DEBUG
+            std::cout << "synapse already exists ... " << std::endl;
+        #endif
+            return -1;
+        }
+    }
+
+    rank_.push_back(rank);
+    value_.push_back(value);
+    
+    if( delay > 0 )
+    {
+        delay_.push_back(delay);
+        if(delay > maxDelay_)
+        {
+            maxDelay_ = delay;
+            pre_population_->setMaxDelay(maxDelay_);
+        }
+    }
+
+    if ( !isRateCoded_ )
+    {
+        auto tmp = std::pair<int,int>(rank, rank_.size()-1);
+        inv_rank_.insert( tmp );
+    }
+    
+    %(add_synapse)s
+
+    nbSynapses_++;
+    return 0;
+"""
+
+rem_synapse_body = """
+#ifdef _DEBUG
+    std::cout << "suppress synapse - pre = " << rank << std::endl;
+    std::cout << "check "<< rank_.size() <<" synapses."<< std::endl;
+#endif
+    for(unsigned int i=0; i < rank_.size(); i++) 
+    {
+        if(rank_[i] == rank ) 
+        {
+        #ifdef _DEBUG
+           std::cout << "found the synapse at: "<< i <<std::endl;
+        #endif
+        
+           rank_.erase(rank_.begin()+i);
+           value_.erase(value_.begin()+i);
+
+           if (delay_.size() > 1)
+               delay_.erase(delay_.begin()+i);
+
+            %(rem_synapse)s
+
+           nbSynapses_--;
+           return 0;
+        }
+    }
+
+    return -1;
 """

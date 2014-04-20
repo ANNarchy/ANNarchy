@@ -267,8 +267,8 @@ class RateProjectionGenerator(ProjectionGenerator):
         local_learn = self.generate_locallearn()
         
         # structural plasticity
-        add_synapse = self.generate_add_synapse()
-        rem_synapse = self.generate_rem_synapse()
+        add_synapse = add_synapse_body % { 'add_synapse': self.generate_add_synapse() }
+        rem_synapse = rem_synapse_body % { 'rem_synapse': self.generate_rem_synapse() }
 
         record = ""
         
@@ -284,8 +284,8 @@ class RateProjectionGenerator(ProjectionGenerator):
             'local': local_learn, 
             'global': global_learn,
             'record' : record,
-            'add_synapse': add_synapse,
-            'rem_synapse': rem_synapse }
+            'add_synapse_body': add_synapse,
+            'rem_synapse_body': rem_synapse }
         return template % dictionary
     
     def generate_pyx(self):
@@ -426,6 +426,10 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         # Generate code for the pre- and postsynaptic events
         pre_event = self.generate_pre_event()
         post_event = self.generate_post_event()
+
+        # structural plasticity
+        add_synapse = add_synapse_body % { 'add_synapse': self.generate_add_synapse() }
+        rem_synapse = rem_synapse_body % { 'rem_synapse': self.generate_rem_synapse() }
         
         record = self.generate_record()
         
@@ -443,6 +447,8 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'global': global_learn,
             'pre_event': pre_event,
             'post_event': post_event,
+            'add_synapse_body': add_synapse,
+            'rem_synapse_body': rem_synapse,
             'record' : record }
         return template % dictionary
     

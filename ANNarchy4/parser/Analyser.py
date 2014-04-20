@@ -594,7 +594,7 @@ def analyse_projection(proj):
     # if no synapse was set during creation of the projection
     # the variable value is not attached to the set of variables
     found = False
-    for var in variables:
+    for var in variables+parameters:
         if var['name'] == "value":
             found = True
     
