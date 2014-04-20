@@ -23,6 +23,9 @@
 
 #include "MeanPopulation.h"
 #include "SpikePopulation.h"
+#include "ANNarchy.h"
+#include "Global.h"
+#include "Includes.h"
 
 Network::Network()
 {
@@ -69,20 +72,6 @@ class Population* Network::getPopulation(unsigned int id)
     }
 }
 
-/*
-std::vector<DATA_TYPE> Network::getRates(int populationID) {
-	return *(populations_[populationID]->getRates());
-}
-
-std::vector<DATA_TYPE> Network::getRates(int populationID,int delay) {
-	return *(populations_[populationID]->getRates(delay));
-}
-
-std::vector<DATA_TYPE> Network::getRates(int populationID, std::vector<int> delays, std::vector<int> ranks) {
-	return populations_[populationID]->getRates(delays, ranks);
-}
-*/
-
 void Network::addPopulation(class Population* population) {
     populations_.push_back(population);
 
@@ -102,13 +91,44 @@ void Network::addPopulation(class Population* population) {
     }
 }
 
-/*
-void Network::connect(int prePopulationID, int postPopulationID, Connector *connector, int projectionID, int targetID) {
-	connector->connect(populations_[prePopulationID], populations_[postPopulationID], projectionID, targetID);
-}
-*/
+void Network::connect(int prePopulationID, int postPopulationID, int projectionID, int targetID, bool spike, std::string filename)
+{
+	std::fstream file(filename, std::ios_base::binary);
+	if (!file.is_open()) {
+		std::cout << "Failed to open file ... " << std::endl;
+		return;
+	}
 
-void Network::disconnect(int prePopulationID, int postPopulationID, int targetID) {
+	std::string line;
+	int preNeuronRank = -1;
+	int previousRank = -1; // to determine start of new dendrite
+	int postNeuronRank = -1;
+	DATA_TYPE value = 0.0;
+	int delay = 0;
+	Projection* dendrite = NULL;
+	while(getline(file, line))
+	{
+		std::vector<std::string> elem = ANNarchy_Global::split(line, ',');
+
+		preNeuronRank = stoi(elem[0]);
+		postNeuronRank = stoi(elem[1]);
+		value = (DATA_TYPE)(stod(elem[2]));
+		delay = stoi(elem[3]);
+
+		if (postNeuronRank != previousRank)
+		{
+			dendrite = createProjInstance().getInstanceOf(projectionID, populations_[prePopulationID], populations_[postPopulationID], postNeuronRank, targetID, spike);
+			dendrite->removeAllSynapses();	// just for the case there are some previously allocated datas
+			populations_[postPopulationID]->addProjection(postNeuronRank, dendrite);
+			previousRank = postNeuronRank;
+		}
+
+		dendrite->addSynapse(preNeuronRank, value, delay);
+	}
+}
+
+void Network::disconnect(int prePopulationID, int postPopulationID, int targetID)
+{
 	if (targetID == -1)
 		populations_[postPopulationID]->removeProjections(populations_[prePopulationID]);
 	else

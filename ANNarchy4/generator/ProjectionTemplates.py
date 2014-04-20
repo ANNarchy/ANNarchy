@@ -39,6 +39,8 @@ public:
 
     int removeSynapse(int rank);
     
+    int removeAllSynapses();
+    
     void initValues();
     
     void computeSum();
@@ -97,9 +99,11 @@ public:
     
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
 
-    int addSynapse(int rank);
+    int addSynapse(int rank, DATA_TYPE value, int delay);
 
-    int removeSynapse(int rank, DATA_TYPE value, int delay);
+    int removeSynapse(int rank);
+    
+    int removeAllSynapses();
     
     void initValues();
     
@@ -296,6 +300,15 @@ int %(class)s::removeSynapse(int rank)
     return -1;
 }
 
+int %(class)s::removeAllSynapses()
+{
+    rank_.clear();
+    value_.clear();
+    delay_.clear();
+    
+    %(destructor)s
+}
+
 void %(class)s::initValues() 
 {
 %(init)s
@@ -392,6 +405,12 @@ int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
 }
 
 int %(class)s::removeSynapse(int rank)
+{
+    std::cout << "to be implement ... " << std::endl;
+    return -1;
+}
+
+int %(class)s::removeAllSynapses()
 {
     std::cout << "to be implement ... " << std::endl;
     return -1;

@@ -53,6 +53,12 @@ public:
     virtual int removeSynapse(int rank) = 0;
 
     /**
+     * 	\brief		removes all synapses from this dendrite
+     * 	\details	is abstract, cause the behavior is implemented by the child class.
+     */
+    virtual int removeAllSynapses() = 0;
+
+    /**
      * 	\brief		record synaptic data
      * 	\details	is abstract, cause the behavior is implemented by the child class.
      */

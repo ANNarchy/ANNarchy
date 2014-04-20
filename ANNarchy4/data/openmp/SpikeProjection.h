@@ -41,6 +41,8 @@ public:
 
     virtual int removeSynapse(int rank) = 0;
 
+    virtual int removeAllSynapses() = 0;
+
     virtual void record() = 0;
 
 	virtual void globalLearn() = 0;
