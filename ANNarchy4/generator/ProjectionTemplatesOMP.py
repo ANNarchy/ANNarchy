@@ -211,6 +211,8 @@ int %(class)s::removeAllSynapses()
     value_.clear();
     delay_.clear();
     
+    nbSynapses_ = 0;
+    
     %(destructor)s
 }
 

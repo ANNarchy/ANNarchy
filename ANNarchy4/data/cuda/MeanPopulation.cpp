@@ -95,11 +95,26 @@ void MeanPopulation::setMaxDelay(int delay)
 #endif
 }
 
-DATA_TYPE MeanPopulation::sum(int neur, int typeID) {
+DATA_TYPE MeanPopulation::sum(int neur, int typeID)
+{
     DATA_TYPE sum=0.0;
 
+#ifdef _DEBUG
+    if ( neur >= typedProjections_.size() )
+    {
+    	std::cout << "No dendrite with id = " << neur << std::endl;
+    	return sum;
+    }
+
+    if ( typeID >= typedProjections_[neur].size() )
+    {
+    	std::cout << "No target with id = " << typeID << std::endl;
+    	return sum;
+    }
+#endif
     auto it = typedProjections_[neur][typeID].begin();
     int end = typedProjections_[neur][typeID].size();
+
     for(int i=0; i != end; i++ )
         sum += static_cast<class MeanProjection*>(*(it++))->getSum();
 

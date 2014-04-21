@@ -520,15 +520,32 @@ class Generator(object):
         with open(Global.annarchy_dir+'/generate/build/ANNarchy.h', mode = 'r') as r_file:
             for a_line in r_file:
                 if a_line.find('//AddProjection') != -1:
+                    code += a_line
                     if(self.cpp_stand_alone):
-                        pass #TODO
-#                         for proj in projections:
-#                             code += proj.generator.generate_cpp_add()
+                        template = """\t\tnet_->connect(%(preID)i, %(postID)i, %(projID)i, %(target)i, %(spike)s, "%(filename)s");\n""" 
+                        
+                        for proj in self.projections:
+                            dictionary = { 'preID' : proj.pre._id,
+                                           'postID' : proj.post._id,
+                                           'projID' : proj._id,
+                                           'target' : proj.post.targets.index(proj.target),
+                                           'spike' : 'false', # TODO!!!!
+                                           'filename' : proj.pre.name+'_'+proj.post.name+'_'+proj.target+'.csv'
+                                          } 
+                            
+                            code += template % dictionary
+
                 elif a_line.find('//AddPopulation') != -1:
+                    code += a_line 
                     if(self.cpp_stand_alone):
-                        pass # TODO
-#                         for pop in populations:
-#                             code += pop.generator.generate_cpp_add()                            
+                        #
+                        # populations register themselves on the network object, so only create the objects
+                        template = """\t\tnew %(class)s("%(name)s", %(size)s);\n"""
+                        for pop in self.populations:
+                            code += template % { 'name': pop.name,
+                                                 'class': pop.class_name,
+                                                 'size': pop.size }
+                                                         
                 elif a_line.find('//createProjInstance') != -1:
                     code += a_line
                     code += self.generate_proj_instance_class()

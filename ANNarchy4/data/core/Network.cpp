@@ -72,7 +72,8 @@ class Population* Network::getPopulation(unsigned int id)
     }
 }
 
-void Network::addPopulation(class Population* population) {
+void Network::addPopulation(class Population* population)
+{
     populations_.push_back(population);
 
     if(population->isMeanRateCoded())
@@ -93,12 +94,13 @@ void Network::addPopulation(class Population* population) {
 
 void Network::connect(int prePopulationID, int postPopulationID, int projectionID, int targetID, bool spike, std::string filename)
 {
-	std::fstream file(filename, std::ios_base::binary);
+	std::fstream file(filename, std::ios_base::in);
 	if (!file.is_open()) {
-		std::cout << "Failed to open file ... " << std::endl;
+		std::cout << "Failed to open file '"<< filename <<"' ... " << std::endl;
 		return;
 	}
 
+	std::cout << "Create pattern from file: "<< filename << std::endl;
 	std::string line;
 	int preNeuronRank = -1;
 	int previousRank = -1; // to determine start of new dendrite
@@ -106,6 +108,8 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 	DATA_TYPE value = 0.0;
 	int delay = 0;
 	Projection* dendrite = NULL;
+
+	int line_counter=0;
 	while(getline(file, line))
 	{
 		std::vector<std::string> elem = ANNarchy_Global::split(line, ',');
@@ -119,12 +123,14 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 		{
 			dendrite = createProjInstance().getInstanceOf(projectionID, populations_[prePopulationID], populations_[postPopulationID], postNeuronRank, targetID, spike);
 			dendrite->removeAllSynapses();	// just for the case there are some previously allocated datas
-			populations_[postPopulationID]->addProjection(postNeuronRank, dendrite);
 			previousRank = postNeuronRank;
 		}
 
 		dendrite->addSynapse(preNeuronRank, value, delay);
+		line_counter++;
 	}
+
+	std::cout << "read "<< line_counter << " line(s) and created "<< postNeuronRank<<" dendrites"<< std::endl;
 }
 
 void Network::disconnect(int prePopulationID, int postPopulationID, int targetID)

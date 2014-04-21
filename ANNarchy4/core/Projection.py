@@ -537,7 +537,7 @@ class Projection(object):
         Save the projection pattern as csv format. 
         Please note, that only the pure connectivity data pre_rank, post_rank, value and delay are stored.
         """
-        filename = self.pre.name + '_' + self.post.name + '_' + self.target
+        filename = self.pre.name + '_' + self.post.name + '_' + self.target+'.csv'
         
         with open(filename, mode='w') as w_file:
             

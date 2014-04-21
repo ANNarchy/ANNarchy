@@ -86,8 +86,13 @@ def set_input():
 
 if __name__=='__main__':
 
-    compile()
-    
+    compile(cpp_stand_alone=True)
+    #input_feature.save_connectivity_as_csv()
+    #feature_feature.save_connectivity_as_csv()
+    #exit(0)
+
+    #compile()
+
     from pyqtgraph.Qt import QtGui, QtCore
     import pyqtgraph as pg
     

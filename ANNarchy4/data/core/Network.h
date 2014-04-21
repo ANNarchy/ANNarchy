@@ -52,6 +52,10 @@ public:
 
 	void run(int steps);
 
+	/**
+	 * 	\brief		add a population to the network
+	 * 	\details	will be automatically called by the Population::Population() method
+	 */
 	void addPopulation(class Population* population);
 
 	int getTime() { return ANNarchy_Global::time; }
