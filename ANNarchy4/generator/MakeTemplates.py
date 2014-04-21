@@ -119,7 +119,7 @@ build/%(obj_type)s : build/%(src_type)s
 \tg++ %(flag)s -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
 
 build/%(obj_type)s : build/%(src_gpu)s
-\tnvcc -arch=compute_20 -Xcompiler -fPIC -I. -c $< -o $@
+\tnvcc -arch=compute_20 -code=sm_20 -Xcompiler -fPIC -I. -c $< -o $@
 
 #
 # remove previous builds

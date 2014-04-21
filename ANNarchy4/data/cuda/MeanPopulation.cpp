@@ -23,10 +23,14 @@
 #include "MeanPopulation.h"
 #include "MeanProjection.h"
 
+#include "simple_test.h"
+
 MeanPopulation::MeanPopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
 {
     rate_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
     delayedRates_ = std::deque< std::vector<DATA_TYPE> >();
+
+    helloCuda();
 }
 
 MeanPopulation::~MeanPopulation()
