@@ -32,7 +32,8 @@ import ANNarchy4.core.Global as Global
 from ANNarchy4.parser.Analyser import Analyser, _extract_functions
 from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
-
+from MakeTemplates import *
+ 
 def _folder_management(profile_enabled, clean):
     """
     ANNarchy is provided as a python package. For compilation a local folder
@@ -378,50 +379,17 @@ class Generator(object):
             else:
                 flags = "-O0 -g -D_DEBUG"
     
-            src = """# Makefile
-SRC = $(wildcard build/*.cpp)
-PYX = $(wildcard pyx/*.pyx)
-OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
-     
-all:
-\t@echo "Please provide a target, either 'ANNarchyCython_2.6', 'ANNarchyCython_2.7' or 'ANNarchyCython_3.x for python versions."
-
-ANNarchyCython_2.6: $(OBJ) pyx/ANNarchyCython_2.6.o
-\t@echo "Build ANNarchyCython library for python 2.6"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.6.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.6 -o ANNarchyCython.so  
-
-pyx/ANNarchyCython_2.6.o : pyx/ANNarchyCython.pyx
-\tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.6 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.6.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
-
-ANNarchyCython_2.7: $(OBJ) pyx/ANNarchyCython_2.7.o
-\t@echo "Build ANNarchyCython library for python 2.7"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.7.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
-
-pyx/ANNarchyCython_2.7.o : pyx/ANNarchyCython.pyx
-\tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
-
-ANNarchyCython_3.x: $(OBJ) pyx/ANNarchyCython_3.x.o
-\t@echo "Build ANNarchyCython library for python 3.x"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_3.x.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython3.2mu -o ANNarchyCython.so  
-
-pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
-\tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python3.2 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_3.x.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
-
-build/%.o : build/%.cpp
-\tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
-
-ANNarchyCPP : $(OBJ)
-\tg++ """+flags+""" -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.o -o libANNarchyCPP.so
-
-clean:
-\trm -rf build/*.o
-\trm -rf pyx/*.o
-\trm -rf ANNarchyCython.so
-    """
-            
+            # generate Makefile
+            if Global.config['paradigm'] == "openmp":
+                src = omp_makefile % { 'src_type': '%.cpp',
+                                       'obj_type': '%.o',
+                                       'flag': flags }
+            else: 
+                src = cuda_makefile % { 'src_type': '%.cpp',
+                                        'obj_type': '%.o',
+                                        'flag': flags }
+            print src
+                        
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)

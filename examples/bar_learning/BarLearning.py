@@ -5,7 +5,7 @@
 #
 from ANNarchy4 import *
 
-setup(paradigm="cuda")
+setup(paradigm="openmp")
 
 # Defining the neurons
 InputNeuron = RateNeuron(
