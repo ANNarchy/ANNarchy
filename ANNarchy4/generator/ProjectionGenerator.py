@@ -38,8 +38,11 @@ class ProjectionGenerator(object):
         
         # Names of the files to be generated
         self.header = Global.annarchy_dir+'/generate/build/'+self.name+'.h'
-        self.body = Global.annarchy_dir+'/generate/build/'+self.name+'.cpp'
         self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.name+'.pyx'
+        if Global.config['paradigm']=="openmp":
+            self.body = Global.annarchy_dir+'/generate/build/'+self.name+'.cpp'
+        else:
+            self.body = Global.annarchy_dir+'/generate/build/'+self.name+'.cu'
         
     def generate(self, verbose):
         self.verbose = verbose

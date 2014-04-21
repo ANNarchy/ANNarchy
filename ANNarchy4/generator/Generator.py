@@ -386,10 +386,10 @@ class Generator(object):
                                        'flag': flags }
             else: 
                 src = cuda_makefile % { 'src_type': '%.cpp',
+                                        'src_gpu': '%.cu',
                                         'obj_type': '%.o',
                                         'flag': flags }
-            print src
-                        
+
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)
