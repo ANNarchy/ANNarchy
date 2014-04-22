@@ -60,7 +60,8 @@ config = dict(
     'show_time': False,
     'suppress_warnings': False,
     'float_prec': 'single',
-    'num_threads': None #default by os
+    'num_threads': None, #default by os
+    'paradigm': 'openmp'
    }
 )
 
@@ -90,6 +91,7 @@ def setup(**keyValueArgs):
     * *suppress_warnings*:  if set True warnings (e. g. from mathematical parser) are suppressed.
     * *show_time*:  if set True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
     * *float_prec*: determine the used floating point precision. By default ANNarchy4 uses single floating point precision for computation. 
+    * *paradigm*: specify the parallelization paradigm, available are: openmp, cuda
     
     **Note**: use this function before any other functions of ANNarchy4.
     """

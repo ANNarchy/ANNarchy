@@ -167,8 +167,6 @@ cdef class LocalProjection:
 
         def __set__(self, rank):
             self.cInstance.setRank(rank)
-            if(self.spike):
-                self.cInstance.invertRanks()
                 
     property learnable:
         def __get__(self):

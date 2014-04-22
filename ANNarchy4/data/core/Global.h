@@ -32,6 +32,8 @@
 #include <functional>
 #include <deque>
 #include <iostream>
+#include <sstream>
+#include <fstream>
 
 //
 //	platform dependencies
@@ -55,7 +57,26 @@ namespace ANNarchy_Global
     inline DATA_TYPE negative(DATA_TYPE x) { return x < 0.0 ? x : 0.0; }
 
     extern int time;
-    
+
+    /**
+     * 	\brief		simple function to split a string at a delimiter
+     * 	\details	I'm still wondering, when something trivial like that, will be part of STL ...
+     * 	\param[in]	string to split
+     * 	\param[in]	char working as delimiter
+     */
+    inline std::vector<std::string> split(const std::string s, char delim)
+    {
+    	std::vector<std::string> elems;
+
+        std::stringstream ss(s);
+        std::string item;
+        while (std::getline(ss, item, delim)) {
+            elems.push_back(item);
+        }
+
+        return elems;
+    }
+
     //FUNCTIONS
 }
 
@@ -70,7 +91,6 @@ namespace ANNarchy_Global
 #include "Random.h"
 #include "Network.h"
 #include "Population.h"
-#include "Connector.h"
 #include "Projection.h"
 
 #endif

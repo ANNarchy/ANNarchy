@@ -585,6 +585,23 @@ def analyse_projection(proj):
     if len(attributes) != len(list(set(attributes))):
         _error(proj.name, ': attributes must be declared only once.', attributes)
         exit(0)
+    
+    # extend the list of parameters by rank and delay
+    parameters += [ { 'name': 'rank', 'init': 0, 'ctype': 'int', 'flags': [] }, 
+                    { 'name': 'delay', 'init': 0, 'ctype': 'int', 'flags': [] } 
+                  ]
+    
+    # if no synapse was set during creation of the projection
+    # the variable value is not attached to the set of variables
+    found = False
+    for var in variables+parameters:
+        if var['name'] == "value":
+            found = True
+    
+    # value is not declared so far, so we simply add a parameter
+    if not found:
+        parameters += [ { 'name': 'value', 'init': 0, 'ctype': 'DATA_TYPE', 'flags': [] } ]
+        
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables

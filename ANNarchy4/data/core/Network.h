@@ -46,15 +46,7 @@ public:
 	    omp_set_num_threads(threads);
 	}
 
-	/*
-	std::vector<DATA_TYPE> getRates(int populationID);
-
-	std::vector<DATA_TYPE> getRates(int populationID,int delay);
-
-	std::vector<DATA_TYPE> getRates(int populationID, std::vector<int> delays, std::vector<int> ranks);
-    */
-
-	void connect(int prePopulationID, int postPopulationID, class Connector *connector, int projectionID, int target);
+	void connect(int prePopulationID, int postPopulationID, int projectionID, int target, bool spike, std::string filename);
 
 	void disconnect(int prePopulationID, int postPopulationID, int target=-1);
 

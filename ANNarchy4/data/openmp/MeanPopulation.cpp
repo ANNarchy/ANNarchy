@@ -1,5 +1,27 @@
+/*
+ *    Population.h
+ *
+ *    This file is part of ANNarchy.
+ *
+ *   Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+ *   Helge Ülo Dinkelbach <helge.dinkelbach@gmail.com>
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   ANNarchy is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "Global.h"
 #include "MeanPopulation.h"
+#include "MeanProjection.h"
 
 MeanPopulation::MeanPopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
 {
@@ -76,16 +98,10 @@ void MeanPopulation::setMaxDelay(int delay)
 DATA_TYPE MeanPopulation::sum(int neur, int typeID) {
     DATA_TYPE sum=0.0;
 
-    /*
-    for(int i=0; i< projections_[neur].size(); i++)
-        if(projections_[neur][i]->getTarget() == typeID)
-            sum += projections_[neur][i]->getSum();
-    */
-
     auto it = typedProjections_[neur][typeID].begin();
     int end = typedProjections_[neur][typeID].size();
     for(int i=0; i != end; i++ )
-        sum += (*(it++))->getSum();
+        sum += static_cast<class MeanProjection*>(*(it++))->getSum();
 
     return sum;
 }
@@ -126,7 +142,7 @@ void MeanPopulation::metaSum()
             std::cout << "\tpre = " << projections_[n][p]->getPrePopulation()->getName() << std::endl;
             std::cout << "\tsynaseCount = " << (int)(projections_[n][p]->getSynapseCount()) << std::endl;
         #endif
-            projections_[n][p]->computeSum();
+           	(static_cast<class MeanProjection*>(projections_[n][p]))->computeSum();
         }
 
     #ifdef ANNAR_SCHEDULE
@@ -234,7 +250,7 @@ void MeanPopulation::metaLearn()
         for(int p=0; p< (int)projections_[n].size();p++)
         {
             if ( projections_[n][p]->isLearning() )
-            	projections_[n][p]->globalLearn();
+            	static_cast<class MeanProjection*>(projections_[n][p])->globalLearn();
         }
     }
 
@@ -269,7 +285,7 @@ void MeanPopulation::metaLearn()
     #endif
         for(int p=0; p< (int)projections_[n].size();p++) {
             if ( projections_[n][p]->isLearning() )
-            	projections_[n][p]->localLearn();
+            	static_cast<class MeanProjection*>(projections_[n][p])->localLearn();
         }
     }
 

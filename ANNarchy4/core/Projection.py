@@ -118,8 +118,8 @@ class Projection(object):
             # pre evaluate init to 
             # transform expressions into their value
             self.init[var['name']] = var['init']
-        self.attributes = self.parameters + self.variables
-        
+
+        self.attributes = self.parameters + self.variables 
         
         # Add the population to the global variable
         Global._projections.append(self)
@@ -531,6 +531,28 @@ class Projection(object):
         self._synapses = self._connector(self.pre, self.post, **self._connector_params)
 
         return self
+
+    def save_connectivity_as_csv(self):
+        """
+        Save the projection pattern as csv format. 
+        Please note, that only the pure connectivity data pre_rank, post_rank, value and delay are stored.
+        """
+        filename = self.pre.name + '_' + self.post.name + '_' + self.target
+        
+        with open(filename, mode='w') as w_file:
+            
+            for dendrite in self._dendrites:
+                rank_iter = iter(dendrite.rank)
+                value_iter = iter(dendrite.value)
+                delay_iter = iter(dendrite.delay)
+                post_rank = dendrite.post_rank
+
+                for i in xrange(dendrite.size):
+                    w_file.write(str(next(rank_iter))+', '+
+                                 str(post_rank)+', '+
+                                 str(next(value_iter))+', '+
+                                 str(next(delay_iter))+'\n'
+                                 )
       
     def get(self, name):
         """ Returns a list of parameters/variables values for each dendrite in the projection.
@@ -629,7 +651,7 @@ class Projection(object):
             m_row = None
             
             for x in xrange(self.post.geometry[0]):
-                m = self._dendrites[i].cy_instance.value
+                m = getattr(self._dendrites[i].cy_instance,variable)
                 
                 if m.shape != self.pre.geometry:
                     new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
@@ -680,7 +702,7 @@ class Projection(object):
                     else:
                         return self.init[name]
                 else:
-                    return self._get_cython_attribute( name)
+                    return self._get_cython_attribute( name )
             else:
                 return object.__getattribute__(self, name)
         return object.__getattribute__(self, name)

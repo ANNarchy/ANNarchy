@@ -291,6 +291,7 @@ rate_prepare_neurons="""
 #    * single_global_ops : code for the single global operations
 spike_population_body = """#include "%(class)s.h"
 #include "Global.h"
+#include "SpikeProjection.h"
 
 %(class)s::%(class)s(std::string name, int nbNeurons): SpikePopulation(name, nbNeurons)
 {
@@ -365,13 +366,13 @@ void %(class)s::propagateSpike() {
             // emit a postsynaptic spike on outgoing projections
             for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
             {
-                (*p_it)->preEvent(*n_it);
+                static_cast<SpikeProjection*>(*p_it)->preEvent(*n_it);
             }
             
             // emit a postsynaptic spike on receiving projections
             for( auto p_it = projections_[(*n_it)].begin(); p_it != projections_[(*n_it)].end(); p_it++)
             {
-                (*p_it)->postEvent();
+                static_cast<SpikeProjection*>(*p_it)->postEvent();
             }
         }
         

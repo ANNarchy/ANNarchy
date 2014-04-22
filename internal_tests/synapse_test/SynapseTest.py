@@ -8,28 +8,29 @@ from datetime import datetime
 #
 # Define the neuron classes
 #
-Simple = Neuron(   
-    tau = 10.0,
-    mp = Variable(init = 0, eq="mp = mp+1"),
-    #rate = Variable(init = 0.0, eq="tau * drate / dt = 1.0/mp"),
-    #rate = Variable(init = 0.0, eq="rate = t")
-    rate = Variable(init = 0.0, eq="tau * drate/dt +rate = pos(0.3)"),
-    order = ['mp','rate']
+Simple = RateNeuron(
+    parameters= """   
+        tau = 10.0
+    """,
+    equations = """
+        tau * drate/dt +rate = pos(0.3)
+    """
 )
 
-SimpleSynapse = Synapse(
-    tau = 1.0,
-    boolPar = True,
-    boolVar = Variable(init=True),
-    intVar = Variable(init=1, type=int),
-    value = Variable(init=0, eq="value = 1.0 / pre.rate", min=-0.5, max=1.0),
-    #value2 = Variable(init=0, eq="value2 = 1.0 / pre.rate", min=-0.5, max=1.0, type=float)
+SimpleSynapse = RateSynapse(
+    parameters="""
+        tau = 1.0
+    """,
+    equations = """
+        dtest_var/dt = 0.3 - test_var : init = 0.3 
+        value = 1.0 / pre.rate : min=-0.5, max=1.0
+    """
 )
 
-InputPop = Population(name="Input", geometry=(8,8), neuron=Simple)
+InputPop = Population(name="Input", geometry=(8,1), neuron=Simple)
 Layer1Pop = Population(name="Layer1", geometry=(1,1), neuron=Simple)
 
-Proj = Projection(pre="Input", post="Layer1", target='exc', synapse=SimpleSynapse, connector=All2All(weights= Uniform(0.0,1.0), delays=2.0))
+Proj = Projection(pre="Input", post="Layer1", target='exc', synapse = SimpleSynapse).connect_all_to_all(weights= Uniform(0.0,1.0), delays=2.0)
 
 #
 # Analyse and compile everything, initialize the parameters/variables...
@@ -155,17 +156,10 @@ if __name__ == '__main__':
 
     set_current_step(10)
 
-    InputPop.start_record('rate')
-    simulate(5)
-    rec = InputPop.get_record('rate')
-    print rec['start']
-    print rec['stop']
-    print rec['data']
-
     #loop()
     
     #loop2()
 
     #loop3()
     
-    #synapse_test()
+    synapse_test()
