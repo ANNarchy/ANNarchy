@@ -68,28 +68,77 @@ weightReduce(
         *result = sdata[0];
 }
 
+/**
+ * 	\brief		manages gpu data
+ */
+class weightSumData
+{
+public:
+	static weightSumData* instance(int threadId, int N)
+	{
+		while ( weightSumData_.size() <= threadId ) // resize if needed
+		{
+			weightSumData_.push_back(NULL);
+		}
+
+		if( weightSumData_[threadId] == NULL ) // initialize if not already done
+		{
+			weightSumData_[threadId] = new weightSumData(N);
+		}
+
+		return weightSumData_[threadId];
+	}
+
+	void resize(int N)
+	{
+		std::cout << "Resize from " << nbElements_ << " to " << N << std::endl;
+		cudaDeviceSynchronize();
+		cudaMalloc((void**)&gpuWeights_, sizeof(DATA_TYPE) * N);
+		cudaMalloc((void**)&gpuRates_, sizeof(DATA_TYPE) * N);
+		cudaMalloc((void**)&gpuIdx_, sizeof(int) * N);
+
+		nbElements_ = N;
+	}
+
+	DATA_TYPE* getRatePtr() { return gpuRates_; }
+	DATA_TYPE* getWeightPtr() { return gpuWeights_; }
+	int* getIndexPtr() { return gpuIdx_; }
+	DATA_TYPE* getResultPtr() { return gpuResult_; }
+
+private:
+	weightSumData(int N)
+	{
+		gpuRates_ = NULL;
+		gpuWeights_ = NULL;
+		gpuResult_ = NULL;
+		gpuIdx_ = NULL;
+		nbElements_ = NULL;
+
+		cudaMalloc((void**)&gpuResult_, sizeof(DATA_TYPE));
+		resize(N);
+	}
+
+	DATA_TYPE *gpuRates_;
+	DATA_TYPE *gpuWeights_;
+	DATA_TYPE *gpuResult_;
+	int *gpuIdx_;
+	int nbElements_;
+
+	static std::vector<weightSumData*> weightSumData_;
+};
+
+std::vector<weightSumData*> weightSumData::weightSumData_ = std::vector<weightSumData*>();
+
 DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<DATA_TYPE> preRates)
 {
-	DATA_TYPE sum = 0.0;
-
-	DATA_TYPE *gpuRates;
-	DATA_TYPE *gpuWeights;
-	DATA_TYPE *gpuResult;
-	int *gpuIdx;
+	int N = rank.size();
+	int tId = omp_get_thread_num();
 
 	double start1 = omp_get_wtime();
-
-	cudaMalloc((void**)&gpuResult, sizeof(DATA_TYPE));
-
-	cudaMalloc((void**)&gpuWeights, sizeof(DATA_TYPE) * value.size());
-	cudaMemcpy(gpuWeights, value.data(), sizeof(DATA_TYPE) * value.size(), cudaMemcpyHostToDevice);
-
-	cudaMalloc((void**)&gpuRates, sizeof(DATA_TYPE) * preRates.size());
-	cudaMemcpy(gpuRates, preRates.data(), sizeof(DATA_TYPE) * preRates.size(), cudaMemcpyHostToDevice);
-
-	cudaMalloc((void**)&gpuIdx, sizeof(int) * rank.size());
-	cudaMemcpy(gpuIdx, rank.data(), sizeof(int) * rank.size(), cudaMemcpyHostToDevice);
-	std::cout << "Allocating data ("<< rank.size() <<" synapses): "<< (omp_get_wtime() - start1)*1000.0 << " ms "<< std::endl;
+	cudaMemcpy( weightSumData::instance(tId, N)->getWeightPtr(), value.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice );
+	cudaMemcpy( weightSumData::instance(tId, N)->getRatePtr(), preRates.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice);
+	cudaMemcpy( weightSumData::instance(tId, N)->getIndexPtr(), rank.data(), sizeof(int) * N, cudaMemcpyHostToDevice);
+	std::cout << "Copying data ("<< N <<" synapses): "<< (omp_get_wtime() - start1)*1000.0 << " ms "<< std::endl;
 
 	int numBlocks = (int)ceil(double(rank.size())/32.0);
 	int smemSize = 64*sizeof(DATA_TYPE);
@@ -97,9 +146,15 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
 
+	std::cout << "Compute kernel ... "<< std::endl;
 	cudaEventRecord(start, 0);
 
-	weightReduce<DATA_TYPE,32><<<numBlocks, 32, smemSize>>>(gpuRates, gpuWeights, gpuIdx, rank.size(), gpuResult);
+	weightReduce<DATA_TYPE,32><<<numBlocks, 32, smemSize>>>(weightSumData::instance(tId, N)->getRatePtr(),
+															weightSumData::instance(tId, N)->getWeightPtr(),
+															weightSumData::instance(tId, N)->getIndexPtr(),
+															N,
+															weightSumData::instance(tId, N)->getResultPtr()
+															);
 
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
@@ -109,14 +164,10 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 	cudaEventDestroy(start);
 	cudaEventDestroy(stop);
 
-	cudaDeviceSynchronize(); // synchronize the printf
 	std::cout << "Time for kernel ("<< rank.size() <<" synapses): "<< elapsedTime << " ms "<< std::endl;
-	cudaMemcpy(&sum, gpuResult, sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
 
-	cudaFree(gpuWeights);
-	cudaFree(gpuRates);
-	cudaFree(gpuIdx);
-	cudaFree(gpuResult);
+	DATA_TYPE sum = 0.0;
+	cudaMemcpy(&sum, weightSumData::instance(tId, N)->getResultPtr(), sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
 
 	return sum;
 }

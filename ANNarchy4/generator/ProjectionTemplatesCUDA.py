@@ -367,7 +367,13 @@ psp_code_body = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-        sum_ = weightedSum(rank_, value_, *pre_rates_);
+    #ifdef _DEBUG
+        std::cout << "sum over " << nbSynapses_ << " elements." << std::endl;
+    #endif
+        for(int i=0; i < nbSynapses_; i++) 
+        {
+            sum_ += %(psp)s
+        }        
     }
     else    // delayed connections
     {
@@ -375,15 +381,55 @@ psp_code_body = \
         {
             pre_rates_ = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_[0]);
             
-            sum_ = weightedSum(rank_, value_, *pre_rates_);
+        #ifdef _DEBUG
+            std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
+            for(int i=0; i<(int)(*pre_rates_).size(); i++) 
+            {
+                std::cout << (*pre_rates_)[i] << " ";
+            }
+            std::cout << std::endl;
+        #endif
+            
+            for(int i=0; i < nbSynapses_; i++) 
+            {
+                sum_ += %(psp_const_delay)s
+            }
         }
         else    // different delays [0..maxDelay]
         {
             std::vector<DATA_TYPE> delayedRates = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_, rank_);
 
-            sum_ = weightedSum(rank_, value_, delayedRates);
+            for(int i=0; i < nbSynapses_; i++) 
+            {
+                sum_ += %(psp_dyn_delay)s
+            }
         }
     }
+        
+    DATA_TYPE gpu_sum =0.0;
+    
+    if(delay_.empty() || maxDelay_ == 0)    // no delay
+    {
+        gpu_sum = weightedSum(rank_, value_, *pre_rates_);
+    }
+    else    // delayed connections
+    {
+        if(constDelay_) // one delay for all connections
+        {
+            pre_rates_ = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_[0]);
+            
+            gpu_sum = weightedSum(rank_, value_, *pre_rates_);
+        }
+        else    // different delays [0..maxDelay]
+        {
+            std::vector<DATA_TYPE> delayedRates = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_, rank_);
+
+            gpu_sum = weightedSum(rank_, value_, delayedRates);
+        }
+    }
+    
+    std::cout << "sum(CPU): " << sum_ << std::endl;
+    std::cout << "sum(GPU): " << gpu_sum << std::endl;
 """ 
 
 # Template for the preEvent() method of a projection
