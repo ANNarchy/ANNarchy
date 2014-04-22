@@ -207,13 +207,7 @@ int %(class)s::removeSynapse(int rank)
 
 int %(class)s::removeAllSynapses()
 {
-    rank_.clear();
-    value_.clear();
-    delay_.clear();
-    
-    nbSynapses_ = 0;
-    
-    %(destructor)s
+%(rem_all_synapse_body)s
 }
 
 void %(class)s::initValues() 
@@ -317,8 +311,7 @@ int %(class)s::removeSynapse(int rank)
 
 int %(class)s::removeAllSynapses()
 {
-    std::cout << "to be implement ... " << std::endl;
-    return -1;
+%(rem_all_synapse_body)s
 }
 
 void %(class)s::initValues() 
@@ -406,6 +399,8 @@ psp_code_body = \
             }
         }
     }
+    
+    //std::cout << "sum(CPU): " << sum_ << std::endl;
 """ 
 
 # Template for the preEvent() method of a projection
