@@ -111,7 +111,7 @@ pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
 #
 # CPP stand alone library
 ANNarchyCPP : $(OBJ) $(GPU_OBJ)
-\tg++ %(flag)s -lcudart -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.o -o libANNarchyCPP.so
+\tg++ %(flag)s -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.o -lcudart -o libANNarchyCPP.so
 
 #
 # compile the source targets
@@ -119,7 +119,7 @@ build/%(obj_type)s : build/%(src_type)s
 \tg++ %(flag)s -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
 
 build/%(obj_type)s : build/%(src_gpu)s
-\tnvcc -arch=compute_20 -code=sm_20 -Xcompiler -fPIC -I. -c $< -o $@
+\tnvcc -arch=compute_30 -code=sm_30 -Xcompiler -fPIC -I. -c $< -o $@
 
 #
 # remove previous builds

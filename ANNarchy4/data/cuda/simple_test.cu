@@ -1,20 +1,122 @@
 #include "simple_test.h"
 #include <stdio.h>
 #include <iostream>
+#include <vector>
+#include <omp.h>
 
 __global__ void helloCudaKernel()
 {
-	printf("Hello from your device :-)");
+	printf("Hello from your device :-) \n");
 }
 
 void helloCuda()
 {
 	cudaSetDevice(0);
-	std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 	
-	printf("test ... \n");
 	helloCudaKernel<<<1,1>>>();
-	
-	std::cout << cudaGetErrorString(cudaGetLastError()) << std::endl;
 	cudaDeviceSynchronize(); // synchronize the printf
+}
+
+template<class T, unsigned int blockSize>
+__global__ void
+weightReduce(
+		T *pr,		// neurons preynaptic layer
+		T *w,		// weights matrix per neuron
+		int *idx,	// index matrix per neuron
+		int c,		// number of connections
+		T *result	// write back result
+	  ) {
+
+	unsigned int tid = threadIdx.x;
+    unsigned int i = tid;
+
+	extern T __shared__ sdata[];
+	T mySum = 0.0;
+
+	while(i < c) {
+		mySum += pr[idx[i]] * w[i];
+
+		i+= blockSize;
+	}
+
+    sdata[tid] = mySum;
+    __syncthreads();
+
+    // do reduction in shared mem
+    if (blockSize >= 512) { if (tid < 256) { sdata[tid] = mySum = mySum + sdata[tid + 256]; } __syncthreads(); }
+    if (blockSize >= 256) { if (tid < 128) { sdata[tid] = mySum = mySum + sdata[tid + 128]; } __syncthreads(); }
+    if (blockSize >= 128) { if (tid <  64) { sdata[tid] = mySum = mySum + sdata[tid +  64]; } __syncthreads(); }
+
+    if (tid < 32)
+    {
+        // now that we are using warp-synchronous programming (below)
+        // we need to declare our shared memory volatile so that the compiler
+        // doesn't reorder stores to it and induce incorrect behavior.
+		volatile T* smem = sdata;
+
+        if (blockSize >=  64) { smem[tid] = mySum = mySum + smem[tid + 32]; }
+        if (blockSize >=  32) { smem[tid] = mySum = mySum + smem[tid + 16]; }
+        if (blockSize >=  16) { smem[tid] = mySum = mySum + smem[tid +  8]; }
+        if (blockSize >=   8) { smem[tid] = mySum = mySum + smem[tid +  4]; }
+        if (blockSize >=   4) { smem[tid] = mySum = mySum + smem[tid +  2]; }
+        if (blockSize >=   2) { smem[tid] = mySum = mySum + smem[tid +  1]; }
+
+	}
+
+    // write result for this block to global mem
+    if (tid == 0)
+        *result = sdata[0];
+}
+
+DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<DATA_TYPE> preRates)
+{
+	DATA_TYPE sum = 0.0;
+
+	DATA_TYPE *gpuRates;
+	DATA_TYPE *gpuWeights;
+	DATA_TYPE *gpuResult;
+	int *gpuIdx;
+
+	double start1 = omp_get_wtime();
+
+	cudaMalloc((void**)&gpuResult, sizeof(DATA_TYPE));
+
+	cudaMalloc((void**)&gpuWeights, sizeof(DATA_TYPE) * value.size());
+	cudaMemcpy(gpuWeights, value.data(), sizeof(DATA_TYPE) * value.size(), cudaMemcpyHostToDevice);
+
+	cudaMalloc((void**)&gpuRates, sizeof(DATA_TYPE) * preRates.size());
+	cudaMemcpy(gpuRates, preRates.data(), sizeof(DATA_TYPE) * preRates.size(), cudaMemcpyHostToDevice);
+
+	cudaMalloc((void**)&gpuIdx, sizeof(int) * rank.size());
+	cudaMemcpy(gpuIdx, rank.data(), sizeof(int) * rank.size(), cudaMemcpyHostToDevice);
+	std::cout << "Allocating data ("<< rank.size() <<" synapses): "<< (omp_get_wtime() - start1)*1000.0 << " ms "<< std::endl;
+
+	int numBlocks = (int)ceil(double(rank.size())/32.0);
+	int smemSize = 64*sizeof(DATA_TYPE);
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+
+	cudaEventRecord(start, 0);
+
+	weightReduce<DATA_TYPE,32><<<numBlocks, 32, smemSize>>>(gpuRates, gpuWeights, gpuIdx, rank.size(), gpuResult);
+
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	float elapsedTime = 0.0;
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+
+	cudaEventDestroy(start);
+	cudaEventDestroy(stop);
+
+	cudaDeviceSynchronize(); // synchronize the printf
+	std::cout << "Time for kernel ("<< rank.size() <<" synapses): "<< elapsedTime << " ms "<< std::endl;
+	cudaMemcpy(&sum, gpuResult, sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
+
+	cudaFree(gpuWeights);
+	cudaFree(gpuRates);
+	cudaFree(gpuIdx);
+	cudaFree(gpuResult);
+
+	return sum;
 }

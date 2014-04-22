@@ -155,6 +155,7 @@ private:
 rate_projection_body = \
 """#include "%(class)s.h"        
 #include "Global.h"
+#include "simple_test.h"
 
 using namespace ANNarchy_Global;
 
@@ -366,13 +367,7 @@ psp_code_body = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-    #ifdef _DEBUG
-        std::cout << "sum over " << nbSynapses_ << " elements." << std::endl;
-    #endif
-        for(int i=0; i < nbSynapses_; i++) 
-        {
-            sum_ += %(psp)s
-        }        
+        sum_ = weightedSum(rank_, value_, *pre_rates_);
     }
     else    // delayed connections
     {
@@ -380,28 +375,13 @@ psp_code_body = \
         {
             pre_rates_ = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_[0]);
             
-        #ifdef _DEBUG
-            std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
-            for(int i=0; i<(int)(*pre_rates_).size(); i++) 
-            {
-                std::cout << (*pre_rates_)[i] << " ";
-            }
-            std::cout << std::endl;
-        #endif
-            
-            for(int i=0; i < nbSynapses_; i++) 
-            {
-                sum_ += %(psp_const_delay)s
-            }
+            sum_ = weightedSum(rank_, value_, *pre_rates_);
         }
         else    // different delays [0..maxDelay]
         {
             std::vector<DATA_TYPE> delayedRates = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_, rank_);
 
-            for(int i=0; i < nbSynapses_; i++) 
-            {
-                sum_ += %(psp_dyn_delay)s
-            }
+            sum_ = weightedSum(rank_, value_, delayedRates);
         }
     }
 """ 

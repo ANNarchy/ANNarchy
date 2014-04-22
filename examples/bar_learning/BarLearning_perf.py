@@ -6,7 +6,7 @@
 from ANNarchy4 import *
 from pyqtgraph.Qt import QtCore, QtGui
 
-setup()
+setup(paradigm="cuda")
 
 # Defining the neurons
 InputNeuron = RateNeuron(
