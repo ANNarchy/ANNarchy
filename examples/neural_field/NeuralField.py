@@ -14,7 +14,7 @@ parameters="""
     baseline = 0.0
 """,
 equations="""
-    noise = Uniform(-0.1, 0.1)
+    noise = Uniform(-0.5, 0.5)
     tau * dmp / dt + mp = baseline + noise
     rate = pos(mp)
 """ 
@@ -91,33 +91,45 @@ class Viewer(object):
 
 import pyqtgraph.opengl as gl
 class GLViewer(object):
-    def __init__(self, pop, world):
+    def __init__(self, populations, world):
     
-        self.pop = pop
+        self.populations = populations
         self.world = world
           
         self.win = gl.GLViewWidget()
         self.win.show()
-        self.win.setCameraPosition(distance=30)
+        self.win.setCameraPosition(distance=50)
         
-        self.plot = gl.GLSurfacePlotItem(
-            x=np.array(range(self.pop.geometry[0])), 
-            y = np.array(range(self.pop.geometry[1])), 
-            shader='heightColor', 
-            computeNormals=False, 
-            smooth=False
-        )
+        self.plots = []
         
-        #self.plot.shader()['colorMap'] = np.array([0.2, 2, 0.5, 0.2, 1, 1, 0.2, 0, 2])
-        self.plot.translate(-self.pop.geometry[0]/2, -self.pop.geometry[1]/2, 0)
-        self.win.addItem(self.plot)
+        shift = - 20
+        for pop in self.populations:
+            
+            p = gl.GLSurfacePlotItem(
+                x = np.linspace(0, pop.geometry[0]-1, pop.geometry[0]), 
+                y = np.linspace(0, pop.geometry[1]-1, pop.geometry[1]), 
+                #y = np.array(range(pop.geometry[1])), 
+                shader='heightColor', 
+                computeNormals=False, 
+                smooth=False
+            )
+            p.translate(shift, -10, -1)
+            self.win.addItem(p)
+            self.plots.append(p)
+            shift += 25
+        
+    def scale(self, data):
+        " Colors are shown in the range [-1, 1] per default."
+        return 1.8 * data -0.9
     
     def update(self):
     
         # Simulate for 200ms
         self.world.rotate(200)      
         # Actualize the GUI
-        self.plot.setData(z=np.array(self.pop.rate)) 
+        for i in range(len(self.populations)):
+            self.plots[i].setData(z=self.scale(self.populations[i].rate)) 
+        # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         
     def run(self):
@@ -141,7 +153,7 @@ if __name__ == "__main__":
 
     # Create the GUI using PyQtGraph
     app = QtGui.QApplication([])
-    viewer = GLViewer(pop= FocusPop, world=world)
+    viewer = GLViewer(populations = [InputPop, FocusPop], world=world)
     # Start the simulation            
     viewer.run()
 
