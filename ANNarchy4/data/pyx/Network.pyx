@@ -52,7 +52,7 @@ cdef class pyNetwork:
 		self.cInstance.setTime(time)
 
 	def set_num_threads(self, threads):
-		self.cInstance.setNumThreads(threads)
+		self.cInstance.setNumThreads(int(threads))
         
 	def Run(self, int nbSteps):
 		self.cInstance.run(nbSteps)

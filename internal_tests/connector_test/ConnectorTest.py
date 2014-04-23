@@ -95,12 +95,35 @@ def stochastic_pattern(pre, post, weight, propability):
                         synapse_dict[(pre_rank, post_rank)] = { 'w': weight, 'd': 2.0 }
   
     return synapse_dict
-    
+
 testUserPattern = Projection(
     pre = Middle, 
     post = Out, 
     target = 'user' 
 ).connect_with_func(method=stochastic_pattern, weight=1.0, propability=0.3)   
+
+def stochastic_pattern2(pre, post, weight, propability):
+    
+    synapse_dict = []
+    app = synapse_dict.append
+    
+    for post_h in xrange(post.height):
+        for post_w in xrange(post.width):
+            post_rank = post.rank_from_coordinates( (post_w, post_h) )
+            
+            for pre_h in xrange(pre.height):
+                for pre_w in xrange(pre.width):
+                    pre_rank = pre.rank_from_coordinates( (pre_w, pre_h) )
+                    if np.random.random() < propability:
+                        app( (pre_rank, post_rank, weight, 2.0,) )
+  
+    return synapse_dict
+    
+testUserPattern2 = Projection(
+    pre = Middle, 
+    post = Out, 
+    target = 'user2' 
+).connect_with_func(method=stochastic_pattern2, weight=1.0, propability=0.3)   
 
 compile(debug_build=True)
 
@@ -127,5 +150,8 @@ visFixedPostPattern.render()
 
 visTestUserPattern = Visualization( [ { 'proj': testUserPattern, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'user defined pattern'} ] )
 visTestUserPattern.render()
+
+visTestUserPattern2 = Visualization( [ { 'proj': testUserPattern2, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'user defined pattern2'} ] )
+visTestUserPattern2.render()
 
 raw_input()
