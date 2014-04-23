@@ -287,3 +287,16 @@ rem_synapse_body = """
 
     return -1;
 """
+
+rem_all_synapse_body = """
+    rank_.clear();
+    value_.clear();
+    delay_.clear();
+    
+    nbSynapses_ = 0;
+    
+    %(rem_all_synapse)s
+    
+    if( !isRateCoded_ )
+        inv_rank_.clear();
+"""

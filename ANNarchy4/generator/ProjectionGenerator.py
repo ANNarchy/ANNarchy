@@ -266,6 +266,25 @@ class ProjectionGenerator(object):
                 code += """%(var)s_.erase(%(var)s_.begin()+i);""" % { 'var' : var['name'] }
 
         return Templates.rem_synapse_body % { 'rem_synapse': code }
+
+    def generate_rem_all_synapse(self):
+        """
+        Code for remove all synapses.
+        
+        Notes:
+            * the implemented template is only extended by local variables / parameters
+            * value and delay are skipped.
+        """
+        code = ""
+        
+        for var in self.desc['variables'] + self.desc['parameters']:
+            if var['name'] == 'value'or var['name'] == 'delay':
+                continue
+
+            if var['name'] in self.desc['local']:
+                code += """%(var)s_.clear();""" % { 'var' : var['name'] }
+
+        return Templates.rem_all_synapse_body % { 'rem_all_synapse': code }
     
     def generate_functions(self):
         "Custom functions"
@@ -319,7 +338,8 @@ class RateProjectionGenerator(ProjectionGenerator):
         # structural plasticity
         add_synapse = self.generate_add_synapse()
         rem_synapse = self.generate_rem_synapse()
-
+        rem_all_synapse = self.generate_rem_all_synapse()
+        
         record = ""
         
         # Generate the code
@@ -335,7 +355,8 @@ class RateProjectionGenerator(ProjectionGenerator):
             'global': global_learn,
             'record' : record,
             'add_synapse_body': add_synapse,
-            'rem_synapse_body': rem_synapse }
+            'rem_synapse_body': rem_synapse,
+            'rem_all_synapse_body': rem_all_synapse }
         return template % dictionary
 
     def generate_pyx(self):
@@ -483,6 +504,7 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
         # structural plasticity
         add_synapse = self.generate_add_synapse()
         rem_synapse = self.generate_rem_synapse()
+        rem_all_synapse = self.generate_rem_all_synapse()
 
         record = ""
         
@@ -499,7 +521,8 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
             'global': global_learn,
             'record' : record,
             'add_synapse_body': add_synapse,
-            'rem_synapse_body': rem_synapse }
+            'rem_synapse_body': rem_synapse,
+            'rem_all_synapse_body': rem_all_synapse }
         return template % dictionary
 
     def generate_pyx(self):
@@ -651,6 +674,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         # structural plasticity
         add_synapse = self.generate_add_synapse()
         rem_synapse = self.generate_rem_synapse()
+        rem_all_synapse = self.generate_rem_all_synapse()
         
         record = self.generate_record()
         
@@ -670,6 +694,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'post_event': post_event,
             'add_synapse_body': add_synapse,
             'rem_synapse_body': rem_synapse,
+            'rem_all_synapse_body': rem_all_synapse,
             'record' : record }
         return template % dictionary
     

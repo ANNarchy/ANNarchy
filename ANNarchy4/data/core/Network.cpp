@@ -125,7 +125,9 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 			dendrite->removeAllSynapses();	// just for the case there are some previously allocated datas
 			previousRank = postNeuronRank;
 		}
-
+	#ifdef _DEBUG
+		std::cout << "add synapse: pre = "<< preNeuronRank << ", post =" << postNeuronRank<< ", value = "<< value << ", delay = "<< delay << std::endl;
+	#endif
 		dendrite->addSynapse(preNeuronRank, value, delay);
 		line_counter++;
 	}
