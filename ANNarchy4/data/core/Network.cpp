@@ -110,6 +110,8 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 	Projection* dendrite = NULL;
 
 	int line_counter=0;
+	int dendrite_counter = 0;
+
 	while(getline(file, line))
 	{
 		std::vector<std::string> elem = ANNarchy_Global::split(line, ',');
@@ -124,6 +126,8 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 			dendrite = createProjInstance().getInstanceOf(projectionID, populations_[prePopulationID], populations_[postPopulationID], postNeuronRank, targetID, spike);
 			dendrite->removeAllSynapses();	// just for the case there are some previously allocated datas
 			previousRank = postNeuronRank;
+
+			dendrite_counter++;
 		}
 	#ifdef _DEBUG
 		std::cout << "add synapse: pre = "<< preNeuronRank << ", post =" << postNeuronRank<< ", value = "<< value << ", delay = "<< delay << std::endl;
@@ -132,7 +136,7 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 		line_counter++;
 	}
 
-	std::cout << "read "<< line_counter << " line(s) and created "<< postNeuronRank<<" dendrites"<< std::endl;
+	std::cout << "read "<< line_counter << " line(s) and created "<< dendrite_counter <<" dendrites"<< std::endl;
 }
 
 void Network::disconnect(int prePopulationID, int postPopulationID, int targetID)
