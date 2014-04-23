@@ -518,6 +518,27 @@ class Projection(object):
                 ranks.append(choice)
                 
         return self
+
+    def connect_from_list(self, connection_list):
+        """
+        Initialize projection initilized by specific list.
+        
+        Expected format:
+        
+            * list of tuples ( pre, post, weight, delay )
+            
+        Example:
+        
+            >>> conn_list = [
+            ...     ( 0, 0, 0.0, 0.1 )
+            ...     ( 0, 1, 0.0, 0.1 )
+            ...     ( 0, 2, 0.0, 0.1 )
+            ...     ( 1, 5, 0.0, 0.1 )
+            ... ]
+            
+            proj = Projection(pre_pop, post_pop, 'exc').connect_from_list( conn_list )
+        """
+        self._synapses = connection_list
                 
     def connect_with_func(self, method, **args):
         """
@@ -596,7 +617,10 @@ class Projection(object):
         """
         build up dendrites
         """
-        self._dendrites, self._post_ranks = self._build_pattern_from_dict()
+        if ( isinstance(self._synapses, list) ):
+        	self._dendrites, self._post_ranks = self._build_pattern_from_list()
+        else:
+        	self._dendrites, self._post_ranks = self._build_pattern_from_dict()
 
     def _comp_dist(self, pre, post):
         """
@@ -611,7 +635,7 @@ class Projection(object):
       
     def _build_pattern_from_dict(self):
         """
-        build up the dendrites from the list of synapses
+        build up the dendrites from the dictionary of synapses
         """
         #
         # the synapse objects are stored as pre-post pairs.
@@ -633,6 +657,29 @@ class Projection(object):
         
         return ret_value, ret_ranks
 
+    def _build_pattern_from_list(self):
+        """
+        build up the dendrites from the list of synapses
+        """
+        dendrites = {} 
+        
+        for conn in self._synapses:
+            try:
+                dendrites[conn[1]]['rank'].append(conn[0])
+                dendrites[conn[1]]['weight'].append(conn[2])
+                dendrites[conn[1]]['delay'].append(conn[3])
+            except KeyError:
+                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [conn[2]], 'delay': [conn[3]] }
+
+            
+        ret_value = []
+        ret_ranks = []
+        for post_id, data in dendrites.iteritems():
+            ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
+            ret_ranks.append(post_id)
+        
+        return ret_value, ret_ranks
+		
     def _gather_data(self, variable):
         """ 
         Gathers synaptic values for visualization
