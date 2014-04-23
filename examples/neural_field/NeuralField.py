@@ -5,7 +5,7 @@
 #
 from ANNarchy4 import *
 
-setup(dt=1.0)
+setup(dt=1.0, paradigm="cuda")
 
 # Define the neuron classes
 Input = RateNeuron(   

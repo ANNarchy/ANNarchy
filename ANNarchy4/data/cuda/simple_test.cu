@@ -107,7 +107,7 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 	weightReduce<DATA_TYPE,32><<<numBlocks, 32, smemSize>>>(WeightSumData::instance(N, C)->getRatePtr(),
 															WeightSumData::instance(N, C)->getWeightPtr(),
 															WeightSumData::instance(N, C)->getIndexPtr(),
-															N,
+															C,
 															WeightSumData::instance(N, C)->getResultPtr()
 															);
 

@@ -19,21 +19,22 @@ public:
 
 	void resize(int N, int C)
 	{
-		if ( nbRates_ >= N)
+		if ( nbRates_ <= N)
 		{
+			std::cout << "Resize from " << nbRates_ << " to " << N << std::endl;
 			if ( gpuRates_ != NULL)
 			{
 				cudaFree(gpuRates_);
 				gpuRates_ = NULL;
 			}
 
-			std::cout << "Resize from " << nbRates_ << " to " << N << std::endl;
 			cudaMalloc((void**)&gpuRates_, sizeof(DATA_TYPE) * N);
 			nbRates_ = N;
 		}
 
-		if ( nbWeights_ > C )
+		if ( nbWeights_ <= C )
 		{
+			std::cout << "Resize from " << nbWeights_ << " to " << C << std::endl;
 			if ( gpuWeights_ != NULL)
 			{
 				cudaFree(gpuWeights_);
