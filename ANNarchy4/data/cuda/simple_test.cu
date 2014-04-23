@@ -4,6 +4,8 @@
 #include <vector>
 #include <omp.h>
 
+#include "memory_management.h"
+
 __global__ void helloCudaKernel()
 {
 	printf("Hello from your device :-) \n");
@@ -68,76 +70,16 @@ weightReduce(
         *result = sdata[0];
 }
 
-/**
- * 	\brief		manages gpu data
- */
-class weightSumData
-{
-public:
-	static weightSumData* instance(int threadId, int N)
-	{
-		while ( weightSumData_.size() <= threadId ) // resize if needed
-		{
-			weightSumData_.push_back(NULL);
-		}
-
-		if( weightSumData_[threadId] == NULL ) // initialize if not already done
-		{
-			weightSumData_[threadId] = new weightSumData(N);
-		}
-
-		return weightSumData_[threadId];
-	}
-
-	void resize(int N)
-	{
-		std::cout << "Resize from " << nbElements_ << " to " << N << std::endl;
-		cudaDeviceSynchronize();
-		cudaMalloc((void**)&gpuWeights_, sizeof(DATA_TYPE) * N);
-		cudaMalloc((void**)&gpuRates_, sizeof(DATA_TYPE) * N);
-		cudaMalloc((void**)&gpuIdx_, sizeof(int) * N);
-
-		nbElements_ = N;
-	}
-
-	DATA_TYPE* getRatePtr() { return gpuRates_; }
-	DATA_TYPE* getWeightPtr() { return gpuWeights_; }
-	int* getIndexPtr() { return gpuIdx_; }
-	DATA_TYPE* getResultPtr() { return gpuResult_; }
-
-private:
-	weightSumData(int N)
-	{
-		gpuRates_ = NULL;
-		gpuWeights_ = NULL;
-		gpuResult_ = NULL;
-		gpuIdx_ = NULL;
-		nbElements_ = NULL;
-
-		cudaMalloc((void**)&gpuResult_, sizeof(DATA_TYPE));
-		resize(N);
-	}
-
-	DATA_TYPE *gpuRates_;
-	DATA_TYPE *gpuWeights_;
-	DATA_TYPE *gpuResult_;
-	int *gpuIdx_;
-	int nbElements_;
-
-	static std::vector<weightSumData*> weightSumData_;
-};
-
-std::vector<weightSumData*> weightSumData::weightSumData_ = std::vector<weightSumData*>();
+WeightSumData* WeightSumData::weightSumData_ = NULL;
 
 DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<DATA_TYPE> preRates)
 {
 	int N = rank.size();
-	int tId = omp_get_thread_num();
 
 	double start1 = omp_get_wtime();
-	cudaMemcpy( weightSumData::instance(tId, N)->getWeightPtr(), value.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice );
-	cudaMemcpy( weightSumData::instance(tId, N)->getRatePtr(), preRates.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice);
-	cudaMemcpy( weightSumData::instance(tId, N)->getIndexPtr(), rank.data(), sizeof(int) * N, cudaMemcpyHostToDevice);
+	cudaMemcpy( WeightSumData::instance(N)->getWeightPtr(), value.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice );
+	cudaMemcpy( WeightSumData::instance(N)->getRatePtr(), preRates.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice);
+	cudaMemcpy( WeightSumData::instance(N)->getIndexPtr(), rank.data(), sizeof(int) * N, cudaMemcpyHostToDevice);
 	std::cout << "Copying data ("<< N <<" synapses): "<< (omp_get_wtime() - start1)*1000.0 << " ms "<< std::endl;
 
 	int numBlocks = (int)ceil(double(rank.size())/32.0);
@@ -149,11 +91,11 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 	std::cout << "Compute kernel ... "<< std::endl;
 	cudaEventRecord(start, 0);
 
-	weightReduce<DATA_TYPE,32><<<numBlocks, 32, smemSize>>>(weightSumData::instance(tId, N)->getRatePtr(),
-															weightSumData::instance(tId, N)->getWeightPtr(),
-															weightSumData::instance(tId, N)->getIndexPtr(),
+	weightReduce<DATA_TYPE,32><<<numBlocks, 32, smemSize>>>(WeightSumData::instance(N)->getRatePtr(),
+															WeightSumData::instance(N)->getWeightPtr(),
+															WeightSumData::instance(N)->getIndexPtr(),
 															N,
-															weightSumData::instance(tId, N)->getResultPtr()
+															WeightSumData::instance(N)->getResultPtr()
 															);
 
 	cudaEventRecord(stop, 0);
@@ -167,7 +109,7 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 	std::cout << "Time for kernel ("<< rank.size() <<" synapses): "<< elapsedTime << " ms "<< std::endl;
 
 	DATA_TYPE sum = 0.0;
-	cudaMemcpy(&sum, weightSumData::instance(tId, N)->getResultPtr(), sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&sum, WeightSumData::instance(N)->getResultPtr(), sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
 
 	return sum;
 }
