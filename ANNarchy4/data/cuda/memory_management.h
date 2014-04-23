@@ -7,41 +7,48 @@
 class WeightSumData
 {
 public:
-	static WeightSumData* instance(int N)
+	static WeightSumData* instance(int N, int C)
 	{
 		if( weightSumData_ == NULL ) // initialize if not already done
 		{
-			weightSumData_ = new WeightSumData(N);
+			weightSumData_ = new WeightSumData(N, C);
 		}
 
 		return weightSumData_;
 	}
 
-	void resize(int N)
+	void resize(int N, int C)
 	{
-		if ( gpuRates_ != NULL)
+		if ( nbRates_ >= N)
 		{
-			cudaFree(gpuRates_);
-			gpuRates_ = NULL;
-		}
-		if ( gpuWeights_ != NULL)
-		{
-			cudaFree(gpuWeights_);
-			gpuWeights_ = NULL;
-		}
-		if ( gpuIdx_ != NULL)
-		{
-			cudaFree(gpuIdx_);
-			gpuIdx_ = NULL;
+			if ( gpuRates_ != NULL)
+			{
+				cudaFree(gpuRates_);
+				gpuRates_ = NULL;
+			}
+
+			std::cout << "Resize from " << nbRates_ << " to " << N << std::endl;
+			cudaMalloc((void**)&gpuRates_, sizeof(DATA_TYPE) * N);
+			nbRates_ = N;
 		}
 
-		std::cout << "Resize from " << nbElements_ << " to " << N << std::endl;
-		cudaDeviceSynchronize();
-		cudaMalloc((void**)&gpuWeights_, sizeof(DATA_TYPE) * N);
-		cudaMalloc((void**)&gpuRates_, sizeof(DATA_TYPE) * N);
-		cudaMalloc((void**)&gpuIdx_, sizeof(int) * N);
+		if ( nbWeights_ > C )
+		{
+			if ( gpuWeights_ != NULL)
+			{
+				cudaFree(gpuWeights_);
+				gpuWeights_ = NULL;
+			}
+			if ( gpuIdx_ != NULL)
+			{
+				cudaFree(gpuIdx_);
+				gpuIdx_ = NULL;
+			}
 
-		nbElements_ = N;
+			cudaMalloc((void**)&gpuWeights_, sizeof(DATA_TYPE) * C);
+			cudaMalloc((void**)&gpuIdx_, sizeof(int) * C);
+			nbWeights_ = C;
+		}
 	}
 
 	DATA_TYPE* getRatePtr() { return gpuRates_; }
@@ -50,23 +57,27 @@ public:
 	DATA_TYPE* getResultPtr() { return gpuResult_; }
 
 protected:
-	WeightSumData(int N)
+	WeightSumData(int N, int C)
 	{
 		gpuRates_ = NULL;
 		gpuWeights_ = NULL;
 		gpuResult_ = NULL;
 		gpuIdx_ = NULL;
-		nbElements_ = NULL;
+
+		nbRates_ = 0;
+		nbWeights_ = 0;
 
 		cudaMalloc((void**)&gpuResult_, sizeof(DATA_TYPE));
-		resize(N);
+		resize(N, C);
 	}
 
 	DATA_TYPE *gpuRates_;
 	DATA_TYPE *gpuWeights_;
 	DATA_TYPE *gpuResult_;
 	int *gpuIdx_;
-	int nbElements_;
+
+	int nbRates_;
+	int nbWeights_;
 
 	static WeightSumData* weightSumData_;
 };

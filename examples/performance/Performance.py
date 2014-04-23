@@ -18,7 +18,7 @@ OutputNeuron = RateNeuron(
     """
 )
 
-NEURON = 1000
+NEURON = 15
 CONN = 10
 
 input_pop = Population(geometry=(NEURON), neuron=InputNeuron)

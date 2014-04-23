@@ -365,6 +365,7 @@ psp_code_body = \
 """
     sum_ =0.0;
     
+    double start = omp_get_wtime();
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
     #ifdef _DEBUG
@@ -405,6 +406,7 @@ psp_code_body = \
             }
         }
     }
+    std::cout << "Computation time CPU:"<< (omp_get_wtime() - start)*1000.0 << " ms "<< std::endl;
         
     DATA_TYPE gpu_sum =0.0;
     

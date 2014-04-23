@@ -5,7 +5,7 @@
 #
 from ANNarchy4 import *
 
-setup(paradigm="cuda", num_threads="1")
+setup(paradigm="openmp", num_threads="6")
 
 # Defining the neurons
 InputNeuron = RateNeuron(
@@ -86,8 +86,8 @@ def set_input():
 
 if __name__=='__main__':
 
-    compile(cpp_stand_alone=True)
-    #compile()
+    #compile(cpp_stand_alone=True)
+    compile()
     #input_feature.save_connectivity_as_csv()
     #feature_feature.save_connectivity_as_csv()
     #exit(0)
