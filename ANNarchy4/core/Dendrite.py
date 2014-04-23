@@ -56,24 +56,16 @@ class Dendrite(object):
         proj_class_name = 'Local' + self.proj.name
         local_proj = getattr(cython_module, proj_class_name)
         
-        if isinstance(self.proj.pre.neuron_type, RateNeuron) and isinstance(self.proj.post.neuron_type, RateNeuron): 
-            self.cy_instance = local_proj(
-                self.proj._id, 
-                self.proj.pre.rank, 
-                self.proj.post.rank, 
-                post_rank, 
-                self.proj.post.targets.index(self.proj.target),
-                False 
-            )
-        else:
-            self.cy_instance = local_proj(
-                self.proj._id, 
-                self.proj.pre.rank, 
-                self.proj.post.rank, 
-                post_rank, 
-                self.proj.post.targets.index(self.proj.target),
-                True
-            )
+        isRateCoded = isinstance(self.proj.pre.neuron_type, RateNeuron) and isinstance(self.proj.post.neuron_type, RateNeuron) 
+        print isRateCoded
+        self.cy_instance = local_proj(
+            self.proj._id, 
+            self.proj.pre.rank, 
+            self.proj.post.rank, 
+            post_rank, 
+            self.proj.post.targets.index(self.proj.target),
+            isRateCoded 
+        )
                     
         self.cy_instance.rank = ranks
         self.cy_instance.value = weights

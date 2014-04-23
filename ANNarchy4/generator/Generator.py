@@ -33,6 +33,8 @@ from ANNarchy4.parser.Analyser import Analyser, _extract_functions
 from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
 from MakeTemplates import *
+
+from templates import *
  
 def _folder_management(profile_enabled, clean):
     """
@@ -573,63 +575,13 @@ class Generator(object):
                 #ifdef _DEBUG
                     std::cout << "Instantiate name=%(name)s" << std::endl;
                 #endif
-                    return new %(name)s(pre, post, postNeuronRank, target, spike);
+                    return new %(name)s(pre, post, postNeuronRank, target, rateCoded);
                     }
 
 """ % { 'name': name, 'id': name.split('Projection')[1]}
 
         # complete code
-        code = """class createProjInstance {
-public:
-    createProjInstance() {};
-    
-    /**
-     *    @brief      instantiate a projection object or returns previous exsisting one.
-     *    @details    called by cpp method ANNarchy::ANNarchy() or by 
-     *                createProjInstance::getInstanceOf(int, int, int, int, int)
-     */
-    Projection* getInstanceOf(int ID, Population *pre, Population *post, int postNeuronRank, int target, bool spike) {
-        
-        if(pre == NULL || post == NULL) {
-            std::cout << "Critical error: invalid pointer in c++ core library." << std::endl;
-            return NULL;
-        }
-        
-        // search for already existing instance
-        Projection* proj = post->getProjection(postNeuronRank, target, pre);
-        
-        if(proj)
-        {
-            // return existing one
-            return proj;
-        }
-        else
-        {
-            switch(ID) 
-            {
-%(case1)s
-                default:
-                {
-                    std::cout << "Unknown typeID: "<< ID << std::endl;
-                    return NULL;
-                }
-            }                    
-        }
-    }
-
-    /**
-     *  @brief          instantiate a projection object or returns previous exsisting one.
-     *  @details        called by cython wrapper.
-     */
-    Projection* getInstanceOf(int ID, int preID, int postID, int postNeuronRank, int target, bool spike) {
-        Population *pre  = Network::instance()->getPopulation(preID);
-        Population *post = Network::instance()->getPopulation(postID);
-        
-        return getInstanceOf(ID, pre, post, postNeuronRank, target, spike);
-    }
-
-};
-""" % { 'case1': cases_ptr }
+        code = create_proj_instance % { 'case1': cases_ptr }
         return code
     
     def update_global_header(self):
@@ -661,8 +613,6 @@ public:
         with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'w') as w_file:
             w_file.write(code)
                 
-
-
     def generate_py_extension(self):
         """
         Because the amount of code is higher, we decide to split up the code. Nevertheless cython generates 
@@ -680,19 +630,10 @@ public:
         for proj in projections:
             proj_include += 'include \"'+proj+'.pyx\"\n'
     
-        code = """include "Network.pyx"
-
-%(pop_inc)s  
-
-include "Projection.pyx"
-%(proj_inc)s  
-
-%(profile)s
-include "Connector.pyx"
-""" % { 'pop_inc': pop_include,
-        'proj_inc': proj_include,
-        'profile': 'include "cy_profile.pyx"' if self.profile_enabled else '' 
-        }
+        code = py_extension % { 'pop_inc': pop_include,
+                                'proj_inc': proj_include,
+                                'profile': 'include "cy_profile.pyx"' if self.profile_enabled else '' 
+                              }
     
         with open(Global.annarchy_dir+'/generate/pyx/ANNarchyCython.pyx', mode='w') as w_file:
             w_file.write(code)

@@ -1,5 +1,5 @@
 /*
- *    Population.h
+ *    RatePopulation.h
  *
  *    This file is part of ANNarchy.
  *
@@ -19,8 +19,8 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __MEAN_POPULATION_H__
-#define __MEAN_POPULATION_H__
+#ifndef __ANNARCHY_RATE_POPULATION_H__
+#define __ANNARCHY_RATE_POPULATION_H__
 
 #include "Global.h"
 
@@ -30,7 +30,7 @@
  *              Population and will be inherited from Population0..PopulationN,
  *              the population classes generated from the users input.
  */
-class MeanPopulation: public Population
+class RatePopulation: public Population
 {
 public:
     /**
@@ -38,13 +38,13 @@ public:
      *  \details    Initializes the mean rate arrays and calls the Population
      *              constructor.
      */
-    MeanPopulation(std::string name, int nbNeurons);
+	RatePopulation(std::string name, int nbNeurons);
 
     /**
      *  \brief      Destructor
      *  \details    Destroys the attached data.
      */
-    virtual ~MeanPopulation();
+    virtual ~RatePopulation();
 
     /**
      *  \brief      set max delay

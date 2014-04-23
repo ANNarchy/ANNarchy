@@ -1,5 +1,5 @@
 /*
- *    MeanProjection.h
+ *    RateDendrite.h
  *
  *    This file is part of ANNarchy.
  *
@@ -19,15 +19,15 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __MEAN_PROJECTION_H__
-#define __MEAN_PROJECTION_H__
+#ifndef __ANNARCHY_RATE_DENDRITE_H__
+#define __ANNARCHY_RATE_DENDRITE_H__
 
 #include "Global.h"
 
-class MeanProjection: public Projection
+class RateDendrite: public Dendrite
 {
 public:
-	MeanProjection();
+	RateDendrite();
 
     /**
      * 	\brief		returns the reference to presynaptic populations

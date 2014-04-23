@@ -20,26 +20,26 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "Global.h"
-#include "MeanPopulation.h"
-#include "MeanProjection.h"
+#include "RatePopulation.h"
+#include "RateDendrite.h"
 
-MeanPopulation::MeanPopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
+RatePopulation::RatePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
 {
     rate_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
     delayedRates_ = std::deque< std::vector<DATA_TYPE> >();
 }
 
-MeanPopulation::~MeanPopulation()
+RatePopulation::~RatePopulation()
 {
 
 }
 
-std::vector<DATA_TYPE>* MeanPopulation::getRates()
+std::vector<DATA_TYPE>* RatePopulation::getRates()
 {
     return &rate_;
 }
 
-std::vector<DATA_TYPE>* MeanPopulation::getRates(int delay)
+std::vector<DATA_TYPE>* RatePopulation::getRates(int delay)
 {
     if ( delay <= (int)delayedRates_.size())
     {
@@ -57,7 +57,7 @@ std::vector<DATA_TYPE>* MeanPopulation::getRates(int delay)
     }
 }
 
-std::vector<DATA_TYPE> MeanPopulation::getRates(std::vector<int> delays, std::vector<int> ranks)
+std::vector<DATA_TYPE> RatePopulation::getRates(std::vector<int> delays, std::vector<int> ranks)
 {
     std::vector<DATA_TYPE> vec = std::vector<DATA_TYPE>(delays.size(), 0.0);
 
@@ -73,7 +73,7 @@ std::vector<DATA_TYPE> MeanPopulation::getRates(std::vector<int> delays, std::ve
     return vec;
 }
 
-void MeanPopulation::setMaxDelay(int delay)
+void RatePopulation::setMaxDelay(int delay)
 {
     // TODO:
     // maybe we should take the current fire rate as initial value
@@ -95,33 +95,33 @@ void MeanPopulation::setMaxDelay(int delay)
 #endif
 }
 
-DATA_TYPE MeanPopulation::sum(int neur, int typeID)
+DATA_TYPE RatePopulation::sum(int neur, int typeID)
 {
     DATA_TYPE sum=0.0;
 
 #ifdef _DEBUG
-    if ( neur >= typedProjections_.size() )
+    if ( neur >= typedDendrites_.size() )
     {
     	std::cout << "No dendrite with id = " << neur << std::endl;
     	return sum;
     }
 
-    if ( typeID >= typedProjections_[neur].size() )
+    if ( typeID >= typedDendrites_[neur].size() )
     {
     	std::cout << "No target with id = " << typeID << std::endl;
     	return sum;
     }
 #endif
-    auto it = typedProjections_[neur][typeID].begin();
-    int end = typedProjections_[neur][typeID].size();
+    auto it = typedDendrites_[neur][typeID].begin();
+    int end = typedDendrites_[neur][typeID].size();
 
     for(int i=0; i != end; i++ )
-        sum += static_cast<class MeanProjection*>(*(it++))->getSum();
+        sum += static_cast<class RateDendrite*>(*(it++))->getSum();
 
     return sum;
 }
 
-void MeanPopulation::metaSum()
+void RatePopulation::metaSum()
 {
 #ifdef ANNAR_PROFILE
     double start = 0, stop = 0;
@@ -146,18 +146,18 @@ void MeanPopulation::metaSum()
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
+        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
+            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
     #endif
-        for(int p=0; p< (int)projections_[n].size();p++)
+        for(unsigned int p = 0; p < dendrites_[n].size();p++)
         {
         #ifdef _DEBUG
-            std::cout << "reference: " << projections_[n][p] << std::endl;
+            std::cout << "reference: " << dendrites_[n][p] << std::endl;
             std::cout << "\tpost = " << name_ << std::endl;
-            std::cout << "\tpre = " << projections_[n][p]->getPrePopulation()->getName() << std::endl;
-            std::cout << "\tsynaseCount = " << (int)(projections_[n][p]->getSynapseCount()) << std::endl;
+            std::cout << "\tpre = " << dendrites_[n][p]->getPrePopulation()->getName() << std::endl;
+            std::cout << "\tsynaseCount = " << (int)(dendrites_[n][p]->getSynapseCount()) << std::endl;
         #endif
-           	(static_cast<class MeanProjection*>(projections_[n][p]))->computeSum();
+           	(static_cast<class RateDendrite*>(dendrites_[n][p]))->computeSum();
         }
 
     #ifdef ANNAR_SCHEDULE
@@ -184,7 +184,7 @@ void MeanPopulation::metaSum()
 #endif
 }
 
-void MeanPopulation::metaStep()
+void RatePopulation::metaStep()
 {
     double start, stop = 0.0;
 
@@ -234,7 +234,7 @@ void MeanPopulation::metaStep()
 
 }
 
-void MeanPopulation::metaLearn()
+void RatePopulation::metaLearn()
 {
     double start = 0.0, stop = 0.0;
 
@@ -258,14 +258,14 @@ void MeanPopulation::metaLearn()
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
+        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
+            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
     #endif
 
-        for(int p=0; p< (int)projections_[n].size();p++)
+        for(unsigned int p = 0; p < dendrites_[n].size();p++)
         {
-            if ( projections_[n][p]->isLearning() )
-            	static_cast<class MeanProjection*>(projections_[n][p])->globalLearn();
+            if ( dendrites_[n][p]->isLearning() )
+            	static_cast<class RateDendrite*>(dendrites_[n][p])->globalLearn();
         }
     }
 
@@ -295,12 +295,12 @@ void MeanPopulation::metaLearn()
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
+        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
+            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
     #endif
-        for(int p=0; p< (int)projections_[n].size();p++) {
-            if ( projections_[n][p]->isLearning() )
-            	static_cast<class MeanProjection*>(projections_[n][p])->localLearn();
+        for(unsigned int p = 0; p < dendrites_[n].size();p++) {
+            if ( dendrites_[n][p]->isLearning() )
+            	static_cast<class RateDendrite*>(dendrites_[n][p])->localLearn();
         }
     }
 

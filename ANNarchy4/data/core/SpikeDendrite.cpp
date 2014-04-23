@@ -1,5 +1,5 @@
 /*
- *    SpikeProjection.cpp
+ *    SpikeDendrite.cpp
  *
  *    This file is part of ANNarchy.
  *
@@ -19,9 +19,9 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "SpikeProjection.h"
+#include "SpikeDendrite.h"
 
-SpikeProjection::SpikeProjection(): Projection( false )
+SpikeDendrite::SpikeDendrite(): Dendrite( false )
 {
 
 }

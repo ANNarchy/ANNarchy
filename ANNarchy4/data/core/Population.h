@@ -19,8 +19,8 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __POPULATION_H__
-#define __POPULATION_H__
+#ifndef __ANNARCHY_POPULATION_H__
+#define __ANNARCHY_POPULATION_H__
 
 #include "Global.h"
 
@@ -80,7 +80,7 @@ public:
      *  \param[in]	neuron	postsynaptic rank of the neuron
      *  \param[in]	proj	projection instance to attach
      */
-    void addProjection(unsigned int neuron, class Projection* proj);
+    void addDendrite(unsigned int neuron, class Dendrite* proj);
 
     /**
      *  \brief		get all projections of neuron n and a certain type
@@ -88,14 +88,14 @@ public:
      *  \param[in]	pre		reference to the presynaptic populations
      *  \param[in]	type	integer id of the projection type
      */
-    void removeProjection(Population *pre, int type);
+    void removeDendrite(Population *pre, int type);
 
     /**
      *  \brief		get all projections of neuron n and a certain type
      *  \details	iterates over all assigned projections of neuron n and delete the ones with presynaptic population without attention to projection type.
      *  \param[in]	pre		reference to the presynaptic populations
      */
-    void removeProjections(Population *pre);
+    void removeDendrites(Population *pre);
 
     /**
      *  \brief		get the projection of neuron n with a certain type and connected to a given presynaptic population
@@ -106,7 +106,7 @@ public:
      *  \param[in]	pre		reference to the presynaptic population
      *  \return		instance of the searched Projection, if one exist in the current lists, otherwise NULL.
      */
-    class Projection* getProjection(unsigned int neuron, int type, Population* pre);
+    class Dendrite* getDendrite(unsigned int neuron, int type, Population* pre);
 
     /**
      *  \brief		get all projections of neuron n and a certain type
@@ -116,7 +116,7 @@ public:
      *  \param[in]	type	integer id of the projection type
      *  \return		std::vector of class Projection, if there some exists otherwise an empty vector is returned.
      */
-    std::vector<class Projection*> getProjections(unsigned int neuron, int type);
+    std::vector<class Dendrite*> getDendrites(unsigned int neuron, int type);
 
     /**
      *  \brief		is the current population rate coded.
@@ -129,8 +129,8 @@ protected:
     int maxDelay_;				///< maximum delay over all neurons. Please note, that this value is set after analyzing the attached projections.
     DATA_TYPE dt_;				///< discretization constant
     bool isRateType_;			///< is the current population rate coded.
-    std::vector< std::vector<class Projection*> > projections_; ///< list of afferent dendrites ordered neuron wise
-    std::vector< std::vector< std::vector<class Projection*> > > typedProjections_;	///< list of afferent dendrites ordered neuron and type wise, to improve performance of the weighted sum.
+    std::vector< std::vector<class Dendrite*> > dendrites_; ///< list of afferent dendrites ordered neuron wise
+    std::vector< std::vector< std::vector<class Dendrite*> > > typedDendrites_;	///< list of afferent dendrites ordered neuron and type wise, to improve performance of the weighted sum.
 };
 
 /*TODEL

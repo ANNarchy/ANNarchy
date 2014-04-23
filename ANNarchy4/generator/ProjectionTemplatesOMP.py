@@ -1,5 +1,5 @@
 
-# Header for a Rate projection.
+# Header for a rate dendrite.
 # 
 # Depends on:
 # 
@@ -22,9 +22,9 @@ rate_projection_header = \
 
 #include "Global.h"
 #include "Includes.h"
-#include "MeanProjection.h"
+#include "RateDendrite.h"
 
-class %(class)s : public MeanProjection 
+class %(class)s : public RateDendrite 
 {
 public:
     %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
@@ -64,7 +64,7 @@ private:
 #endif
 """ 
 
-# Header for a spike projection.
+# Header for a spike dendrite.
 # 
 # Depends on:
 # 
@@ -87,9 +87,10 @@ spike_projection_header = \
 
 #include "Global.h"
 #include "Includes.h"
-#include "SpikeProjection.h"
+#include "SpikeDendrite.h"
 
-class %(class)s : public SpikeProjection {
+class %(class)s : public SpikeDendrite 
+{
 public:
     %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
     
@@ -158,7 +159,7 @@ rate_projection_body = \
 
 using namespace ANNarchy_Global;
 
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : MeanProjection() 
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : RateDendrite() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
@@ -169,13 +170,13 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
 
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : MeanProjection() 
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : RateDendrite() 
 {
-    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
-    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
+    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID, spike));
+    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID, spike));
 
     pre_rates_ = pre_population_->getRates();
     post_rates_ = post_population_->getRates();
@@ -183,7 +184,7 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
 
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
 }
 
 %(class)s::~%(class)s() 
@@ -260,7 +261,7 @@ spike_projection_body = \
 
 using namespace ANNarchy_Global;
         
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : SpikeProjection() 
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : SpikeDendrite() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
@@ -268,22 +269,22 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
     if(spike)
     {
         pre_population_->addSpikeTarget(this);
     }
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : SpikeProjection() 
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : SpikeDendrite() 
 {
-    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
-    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
+    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID, spike));
+    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID, spike));
 
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
     if(spike)
     {
         pre_population_->addSpikeTarget(this);
@@ -373,7 +374,7 @@ psp_code_body = \
     {
         if(constDelay_) // one delay for all connections
         {
-            pre_rates_ = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_[0]);
+            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRates(delay_[0]);
             
         #ifdef _DEBUG
             std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
@@ -391,7 +392,7 @@ psp_code_body = \
         }
         else    // different delays [0..maxDelay]
         {
-            std::vector<DATA_TYPE> delayedRates = static_cast<MeanPopulation*>(pre_population_)->getRates(delay_, rank_);
+            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRates(delay_, rank_);
 
             for(int i=0; i < nbSynapses_; i++) 
             {

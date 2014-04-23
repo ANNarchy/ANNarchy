@@ -32,9 +32,9 @@ cimport numpy as np
 
 #
 # c++ class
-cdef extern from "../build/Projection.h":
-    cdef cppclass Projection:
-        Projection(int preLayer, int postLayer, int postNeuronRank, int target)
+cdef extern from "../build/Dendrite.h":
+    cdef cppclass Dendrite:
+        Dendrite(int preLayer, int postLayer, int postNeuronRank, int target)
 
         vector[int] getRank()
 
@@ -74,26 +74,25 @@ cdef extern from "../build/Projection.h":
         
         int getLearnOffset()
         
-
 # c++ class
 cdef extern from "../build/ANNarchy.h":
     cdef cppclass createProjInstance:
         createProjInstance()
         
-        Projection* getInstanceOf(int id, int pre, int post, int postNeuronRank, int target, spike)
+        Dendrite* getInstanceOf(int id, int pre, int post, int postNeuronRank, int target, rateCoded)
 
 #
 # wrapper to c++ class, contains connection data of one neuron
-cdef class LocalProjection:
+cdef class pyxDendrite:
 
-    cdef Projection* cInstance
+    cdef Dendrite* cInstance
     cdef post_rank
     cdef spike
     
-    def __cinit__(self, proj_type, preID, postID, rank, target, spike=False):
+    def __cinit__(self, proj_type, preID, postID, rank, target, rateCoded):
         self.post_rank = rank
-        self.spike = spike
-        self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike)
+        self.spike = not rateCoded
+        self.cInstance = createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, rateCoded)
         
     def init(self, rank, value, delay):
         self.cInstance.setRank(rank)

@@ -19,8 +19,8 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __GLOBAL_H__
-#define __GLOBAL_H__
+#ifndef __ANNARCHY_GLOBAL_H__
+#define __ANNARCHY_GLOBAL_H__
 
 //
 //	stl and other common things
@@ -92,5 +92,6 @@ namespace ANNarchy_Global
 #include "Network.h"
 #include "Population.h"
 #include "Projection.h"
+#include "Dendrite.h"
 
 #endif

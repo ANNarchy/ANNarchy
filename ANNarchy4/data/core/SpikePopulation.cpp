@@ -20,14 +20,14 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "SpikePopulation.h"
-#include "SpikeProjection.h"
+#include "SpikeDendrite.h"
 
 SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, false)
 {
 	spiked_ = std::vector< bool >(nbNeurons_, false);
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
 
-	spikeTargets_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
+	spikeTargets_ = std::vector<std::vector<Dendrite*> >(nbNeurons_, std::vector<Dendrite*>());
 }
 
 SpikePopulation::~SpikePopulation()
@@ -35,15 +35,15 @@ SpikePopulation::~SpikePopulation()
 
 }
 
-void SpikePopulation::addSpikeTarget(Projection* proj)
+void SpikePopulation::addSpikeTarget(Dendrite* dendrite)
 {
 #ifdef _DEBUG
-    std::cout << name_ << ": added projection as spike target " << std::endl;
-    std::cout << "address " << proj << std::endl;
+    std::cout << name_ << ": added dendrite as spike target " << std::endl;
+    std::cout << "address " << dendrite << std::endl;
 #endif
     for(unsigned int n=0; n< nbNeurons_; n++)
     {
-        spikeTargets_.at(n).push_back(proj);
+        spikeTargets_.at(n).push_back(dendrite);
     }
 }
 
@@ -119,13 +119,13 @@ void SpikePopulation::metaLearn()
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
+        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
+            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
     #endif
-        for(int p=0; p< (int)projections_[n].size();p++)
+        for(unsigned int p=0; p < dendrites_[n].size();p++)
         {
-        	if ( projections_[n][p]->isLearning() )
-        		static_cast<class SpikeProjection*>(projections_[n][p])->globalLearn();
+        	if ( dendrites_[n][p]->isLearning() )
+        		static_cast<class SpikeDendrite*>(dendrites_[n][p])->globalLearn();
         }
     }
 
@@ -155,12 +155,12 @@ void SpikePopulation::metaLearn()
     for(int n=0; n<nbNeurons_; n++)
     {
     #ifdef _DEBUG
-        if ( projections_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< projections_[n].size()<< " projections."<< std::endl;
+        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
+            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
     #endif
-        for(int p=0; p< (int)projections_[n].size();p++) {
-        	if ( projections_[n][p]->isLearning() )
-        		static_cast<class SpikeProjection*>(projections_[n][p])->localLearn();
+        for(unsigned int p = 0; p < dendrites_[n].size();p++) {
+        	if ( dendrites_[n][p]->isLearning() )
+        		static_cast<class SpikeDendrite*>(dendrites_[n][p])->localLearn();
         }
     }
 

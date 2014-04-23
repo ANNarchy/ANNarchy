@@ -1,5 +1,5 @@
 /*
- *    SpikeProjection.h
+ *    SpikeDendrite.h
  *
  *    This file is part of ANNarchy.
  *
@@ -19,17 +19,15 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __SPIKE_PROJECTION_H__
-#define __SPIKE_PROJECTION_H__
+#ifndef __ANNARCHY_SPIKE_DENDRITE_H__
+#define __ANNARCHY_SPIKE_DENDRITE_H__
 
 #include "Global.h"
 
-#include "Global.h"
-
-class SpikeProjection: public Projection
+class SpikeDendrite: public Dendrite
 {
 public:
-	SpikeProjection();
+	SpikeDendrite();
 
     /**
      * 	\brief		returns the reference to presynaptic populations

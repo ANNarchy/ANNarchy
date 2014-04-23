@@ -21,10 +21,10 @@ rate_population_header = \
 #define __ANNarchy_%(class)s_H__
 
 #include "Global.h"
-#include "MeanPopulation.h"
+#include "RatePopulation.h"
 using namespace ANNarchy_Global;
 
-class %(class)s: public MeanPopulation
+class %(class)s: public RatePopulation
 {
 public:
     %(class)s(std::string name, int nbNeurons);
@@ -199,7 +199,7 @@ global_variable_access = \
 rate_population_body = """#include "%(class)s.h"
 #include "Global.h"
 
-%(class)s::%(class)s(std::string name, int nbNeurons): MeanPopulation(name, nbNeurons)
+%(class)s::%(class)s(std::string name, int nbNeurons): RatePopulation(name, nbNeurons)
 {
 #ifdef _DEBUG
     std::cout << "%(class)s::%(class)s called." << std::endl;
@@ -291,7 +291,7 @@ rate_prepare_neurons="""
 #    * single_global_ops : code for the single global operations
 spike_population_body = """#include "%(class)s.h"
 #include "Global.h"
-#include "SpikeProjection.h"
+#include "SpikeDendrite.h"
 
 %(class)s::%(class)s(std::string name, int nbNeurons): SpikePopulation(name, nbNeurons)
 {
@@ -348,11 +348,11 @@ void %(class)s::record()
 {
 %(record)s
     
-    for (int n=0; n < projections_.size(); n++ )
+    for (unsigned int n=0; n < dendrites_.size(); n++ )
     {
-        for(int p=0; p< projections_[n].size(); p++)
+        for(unsigned int p=0; p< dendrites_[n].size(); p++)
         {
-            projections_[n][p]->record();
+            dendrites_[n][p]->record();
         }
     }
 }
@@ -366,13 +366,13 @@ void %(class)s::propagateSpike() {
             // emit a postsynaptic spike on outgoing projections
             for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
             {
-                static_cast<SpikeProjection*>(*p_it)->preEvent(*n_it);
+                static_cast<SpikeDendrite*>(*p_it)->preEvent(*n_it);
             }
             
             // emit a postsynaptic spike on receiving projections
-            for( auto p_it = projections_[(*n_it)].begin(); p_it != projections_[(*n_it)].end(); p_it++)
+            for( auto p_it = dendrites_[(*n_it)].begin(); p_it != dendrites_[(*n_it)].end(); p_it++)
             {
-                static_cast<SpikeProjection*>(*p_it)->postEvent();
+                static_cast<SpikeDendrite*>(*p_it)->postEvent();
             }
         }
         

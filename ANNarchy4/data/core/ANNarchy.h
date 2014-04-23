@@ -1,4 +1,6 @@
 /*
+ * 	  ANNarchy.h
+ *
  *    This file is part of ANNarchy.
  *   
  *   Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
@@ -17,8 +19,8 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __ANNARCHY_H__
-#define __ANNARCHY_H__
+#ifndef __ANNARCHY_ANNARCHY_H__
+#define __ANNARCHY_ANNARCHY_H__
     
 #include "Includes.h"
 

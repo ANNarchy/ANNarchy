@@ -66,12 +66,12 @@ cdef extern from "../build/%(name)s.h":
 
 %(cFunction)s
 
-cdef class Local%(name)s(LocalProjection):
+cdef class Local%(name)s(pyxDendrite):
 
     cdef %(name)s* cInhInstance
 
-    def __cinit__(self, proj_type, preID, postID, rank, target, spike):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike))
+    def __cinit__(self, proj_type, preID, postID, rank, target, rateCoded):
+        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, rateCoded))
 
     def init_values(self):
         self.cInhInstance.initValues()
@@ -105,12 +105,12 @@ cdef extern from "../build/%(name)s.h":
         
 %(cFunction)s
 
-cdef class Local%(name)s(LocalProjection):
+cdef class Local%(name)s(pyxDendrite):
 
     cdef %(name)s* cInhInstance
 
-    def __cinit__(self, proj_type, preID, postID, rank, target, spike):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, spike))
+    def __cinit__(self, proj_type, preID, postID, rank, target, rateCoded):
+        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, rateCoded))
 
     def init_values(self):
         self.cInhInstance.initValues()

@@ -19,8 +19,8 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __NETWORK_H__
-#define __NETWORK_H__
+#ifndef __ANNARCHY_NETWORK_H__
+#define __ANNARCHY_NETWORK_H__
 
 #include "Global.h"
 
@@ -37,9 +37,9 @@ public:
 
 	~Network();
 
-	class Population* getPopulation(std::string name);
+	class Population* getPopulation(std::string name, bool isRateCoded);
 
-	class Population* getPopulation(unsigned int id);
+	class Population* getPopulation(unsigned int id, bool isRateCoded);
 
 	void setNumThreads(int threads)
 	{
@@ -48,7 +48,7 @@ public:
 
 	void connect(int prePopulationID, int postPopulationID, int projectionID, int target, bool spike, std::string filename);
 
-	void disconnect(int prePopulationID, int postPopulationID, int target=-1);
+	void disconnect(int prePopulationID, int postPopulationID, bool preIsSpike, bool postIsSpike, int target=-1);
 
 	void run(int steps);
 
@@ -68,9 +68,7 @@ private:
 	static Network *instance_;
 
 	// data
-	std::vector<class Population*> populations_;
-
-	std::vector<class MeanPopulation*> mean_populations_;
+	std::vector<class RatePopulation*> rate_populations_;
 	std::vector<class SpikePopulation*> spike_populations_;
 };
 #endif

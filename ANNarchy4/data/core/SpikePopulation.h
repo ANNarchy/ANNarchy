@@ -19,8 +19,8 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __SPIKE_POPULATION_H__
-#define __SPIKE_POPULATION_H__
+#ifndef __ANNARCHY_SPIKE_POPULATION_H__
+#define __ANNARCHY_SPIKE_POPULATION_H__
 
 #include "Global.h"
 
@@ -52,7 +52,7 @@ public:
      * \param[IN]   projection  Instance of Projection determing the spike target.
      *              A spike will activate the Projection::preEvent method.
      */
-    void addSpikeTarget(class Projection* projection);
+    void addSpikeTarget(class Dendrite* dendrite);
 
     /**
      * \brief       Get the spike times of all neurons.
@@ -100,7 +100,7 @@ public:
 	virtual void globalOperations() {}
 
 protected:
-	std::vector< std::vector<class Projection*> > spikeTargets_; // first dimension, neuron wise
+	std::vector< std::vector<class Dendrite*> > spikeTargets_; // first dimension, neuron wise
 
 	std::vector< bool > spiked_;
 	std::vector< std::vector<int> > spike_timings_;

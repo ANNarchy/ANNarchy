@@ -21,7 +21,7 @@
  */
 #include "Network.h"
 
-#include "MeanPopulation.h"
+#include "RatePopulation.h"
 #include "SpikePopulation.h"
 #include "ANNarchy.h"
 #include "Global.h"
@@ -29,59 +29,83 @@
 
 Network::Network()
 {
-	populations_.clear();
+	rate_populations_.clear();
+	spike_populations_.clear();
 
 	ANNarchy_Global::time = 0;
 }
 
 Network::~Network()
 {
-
     std::cout << "Network destructor." << std::endl;
 
-	while(!populations_.empty())
+	while(!rate_populations_.empty())
 	{
-		delete populations_.back();
-		populations_.pop_back();
+		delete rate_populations_.back();
+		rate_populations_.pop_back();
+	}
+
+	while(!spike_populations_.empty())
+	{
+		delete spike_populations_.back();
+		spike_populations_.pop_back();
 	}
 }
 
-class Population* Network::getPopulation(std::string name)
+class Population* Network::getPopulation(std::string name, bool isRateCoded)
 {
-	for(auto it = populations_.cbegin(); it != populations_.cend(); it++)
+	if (isRateCoded)
 	{
-		if((*it)->getName().compare(name)==0)
-			return (*it);
+		for(auto it = rate_populations_.cbegin(); it != rate_populations_.cend(); it++)
+		{
+			if((*it)->getName().compare(name)==0)
+				return (*it);
+		}
+	}
+	else
+	{
+		for(auto it = spike_populations_.cbegin(); it != spike_populations_.cend(); it++)
+		{
+			if((*it)->getName().compare(name)==0)
+				return (*it);
+		}
 	}
 
+#ifdef _DEBUG
+	std::cout << "Population name = "<< name <<" not exist."<<std::endl;
+#endif
 	return NULL;
 }
 
-class Population* Network::getPopulation(unsigned int id)
+class Population* Network::getPopulation(unsigned int id, bool isRateCoded)
 {
-    if ( id < populations_.size() )
-    {
-        return populations_[id];
-    }
-    else
-    {
-    #ifdef _DEBUG
-        std::cout << "Population id="<<id<<" not exist."<<std::endl;
-    #endif
-        return NULL;
-    }
+
+	if ( isRateCoded && id < rate_populations_.size() )
+	{
+		return rate_populations_[id];
+	}
+	else if ( !isRateCoded && id < spike_populations_.size() )
+	{
+		return spike_populations_[id];
+	}
+	else
+	{
+	#ifdef _DEBUG
+		std::string tmp = isRateCoded ? "true" : "false";
+		std::cout << "Population id = "<<id<<", rate = "<< tmp << " not exist" <<std::endl;
+	#endif
+		return NULL;
+	}
 }
 
 void Network::addPopulation(class Population* population)
 {
-    populations_.push_back(population);
-
     if(population->isMeanRateCoded())
     {
 	#ifdef _DEBUG
-		std::cout << "Added rate population '"<< population->getName()<<"' on place " << mean_populations_.size()<<std::endl;
+		std::cout << "Added rate population '"<< population->getName()<<"' on place " << rate_populations_.size()<<std::endl;
 	#endif
-		mean_populations_.push_back(static_cast<MeanPopulation*>(population));
+		rate_populations_.push_back(static_cast<RatePopulation*>(population));
     }
     else
     {
@@ -107,10 +131,13 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 	int postNeuronRank = -1;
 	DATA_TYPE value = 0.0;
 	int delay = 0;
-	Projection* dendrite = NULL;
+	Dendrite* dendrite = NULL;
 
 	int line_counter=0;
 	int dendrite_counter = 0;
+
+	auto pre = getPopulation(prePopulationID, spike);
+	auto post = getPopulation(postPopulationID, spike);
 
 	while(getline(file, line))
 	{
@@ -123,7 +150,7 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 
 		if (postNeuronRank != previousRank)
 		{
-			dendrite = createProjInstance().getInstanceOf(projectionID, populations_[prePopulationID], populations_[postPopulationID], postNeuronRank, targetID, spike);
+			dendrite = createProjInstance().getInstanceOf(projectionID, pre, post, postNeuronRank, targetID, spike);
 			dendrite->removeAllSynapses();	// just for the case there are some previously allocated datas
 			previousRank = postNeuronRank;
 
@@ -139,15 +166,28 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 	std::cout << "read "<< line_counter << " line(s) and created "<< dendrite_counter <<" dendrites"<< std::endl;
 }
 
-void Network::disconnect(int prePopulationID, int postPopulationID, int targetID)
+void Network::disconnect(int prePopulationID, int postPopulationID, bool preIsSpike, bool postIsSpike, int targetID)
 {
-	if (targetID == -1)
-		populations_[postPopulationID]->removeProjections(populations_[prePopulationID]);
+	auto pre = getPopulation(prePopulationID, preIsSpike);
+	auto post = getPopulation(postPopulationID, postIsSpike);
+
+	if ( pre && post )
+	{
+		if (targetID == -1)
+			post->removeDendrites(pre);
+		else
+			post->removeDendrite(pre, targetID);
+	}
 	else
-		populations_[postPopulationID]->removeProjection(populations_[prePopulationID], targetID);
+	{
+	#ifdef _DEBUG
+		std::cout << "Projection does not exist ... " << std::endl;
+	#endif
+	}
 }
 
-void Network::run(int steps) {
+void Network::run(int steps)
+{
 #ifdef ANNAR_PROFILE
         std::cout << "Run simulation with "<< omp_get_max_threads() << " thread(s)." << std::endl;
 #endif
@@ -173,30 +213,30 @@ void Network::run(int steps) {
             //
             // parallel population wise
             #pragma omp for
-            for(int p=0; p<(int)spike_populations_.size(); p++)
+            for(unsigned int p = 0; p < spike_populations_.size(); p++)
             {
                 spike_populations_[p]->prepareNeurons();
             }
 
             //
             // parallel neuron wise
-            for(int p=0; p<(int)mean_populations_.size(); p++)
+            for(unsigned int p = 0; p < rate_populations_.size(); p++)
             {
-                mean_populations_[p]->metaSum();
+                rate_populations_[p]->metaSum();
             }
             #pragma omp barrier
 
             //
             // parallel neuron wise
-            for(int p=0; p<(int)mean_populations_.size(); p++)
+            for(unsigned int p = 0; p < rate_populations_.size(); p++)
             {
-                mean_populations_[p]->metaStep();
+            	rate_populations_[p]->metaStep();
             }
             #pragma omp barrier
 
             //
             // parallel neuron wise
-            for(int p=0; p<(int)spike_populations_.size(); p++)
+            for(unsigned int p = 0; p < spike_populations_.size(); p++)
             {
                 spike_populations_[p]->metaStep();
             }
@@ -205,25 +245,26 @@ void Network::run(int steps) {
             //
             // parallel population wise
             #pragma omp for
-            for(int p=0; p<(int)mean_populations_.size(); p++)
+            for(unsigned int p = 0; p < rate_populations_.size(); p++)
             {
-                mean_populations_[p]->globalOperations();
+            	rate_populations_[p]->globalOperations();
             }
 
 			#pragma omp for
-			for(int p=0; p<(int)spike_populations_.size(); p++)
+			for(unsigned int p = 0; p < spike_populations_.size(); p++)
 			{
 				spike_populations_[p]->globalOperations();
 			}
 
             //
             // parallel neuron wise
-            for(int p=0; p<(int)mean_populations_.size(); p++)
+            for(int p = 0; p < rate_populations_.size(); p++)
             {
-           		mean_populations_[p]->metaLearn();
+            	rate_populations_[p]->metaLearn();
             }
             #pragma omp barrier
-            for(int p=0; p<(int)spike_populations_.size(); p++)
+
+            for(int p = 0; p < spike_populations_.size(); p++)
             {
            		spike_populations_[p]->metaLearn();
             }
@@ -232,12 +273,13 @@ void Network::run(int steps) {
             //
             // parallel population wise
             #pragma omp for
-            for(int p=0; p<(int)mean_populations_.size(); p++)
+            for(unsigned int p = 0; p < rate_populations_.size(); p++)
             {
-                mean_populations_[p]->record();
+            	rate_populations_[p]->record();
             }
+
 			#pragma omp for
-			for(int p=0; p<(int)spike_populations_.size(); p++)
+			for(unsigned int p = 0; p < spike_populations_.size(); p++)
 			{
 				spike_populations_[p]->record();
 			}

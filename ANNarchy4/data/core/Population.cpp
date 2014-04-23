@@ -32,8 +32,8 @@ Population::Population(std::string name, unsigned int nbNeurons, bool isRateType
     maxDelay_ = 0;
     isRateType_ = isRateType;
 
-    projections_ = std::vector<std::vector<Projection*> >(nbNeurons_, std::vector<Projection*>());
-    typedProjections_ = std::vector< std::vector< std::vector<class Projection*> > >(nbNeurons_, std::vector< std::vector<class Projection*> >());
+    dendrites_ = std::vector<std::vector<Dendrite*> >(nbNeurons_, std::vector<Dendrite*>());
+    typedDendrites_ = std::vector< std::vector< std::vector<class Dendrite*> > >(nbNeurons_, std::vector< std::vector<class Dendrite*> >());
 
 #ifdef ANNAR_PROFILE
     try
@@ -48,22 +48,22 @@ Population::Population(std::string name, unsigned int nbNeurons, bool isRateType
 #endif
 }
 
-void Population::addProjection(unsigned int postRankID, Projection* proj)
+void Population::addDendrite(unsigned int postRankID, Dendrite* proj)
 {
 #ifdef _DEBUG
-    std::cout << name_ << ": added projection to neuron " << postRankID << std::endl;
+    std::cout << name_ << ": added dendrite to neuron " << postRankID << std::endl;
     std::cout << "address " << proj << std::endl;
 #endif
     try
     {
-        projections_.at(postRankID).push_back(proj);
+        dendrites_.at(postRankID).push_back(proj);
 
-        while (typedProjections_.at(postRankID).size() <= proj->getTarget())
+        while (typedDendrites_.at(postRankID).size() <= proj->getTarget())
         {
-            typedProjections_.at(postRankID).push_back(std::vector<Projection*>());
+            typedDendrites_.at(postRankID).push_back(std::vector<Dendrite*>());
         }
 
-        typedProjections_.at(postRankID).at(proj->getTarget()).push_back(proj);
+        typedDendrites_.at(postRankID).at(proj->getTarget()).push_back(proj);
     }
     catch (std::exception &e)
     {
@@ -74,40 +74,40 @@ void Population::addProjection(unsigned int postRankID, Projection* proj)
     };
 }
 
-void Population::removeProjection(Population* pre, int type)
+void Population::removeDendrite(Population* pre, int type)
 {
     for (int n = 0; n < nbNeurons_; n++)
     {
-        for (int p = 0; p < projections_[n].size(); p++)
+        for (int p = 0; p < dendrites_[n].size(); p++)
         {
-            if (projections_[n][p]->getPrePopulation() == pre)
-                projections_[n].erase(projections_[n].begin()+p);
+            if (dendrites_[n][p]->getPrePopulation() == pre)
+                dendrites_[n].erase(dendrites_[n].begin()+p);
         }
     }
 }
 
-void Population::removeProjections(Population* pre)
+void Population::removeDendrites(Population* pre)
 {
     for (unsigned int n = 0; n < nbNeurons_; n++)
     {
-        for (unsigned int p = 0; p < projections_[n].size(); p++)
+        for (unsigned int p = 0; p < dendrites_[n].size(); p++)
         {
-            if (projections_[n][p]->getPrePopulation() == pre)
-                projections_[n].erase(projections_[n].begin()+p);
+            if (dendrites_[n][p]->getPrePopulation() == pre)
+                dendrites_[n].erase(dendrites_[n].begin()+p);
         }
     }
 }
 
-Projection* Population::getProjection(unsigned int neuron, int type, Population *pre)
+Dendrite* Population::getDendrite(unsigned int neuron, int type, Population *pre)
 {
-    if (neuron < projections_.size())
+    if (neuron < dendrites_.size())
     {
-        for (unsigned int p = 0; p < projections_[neuron].size(); p++)
+        for (unsigned int p = 0; p < dendrites_[neuron].size(); p++)
         {
-            if ((projections_[neuron][p]->getTarget() == type) &&
-                (projections_[neuron][p]->getPrePopulation() == pre))
+            if ((dendrites_[neuron][p]->getTarget() == type) &&
+                (dendrites_[neuron][p]->getPrePopulation() == pre))
             {
-                return projections_[neuron][p];
+                return dendrites_[neuron][p];
             }
         }
     }
@@ -115,17 +115,17 @@ Projection* Population::getProjection(unsigned int neuron, int type, Population 
     return NULL;
 }
 
-std::vector<Projection*> Population::getProjections(unsigned int neuron, int type)
+std::vector<Dendrite*> Population::getDendrites(unsigned int neuron, int type)
 {
-    std::vector<Projection*> vec = std::vector<Projection*>();
+    std::vector<Dendrite*> vec = std::vector<Dendrite*>();
 
-    if (neuron < projections_.size())
+    if (neuron < dendrites_.size())
     {
-        for (unsigned int p = 0; p < projections_[neuron].size(); p++)
+        for (unsigned int p = 0; p < dendrites_[neuron].size(); p++)
         {
-            if (projections_[neuron][p]->getTarget() == type)
+            if (dendrites_[neuron][p]->getTarget() == type)
             {
-                vec.push_back(projections_[neuron][p]);
+                vec.push_back(dendrites_[neuron][p]);
             }
         }
     }

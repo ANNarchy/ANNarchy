@@ -1,5 +1,5 @@
 
-# Header for a Rate projection.
+# Header for a rate dendrite
 # 
 # Depends on:
 # 
@@ -22,9 +22,9 @@ rate_projection_header = \
 
 #include "Global.h"
 #include "Includes.h"
-#include "MeanProjection.h"
+#include "RateDendrite.h"
 
-class %(class)s : public MeanProjection 
+class %(class)s : public RateDendrite 
 {
 public:
     %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
@@ -159,7 +159,7 @@ rate_projection_body = \
 
 using namespace ANNarchy_Global;
 
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : MeanProjection() 
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : RateDendrite() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
@@ -170,10 +170,10 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
 
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : MeanProjection() 
+%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : RateDendrite() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
@@ -184,7 +184,7 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
 
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
 }
 
 %(class)s::~%(class)s() 
@@ -273,7 +273,7 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
     if(spike)
     {
         pre_population_->addSpikeTarget(this);
@@ -288,7 +288,7 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->addProjection(postRank, this);
+    post_population_->addDendrite(postRank, this);
     if(spike)
     {
         pre_population_->addSpikeTarget(this);
