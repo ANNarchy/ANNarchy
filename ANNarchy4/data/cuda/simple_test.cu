@@ -67,19 +67,33 @@ weightReduce(
 
     // write result for this block to global mem
     if (tid == 0)
+    {
+    	printf("result %f", sdata[0]);
         *result = sdata[0];
+    }
 }
 
 WeightSumData* WeightSumData::weightSumData_ = NULL;
 
 DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<DATA_TYPE> preRates)
 {
-	int N = rank.size();
+	int N = preRates.size();
+	int C = rank.size();
+
+	for ( int i = 0; i < rank.size(); i++ )
+		std::cout << rank[i] << ", ";
+	std::cout << std::endl;
+	for ( int i = 0; i < value.size(); i++ )
+		std::cout << value[i] << ", ";
+	std::cout << std::endl;
+	for ( int i = 0; i < rank.size(); i++ )
+		std::cout << preRates[rank[i]] << ", ";
+	std::cout << std::endl;
 
 	double start1 = omp_get_wtime();
-	cudaMemcpy( WeightSumData::instance(N)->getWeightPtr(), value.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice );
+	cudaMemcpy( WeightSumData::instance(N)->getWeightPtr(), value.data(), sizeof(DATA_TYPE) * C, cudaMemcpyHostToDevice );
 	cudaMemcpy( WeightSumData::instance(N)->getRatePtr(), preRates.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice);
-	cudaMemcpy( WeightSumData::instance(N)->getIndexPtr(), rank.data(), sizeof(int) * N, cudaMemcpyHostToDevice);
+	cudaMemcpy( WeightSumData::instance(N)->getIndexPtr(), rank.data(), sizeof(int) * C, cudaMemcpyHostToDevice);
 	std::cout << "Copying data ("<< N <<" synapses): "<< (omp_get_wtime() - start1)*1000.0 << " ms "<< std::endl;
 
 	int numBlocks = (int)ceil(double(rank.size())/32.0);
@@ -97,6 +111,8 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 															N,
 															WeightSumData::instance(N)->getResultPtr()
 															);
+
+	cudaDeviceSynchronize();
 
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
