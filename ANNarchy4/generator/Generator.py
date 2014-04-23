@@ -31,8 +31,9 @@ import ANNarchy4
 import ANNarchy4.core.Global as Global
 from ANNarchy4.parser.Analyser import Analyser, _extract_functions
 from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, SpikeProjectionGenerator  
-
+from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
+from MakeTemplates import *
+ 
 def _folder_management(profile_enabled, clean):
     """
     ANNarchy is provided as a python package. For compilation a local folder
@@ -235,12 +236,19 @@ class Generator(object):
         
         # create projections cpp class for each synapse
         for name, desc in self.analyser.analysed_projections.iteritems():
-            if desc['type'] == 'rate':
-                proj_generator = RateProjectionGenerator(name, desc)
-            elif desc['type'] == 'spike':
-                proj_generator = SpikeProjectionGenerator(name, desc)
-            proj_generator.generate(Global.config['verbose'])
-    
+            if Global.config['paradigm'] == "openmp":
+                if desc['type'] == 'rate':
+                    proj_generator = RateProjectionGenerator(name, desc)
+                elif desc['type'] == 'spike':
+                    proj_generator = SpikeProjectionGenerator(name, desc)
+                proj_generator.generate(Global.config['verbose'])
+            else:
+                if desc['type'] == 'rate':
+                    proj_generator = RateProjectionGeneratorCUDA(name, desc)
+                elif desc['type'] == 'spike':
+                    proj_generator = SpikeProjectionGenerator(name, desc)
+                proj_generator.generate(Global.config['verbose'])
+                
         # Create default files mainly based on the number of populations and projections
         if Global.config['verbose']:
             print('\nCreate Includes.h ...')
@@ -371,50 +379,17 @@ class Generator(object):
             else:
                 flags = "-O0 -g -D_DEBUG"
     
-            src = """# Makefile
-SRC = $(wildcard build/*.cpp)
-PYX = $(wildcard pyx/*.pyx)
-OBJ = $(patsubst build/%.cpp, build/%.o, $(SRC))
-     
-all:
-\t@echo "Please provide a target, either 'ANNarchyCython_2.6', 'ANNarchyCython_2.7' or 'ANNarchyCython_3.x for python versions."
+            # generate Makefile
+            if Global.config['paradigm'] == "openmp":
+                src = omp_makefile % { 'src_type': '%.cpp',
+                                       'obj_type': '%.o',
+                                       'flag': flags }
+            else: 
+                src = cuda_makefile % { 'src_type': '%.cpp',
+                                        'src_gpu': '%.cu',
+                                        'obj_type': '%.o',
+                                        'flag': flags }
 
-ANNarchyCython_2.6: $(OBJ) pyx/ANNarchyCython_2.6.o
-\t@echo "Build ANNarchyCython library for python 2.6"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.6.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.6 -o ANNarchyCython.so  
-
-pyx/ANNarchyCython_2.6.o : pyx/ANNarchyCython.pyx
-\tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.6 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.6.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
-
-ANNarchyCython_2.7: $(OBJ) pyx/ANNarchyCython_2.7.o
-\t@echo "Build ANNarchyCython library for python 2.7"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_2.7.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython2.7 -o ANNarchyCython.so  
-
-pyx/ANNarchyCython_2.7.o : pyx/ANNarchyCython.pyx
-\tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python2.7 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_2.7.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
-
-ANNarchyCython_3.x: $(OBJ) pyx/ANNarchyCython_3.x.o
-\t@echo "Build ANNarchyCython library for python 3.x"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_3.x.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython3.2mu -o ANNarchyCython.so  
-
-pyx/ANNarchyCython_3.x.o : pyx/ANNarchyCython.pyx
-\tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ """+flags+""" -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python3.2 -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_3.x.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
-
-build/%.o : build/%.cpp
-\tg++ """+flags+""" -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
-
-ANNarchyCPP : $(OBJ)
-\tg++ """+flags+""" -fPIC -shared -fpermissive -std=c++0x -fopenmp -I. build/*.o -o libANNarchyCPP.so
-
-clean:
-\trm -rf build/*.o
-\trm -rf pyx/*.o
-\trm -rf ANNarchyCython.so
-    """
-            
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)
@@ -545,15 +520,32 @@ clean:
         with open(Global.annarchy_dir+'/generate/build/ANNarchy.h', mode = 'r') as r_file:
             for a_line in r_file:
                 if a_line.find('//AddProjection') != -1:
+                    code += a_line
                     if(self.cpp_stand_alone):
-                        pass #TODO
-#                         for proj in projections:
-#                             code += proj.generator.generate_cpp_add()
+                        template = """\t\tnet_->connect(%(preID)i, %(postID)i, %(projID)i, %(target)i, %(spike)s, "%(filename)s");\n""" 
+                        
+                        for proj in self.projections:
+                            dictionary = { 'preID' : proj.pre._id,
+                                           'postID' : proj.post._id,
+                                           'projID' : proj._id,
+                                           'target' : proj.post.targets.index(proj.target),
+                                           'spike' : 'false', # TODO!!!!
+                                           'filename' : proj.pre.name+'_'+proj.post.name+'_'+proj.target+'.csv'
+                                          } 
+                            
+                            code += template % dictionary
+
                 elif a_line.find('//AddPopulation') != -1:
+                    code += a_line 
                     if(self.cpp_stand_alone):
-                        pass # TODO
-#                         for pop in populations:
-#                             code += pop.generator.generate_cpp_add()                            
+                        #
+                        # populations register themselves on the network object, so only create the objects
+                        template = """\t\tnew %(class)s("%(name)s", %(size)s);\n"""
+                        for pop in self.populations:
+                            code += template % { 'name': pop.name,
+                                                 'class': pop.class_name,
+                                                 'size': pop.size }
+                                                         
                 elif a_line.find('//createProjInstance') != -1:
                     code += a_line
                     code += self.generate_proj_instance_class()
