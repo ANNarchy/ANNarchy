@@ -14,7 +14,7 @@ parameters="""
     baseline = 0.0
 """,
 equations="""
-    noise = Uniform(-0.1, 0.1)
+    noise = Uniform(-0.5, 0.5)
     tau * dmp / dt + mp = baseline + noise
     rate = pos(mp)
 """ 
@@ -57,39 +57,106 @@ Proj2 = Projection(
     sigma_neg=0.7                    
 )
 
+from pyqtgraph.Qt import QtGui, QtCore
+import pyqtgraph as pg 
+
+class Viewer(object):
+    def __init__(self, pop, world):
+    
+        self.pop = pop
+        self.world = world
+          
+        self.win = pg.GraphicsLayoutWidget()
+        self.win.resize(800,800)
+        self.win.show()
+        self.view = self.win.addViewBox()
+        self.view.setAspectLocked(True)
+        self.img = pg.ImageItem(border='w')
+        self.view.addItem(self.img)
+        self.view.setRange(QtCore.QRectF(0, 0, 20, 20))
+    
+    def update(self):
+    
+        # Simulate for 200ms
+        self.world.rotate(200)      
+        # Actualize the GUI
+        self.img.setImage(self.pop.rate)
+        QtGui.QApplication.processEvents()
+        
+    def run(self):
+        timer = QtCore.QTimer()
+        timer.timeout.connect(self.update)
+        timer.start(0)  
+        QtGui.QApplication.instance().exec_() 
+
+import pyqtgraph.opengl as gl
+class GLViewer(object):
+    def __init__(self, populations, world):
+    
+        self.populations = populations
+        self.world = world
+          
+        self.win = gl.GLViewWidget()
+        self.win.show()
+        self.win.setCameraPosition(distance=50)
+        
+        self.plots = []
+        
+        shift = - 20
+        for pop in self.populations:
+            
+            p = gl.GLSurfacePlotItem(
+                x = np.linspace(0, pop.geometry[0]-1, pop.geometry[0]), 
+                y = np.linspace(0, pop.geometry[1]-1, pop.geometry[1]), 
+                #y = np.array(range(pop.geometry[1])), 
+                shader='heightColor', 
+                computeNormals=False, 
+                smooth=False
+            )
+            p.translate(shift, -10, -1)
+            self.win.addItem(p)
+            self.plots.append(p)
+            shift += 25
+        
+    def scale(self, data):
+        " Colors are shown in the range [-1, 1] per default."
+        return 1.8 * data -0.9
+    
+    def update(self):
+    
+        # Simulate for 200ms
+        self.world.rotate(200)      
+        # Actualize the GUI
+        for i in range(len(self.populations)):
+            self.plots[i].setData(z=self.scale(self.populations[i].rate)) 
+        # Listen to mouse/keyboard events
+        QtGui.QApplication.processEvents()
+        
+    def run(self):
+        timer = QtCore.QTimer()
+        timer.timeout.connect(self.update)
+        timer.start(0)  
+        QtGui.QApplication.instance().exec_() 
+        
+ 
+
 # Main program
 if __name__ == "__main__":
 
     # Analyse and compile everything, initialize the parameters/variables...
     compile()   
-
-    # Create the GUI using PyQtGraph
-    from pyqtgraph.Qt import QtGui, QtCore
-    import pyqtgraph as pg    
-    app = pg.mkQApp()
-    win = QtGui.QMainWindow()
-    win.resize(800,800)
-    imv = pg.ImageView()
-    win.setCentralWidget(imv)
-    win.show()
-
     
-    # Import the envorinment for the simulation (Cython)
+    # Import the environment for the simulation (Cython)
     import pyximport; pyximport.install()
     from BubbleWorld import World
     world = World(pop = InputPop, radius = 0.5, sigma = 2.0, period = 5000.0)
-    
-    # Method called regularly by the GUI
-    def update():
-        # Simulate for 200ms
-        world.rotate(200)      
-        # Actualize the GUI
-        imv.setImage(FocusPop.rate)
-        QtGui.QApplication.processEvents()
-     
+
+    # Create the GUI using PyQtGraph
+    app = QtGui.QApplication([])
+    viewer = GLViewer(populations = [InputPop, FocusPop], world=world)
     # Start the simulation            
-    timer = QtCore.QTimer()
-    timer.timeout.connect(update)
-    timer.start(0)
-    QtGui.QApplication.instance().exec_()
+    viewer.run()
+
+     
+
 

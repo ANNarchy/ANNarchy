@@ -28,10 +28,11 @@ cdef class World:
         self.midh = self.pop.geometry[1]/2
     
     def rotate(self, int duration):
-        for t in range(duration):
+        cdef int t
+        for t in xrange(duration):
             self.angle += 1.0/self.period
             self.cw = self.midw * ( 1.0 + self.radius * np.cos(2.0 * np.pi * self.angle ) )
             self.ch = self.midh * ( 1.0 + self.radius * np.sin(2.0 * np.pi * self.angle ) )
-            self.data = (0.5 * np.exp(-((self.xx-self.cw)**2 + (self.yy-self.ch)**2)/2.0/self.sigma**2))
+            self.data = (np.exp(-((self.xx-self.cw)**2 + (self.yy-self.ch)**2)/2.0/self.sigma**2))
             self.pop.baseline = self.data
             simulate(1)  
