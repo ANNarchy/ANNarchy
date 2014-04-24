@@ -134,7 +134,7 @@ protected:
     std::vector< std::vector<class Dendrite*> > dendrites_; ///< list of afferent dendrites ordered neuron wise
     std::vector< std::vector< std::vector<class Dendrite*> > > typedDendrites_;	///< list of afferent dendrites ordered neuron and type wise, to improve performance of the weighted sum.
 
-    unsigned int rank_ = 0;				///< internal identifier of the population
+    unsigned int rank_;				///< internal identifier of the population
 };
 
 /*TODEL
