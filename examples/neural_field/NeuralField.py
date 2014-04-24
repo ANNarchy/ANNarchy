@@ -1,7 +1,8 @@
 #
 #
-#    ANNarchy-4 NeuralField
+#   ANNarchy-4 NeuralField
 #
+#   authors: Julien Vitay, Helge Uelo Dinkelbach
 #
 from ANNarchy4 import *
 

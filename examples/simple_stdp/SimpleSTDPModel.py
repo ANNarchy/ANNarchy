@@ -1,8 +1,13 @@
+#
+#   ANNarchy4 - SimpleSTDP
+#
+#   A simple model showing the STDP learning on small amount of neurons
+#
+#   authors: Helge Uelo Dinkelbach, Julien Vitay
+#
 from ANNarchy4 import *
 
 from pylab import show, figure, subplot, legend, close
-
-#setup(verbose=True)
 
 Izhikevitch = SpikeNeuron(
 parameters="""

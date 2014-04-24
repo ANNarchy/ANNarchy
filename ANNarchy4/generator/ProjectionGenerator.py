@@ -657,7 +657,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         functions = self.generate_functions()
                 
         # Generate the code
-        template = OMPTemplates.spike_projection_header
+        template = Templates.spike_projection_header
         dictionary = { 
             'class': self.name, 
             'pre_name': self.desc['pre_class'],
