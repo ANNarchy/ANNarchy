@@ -295,6 +295,17 @@ class ProjectionGenerator(object):
             
         return code
 
+    def generate_add_proj_include(self):
+        """
+        Include of paradigm specific headers
+        """
+        add_include = ''
+        if Global.config['paradigm'] == "cuda":
+            add_include += "#include \"simple_test.h\""
+        
+        return add_include
+    
+
 class RateProjectionGenerator(ProjectionGenerator):
     """ Class for generating C++ code from a rate population description. """
     def __init__(self, name, desc):
@@ -312,7 +323,7 @@ class RateProjectionGenerator(ProjectionGenerator):
         functions = self.generate_functions()
         
         # Generate the code
-        template = OMPTemplates.rate_projection_header
+        template = Templates.rate_projection_header
         dictionary = { 
             'class': self.name, 
             'pre_name': self.desc['pre_class'],
@@ -343,9 +354,10 @@ class RateProjectionGenerator(ProjectionGenerator):
         record = ""
         
         # Generate the code
-        template = OMPTemplates.rate_projection_body
+        template = Templates.rate_projection_body
         dictionary = {         
             'class': self.name,
+            'add_include': self.generate_add_proj_include(),
             'destructor': '' ,
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],
@@ -478,7 +490,7 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
         functions = self.generate_functions()
         
         # Generate the code
-        template = CUDATemplates.rate_projection_header
+        template = Templates.rate_projection_header
         dictionary = { 
             'class': self.name, 
             'pre_name': self.desc['pre_class'],
@@ -509,9 +521,10 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
         record = ""
         
         # Generate the code
-        template = CUDATemplates.rate_projection_body
+        template = Templates.rate_projection_body
         dictionary = {         
             'class': self.name,
+            'add_include': self.generate_add_proj_include(),
             'destructor': '' ,
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],
@@ -677,11 +690,12 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         rem_all_synapse = self.generate_rem_all_synapse()
         
         record = self.generate_record()
-        
+
         # Generate the code
-        template = OMPTemplates.spike_projection_body
+        template = Templates.spike_projection_body
         dictionary = {         
             'class': self.name,
+            'add_include': self.generate_add_proj_include(),
             'destructor': '' ,
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],

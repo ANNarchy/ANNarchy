@@ -154,8 +154,8 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 	int line_counter=0;
 	int dendrite_counter = 0;
 
-	auto pre = getPopulation(prePopulationID, spike);
-	auto post = getPopulation(postPopulationID, spike);
+	auto pre = getPopulation(prePopulationID);
+	auto post = getPopulation(postPopulationID);
 
 	while(getline(file, line))
 	{
