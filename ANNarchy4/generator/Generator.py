@@ -32,8 +32,6 @@ import ANNarchy4.core.Global as Global
 from ANNarchy4.parser.Analyser import Analyser, _extract_functions
 from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
-from MakeTemplates import *
-
 from templates import *
  
 def _folder_management(profile_enabled, clean):
