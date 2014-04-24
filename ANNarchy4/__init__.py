@@ -12,18 +12,6 @@ from .core.Dendrite import Dendrite
 from .core.Random import Constant, Uniform, Normal
 
 #
-# ANNarchy4 visualizer
-from .visualization import Visualization
-#from .visualization2 import Visualization2
-
-try:
-    import PyQt4
-    import OpenGL
-    from .editor import ANNarchyEditor
-except ImportError:
-    print "ANNarchy4 editor is not available through missing dependencies."
-
-#
 # ANNarchy4 compilation
 from .generator import compile
 
