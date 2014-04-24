@@ -27,9 +27,9 @@ rate_projection_header = \
 class %(class)s : public RateDendrite 
 {
 public:
-    %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
+    %(class)s(Population* pre, Population* post, int postRank, int target);
     
-    %(class)s(int preID, int postID, int postRank, int target, bool spike);
+    %(class)s(int preID, int postID, int postRank, int target);
     
     ~%(class)s();
     
@@ -92,9 +92,9 @@ spike_projection_header = \
 class %(class)s : public SpikeDendrite 
 {
 public:
-    %(class)s(Population* pre, Population* post, int postRank, int target, bool spike);
+    %(class)s(Population* pre, Population* post, int postRank, int target);
     
-    %(class)s(int preID, int postID, int postRank, int target, bool spike);
+    %(class)s(int preID, int postID, int postRank, int target);
     
     ~%(class)s();
     
@@ -159,7 +159,7 @@ rate_projection_body = \
 
 using namespace ANNarchy_Global;
 
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : RateDendrite() 
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : RateDendrite() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
@@ -173,10 +173,10 @@ using namespace ANNarchy_Global;
     post_population_->addDendrite(postRank, this);
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : RateDendrite() 
+%(class)s::%(class)s(int preID, int postID, int postRank, int target) : RateDendrite() 
 {
-    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID, spike));
-    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID, spike));
+    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
+    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
     pre_rates_ = pre_population_->getRates();
     post_rates_ = post_population_->getRates();
@@ -261,7 +261,7 @@ spike_projection_body = \
 
 using namespace ANNarchy_Global;
         
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target, bool spike) : SpikeDendrite() 
+%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : SpikeDendrite() 
 {
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
@@ -270,25 +270,19 @@ using namespace ANNarchy_Global;
     post_neuron_rank_ = postRank;
     
     post_population_->addDendrite(postRank, this);
-    if(spike)
-    {
-        pre_population_->addSpikeTarget(this);
-    }
+    pre_population_->addSpikeTarget(this);
 }
 
-%(class)s::%(class)s(int preID, int postID, int postRank, int target, bool spike) : SpikeDendrite() 
+%(class)s::%(class)s(int preID, int postID, int postRank, int target) : SpikeDendrite() 
 {
-    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID, spike));
-    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID, spike));
+    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
+    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
     target_ = target;
     post_neuron_rank_ = postRank;
     
     post_population_->addDendrite(postRank, this);
-    if(spike)
-    {
-        pre_population_->addSpikeTarget(this);
-    }
+    pre_population_->addSpikeTarget(this);
 }
 
 %(class)s::~%(class)s() 

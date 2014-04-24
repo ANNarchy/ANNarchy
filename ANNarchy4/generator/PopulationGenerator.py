@@ -466,6 +466,7 @@ class RatePopulationGenerator(PopulationGenerator):
         template = rate_population_body
         dictionary = {
             'class' : self.name,
+            'pop_id': self.desc['id'],
             'constructor' : constructor,
             'destructor' : destructor,
             'prepare': prepare,
@@ -627,6 +628,7 @@ class SpikePopulationGenerator(PopulationGenerator):
         template = spike_population_body
         dictionary = {
             'class' : self.name,
+            'pop_id': self.desc['id'],
             'constructor' : constructor,
             'destructor' : destructor,
             'prepare': prepare,

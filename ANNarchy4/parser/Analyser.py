@@ -54,6 +54,9 @@ class Analyser(object):
             pop.targets = list(set(pop.targets))  
             pop.sources = list(set(pop.sources))
             
+            # internal id
+            pop.description['id'] = pop._id
+            
             # Actualize initial values
             for variable in pop.description['parameters']:
                 if isinstance(pop.init[variable['name']], bool) or \

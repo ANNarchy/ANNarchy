@@ -57,7 +57,6 @@ class Dendrite(object):
         local_proj = getattr(cython_module, proj_class_name)
         
         isRateCoded = isinstance(self.proj.pre.neuron_type, RateNeuron) and isinstance(self.proj.post.neuron_type, RateNeuron) 
-        print isRateCoded
         self.cy_instance = local_proj(
             self.proj._id, 
             self.proj.pre.rank, 

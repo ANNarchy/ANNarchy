@@ -77,6 +77,24 @@ class Population* Network::getPopulation(std::string name, bool isRateCoded)
 	return NULL;
 }
 
+class Population* Network::getPopulation(unsigned int id)
+{
+
+	for(auto it = rate_populations_.cbegin(); it != rate_populations_.cend(); it++)
+	{
+		if ((*it)->getRank() == id)
+			return (*it);
+	}
+
+	for(auto it = spike_populations_.cbegin(); it != spike_populations_.cend(); it++)
+	{
+		if ((*it)->getRank() == id)
+			return (*it);
+	}
+
+	return NULL;
+}
+
 class Population* Network::getPopulation(unsigned int id, bool isRateCoded)
 {
 
@@ -150,7 +168,7 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 
 		if (postNeuronRank != previousRank)
 		{
-			dendrite = createProjInstance().getInstanceOf(projectionID, pre, post, postNeuronRank, targetID, spike);
+			dendrite = createProjInstance().getInstanceOf(projectionID, pre, post, postNeuronRank, targetID);
 			dendrite->removeAllSynapses();	// just for the case there are some previously allocated datas
 			previousRank = postNeuronRank;
 

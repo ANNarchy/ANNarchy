@@ -44,6 +44,12 @@ public:
     virtual ~Dendrite();
 
     /**
+     *  \brief		is the current dendrite rate coded.
+     *  \details	the variable isRateCoded__ is set by the inheriting class.
+     */
+    bool isRateCoded() { return isRateCoded_; }
+
+    /**
      * 	\brief		returns the reference to presynaptic populations
      * 	\details	is abstract, cause the reference is hold by child class.
      */

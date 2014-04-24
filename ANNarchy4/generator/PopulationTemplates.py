@@ -201,9 +201,12 @@ rate_population_body = """#include "%(class)s.h"
 
 %(class)s::%(class)s(std::string name, int nbNeurons): RatePopulation(name, nbNeurons)
 {
+    rank_ = %(pop_id)s;
+    
 #ifdef _DEBUG
-    std::cout << "%(class)s::%(class)s called." << std::endl;
+    std::cout << "%(class)s::%(class)s called (using rank " << rank_ << ")" << std::endl;
 #endif
+
 %(constructor)s
 
     try
@@ -295,14 +298,25 @@ spike_population_body = """#include "%(class)s.h"
 
 %(class)s::%(class)s(std::string name, int nbNeurons): SpikePopulation(name, nbNeurons)
 {
+    rank_ = %(pop_id)s;
+    
 #ifdef _DEBUG
-    std::cout << "%(class)s::%(class)s called." << std::endl;
+    std::cout << "%(class)s::%(class)s called (using rank " << rank_ << ")" << std::endl;
 #endif
+
 %(constructor)s
 
     spiked_ = std::vector<bool>(nbNeurons_, false);
     
-    Network::instance()->addPopulation(this);
+    try
+    {
+        Network::instance()->addPopulation(this);
+    }
+    catch(std::exception e)
+    {
+        std::cout << "Failed to attach population"<< std::endl;
+        std::cout << e.what() << std::endl;
+    }
 }
 
 %(class)s::~%(class)s() 

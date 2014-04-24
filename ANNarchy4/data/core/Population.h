@@ -123,6 +123,8 @@ public:
      *  \details	the variable isRateType_ is set by the inheriting class.
      */
     bool isMeanRateCoded() { return isRateType_; }
+
+    unsigned int getRank() { return rank_; }
 protected:
     unsigned int nbNeurons_; 	///< amount of neurons in the layer
     std::string name_;  		///< name of layer
@@ -131,6 +133,8 @@ protected:
     bool isRateType_;			///< is the current population rate coded.
     std::vector< std::vector<class Dendrite*> > dendrites_; ///< list of afferent dendrites ordered neuron wise
     std::vector< std::vector< std::vector<class Dendrite*> > > typedDendrites_;	///< list of afferent dendrites ordered neuron and type wise, to improve performance of the weighted sum.
+
+    unsigned int rank_ = 0;				///< internal identifier of the population
 };
 
 /*TODEL

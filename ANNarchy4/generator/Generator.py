@@ -569,16 +569,7 @@ class Generator(object):
         # single cases
         cases_ptr = ''
         for name, desc in projections.iteritems():
-            cases_ptr += """
-                case %(id)s:
-                    {
-                #ifdef _DEBUG
-                    std::cout << "Instantiate name=%(name)s" << std::endl;
-                #endif
-                    return new %(name)s(pre, post, postNeuronRank, target, rateCoded);
-                    }
-
-""" % { 'name': name, 'id': name.split('Projection')[1]}
+            cases_ptr += proj_instance % { 'name': name, 'id': name.split('Projection')[1]}
 
         # complete code
         code = create_proj_instance % { 'case1': cases_ptr }
