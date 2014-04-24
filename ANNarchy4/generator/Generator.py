@@ -382,15 +382,20 @@ class Generator(object):
             else:
                 flags = "-O0 -g -D_DEBUG"
     
+            py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
+                                                   'minor': sys.version_info[1] }
+    
             # generate Makefile
             if Global.config['paradigm'] == "openmp":
                 src = omp_makefile % { 'src_type': '%.cpp',
                                        'obj_type': '%.o',
+                                       'py_version': py_version, 
                                        'flag': flags }
             else: 
                 src = cuda_makefile % { 'src_type': '%.cpp',
                                         'src_gpu': '%.cu',
                                         'obj_type': '%.o',
+                                        'py_version': py_version,
                                         'flag': flags }
 
             # Write the Makefile to the disk
