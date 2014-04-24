@@ -27,11 +27,6 @@ import sys, os
 from datetime import datetime
 from math import ceil
 
-try:
-    from PyQt4.QtCore import QCoreApplication
-except:
-    pass
-
 # instances
 _populations = []       # created populations
 _projections = []       # created projections

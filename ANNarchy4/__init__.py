@@ -15,18 +15,12 @@ from .core.Random import Constant, Uniform, Normal
 # ANNarchy4 compilation
 from .generator import compile
 
-#
-# extension packages, imported as available
-from .extensions import *
-if Global.config['verbose']:
-    check_extensions()
-
 # Generic imports
 import numpy as np
 import os, sys
 
 # Version
 __version__ = '4.1'
-__release__ = '4.1.0.beta'
-Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
+__release__ = '4.1.0.gamma'
+core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                    ') on ' + sys.platform + ' (' + os.name + ').' )
