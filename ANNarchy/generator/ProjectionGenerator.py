@@ -21,12 +21,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy4.core import Global
-from ANNarchy4.core.Random import *
+from ANNarchy.core import Global
+from ANNarchy.core.Random import *
 
-from ANNarchy4.generator import ProjectionTemplates as Templates
-from ANNarchy4.generator import ProjectionTemplatesOMP as OMPTemplates
-from ANNarchy4.generator import ProjectionTemplatesCUDA as CUDATemplates
+from ANNarchy.generator import ProjectionTemplates as Templates
+from ANNarchy.generator import ProjectionTemplatesOMP as OMPTemplates
+from ANNarchy.generator import ProjectionTemplatesCUDA as CUDATemplates
 
 import re
 

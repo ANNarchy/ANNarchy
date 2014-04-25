@@ -25,7 +25,7 @@ import pprint
 
 class RateSynapse(object):
     """
-    Definition of a rate coded synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
+    Definition of a rate coded synapse in ANNarchy. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
     
     def __init__(self, parameters="", equations="", psp=None, extra_values=None, functions=None):
@@ -55,7 +55,7 @@ class RateSynapse(object):
         
 class SpikeSynapse(object):
     """
-    Definition of a spiking synapse in ANNarchy4. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
+    Definition of a spiking synapse in ANNarchy. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
     """
 
     def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, psp = None, extra_values=None, functions=None ):

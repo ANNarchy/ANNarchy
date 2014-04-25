@@ -29,11 +29,11 @@ import pyximport
 pyximport.install()
 import cy_functions
 
-from ANNarchy4.core import Global
-from ANNarchy4.core.Neuron import RateNeuron, SpikeNeuron
-from ANNarchy4.core.Synapse import RateSynapse, SpikeSynapse
-from ANNarchy4.parser.Analyser import analyse_projection
-from ANNarchy4.core.Dendrite import Dendrite
+from ANNarchy.core import Global
+from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
+from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
+from ANNarchy.parser.Analyser import analyse_projection
+from ANNarchy.core.Dendrite import Dendrite
 
 class Projection(object):
     """

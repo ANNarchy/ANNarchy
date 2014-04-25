@@ -21,11 +21,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy4.core import Global
+from ANNarchy.core import Global
 
 class Record:
     """
-    A simple helper class used by the ANNarchy4.core.Population class.
+    A simple helper class used by the ANNarchy.core.Population class.
     """
     INITED = 0
     RUNNING = 1

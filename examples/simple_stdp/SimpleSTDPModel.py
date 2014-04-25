@@ -1,11 +1,11 @@
 #
-#   ANNarchy4 - SimpleSTDP
+#   ANNarchy - SimpleSTDP
 #
 #   A simple model showing the STDP learning on small amount of neurons
 #
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
-from ANNarchy4 import *
+from ANNarchy import *
 
 from pylab import show, figure, subplot, legend, close
 

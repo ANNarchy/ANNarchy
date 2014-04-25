@@ -21,9 +21,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy4.core import Global
-from ANNarchy4.generator.PopulationTemplates import *
-from ANNarchy4.core.Random import *
+from ANNarchy.core import Global
+from ANNarchy.generator.PopulationTemplates import *
+from ANNarchy.core.Random import *
 
 import re
 

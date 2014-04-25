@@ -21,13 +21,13 @@
     
 """
 #from .Descriptor import Descriptor, Attribute
-import ANNarchy4.core.Global as Global
-from ANNarchy4.core.Neuron import RateNeuron
-from ANNarchy4.core.Random import RandomDistribution
+import ANNarchy.core.Global as Global
+from ANNarchy.core.Neuron import RateNeuron
+from ANNarchy.core.Random import RandomDistribution
 import numpy as np
 import traceback
 
-from ANNarchy4.core.Record import Record
+from ANNarchy.core.Record import Record
 
 
 class Dendrite(object):

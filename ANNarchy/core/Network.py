@@ -24,7 +24,7 @@
 from .Population import Population
 from .Projection import Projection
 
-from ANNarchy4 import generator
+from ANNarchy import generator
 from . import Global
 
 from math import ceil

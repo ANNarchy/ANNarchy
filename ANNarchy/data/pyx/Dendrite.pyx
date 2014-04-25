@@ -23,7 +23,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy4.core.Random import *
+from ANNarchy.core.Random import *
 
 from libcpp.vector cimport vector
 from libc.stdlib cimport malloc

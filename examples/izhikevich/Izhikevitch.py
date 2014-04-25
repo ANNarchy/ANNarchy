@@ -1,4 +1,4 @@
-from ANNarchy4 import *
+from ANNarchy import *
 from pylab import show, figure, subplot, legend, close
 
 #

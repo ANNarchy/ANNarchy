@@ -22,7 +22,7 @@
     
 """
 import numpy as np
-from ANNarchy4.core import Global
+from ANNarchy.core import Global
 
 # List of available distributions
 available_distributions = [ 'Constant',

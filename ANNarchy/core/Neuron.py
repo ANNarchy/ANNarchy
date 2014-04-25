@@ -21,14 +21,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy4.core.Global import _error
-from ANNarchy4.core.PopulationView import PopulationView
+from ANNarchy.core.Global import _error
+from ANNarchy.core.PopulationView import PopulationView
 
 import pprint
 
 class RateNeuron(object):
     """
-    Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
+    Python definition of a mean rate coded neuron in ANNarchy. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
     def __init__(self, parameters="", equations="", extra_values={}, functions=None):
         """ 
@@ -61,7 +61,7 @@ class RateNeuron(object):
         
 class SpikeNeuron(object):
     """
-    Python definition of a mean rate coded neuron in ANNarchy4. This object is intended to encapsulate neuronal equations and further used in population class.
+    Python definition of a mean rate coded neuron in ANNarchy. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
     def __init__(self, parameters="", equations="", spike=None, reset=None, extra_values={}, functions=None ):
         """ 
