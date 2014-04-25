@@ -80,6 +80,22 @@ public:
      *  \param[in]	neuron	postsynaptic rank of the neuron
      *  \param[in]	proj	projection instance to attach
      */
+    void addProjection(class Projection* projection);
+
+    /**
+     *  \brief		get a projection to another presynaptic population
+     *  \param[in]	pre		presynaptic population
+     *  \param[in]	target 	integer target ID
+     *  \return		reference to the projection, if one exists with these parameters, otherwise NULL.
+     */
+    class Projection* getProjection(class Population* pre, int target);
+
+    /**
+     *  \brief		add a dendrite to a neuron
+     *  \details	the given dendrite is attached to the postsynaptic neuron identified by given rank.
+     *  \param[in]	neuron		postsynaptic rank of the neuron
+     *  \param[in]	dendrite	dendrite instance to attach
+     */
     void addDendrite(unsigned int neuron, class Dendrite* proj);
 
     /**
@@ -131,6 +147,7 @@ protected:
     int maxDelay_;				///< maximum delay over all neurons. Please note, that this value is set after analyzing the attached projections.
     DATA_TYPE dt_;				///< discretization constant
     bool isRateType_;			///< is the current population rate coded.
+    std::vector< class Projection*> projections_;
     std::vector< std::vector<class Dendrite*> > dendrites_; ///< list of afferent dendrites ordered neuron wise
     std::vector< std::vector< std::vector<class Dendrite*> > > typedDendrites_;	///< list of afferent dendrites ordered neuron and type wise, to improve performance of the weighted sum.
 

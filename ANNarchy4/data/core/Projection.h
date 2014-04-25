@@ -31,28 +31,18 @@ public:
 
     ~Projection();
 
-    virtual void addDendrite(int postNeuronRank, Dendrite *dendrite) {}
+    virtual Population* getPrePopulation() { return NULL; }
 
-    virtual void removeDendrite(int postNeuronRank, Population *pre) {}
+    virtual void addDendrite(int postNeuronRank, class Dendrite *dendrite) {}
+
+    virtual void removeDendrite(int postNeuronRank, class Population *pre) {}
 
     bool isRateCoded() { return isRateCoded_; }
 
     int getTarget() { return target_; }
 
-private:
+protected:
     int target_;
     bool isRateCoded_;
-};
-
-class RateProjection : public Projection
-{
-public:
-	RateProjection()
-	{
-		isRateCoded_ = true;
-	}
-private:
-
-	std::vector<RateDendrite*> dendrites_;
 };
 #endif

@@ -48,28 +48,47 @@ Population::Population(std::string name, unsigned int nbNeurons, bool isRateType
 #endif
 }
 
-void Population::addDendrite(unsigned int postRankID, Dendrite* proj)
+void Population::addProjection(Projection* projection)
+{
+#ifdef _DEBUG
+    std::cout << name_ << ": added projection = "<< projection << std::endl;
+#endif
+	projections_.push_back(projection);
+}
+
+class Projection* Population::getProjection(class Population* pre, int target)
+{
+	for(auto it = projections_.begin(); it != projections_.end(); it++ )
+	{
+		if ( ((*it)->getPrePopulation() == pre) && ( (*it)->getTarget() == target) )
+			return *it;
+	}
+
+	return NULL;
+}
+
+void Population::addDendrite(unsigned int postRankID, Dendrite* dendrite)
 {
 #ifdef _DEBUG
     std::cout << name_ << ": added dendrite to neuron " << postRankID << std::endl;
-    std::cout << "address " << proj << std::endl;
+    std::cout << "address " << dendrite << std::endl;
 #endif
     try
     {
-        dendrites_.at(postRankID).push_back(proj);
+        dendrites_.at(postRankID).push_back(dendrite);
 
-        while (typedDendrites_.at(postRankID).size() <= proj->getTarget())
+        while (typedDendrites_.at(postRankID).size() <= dendrite->getTarget())
         {
             typedDendrites_.at(postRankID).push_back(std::vector<Dendrite*>());
         }
 
-        typedDendrites_.at(postRankID).at(proj->getTarget()).push_back(proj);
+        typedDendrites_.at(postRankID).at(dendrite->getTarget()).push_back(dendrite);
     }
     catch (std::exception &e)
     {
         std::cout << std::endl;
         std::cout << "Caught: " << e.what() << std::endl;
-        std::cout << "caused by: attach a projection to neuron " << postRankID <<" but there only " << nbNeurons_ << " neurons" << std::endl;
+        std::cout << "caused by: attach a dendrite to neuron " << postRankID <<" but there only " << nbNeurons_ << " neurons" << std::endl;
         std::cout << std::endl;
     };
 }

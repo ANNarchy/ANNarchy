@@ -52,6 +52,26 @@ Network::~Network()
 	}
 }
 
+class Population* Network::getPopulation(std::string name)
+{
+	for(auto it = rate_populations_.cbegin(); it != rate_populations_.cend(); it++)
+	{
+		if((*it)->getName().compare(name)==0)
+			return (*it);
+	}
+
+	for(auto it = spike_populations_.cbegin(); it != spike_populations_.cend(); it++)
+	{
+		if((*it)->getName().compare(name)==0)
+			return (*it);
+	}
+
+#ifdef _DEBUG
+	std::cout << "Population name = "<< name <<" not exist."<<std::endl;
+#endif
+	return NULL;
+}
+
 class Population* Network::getPopulation(std::string name, bool isRateCoded)
 {
 	if (isRateCoded)

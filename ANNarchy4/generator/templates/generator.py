@@ -53,7 +53,10 @@ public:
         Population *pre  = Network::instance()->getPopulation(preID);
         Population *post = Network::instance()->getPopulation(postID);
         
-        return getInstanceOf(ID, pre, post, postNeuronRank, target);
+        auto dendrite =  getInstanceOf(ID, pre, post, postNeuronRank, target);
+        
+        post->getProjection(pre, target)->addDendrite(postNeuronRank, dendrite);        
+        return dendrite;
     }
 
 };
@@ -77,6 +80,7 @@ py_extension = """include "Network.pyx"
 
 %(pop_inc)s  
 
+include "RateProjection.pyx"
 include "Dendrite.pyx"
 %(proj_inc)s  
 
