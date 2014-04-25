@@ -27,11 +27,11 @@ import shutil
 import time
 
 # ANNarchy core informations
-import ANNarchy4
-import ANNarchy4.core.Global as Global
-from ANNarchy4.parser.Analyser import Analyser, _extract_functions
-from ANNarchy4.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy4.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
+import ANNarchy
+import ANNarchy.core.Global as Global
+from ANNarchy.parser.Analyser import Analyser, _extract_functions
+from ANNarchy.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
+from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
 from templates import *
  
 def _folder_management(profile_enabled, clean):
@@ -161,7 +161,7 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
     # Test if profiling is enabled
     if profile_enabled:
         try:
-            from ANNarchy4.extensions import Profile
+            from ANNarchy.extensions import Profile
         except ImportError:
             Global._error( 'Profile extension was not found.' )
             profile_enabled = False

@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-from ANNarchy4.core import Global
+from ANNarchy.core import Global
 
 class Descriptor(object):
 

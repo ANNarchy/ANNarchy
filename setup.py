@@ -56,16 +56,16 @@ except:
 # Perform the installation
 ################################################
 print('Installing ANNarchy on your system')
-setup(  name='ANNarchy4',
-		version='4.1.0.beta',
+setup(  name='ANNarchy',
+		version='4.1.0.gamma',
 		license='GPLv2 or later',
-		platforms='GNU/Linux, Windows',
+		platforms='GNU/Linux',
 		description='Artificial Neural Networks architect',
 		long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed mean-rate neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
 		author='Julien Vitay and Helge Uelo Dinkelbach',
 		author_email='julien.vitay@informatik.tu-chemnitz.de',
 		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy4': ['data/compile.sh', 'data/compiled.sh', 'data/setup.py', 'data/core/*', 'data/openmp/*', 'data/pyx/*', 'core/cy_functions.pyx']}
+        package_data={'ANNarchy': ['data/compile.sh', 'data/compiled.sh', 'data/setup.py', 'data/core/*', 'data/openmp/*', 'data/pyx/*', 'core/cy_functions.pyx']}
  )
 

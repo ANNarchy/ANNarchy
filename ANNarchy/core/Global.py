@@ -77,7 +77,7 @@ authorized_keywords = [
 
 def setup(**keyValueArgs):
     """
-    The setup function is used to configure ANNarchy4 simulation environment. It takes various optional arguments: 
+    The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments: 
 
     Parameter:
     
@@ -85,10 +85,10 @@ def setup(**keyValueArgs):
     * *verbose*:    shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
     * *suppress_warnings*:  if set True warnings (e. g. from mathematical parser) are suppressed.
     * *show_time*:  if set True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
-    * *float_prec*: determine the used floating point precision. By default ANNarchy4 uses single floating point precision for computation. 
+    * *float_prec*: determine the used floating point precision. By default ANNarchy uses single floating point precision for computation. 
     * *paradigm*: specify the parallelization paradigm, available are: openmp, cuda
     
-    **Note**: use this function before any other functions of ANNarchy4.
+    **Note**: use this function before any other functions of ANNarchy.
     """
     for key in keyValueArgs:
 

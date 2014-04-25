@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-from ANNarchy4.core import Global as Global
-from ANNarchy4.core.Random import RandomDistribution
+from ANNarchy.core import Global as Global
+from ANNarchy.core.Random import RandomDistribution
 import numpy as np
 
 class PopulationView(object):

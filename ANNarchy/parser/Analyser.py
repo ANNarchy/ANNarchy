@@ -21,12 +21,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy4.core.Neuron import RateNeuron
-from ANNarchy4.core.Synapse import RateSynapse
-from ANNarchy4.core.Global import _error, _warning, authorized_keywords
-from ANNarchy4.core.Random import available_distributions
-from ANNarchy4.parser.Equation import Equation
-from ANNarchy4.parser.Function import FunctionParser
+from ANNarchy.core.Neuron import RateNeuron
+from ANNarchy.core.Synapse import RateSynapse
+from ANNarchy.core.Global import _error, _warning, authorized_keywords
+from ANNarchy.core.Random import available_distributions
+from ANNarchy.parser.Equation import Equation
+from ANNarchy.parser.Function import FunctionParser
 
 from pprint import pprint
 import re

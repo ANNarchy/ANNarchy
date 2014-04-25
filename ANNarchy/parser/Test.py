@@ -1,4 +1,4 @@
-from ANNarchy4 import *
+from ANNarchy import *
 
 DefaultNeuron = RateNeuron(
     parameters = """
@@ -38,8 +38,8 @@ proj = Projection(
 )
 
 # Call only the analyser
-from ANNarchy4.core.Global import _populations, _projections
-from ANNarchy4.parser.Analyser import Analyser
+from ANNarchy.core.Global import _populations, _projections
+from ANNarchy.parser.Analyser import Analyser
 from pprint import pprint
 
 analyser = Analyser(_populations, _projections)

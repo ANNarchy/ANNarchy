@@ -21,14 +21,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy4.parser.Analyser import analyse_population
+from ANNarchy.parser.Analyser import analyse_population
 
-from ANNarchy4.core.PopulationView import PopulationView
-from ANNarchy4.core.Random import RandomDistribution
-from ANNarchy4.core.Neuron import IndividualNeuron
+from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Neuron import IndividualNeuron
 
-from ANNarchy4.core.Record import Record
-import ANNarchy4.core.Global as Global
+from ANNarchy.core.Record import Record
+import ANNarchy.core.Global as Global
 
 import traceback
 import numpy as np
@@ -50,7 +50,7 @@ class Population(object):
         
             * *geometry*: population geometry as tuple. If an integer is given, it is the size of the population.
 
-            * *neuron*: instance of ``ANNarchy4.RateNeuron`` or ``ANNarchy4.SpikeNeuron``
+            * *neuron*: instance of ``ANNarchy.RateNeuron`` or ``ANNarchy.SpikeNeuron``
 
             * *name*: unique name of the population (optional).
         
