@@ -1,10 +1,10 @@
 #
 #
-#   ANNarchy-4 NeuralField
+#   ANNarchy NeuralField
 #
 #   authors: Julien Vitay, Helge Uelo Dinkelbach
 #
-from ANNarchy4 import *
+from ANNarchy import *
 
 setup(dt=1.0)
 

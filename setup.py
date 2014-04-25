@@ -3,6 +3,7 @@
 ################################################
 # Check if the required packages are installed
 ################################################
+from pkg_resources import parse_version
 
 # check python version
 import sys
@@ -39,18 +40,19 @@ except:
     print('Warning : Python package "scipy" is needed by some functions, but not required.')
     print('You can install it from: http://www.scipy.org')
 
-# matplotlib
+# scipy
 try:
-    import matplotlib
-    print('Checking for matplotlib... OK')
+    import sympy
+    
+    if parse_version(sympy.__version__) > parse_version('0.7.4'):
+        print('Checking for sympy... OK')
+    else:
+        print parse_version(sympy.__version__), 'is not sufficient, expected >= 0.7.4' 
 except:
-    print('Checking for matplotlib... NO')
-    print('Warning : Python package "matplotlib" is required to display the graphical interface. Graphical interface won\'t be displayed')
-    print('You can install it from: http://matplotlib.org/')
+    print('Checking for sympy... NO')
+    print('Warning : Python package "scipy" is needed by some functions, but not required.')
+    print('You can install it with easy_install sympy')
 
-
-    
-    
     
 ################################################
 # Perform the installation
