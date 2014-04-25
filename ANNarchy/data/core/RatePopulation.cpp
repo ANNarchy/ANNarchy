@@ -22,6 +22,7 @@
 #include "Global.h"
 #include "RatePopulation.h"
 #include "RateDendrite.h"
+#include "RateProjection.h"
 
 RatePopulation::RatePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
 {
@@ -147,7 +148,7 @@ void RatePopulation::metaSum()
     {
     #ifdef _DEBUG
         if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
+            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " dendrites."<< std::endl;
     #endif
         for(unsigned int p = 0; p < dendrites_[n].size();p++)
         {
@@ -170,8 +171,25 @@ void RatePopulation::metaSum()
             coreCounter[omp_get_thread_num()][omp_get_num_procs()]++;
         }
     #endif
-
     }
+
+#ifdef _DEBUG
+    #pragma omp master
+    {
+    std::cout << "###########################"<< std::endl;
+    std::cout << "# Meta sum 2              #"<< std::endl;
+    std::cout << "###########################"<< std::endl;
+    }
+#endif
+#ifdef _DEBUG
+	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
+		std::cout << name_ <<": "<< projections_.size()<< " projections."<< std::endl;
+#endif
+	#pragma omp for
+    for(unsigned int p = 0; p < projections_.size();p++)
+	{
+    	static_cast<RateProjection*>(projections_[p])->computeSum();
+	}
 
     #pragma omp barrier
 #ifdef ANNAR_PROFILE

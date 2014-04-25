@@ -35,10 +35,7 @@ public:
 
 	DATA_TYPE getSum() { return sum_; }
 
-	void computeWeightedSum()
-	{
-		sum_ = 0.0;
-	}
+	void computeSum();
 
 private:
 	DATA_TYPE sum_;

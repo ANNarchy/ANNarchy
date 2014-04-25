@@ -34,6 +34,8 @@ public:
     
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
+    int getSynapseCount() { return nbSynapses_; }
+    
     int addSynapse(int rank, DATA_TYPE value, int delay);
 
     int removeSynapse(int rank);
@@ -98,6 +100,8 @@ public:
     ~%(class)s();
     
     class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
+
+    int getSynapseCount() { return nbSynapses_; }
 
     int addSynapse(int rank, DATA_TYPE value, int delay);
 

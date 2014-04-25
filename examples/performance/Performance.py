@@ -1,9 +1,10 @@
 #
 #	A network comparable to Dinkelbach et al. 2012
 #
-from ANNarchy4 import *
+from ANNarchy import *
 
-setup( paradigm = "cuda" )
+setup(num_threads=1)
+#setup( paradigm = "cuda", num_threads=1 )
 
 # Defining the neurons
 InputNeuron = RateNeuron(
@@ -27,7 +28,9 @@ output_pop = Population(geometry=(NEURON), neuron=OutputNeuron)
 proj = Projection(input_pop, output_pop, 'exc').connect_fixed_number_pre(CONN)
 
 compile() # needed to save connectivity matrix
-proj.save_connectivity_as_csv()
+#proj.save_connectivity_as_csv()
+
+#simulate(1)
 
 # recompile as stand alone
-compile(cpp_stand_alone = True)
+#compile(cpp_stand_alone = True)

@@ -60,3 +60,19 @@ void RateProjection::addDendrite(int postNeuronRank, class Dendrite *dendrite)
 		std::cout << std::endl;
 	};
 }
+
+void RateProjection::computeSum()
+{
+#ifdef _DEBUG
+	std::cout << "number of dendrites:" << dendrites_.size() << std::endl;
+#endif
+
+	for ( unsigned int n = 0; n != dendrites_.size(); n++ )
+	{
+		for ( auto d_it = dendrites_[n].begin(); d_it != dendrites_[n].end(); d_it++ )
+		{
+			std::cout << "dendrite(" << n << "): " << (*d_it)->getSynapseCount()<< std::endl;
+			(*d_it)->computeSum();
+		}
+	}
+}
