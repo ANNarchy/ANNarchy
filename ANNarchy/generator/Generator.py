@@ -71,25 +71,26 @@ def _folder_management(profile_enabled, clean):
                     Global.annarchy_dir+'/generate/build/'+cfile # dest
                     )
     
-    if Global.config['paradigm'] == "openmp":
-        #
-        # currently we dont have openmp specific files
-        #=======================================================================
-        # # openmp .cpp / .h files
-        # for cfile in os.listdir(sources_dir+'/openmp'):
-        #     shutil.copy(sources_dir+'/openmp/'+cfile, # src
-        #                 Global.annarchy_dir+'/generate/build/'+cfile # dest
-        #                 )
-        #=======================================================================
-        pass
-    elif Global.config['paradigm'] == "cuda":
-        for cfile in os.listdir(sources_dir+'/cuda'):
-            shutil.copy(sources_dir+'/cuda/'+cfile, # src
-                        Global.annarchy_dir+'/generate/build/'+cfile # dest
-                        )        
-    else:
-        Global._print("unknown paradigm ... abort compilation ...")
-        exit(0)
+    if Global.config.has_key('paradigm'):
+        if Global.config['paradigm'] == "openmp":
+            #
+            # currently we dont have openmp specific files
+            #=======================================================================
+            # # openmp .cpp / .h files
+            # for cfile in os.listdir(sources_dir+'/openmp'):
+            #     shutil.copy(sources_dir+'/openmp/'+cfile, # src
+            #                 Global.annarchy_dir+'/generate/build/'+cfile # dest
+            #                 )
+            #=======================================================================
+            pass
+        elif Global.config['paradigm'] == "cuda":
+            for cfile in os.listdir(sources_dir+'/cuda'):
+                shutil.copy(sources_dir+'/cuda/'+cfile, # src
+                            Global.annarchy_dir+'/generate/build/'+cfile # dest
+                            )        
+        else:
+            Global._print("unknown paradigm ... abort compilation ...")
+            exit(0)
             
     # pyx files
     for pfile in os.listdir(sources_dir+'/pyx'):
@@ -239,15 +240,23 @@ class Generator(object):
         
         # create projections cpp class for each synapse
         for name, desc in self.analyser.analysed_projections.iteritems():
-            if Global.config['paradigm'] == "openmp":
-                if desc['type'] == 'rate':
-                    proj_generator = RateProjectionGenerator(name, desc)
-                elif desc['type'] == 'spike':
-                    proj_generator = SpikeProjectionGenerator(name, desc)
-                proj_generator.generate(Global.config['verbose'])
+            
+            if Global.config.has_key('paradigm'):
+                if Global.config['paradigm'] == "openmp":
+                    if desc['type'] == 'rate':
+                        proj_generator = RateProjectionGenerator(name, desc)
+                    elif desc['type'] == 'spike':
+                        proj_generator = SpikeProjectionGenerator(name, desc)
+                    proj_generator.generate(Global.config['verbose'])
+                else:
+                    if desc['type'] == 'rate':
+                        proj_generator = RateProjectionGeneratorCUDA(name, desc)
+                    elif desc['type'] == 'spike':
+                        proj_generator = SpikeProjectionGenerator(name, desc)
+                    proj_generator.generate(Global.config['verbose'])
             else:
                 if desc['type'] == 'rate':
-                    proj_generator = RateProjectionGeneratorCUDA(name, desc)
+                    proj_generator = RateProjectionGenerator(name, desc)
                 elif desc['type'] == 'spike':
                     proj_generator = SpikeProjectionGenerator(name, desc)
                 proj_generator.generate(Global.config['verbose'])
@@ -386,17 +395,23 @@ class Generator(object):
                                                    'minor': sys.version_info[1] }
     
             # generate Makefile
-            if Global.config['paradigm'] == "openmp":
+            if Global.config.has_key('paradigm'):
+                if Global.config['paradigm'] == "openmp":
+                    src = omp_makefile % { 'src_type': '%.cpp',
+                                           'obj_type': '%.o',
+                                           'py_version': py_version, 
+                                           'flag': flags }
+                else: 
+                    src = cuda_makefile % { 'src_type': '%.cpp',
+                                            'src_gpu': '%.cu',
+                                            'obj_type': '%.o',
+                                            'py_version': py_version,
+                                            'flag': flags }
+            else:
                 src = omp_makefile % { 'src_type': '%.cpp',
                                        'obj_type': '%.o',
                                        'py_version': py_version, 
                                        'flag': flags }
-            else: 
-                src = cuda_makefile % { 'src_type': '%.cpp',
-                                        'src_gpu': '%.cu',
-                                        'obj_type': '%.o',
-                                        'py_version': py_version,
-                                        'flag': flags }
 
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
