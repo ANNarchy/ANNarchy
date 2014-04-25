@@ -24,12 +24,35 @@
 
 #include "Global.h"
 
-class Projection{
+class Projection
+{
 public:
 	Projection();
 
     ~Projection();
 
+    virtual void addDendrite(int postNeuronRank, Dendrite *dendrite) {}
+
+    virtual void removeDendrite(int postNeuronRank, Population *pre) {}
+
+    bool isRateCoded() { return isRateCoded_; }
+
+    int getTarget() { return target_; }
+
+private:
+    int target_;
+    bool isRateCoded_;
 };
 
+class RateProjection : public Projection
+{
+public:
+	RateProjection()
+	{
+		isRateCoded_ = true;
+	}
+private:
+
+	std::vector<RateDendrite*> dendrites_;
+};
 #endif
