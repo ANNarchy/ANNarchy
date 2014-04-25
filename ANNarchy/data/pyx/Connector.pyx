@@ -23,8 +23,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy4.core.Random import *
-import ANNarchy4.core.Projection as PyProjection
+from ANNarchy.core.Random import *
+import ANNarchy.core.Projection as PyProjection
 
 from libcpp.vector cimport vector 
 from libc.stdlib cimport malloc
