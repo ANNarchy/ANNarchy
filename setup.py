@@ -21,6 +21,19 @@ except:
     print('You can install it from: http://pypi.python.org/pypi/setuptools')
     exit(0)
 
+# sympy
+try:
+    import sympy
+    
+    if parse_version(sympy.__version__) > parse_version('0.7.4'):
+        print('Checking for sympy... OK')
+    else:
+        print parse_version(sympy.__version__), 'is not sufficient, expected >= 0.7.4' 
+except:
+    print('Checking for sympy... NO')
+    print('Error : Python package "sympy" is required.')
+    exit(0)
+    
 # numpy
 try:
     import numpy
@@ -40,20 +53,6 @@ except:
     print('Warning : Python package "scipy" is needed by some functions, but not required.')
     print('You can install it from: http://www.scipy.org')
 
-# scipy
-try:
-    import sympy
-    
-    if parse_version(sympy.__version__) > parse_version('0.7.4'):
-        print('Checking for sympy... OK')
-    else:
-        print parse_version(sympy.__version__), 'is not sufficient, expected >= 0.7.4' 
-except:
-    print('Checking for sympy... NO')
-    print('Warning : Python package "scipy" is needed by some functions, but not required.')
-    print('You can install it with easy_install sympy')
-
-    
 ################################################
 # Perform the installation
 ################################################
