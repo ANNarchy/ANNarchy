@@ -75,10 +75,6 @@ class Projection(object):
         # Store the arguments
         self.target = target
         
-        # Create a default name
-        self._id = len(Global._projections)
-        self.name = 'Projection'+str(self._id)
-        
         # Add the target to the postsynaptic population
         self.post.targets.append(self.target)
         
@@ -93,6 +89,12 @@ class Projection(object):
                 self.synapse_type = SpikeSynapse(parameters = "", equations = "", pre_spike="g_target += value", post_spike="")
         else:
             self.synapse_type = synapse
+
+        type_prefix = "Rate" if isinstance(self.synapse_type, RateSynapse) else "Spike"
+
+        # Create a default name
+        self._id = len(Global._projections)
+        self.name = type_prefix+'Dendrite'+str(self._id)
             
         self._synapses = {}
         self._connector = None

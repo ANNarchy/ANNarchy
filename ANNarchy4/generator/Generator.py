@@ -574,8 +574,8 @@ class Generator(object):
         projections = self.analyser.analysed_projections
         # single cases
         cases_ptr = ''
-        for name, desc in projections.iteritems():
-            cases_ptr += proj_instance % { 'name': name, 'id': name.split('Projection')[1]}
+        for name in projections.iterkeys():
+            cases_ptr += proj_instance % { 'name': name, 'id': name.split('Dendrite')[1]}
 
         # complete code
         code = create_proj_instance % { 'case1': cases_ptr }
