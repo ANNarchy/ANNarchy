@@ -127,8 +127,12 @@ class PopulationView(object):
                 
     def __add__(self, other):
         """Allows to join two PopulationViews if they have the same population."""
+        from ANNarchy.core.Neuron import IndividualNeuron
         if other.population == self.population:
-            return PopulationView(self.population, list(set(self.ranks + other.ranks)))
+            if isinstance(other, IndividualNeuron):
+                return PopulationView(self.population, list(set(self.ranks + [other.rank])))
+            elif isinstance(other, PopulationView):
+                return PopulationView(self.population, list(set(self.ranks + other.ranks)))
         else:
             Global._error("can only add two PopulationViews of the same population.")
             return None

@@ -184,7 +184,7 @@ class Population(object):
         if not hasattr(self, 'initialized'): # Before the end of the constructor
             object.__setattr__(self, name, value)
         elif name == 'attributes':
-            object.__setatt__(self, name, value)
+            object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
                 if not self.initialized:
@@ -564,7 +564,7 @@ class Population(object):
         
         * *name*: attribute name as string
         """
-        return self.__getattr__(self, name)
+        return self.__getattr__(name)
             
     def neuron(self, *coord):  
         " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  
@@ -586,13 +586,13 @@ class Population(object):
         # Return corresponding neuron
         return IndividualNeuron(self, rank)
         
-          
+    @property   
     def neurons(self):
         """ Returns iteratively each neuron in the population.
         
         For instance, if you want to iterate over all neurons of a population:
         
-            >>> for neur in pop.neurons():
+            >>> for neur in pop.neurons:
             ...     print neur.rate
             
         Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:

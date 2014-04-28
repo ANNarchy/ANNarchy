@@ -4,7 +4,7 @@ from .core.Global import *
 from .core import Global
 from .core.Network import Network, MagicNetwork
 from .core.IO import save, load, load_parameter
-from .core.Neuron import RateNeuron, SpikeNeuron
+from .core.Neuron import RateNeuron, SpikeNeuron, IndividualNeuron
 from .core.Synapse import RateSynapse, SpikeSynapse
 from .core.Population import Population
 from .core.PopulationView import PopulationView
