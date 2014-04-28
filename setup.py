@@ -62,11 +62,11 @@ setup(  name='ANNarchy',
 		license='GPLv2 or later',
 		platforms='GNU/Linux',
 		description='Artificial Neural Networks architect',
-		long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed mean-rate neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
+		long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed rate-coded or spiking neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
 		author='Julien Vitay and Helge Uelo Dinkelbach',
 		author_email='julien.vitay@informatik.tu-chemnitz.de',
 		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['data/compile.sh', 'data/compiled.sh', 'data/setup.py', 'data/core/*', 'data/openmp/*', 'data/pyx/*', 'core/cy_functions.pyx']}
+        package_data={'ANNarchy': ['data/core/*', 'data/openmp/*', 'data/pyx/*', 'core/cy_functions.pyx']}
  )
 
