@@ -58,7 +58,7 @@ except:
 ################################################
 print('Installing ANNarchy on your system')
 setup(  name='ANNarchy',
-		version='4.1.0.gamma',
+		version='4.1.0',
 		license='GPLv2 or later',
 		platforms='GNU/Linux',
 		description='Artificial Neural Networks architect',
