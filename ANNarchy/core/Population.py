@@ -541,24 +541,20 @@ class Population(object):
      
         return normal
 
-    def set(self, value):
+    def set(self, values):
         """
         Sets neuron variable/parameter values.
         
         Parameter:
         
-            * *value*: dictionary of attributes to be updated
+            * *values: dictionary of attributes to be updated
             
                 .. code-block:: python
                 
                     set({ 'tau' : 20.0, 'rate'= np.random.rand((8,8)) } )
         """
-        for name in value.keys():
-            if hasattr(self, 'cyInstance'):
-                if name in self.attributes:
-                    self._set_cython_attribute(name, value[name])
-            else:
-                self.init[name] = value[name]
+        for name, value in values.iteritems():
+            self.__setattr__(name, value)
         
     def get(self, name):
         """
@@ -568,10 +564,7 @@ class Population(object):
         
         * *name*: attribute name as string
         """
-        if hasattr(self, 'cyInstance'):
-            return self._get_cython_attribute(name) 
-        else:
-            return self.init[name]
+        return self.__getattr__(self, name)
             
     def neuron(self, *coord):  
         " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  
