@@ -102,7 +102,7 @@ class Uniform(RandomDistribution):
         
         Parameters:
         * *min*: min
-        * *min*: min
+        * *max*: max
         * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
         """
         self._min = min

@@ -165,14 +165,15 @@ class Population(object):
             return object.__getattribute__(self, 'attributes')
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
-                if not self.initialized:
-                    # access before compile()
+                if not self.initialized: # access before compile()
                     if name in self.description['local']:
-                        return np.array([self.init[name]] * self.size).reshape(self._geometry)
+                        if isinstance(self.init[name], np.ndarray):
+                            return self.init[name]
+                        else:
+                            return np.array([self.init[name]] * self.size).reshape(self._geometry)
                     else:
                         return self.init[name]
-                else:
-                    # access after compile()
+                else: # access after compile()
                     return self._get_cython_attribute( name)
             else:
                 return object.__getattribute__(self, name)
@@ -187,7 +188,10 @@ class Population(object):
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
                 if not self.initialized:
-                    self.init[name] = value
+                    if isinstance(value, RandomDistribution): # Make sure it is generated only once
+                        self.init[name] = np.array(value.get_values(self.size)).reshape(self._geometry)
+                    else:
+                        self.init[name] = value
                 else:
                     self._set_cython_attribute(name, value)      
             else:
