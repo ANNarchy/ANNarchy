@@ -1,4 +1,4 @@
-ANNarchy (Artificial Neural Networks architect) is a simulator for distributed mean-firing rate neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks. It is released under the `GNU GPL v2 or later <http://www.gnu.org/licenses/gpl.html>`_.
+ANNarchy (Artificial Neural Networks architect) is a simulator for distributed rate-coded or spiking neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks. It is released under the `GNU GPL v2 or later <http://www.gnu.org/licenses/gpl.html>`_.
 
 
 **Authors**:
@@ -25,8 +25,6 @@ ANNarchy (Artificial Neural Networks architect) is a simulator for distributed m
 **Platforms**:
 
     * GNU/Linux
-    
-    * Windows
 
 **Dependencies**:
 
@@ -40,4 +38,4 @@ ANNarchy (Artificial Neural Networks architect) is a simulator for distributed m
     
     * NumPy >= 1.5
     
-    * Matplotlib >= 1.0
+    * SymPy >= 0.7.4
