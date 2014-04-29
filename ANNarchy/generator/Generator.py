@@ -208,12 +208,11 @@ class Generator(object):
         # Perform compilation if something has changed
         self.partial_compilation(changed_cpp, changed_pyx)
                 
-        # Create the Python objects    
+        # Create the Python objects
         if not self.cpp_stand_alone:        
             if Global.config['verbose']:
                 Global._print('Building network ...')
-            self.instantiate()
-    
+            self.instantiate()    
         else:
             #abort the application after compiling ANNarchyCPP
             Global._print('\nCompilation process of ANNarchyCPP completed successful.\n')
@@ -497,6 +496,12 @@ class Generator(object):
             proj._init_attributes()   
             if Global.config['show_time']:
                 Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
+        # Instantiate the network
+        global _network
+        Global._network = ANNarchyCython.pyNetwork()
+        # check if user defined a certain number of threads.
+        if Global.config['num_threads'] != None:
+            Global._network.set_num_threads(Global.config['num_threads'])  
                 
     def create_includes(self):
         """ Generates 'Includes.h' containing all generated headers.
