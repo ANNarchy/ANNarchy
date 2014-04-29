@@ -191,11 +191,14 @@ def add_function(function):
     
 def simulate(duration):
     """
+
     Runs the network for the given duration. 
     
+
     If an integer is given, the argument represents the number of time steps.
     
     If a floating point value is given, it represents a duration in milliseconds computed relative to the discretization step declared in setup() (default: 1ms). 
+
     """
     if isinstance(duration, int):
         nb_steps = duration
@@ -206,10 +209,20 @@ def simulate(duration):
         return
 
     if _network:      
-        _network.Run(nb_steps)
+        _network.run(nb_steps)
     else:
         _error('simulate(): the network is not compiled yet.')
         return
+    
+def step():
+    """
+
+    Performs a single simulation step. 
+
+    """
+    if _network:      
+        _network.run(1)
+
     
 def current_time():
     """

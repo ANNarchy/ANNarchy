@@ -1,6 +1,6 @@
 import numpy as np
 cimport numpy as np
-from NeuralField import simulate, get_population
+from NeuralField import step, get_population
     
 cdef class World:
     " Environment class allowing to clamp a rotating bubble into the baseline of a population."
@@ -43,4 +43,4 @@ cdef class World:
             # Clamp the bubble into pop.baseline
             self.pop.baseline = self.data
             # Simulate 1 ms
-            simulate(1)  
+            step()  
