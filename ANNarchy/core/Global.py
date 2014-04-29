@@ -178,6 +178,7 @@ def add_function(function):
     Please refer to the manual to know the allowed mathematical functions.
     """  
     _functions.append(function)
+    
 def simulate(duration):
     """
     Runs the network for the given duration. 
