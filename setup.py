@@ -47,15 +47,17 @@ except:
 
 # cython
 try:
+    import cython
     if parse_version(cython.__version__) > parse_version('0.19.0'):
         print('Checking for cython... OK')
     else:
+        print('Checking for cython... NO')
         print 'Cython', parse_version(cython.__version__), 'is not sufficient, expected >= 0.19.0' 
-    print('Checking for cython... OK')
 except:
     print('Checking for cython... NO')
-    print('Warning : Python package "cython" is required.')
+    print('Error : Python package "cython" is required.')
     print('You can install it from pip or: http://www.cython.org')
+    exit(0)
 
 ################################################
 # Perform the installation
@@ -71,6 +73,6 @@ setup(  name='ANNarchy',
 		author_email='julien.vitay@informatik.tu-chemnitz.de',
 		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['data/core/*', 'data/openmp/*', 'data/pyx/*', 'core/cy_functions.pyx']}
+        package_data={'ANNarchy': ['data/core/*', 'data/cuda/*', 'data/pyx/*', 'core/cy_functions.pyx']}
  )
 

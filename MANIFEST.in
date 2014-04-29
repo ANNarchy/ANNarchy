@@ -1,0 +1,8 @@
+include MANIFEST.in
+include README.rst
+graft ANNarchy
+include examples/neural_field/NeuralField.py
+include examples/neural_field/BubbleWorld.pyx
+include examples/bar_learning/BarLearning.py
+include examples/izhikevich/Izhikevitch.py
+include examples/simple_stdp/SimpleSTDPModel.py
