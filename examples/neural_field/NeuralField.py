@@ -34,13 +34,13 @@ InputPop = Population(name = 'Input', geometry = (nb_neurons, nb_neurons), neuro
 FocusPop = Population(name = 'Focus', geometry = (nb_neurons, nb_neurons), neuron = NeuralFieldNeuron)
 
 # Create the projections
-Proj1 = Projection( 
+input_focus = Projection( 
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc'
 ).connect_one_to_one( weights=1.0 )
 
-Proj2 = Projection(
+focus_focus = Projection(
     pre = FocusPop, 
     post = FocusPop, 
     target = 'inh'     
@@ -51,6 +51,7 @@ Proj2 = Projection(
     sigma_neg=0.7                    
 )
 
+# Visualizer using PyQtGraph
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg 
 import pyqtgraph.opengl as gl
