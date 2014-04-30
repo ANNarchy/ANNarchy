@@ -547,11 +547,11 @@ class Population(object):
         
         Parameter:
         
-            * *values: dictionary of attributes to be updated
+        * *values*: dictionary of attributes to be updated
             
-                .. code-block:: python
+            .. code-block:: python
                 
-                    set({ 'tau' : 20.0, 'rate'= np.random.rand((8,8)) } )
+                set({ 'tau' : 20.0, 'rate'= np.random.rand((8,8)) } )
         """
         for name, value in values.iteritems():
             self.__setattr__(name, value)
