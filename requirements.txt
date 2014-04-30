@@ -1,3 +1,4 @@
 numpy>1.5.0
 sympy>0.7.4
 cython>=0.17
+lxml>3.0.0
