@@ -28,7 +28,7 @@ try:
     if parse_version(sympy.__version__) > parse_version('0.7.4'):
         print('Checking for sympy... OK')
     else:
-        print 'Sympy', parse_version(sympy.__version__), 'is not sufficient, expected >= 0.7.4' 
+        print 'Sympy', sympy.__version__, 'is not sufficient, expected >= 0.7.4' 
 except:
     print('Checking for sympy... NO')
     print('Error : Python package "sympy" is required.')
@@ -52,7 +52,7 @@ try:
         print('Checking for cython... OK')
     else:
         print('Checking for cython... NO')
-        print 'Cython', parse_version(cython.__version__), 'is not sufficient, expected >= 0.19.0' 
+        print 'Cython', cython.__version__, 'is not sufficient, expected >= 0.19.0' 
 except:
     print('Checking for cython... NO')
     print('Error : Python package "cython" is required.')
