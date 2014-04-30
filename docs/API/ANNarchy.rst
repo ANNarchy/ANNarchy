@@ -83,18 +83,3 @@ To save the network state you may use the following method:
 Please note that these function is only usable after ANNarchy.compile().
 
 
-Available classes
-====================================
-
-The ANNarchy simulation environment provides a set of several classes. In the following sections, you'll have access to the documentation of every class, method or attribute accessible in Python.
-
-.. toctree::
-    :maxdepth: 2
-
-    Network.rst
-    Neuron.rst
-    Synapse.rst
-    Population.rst
-    Projections.rst
-    Dendrite.rst
-    RandomDistribution.rst
