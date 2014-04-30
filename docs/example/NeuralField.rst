@@ -179,7 +179,8 @@ As no input has been fed into the network, calling ``simulate()`` now won't lead
 Defining the environment
 -------------------------
 
-**Pure Python approach**
+Pure Python approach
+++++++++++++++++++++++
 
 In this example, we consider as input a moving bubble of activity rotating along a circle in the input space in 5 seconds. A naive way of setting such inputs would be to access population attributes (namely ``InputPop.baseline``) in a tight loop in Python:
 
@@ -207,7 +208,10 @@ A Gaussian profile (in the form of a Numpy array) is then clamped into the basel
 Although this approach works, you would observe that it is very slow: the computation of the bubble and its feeding into ``InputPop`` takes much more time than the call to ``step()``. The interest of using a parallel simulator disappears. This is due to the fact that Python is knowingly bad at performing tight loops because of its interpreted nature. If the ``while`` loop were compiled from C code, the computation would be much more efficient. This is what Cython brings you.
             
             
-**Cython approach**
+Cython approach
+++++++++++++++++++
+
+**Generalities on Cython**
 
 The Cython approach requires to write Cython-specific code in a ``.pyx`` file, generate the corresponding C code with Python access methods, compile it and later import it into your Python code.
 
@@ -237,7 +241,64 @@ By specifing the type of a variable (which can not be changed later contrary to 
     from TestModule import dummy
     dummy()
     
-``pyximport`` takes care of the compilation process (but emits quite a lot of warnings), and allows to import ``TestModule`` as if it were a regular Python module. Please refer to the `Cython documentation <http://docs.cython.org/>`_ to know more. 
+``pyximport`` takes care of the compilation process (but emits quite a lot of warnings), and allows to import ``TestModule`` as if it were a regular Python module. Please refer to the `Cython documentation <http://docs.cython.org>`_ to know more. 
+
+**Moving bubbles in Cython**
+
+The file ``BubbleWorld.pyx`` defines a ``World`` able to rotate the bubble for a specified duration. 
+
+.. code:: python
+
+    import numpy as np
+    cimport numpy as np
+    from NeuralField import step
+    
+At the beginning of the file, numpy is imported once as a normal 
+
+.. code:: python 
+        
+    cdef class World:
+        " Environment class allowing to clamp a rotating bubble into the baseline of a population."
+        
+        cdef pop # Input population
+        
+        cdef float angle # Current angle
+        cdef float radius # Radius of the circle 
+        cdef float sigma # Width of the bubble
+        cdef float period # Number of steps needed to make one revolution
+
+        cdef np.ndarray xx, yy # indices
+        cdef float cx, cy, midw, midh
+        cdef np.ndarray data 
+        
+        def __cinit__(self, pop, radius, sigma, period):
+            " Constructor"
+            self.pop = pop
+            self.angle = 0.0
+            self.radius = radius
+            self.sigma = sigma
+            self.period = period
+            cdef np.ndarray x = np.linspace(0, self.pop.geometry[0]-1, self.pop.geometry[0])
+            cdef np.ndarray y = np.linspace(0, self.pop.geometry[1]-1, self.pop.geometry[1])
+            self.xx, self.yy = np.meshgrid(x, y)
+            self.midw = self.pop.geometry[0]/2
+            self.midh = self.pop.geometry[1]/2
+        
+        def rotate(self, int duration):
+            " Rotates the bubble for the given duration"
+            cdef int t
+            for t in xrange(duration):
+                # Update the angle
+                self.angle += 1.0/self.period
+                # Compute the center of the bubble
+                self.cx = self.midw * ( 1.0 + self.radius * np.cos(2.0 * np.pi * self.angle ) )
+                self.cy = self.midh * ( 1.0 + self.radius * np.sin(2.0 * np.pi * self.angle ) )
+                # Create the bubble
+                self.data = (np.exp(-((self.xx-self.cx)**2 + (self.yy-self.cy)**2)/2.0/self.sigma**2))
+                # Clamp the bubble into pop.baseline
+                self.pop.baseline = self.data
+                # Simulate 1 ms
+                step()  
 
 
 Running the simulation

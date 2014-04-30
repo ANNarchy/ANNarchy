@@ -7,8 +7,11 @@ ANNarchy (Artificial Neural Networks architect) is a neural simulator designed f
 
 The source code of ANNarchy can be downloaded at:
 
-    `http://bitbucket.org/annarchy/annarchy <https://bitbucket.org/annarchy/annarchy>`_
+    `http://bitbucket.org/annarchy/annarchy <http://bitbucket.org/annarchy/annarchy>`_
     
+The documentation can be found online at:
+
+    `http://annarchy.readthedocs.org <http://annarchy.readthedocs.org>`_
 
 
 Any comment, bug report, problem, suggestion for improvement should be done through the `Issue Tracker <https://bitbucket.org/annarchy/annarchy/issues>`_ of ANNarchy on `Bitbucket <http://bitbucket.org>`_. You will need to create a free account.

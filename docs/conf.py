@@ -303,13 +303,3 @@ autodoc_member_order='groupwise'
 autoclass_content='both'
 
 
-#########################################
-### Breathe for C++ doxygen
-#########################################
-breathe_projects = {  "ANNarchy": "./doxygen/xml/"}
-breathe_default_project = "ANNarchy"
-
-#########################################
-### Graphviz
-#########################################
-graphviz_output_format = 'svg'

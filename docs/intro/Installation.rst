@@ -2,54 +2,48 @@
 Installation of ANNarchy
 *************************
 
-ANNarchy is designed to run on GNU/Linux. It relies mostly on a C++ compiler, Cython (C for Python extension) and Python (NumPy, SciPy, Sympy) libraries. Installation on MacOS is theoretically possible if openMP support is disabled, but not tested yet.
+ANNarchy is designed to run on GNU/Linux. It relies mostly on a C++ compiler, Cython (C for Python extension) and Python (NumPy, Sympy) libraries. Installation on MacOS is theoretically possible, but not tested yet. Installation on Windows is not yet possible.
+
+Download
+===========
+
+The source code of ANNarchy can be downloaded on Bitbucket::
+
+    git clone http://bitbucket.org/annarchy/annarchy.git
+
+As ANNarchy is under heavy development, you should update the repository regularly::
+
+    git pull
 
 Installation on GNU/Linux systems
 =============================================
-    
+   
 
 Dependencies
 --------------------
 
-ANNarchy depends on a number of packages which should be easily accessible on recent GNU/Linux distributions. The safest way to install these dependencies is through your favourite package manager. Older versions of these packages may work but have not been tested.
+ANNarchy depends on a number of packages which should be easily accessible on recent GNU/Linux distributions. The classical way to install these dependencies is through your favourite package manager. Older versions of these packages may work but have not been tested.
 
-    * g++ >= 4.6 (4.7 is recommended) 
-    * Python == 2.7
-    * Cython >= 0.19
-    * Setuptools >= 0.6
-    * NumPy >= 1.5
-    * SymPy >= 0.7.4
+    * g++ >= 4.6 (4.7 or above is recommended) 
+    * make >= 3.0
+    * python == 2.7 (with the development files)
+    * cython >= 0.19
+    * setuptools >= 0.6
+    * numpy >= 1.8
+    * sympy >= 0.7.4
     
-On Debian/Ubuntu systems, these packages are in the normal repositories under the names (python 2.x version):
+Additionally, the following packages are optional but strongly recommended:
 
-    * g++
-    * python-dev
-    * python-setuptools
-    * python-numpy
-    * python-scipy 
-    * python-lxml
-    * python-sympy
+    * pyqtgraph >= 0.9.8 (for visualizing the provided examples)
+    * matplotlib >= 1.3.0 (for your own visualizations)
+    * lxml >= 3.0 (for saving the networks in .xml format)
+    * scipy >= 0.17 (for saving the networks in Matlab format)
+    
+    
+The version requirement on Sympy is rather new (as of May 2014) and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``pip`` (to be installed)::
 
-.. For python3.x support of ANNarchy the needed packages are:
+    pip install cython numpy sympy pyqtgraph matplotlib lxml scipy
 
-    * python3-dev
-    * python3-setuptools
-    * python3-numpy
-    * python3-scipy
-    * python3-lxml
-
-.. For the GUI version you need further these packages:
-
-    * python-qscintilla2
-    * python-opengl
-    * python-qt4
-    * python-qt4-gl
-
-.. hint: python3-matplotlib seems to be available only for versions above 3.3
-
-Cython is available either as source on www.cython.org or as python package through easy_install or pip (requires super user permissions for global installation) ::
-
-    user@Machine: easy_install cython
 
 Installation
 ---------------
@@ -100,7 +94,7 @@ Again, replace '2.7' with your Python version. If this directory does not exist,
 
 .. In this case you need to attach an argument to the install command:
 
-    > python setup.py install --compiler=mingw32
+..    > python setup.py install --compiler=mingw32
     
 .. **Cython**
 
@@ -113,6 +107,6 @@ Again, replace '2.7' with your Python version. If this directory does not exist,
 
 .. Once all dependencies are satisfied, simply unpack ANNarchy's source code somewhere, and type::
 
-    > python setup.py install
+..    > python setup.py install
 
 .. in the top-level directory.
