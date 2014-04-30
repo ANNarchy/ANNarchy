@@ -36,10 +36,10 @@ cdef class World:
             # Update the angle
             self.angle += 1.0/self.period
             # Compute the center of the bubble
-            self.cw = self.midw * ( 1.0 + self.radius * np.cos(2.0 * np.pi * self.angle ) )
-            self.ch = self.midh * ( 1.0 + self.radius * np.sin(2.0 * np.pi * self.angle ) )
+            self.cx = self.midw * ( 1.0 + self.radius * np.cos(2.0 * np.pi * self.angle ) )
+            self.cy = self.midh * ( 1.0 + self.radius * np.sin(2.0 * np.pi * self.angle ) )
             # Create the bubble
-            self.data = (np.exp(-((self.xx-self.cw)**2 + (self.yy-self.ch)**2)/2.0/self.sigma**2))
+            self.data = (np.exp(-((self.xx-self.cx)**2 + (self.yy-self.cy)**2)/2.0/self.sigma**2))
             # Clamp the bubble into pop.baseline
             self.pop.baseline = self.data
             # Simulate 1 ms
