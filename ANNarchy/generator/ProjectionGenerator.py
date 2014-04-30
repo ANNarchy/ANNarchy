@@ -418,8 +418,10 @@ class RateProjectionGenerator(ProjectionGenerator):
             if param['name'] in self.desc['global']: # global attribute 
                 # The code is already in 'cpp'
                 code +="""
+    %(comment)s
     %(code)s   
-""" % {'code' : param['cpp']}
+""" % { 'comment': '// ' + param['eq'],
+        'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
                     if bound == 'min':
@@ -443,8 +445,10 @@ class RateProjectionGenerator(ProjectionGenerator):
             if param['name'] in self.desc['local']: # local attribute 
                 # The code is already in 'cpp'
                 local_learn +="""
-        %(code)s   
-""" % {'code' : param['cpp']}
+    %(comment)s
+    %(code)s   
+""" % { 'comment': '// ' + param['eq'],
+        'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
                     if bound == 'min':

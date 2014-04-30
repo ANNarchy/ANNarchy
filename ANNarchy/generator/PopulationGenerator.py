@@ -320,8 +320,10 @@ void %(class)s::compute_sum_%(var)s() {
         for param in self.desc['variables']:            
             if param['name'] in self.desc['local']: # local attribute
                 code += """
+    %(comment)s
     %(cpp)s
-""" % { 'cpp': param['cpp'] }
+""" % { 'comment': '// '+param['eq'],
+        'cpp': param['cpp'] }
 
             if self.desc.has_key('spike'):
                 if param['name'] == self.desc['spike']['name']:

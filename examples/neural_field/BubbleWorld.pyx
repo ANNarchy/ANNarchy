@@ -13,7 +13,7 @@ cdef class World:
     cdef float period # Number of steps needed to make one revolution
 
     cdef np.ndarray xx, yy # indices
-    cdef float cw, ch, midw, midh
+    cdef float cx, cy, midw, midh
     cdef np.ndarray data 
     
     def __cinit__(self, pop, radius, sigma, period):
