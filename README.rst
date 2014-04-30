@@ -39,3 +39,5 @@ ANNarchy (Artificial Neural Networks architect) is a simulator for distributed r
     * NumPy >= 1.5
     
     * SymPy >= 0.7.4
+    
+    * lxml >= 3.0
