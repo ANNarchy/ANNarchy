@@ -52,9 +52,13 @@ focus_focus = Projection(
 )
 
 # Visualizer using PyQtGraph
-from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph as pg 
-import pyqtgraph.opengl as gl
+try:
+    from pyqtgraph.Qt import QtGui, QtCore
+    import pyqtgraph as pg 
+    import pyqtgraph.opengl as gl
+except:
+    print 'PyQtGraph is not installed on your system, can not visualize the network.'
+    exit(0)
 
 class GLViewer(object):
     " Class to visualize the network activity using PyQtGraph and openGL."
@@ -111,7 +115,8 @@ if __name__ == "__main__":
     # Create the GUI using PyQtGraph
     app = QtGui.QApplication([])
     viewer = GLViewer(populations = [InputPop, FocusPop], world=world)
-    # Start the simulation            
+    
+    # Start the simulation forever          
     viewer.run()
 
      

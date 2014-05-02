@@ -2,9 +2,9 @@
 Neural Fields
 **************************
 
-In ``examples/neural_field`` is a simple model using `Neural Fields <http://www.scholarpedia.org/article/Neural_fields>`_. It consists of two 2D populations ``input`` and ``focus``, with one-to-one connections between ``input`` and ``focus``, and difference-of-Gaussians (dog) lateral connections within ``focus``.
+In ``examples/neural_field`` is a simple model using `Neural Fields <http://www.scholarpedia.org/article/Neural_fields>`_. It consists of two 2D populations ``Input`` and ``Focus``, with one-to-one connections between ``Input`` and ``Focus``, and Difference-of-Gaussians (DoG) lateral connections within ``Focus``.
 
-You can simply try the network by typing::
+If you have PyQtGraph installed, you can simply try the network by typing::
 
     python NeuralField.py
     
@@ -16,7 +16,7 @@ You can simply try the network by typing::
 Model overview
 --------------------
     
-Each population consists of N*N neurons, with N=20. The ``input`` population is solely used to represent inputs for ``focus``. The firing rate of each neuron is defined by a simple equation:
+Each population consists of N*N neurons, with N=20. The ``Input`` population is solely used to represent inputs for ``Focus``. The firing rate of each neuron is defined by a simple equation:
 
 .. math::
     
@@ -24,7 +24,7 @@ Each population consists of N*N neurons, with N=20. The ``input`` population is 
     
 where :math:`\text{input}_i(t)` is the instantaneous firing rate, :math:`\text{baseline}_i(t)` its baseline activity, :math:`\eta(t)` an additive noise uniformly taken in :math:`[-0.5, 0.5]` and :math:`()^+` the positive function. 
 
-The ``focus`` population implements a discretized neural field, with neurons following the ODE:
+The ``Focus`` population implements a discretized neural field, with neurons following the ODE:
 
 .. math::
 
@@ -34,9 +34,9 @@ The ``focus`` population implements a discretized neural field, with neurons fol
     
 where :math:`\text{focus}_i(t)` is the neuron's firing rate, :math:`\text{mp}_i(t)` its membrane potential, :math:`\tau` a time constant and :math:`w_{i, j}` the weight value (synaptic efficiency) of the synapse between the neurons j and i. :math:`f()` is a semi-linear function, ensuring the firing rate is bounded between 0 and 1.
 
-Each neuron in ``focus`` takes inputs from the neuron of ``input`` which has the same index (or rank), leading to a ``one2one`` connection pattern.
+Each neuron in ``Focus`` takes inputs from the neuron of ``Input`` which has the same index (or rank), leading to a ``one_to_one`` connection pattern.
 
-The lateral connections within ``focus`` follow a difference-of-Gaussians (``dog``) connection pattern, with the connection weights :math:`w_{i,j}` depending on the normalized euclidian distance between the neurons in the N*N population:
+The lateral connections within ``Focus`` follow a difference-of-Gaussians (``dog``) connection pattern, with the connection weights :math:`w_{i,j}` depending on the normalized euclidian distance between the neurons in the N*N population:
 
 .. math:: 
 
@@ -106,7 +106,7 @@ The second neuron we need is a bit more complex, as it is governed by an ODE and
         """
     )
     
-``tau`` is a population-wise parameter, whose value will be the same for all neuron of the population. ``noise`` is a random number generator. ``mp`` is the membrane potential, whose dynamics are governed by a first-order linear ODE, integrating the sums of excitatory and inhibitory inputs with noise. As explained in the section `Defining a Neuron <../manual/Neuron.html>`_, ``sum(exc)`` retrieves the weighted sum of presynaptic firing rates for the synapses having the connection type *exc*, here the one2one connections between ``input`` and ``focus``. ``sum(inh)`` does the same for *inh* type connections, here the lateral connections within ``focus``.
+``tau`` is a population-wise parameter, whose value will be the same for all neuron of the population. ``noise`` is a random number generator. ``mp`` is the membrane potential, whose dynamics are governed by a first-order linear ODE, integrating the sums of excitatory and inhibitory inputs with noise. As explained in the section `Defining a Neuron <../manual/Neuron.html>`_, ``sum(exc)`` retrieves the weighted sum of presynaptic firing rates for the synapses having the connection type *exc*, here the one2one connections between ``Input`` and ``Focus``. ``sum(inh)`` does the same for *inh* type connections, here the lateral connections within ``focus``.
 
 ``rate`` is defined by a piecewise linear function of ``mp``, making sure that it is bounded between 0.0 and 1.0. The function is defined by the conjunction of a conditional statement (if-then-else) and the ``pos()`` positive function.
 
@@ -247,15 +247,20 @@ By specifing the type of a variable (which can not be changed later contrary to 
 
 The file ``BubbleWorld.pyx`` defines a ``World`` able to rotate the bubble for a specified duration. 
 
-.. code:: python
+.. code-block:: cython
 
     import numpy as np
     cimport numpy as np
     from NeuralField import step
     
-At the beginning of the file, numpy is imported once as a normal 
+At the beginning of the file, numpy is imported once as a normal Python module with ``import``, and once as a Cython module with ``cimport``. This allows our Cython module to access directly the internal representations of Numpy without going through the Python interpreter. From the ``NeuralField.py`` script, we only need the ``step()`` method allow to simulate the network for one millisecond.
 
-.. code:: python 
+We can then define a ``World`` class taking as parameters:
+
+* the population which will be used as input (here ``InputPop``),
+* several arguments such as ``raduis``, ``sigma`` and ``period`` which allow to parameterize the behavior of the rotating bubble:
+
+.. code-block:: cython 
         
     cdef class World:
         " Environment class allowing to clamp a rotating bubble into the baseline of a population."
@@ -300,12 +305,112 @@ At the beginning of the file, numpy is imported once as a normal
                 # Simulate 1 ms
                 step()  
 
+Although this tutorial won't go into much detail, you can note the following:
+
+* The data given to or intitialized in the constructore are previously decalred (with their type) as attributes of the class. This way, Cython knows at the compilation time which operations are possible on them, which amount of memory to allocate and so on, resulting in a more efficient implementation.
+
+* The input population (``self.pop``) can be accessed as a normal Python object. In particular, self.pop.geometry is used in the constructor to initialize the meshgrid.
+
+* the method ``rotate()`` performs the simulation for the given duration (in steps, not milliseconds). Its content is relatively similar to the Python version.
+
 
 Running the simulation
 ----------------------------
 
+Once the environment has been defined, the simulation can be executed. The following code, to be placed after the network definition, performs a simulation of the network, taking inputs from ``BubbleWorld.pyx``, during 2 seconds:
 
+.. code-block:: python
+
+    if __name__ == "__main__":
+        # Compile the network
+        compile()
+        
+        # Create the environment
+        import pyximport; pyximport.install()
+        from BubbleWorld import World
+        world = World(pop = InputPop, radius = 0.5, sigma = 2.0, period = 5000.0)
+        
+        # Simulate for 2 seconds with inputs
+        world.rotate(2000)
+    
+It is good practice to put the ``compile()`` call and the rest of the simulation in a ``if __name__ == "__main__":`` statement, as it would be otherwise executed when the network definition is imported by another script. 
     
 Visualizing the network
 ----------------------------
+
+The preceding code performs correctly the intended simulation, but nothing is visualized. The user has all freedom to visualize his network the way he prefers (for example through animated Matplotlib figures), but the provided example takes advantage of the `PyQtGraph <www.pyqtgraph.org>`_ to visualize efficiently activity in the network.
+
+The following class is defined:
+
+.. code-block:: python
+
+    # Visualizer using PyQtGraph
+    from pyqtgraph.Qt import QtGui, QtCore
+    import pyqtgraph as pg 
+    import pyqtgraph.opengl as gl
+
+    class GLViewer(object):
+        " Class to visualize the network activity using PyQtGraph and openGL."
+        def __init__(self, populations, world):    
+            self.populations = populations
+            self.world = world          
+            self.win = gl.GLViewWidget()
+            self.win.show()
+            self.win.setCameraPosition(distance=50)
+            self.plots = []
+            shift = - 20
+            for pop in self.populations: 
+                p = gl.GLSurfacePlotItem(
+                    x = np.linspace(0, pop.geometry[0]-1, pop.geometry[0]), 
+                    y = np.linspace(0, pop.geometry[1]-1, pop.geometry[1]), 
+                    shader='heightColor', 
+                    computeNormals=False, 
+                    smooth=False
+                )
+                p.translate(shift, -10, -1)
+                self.win.addItem(p)
+                self.plots.append(p)
+                shift += 25
+        def scale(self, data):
+            " Colors are shown in the range [-1, 1] per default."
+            return 1.8 * data -0.9
+        def update(self):
+            # Simulate for 200ms
+            self.world.rotate(200)      
+            # Actualize the GUI
+            for i in range(len(self.populations)):
+                self.plots[i].setData(z=self.scale(self.populations[i].rate)) 
+            # Listen to mouse/keyboard events
+            QtGui.QApplication.processEvents()
+        def run(self):
+            timer = QtCore.QTimer()
+            timer.timeout.connect(self.update)
+            timer.start(0)  
+            QtGui.QApplication.instance().exec_() 
+            
+We leave out again the details about this class (please look at the examples and tutorials on the PyQtGraph website to understand it). It allows to open a PyQtGraph window and display the firing rate of both ``Input`` and ``Focus`` population using OpenGL (make sure it is also installed). The ``run()`` method is an endless loop calling regularly the ``update()`` method. 
+
+The ``update()`` method calls first ``World.rotate(200)`` and waits for its completion before reactualizing the display. The reason is that refreshing the display can only be done sequentially with the simulation, and calling it too often would impair the simulation time.
+
+Once this class has been defined, the simulation can be run endlessly:
+
+.. code-block:: python 
+
+    # Main program
+    if __name__ == "__main__":
+
+        # Analyse and compile everything, initialize the parameters/variables...
+        compile()   
+        
+        # Import the environment for the simulation (Cython)
+        import pyximport; pyximport.install()
+        from BubbleWorld import World
+        world = World(pop = InputPop, radius = 0.5, sigma = 2.0, period = 5000.0)
+
+        # Create the GUI using PyQtGraph
+        app = QtGui.QApplication([])
+        viewer = GLViewer(populations = [InputPop, FocusPop], world=world)
+        
+        # Start the simulation forever          
+        viewer.run()
 
