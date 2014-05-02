@@ -424,16 +424,23 @@ class RateProjectionGenerator(ProjectionGenerator):
         'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         code += """
     if(%(var)s_ < %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         code += """
     if(%(var)s_ > %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         return code
     
     def generate_locallearn(self):
@@ -451,16 +458,23 @@ class RateProjectionGenerator(ProjectionGenerator):
         'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         local_learn += """
         if(%(var)s_[i] < %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         local_learn += """
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         
         if len(local_learn) > 1:
             #
@@ -593,16 +607,23 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
 """ % {'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         code += """
     if(%(var)s_ < %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         code += """
     if(%(var)s_ > %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         return code
     
     def generate_locallearn(self):
@@ -618,16 +639,23 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
 """ % {'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         local_learn += """
         if(%(var)s_[i] < %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         local_learn += """
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         
         if len(local_learn) > 1:
             #
@@ -825,16 +853,23 @@ class SpikeProjectionGenerator(ProjectionGenerator):
 """ % {'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         code += """
         if(%(var)s_[i] < %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         code += """
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         code+="""
     }
 """

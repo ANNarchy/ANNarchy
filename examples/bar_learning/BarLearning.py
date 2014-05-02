@@ -28,21 +28,13 @@ Oja = RateSynapse(
     parameters=""" 
         tau = 2000.0 : postsynaptic
         alpha = 8.0 : postsynaptic
+        min_value = 0.0 : postsynaptic
     """,
     equations="""
-        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=-100.0
+        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=min_value
     """
 )  
 
-AntiHebb = RateSynapse(
-    parameters=""" 
-        tau = 2000.0 : postsynaptic
-        alpha = 0.3 : postsynaptic
-    """,
-    equations="""
-        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min = 0.0
-    """
-)  
 
 # Creating the populations
 input_pop = Population(geometry=(8,8), neuron=InputNeuron)
@@ -55,12 +47,13 @@ input_feature = Projection(
     target='exc', 
     synapse = Oja    
 ).connect_all_to_all( weights = Uniform(-0.5, 0.5) )
+input_feature.min_value = -100.0
                      
 feature_feature = Projection(
     pre=feature_pop, 
     post=feature_pop, 
     target='inh', 
-    synapse = AntiHebb
+    synapse = Oja
 ).connect_all_to_all( weights = Uniform(0.0, 1.0) )
 feature_feature.alpha = 0.3
 
