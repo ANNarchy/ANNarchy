@@ -2,7 +2,7 @@
 Bar learning problem
 ************************************
 
-The implementation of the bar learning problem is located in the ``examples/bar_learn`` folder. The bar learning problem describes the process of learning receptive fields on an artificial input pattern. Therefore images consisting of independent bars are used. Those images are generated as following: an eight by eight image is filled by eight horizontal bars and respectively eight vertical bars. Each bar can occur independently with the probability of 1/8. As learning result the single neurons of this neuronal network should learn to respond to these components.
+The implementation of the bar learning problem is located in the ``examples/bar_learn`` folder. The bar learning problem describes the process of learning receptive fields on an artificial input pattern. Therefore images consisting of independent bars are used. Those images are generated as following: an 8*8 image is filled by eight horizontal bars and respectively eight vertical bars. Each bar can occur independently with the probability of 1/8. At the end of learning, the single neurons of this neuronal network should learn to respond to these components independently.
 
 You can simply try the network by typing:
 
@@ -13,7 +13,7 @@ You can simply try the network by typing:
 Model overview
 ------------------------
 
-The model consists of two populations ``Input`` and ``Feature``. The size of ``Input`` could be chosen as you wish (in our example 8*8). The neuron amount in the ``Feature`` population should be higher then the amount of independent bars, which could appear (in our sample 32 neurons). The ``Feature`` population got excitory connections to ``Input`` by an all-to-all connection pattern. The same pattern is used for the inhibitory connections.
+The model consists of two populations ``Input`` and ``Feature``. The size of ``Input`` could be chosen as you wish (in our example 8*8). The number neuron in the ``Feature`` population should be higher than the number of independent bars which could appear (we chose here 32 neurons). The ``Feature`` population gets excitory connections from ``Input`` through an all-to-all connection pattern. The same pattern is used for the inhibitory connections within ``Feature``.
 
 Defining the neurons
 ------------------------

@@ -88,7 +88,7 @@ class GLViewer(object):
     def update(self):
         # Simulate for 200ms
         self.world.rotate(200)      
-        # Actualize the GUI
+        # Refresh the GUI
         for i in range(len(self.populations)):
             self.plots[i].setData(z=self.scale(self.populations[i].rate)) 
         # Listen to mouse/keyboard events
