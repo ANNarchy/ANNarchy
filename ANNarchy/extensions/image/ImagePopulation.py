@@ -14,7 +14,6 @@ except:
     Global._warning('The Python bindings to OpenCV are not installed on your system, unable to connect to a camera.')
     exist_cv = False
             
-import atexit
 import numpy as np
 
 class ImagePopulation(Population):
@@ -77,6 +76,8 @@ class ImagePopulation(Population):
         # Default camera
         self.cam = None
 
+    def __del__(self):
+        self.stop_camera()
         
     def set_image(self, image_name):
         """ 
@@ -145,8 +146,7 @@ class ImagePopulation(Population):
                     setattr(self.cyInstance, 'rate', (cv2.resize(im, (self.geometry[1], self.geometry[0])))/255.)
         else:
             Global._error('The camera is not started yet. Call start_camera(0) first.')
-
-    @atexit.register    
+   
     def stop_camera(self):
         """
         Releases the camera.
