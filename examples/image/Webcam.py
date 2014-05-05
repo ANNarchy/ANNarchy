@@ -22,14 +22,24 @@ class Viewer(object):
         box.addItem(self.vis)        
         self.win.show()
         
+        self.lastUpdate = pg.ptime.time()
+        self.avgFps = 0.0
+        
 
     def update(self):
-        # Simulate for 50 ms with a new input
+        # Simulate for 10 ms with a new input
         self.pop.grab_image()
+        simulate(10)
         # Refresh the GUI
         self.vis.setImage(np.swapaxes(self.pop.rate,0,1))
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
+        # FPS
+        now = pg.ptime.time()
+        fps = 1.0 / (now - self.lastUpdate)
+        self.lastUpdate = now
+        self.avgFps = self.avgFps * 0.8 + fps * 0.2
+        print self.avgFps
         
     def run(self):
         
@@ -40,8 +50,9 @@ class Viewer(object):
         timer.stop()
 
 if __name__ == '__main__':
+
     # Create the population    
-    pop = ImagePopulation(name='test', geometry=(480, 640, 3))
+    pop = ImagePopulation(name='test', geometry=(480, 640, 1))
     
     # Compile
     compile()

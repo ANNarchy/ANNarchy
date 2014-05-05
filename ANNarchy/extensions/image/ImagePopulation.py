@@ -65,13 +65,13 @@ class ImagePopulation(Population):
             exit(0)
         if len(geometry)==3 and (geometry[2]!=3 and geometry[2]!=1):
             Global._error('The third dimension of an ImagePopulation should be either 1 (grayscale) or 3 (color).') 
-            exit(0)
+            exit(0)            
+        if len(geometry)==3 and geometry[2]==1:
+            geometry = (geometry[0], geometry[1])
             
         # Create the population     
         Population.__init__(self, geometry = geometry, name=name, neuron = RateNeuron(parameters="""rate = 0.0""") )
         
-        if len(geometry)==3 and geometry[2]==1:
-            self.dimension = 1
             
         # Default camera
         self.cam = None
@@ -105,9 +105,11 @@ class ImagePopulation(Population):
         else:
             setattr(self.cyInstance, 'rate', (np.array(im))/255.)
             
-    def start_camera(self, id_camera=0):
+    def start_camera(self, camera_port=0):
         """
         Starts the webcam with the corresponding device (default = 0).
+        
+        On linux, the camera port corresponds to the number in /dev/video0, /dev/video1, etc.
         
         The camera must be released at the end of the script:
         
@@ -116,12 +118,14 @@ class ImagePopulation(Population):
         if self.cam: # The camera is already started
             self.stop_camera()
         try:
-            self.cam = cv2.VideoCapture(id_camera)
-            self.cam.set(cv2.CV_CAP_PROP_FRAME_WIDTH,self.geometry[1]) # sets the width
-            self.cam.set(cv2.CV_CAP_PROP_FRAME_HEIGHT,self.geometry[0]) # sets the height
-            self.cam.set(cv2.CV_CAP_PROP_CONVERT_RGB, True) # sets the color space
-        except:
-            Global._error('The camera ' + str(id_camera) + ' is not available.')
+            self.cam = cv2.VideoCapture(camera_port)
+            # Setting the width/height does not always work
+            #self.cam.set(3,self.geometry[1]) # sets the width
+            #self.cam.set(4,self.geometry[0]) # sets the height
+            #self.cam.set(cv2.CV_CAP_PROP_CONVERT_RGB, True) # sets the color space
+        except Exception, e:
+            print e
+            Global._error('The camera ' + str(camera_port) + ' is not available.')
             return
         
     def grab_image(self):
@@ -135,15 +139,19 @@ class ImagePopulation(Population):
         if self.cam:
             ret, im = self.cam.read()
             if ret:
-                if self.dimension == 2 or self.geometry[2] == 1:
+                if self.dimension == 2:
                     im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
                 else:
-                    b,g,r = cv2.split(im)       # get b,g,r
-                    im = cv2.merge([r,g,b])     # switch it to rgb
+                    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+#                    b,g,r = cv2.split(im)       # get b,g,r
+#                    im = cv2.merge([r,g,b])     # switch it to rgb
+                # Resize the image
+                if im.shape != (self.geometry[1], self.geometry[0]):
+                    im = cv2.resize(im, (self.geometry[1], self.geometry[0]))                    
                 if not Global._compiled:
-                    self.rate = (cv2.resize(im, (self.geometry[1], self.geometry[0])))/255.
+                    self.rate = (im)/255.
                 else:
-                    setattr(self.cyInstance, 'rate', (cv2.resize(im, (self.geometry[1], self.geometry[0])))/255.)
+                    setattr(self.cyInstance, 'rate', (im)/255.)
         else:
             Global._error('The camera is not started yet. Call start_camera(0) first.')
    
