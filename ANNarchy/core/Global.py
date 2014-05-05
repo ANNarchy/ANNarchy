@@ -27,28 +27,30 @@ import sys, os
 from datetime import datetime
 from math import ceil
 
-# instances
+# Global instances
 _network = None         # created network
 _populations = []       # created populations
 _projections = []       # created projections
 _functions = []         # created functions
 
-# predefined variables / parameters
+# Predefined variables / parameters
 _pre_def_synapse = ['value', 'rank', 'delay', 'psp']
 _pre_def_synapse_var = ['value', 'rank', 'delay', 'psp']
 _pre_def_synapse_par = []
 
 _pre_def_neuron = ['rank', 'rate']
 
+# Aditional instances
 _cy_instance = None
 _visualizer = None
 
-# path to annarchy working directory
+# Path to the annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
 
+# Flag to tell if the network has already been compiled
 _compiled = False   #I know it's evil
 
-# discretization timestamp
+# Configuration
 config = dict(
    { 
     'dt' : 1.0,
