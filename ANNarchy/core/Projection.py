@@ -25,10 +25,6 @@ import traceback
 import numpy as np
 import math
 
-import pyximport
-pyximport.install()
-import cy_functions
-
 from ANNarchy.core import Global
 from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
@@ -129,6 +125,9 @@ class Projection(object):
         # Finalize initialization
         self.initialized = False
         
+        import pyximport
+        pyximport.install()
+        import cy_functions
         self._comp_dict = {
             1: cy_functions.comp_dist1D,
             2: cy_functions.comp_dist2D,

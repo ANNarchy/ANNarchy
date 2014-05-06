@@ -8,11 +8,12 @@ except:
     Global._error('The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations.')
     exit(0)
 try:
-    import cv2
-    exist_cv = True
-except:
-    Global._warning('The Python bindings to OpenCV are not installed on your system, unable to connect to a camera.')
-    exist_cv = False
+    from . import CameraDevice as Cam
+    exists_cv = True
+except Exception, e :
+    print e
+    Global._warning('OpenCV is not installed on your system, unable to connect to a camera.')
+    exists_cv = False
             
 import numpy as np
 
@@ -20,7 +21,7 @@ class ImagePopulation(Population):
     """ 
     Specific rate-coded Population allowing to represent images (png, jpg...) or webcam streams as the firing rate of a population (each neuron represents one pixel).
     
-    This extension requires the Python Image Library (pip install Pillow) and (only for camera inputs) OpenCV >= 2.0 (apt-get/yum install python-opencv).
+    This extension requires the Python Image Library (pip install Pillow) and (only for camera inputs) OpenCV >= 2.0 (apt-get/yum install opencv).
     
     Usage for images:
     
@@ -115,14 +116,18 @@ class ImagePopulation(Population):
         
         >>> pop.stop_camera()
         """
+        if not exists_cv:
+            return
         if self.cam: # The camera is already started
             self.stop_camera()
         try:
-            self.cam = cv2.VideoCapture(camera_port)
-            # Setting the width/height does not always work
-            #self.cam.set(3,self.geometry[1]) # sets the width
-            #self.cam.set(4,self.geometry[0]) # sets the height
-            #self.cam.set(cv2.CV_CAP_PROP_CONVERT_RGB, True) # sets the color space
+            self.cam = Cam.CameraDevice(
+                self,
+                id=camera_port, 
+                width=self.geometry[1], 
+                height=self.geometry[0], 
+                depth=(self.geometry[2] if self._dimension == 3 else 1)
+            )
         except Exception, e:
             print e
             Global._error('The camera ' + str(camera_port) + ' is not available.')
@@ -136,22 +141,10 @@ class ImagePopulation(Population):
         
         >>> pop.start_camera(0)
         """
-        if self.cam:
-            ret, im = self.cam.read()
-            if ret:
-                if self.dimension == 2:
-                    im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-                else:
-                    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-#                    b,g,r = cv2.split(im)       # get b,g,r
-#                    im = cv2.merge([r,g,b])     # switch it to rgb
-                # Resize the image
-                if im.shape != (self.geometry[1], self.geometry[0]):
-                    im = cv2.resize(im, (self.geometry[1], self.geometry[0]))                    
-                if not Global._compiled:
-                    self.rate = (im)/255.
-                else:
-                    setattr(self.cyInstance, 'rate', (im)/255.)
+        if not exists_cv:
+            return
+        if self.cam and self.cam.is_opened():                   
+            self.cam.grab_image()
         else:
             Global._error('The camera is not started yet. Call start_camera(0) first.')
    
@@ -159,6 +152,8 @@ class ImagePopulation(Population):
         """
         Releases the camera.
         """
+        if not exists_cv:
+            return
         if self.cam:
             self.cam.release()
             self.cam=None
