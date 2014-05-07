@@ -111,10 +111,6 @@ class ImagePopulation(Population):
         Starts the webcam with the corresponding device (default = 0).
         
         On linux, the camera port corresponds to the number in /dev/video0, /dev/video1, etc.
-        
-        The camera must be released at the end of the script:
-        
-        >>> pop.stop_camera()
         """
         if not exists_cv:
             return
@@ -122,11 +118,10 @@ class ImagePopulation(Population):
             self.stop_camera()
         try:
             self.cam = Cam.CameraDevice(
-                self,
                 id=camera_port, 
                 width=self.geometry[1], 
                 height=self.geometry[0], 
-                depth=(self.geometry[2] if self._dimension == 3 else 1)
+                depth=(3 if self._dimension == 3 else 1)
             )
         except Exception, e:
             print e
@@ -144,13 +139,17 @@ class ImagePopulation(Population):
         if not exists_cv:
             return
         if self.cam and self.cam.is_opened():                   
-            self.cam.grab_image()
+            if not Global._compiled:
+                self.rate = self.cam.grab_image()
+            else:
+                setattr(self.cyInstance, 'rate', self.cam.grab_image())
+                #self.cam.grab_image()
         else:
             Global._error('The camera is not started yet. Call start_camera(0) first.')
    
     def stop_camera(self):
         """
-        Releases the camera.
+        Releases the camera (not neceassary at the end of the script).
         """
         if not exists_cv:
             return

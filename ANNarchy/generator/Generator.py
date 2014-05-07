@@ -33,6 +33,10 @@ from ANNarchy.parser.Analyser import Analyser, _extract_functions
 from ANNarchy.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
 from templates import *
+
+# String containing the extra libs which can be added by extensions
+# e.g. extra_libs = "-lopencv_core -lopencv_video"
+extra_libs = ""
  
 def _folder_management(profile_enabled, clean):
     """
@@ -399,7 +403,8 @@ class Generator(object):
                     src = omp_makefile % { 'src_type': '%.cpp',
                                            'obj_type': '%.o',
                                            'py_version': py_version, 
-                                           'flag': flags }
+                                           'flag': flags,
+                                           'extra_libs': extra_libs }
                 else: 
                     src = cuda_makefile % { 'src_type': '%.cpp',
                                             'src_gpu': '%.cu',
@@ -410,7 +415,8 @@ class Generator(object):
                 src = omp_makefile % { 'src_type': '%.cpp',
                                        'obj_type': '%.o',
                                        'py_version': py_version, 
-                                       'flag': flags }
+                                       'flag': flags,
+                                       'extra_libs': extra_libs }
 
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:

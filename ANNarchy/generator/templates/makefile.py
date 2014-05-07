@@ -22,7 +22,7 @@ all:
 
 ANNarchyCython_%(py_version)s: $(OBJ) pyx/ANNarchyCython_%(py_version)s.o
 \t@echo "Build ANNarchyCython library for python %(py_version)s"
-\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_%(py_version)s.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython%(py_version)s -o ANNarchyCython.so  
+\tg++ -shared -Wl,-z,relro -fpermissive -std=c++0x -fopenmp build/*.o pyx/ANNarchyCython_%(py_version)s.o -L. -L/usr/lib64 -Wl,-R./annarchy -lpython%(py_version)s %(extra_libs)s -o ANNarchyCython.so  
 
 pyx/ANNarchyCython_%(py_version)s.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
@@ -40,7 +40,7 @@ clean:
 \trm -rf ANNarchyCython.so
 """
 
-# Template for creation of the Makefile for OpenMP paradigm
+# Template for creation of the Makefile for CUDA paradigm
 #
 # * src_type: set to %.cpp
 #

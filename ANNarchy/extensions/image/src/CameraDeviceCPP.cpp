@@ -9,8 +9,7 @@ vector<float> CameraDeviceCPP::GrabImage(){
         read(frame); 
         // Resize the image
         Mat resized_frame;
-        frame.copyTo(resized_frame);
-        //resize(frame, resized_frame, Size(width_, height_) );
+        resize(frame, resized_frame, Size(width_, height_) );
         // If depth=1, only luminance
         if(depth_==1){
             // Convert to luminance

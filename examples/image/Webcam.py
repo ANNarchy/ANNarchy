@@ -29,7 +29,6 @@ class Viewer(object):
     def update(self):
         # Simulate for 10 ms with a new input
         self.pop.grab_image()
-        simulate(1)
         # Refresh the GUI
         self.vis.setImage(np.swapaxes(self.pop.rate,0,1))
         # Listen to mouse/keyboard events
