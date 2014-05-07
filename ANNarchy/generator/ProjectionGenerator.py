@@ -174,19 +174,15 @@ class ProjectionGenerator(object):
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                tmp_code = local_template % { 'Name': param['name'].capitalize(), 
+                code += local_template % { 'Name': param['name'].capitalize(), 
                                               'name': param['name'], 
-                                              'type': param['ctype'] }
-        
-                code += tmp_code.replace('DATA_TYPE', 'float') # no double in cython
+                                              'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
                 
             elif param['name'] in self.desc['global']: # global attribute
-                tmp_code = global_template % { 'Name': param['name'].capitalize(), 
+                code += global_template % { 'Name': param['name'].capitalize(), 
                                                'name': param['name'], 
-                                               'type': param['ctype'] }
+                                               'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         
-                code += tmp_code.replace('DATA_TYPE', 'float')
-
         return code
     
     def generate_pyfunctions(self):
@@ -205,10 +201,12 @@ class ProjectionGenerator(object):
             
             if param['name'] in self.desc['local']: # local attribute
                 code += local_template % { 'Name': param['name'].capitalize(), 
-                                           'name': param['name'] }
+                                           'name': param['name'],
+                                           'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
             elif param['name'] in self.desc['global']: # global attribute
                 code += global_template % { 'Name': param['name'].capitalize(), 
-                                            'name': param['name'] }
+                                            'name': param['name'],
+                                            'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
         return code
 
     def generate_record(self):
