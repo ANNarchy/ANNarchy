@@ -387,17 +387,19 @@ void %(class)s::compute_sum_%(var)s() {
         return code
     
     def generate_pyfunctions(self):
-        "Python functions acessing the Cython wrapper"
+        "Python functions accessing the Cython wrapper"
         code = ""        
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_property_pyx % { 'Name': param['name'].capitalize(), 
-                                               'name': param['name'] }
+                code += local_property_pyx % { 'name': param['name'], 
+                                               'Name': param['name'].capitalize(),
+                                               'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
                 
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_property_pyx % { 'Name': param['name'].capitalize(), 
-                                                'name': param['name'] }
+                code += global_property_pyx % { 'name': param['name'], 
+                                                'Name': param['name'].capitalize(),
+                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         return code
                 
     

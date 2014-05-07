@@ -161,11 +161,11 @@ class Population(object):
         " Method called when accessing an attribute."
         if not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
-        elif name == 'attributes':
-            return object.__getattribute__(self, 'attributes')
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
-                if not self.initialized: # access before compile()
+                if self.initialized: # access after compile()
+                    return self._get_cython_attribute(name)
+                else: # access before compile()
                     if name in self.description['local']:
                         if isinstance(self.init[name], np.ndarray):
                             return self.init[name]
@@ -173,8 +173,6 @@ class Population(object):
                             return np.array([self.init[name]] * self.size).reshape(self._geometry)
                     else:
                         return self.init[name]
-                else: # access after compile()
-                    return self._get_cython_attribute( name)
             else:
                 return object.__getattribute__(self, name)
         return object.__getattribute__(self, name)
@@ -182,8 +180,6 @@ class Population(object):
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
         if not hasattr(self, 'initialized'): # Before the end of the constructor
-            object.__setattr__(self, name, value)
-        elif name == 'attributes':
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
@@ -209,15 +205,14 @@ class Population(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        if hasattr(self, 'cyInstance'):
-            if hasattr(self.cyInstance, attribute):
-                if attribute in self.description['local']:
-                    return np.array(getattr(self.cyInstance, attribute)).reshape(self._geometry)
-                else:
-                    return getattr(self.cyInstance, attribute)
+        try:
+            if attribute in self.description['local']:
+                return getattr(self.cyInstance, '_get_'+attribute)().reshape(self._geometry)
             else:
-                print('Error: attribute', attribute, 'does not exist in this population.')
-                print(traceback.print_stack())
+                return getattr(self.cyInstance, '_get_'+attribute)()
+        except:
+            print('Error: attribute', attribute, 'does not exist in this population.')
+            print(traceback.print_stack())
         
     def _set_cython_attribute(self, attribute, value):
         """
@@ -229,20 +224,19 @@ class Population(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        if hasattr(self, 'cyInstance'):
-            if hasattr(self.cyInstance, attribute):
-                if attribute in self.description['local']:
-                    if isinstance(value, np.ndarray):
-                        setattr(self.cyInstance, attribute, value.reshape(self.size) )
-                    elif isinstance(value, list):
-                        setattr(self.cyInstance, attribute, np.array(value).reshape(self.size) )
-                    else:
-                        setattr(self.cyInstance, attribute, np.array( [value]*self.size ) )
+        try:
+            if attribute in self.description['local']:
+                if isinstance(value, np.ndarray):
+                    getattr(self.cyInstance, '_set_'+attribute)(value.reshape(self.size))
+                elif isinstance(value, list):
+                    getattr(self.cyInstance, '_set_'+attribute)(np.array(value).reshape(self.size))
                 else:
-                    setattr(self.cyInstance, attribute, value)
+                    getattr(self.cyInstance, '_set_'+attribute)(np.array( [value]*self.size ))
             else:
-                print('Error: variable', attribute, 'does not exist in this population.')
-                print(traceback.print_stack())
+                getattr(self.cyInstance, '_set_'+attribute)(value)
+        except:
+            print('Error: variable', attribute, 'does not exist in this population.')
+            print(traceback.print_stack())
 
     @property
     def geometry(self):

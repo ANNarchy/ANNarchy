@@ -31,6 +31,9 @@ class Viewer(object):
         self.pop.grab_image()
         # Refresh the GUI
         self.vis.setImage(np.swapaxes(self.pop.rate,0,1))
+        #self.vis.setImage(self.pop.rate)
+        #self.vis.setImage(np.ones((640, 480, 3)))
+        #a = self.pop.rate
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         # FPS
@@ -51,7 +54,9 @@ class Viewer(object):
 if __name__ == '__main__':
 
     # Create the population    
-    pop = ImagePopulation(name='test', geometry=(480, 640, 1))
+    #pop = VideoPopulation(name='test', geometry=(480, 640, 3))
+    #pop = VideoPopulation(name='test', geometry=(480, 640, 1))
+    pop = VideoPopulation(name='test', geometry=(240, 320, 3))
     
     # Compile
     compile()

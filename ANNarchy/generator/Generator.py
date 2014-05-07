@@ -35,8 +35,8 @@ from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, Rate
 from templates import *
 
 # String containing the extra libs which can be added by extensions
-# e.g. extra_libs = "-lopencv_core -lopencv_video"
-extra_libs = ""
+# e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
+extra_libs = []
  
 def _folder_management(profile_enabled, clean):
     """
@@ -235,7 +235,9 @@ class Generator(object):
         
         # create population cpp class for each neuron
         for name, desc in self.analyser.analysed_populations.iteritems():
-            if desc['type'] == 'rate':
+            if hasattr(desc['pop'], 'generator'): # extension
+                pop_generator = desc['pop'].generator
+            elif desc['type'] == 'rate':
                 pop_generator = RatePopulationGenerator(name, desc)
             elif desc['type'] == 'spike':
                 pop_generator = SpikePopulationGenerator(name, desc)
@@ -393,6 +395,10 @@ class Generator(object):
                 flags = "-O2"
             else:
                 flags = "-O0 -g -D_DEBUG"
+                
+            libs = ""
+            for l in extra_libs:
+                libs += str(l) + ' '
     
             py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
                                                    'minor': sys.version_info[1] }
@@ -404,7 +410,7 @@ class Generator(object):
                                            'obj_type': '%.o',
                                            'py_version': py_version, 
                                            'flag': flags,
-                                           'extra_libs': extra_libs }
+                                           'extra_libs': libs }
                 else: 
                     src = cuda_makefile % { 'src_type': '%.cpp',
                                             'src_gpu': '%.cu',
@@ -416,7 +422,7 @@ class Generator(object):
                                        'obj_type': '%.o',
                                        'py_version': py_version, 
                                        'flag': flags,
-                                       'extra_libs': extra_libs }
+                                       'extra_libs': libs }
 
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:

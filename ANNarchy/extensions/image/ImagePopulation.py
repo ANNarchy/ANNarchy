@@ -7,38 +7,21 @@ try:
 except:
     Global._error('The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations.')
     exit(0)
-try:
-    from . import CameraDevice as Cam
-    exists_cv = True
-except Exception, e :
-    print e
-    Global._warning('OpenCV is not installed on your system, unable to connect to a camera.')
-    exists_cv = False
             
 import numpy as np
 
 class ImagePopulation(Population):
     """ 
-    Specific rate-coded Population allowing to represent images (png, jpg...) or webcam streams as the firing rate of a population (each neuron represents one pixel).
+    Specific rate-coded Population allowing to represent images (png, jpg...) as the firing rate of a population (each neuron represents one pixel).
     
-    This extension requires the Python Image Library (pip install Pillow) and (only for camera inputs) OpenCV >= 2.0 (apt-get/yum install opencv).
+    This extension requires the Python Image Library (pip install Pillow).
     
-    Usage for images:
+    Usage:
     
     >>> from ANNarchy import *
     >>> from ANNarchy.extensions.image import ImagePopulation
     >>> pop = ImagePopulation(name='Input', geometry=(480, 640))
     >>> pop.set_image('image.jpg')
-    
-    Usage for cameras inputs:
-    
-    >>> from ANNarchy import *
-    >>> from ANNarchy.extensions.image import ImagePopulation
-    >>> pop = ImagePopulation(name='Input', geometry=(480, 640))
-    >>> compile()
-    >>> pop.start_camera(0)
-    >>> pop.grab_image()
-    >>> pop.stop_camera()
     """
     
     def __init__(self, geometry, name=None):
@@ -72,13 +55,7 @@ class ImagePopulation(Population):
             
         # Create the population     
         Population.__init__(self, geometry = geometry, name=name, neuron = RateNeuron(parameters="""rate = 0.0""") )
-        
-            
-        # Default camera
-        self.cam = None
 
-    def __del__(self):
-        self.stop_camera()
         
     def set_image(self, image_name):
         """ 
@@ -104,7 +81,52 @@ class ImagePopulation(Population):
         if not Global._compiled:
             self.rate = (np.array(im))/255.
         else:
-            setattr(self.cyInstance, 'rate', (np.array(im))/255.)
+            self.cyInstance._set_rate(np.array(im)/255.)
+
+
+class VideoPopulation(ImagePopulation):
+    """ 
+    Specific rate-coded Population allowing to feed a webcam input into the firing rate of a population (each neuron represents one pixel).
+    
+    This extension requires the C++ library OpenCV >= 2.0 (apt-get/yum install opencv).
+    
+    Usage :
+    
+    >>> from ANNarchy import *
+    >>> from ANNarchy.extensions.image import VideoPopulation
+    >>> pop = VideoPopulation(name='Input', geometry=(480, 640))
+    >>> compile()
+    >>> pop.start_camera(0)
+    >>> while(True):
+    ...   pop.grab_image()
+    ...   simulate(10.0)
+    """
+    
+    def __init__(self, geometry, name=None):
+        """        
+        *Parameters*:
+        
+            * *geometry*: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
+            
+                * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
+            
+                * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
+                
+                If the third dimension is 3, each will correspond to the RGB values of the pixels.
+                
+                .. warning::
+                
+                    Due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
+
+            * *name*: unique name of the population (optional).
+        
+        """         
+        # Create the population     
+        ImagePopulation.__init__(self, geometry = geometry, name=name )
+
+        # Code generator
+        from .VideoPopulationGenerator import VideoPopulationGenerator
+        self.generator = VideoPopulationGenerator(self)
             
     def start_camera(self, camera_port=0):
         """
@@ -112,21 +134,7 @@ class ImagePopulation(Population):
         
         On linux, the camera port corresponds to the number in /dev/video0, /dev/video1, etc.
         """
-        if not exists_cv:
-            return
-        if self.cam: # The camera is already started
-            self.stop_camera()
-        try:
-            self.cam = Cam.CameraDevice(
-                id=camera_port, 
-                width=self.geometry[1], 
-                height=self.geometry[0], 
-                depth=(3 if self._dimension == 3 else 1)
-            )
-        except Exception, e:
-            print e
-            Global._error('The camera ' + str(camera_port) + ' is not available.')
-            return
+        self.cyInstance.start_camera(camera_port, self.geometry[1], self.geometry[0], 3 if self._dimension==3 else 1)
         
     def grab_image(self):
         """
@@ -136,23 +144,6 @@ class ImagePopulation(Population):
         
         >>> pop.start_camera(0)
         """
-        if not exists_cv:
-            return
-        if self.cam and self.cam.is_opened():                   
-            if not Global._compiled:
-                self.rate = self.cam.grab_image()
-            else:
-                setattr(self.cyInstance, 'rate', self.cam.grab_image())
-                #self.cam.grab_image()
-        else:
-            Global._error('The camera is not started yet. Call start_camera(0) first.')
-   
-    def stop_camera(self):
-        """
-        Releases the camera (not neceassary at the end of the script).
-        """
-        if not exists_cv:
-            return
-        if self.cam:
-            self.cam.release()
-            self.cam=None
+        self.cyInstance.grab_image()
+
+        
