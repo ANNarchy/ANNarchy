@@ -30,22 +30,21 @@ import re
 class PopulationGenerator(object):
     """ Base class for generating C++ code from a population description. """
     def __init__(self, name, desc):
-        self.name = name
         self.class_name = name
         self.desc = desc
         
         # Names of the files to be generated
-        self.header = Global.annarchy_dir+'/generate/build/'+self.name+'.h'
-        self.body = Global.annarchy_dir+'/generate/build/'+self.name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.name+'.pyx'
+        self.header = Global.annarchy_dir+'/generate/build/'+self.class_name+'.h'
+        self.body = Global.annarchy_dir+'/generate/build/'+self.class_name+'.cpp'
+        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.class_name+'.pyx'
         
     def generate(self, verbose):
         self.verbose = verbose
         if verbose:
-            if self.name != self.desc['name']:
-                Global._print( 'Generating', self.desc['name'], '(', self.name, ')' ) 
+            if self.class_name != self.desc['name']:
+                Global._print( 'Generating', self.desc['name'], '(', self.class_name, ')' ) 
             else:
-                Global._print( 'Generating', self.name )
+                Global._print( 'Generating', self.class_name )
 
         #   generate files
         with open(self.header, mode = 'w') as w_file:
@@ -239,7 +238,7 @@ void %(class)s::compute_min_%(var)s() {
             %(var)s_min_ = %(var)s_[i];
     }
 }
-""" % { 'class': self.name, 'var': var['variable'] }
+""" % { 'class': self.class_name, 'var': var['variable'] }
             elif var['function'] == 'max':
                 single += """
 void %(class)s::compute_max_%(var)s() {
@@ -249,7 +248,7 @@ void %(class)s::compute_max_%(var)s() {
             %(var)s_max_ = %(var)s_[i];
     }
 }
-"""  % { 'class': self.name, 'var': var['variable'] }
+"""  % { 'class': self.class_name, 'var': var['variable'] }
             elif var['function'] == 'mean':
                 single += """
 void %(class)s::compute_mean_%(var)s() {
@@ -260,7 +259,7 @@ void %(class)s::compute_mean_%(var)s() {
     
     %(var)s_mean_ /= %(var)s_.size();
 }
-"""  % { 'class': self.name, 'var': var['variable'] }
+"""  % { 'class': self.class_name, 'var': var['variable'] }
             elif var['function'] == 'sum':
                 single += """
 void %(class)s::compute_sum_%(var)s() {
@@ -269,7 +268,7 @@ void %(class)s::compute_sum_%(var)s() {
         %(var)s_mean_ += %(var)s_[i];
     }
 }
-"""  % { 'class': self.name, 'var': var['variable'] }
+"""  % { 'class': self.class_name, 'var': var['variable'] }
         return single, glob
     
     def generate_record(self):
@@ -437,7 +436,7 @@ class RatePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = rate_population_header
         dictionary = {
-            'class' : self.name,
+            'class' : self.class_name,
             'access' : access,
             'global_ops_access' : global_ops_access,
             'global_ops_method' : global_ops_method,
@@ -466,7 +465,7 @@ class RatePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = rate_population_body
         dictionary = {
-            'class' : self.name,
+            'class' : self.class_name,
             'pop_id': self.desc['id'],
             'constructor' : constructor,
             'destructor' : destructor,
@@ -490,8 +489,8 @@ class RatePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = rate_population_pyx
         dictionary = {
-            'class_name': self.class_name,
-	    'name' : self.name,
+            'class_name': self.desc['class'],
+	        'name' : self.desc['name'],
             'cFunction' : cwrappers, 
             'neuron_count' : size,
             'pyFunction' : pyfunctions,
@@ -586,7 +585,7 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = spike_population_header
         dictionary = {
-            'class' : self.name,
+            'class' : self.class_name,
             'access' : access,
             'global_ops_access' : global_ops_access,
             'global_ops_method' : global_ops_method,
@@ -629,7 +628,7 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = spike_population_body
         dictionary = {
-            'class' : self.name,
+            'class' : self.class_name,
             'pop_id': self.desc['id'],
             'constructor' : constructor,
             'destructor' : destructor,
@@ -654,8 +653,8 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = spike_population_pyx
         dictionary = {
-            'class_name': self.class_name,
-            'name' : self.name,
+            'class_name': self.desc['class'],
+            'name' :  self.desc['name'],
             'cFunction' : cwrappers, 
             'neuron_count' : size,
             'pyFunction' : pyfunctions,

@@ -42,7 +42,7 @@ class Population(object):
     Represents a population of neurons.
     """
 
-    def __init__(self, geometry, neuron, name=None):
+    def __init__(self, geometry, neuron, **kwargs):
         """
         Constructor of the population.
         
@@ -91,9 +91,10 @@ class Population(object):
         # Attribute a name if not provided
         self._id = len(Global._populations)
         self.class_name = 'Population'+str(self._id)
-        if name:
-            self.name = name
-        else:
+        
+        try:
+            self.name = kwargs['name']
+        except:
             self.name = self.class_name
                 
         # Add the population to the global variable
