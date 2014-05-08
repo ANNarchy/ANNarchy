@@ -31,18 +31,28 @@ public:
 
     ~Projection();
 
-    virtual Population* getPrePopulation() { return NULL; }
+    virtual void globalLearn() = 0;
 
-    virtual void addDendrite(int postNeuronRank, class Dendrite *dendrite) {}
+    virtual void localLearn() = 0;
 
-    virtual void removeDendrite(int postNeuronRank, class Population *pre) {}
+    virtual Population* getPrePopulation() = 0;
 
-    bool isRateCoded() { return isRateCoded_; }
+    virtual void addDendrite(int postNeuronRank, class Dendrite *dendrite) = 0;
+
+    virtual class Dendrite* getDendrite(int postNeuronRank) = 0;
+
+    virtual void removeDendrite(int postNeuronRank, class Population *pre) = 0;
+
+    virtual bool isRateCoded() = 0;
+
+    virtual void record() = 0;
+
+    bool isLearning() { return isLearning_; }
 
     int getTarget() { return target_; }
 
 protected:
+    bool isLearning_;
     int target_;
-    bool isRateCoded_;
 };
 #endif

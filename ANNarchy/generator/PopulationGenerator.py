@@ -31,6 +31,7 @@ class PopulationGenerator(object):
     """ Base class for generating C++ code from a population description. """
     def __init__(self, name, desc):
         self.name = name
+        self.class_name = name
         self.desc = desc
         
         # Names of the files to be generated
@@ -489,7 +490,8 @@ class RatePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = rate_population_pyx
         dictionary = {
-            'name' : self.name,
+            'class_name': self.class_name,
+	    'name' : self.name,
             'cFunction' : cwrappers, 
             'neuron_count' : size,
             'pyFunction' : pyfunctions,
@@ -652,6 +654,7 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Generate the code
         template = spike_population_pyx
         dictionary = {
+            'class_name': self.class_name,
             'name' : self.name,
             'cFunction' : cwrappers, 
             'neuron_count' : size,

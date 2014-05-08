@@ -26,16 +26,74 @@
 RateProjection::RateProjection(std::string pre, std::string post, int target): Projection()
 {
 #ifdef _DEBUG
-	std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << ", target = "<< target << std::endl;
+	std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
 #endif
 	pre_population_ = static_cast<class RatePopulation*>(Network::instance()->getPopulation(pre));
 	post_population_ = static_cast<class RatePopulation*>(Network::instance()->getPopulation(post));
 
-	post_population_->addProjection(this);
-	dendrites_ = std::vector< std::vector<RateDendrite*> >(post_population_->getNeuronCount(), std::vector<RateDendrite*>());
-
 	target_ = target;
-	isRateCoded_ = true;
+	post_population_->addProjection(this);
+
+	nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
+	dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+}
+
+void RateProjection::computeSum()
+{
+#ifdef _DEBUG
+	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
+#endif
+
+	#pragma omp for
+	for ( int n = 0; n < nbDendrites_; n++ )
+	{
+	#ifdef _DEBUG
+		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
+	#endif
+		dendrites_[n]->computeSum();
+	}
+}
+
+void RateProjection::globalLearn()
+{
+#ifdef _DEBUG
+	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
+#endif
+
+	#pragma omp for
+	for ( int n = 0; n < nbDendrites_; n++ )
+	{
+		dendrites_[n]->globalLearn();
+	}
+}
+
+void RateProjection::localLearn()
+{
+#ifdef _DEBUG
+	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
+#endif
+
+	#pragma omp for
+	for ( int n = 0; n < nbDendrites_; n++ )
+	{
+	#ifdef _DEBUG
+		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
+	#endif
+		dendrites_[n]->localLearn();
+	}
+}
+
+DATA_TYPE RateProjection::getSum(int neuron)
+{
+	if ( neuron >= dendrites_.size() )
+	{
+		std::cout << "No dendrite " << neuron << "on this projection."<< std::endl;
+		return 0.0;
+	}
+	else
+	{
+		return dendrites_[neuron]->getSum();
+	}
 }
 
 Population* RateProjection::getPrePopulation()
@@ -45,34 +103,34 @@ Population* RateProjection::getPrePopulation()
 
 void RateProjection::addDendrite(int postNeuronRank, class Dendrite *dendrite)
 {
-#ifdef _DEBUG
-    std::cout << "Projection ( ptr = " << this << " ): added dendrite ( ptr = " << dendrite << ") to neuron " << postNeuronRank << std::endl;
-#endif
-	try
+	if ( postNeuronRank < nbDendrites_ )
 	{
-		dendrites_.at(postNeuronRank).push_back(static_cast<RateDendrite*>(dendrite));
-	}
-	catch (std::exception &e)
-	{
-		std::cout << std::endl;
-		std::cout << "Caught: " << e.what() << std::endl;
-		std::cout << "caused by: attach a dendrite to neuron " << postNeuronRank <<" but there only " << post_population_->getNeuronCount() << " neurons" << std::endl;
-		std::cout << std::endl;
-	};
-}
-
-void RateProjection::computeSum()
-{
-#ifdef _DEBUG
-	std::cout << "number of dendrites:" << dendrites_.size() << std::endl;
-#endif
-
-	for ( unsigned int n = 0; n != dendrites_.size(); n++ )
-	{
-		for ( auto d_it = dendrites_[n].begin(); d_it != dendrites_[n].end(); d_it++ )
+	#ifdef _DEBUG
+		std::cout << "Projection ( ptr = " << this << " ): added dendrite ( ptr = " << dendrite << " ) to neuron " << postNeuronRank << std::endl;
+	#endif
+		if ( dendrites_[postNeuronRank] == NULL)
 		{
-			std::cout << "dendrite(" << n << "): " << (*d_it)->getSynapseCount()<< std::endl;
-			(*d_it)->computeSum();
+			dendrites_[postNeuronRank] = static_cast<RateDendrite*>(dendrite);
+		}
+		else
+		{
+		#ifdef _DEBUG
+			std::cout << "Warning: already attached a dendrite ( ptr = " << dendrites_[postNeuronRank] << " ) to neuron " << postNeuronRank << std::endl;
+		#endif
 		}
 	}
+	else
+	{
+		std::cout << "Error on attaching dendrite to neuron " << postNeuronRank << ", expected a rank < " << dendrites_.size() << std::endl;
+	}
+}
+
+Dendrite *RateProjection::getDendrite(int postNeuronRank)
+{
+	return dendrites_[postNeuronRank];
+}
+
+void RateProjection::removeDendrite(int postNeuronRank, class Population *pre)
+{
+
 }

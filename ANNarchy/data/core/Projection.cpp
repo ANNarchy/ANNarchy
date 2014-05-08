@@ -23,6 +23,7 @@
 
 Projection::Projection()
 {
+	isLearning_ = true;
 }
 
 Projection::~Projection()

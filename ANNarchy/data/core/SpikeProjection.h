@@ -1,5 +1,5 @@
 /*
- *    RateProjection.h
+ *    SpikeProjection.h
  *
  *    This file is part of ANNarchy.
  *
@@ -19,23 +19,21 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __ANNARCHY_RATE_PROJECTION_H__
-#define __ANNARCHY_RATE_PROJECTION_H__
+#ifndef __ANNARCHY_SPIKE_PROJECTION_H__
+#define __ANNARCHY_SPIKE_PROJECTION_H__
 
 #include "Global.h"
 
-class RateProjection : public Projection
+class SpikeProjection : public Projection
 {
 public:
-	RateProjection(std::string pre, std::string post, int target);
-
-	void computeSum();
+	SpikeProjection(std::string pre, std::string post, int target);
 
     void globalLearn();
 
     void localLearn();
 
-    DATA_TYPE getSum(int neuron);
+    void postEvent(std::vector<int> post_ranks);
 
 	Population* getPrePopulation();
 
@@ -45,15 +43,15 @@ public:
 
 	void removeDendrite(int postNeuronRank, class Population *pre);
 
-	bool isRateCoded() { return true; }
+	bool isRateCoded() { return false; }
 
-	void record() {}
+	void record();
 
 private:
 	int nbDendrites_;
 
-	class RatePopulation* pre_population_;
-	class RatePopulation* post_population_;
-	std::vector< class RateDendrite* > dendrites_;
+	class SpikePopulation* pre_population_;
+	class SpikePopulation* post_population_;
+	std::vector< class SpikeDendrite* > dendrites_;
 };
 #endif

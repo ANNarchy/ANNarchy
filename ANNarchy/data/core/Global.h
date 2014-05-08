@@ -81,6 +81,10 @@ namespace ANNarchy_Global
 }
 
 //
+// additional defines for more deeply debugging
+// #define _DEBUG_DELAY
+
+//
 // profiling extension
 // #define ANNAR_PROFILE
 // #define ANNAR_SCHEDULE

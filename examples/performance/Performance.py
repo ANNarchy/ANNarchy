@@ -23,14 +23,14 @@ NEURON = 15
 CONN = 10
 
 input_pop = Population(geometry=(NEURON), neuron=InputNeuron)
-output_pop = Population(geometry=(NEURON), neuron=OutputNeuron)
+output_pop = Population(geometry=(1), neuron=OutputNeuron)
 
 proj = Projection(input_pop, output_pop, 'exc').connect_fixed_number_pre(CONN)
 
 compile() # needed to save connectivity matrix
 #proj.save_connectivity_as_csv()
 
-#simulate(1)
+simulate(1)
 
 # recompile as stand alone
 #compile(cpp_stand_alone = True)

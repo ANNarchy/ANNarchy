@@ -212,9 +212,9 @@ void Network::disconnect(int prePopulationID, int postPopulationID, bool preIsSp
 	if ( pre && post )
 	{
 		if (targetID == -1)
-			post->removeDendrites(pre);
+			post->removeProjections(pre);
 		else
-			post->removeDendrite(pre, targetID);
+			post->removeProjection(pre, targetID);
 	}
 	else
 	{

@@ -16,6 +16,8 @@ from .core.Random import Constant, Uniform, Normal
 # ANNarchy4 compilation
 from .generator import compile
 
+from .extensions import *
+
 # Generic imports
 import numpy as np
 import os, sys

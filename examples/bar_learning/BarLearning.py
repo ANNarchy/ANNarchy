@@ -4,8 +4,9 @@
 #   authors: Julien Vitay, Helge Uelo Dinkelbach
 #
 from ANNarchy import *
+import time
 
-setup(paradigm="cuda", num_threads=1)
+setup(paradigm="openmp")
 
 # Defining the neurons
 InputNeuron = RateNeuron(
@@ -116,14 +117,21 @@ if __name__=='__main__':
     box = win.addViewBox(lockAspect=True)
     rv_vis = pg.ImageItem()
     box.addItem(rv_vis)
-    
+
     #win.setCentralWidget(imv)
     win.show()
 
     def update():
+        
+        tStart = 0
+
         for trial in range(3000):
+            if (trial == 0):
+                tStart = time.clock()
+                                
             if (trial > 0) and (trial % 100==0):
-                print trial
+                print trial, ' trials comnputed, took', time.clock() - tStart, 'seconds'
+                tStart = time.clock()
                 
             set_input()
             simulate(50) 

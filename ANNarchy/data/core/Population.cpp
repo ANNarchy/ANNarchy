@@ -23,6 +23,7 @@
 #include "Global.h"
 #include <exception>
 #include <typeinfo>
+#include "RateProjection.h"
 
 Population::Population(std::string name, unsigned int nbNeurons, bool isRateType)
 {
@@ -32,8 +33,8 @@ Population::Population(std::string name, unsigned int nbNeurons, bool isRateType
     maxDelay_ = 0;
     isRateType_ = isRateType;
 
-    dendrites_ = std::vector<std::vector<Dendrite*> >(nbNeurons_, std::vector<Dendrite*>());
-    typedDendrites_ = std::vector< std::vector< std::vector<class Dendrite*> > >(nbNeurons_, std::vector< std::vector<class Dendrite*> >());
+    projections_.clear();
+    typedProjections_ = std::vector< std::vector<Projection*> >();
 
 #ifdef ANNAR_PROFILE
     try
@@ -51,9 +52,37 @@ Population::Population(std::string name, unsigned int nbNeurons, bool isRateType
 void Population::addProjection(Projection* projection)
 {
 #ifdef _DEBUG
-    std::cout << name_ << ": added projection = "<< projection << std::endl;
+	bool isRateCoded = projection->isRateCoded();
+	std::string tmp = isRateCoded ? "rate" : "spike";
+    std::cout << name_ << ": added projection ( ptr = "<< projection << ", " << tmp << " coded, target = "<< projection->getTarget() << ")" <<std::endl;
 #endif
 	projections_.push_back(projection);
+
+	if( projection->getTarget() >= typedProjections_.size() )
+	{
+	#ifdef _DEBGU
+		std::cout << "extend typed projection by "<< projection->getTarget() << std::endl;
+	#endif
+		typedProjections_.resize( projection->getTarget()+1, std::vector<class Projection*>() );
+	}
+
+	typedProjections_[projection->getTarget()].push_back(projection);
+}
+
+void Population::removeProjections(Population* pre)
+{
+#ifdef _DEBUG
+    std::cout << name_ << ": remove projections to '"<< pre->getName() << "'" <<std::endl;
+#endif
+
+}
+
+void Population::removeProjection(Population* pre, int target)
+{
+#ifdef _DEBUG
+    std::cout << name_ << ": remove projection to '"<< pre->getName() << "', target = " << target << "'" <<std::endl;
+#endif
+
 }
 
 class Projection* Population::getProjection(class Population* pre, int target)
@@ -66,93 +95,6 @@ class Projection* Population::getProjection(class Population* pre, int target)
 
 	return NULL;
 }
-
-void Population::addDendrite(unsigned int postRankID, Dendrite* dendrite)
-{
-#ifdef _DEBUG
-    std::cout << name_ << ": added dendrite to neuron " << postRankID << std::endl;
-    std::cout << "address " << dendrite << std::endl;
-#endif
-    try
-    {
-        dendrites_.at(postRankID).push_back(dendrite);
-
-        while (typedDendrites_.at(postRankID).size() <= dendrite->getTarget())
-        {
-            typedDendrites_.at(postRankID).push_back(std::vector<Dendrite*>());
-        }
-
-        typedDendrites_.at(postRankID).at(dendrite->getTarget()).push_back(dendrite);
-    }
-    catch (std::exception &e)
-    {
-        std::cout << std::endl;
-        std::cout << "Caught: " << e.what() << std::endl;
-        std::cout << "caused by: attach a dendrite to neuron " << postRankID <<" but there only " << nbNeurons_ << " neurons" << std::endl;
-        std::cout << std::endl;
-    };
-}
-
-void Population::removeDendrite(Population* pre, int type)
-{
-    for (int n = 0; n < nbNeurons_; n++)
-    {
-        for (int p = 0; p < dendrites_[n].size(); p++)
-        {
-            if (dendrites_[n][p]->getPrePopulation() == pre)
-                dendrites_[n].erase(dendrites_[n].begin()+p);
-        }
-    }
-}
-
-void Population::removeDendrites(Population* pre)
-{
-    for (unsigned int n = 0; n < nbNeurons_; n++)
-    {
-        for (unsigned int p = 0; p < dendrites_[n].size(); p++)
-        {
-            if (dendrites_[n][p]->getPrePopulation() == pre)
-                dendrites_[n].erase(dendrites_[n].begin()+p);
-        }
-    }
-}
-
-Dendrite* Population::getDendrite(unsigned int neuron, int type, Population *pre)
-{
-    if (neuron < dendrites_.size())
-    {
-        for (unsigned int p = 0; p < dendrites_[neuron].size(); p++)
-        {
-            if ((dendrites_[neuron][p]->getTarget() == type) &&
-                (dendrites_[neuron][p]->getPrePopulation() == pre))
-            {
-                return dendrites_[neuron][p];
-            }
-        }
-    }
-
-    return NULL;
-}
-
-std::vector<Dendrite*> Population::getDendrites(unsigned int neuron, int type)
-{
-    std::vector<Dendrite*> vec = std::vector<Dendrite*>();
-
-    if (neuron < dendrites_.size())
-    {
-        for (unsigned int p = 0; p < dendrites_[neuron].size(); p++)
-        {
-            if (dendrites_[neuron][p]->getTarget() == type)
-            {
-                vec.push_back(dendrites_[neuron][p]);
-            }
-        }
-    }
-
-    return vec;
-}
-
-
 
 /*TODEL
  *

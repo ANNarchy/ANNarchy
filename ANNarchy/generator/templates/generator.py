@@ -17,7 +17,7 @@ public:
         }
         
         // search for already existing instance
-        Dendrite* dendrite = post->getDendrite(postNeuronRank, target, pre);
+        Dendrite* dendrite = post->getProjection(pre, target)->getDendrite(postNeuronRank);
         
         if(dendrite)
         {
@@ -47,7 +47,7 @@ public:
     {
     #ifdef _DEBUG
         std::string tmp = rateCoded ? "true" : "false";
-        std::cout << "pre = "<< preID <<", post = " << postID << ", rateCoded = "<< tmp << std::endl;
+        std::cout << "getInstanceOf ( pre = "<< preID <<", post = " << postID << ", rateCoded = "<< tmp << " ) called." << std::endl;
     #endif
     
         Population *pre  = Network::instance()->getPopulation(preID);
@@ -81,6 +81,7 @@ py_extension = """include "Network.pyx"
 %(pop_inc)s  
 
 include "RateProjection.pyx"
+include "SpikeProjection.pyx"
 include "Dendrite.pyx"
 %(proj_inc)s  
 

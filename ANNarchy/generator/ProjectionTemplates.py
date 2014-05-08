@@ -174,8 +174,6 @@ using namespace ANNarchy_Global;
 
     target_ = target;
     post_neuron_rank_ = postRank;
-
-    post_population_->addDendrite(postRank, this);
 }
 
 %(class)s::%(class)s(int preID, int postID, int postRank, int target) : RateDendrite() 
@@ -188,8 +186,6 @@ using namespace ANNarchy_Global;
 
     target_ = target;
     post_neuron_rank_ = postRank;
-
-    post_population_->addDendrite(postRank, this);
 }
 
 %(class)s::~%(class)s() 
@@ -276,7 +272,7 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->addDendrite(postRank, this);
+    post_population_->getProjection(pre, target)->addDendrite(postRank, this);
     pre_population_->addSpikeTarget(this);
 }
 
@@ -288,7 +284,7 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->addDendrite(postRank, this);
+    post_population_->getProjection(pre_population_, target)->addDendrite(postRank, this);
     pre_population_->addSpikeTarget(this);
 }
 

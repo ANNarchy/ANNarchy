@@ -83,6 +83,20 @@ public:
     void addProjection(class Projection* projection);
 
     /**
+     *  \brief		remove a projection to another presynaptic population
+     *  \param[in]	pre		presynaptic population
+     *  \param[in]	target 	integer target ID
+     */
+    void removeProjections(class Population* pre);
+
+    /**
+     *  \brief		remove a projection to another presynaptic population
+     *  \param[in]	pre		presynaptic population
+     *  \param[in]	target 	integer target ID
+     */
+    void removeProjection(class Population* pre, int target);
+
+    /**
      *  \brief		get a projection to another presynaptic population
      *  \param[in]	pre		presynaptic population
      *  \param[in]	target 	integer target ID
@@ -90,49 +104,6 @@ public:
      */
     class Projection* getProjection(class Population* pre, int target);
 
-    /**
-     *  \brief		add a dendrite to a neuron
-     *  \details	the given dendrite is attached to the postsynaptic neuron identified by given rank.
-     *  \param[in]	neuron		postsynaptic rank of the neuron
-     *  \param[in]	dendrite	dendrite instance to attach
-     */
-    void addDendrite(unsigned int neuron, class Dendrite* proj);
-
-    /**
-     *  \brief		get all projections of neuron n and a certain type
-     *  \details	iterates over all assigned projections of neuron n and delete the ones with presynaptic population pre and the given projection type.
-     *  \param[in]	pre		reference to the presynaptic populations
-     *  \param[in]	type	integer id of the projection type
-     */
-    void removeDendrite(Population *pre, int type);
-
-    /**
-     *  \brief		get all projections of neuron n and a certain type
-     *  \details	iterates over all assigned projections of neuron n and delete the ones with presynaptic population without attention to projection type.
-     *  \param[in]	pre		reference to the presynaptic populations
-     */
-    void removeDendrites(Population *pre);
-
-    /**
-     *  \brief		get the projection of neuron n with a certain type and connected to a given presynaptic population
-     *  \details	iterates over all assigned projections of neuron n and select the one projection
-     *  			of given type and presynaptic population pre
-     *  \param[in]	neuron	rank of the neuron
-     *  \param[in]	type	integer id of the projection type
-     *  \param[in]	pre		reference to the presynaptic population
-     *  \return		instance of the searched Projection, if one exist in the current lists, otherwise NULL.
-     */
-    class Dendrite* getDendrite(unsigned int neuron, int type, Population* pre);
-
-    /**
-     *  \brief		get all projections of neuron n and a certain type
-     *  \details	iterates over all assigned projections of neuron n and select the ones
-     *  			of given type.
-     *  \param[in]	neuron	rank of the neuron
-     *  \param[in]	type	integer id of the projection type
-     *  \return		std::vector of class Projection, if there some exists otherwise an empty vector is returned.
-     */
-    std::vector<class Dendrite*> getDendrites(unsigned int neuron, int type);
 
     /**
      *  \brief		is the current population rate coded.
@@ -148,8 +119,7 @@ protected:
     DATA_TYPE dt_;				///< discretization constant
     bool isRateType_;			///< is the current population rate coded.
     std::vector< class Projection*> projections_;
-    std::vector< std::vector<class Dendrite*> > dendrites_; ///< list of afferent dendrites ordered neuron wise
-    std::vector< std::vector< std::vector<class Dendrite*> > > typedDendrites_;	///< list of afferent dendrites ordered neuron and type wise, to improve performance of the weighted sum.
+    std::vector< std::vector< class Projection*> > typedProjections_;
 
     unsigned int rank_;				///< internal identifier of the population
 };
