@@ -63,10 +63,9 @@ class Constant(RandomDistribution):
     Random distribution instance returning a constant value.
     """
     def __init__(self, value):
-        """
-        Constructor.
-        
+        """        
         Parameter:
+        
         * *value*: the constant value
         """
         self._value = value
@@ -97,12 +96,13 @@ class Uniform(RandomDistribution):
     Random distribution instance returning a random value based on uniform distribution.
     """   
     def __init__(self, min, max, cpp_seed=-1):
-        """
-        Constructor.
-        
+        """        
         Parameters:
-        * *min*: min
-        * *min*: min
+        
+        * *min*: minimum value
+        
+        * *max*: maximum value
+        
         * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
         """
         self._min = min
@@ -138,12 +138,13 @@ class Normal(RandomDistribution):
     Random distribution instance returning a random value based on uniform distribution.
     """   
     def __init__(self, mu, sigma, cpp_seed=-1):
-        """
-        Constructor.
-        
+        """        
         Parameters:
-        * *mu*: mean
-        * *sigma*: standard deviation
+        
+        * *mu*: mean of the distribution
+        
+        * *sigma*: standard deviation of the distribution
+        
         * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
         """
         self._mu = mu

@@ -33,6 +33,10 @@ from ANNarchy.parser.Analyser import Analyser, _extract_functions
 from ANNarchy.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
 from templates import *
+
+# String containing the extra libs which can be added by extensions
+# e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
+extra_libs = []
  
 def _folder_management(profile_enabled, clean):
     """
@@ -207,12 +211,11 @@ class Generator(object):
         # Perform compilation if something has changed
         self.partial_compilation(changed_cpp, changed_pyx)
                 
-        # Create the Python objects    
+        # Create the Python objects
         if not self.cpp_stand_alone:        
             if Global.config['verbose']:
                 Global._print('Building network ...')
-            self.instantiate()
-    
+            self.instantiate()    
         else:
             #abort the application after compiling ANNarchyCPP
             Global._print('\nCompilation process of ANNarchyCPP completed successful.\n')
@@ -231,7 +234,9 @@ class Generator(object):
         
         # create population cpp class for each neuron
         for name, desc in self.analyser.analysed_populations.iteritems():
-            if desc['type'] == 'rate':
+            if hasattr(desc['pop'], 'generator'): # extension
+                pop_generator = desc['pop'].generator
+            elif desc['type'] == 'rate':
                 pop_generator = RatePopulationGenerator(name, desc)
             elif desc['type'] == 'spike':
                 pop_generator = SpikePopulationGenerator(name, desc)
@@ -389,22 +394,34 @@ class Generator(object):
                 flags = "-O2"
             else:
                 flags = "-O0 -g -D_DEBUG"
+                
+            libs = ""
+            for l in extra_libs:
+                libs += str(l) + ' '
     
             py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
                                                    'minor': sys.version_info[1] }
     
             # generate Makefile
-            if Global.config['paradigm'] == "openmp":
+            if Global.config.has_key('paradigm'):
+                if Global.config['paradigm'] == "openmp":
+                    src = omp_makefile % { 'src_type': '%.cpp',
+                                           'obj_type': '%.o',
+                                           'py_version': py_version, 
+                                           'flag': flags,
+                                           'extra_libs': libs }
+                else: 
+                    src = cuda_makefile % { 'src_type': '%.cpp',
+                                            'src_gpu': '%.cu',
+                                            'obj_type': '%.o',
+                                            'py_version': py_version,
+                                            'flag': flags }
+            else:
                 src = omp_makefile % { 'src_type': '%.cpp',
                                        'obj_type': '%.o',
                                        'py_version': py_version, 
-                                       'flag': flags }
-            else: 
-                src = cuda_makefile % { 'src_type': '%.cpp',
-                                        'src_gpu': '%.cu',
-                                        'obj_type': '%.o',
-                                        'py_version': py_version,
-                                        'flag': flags }
+                                       'flag': flags,
+                                       'extra_libs': libs }
 
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
@@ -490,6 +507,12 @@ class Generator(object):
             proj._init_attributes()   
             if Global.config['show_time']:
                 Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
+        # Instantiate the network
+        global _network
+        Global._network = ANNarchyCython.pyNetwork()
+        # check if user defined a certain number of threads.
+        if Global.config['num_threads'] != None:
+            Global._network.set_num_threads(Global.config['num_threads'])  
                 
     def create_includes(self):
         """ Generates 'Includes.h' containing all generated headers.

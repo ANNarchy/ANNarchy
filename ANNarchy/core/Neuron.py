@@ -21,6 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
+import numpy as np
 from ANNarchy.core.Global import _error
 from ANNarchy.core.PopulationView import PopulationView
 
@@ -142,7 +143,11 @@ class IndividualNeuron(object):
             return object.__getattribute__(self, name)
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
-                return self.population.get(name)[self.rank]
+                val = (self.population.get(name))
+                if isinstance(val, np.ndarray):
+                    return val[self.population.coordinates_from_rank(self.rank)]
+                else:
+                    return val
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -156,9 +161,15 @@ class IndividualNeuron(object):
             object.__setattr__(self, name, value)
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
-                val = self.population.get(name).reshape(self.population.size)
-                val[self.rank] = value
-                self.population.set({name: val})
+                if name in self.population.description['local']:
+                    if not self.population.initialized: # Store it in the temporary array
+                        newval = self.population.get(name)
+                        newval[self.population.coordinates_from_rank(self.rank)] = value
+                        self.population.__setattr__(name, newval)
+                    else: # Access the C++ data 
+                        eval('self.population.cyInstance._set_single_'+name+'('+str(self.rank)+', '+str(value)+')')
+                else:
+                    self.population.__setattr__(name, value)
             else:
                 object.__setattr__(self, name, value)
         else:
@@ -168,10 +179,10 @@ class IndividualNeuron(object):
         desc = 'Neuron of the population ' + self.population.name + ' with rank ' + str(self.rank) + ' (coordinates ' + str(self.population.coordinates_from_rank(self.rank)) + ').\n'
         desc += 'Parameters:\n'
         for param in self.population.parameters:
-            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + ';'
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + '\n'
         desc += '\nVariables:\n'
         for param in self.population.variables:
-            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + ';'
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + '\n'
         return desc
     
     def __add__(self, other):

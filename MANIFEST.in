@@ -1,0 +1,12 @@
+include MANIFEST.in
+include README.rst
+include requirements.txt
+include setup.cfg
+recursive-include docs Makefile *.py *.rst *.png *.svg
+graft docs/_themes
+prune docs/_build
+include examples/neural_field/NeuralField.py
+include examples/neural_field/BubbleWorld.pyx
+include examples/bar_learning/BarLearning.py
+include examples/izhikevich/Izhikevich.py
+include examples/simple_stdp/SimpleSTDPModel.py

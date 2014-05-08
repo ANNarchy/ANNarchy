@@ -174,19 +174,15 @@ class ProjectionGenerator(object):
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                tmp_code = local_template % { 'Name': param['name'].capitalize(), 
+                code += local_template % { 'Name': param['name'].capitalize(), 
                                               'name': param['name'], 
-                                              'type': param['ctype'] }
-        
-                code += tmp_code.replace('DATA_TYPE', 'float') # no double in cython
+                                              'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
                 
             elif param['name'] in self.desc['global']: # global attribute
-                tmp_code = global_template % { 'Name': param['name'].capitalize(), 
+                code += global_template % { 'Name': param['name'].capitalize(), 
                                                'name': param['name'], 
-                                               'type': param['ctype'] }
+                                               'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         
-                code += tmp_code.replace('DATA_TYPE', 'float')
-
         return code
     
     def generate_pyfunctions(self):
@@ -205,10 +201,12 @@ class ProjectionGenerator(object):
             
             if param['name'] in self.desc['local']: # local attribute
                 code += local_template % { 'Name': param['name'].capitalize(), 
-                                           'name': param['name'] }
+                                           'name': param['name'],
+                                           'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
             elif param['name'] in self.desc['global']: # global attribute
                 code += global_template % { 'Name': param['name'].capitalize(), 
-                                            'name': param['name'] }
+                                            'name': param['name'],
+                                            'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
         return code
 
     def generate_record(self):
@@ -417,20 +415,29 @@ class RateProjectionGenerator(ProjectionGenerator):
             if param['name'] in self.desc['global']: # global attribute 
                 # The code is already in 'cpp'
                 code +="""
+    %(comment)s
     %(code)s   
-""" % {'code' : param['cpp']}
+""" % { 'comment': '// ' + param['eq'],
+        'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         code += """
     if(%(var)s_ < %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         code += """
     if(%(var)s_ > %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         return code
     
     def generate_locallearn(self):
@@ -442,20 +449,29 @@ class RateProjectionGenerator(ProjectionGenerator):
             if param['name'] in self.desc['local']: # local attribute 
                 # The code is already in 'cpp'
                 local_learn +="""
-        %(code)s   
-""" % {'code' : param['cpp']}
+    %(comment)s
+    %(code)s   
+""" % { 'comment': '// ' + param['eq'],
+        'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         local_learn += """
         if(%(var)s_[i] < %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         local_learn += """
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         
         if len(local_learn) > 1:
             #
@@ -588,16 +604,23 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
 """ % {'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         code += """
     if(%(var)s_ < %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         code += """
     if(%(var)s_ > %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         return code
     
     def generate_locallearn(self):
@@ -613,16 +636,23 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
 """ % {'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         local_learn += """
         if(%(var)s_[i] < %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         local_learn += """
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         
         if len(local_learn) > 1:
             #
@@ -820,16 +850,23 @@ class SpikeProjectionGenerator(ProjectionGenerator):
 """ % {'code' : param['cpp']}
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
+                    # Check if the min/max value is a float/int or another parameter/variable
+                    if val in self.desc['local']:
+                        pval = val + '_[i]'
+                    elif val in self.desc['global']:
+                        pval = val + '_'
+                    else:
+                        pval = val
                     if bound == 'min':
                         code += """
         if(%(var)s_[i] < %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         code += """
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'var' : param['name'], 'val' : pval}
         code+="""
     }
 """

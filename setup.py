@@ -18,7 +18,7 @@ try:
 except:
     print('Checking for setuptools... NO')
     print('Error : Python package "setuptools" is required.')
-    print('You can install it from: http://pypi.python.org/pypi/setuptools')
+    print('You can install it from pip or: http://pypi.python.org/pypi/setuptools')
     exit(0)
 
 # sympy
@@ -28,10 +28,11 @@ try:
     if parse_version(sympy.__version__) > parse_version('0.7.4'):
         print('Checking for sympy... OK')
     else:
-        print parse_version(sympy.__version__), 'is not sufficient, expected >= 0.7.4' 
+        print 'Sympy', sympy.__version__, 'is not sufficient, expected >= 0.7.4' 
 except:
     print('Checking for sympy... NO')
     print('Error : Python package "sympy" is required.')
+    print('You can install it from pip or: http://www.sympy.org')
     exit(0)
     
 # numpy
@@ -41,32 +42,37 @@ try:
 except:
     print('Checking for numpy... NO')
     print('Error : Python package "numpy" is required.')
-    print('You can install it from: http://www.numpy.org')
+    print('You can install it from pip or: http://www.numpy.org')
     exit(0)
 
-# scipy
+# cython
 try:
-    import scipy
-    print('Checking for scipy... OK')
+    import cython
+    if parse_version(cython.__version__) > parse_version('0.19.0'):
+        print('Checking for cython... OK')
+    else:
+        print('Checking for cython... NO')
+        print 'Cython', cython.__version__, 'is not sufficient, expected >= 0.19.0' 
 except:
-    print('Checking for scipy... NO')
-    print('Warning : Python package "scipy" is needed by some functions, but not required.')
-    print('You can install it from: http://www.scipy.org')
+    print('Checking for cython... NO')
+    print('Error : Python package "cython" is required.')
+    print('You can install it from pip or: http://www.cython.org')
+    exit(0)
 
 ################################################
 # Perform the installation
 ################################################
 print('Installing ANNarchy on your system')
 setup(  name='ANNarchy',
-		version='4.1.0.gamma',
+		version='4.1.1',
 		license='GPLv2 or later',
 		platforms='GNU/Linux',
 		description='Artificial Neural Networks architect',
-		long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed mean-rate neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
+		long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed rate-coded or spiking neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
 		author='Julien Vitay and Helge Uelo Dinkelbach',
 		author_email='julien.vitay@informatik.tu-chemnitz.de',
 		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['data/compile.sh', 'data/compiled.sh', 'data/setup.py', 'data/core/*', 'data/openmp/*', 'data/pyx/*', 'core/cy_functions.pyx']}
+        package_data={'ANNarchy': ['data/core/*', 'data/cuda/*', 'data/pyx/*', 'core/cy_functions.pyx']}
  )
 

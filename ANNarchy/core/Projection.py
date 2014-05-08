@@ -25,10 +25,6 @@ import traceback
 import numpy as np
 import math
 
-import pyximport
-pyximport.install()
-import cy_functions
-
 from ANNarchy.core import Global
 from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
@@ -129,6 +125,9 @@ class Projection(object):
         # Finalize initialization
         self.initialized = False
         
+        import pyximport
+        pyximport.install()
+        import cy_functions
         self._comp_dict = {
             1: cy_functions.comp_dist1D,
             2: cy_functions.comp_dist2D,
@@ -794,7 +793,7 @@ class Projection(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        return np.array([getattr(dendrite, attribute) for dendrite in self._dendrites])
+        return np.array([getattr(dendrite.cy_instance, '_get_'+attribute)() for dendrite in self._dendrites])
         
     def _set_cython_attribute(self, attribute, value):
         """
@@ -810,18 +809,24 @@ class Projection(object):
             if value.dim == 1:
                 if value.shape == (self.size, ):
                     for n in range(self.size):
-                        setattr(self._dendrites[n], attribute, value[n])
+                        getattr(self._dendrites[n].cy_instance, '_set_'+attribute)(value[n])
                 else:
                     Global._error('The projection has '+self.size+ ' dendrites.')
         elif isinstance(value, list):
             if len(value) == self.size:
                 for n in range(self.size):
-                    setattr(self._dendrites[n], attribute, value[n])
+                    getattr(self._dendrites[n].cy_instance, '_set_'+attribute)(value[n])
             else:
                 Global._error('The projection has '+self.size+ ' dendrites.')
-        else:
-            for dendrite in self._dendrites:
-                setattr(dendrite, attribute,  value)
+        else: # a single value
+            if attribute in self.description['local']:
+                for dendrite in self._dendrites:
+                    getattr(dendrite.cy_instance, '_set_'+attribute)(value*np.ones(dendrite.size))
+            else:
+                for dendrite in self._dendrites:
+                    getattr(dendrite.cy_instance, '_set_'+attribute)(value)
+
+            
            
     # Iterators
     def __getitem__(self, *args, **kwds):

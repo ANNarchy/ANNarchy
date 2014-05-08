@@ -404,6 +404,7 @@ from libcpp.string cimport string
 from libcpp cimport bool
 
 import numpy as np
+cimport numpy as np
 
 cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
@@ -443,6 +444,7 @@ from libcpp.string cimport string
 from libcpp cimport bool
 
 import numpy as np
+cimport numpy as np
 
 cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
@@ -474,23 +476,18 @@ cdef class Local%(name)s(pyxDendrite):
 #    
 #     * Name : Capitalized name of variable
 local_property_pyx = """
-    property %(name)s:
-        def __get__(self):
-            return np.array(self.cInhInstance.get%(Name)s())
 
-        def __set__(self, value):
-            if isinstance(value, np.ndarray)==True:
-                if value.ndim==1:
-                    self.cInhInstance.set%(Name)s(value)
-                else:
-                    self.cInhInstance.set%(Name)s(value.reshape(self.size))
-            else:
-                self.cInhInstance.set%(Name)s(np.ones(self.size)*value)
+    # local: %(name)s
+    cpdef np.ndarray _get_%(name)s(self):
+        return np.array(self.cInhInstance.get%(Name)s())
+        
+    cpdef _set_%(name)s(self, np.ndarray value):
+        self.cInhInstance.set%(Name)s(value)
 
-    def _get_single_%(name)s(self, rank):
+    cpdef %(type)s _get_single_%(name)s(self, int rank):
         return self.cInhInstance.getSingle%(Name)s(rank)
 
-    def _set_single_%(name)s(self, rank, value):
+    cpdef _set_single_%(name)s(self, int rank, %(type)s value):
         self.cInhInstance.setSingle%(Name)s(rank, value)
 
     def _start_record_%(name)s(self):
@@ -499,7 +496,7 @@ local_property_pyx = """
     def _stop_record_%(name)s(self):
         self.cInhInstance.stopRecord%(Name)s()
 
-    def _get_recorded_%(name)s(self):
+    cpdef np.ndarray _get_recorded_%(name)s(self):
         tmp = np.array(self.cInhInstance.getRecorded%(Name)s())
         self.cInhInstance.clearRecorded%(Name)s()
         return tmp
@@ -514,12 +511,13 @@ local_property_pyx = """
 #    
 #     * Name : Capitalized name of variable
 global_property_pyx = """
-    property %(name)s:
-        def __get__(self):
-            return self.cInhInstance.get%(Name)s()
-
-        def __set__(self, value):
-            self.cInhInstance.set%(Name)s(value)
+    
+    # global: %(name)s
+    cpdef %(type)s _get_%(name)s(self):
+        return self.cInhInstance.get%(Name)s()
+        
+    cpdef _set_%(name)s(self, %(type)s value):
+        self.cInhInstance.set%(Name)s(value)
         
 """
 

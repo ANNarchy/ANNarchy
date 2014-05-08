@@ -1,21 +1,23 @@
 import numpy as np
 cimport numpy as np
-from NeuralField import simulate, get_population
+from NeuralField import step
     
 cdef class World:
+    " Environment class allowing to clamp a rotating bubble into the baseline of a population."
     
     cdef pop # Input population
     
-    cdef float angle
-    cdef float radius 
-    cdef float sigma 
-    cdef float period 
+    cdef float angle # Current angle
+    cdef float radius # Radius of the circle 
+    cdef float sigma # Width of the bubble
+    cdef float period # Number of steps needed to make one revolution
 
-    cdef np.ndarray xx, yy 
-    cdef float cw, ch, midw, midh
+    cdef np.ndarray xx, yy # indices
+    cdef float cx, cy, midw, midh
     cdef np.ndarray data 
     
     def __cinit__(self, pop, radius, sigma, period):
+        " Constructor"
         self.pop = pop
         self.angle = 0.0
         self.radius = radius
@@ -28,11 +30,17 @@ cdef class World:
         self.midh = self.pop.geometry[1]/2
     
     def rotate(self, int duration):
+        " Rotates the bubble for the given duration"
         cdef int t
         for t in xrange(duration):
+            # Update the angle
             self.angle += 1.0/self.period
-            self.cw = self.midw * ( 1.0 + self.radius * np.cos(2.0 * np.pi * self.angle ) )
-            self.ch = self.midh * ( 1.0 + self.radius * np.sin(2.0 * np.pi * self.angle ) )
-            self.data = (np.exp(-((self.xx-self.cw)**2 + (self.yy-self.ch)**2)/2.0/self.sigma**2))
+            # Compute the center of the bubble
+            self.cx = self.midw * ( 1.0 + self.radius * np.cos(2.0 * np.pi * self.angle ) )
+            self.cy = self.midh * ( 1.0 + self.radius * np.sin(2.0 * np.pi * self.angle ) )
+            # Create the bubble
+            self.data = (np.exp(-((self.xx-self.cx)**2 + (self.yy-self.cy)**2)/2.0/self.sigma**2))
+            # Clamp the bubble into pop.baseline
             self.pop.baseline = self.data
-            simulate(1)  
+            # Simulate 1 ms
+            step()  

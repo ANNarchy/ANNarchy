@@ -24,8 +24,6 @@
 from ANNarchy.core import Global 
 import os
 import pickle
-from lxml import etree 
-import scipy.io as sio
 
 def load_parameter(in_file):
     """
@@ -35,6 +33,11 @@ def load_parameter(in_file):
     
     * *in_file*: either single or collection of strings. if the location of the xml file differs from the base directory, you need to provide relative or absolute path.
     """
+    try:
+        from lxml import etree 
+    except:
+        print 'lxml is not installed. Unable to save in xml format.'
+        return
     par = {}
     damaged_pars = []   # for printout
     
@@ -157,6 +160,7 @@ def save(in_file, pure_data=True, variables=True, connections=True):
     
     if extension == '.mat':
         Global._debug("Save in matlab format.")
+        import scipy.io as sio
         sio.savemat(in_file, data)
         
     elif extension == '.data':

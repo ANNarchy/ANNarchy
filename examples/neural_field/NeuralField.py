@@ -1,6 +1,4 @@
-#
-#
-#   ANNarchy NeuralField
+#   Simple example of a neural field
 #
 #   authors: Julien Vitay, Helge Uelo Dinkelbach
 #
@@ -9,45 +7,40 @@ from ANNarchy import *
 setup(dt=1.0)
 
 # Define the neuron classes
-Input = RateNeuron(   
-parameters="""
-    tau = 1.0
-    baseline = 0.0
-""",
-equations="""
-    noise = Uniform(-0.5, 0.5)
-    tau * dmp / dt + mp = baseline + noise
-    rate = pos(mp)
-""" 
+InputNeuron = RateNeuron(   
+    parameters="""
+        baseline = 0.0
+    """,
+    equations="""
+        noise = Uniform(-0.5, 0.5)
+        rate = pos(baseline + noise)
+    """ 
 )
 
-Focus = RateNeuron(
-parameters=""" 
-    tau = 20.0
-    noise = 0.0
-    baseline = 0.0
-    threshold_min = 0.0
-    threshold_max = 1.0
-""",
-equations="""
-    tau * dmp / dt + mp = sum(exc) + sum(inh) + baseline + noise
-    rate = if mp > threshold_max : threshold_max else: pos(mp) : init = 0.0
-"""
+NeuralFieldNeuron = RateNeuron(
+    parameters=""" 
+        tau = 10.0 : population
+    """,
+    equations="""
+        noise = Uniform(-0.5, 0.5)
+        tau * dmp / dt + mp = sum(exc) + sum(inh) + noise
+        rate = if mp < 1.0 : pos(mp) else: 1.0 
+    """
 )
 
 # Create the populations
 nb_neurons = 20
-InputPop = Population(name = 'Input', geometry = (nb_neurons, nb_neurons), neuron = Input)
-FocusPop = Population(name = 'Focus', geometry = (nb_neurons, nb_neurons), neuron = Focus)
+InputPop = Population(name = 'Input', geometry = (nb_neurons, nb_neurons), neuron = InputNeuron)
+FocusPop = Population(name = 'Focus', geometry = (nb_neurons, nb_neurons), neuron = NeuralFieldNeuron)
 
 # Create the projections
-Proj1 = Projection( 
+input_focus = Projection( 
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc'
 ).connect_one_to_one( weights=1.0 )
 
-Proj2 = Projection(
+focus_focus = Projection(
     pre = FocusPop, 
     post = FocusPop, 
     target = 'inh'     
@@ -58,58 +51,29 @@ Proj2 = Projection(
     sigma_neg=0.7                    
 )
 
-from pyqtgraph.Qt import QtGui, QtCore
-import pyqtgraph as pg 
+# Visualizer using PyQtGraph
+try:
+    from pyqtgraph.Qt import QtGui, QtCore
+    import pyqtgraph as pg 
+    import pyqtgraph.opengl as gl
+except:
+    print 'PyQtGraph is not installed on your system, can not visualize the network.'
+    exit(0)
 
-class Viewer(object):
-    def __init__(self, pop, world):
-    
-        self.pop = pop
-        self.world = world
-          
-        self.win = pg.GraphicsLayoutWidget()
-        self.win.resize(800,800)
-        self.win.show()
-        self.view = self.win.addViewBox()
-        self.view.setAspectLocked(True)
-        self.img = pg.ImageItem(border='w')
-        self.view.addItem(self.img)
-        self.view.setRange(QtCore.QRectF(0, 0, 20, 20))
-    
-    def update(self):
-    
-        # Simulate for 200ms
-        self.world.rotate(200)      
-        # Actualize the GUI
-        self.img.setImage(self.pop.rate)
-        QtGui.QApplication.processEvents()
-        
-    def run(self):
-        timer = QtCore.QTimer()
-        timer.timeout.connect(self.update)
-        timer.start(0)  
-        QtGui.QApplication.instance().exec_() 
-
-import pyqtgraph.opengl as gl
 class GLViewer(object):
-    def __init__(self, populations, world):
-    
+    " Class to visualize the network activity using PyQtGraph and openGL."
+    def __init__(self, populations, world):    
         self.populations = populations
-        self.world = world
-          
+        self.world = world          
         self.win = gl.GLViewWidget()
         self.win.show()
         self.win.setCameraPosition(distance=50)
-        
         self.plots = []
-        
         shift = - 20
-        for pop in self.populations:
-            
+        for pop in self.populations: 
             p = gl.GLSurfacePlotItem(
                 x = np.linspace(0, pop.geometry[0]-1, pop.geometry[0]), 
                 y = np.linspace(0, pop.geometry[1]-1, pop.geometry[1]), 
-                #y = np.array(range(pop.geometry[1])), 
                 shader='heightColor', 
                 computeNormals=False, 
                 smooth=False
@@ -118,21 +82,17 @@ class GLViewer(object):
             self.win.addItem(p)
             self.plots.append(p)
             shift += 25
-        
     def scale(self, data):
         " Colors are shown in the range [-1, 1] per default."
         return 1.8 * data -0.9
-    
     def update(self):
-    
         # Simulate for 200ms
         self.world.rotate(200)      
-        # Actualize the GUI
+        # Refresh the GUI
         for i in range(len(self.populations)):
             self.plots[i].setData(z=self.scale(self.populations[i].rate)) 
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
-        
     def run(self):
         timer = QtCore.QTimer()
         timer.timeout.connect(self.update)
@@ -155,7 +115,8 @@ if __name__ == "__main__":
     # Create the GUI using PyQtGraph
     app = QtGui.QApplication([])
     viewer = GLViewer(populations = [InputPop, FocusPop], world=world)
-    # Start the simulation            
+    
+    # Start the simulation forever          
     viewer.run()
 
      

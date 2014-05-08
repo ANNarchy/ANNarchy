@@ -320,8 +320,10 @@ void %(class)s::compute_sum_%(var)s() {
         for param in self.desc['variables']:            
             if param['name'] in self.desc['local']: # local attribute
                 code += """
+    %(comment)s
     %(cpp)s
-""" % { 'cpp': param['cpp'] }
+""" % { 'comment': '// '+param['eq'],
+        'cpp': param['cpp'] }
 
             if self.desc.has_key('spike'):
                 if param['name'] == self.desc['spike']['name']:
@@ -370,32 +372,31 @@ void %(class)s::compute_sum_%(var)s() {
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                tmp_code = local_wrapper_pyx % { 'Name': param['name'].capitalize(), 
+                code += local_wrapper_pyx % { 'Name': param['name'].capitalize(), 
                                                  'name': param['name'], 
-                                                 'type': param['ctype'] }
+                                                 'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         
-                code += tmp_code.replace('DATA_TYPE', 'float') # no double in cython
                 
             elif param['name'] in self.desc['global']: # global attribute
-                tmp_code = global_wrapper_pyx % { 'Name': param['name'].capitalize(), 
+                code += global_wrapper_pyx % { 'Name': param['name'].capitalize(), 
                                                   'name': param['name'], 
-                                                  'type': param['ctype'] }
-        
-                code += tmp_code.replace('DATA_TYPE', 'float')
+                                                  'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         return code
     
     def generate_pyfunctions(self):
-        "Python functions acessing the Cython wrapper"
+        "Python functions accessing the Cython wrapper"
         code = ""        
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_property_pyx % { 'Name': param['name'].capitalize(), 
-                                               'name': param['name'] }
+                code += local_property_pyx % { 'name': param['name'], 
+                                               'Name': param['name'].capitalize(),
+                                               'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
                 
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_property_pyx % { 'Name': param['name'].capitalize(), 
-                                                'name': param['name'] }
+                code += global_property_pyx % { 'name': param['name'], 
+                                                'Name': param['name'].capitalize(),
+                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         return code
                 
     

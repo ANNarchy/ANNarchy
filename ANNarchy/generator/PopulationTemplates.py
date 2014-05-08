@@ -427,6 +427,7 @@ rate_population_pyx = """from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 import numpy as np
+cimport numpy as np
 
 cdef extern from "../build/%(class_name)s.h":
     cdef cppclass %(class_name)s:
@@ -484,6 +485,7 @@ spike_population_pyx = """from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.string cimport string
 import numpy as np
+cimport numpy as np
 
 cdef extern from "../build/%(class_name)s.h":
     cdef cppclass %(class_name)s:
@@ -537,24 +539,21 @@ cdef class py%(class_name)s:
 #     * name : name of the variable
 #    
 #     * Name : Capitalized name of variable
+#    
+#     * type : The type of the variable
 local_property_pyx = """
-    property %(name)s:
-        def __get__(self):
-            return np.array(self.cInstance.get%(Name)s())
 
-        def __set__(self, value):
-            if isinstance(value, np.ndarray)==True:
-                if value.ndim==1:
-                    self.cInstance.set%(Name)s(value)
-                else:
-                    self.cInstance.set%(Name)s(value.reshape(self.size))
-            else:
-                self.cInstance.set%(Name)s(np.ones(self.size)*value)
-
-    def _get_single_%(name)s(self, rank):
+    # local: %(name)s
+    cpdef np.ndarray _get_%(name)s(self):
+        return np.array(self.cInstance.get%(Name)s())
+        
+    cpdef _set_%(name)s(self, np.ndarray value):
+        self.cInstance.set%(Name)s(value)
+        
+    cpdef %(type)s _get_single_%(name)s(self, rank):
         return self.cInstance.getSingle%(Name)s(rank)
 
-    def _set_single_%(name)s(self, rank, value):
+    def _set_single_%(name)s(self, int rank, %(type)s value):
         self.cInstance.setSingle%(Name)s(rank, value)
 
     def _start_record_%(name)s(self):
@@ -563,7 +562,7 @@ local_property_pyx = """
     def _stop_record_%(name)s(self):
         self.cInstance.stopRecord%(Name)s()
 
-    def _get_recorded_%(name)s(self):
+    cpdef np.ndarray _get_recorded_%(name)s(self):
         tmp = np.array(self.cInstance.getRecorded%(Name)s())
         self.cInstance.clearRecorded%(Name)s()
         return tmp
@@ -578,12 +577,13 @@ local_property_pyx = """
 #    
 #     * Name : Capitalized name of variable
 global_property_pyx = """
-    property %(name)s:
-        def __get__(self):
-            return self.cInstance.get%(Name)s()
 
-        def __set__(self, value):
-            self.cInstance.set%(Name)s(value)
+    # global: %(name)s
+    cpdef %(type)s _get_%(name)s(self):
+        return self.cInstance.get%(Name)s()
+
+    cpdef _set_%(name)s(self, %(type)s value):
+        self.cInstance.set%(Name)s(value)
         
 """
 

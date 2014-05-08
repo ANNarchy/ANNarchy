@@ -88,7 +88,7 @@ class Dendrite(object):
             return object.__getattribute__(self, 'attributes')
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
-                return getattr(self.cy_instance, name)
+                return getattr(self.cy_instance, '_get_'+name)()
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -102,7 +102,7 @@ class Dendrite(object):
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.proj.attributes:
-                setattr(self.cy_instance, name, value)
+                getattr(self.cy_instance, '_set_'+name)(value)
             else:
                 object.__setattr__(self, name, value)
         else:

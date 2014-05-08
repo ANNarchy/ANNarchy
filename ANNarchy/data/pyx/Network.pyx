@@ -54,5 +54,5 @@ cdef class pyNetwork:
 	def set_num_threads(self, threads):
 		self.cInstance.setNumThreads(int(threads))
         
-	def Run(self, int nbSteps):
+	def run(self, int nbSteps):
 		self.cInstance.run(nbSteps)

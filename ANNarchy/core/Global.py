@@ -27,27 +27,30 @@ import sys, os
 from datetime import datetime
 from math import ceil
 
-# instances
+# Global instances
+_network = None         # created network
 _populations = []       # created populations
 _projections = []       # created projections
 _functions = []         # created functions
 
-# predefined variables / parameters
+# Predefined variables / parameters
 _pre_def_synapse = ['value', 'rank', 'delay', 'psp']
 _pre_def_synapse_var = ['value', 'rank', 'delay', 'psp']
 _pre_def_synapse_par = []
 
 _pre_def_neuron = ['rank', 'rate']
 
+# Aditional instances
 _cy_instance = None
 _visualizer = None
 
-# path to annarchy working directory
+# Path to the annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
 
+# Flag to tell if the network has already been compiled
 _compiled = False   #I know it's evil
 
-# discretization timestamp
+# Configuration
 config = dict(
    { 
     'dt' : 1.0,
@@ -79,15 +82,24 @@ def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments: 
 
-    Parameter:
+    Parameters:
     
-    * *dt*:         discretization constant
-    * *verbose*:    shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
-    * *suppress_warnings*:  if set True warnings (e. g. from mathematical parser) are suppressed.
-    * *show_time*:  if set True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
-    * *float_prec*: determine the used floating point precision. By default ANNarchy uses single floating point precision for computation. 
+    * *dt*: discretization constant (default: 1.0 ms).
     
-    **Note**: use this function before any other functions of ANNarchy.
+    * *num_threads*: number of treads used by openMP (overrides the environment variable OMP_NUM_THREADS when set, default = None).
+    
+    * *float_prec*: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses single floating point precision. 
+    
+    The following parameters are mainly for debugging and profiling, and should be ignored by most users:
+    
+    * *verbose*: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    
+    * *suppress_warnings*: if True, warnings (e. g. from mathematical parser) are suppressed.
+    
+    * *show_time*: if True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
+    
+    
+    **Note**: this function should be used before any other functions of ANNarchy, right after ``from ANNarchy import *``.
     """
     for key in keyValueArgs:
 
@@ -179,13 +191,17 @@ def add_function(function):
     Please refer to the manual to know the allowed mathematical functions.
     """  
     _functions.append(function)
+    
 def simulate(duration):
     """
+
     Runs the network for the given duration. 
     
+
     If an integer is given, the argument represents the number of time steps.
     
     If a floating point value is given, it represents a duration in milliseconds computed relative to the discretization step declared in setup() (default: 1ms). 
+
     """
     if isinstance(duration, int):
         nb_steps = duration
@@ -194,17 +210,22 @@ def simulate(duration):
     else:
         _error('simulate() require either integers or floats.')
         return
-    try:
-        import ANNarchyCython
-    except:
+
+    if _network:      
+        _network.run(nb_steps)
+    else:
         _error('simulate(): the network is not compiled yet.')
         return
-    else:
-        # check if user defined a certain number of threads.
-        if config['num_threads'] != None:
-            ANNarchyCython.pyNetwork().set_num_threads(config['num_threads'])
-        
-        ANNarchyCython.pyNetwork().Run(nb_steps)
+    
+def step():
+    """
+
+    Performs a single simulation step. 
+
+    """
+    if _network:      
+        _network.run(1)
+
     
 def current_time():
     """
@@ -213,8 +234,7 @@ def current_time():
     **Note**: computed as number of simulation steps times dt
     """
     try:
-        import ANNarchyCython
-        return ANNarchyCython.pyNetwork().get_time() * config['dt']
+        return _network.get_time() * config['dt']
     except:
         return 0.0
 
@@ -223,8 +243,7 @@ def current_step():
     Returns current simulation step.
     """
     try:
-        import ANNarchyCython
-        return ANNarchyCython.pyNetwork().get_time()
+        return _network.get_time()
     except:
         return 0
 
@@ -235,8 +254,7 @@ def set_current_time(time):
     **Note**: computed as number of simulation steps times dt
     """
     try:
-        import ANNarchyCython
-        ANNarchyCython.pyNetwork().set_time(int( time / config['dt']))
+        _network.set_time(int( time / config['dt']))
     except:
         _warning('the network is not compiled yet')
     
@@ -245,8 +263,7 @@ def set_current_step(time):
     set current simulation step.
     """
     try:
-        import ANNarchyCython
-        ANNarchyCython.pyNetwork().set_time( time )
+        _network.set_time( time )
     except:
         _warning('the network is not compiled yet')
         
