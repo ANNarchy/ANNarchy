@@ -79,7 +79,7 @@ cdef extern from "../build/ANNarchy.h":
     cdef cppclass createProjInstance:
         createProjInstance()
         
-        Dendrite* getInstanceOf(int id, int pre, int post, int postNeuronRank, int target, rateCoded)
+        Dendrite* getInstanceOf(int id, int pre, int post, int postNeuronRank, int target, bool rateCoded)
 
 #
 # wrapper to c++ class, contains connection data of one neuron

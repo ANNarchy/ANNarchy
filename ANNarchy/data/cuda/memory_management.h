@@ -128,7 +128,7 @@ protected:
 		gpuWeights_ = NULL;
 		gpuResult_ = NULL;
 		gpuIdx_ = NULL;
-		nbElements_ = NULL;
+		nbElements_ = 0;
 
 		cudaMalloc((void**)&gpuResult_, sizeof(DATA_TYPE));
 		resize(N);

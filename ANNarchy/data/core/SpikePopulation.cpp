@@ -21,6 +21,7 @@
  */
 #include "SpikePopulation.h"
 #include "SpikeDendrite.h"
+#include "SpikeProjection.h"
 
 SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, false)
 {
@@ -115,21 +116,17 @@ void SpikePopulation::metaLearn()
     }
     #pragma barrier
 #endif
-    #pragma omp for
-    for(int n=0; n<nbNeurons_; n++)
-    {
-    #ifdef _DEBUG
-        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
-    #endif
-        for(unsigned int p=0; p < dendrites_[n].size();p++)
-        {
-        	if ( dendrites_[n][p]->isLearning() )
-        		static_cast<class SpikeDendrite*>(dendrites_[n][p])->globalLearn();
-        }
-    }
 
-    #pragma omp barrier
+#ifdef _DEBUG
+	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
+		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
+#endif
+	for(unsigned int p=0; p < projections_.size();p++)
+	{
+		if ( projections_[p]->isLearning() )
+			static_cast<class SpikeProjection*>(projections_[p])->globalLearn();
+	}
+	#pragma omp barrier
 
 #ifdef ANNAR_PROFILE
     #pragma omp master
@@ -151,18 +148,15 @@ void SpikePopulation::metaLearn()
     }
 #endif
 
-    #pragma omp for
-    for(int n=0; n<nbNeurons_; n++)
-    {
-    #ifdef _DEBUG
-        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
-    #endif
-        for(unsigned int p = 0; p < dendrites_[n].size();p++) {
-        	if ( dendrites_[n][p]->isLearning() )
-        		static_cast<class SpikeDendrite*>(dendrites_[n][p])->localLearn();
-        }
-    }
+#ifdef _DEBUG
+	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
+		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
+#endif
+    for(unsigned int p=0; p < projections_.size();p++)
+	{
+		if ( projections_[p]->isLearning() )
+			static_cast<class SpikeProjection*>(projections_[p])->localLearn();
+	}
 
     #pragma omp barrier
 #ifdef ANNAR_PROFILE

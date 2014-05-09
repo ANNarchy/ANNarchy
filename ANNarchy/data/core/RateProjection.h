@@ -1,8 +1,8 @@
 /*
- *    Projection.cpp
+ *    RateProjection.h
  *
  *    This file is part of ANNarchy.
- *   
+ *
  *   Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
  *   Helge Ülo Dinkelbach <helge.dinkelbach@gmail.com>
  *
@@ -19,14 +19,41 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "Projection.h"
+#ifndef __ANNARCHY_RATE_PROJECTION_H__
+#define __ANNARCHY_RATE_PROJECTION_H__
 
-Projection::Projection()
+#include "Global.h"
+
+class RateProjection : public Projection
 {
-	isLearning_ = true;
-}
+public:
+	RateProjection(std::string pre, std::string post, int target);
 
-Projection::~Projection()
-{
-}
+	void computeSum();
 
+    void globalLearn();
+
+    void localLearn();
+
+    DATA_TYPE getSum(int neuron);
+
+	Population* getPrePopulation();
+
+	void addDendrite(int postNeuronRank, class Dendrite *dendrite);
+
+	class Dendrite *getDendrite(int postNeuronRank);
+
+	void removeDendrite(int postNeuronRank, class Population *pre);
+
+	bool isRateCoded() { return true; }
+
+	void record() {}
+
+private:
+	int nbDendrites_;
+
+	class RatePopulation* pre_population_;
+	class RatePopulation* post_population_;
+	std::vector< class RateDendrite* > dendrites_;
+};
+#endif

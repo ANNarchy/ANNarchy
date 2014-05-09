@@ -508,6 +508,7 @@ def analyse_population(pop):
     description = {
         'pop': pop,
         'name': pop.name,
+        'class': pop.class_name,
         'type': pop_type,
         'raw_parameters': pop.neuron_type.parameters,
         'raw_equations': pop.neuron_type.equations,

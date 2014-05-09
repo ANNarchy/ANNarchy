@@ -24,12 +24,35 @@
 
 #include "Global.h"
 
-class Projection{
+class Projection
+{
 public:
 	Projection();
 
     ~Projection();
 
-};
+    virtual void globalLearn() = 0;
 
+    virtual void localLearn() = 0;
+
+    virtual Population* getPrePopulation() = 0;
+
+    virtual void addDendrite(int postNeuronRank, class Dendrite *dendrite) = 0;
+
+    virtual class Dendrite* getDendrite(int postNeuronRank) = 0;
+
+    virtual void removeDendrite(int postNeuronRank, class Population *pre) = 0;
+
+    virtual bool isRateCoded() = 0;
+
+    virtual void record() = 0;
+
+    bool isLearning() { return isLearning_; }
+
+    int getTarget() { return target_; }
+
+protected:
+    bool isLearning_;
+    int target_;
+};
 #endif

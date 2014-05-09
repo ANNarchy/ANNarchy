@@ -134,6 +134,8 @@ class Projection(object):
             3: cy_functions.comp_dist3D
         }
 
+        self._cython_instance = None
+
     @property
     def size(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
@@ -618,6 +620,15 @@ class Projection(object):
         """
         build up dendrites either from list or dictionary
         """
+
+        cython_module = __import__('ANNarchyCython') 
+        if isinstance(self.synapse_type, RateSynapse):
+            RateProj = getattr(cython_module, 'pyRateProjection')
+            self._cython_instance = RateProj(self.pre.name, self.post.name, self.post.targets.index(self.target))  
+        else:
+            SpikeProj = getattr(cython_module, 'pySpikeProjection')
+            SpikeProj(self.pre.name, self.post.name, self.post.targets.index(self.target))
+        
         if ( isinstance(self._synapses, list) ):
         	self._dendrites, self._post_ranks = self._build_pattern_from_list()
         else:

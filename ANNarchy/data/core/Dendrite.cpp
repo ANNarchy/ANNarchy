@@ -53,9 +53,10 @@ Dendrite::~Dendrite()
 
 void Dendrite::setDelay(std::vector<int> delay)
 {
-    #ifdef _DEBUG
-            std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
-    #endif
+#ifdef _DEBUG_DELAY
+	std::cout << "Dendrite (ptr = " << this << ")" << std::endl;
+	std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
+#endif
 	for(auto it=delay.begin(); it!=delay.end();it++)
             {
 		if(*it>maxDelay_)
@@ -64,10 +65,11 @@ void Dendrite::setDelay(std::vector<int> delay)
 		if(*it != maxDelay_)
 			constDelay_ = false;
 	}
-    #ifdef _DEBUG
-            std::cout << "NEW: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
-    #endif
-            delay_ = delay;
+
+#ifdef _DEBUG_DELAY
+	std::cout << "NEW: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
+#endif
+	delay_ = delay;
 };
 
 void Dendrite::setRank(std::vector<int> rank)

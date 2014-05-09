@@ -1,4 +1,4 @@
-from ANNarchy4 import *
+from ANNarchy import *
 
 Simple = RateNeuron(   
 parameters="""
