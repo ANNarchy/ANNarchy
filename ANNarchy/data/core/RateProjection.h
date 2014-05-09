@@ -29,6 +29,8 @@ class RateProjection : public Projection
 public:
 	RateProjection(std::string pre, std::string post, int target);
 
+	RateProjection(Population *pre, Population* post, int target);
+
 	void computeSum();
 
     void globalLearn();
@@ -37,9 +39,11 @@ public:
 
     DATA_TYPE getSum(int neuron);
 
-	Population* getPrePopulation();
+	virtual Population* getPrePopulation() { return NULL; }
 
 	void addDendrite(int postNeuronRank, class Dendrite *dendrite);
+
+	virtual void addDendrite(int postNeuronRank, std::vector<int> ranks, std::vector<DATA_TYPE> values, std::vector<int> delays) {}
 
 	class Dendrite *getDendrite(int postNeuronRank);
 
@@ -49,11 +53,9 @@ public:
 
 	void record() {}
 
-private:
+protected:
 	int nbDendrites_;
 
-	class RatePopulation* pre_population_;
-	class RatePopulation* post_population_;
 	std::vector< class RateDendrite* > dendrites_;
 };
 #endif

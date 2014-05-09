@@ -476,6 +476,7 @@ class Generator(object):
                 Global._print(e)
                 Global._error('The Cython library was not correctly compiled.\n Check the compilation logs in annarchy/compile_sterr.log')
                 exit(0)
+                
         # Bind the py extensions to the corresponding python objects
         for pop in self.populations:
             if Global.config['verbose']:
@@ -495,7 +496,8 @@ class Generator(object):
                 Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')        
             if Global.config['show_time']:
                 t0 = time.time()
-            # Create the synapses
+            
+            # Create the projection
             proj._connect() 
             
             #TODO:
@@ -585,9 +587,6 @@ class Generator(object):
                                                  'class': pop.class_name,
                                                  'size': pop.size }
                                                          
-                elif a_line.find('//createProjInstance') != -1:
-                    code += a_line
-                    code += self.generate_proj_instance_class()
                 else:
                     code += a_line
     
@@ -595,23 +594,6 @@ class Generator(object):
             w_file.write(code)
             
 
-    def generate_proj_instance_class(self):
-        """
-        The standard ANNarchy core has no knowledge about the full amount of projection
-        classes. On the other hand we want to instantiate the object from there. To achieve this
-        we introduce a projection instantiation class, which returns a projections instance corresponding
-        to the given ID.
-        """
-        projections = self.analyser.analysed_projections
-        # single cases
-        cases_ptr = ''
-        for name in projections.iterkeys():
-            cases_ptr += proj_instance % { 'name': name, 'id': name.split('Dendrite')[1]}
-
-        # complete code
-        code = create_proj_instance % { 'case1': cases_ptr }
-        return code
-    
     def update_global_header(self):
         """
         update Global.h dependent on compilation modes:

@@ -25,6 +25,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.Random import *
 
 from ANNarchy.generator import ProjectionTemplates as Templates
+from ANNarchy.generator import DendriteTemplates as DendTemplates
 from ANNarchy.generator import ProjectionTemplatesOMP as OMPTemplates
 from ANNarchy.generator import ProjectionTemplatesCUDA as CUDATemplates
 
@@ -37,9 +38,12 @@ class ProjectionGenerator(object):
         self.desc = desc
         
         # Names of the files to be generated
-        self.header = Global.annarchy_dir+'/generate/build/'+self.name+'.h'
+        self.proj_header = Global.annarchy_dir+'/generate/build/'+self.name+'.h'
+        self.proj_body = Global.annarchy_dir+'/generate/build/'+self.name+'.cpp'
         self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.name+'.pyx'
-        self.body = Global.annarchy_dir+'/generate/build/'+self.name+'.cpp'
+
+        self.dend_header = Global.annarchy_dir+'/generate/build/'+self.name.replace('Projection', 'Dendrite')+'.h'
+        self.dend_body = Global.annarchy_dir+'/generate/build/'+self.name.replace('Projection', 'Dendrite')+'.cpp'
         
     def generate(self, verbose):
         self.verbose = verbose
@@ -47,11 +51,17 @@ class ProjectionGenerator(object):
             Global._print( 'Generating', self.name )
 
         #   generate files
-        with open(self.header, mode = 'w') as w_file:
-            w_file.write(self.generate_header())
+        with open(self.proj_header, mode = 'w') as w_file:
+            w_file.write(self.generate_proj_header())
 
-        with open(self.body, mode = 'w') as w_file:
-            w_file.write(self.generate_body())
+        with open(self.proj_body, mode = 'w') as w_file:
+            w_file.write(self.generate_proj_body())
+
+        with open(self.dend_header, mode = 'w') as w_file:
+            w_file.write(self.generate_dendrite_header())
+
+        with open(self.dend_body, mode = 'w') as w_file:
+            w_file.write(self.generate_dendrite_body())
 
         with open(self.pyx, mode = 'w') as w_file:
             w_file.write(self.generate_pyx()) 
@@ -122,6 +132,70 @@ class ProjectionGenerator(object):
 
         return members
 
+    def generate_idx_members_access_header(self):
+        """ 
+        Returns public members access. 
+        
+        Notes:
+            * depend only on locality.
+            * rank, delay access is already implemented in base class
+            * psp are skipped, hence it should not be accessible 
+        """
+        members_header = ""
+        
+        local_template = Templates.local_idx_variable_access
+        global_template = Templates.global_idx_variable_access
+        
+        for param in self.desc['parameters'] + self.desc['variables']:
+            if param['name'] in ['rank', 'delay', 'psp']: # Already declared
+                continue
+            if param['name'] in self.desc['local']: # local attribute
+                members_header += local_template % { 'name' : param['name'], 
+                                              'Name': param['name'].capitalize(),
+                                              'type': param['ctype'],
+                                              'class': self.name.replace('Projection', 'Dendrite')}
+                
+            elif param['name'] in self.desc['global']: # global attribute
+                members_header += global_template % { 'name' : param['name'], 
+                                               'Name': param['name'].capitalize(),
+                                               'type': param['ctype'],
+                                               'class': self.name.replace('Projection', 'Dendrite')}
+
+        return members_header
+
+    def generate_idx_members_access_body(self):
+        """ 
+        Returns public members access. 
+        
+        Notes:
+            * depend only on locality.
+            * rank, delay access is already implemented in base class
+            * psp are skipped, hence it should not be accessible 
+        """
+        members_body = ""
+        
+        local_template = Templates.local_idx_variable_access_body
+        global_template = Templates.global_idx_variable_access_body
+        
+        for param in self.desc['parameters'] + self.desc['variables']:
+            if param['name'] in ['rank', 'delay', 'psp']: # Already declared
+                continue
+            if param['name'] in self.desc['local']: # local attribute
+                members_body += local_template % { 'name' : param['name'], 
+                                              'Name': param['name'].capitalize(),
+                                              'type': param['ctype'],
+                                              'class': self.name,
+                                              'dend_class': self.name.replace('Projection', 'Dendrite')}
+                
+            elif param['name'] in self.desc['global']: # global attribute
+                members_body += global_template % { 'name' : param['name'], 
+                                               'Name': param['name'].capitalize(),
+                                               'type': param['ctype'],
+                                               'class': self.name,
+                                               'dend_class': self.name.replace('Projection', 'Dendrite')}
+
+        return members_body
+
     def generate_constructor(self):
         """ Content of the Projection constructor."""
         constructor = ""
@@ -184,7 +258,7 @@ class ProjectionGenerator(object):
                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         
         return code
-    
+
     def generate_pyfunctions(self):
         """
         Python functions accessing the Cython wrapper
@@ -209,6 +283,7 @@ class ProjectionGenerator(object):
                                             'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
         return code
 
+        
     def generate_record(self):
         """ 
         Code for recording.
@@ -309,8 +384,74 @@ class RateProjectionGenerator(ProjectionGenerator):
     def __init__(self, name, desc):
         ProjectionGenerator.__init__(self, name, desc)
             
-    def generate_header(self):
+    def generate_proj_header(self):
         " Generates the C++ header file."        
+        # Private members declarations
+        members = self.generate_members_declaration()
+        
+        # Access method for attributes
+        access_header = self.generate_idx_members_access_header()
+        
+        # Custom function
+        functions = self.generate_functions()
+        
+        # Generate the code
+        template = Templates.rate_projection_header
+        dictionary = { 
+            'class': self.name, 
+            'dend_class': self.name.replace('Projection', 'Dendrite'),
+            'pre_name': self.desc['pre_class'],
+            'post_name': self.desc['post_class'],
+            'access': access_header,
+            'member': members,
+            'functions': functions }
+        return template % dictionary
+
+    def generate_proj_body(self):
+        # Initialize parameters and variables
+        constructor = self.generate_constructor()
+        
+        # Computation of psp for the weighted sum
+        psp = self.generate_psp()
+    
+        # Access method for attributes
+        access_body = self.generate_idx_members_access_body()
+        
+        # Generate code for the global variables
+        global_learn = self.generate_globallearn()
+        
+        # Generate code for the local variables
+        local_learn = self.generate_locallearn()
+        
+        # structural plasticity
+        add_synapse = self.generate_add_synapse()
+        rem_synapse = self.generate_rem_synapse()
+        rem_all_synapse = self.generate_rem_all_synapse()
+        
+        record = ""
+        
+        # Generate the code
+        template = Templates.rate_projection_body
+        dictionary = {         
+            'class': self.name,
+            'add_include': self.generate_add_proj_include(),
+            'dend_class': self.name.replace('Projection', 'Dendrite'), 
+            'access': access_body,
+            'destructor': '' ,
+            'pre_type': self.desc['pre_class'],
+            'post_type': self.desc['post_class'],
+            'init': constructor, 
+            'sum': psp, 
+            'local': local_learn, 
+            'global': global_learn,
+            'record' : record,
+            'add_synapse_body': add_synapse,
+            'rem_synapse_body': rem_synapse,
+            'rem_all_synapse_body': rem_all_synapse }
+        return template % dictionary
+    
+    def generate_dendrite_header(self):
+        " Generates the C++ header file for dendrite class."        
         # Private members declarations
         members = self.generate_members_declaration()
         
@@ -321,9 +462,9 @@ class RateProjectionGenerator(ProjectionGenerator):
         functions = self.generate_functions()
         
         # Generate the code
-        template = Templates.rate_projection_header
+        template = DendTemplates.rate_dendrite_header
         dictionary = { 
-            'class': self.name, 
+            'class': self.name.replace('Projection', 'Dendrite'), 
             'pre_name': self.desc['pre_class'],
             'post_name': self.desc['post_class'],
             'access': access,
@@ -331,7 +472,7 @@ class RateProjectionGenerator(ProjectionGenerator):
             'functions': functions }
         return template % dictionary
     
-    def generate_body(self):
+    def generate_dendrite_body(self):
         # Initialize parameters and variables
         constructor = self.generate_constructor()
         
@@ -352,9 +493,9 @@ class RateProjectionGenerator(ProjectionGenerator):
         record = ""
         
         # Generate the code
-        template = Templates.rate_projection_body
+        template = DendTemplates.rate_dendrite_body
         dictionary = {         
-            'class': self.name,
+            'class': self.name.replace('Projection','Dendrite'),
             'add_include': self.generate_add_proj_include(),
             'destructor': '' ,
             'pre_type': self.desc['pre_class'],

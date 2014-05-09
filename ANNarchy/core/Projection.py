@@ -90,7 +90,7 @@ class Projection(object):
 
         # Create a default name
         self._id = len(Global._projections)
-        self.name = type_prefix+'Dendrite'+str(self._id)
+        self.name = type_prefix+'Projection'+str(self._id)
             
         self._synapses = {}
         self._connector = None
@@ -622,17 +622,15 @@ class Projection(object):
         """
 
         cython_module = __import__('ANNarchyCython') 
-        if isinstance(self.synapse_type, RateSynapse):
-            RateProj = getattr(cython_module, 'pyRateProjection')
-            self._cython_instance = RateProj(self.pre.name, self.post.name, self.post.targets.index(self.target))  
-        else:
-            SpikeProj = getattr(cython_module, 'pySpikeProjection')
-            SpikeProj(self.pre.name, self.post.name, self.post.targets.index(self.target))
+        proj = getattr(cython_module, 'py'+self.name)
+        self._cython_instance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
         
         if ( isinstance(self._synapses, list) ):
-        	self._dendrites, self._post_ranks = self._build_pattern_from_list()
+        	dendrites = self._build_pattern_from_list()
         else:
-        	self._dendrites, self._post_ranks = self._build_pattern_from_dict()
+        	dendrites = self._build_pattern_from_dict()
+
+        self._cython_instance.createFromDict(dendrites)
 
     def _comp_dist(self, pre, post):
         """
@@ -661,14 +659,8 @@ class Projection(object):
             except KeyError:
                 dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [data['w']], 'delay': [data['d']] }
         
-        ret_value = []
-        ret_ranks = []
-        for post_id, data in dendrites.iteritems():
-            ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
-            ret_ranks.append(post_id)
-        
-        return ret_value, ret_ranks
-
+        return dendrites
+    
     def _build_pattern_from_list(self):
         """
         build up the dendrites from the list of synapses
@@ -683,14 +675,7 @@ class Projection(object):
             except KeyError:
                 dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [conn[2]], 'delay': [conn[3]] }
 
-            
-        ret_value = []
-        ret_ranks = []
-        for post_id, data in dendrites.iteritems():
-            ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
-            ret_ranks.append(post_id)
-        
-        return ret_value, ret_ranks
+        return dendrites
 		
     def _gather_data(self, variable):
         """ 
@@ -710,13 +695,13 @@ class Projection(object):
             m_row = None
             
             for x in xrange(self.post.geometry[0]):
-                m = getattr(self._dendrites[i].cy_instance,variable)
+                m = getattr(self._cython_instance, '_get_'+variable)(x+self.post.geometry[0]*y)
                 
                 if m.shape != self.pre.geometry:
                     new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
                     
                     j = 0
-                    for r in self._dendrites[i].cy_instance.rank:
+                    for r in self._cython_instance._get_rank(x+self.post.geometry[0]*y):
                         new_m[r] = m[j]
                         j+=1 
                     m = new_m
@@ -793,7 +778,7 @@ class Projection(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        return np.array([getattr(dendrite.cy_instance, '_get_'+attribute)() for dendrite in self._dendrites])
+        return np.array([getattr(self.cy_instance, '_get_'+attribute)(i) for i in xrange(self.size)])
         
     def _set_cython_attribute(self, attribute, value):
         """
@@ -809,22 +794,22 @@ class Projection(object):
             if value.dim == 1:
                 if value.shape == (self.size, ):
                     for n in range(self.size):
-                        getattr(self._dendrites[n].cy_instance, '_set_'+attribute)(value[n])
+                        getattr(self.cy_instance, '_set_'+attribute)(n, value)
                 else:
                     Global._error('The projection has '+self.size+ ' dendrites.')
         elif isinstance(value, list):
             if len(value) == self.size:
                 for n in range(self.size):
-                    getattr(self._dendrites[n].cy_instance, '_set_'+attribute)(value[n])
+                    getattr(self.cy_instance, '_set_'+attribute)(n, value)
             else:
                 Global._error('The projection has '+self.size+ ' dendrites.')
         else: # a single value
             if attribute in self.description['local']:
-                for dendrite in self._dendrites:
-                    getattr(dendrite.cy_instance, '_set_'+attribute)(value*np.ones(dendrite.size))
+                for i in xrange(self.size):
+                    getattr(self.cy_instance, '_set_'+attribute)(i, value*np.ones(self.size))
             else:
-                for dendrite in self._dendrites:
-                    getattr(dendrite.cy_instance, '_set_'+attribute)(value)
+                for i in xrange(self.size):
+                    getattr(self.cy_instance, '_set_'+attribute)(i, value)
 
             
            

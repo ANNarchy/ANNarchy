@@ -5,7 +5,7 @@
 from ANNarchy import *
 import time
 
-setup(paradigm="openmp")
+setup(paradigm="openmp", num_threads=1)
 
 # Defining the neuron
 InputNeuron = RateNeuron(   
@@ -34,7 +34,7 @@ Oja = RateSynapse(
         min_value = 0.0 : postsynaptic
     """,
     equations="""
-        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=min_value
+        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=min_value, init = 0.0
     """
 )  
 

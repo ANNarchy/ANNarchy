@@ -21,49 +21,114 @@ rate_projection_header = \
 
 #include "Global.h"
 #include "Includes.h"
-#include "RateDendrite.h"
+#include "RateProjection.h"
 
-class %(class)s : public RateDendrite 
+class %(class)s : public RateProjection 
 {
 public:
-    %(class)s(Population* pre, Population* post, int postRank, int target);
+    %(class)s(Population* pre, Population* post, int target);
     
-    %(class)s(int preID, int postID, int postRank, int target);
+    %(class)s(int preID, int postID, int target);
     
     ~%(class)s();
-    
-    class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
-    
-    int getSynapseCount() { return nbSynapses_; }
-    
-    int addSynapse(int rank, DATA_TYPE value, int delay);
 
-    int removeSynapse(int rank);
+    std::vector<int> getRank(int post_rank);
     
-    int removeAllSynapses();
+    std::vector<int> getDelay(int post_rank);
     
-    void initValues();
+    Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
-    void computeSum();
+    void addDendrite(int, std::vector<int>, std::vector<DATA_TYPE>, std::vector<int>);
     
-    void globalLearn();
-    
-    void localLearn();
-
-    void record();
-
 %(access)s
 
-%(functions)s
-
 private:
-%(member)s
 
     %(pre_name)s* pre_population_;
     %(post_name)s* post_population_;
 };
 #endif
 """ 
+
+# Body for a rate projection
+#
+# Depends on:
+#
+#    * class : the class name
+#
+#    * destructor : code for the destructor where all variables are freed
+# 
+#    * pre_type : name of class of the presynaptic population
+# 
+#    * post_type : name of class of the presynaptic population
+# 
+#    * init : initial values for parameters and variables
+# 
+#    * local : code for local_learn 
+#
+#    * global : code for global_learn
+#
+rate_projection_body = \
+"""#include "%(class)s.h"        
+#include "Global.h"
+#include "%(dend_class)s.h"
+
+%(add_include)s
+
+using namespace ANNarchy_Global;
+
+%(class)s::%(class)s(Population* pre, Population* post, int target) : RateProjection(pre, post, target) 
+{
+#ifdef _DEBUG
+    std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
+#endif
+    pre_population_ = static_cast<class %(pre_type)s*>( pre );
+    post_population_ = static_cast<class %(post_type)s*>( post );
+
+    target_ = target;
+    post_population_->addProjection(this);
+
+    nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
+    dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+}
+
+%(class)s::%(class)s(int pre, int post, int target) : RateProjection(NULL, NULL, target) 
+{
+#ifdef _DEBUG
+    std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
+#endif
+    pre_population_ = static_cast<class %(pre_type)s*>(Network::instance()->getPopulation(pre));
+    post_population_ = static_cast<class %(post_type)s*>(Network::instance()->getPopulation(post));
+
+    target_ = target;
+    post_population_->addProjection(this);
+
+    nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
+    dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+}
+
+std::vector<int> %(class)s::getRank(int post_rank)
+{
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRank();
+}
+
+std::vector<int> %(class)s::getDelay(int post_rank)
+{
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getDelay();
+}
+
+%(access)s
+
+void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay)
+{
+
+    dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
+    
+    dendrites_[post_rank]->setRank(rank);
+    dendrites_[post_rank]->setValue(value);
+    dendrites_[post_rank]->setDelay(delay);    
+}
+"""
 
 # Header for a spike dendrite.
 # 
@@ -136,106 +201,6 @@ private:
     %(post_name)s* post_population_;
 };
 #endif
-"""
-
-# Body for a rate projection
-#
-# Depends on:
-#
-#    * class : the class name
-#
-#    * destructor : code for the destructor where all variables are freed
-# 
-#    * pre_type : name of class of the presynaptic population
-# 
-#    * post_type : name of class of the presynaptic population
-# 
-#    * init : initial values for parameters and variables
-# 
-#    * local : code for local_learn 
-#
-#    * global : code for global_learn
-#
-rate_projection_body = \
-"""#include "%(class)s.h"        
-#include "Global.h"
-
-%(add_include)s
-
-using namespace ANNarchy_Global;
-
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : RateDendrite() 
-{
-    pre_population_ = static_cast<%(pre_type)s*>(pre);
-    post_population_ = static_cast<%(post_type)s*>(post);
-    
-    pre_rates_ = pre_population_->getRates();
-    post_rates_ = post_population_->getRates();
-
-    target_ = target;
-    post_neuron_rank_ = postRank;
-}
-
-%(class)s::%(class)s(int preID, int postID, int postRank, int target) : RateDendrite() 
-{
-    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
-    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
-
-    pre_rates_ = pre_population_->getRates();
-    post_rates_ = post_population_->getRates();
-
-    target_ = target;
-    post_neuron_rank_ = postRank;
-}
-
-%(class)s::~%(class)s() 
-{
-#ifdef _DEBUG
-    std::cout <<"%(class)s::Destructor"<< std::endl;
-#endif
-
-%(destructor)s
-}
-
-int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
-{
-%(add_synapse_body)s
-}
-
-int %(class)s::removeSynapse(int rank)
-{
-%(rem_synapse_body)s
-}
-
-int %(class)s::removeAllSynapses()
-{
-%(rem_all_synapse_body)s
-}
-
-void %(class)s::initValues() 
-{
-%(init)s
-}
-
-void %(class)s::computeSum() 
-{   
-%(sum)s
-}
-
-void %(class)s::localLearn() 
-{
-%(local)s
-}
-
-void %(class)s::globalLearn() 
-{
-%(global)s
-}
-
-void %(class)s::record() 
-{
-%(record)s
-}
 """
 
 # Body for a Spike projection
@@ -388,6 +353,101 @@ global_variable_access = \
     void set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
 """
 
+# Template for a local variable
+# 
+# Depends on:
+# 
+#     * name : name of the variable
+#    
+#     * Name : Capitalized name of variable
+#
+#     * type : type of the variable
+#
+local_idx_variable_access = \
+"""
+    // Access methods for the local variable %(name)s
+    std::vector<%(type)s> get%(Name)s(int post_rank);
+    void set%(Name)s(int post_rank, std::vector<%(type)s> %(name)s);
+    
+    %(type)s getSingle%(Name)s(int post_rank, int rank);
+    void setSingle%(Name)s(int post_rank, int rank, %(type)s %(name)s);
+
+    std::vector< std::vector< %(type)s > >getRecorded%(Name)s(int post_rank);                    
+    void startRecord%(Name)s(int post_rank);
+    void stopRecord%(Name)s(int post_rank);
+    void clearRecorded%(Name)s(int post_rank);
+"""
+
+local_idx_variable_access_body = \
+"""
+// Access methods for the local variable %(name)s
+std::vector<%(type)s> %(class)s::get%(Name)s(int post_rank) 
+{ 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s(); 
+}
+void %(class)s::set%(Name)s(int post_rank, std::vector<%(type)s> %(name)s) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->set%(Name)s(%(name)s); 
+}
+
+%(type)s %(class)s::getSingle%(Name)s(int post_rank, int rank) 
+{ 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getSingle%(Name)s(rank); 
+}
+void %(class)s::setSingle%(Name)s(int post_rank, int rank, %(type)s %(name)s) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setSingle%(Name)s(rank, %(name)s); 
+}
+
+std::vector< std::vector< %(type)s > > %(class)s::getRecorded%(Name)s(int post_rank) 
+{ 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRecorded%(Name)s(); 
+}                    
+void %(class)s::startRecord%(Name)s(int post_rank) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->startRecord%(Name)s(); 
+}
+void %(class)s::stopRecord%(Name)s(int post_rank) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->stopRecord%(Name)s(); 
+}
+void %(class)s::clearRecorded%(Name)s(int post_rank) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->clearRecorded%(Name)s(); 
+}
+"""
+
+# Template for a global variable
+# 
+# Depends on:
+# 
+#     * name : name of the variable
+#    
+#     * Name : Capitalized name of variable
+#
+#     * type : type of the variable
+#
+global_idx_variable_access = \
+"""
+// Access methods for the global variable %(name)s
+%(type)s get%(Name)s(int post_rank);
+void set%(Name)s(int post_rank, %(type)s %(name)s);
+"""
+
+global_idx_variable_access_body = \
+"""
+    // Access methods for the global variable %(name)s
+    %(type)s %(class)s::get%(Name)s(int post_rank) 
+    { 
+        return (static_cast<class %(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s(); 
+    }
+    
+    void %(class)s::set%(Name)s(int post_rank, %(type)s %(name)s) 
+    { 
+        (static_cast<class %(dend_class)s*>(dendrites_[post_rank]))->set%(Name)s( %(name)s ); 
+    }
+"""
+
 # Cython file for a rate population
 #
 # Depends on:
@@ -408,24 +468,34 @@ cimport numpy as np
 
 cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
-        %(name)s(int preLayer, int postLayer, int postNeuronRank, int target)
+        %(name)s(int preLayer, int postLayer, int target)
 
-        void initValues()
+        void addDendrite(int, vector[int], vector[float], vector[int])
 
+        vector[int] getRank(int post_rank)
+        
+        vector[int] getDelay(int post_rank)
+        
 %(cFunction)s
 
-cdef class Local%(name)s(pyxDendrite):
+cdef class py%(name)s:
 
-    cdef %(name)s* cInhInstance
+    cdef %(name)s* cInstance
 
-    def __cinit__(self, proj_type, preID, postID, rank, target, rateCoded):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, rateCoded))
+    def __cinit__(self, preID, postID, target):
+        self.cInstance = new %(name)s(preID, postID, target)
 
-    def init_values(self):
-        self.cInhInstance.initValues()
+    cpdef np.ndarray _get_rank(self, int post_rank):
+        return np.array(self.cInstance.getRank(post_rank))
+
+    cpdef createFromDict( self, dict dendrites ):
+        cdef int rank
+        cdef dict data
         
-%(pyFunction)s
+        for rank, data in dendrites.iteritems():
+            self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])
 
+%(pyFunction)s
 """ 
 
 # Cython file for a Spike projection
@@ -478,27 +548,27 @@ cdef class Local%(name)s(pyxDendrite):
 local_property_pyx = """
 
     # local: %(name)s
-    cpdef np.ndarray _get_%(name)s(self):
-        return np.array(self.cInhInstance.get%(Name)s())
+    cpdef np.ndarray _get_%(name)s(self, int post_rank):
+        return np.array(self.cInstance.get%(Name)s(post_rank))
         
-    cpdef _set_%(name)s(self, np.ndarray value):
-        self.cInhInstance.set%(Name)s(value)
+    cpdef _set_%(name)s(self, int post_rank, np.ndarray value):
+        self.cInstance.set%(Name)s(post_rank, value)
 
-    cpdef %(type)s _get_single_%(name)s(self, int rank):
-        return self.cInhInstance.getSingle%(Name)s(rank)
+    cpdef %(type)s _get_single_%(name)s(self, int post_rank, int rank):
+        return self.cInstance.getSingle%(Name)s(post_rank, rank)
 
-    cpdef _set_single_%(name)s(self, int rank, %(type)s value):
-        self.cInhInstance.setSingle%(Name)s(rank, value)
+    cpdef _set_single_%(name)s(self, int post_rank, int rank, %(type)s value):
+        self.cInstance.setSingle%(Name)s(post_rank, rank, value)
 
-    def _start_record_%(name)s(self):
-        self.cInhInstance.startRecord%(Name)s()
+    def _start_record_%(name)s(self, int post_rank):
+        self.cInstance.startRecord%(Name)s(post_rank)
 
-    def _stop_record_%(name)s(self):
-        self.cInhInstance.stopRecord%(Name)s()
+    def _stop_record_%(name)s(self, int post_rank):
+        self.cInstance.stopRecord%(Name)s(post_rank)
 
-    cpdef np.ndarray _get_recorded_%(name)s(self):
-        tmp = np.array(self.cInhInstance.getRecorded%(Name)s())
-        self.cInhInstance.clearRecorded%(Name)s()
+    cpdef np.ndarray _get_recorded_%(name)s(self, int post_rank):
+        tmp = np.array(self.cInstance.getRecorded%(Name)s(post_rank))
+        self.cInstance.clearRecorded%(Name)s(post_rank)
         return tmp
         
 """
@@ -513,11 +583,11 @@ local_property_pyx = """
 global_property_pyx = """
     
     # global: %(name)s
-    cpdef %(type)s _get_%(name)s(self):
-        return self.cInhInstance.get%(Name)s()
+    cpdef %(type)s _get_%(name)s(self, int post_rank):
+        return self.cInstance.get%(Name)s(post_rank)
         
-    cpdef _set_%(name)s(self, %(type)s value):
-        self.cInhInstance.set%(Name)s(value)
+    cpdef _set_%(name)s(self, int post_rank, %(type)s value):
+        self.cInstance.set%(Name)s(post_rank, value)
         
 """
 
@@ -532,14 +602,14 @@ global_property_pyx = """
 #     * type : C type of variable
 local_wrapper_pyx = """
         # Local %(name)s
-        vector[%(type)s] get%(Name)s()
-        void set%(Name)s(vector[%(type)s] values)
-        %(type)s getSingle%(Name)s(int rank)
-        void setSingle%(Name)s(int rank, %(type)s values)
-        void startRecord%(Name)s()
-        void stopRecord%(Name)s()
-        void clearRecorded%(Name)s()
-        vector[vector[%(type)s]] getRecorded%(Name)s()
+        vector[%(type)s] get%(Name)s(int post_rank)
+        void set%(Name)s(int post_rank, vector[%(type)s] values)
+        %(type)s getSingle%(Name)s(int post_rank, int rank)
+        void setSingle%(Name)s(int post_rank, int rank, %(type)s values)
+        void startRecord%(Name)s(int post_rank)
+        void stopRecord%(Name)s(int post_rank)
+        void clearRecorded%(Name)s(int post_rank)
+        vector[vector[%(type)s]] getRecorded%(Name)s(int post_rank)
 """
 
 # Global Cython wrapper
@@ -553,8 +623,8 @@ local_wrapper_pyx = """
 #     * type : C type of variable
 global_wrapper_pyx = """
         # Global %(name)s
-        %(type)s get%(Name)s()
-        void set%(Name)s(%(type)s value)                
+        %(type)s get%(Name)s(int post_rank)
+        void set%(Name)s(int post_rank, %(type)s value)                
 """
 
 # an implementation code of adding dynamically synapses.

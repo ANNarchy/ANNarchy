@@ -25,17 +25,12 @@
 
 RateProjection::RateProjection(std::string pre, std::string post, int target): Projection()
 {
-#ifdef _DEBUG
-	std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
-#endif
-	pre_population_ = static_cast<class RatePopulation*>(Network::instance()->getPopulation(pre));
-	post_population_ = static_cast<class RatePopulation*>(Network::instance()->getPopulation(post));
 
-	target_ = target;
-	post_population_->addProjection(this);
+}
 
-	nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-	dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+RateProjection::RateProjection(Population *pre, Population* post, int target): Projection()
+{
+
 }
 
 void RateProjection::computeSum()
@@ -94,11 +89,6 @@ DATA_TYPE RateProjection::getSum(int neuron)
 	{
 		return dendrites_[neuron]->getSum();
 	}
-}
-
-Population* RateProjection::getPrePopulation()
-{
-	return static_cast<class Population*>(pre_population_);
 }
 
 void RateProjection::addDendrite(int postNeuronRank, class Dendrite *dendrite)
