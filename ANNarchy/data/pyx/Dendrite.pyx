@@ -134,38 +134,62 @@ cdef class pyxDendrite:
         def __set__(self, value):
             print 'The discretization step is only modifiable globally.'
         
-    property value:
-        def __get__(self):
-            return np.array(self.cInstance.getValue())
+#    property value:
+#        def __get__(self):
+#            return np.array(self.cInstance.getValue())
 
-        def __set__(self, value):
-            if isinstance(value, np.ndarray)==True:
-                if value.ndim==1:
-                    self.cInstance.setValue(value)
-                else:
-                    self.cInstance.setValue(value.reshape(self.size))
+#        def __set__(self, value):
+#            if isinstance(value, np.ndarray)==True:
+#                if value.ndim==1:
+#                    self.cInstance.setValue(value)
+#                else:
+#                    self.cInstance.setValue(value.reshape(self.size))
+#            else:
+#                self.cInstance.setValue(np.ones(self.size)*value)
+    
+    cpdef np.ndarray _get_value(self):
+        return np.array(self.cInstance.getValue())
+
+    cpdef _set_value(self, np.ndarray value):
+        self.cInstance.setValue(value)
+
+#    property delay:
+#        def __get__(self):
+#            return np.array(self.cInstance.getDelay())
+
+#        def __set__(self, value):
+#            if isinstance(value, np.ndarray)==True:
+#                if value.ndim==1:
+#                    self.cInstance.setDelay(value)
+#                else:
+#                    self.cInstance.setDelay(value.reshape(self.size))
+#            else:
+#                self.cInstance.setDelay(np.ones(self.size)*value)
+
+    cpdef np.ndarray _get_delay(self):
+        return np.array(self.cInstance.getDelay())
+
+    cpdef _set_delay(self, value):
+        if isinstance(value, np.ndarray)==True:
+            if value.ndim==1:
+                self.cInstance.setDelay(value)
             else:
-                self.cInstance.setValue(np.ones(self.size)*value)
+                self.cInstance.setDelay(value.reshape(self.size))
+        else:
+            self.cInstance.setDelay(np.ones(self.size)*value)
 
-    property delay:
-        def __get__(self):
-            return np.array(self.cInstance.getDelay())
+#    property rank: # pre synaptic ranks
+#        def __get__(self):
+#            return np.array(self.cInstance.getRank())
 
-        def __set__(self, value):
-            if isinstance(value, np.ndarray)==True:
-                if value.ndim==1:
-                    self.cInstance.setDelay(value)
-                else:
-                    self.cInstance.setDelay(value.reshape(self.size))
-            else:
-                self.cInstance.setDelay(np.ones(self.size)*value)
+#        def __set__(self, rank):
+#            self.cInstance.setRank(rank)
 
-    property rank: # pre synaptic rank
-        def __get__(self):
-            return np.array(self.cInstance.getRank())
+    cpdef np.ndarray _get_rank(self):
+        return np.array(self.cInstance.getRank())
 
-        def __set__(self, rank):
-            self.cInstance.setRank(rank)
+    cpdef _set_rank(self, np.ndarray rank):
+        self.cInstance.setRank(rank)
                 
     property learnable:
         def __get__(self):

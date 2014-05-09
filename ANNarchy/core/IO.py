@@ -285,13 +285,13 @@ def _net_description(variables, connections):
                 varias = {}
                 
                 for var in dendrite.variables:
-                    varias[var] = dendrite.get(var)
+                    varias[var] = getattr(dendrite.cy_instance, '_get_'+var)()
 
                 if 'value' not in dendrite.variables:
-                    varias['values'] = dendrite.cy_instance.value 
+                    varias['values'] = dendrite.cy_instance._get_value() 
                 
-                varias['delays'] = dendrite.cy_instance.delay
-                varias['pre_ranks'] = dendrite.cy_instance.rank
+                varias['delays'] = dendrite.cy_instance._get_delay()
+                varias['pre_ranks'] = dendrite.cy_instance._get_rank()
                                 
                 if varias != {}:
                     dendrite_desc['variables'] = varias

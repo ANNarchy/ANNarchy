@@ -66,10 +66,11 @@ class Dendrite(object):
             isRateCoded 
         )
                     
-        self.cy_instance.rank = ranks
-        self.cy_instance.value = weights
+        self.cy_instance._set_rank(np.array(ranks))
+        self.cy_instance._set_value(np.array(weights))
+        
         if delays != None:
-            self.cy_instance.delay = delays
+            self.cy_instance._set_delay(delays)
             if (len(delays)>0):
                 max_delay = np.amax(delays)
                 self.proj.pre.cyInstance.set_max_delay(int(max_delay))
@@ -85,10 +86,10 @@ class Dendrite(object):
         if name == 'proj':
             return object.__getattribute__(self, name)
         elif name == 'attributes':
-            return object.__getattribute__(self, 'attributes')
+            return object.__getattribute__(self, name)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
-                return getattr(self.cy_instance, '_get_'+name)()
+                return self._get_cython_attribute(name)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -99,10 +100,10 @@ class Dendrite(object):
         if name == 'proj':
             object.__setattr__(self, 'proj', value)
         elif name == 'attributes':
-            object.__setattr__(self, name, value)
+            object.__setattr__(self, 'attributes', value)
         elif hasattr(self, 'attributes'):
-            if name in self.proj.attributes:
-                getattr(self.cy_instance, '_set_'+name)(value)
+            if name in self.attributes:
+                self._set_cython_attribute(name, value)
             else:
                 object.__setattr__(self, name, value)
         else:
@@ -309,16 +310,27 @@ class Dendrite(object):
                     set( 'tau' : 20, 'value'= np.random.rand(8,8) } )
         """
         for val_key in value.keys():
-            if hasattr(self.cy_instance, val_key):
-                # Check the type of the data!!
-                if isinstance(value[val_key], RandomDistribution):
-                    val = value[val_key].getValues(self.size) 
-                else: 
-                    val = value[val_key]           
-                # Set the value
-                setattr(self.cy_instance, val_key, val)
-            else:
-                Global._error("dendrite has no parameter/variable called", val_key)
+            self._set_cython_attribute(self, val_key, value[val_key])
+            
+    def _set_cython_attribute(self, name, value):
+        try:
+            if isinstance(value, np.ndarray):
+                getattr(self.cy_instance, '_set_'+name)(value)
+            elif isinstance(value, list):
+                getattr(self.cy_instance, '_set_'+name)(np.array(value))
+            else: # a single value
+                if attribute in self.proj.description['local']:
+                    getattr(self.cy_instance, '_set_'+name)(value*np.ones(self.size))
+                else:
+                    getattr(self.cy_instance, '_set_'+name)(value)
+        except:
+            Global._error('Can not assign ' + name + ' with the provided value in the dendrite')
+            
+    def _get_cython_attribute(self, name):
+        try:
+            return getattr(self.cy_instance, '_get_'+name)()
+        except:
+            Global._error('Can not read ' + name + ' for the dendrite')
                 
     def get(self, value):
         """
@@ -328,12 +340,13 @@ class Dendrite(object):
         
             * *value*: value name as string
         """
-        if value in self.variables:
-            return self.get_variable(value)
-        elif value in self.parameters:
-            return self.get_parameter(value)
-        else:
-            Global._error("dendrite has no parameter/variable called", value)     
+        try:
+            return getattr(self.cy_instance, '_get_'+value)()
+        except:
+            if value in ['rank', 'value', 'delay']:
+                return getattr(self.cy_instance, value)
+            else:
+                Global._error("Dendrite has no parameter/variable called", value)     
     
     @property
     def size(self):
@@ -379,33 +392,33 @@ class Dendrite(object):
         """
         return self.cy_instance.get_target()
         
-    def get_variable(self, variable):
-        """
-        Returns the value of the given variable for all synapses in the dendrite, as a NumPy array having the same geometry as the presynaptic population.
-        
-        Parameter:
-        
-        * *variable*:    a string representing the variable's name.
-        """
-        if hasattr(self.cy_instance, variable):
-            return getattr(self.cy_instance, variable)
-        else:
-            Global._error("variable", variable, "does not exist in this dendrite.")
-            Global._print(traceback.print_stack())
+#    def get_variable(self, variable):
+#        """
+#        Returns the value of the given variable for all synapses in the dendrite, as a NumPy array having the same geometry as the presynaptic population.
+#        
+#        Parameter:
+#        
+#        * *variable*:    a string representing the variable's name.
+#        """
+#        if hasattr(self.cy_instance, variable):
+#            return getattr(self.cy_instance, variable)
+#        else:
+#            Global._error("variable", variable, "does not exist in this dendrite.")
+#            Global._print(traceback.print_stack())
 
-    def get_parameter(self, parameter):
-        """
-        Returns the value of the given parameter, which is common for all synapses in the dendrite.
-        
-        Parameter:
-        
-        * *parameter*:    a string representing the parameter's name.
-        """
-        if hasattr(self.cy_instance, parameter):
-            return getattr(self.cy_instance, parameter)
-        else:
-            Global._error("parameter", parameter, "does not exist in this dendrite.")
-            Global._print(traceback.print_stack())
+#    def get_parameter(self, parameter):
+#        """
+#        Returns the value of the given parameter, which is common for all synapses in the dendrite.
+#        
+#        Parameter:
+#        
+#        * *parameter*:    a string representing the parameter's name.
+#        """
+#        if hasattr(self.cy_instance, parameter):
+#            return getattr(self.cy_instance, parameter)
+#        else:
+#            Global._error("parameter", parameter, "does not exist in this dendrite.")
+#            Global._print(traceback.print_stack())
 
     def add_synapse(self, rank, value, delay=0):
         """

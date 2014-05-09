@@ -375,7 +375,7 @@ class Projection(object):
 
         return self
        
-    def connect_fixed_propability(self, propability, weights, delays=0.0, allow_self_connections=False):
+    def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
         """ fixed_probability projection between two populations. 
     
         Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided.
@@ -411,7 +411,7 @@ class Projection(object):
                 if (pre_rank == post_rank) and not allow_self_connections:
                     continue
 
-                if np.random.random() < propability:
+                if np.random.random() < probability:
                     self._synapses[(pre_rank, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
   
         return self
