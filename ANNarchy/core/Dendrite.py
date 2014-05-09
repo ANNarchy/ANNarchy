@@ -70,7 +70,7 @@ class Dendrite(object):
         self.cy_instance._set_value(np.array(weights))
         
         if delays != None:
-            self.cy_instance._set_delay(delays)
+            self.cy_instance._set_delay(np.array(delays))
             if (len(delays)>0):
                 max_delay = np.amax(delays)
                 self.proj.pre.cyInstance.set_max_delay(int(max_delay))
