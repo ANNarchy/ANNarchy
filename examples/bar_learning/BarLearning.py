@@ -3,6 +3,9 @@
 #   authors: Julien Vitay, Helge Uelo Dinkelbach
 
 from ANNarchy import *
+import time
+
+setup(paradigm="openmp")
 
 # Defining the neuron
 InputNeuron = RateNeuron(   
@@ -137,5 +140,3 @@ if __name__=='__main__':
     
     # Start the simulation
     view.run()
-
-        

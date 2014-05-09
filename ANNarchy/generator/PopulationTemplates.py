@@ -204,7 +204,7 @@ rate_population_body = """#include "%(class)s.h"
     rank_ = %(pop_id)s;
     
 #ifdef _DEBUG
-    std::cout << "%(class)s::%(class)s called (using rank " << rank_ << ")" << std::endl;
+    std::cout << name << ": %(class)s::%(class)s called (using rank " << rank_ << ")" << std::endl;
 #endif
 
 %(constructor)s
@@ -295,13 +295,14 @@ rate_prepare_neurons="""
 spike_population_body = """#include "%(class)s.h"
 #include "Global.h"
 #include "SpikeDendrite.h"
+#include "SpikeProjection.h"
 
 %(class)s::%(class)s(std::string name, int nbNeurons): SpikePopulation(name, nbNeurons)
 {
     rank_ = %(pop_id)s;
     
 #ifdef _DEBUG
-    std::cout << "%(class)s::%(class)s called (using rank " << rank_ << ")" << std::endl;
+    std::cout << name << ": %(class)s::%(class)s called (using rank " << rank_ << ")" << std::endl;
 #endif
 
 %(constructor)s
@@ -362,12 +363,9 @@ void %(class)s::record()
 {
 %(record)s
     
-    for (unsigned int n=0; n < dendrites_.size(); n++ )
+    for(unsigned int p=0; p< projections_.size(); p++)
     {
-        for(unsigned int p=0; p< dendrites_[n].size(); p++)
-        {
-            dendrites_[n][p]->record();
-        }
+        projections_[p]->record();
     }
 }
 
@@ -383,16 +381,17 @@ void %(class)s::propagateSpike() {
                 static_cast<SpikeDendrite*>(*p_it)->preEvent(*n_it);
             }
             
-            // emit a postsynaptic spike on receiving projections
-            for( auto p_it = dendrites_[(*n_it)].begin(); p_it != dendrites_[(*n_it)].end(); p_it++)
-            {
-                static_cast<SpikeDendrite*>(*p_it)->postEvent();
-            }
+        }
+        
+        // emit a postsynaptic spike on receiving projections
+        for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
+        {
+            static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
+            
         }
         
         propagate_.erase(propagate_.begin(), propagate_.end());
     }
-        
 }
 
 void %(class)s::reset() {
@@ -430,9 +429,9 @@ from libcpp.string cimport string
 import numpy as np
 cimport numpy as np
 
-cdef extern from "../build/%(name)s.h":
-    cdef cppclass %(name)s:
-        %(name)s(string name, int N)
+cdef extern from "../build/%(class_name)s.h":
+    cdef cppclass %(class_name)s:
+        %(class_name)s(string name, int N)
 
         int getNeuronCount()
         
@@ -445,12 +444,12 @@ cdef extern from "../build/%(name)s.h":
 %(cFunction)s
 
 
-cdef class py%(name)s:
+cdef class py%(class_name)s:
 
-    cdef %(name)s* cInstance
+    cdef %(class_name)s* cInstance
 
     def __cinit__(self):
-        self.cInstance = new %(name)s('%(name)s', %(neuron_count)s)
+        self.cInstance = new %(class_name)s('%(name)s', %(neuron_count)s)
 
     def name(self):
         return self.cInstance.getName()
@@ -488,9 +487,9 @@ from libcpp.string cimport string
 import numpy as np
 cimport numpy as np
 
-cdef extern from "../build/%(name)s.h":
-    cdef cppclass %(name)s:
-        %(name)s(string name, int N)
+cdef extern from "../build/%(class_name)s.h":
+    cdef cppclass %(class_name)s:
+        %(class_name)s(string name, int N)
 
         int getNeuronCount()
         
@@ -505,12 +504,12 @@ cdef extern from "../build/%(name)s.h":
 %(cFunction)s
 
 
-cdef class py%(name)s:
+cdef class py%(class_name)s:
 
-    cdef %(name)s* cInstance
+    cdef %(class_name)s* cInstance
 
     def __cinit__(self):
-        self.cInstance = new %(name)s('%(name)s', %(neuron_count)s)
+        self.cInstance = new %(class_name)s('%(name)s', %(neuron_count)s)
 
     def name(self):
         return self.cInstance.getName()

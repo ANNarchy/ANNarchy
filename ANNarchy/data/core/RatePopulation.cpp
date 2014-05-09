@@ -1,5 +1,5 @@
 /*
- *    Population.h
+ *    RatePopulation.cpp
  *
  *    This file is part of ANNarchy.
  *
@@ -22,6 +22,7 @@
 #include "Global.h"
 #include "RatePopulation.h"
 #include "RateDendrite.h"
+#include "RateProjection.h"
 
 RatePopulation::RatePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
 {
@@ -43,7 +44,7 @@ std::vector<DATA_TYPE>* RatePopulation::getRates(int delay)
 {
     if ( delay <= (int)delayedRates_.size())
     {
-    #ifdef _DEBUG
+    #ifdef _DEBUG_DELAY
         std::cout << name_ << ": rates for delay "<< delay << "(" << maxDelay_ <<")" << std::endl;
         for(int i=0; i < delayedRates_.size(); i++)
                 std::cout << "   data-addr: " << &(delayedRates_[i]) << std::endl;
@@ -75,20 +76,18 @@ std::vector<DATA_TYPE> RatePopulation::getRates(std::vector<int> delays, std::ve
 
 void RatePopulation::setMaxDelay(int delay)
 {
-    // TODO:
-    // maybe we should take the current fire rate as initial value
-#ifdef _DEBUG
+#ifdef _DEBUG_DELAY
     std::cout << "Population " << name_ << " got new max delay: " << delay << std::endl;
 #endif
     if(delay > maxDelay_)
     {
         for(int oldSize = delayedRates_.size(); oldSize < delay; oldSize++)
-            delayedRates_.push_front(std::vector<DATA_TYPE>(nbNeurons_, (DATA_TYPE)oldSize));
+            delayedRates_.push_front( rate_ );
 
         maxDelay_ = delay;
     }
 
-#ifdef _DEBUG
+#ifdef _DEBUG_DELAY
     std::cout << "current delay vec: " << delayedRates_.size() << std::endl;
     for(int i=0; i<delayedRates_.size(); i++)
             std::cout << "   Delay: " << i << " rates: " << delayedRates_[i].size() << std::endl;
@@ -100,23 +99,17 @@ DATA_TYPE RatePopulation::sum(int neur, int typeID)
     DATA_TYPE sum=0.0;
 
 #ifdef _DEBUG
-    if ( neur >= typedDendrites_.size() )
+    if ( typeID >= typedProjections_.size() )
     {
-    	std::cout << "No dendrite with id = " << neur << std::endl;
-    	return sum;
-    }
-
-    if ( typeID >= typedDendrites_[neur].size() )
-    {
-    	std::cout << "No target with id = " << typeID << std::endl;
+    	std::cout << "No projection with target id = " << typeID << std::endl;
     	return sum;
     }
 #endif
-    auto it = typedDendrites_[neur][typeID].begin();
-    int end = typedDendrites_[neur][typeID].size();
+    auto it = typedProjections_[typeID].begin();
+    int end = typedProjections_[typeID].size();
 
-    for(int i=0; i != end; i++ )
-        sum += static_cast<class RateDendrite*>(*(it++))->getSum();
+    for(int i=0; i < end; i++ )
+        sum += static_cast<class RateProjection*>(*(it++))->getSum(neur);
 
     return sum;
 }
@@ -141,37 +134,17 @@ void RatePopulation::metaSum()
     std::cout << "###########################"<< std::endl;
     }
 #endif
+#ifdef _DEBUG
+	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
+		std::cout << name_ <<": "<< projections_.size()<< " projection(s)"<< std::endl;
+#endif
 
-    #pragma omp for
-    for(int n=0; n<nbNeurons_; n++)
-    {
-    #ifdef _DEBUG
-        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
-    #endif
-        for(unsigned int p = 0; p < dendrites_[n].size();p++)
-        {
-        #ifdef _DEBUG
-            std::cout << "reference: " << dendrites_[n][p] << std::endl;
-            std::cout << "\tpost = " << name_ << std::endl;
-            std::cout << "\tpre = " << dendrites_[n][p]->getPrePopulation()->getName() << std::endl;
-            std::cout << "\tsynaseCount = " << (int)(dendrites_[n][p]->getSynapseCount()) << std::endl;
-        #endif
-           	(static_cast<class RateDendrite*>(dendrites_[n][p]))->computeSum();
-        }
-
-    #ifdef ANNAR_SCHEDULE
-        // increase the number of runs for the current thread on the current scheduled cpu
-        coreCounter[omp_get_thread_num()][sched_getcpu()]++;
-        // if the last scheduled cpu is different from the actual scheduled cpu then increase
-        // the number of switches for the current thread
-        if (coreCounter[omp_get_thread_num()][omp_get_num_procs() + 1] != sched_getcpu()) {
-            coreCounter[omp_get_thread_num()][omp_get_num_procs() + 1] = sched_getcpu();
-            coreCounter[omp_get_thread_num()][omp_get_num_procs()]++;
-        }
-    #endif
-
-    }
+	//
+	// parallelization will be inside
+	for(unsigned int p = 0; p < projections_.size();p++)
+	{
+    	static_cast<RateProjection*>(projections_[p])->computeSum();
+	}
 
     #pragma omp barrier
 #ifdef ANNAR_PROFILE
@@ -186,6 +159,14 @@ void RatePopulation::metaSum()
 
 void RatePopulation::metaStep()
 {
+#ifdef _DEBUG
+    #pragma omp master
+    {
+    std::cout << "###########################"<< std::endl;
+    std::cout << "# Meta step               #"<< std::endl;
+    std::cout << "###########################"<< std::endl;
+    }
+#endif
     double start, stop = 0.0;
 
 #ifdef ANNAR_PROFILE
@@ -254,22 +235,19 @@ void RatePopulation::metaLearn()
     }
     #pragma barrier
 #endif
-    #pragma omp for
-    for(int n=0; n<nbNeurons_; n++)
-    {
-    #ifdef _DEBUG
-        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
-    #endif
 
-        for(unsigned int p = 0; p < dendrites_[n].size();p++)
-        {
-            if ( dendrites_[n][p]->isLearning() )
-            	static_cast<class RateDendrite*>(dendrites_[n][p])->globalLearn();
-        }
-    }
-
-    #pragma omp barrier
+#ifdef _DEBUG
+	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
+		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
+#endif
+	for(unsigned int p = 0; p < projections_.size(); p++)
+	{
+		if ( projections_[p]->isLearning() )
+		{
+			static_cast<class RateProjection*>(projections_[p])->globalLearn();
+		}
+		#pragma omp barrier
+	}
 
 #ifdef ANNAR_PROFILE
     stop = omp_get_wtime();
@@ -290,21 +268,19 @@ void RatePopulation::metaLearn()
     std::cout << "###########################"<< std::endl;
     }
 #endif
+#ifdef _DEBUG
+	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
+		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
+#endif
+	for(unsigned int p = 0; p < projections_.size(); p++)
+	{
+		if ( projections_[p]->isLearning() )
+		{
+			static_cast<class RateProjection*>(projections_[p])->localLearn();
+		}
+		#pragma omp barrier
+	}
 
-    #pragma omp for
-    for(int n=0; n<nbNeurons_; n++)
-    {
-    #ifdef _DEBUG
-        if ( dendrites_[n].size() > 0 && omp_get_thread_num() == 0 )
-            std::cout << name_<<"("<< n << "): "<< dendrites_[n].size()<< " projections."<< std::endl;
-    #endif
-        for(unsigned int p = 0; p < dendrites_[n].size();p++) {
-            if ( dendrites_[n][p]->isLearning() )
-            	static_cast<class RateDendrite*>(dendrites_[n][p])->localLearn();
-        }
-    }
-
-    #pragma omp barrier
 #ifdef ANNAR_PROFILE
     stop = omp_get_wtime();
     #pragma omp master

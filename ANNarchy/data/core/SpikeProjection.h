@@ -1,8 +1,8 @@
 /*
- *    Projection.cpp
+ *    SpikeProjection.h
  *
  *    This file is part of ANNarchy.
- *   
+ *
  *   Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
  *   Helge Ülo Dinkelbach <helge.dinkelbach@gmail.com>
  *
@@ -19,14 +19,39 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "Projection.h"
+#ifndef __ANNARCHY_SPIKE_PROJECTION_H__
+#define __ANNARCHY_SPIKE_PROJECTION_H__
 
-Projection::Projection()
+#include "Global.h"
+
+class SpikeProjection : public Projection
 {
-	isLearning_ = true;
-}
+public:
+	SpikeProjection(std::string pre, std::string post, int target);
 
-Projection::~Projection()
-{
-}
+    void globalLearn();
 
+    void localLearn();
+
+    void postEvent(std::vector<int> post_ranks);
+
+	Population* getPrePopulation();
+
+	void addDendrite(int postNeuronRank, class Dendrite *dendrite);
+
+	class Dendrite *getDendrite(int postNeuronRank);
+
+	void removeDendrite(int postNeuronRank, class Population *pre);
+
+	bool isRateCoded() { return false; }
+
+	void record();
+
+private:
+	int nbDendrites_;
+
+	class SpikePopulation* pre_population_;
+	class SpikePopulation* post_population_;
+	std::vector< class SpikeDendrite* > dendrites_;
+};
+#endif

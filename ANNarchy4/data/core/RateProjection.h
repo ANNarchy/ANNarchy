@@ -1,5 +1,5 @@
 /*
- *    RateDendrite.h
+ *    RateProjection.h
  *
  *    This file is part of ANNarchy.
  *
@@ -19,51 +19,32 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __ANNARCHY_RATE_DENDRITE_H__
-#define __ANNARCHY_RATE_DENDRITE_H__
+#ifndef __ANNARCHY_RATE_PROJECTION_H__
+#define __ANNARCHY_RATE_PROJECTION_H__
 
 #include "Global.h"
 
-class RateDendrite: public Dendrite
+class RateProjection : public Projection
 {
 public:
-	RateDendrite();
+	RateProjection(std::string pre, std::string post, int target);
 
-    /**
-     * 	\brief		returns the reference to presynaptic populations
-     * 	\details	is abstract, cause the reference is hold by child class.
-     */
-	virtual class Population* getPrePopulation() = 0;
+	Population* getPrePopulation();
 
-	virtual int getSynapseCount() = 0;
+	void addDendrite(int postNeuronRank, class Dendrite *dendrite);
 
-	virtual int addSynapse(int rank, DATA_TYPE value, int delay) = 0;
-
-    virtual int removeSynapse(int rank) = 0;
-
-    virtual int removeAllSynapses() = 0;
-
-    virtual void record() = 0;
-
-	virtual void computeSum() = 0;
-
-	virtual void globalLearn() = 0;
-
-	virtual void localLearn() = 0;
-
-	/**
-	 * 	\brief		get the weighted sum
-	 * 	\details	computation is done by computeSum (overridden by implementor classes)
-	 */
 	DATA_TYPE getSum() { return sum_; }
 
-protected:
+	void computeWeightedSum()
+	{
+		sum_ = 0.0;
+	}
 
+private:
 	DATA_TYPE sum_;
 
-    DATA_TYPE post_rate_;
-    std::vector<DATA_TYPE>* post_rates_;
-    std::vector<DATA_TYPE>* pre_rates_;
+	class RatePopulation* pre_population_;
+	class RatePopulation* post_population_;
+	std::vector< std::vector<class RateDendrite*> > dendrites_;
 };
-
 #endif

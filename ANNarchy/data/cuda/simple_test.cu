@@ -79,6 +79,7 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 	int N = preRates.size();
 	int C = rank.size();
 
+#ifdef _DEBUG
 	for ( int i = 0; i < rank.size(); i++ )
 		std::cout << rank[i] << ", ";
 	std::cout << std::endl;
@@ -88,7 +89,7 @@ DATA_TYPE weightedSum(std::vector<int> rank, std::vector<DATA_TYPE> value, std::
 	for ( int i = 0; i < preRates.size(); i++ )
 		std::cout << preRates[rank[i]] << ", ";
 	std::cout << std::endl;
-
+#endif 
 	double start1 = omp_get_wtime();
 	cudaMemcpy( WeightSumData::instance(N, C)->getWeightPtr(), value.data(), sizeof(DATA_TYPE) * C, cudaMemcpyHostToDevice );
 	cudaMemcpy( WeightSumData::instance(N, C)->getRatePtr(), preRates.data(), sizeof(DATA_TYPE) * N, cudaMemcpyHostToDevice);

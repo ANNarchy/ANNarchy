@@ -37,9 +37,11 @@ public:
 
 	~Network();
 
-	class Population* getPopulation(unsigned int id);
+	class Population* getPopulation(std::string name);
 
 	class Population* getPopulation(std::string name, bool isRateCoded);
+
+	class Population* getPopulation(unsigned int id);
 
 	class Population* getPopulation(unsigned int id, bool isRateCoded);
 

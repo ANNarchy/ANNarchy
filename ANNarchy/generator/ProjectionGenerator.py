@@ -298,9 +298,8 @@ class ProjectionGenerator(object):
         Include of paradigm specific headers
         """
         add_include = ''
-        if Global.config.has_key('paradigm'):
-            if Global.config['paradigm'] == "cuda":
-                add_include += "#include \"simple_test.h\""
+        if Global.config['paradigm'] == "cuda":
+            add_include += "#include \"simple_test.h\""
         
         return add_include
     
