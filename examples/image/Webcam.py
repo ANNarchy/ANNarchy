@@ -67,6 +67,3 @@ if __name__ == '__main__':
     # Start the GUI
     view = Viewer(pop)
     view.run()    
-    
-    # Stop the camera
-    pop.stop_camera()

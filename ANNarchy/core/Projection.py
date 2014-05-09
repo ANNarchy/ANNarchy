@@ -710,13 +710,13 @@ class Projection(object):
             m_row = None
             
             for x in xrange(self.post.geometry[0]):
-                m = getattr(self._dendrites[i].cy_instance,variable)
+                m = getattr(self._dendrites[i].cy_instance, '_get_'+variable)()
                 
                 if m.shape != self.pre.geometry:
                     new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
                     
                     j = 0
-                    for r in self._dendrites[i].cy_instance.rank:
+                    for r in self._dendrites[i].cy_instance._get_rank():
                         new_m[r] = m[j]
                         j+=1 
                     m = new_m
