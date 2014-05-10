@@ -3,18 +3,14 @@
 #   authors: Julien Vitay, Helge Uelo Dinkelbach
 
 from ANNarchy import *
-import time
 
-setup(paradigm="openmp")
+setup()
 
 # Defining the neuron
 InputNeuron = RateNeuron(   
     parameters="""
-        baseline = 0.0
-    """,
-    equations="""
-        rate = baseline
-    """ 
+        rate = 0.0
+    """
 )
 
 LeakyNeuron = RateNeuron(
@@ -40,39 +36,39 @@ Oja = RateSynapse(
 
 
 # Creating the populations
-input_pop = Population(geometry=(8,8), neuron=InputNeuron)
-feature_pop = Population(geometry=(8, 4), neuron=LeakyNeuron)
+Input = Population(geometry=(8,10), neuron=InputNeuron)
+Feature = Population(geometry=(8, 4), neuron=LeakyNeuron)
 
 # Creating the projections
-input_feature = Projection(
-    pre=input_pop, 
-    post=feature_pop, 
+Input_Feature = Projection(
+    pre=Input, 
+    post=Feature, 
     target='exc', 
     synapse = Oja    
 ).connect_all_to_all( weights = Uniform(-0.5, 0.5) )
-input_feature.min_value = -100.0
+Input_Feature.min_value = -10.0
                      
-feature_feature = Projection(
-    pre=feature_pop, 
-    post=feature_pop, 
+Feature_Feature = Projection(
+    pre=Feature, 
+    post=Feature, 
     target='inh', 
     synapse = Oja
 ).connect_all_to_all( weights = Uniform(0.0, 1.0) )
-feature_feature.alpha = 0.3
+Feature_Feature.alpha = 0.3
 
 
 # Definition of the environment
 def set_input():
-    # Choose which bars will be used as inputs
-    values = np.zeros(input_pop.geometry)
-    for w in range(input_pop.geometry[1]):
-        if np.random.random() < 1./ float(input_pop.geometry[1]):
-            values[:, w] = 1.
-    for h in range(input_pop.geometry[0]):
-        if np.random.random() < 1./ float(input_pop.geometry[0]):
-            values[h, :] = 1.
-    # Set the input
-    input_pop.baseline = values
+    # Reset the firing rate for all neurons
+    Input.rate = 0.0
+    # Clamp horizontal bars
+    for h in range(Input.geometry[0]):
+        if np.random.random() < 1.0/ float(Input.geometry[0]):
+            Input[h, :].rate = 1.0
+    # Clamp vertical bars
+    for w in range(Input.geometry[1]):
+        if np.random.random() < 1.0/ float(Input.geometry[1]):
+            Input[:, w].rate = 1.0
     
 
 # Visualizer
@@ -118,9 +114,9 @@ class Viewer(object):
         set_input()
         simulate(50) 
         # Refresh the GUI
-        self.input_vis.setImage(input_pop.rate)
-        self.feature_vis.setImage(feature_pop.rate)
-        self.rv_vis.setImage(input_feature._gather_data('value').transpose())
+        self.input_vis.setImage(Input.rate.T)
+        self.feature_vis.setImage(Feature.rate)
+        self.rv_vis.setImage(Input_Feature._gather_data('value').transpose())
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         
