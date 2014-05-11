@@ -1,7 +1,7 @@
 from ANNarchy import *
 
 # Define the neurons
-Izhikevitch = SpikeNeuron(
+Izhikevich = SpikeNeuron(
     parameters="""
         noise_scale = 5.0 : population
         a = 0.02
@@ -29,12 +29,12 @@ Izhikevitch = SpikeNeuron(
     """
 )
 
-Excitatory = Population(name='Excitatory', geometry=800, neuron=Izhikevitch)
+Excitatory = Population(name='Excitatory', geometry=800, neuron=Izhikevich)
 re = np.random.random(800)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
 
-Inhibitory = Population(name='Inhibitory', geometry=200, neuron=Izhikevitch)
+Inhibitory = Population(name='Inhibitory', geometry=200, neuron=Izhikevich)
 ri = np.random.random(200)
 Inhibitory.noise_scale = 2.0
 Inhibitory.b = 0.25 - 0.05*ri
@@ -89,10 +89,9 @@ if __name__ == '__main__':
     data_exc = data['Excitatory']['s']['data']
     data_inh = data['Inhibitory']['s']['data']
     data_all = np.concatenate((data_exc, data_inh), axis=0)
-    
+
     # Prepare data for the raster plot
     spikes =  np.nonzero(data_all > 0.5)
-    
     
     # Plot the results
     try:
