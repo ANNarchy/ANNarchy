@@ -166,6 +166,9 @@ using namespace ANNarchy_Global;
 
 %(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : RateDendrite() 
 {
+#ifdef _DEBUG
+    std::cout << "Create %(class)s (ptr = " << this << ") for neuron " << postRank << " between " << pre->getName() << " and " << post->getName() << std::endl;
+#endif
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
     
@@ -178,6 +181,9 @@ using namespace ANNarchy_Global;
 
 %(class)s::%(class)s(int preID, int postID, int postRank, int target) : RateDendrite() 
 {
+#ifdef _DEBUG
+    std::cout << "Create %(class)s (ptr = " << this << ") for neuron " << postRank << " between id =" << preID << " and id =" << postID << std::endl;
+#endif    
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
