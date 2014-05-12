@@ -20,7 +20,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-#from .Descriptor import Descriptor, Attribute
 import ANNarchy.core.Global as Global
 from ANNarchy.core.Neuron import RateNeuron
 from ANNarchy.core.Random import RandomDistribution
@@ -34,7 +33,7 @@ class Dendrite(object):
     """
     A dendrite encapsulates all synapses of one neuron coming from a single projection.
     
-    *Hint*: this class will be created from projection class.
+    *Hint*: this class is only a data wrapper  created from projection class.
     
     Parameter:
     
@@ -42,7 +41,7 @@ class Dendrite(object):
     * *post_rank*: rank of the postsynaptic neuron
     * *cython_instance*: instance of the cythonized dendrite class.
     """
-    def __init__(self, proj, post_rank, ranks=None, weights=None, delays=None):
+    def __init__(self, proj, post_rank):
 
         self.post_rank = post_rank
         self.proj = proj
@@ -52,33 +51,6 @@ class Dendrite(object):
         self.variables = self.proj.variables
         self.attributes = self.proj.attributes
 
-        cython_module = __import__('ANNarchyCython') 
-        proj_class_name = 'Local' + self.proj.name
-        local_proj = getattr(cython_module, proj_class_name)
-        
-        isRateCoded = isinstance(self.proj.pre.neuron_type, RateNeuron) and isinstance(self.proj.post.neuron_type, RateNeuron) 
-        self.cy_instance = local_proj(
-            self.proj._id, 
-            self.proj.pre.rank, 
-            self.proj.post.rank, 
-            post_rank, 
-            self.proj.post.targets.index(self.proj.target),
-            isRateCoded 
-        )
-                    
-        self.cy_instance.rank = ranks
-        self.cy_instance.value = weights
-        if delays != None:
-            self.cy_instance.delay = delays
-            if (len(delays)>0):
-                max_delay = np.amax(delays)
-                self.proj.pre.cyInstance.set_max_delay(int(max_delay))
-
-        self.cy_instance.init_values()
-
-        self._recorded_variables = {}        
-        for var in list(set(self.variables + ['value'])):
-            self._recorded_variables[var] = Record(var)
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
@@ -88,7 +60,7 @@ class Dendrite(object):
             return object.__getattribute__(self, 'attributes')
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
-                return getattr(self.cy_instance, '_get_'+name)()
+                return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -102,7 +74,7 @@ class Dendrite(object):
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.proj.attributes:
-                getattr(self.cy_instance, '_set_'+name)(value)
+                getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value)
             else:
                 object.__setattr__(self, name, value)
         else:
@@ -116,38 +88,39 @@ class Dendrite(object):
             
             * *variable*: single variable name or list of variable names.        
         """
-        _variable = []
+        print 'TODO: not implemented yet'
+        # _variable = []
         
-        if isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')
+        # if isinstance(variable, str):
+        #     _variable.append(variable)
+        # elif isinstance(variable, list):
+        #     _variable = variable
+        # else:
+        #     print('Error: variable must be either a string or list of strings.')
         
-        for var in _variable:
+        # for var in _variable:
             
-            if not var in self._recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.proj.name)
-                continue
+        #     if not var in self._recorded_variables.keys():
+        #         print(var, 'is not a recordable variable of', self.proj.name)
+        #         continue
 
-            if not self._recorded_variables[var].is_inited:
-                print('variable',var,'is not inited.')
-                continue
+        #     if not self._recorded_variables[var].is_inited:
+        #         print('variable',var,'is not inited.')
+        #         continue
             
-            try:
-                getattr(self.cy_instance, '_start_record_'+var)()
+        #     try:
+        #         getattr(self.cy_instance, '_start_record_'+var)()
     
-                if Global.config['verbose']:
-                    print('start record of', var, '(', self.proj.name, ')')
+        #         if Global.config['verbose']:
+        #             print('start record of', var, '(', self.proj.name, ')')
                     
-                self._recorded_variables[var].start()
-            except:
-                #TODO:
-                print self.cy_instance
-                print '_start_record_'+var
-                print "Error (start_record): only possible after compilation."
-                pass
+        #         self._recorded_variables[var].start()
+        #     except:
+        #         #TODO:
+        #         print self.cy_instance
+        #         print '_start_record_'+var
+        #         print "Error (start_record): only possible after compilation."
+        #         pass
 
     def pause_record(self, variable=None):
         """
@@ -157,34 +130,35 @@ class Dendrite(object):
             
         * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
         """
-        _variable = []
-        if variable == None:
-            _variable = self._running_recorded_variables
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')       
+        print 'TODO: not implemented yet'
+        # _variable = []
+        # if variable == None:
+        #     _variable = self._running_recorded_variables
+        # elif isinstance(variable, str):
+        #     _variable.append(variable)
+        # elif isinstance(variable, list):
+        #     _variable = variable
+        # else:
+        #     print('Error: variable must be either a string or list of strings.')       
         
-        for var in _variable:
+        # for var in _variable:
             
-            if not var in self._recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
-                continue
+        #     if not var in self._recorded_variables.keys():
+        #         print(var, 'is not a recordable variable of', self.name)
+        #         continue
 
-            if not self._recorded_variables[var].is_running:
-                print('record of', var, 'was not running on population', self.name)
-                continue
+        #     if not self._recorded_variables[var].is_running:
+        #         print('record of', var, 'was not running on population', self.name)
+        #         continue
             
-            try:
-                getattr(self.cy_instance, '_stop_record_'+var)()
+        #     try:
+        #         getattr(self.cy_instance, '_stop_record_'+var)()
 
-                if Global.config['verbose']:
-                    print('pause record of', var, '(', self.name, ')')
-                self._recorded_variables[var].pause()
-            except:
-                print("Error (pause_record): only possible after compilation.")
+        #         if Global.config['verbose']:
+        #             print('pause record of', var, '(', self.name, ')')
+        #         self._recorded_variables[var].pause()
+        #     except:
+        #         print("Error (pause_record): only possible after compilation.")
 
     def resume_record(self, variable):
         """
@@ -194,34 +168,35 @@ class Dendrite(object):
             
             * *variable*: single variable name or list of variable names.        
         """
-        _variable = []
+        print 'TODO: not implemented yet'
+        # _variable = []
         
-        if isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')
+        # if isinstance(variable, str):
+        #     _variable.append(variable)
+        # elif isinstance(variable, list):
+        #     _variable = variable
+        # else:
+        #     print('Error: variable must be either a string or list of strings.')
         
-        for var in _variable:
+        # for var in _variable:
             
-            if not var in var in self._recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
-                continue
+        #     if not var in var in self._recorded_variables.keys():
+        #         print(var, 'is not a recordable variable of', self.name)
+        #         continue
             
-            if not self._recorded_variables[var].is_running:
-                print('record of', var, 'is already running on population', self.name)
-                continue
+        #     if not self._recorded_variables[var].is_running:
+        #         print('record of', var, 'is already running on population', self.name)
+        #         continue
             
-            try:
-                getattr(self.cy_instance, '_start_record_'+var)()
+        #     try:
+        #         getattr(self.cy_instance, '_start_record_'+var)()
                 
-                if Global.config['verbose']:
-                    print('resume record of', var, '(' , self.name, ')')
+        #         if Global.config['verbose']:
+        #             print('resume record of', var, '(' , self.name, ')')
 
-                self._recorded_variables[var].start()
-            except:
-                print("Error: only possible after compilation.")
+        #         self._recorded_variables[var].start()
+        #     except:
+        #         print("Error: only possible after compilation.")
                 
     def get_record(self, variable=None, as_1D=False):
         """
@@ -233,68 +208,69 @@ class Dendrite(object):
         * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
         * *as_1D*: by default this functions returns the data as matrix (geometry shape, time). If as_1D set to True, the data will be returned as two-dimensional plot (neuron x time)
         """
+        print 'TODO: not implemented yet'
         
-        _variable = []
-        if variable == None:
-            _variable = self._recorded_variables
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')
+        # _variable = []
+        # if variable == None:
+        #     _variable = self._recorded_variables
+        # elif isinstance(variable, str):
+        #     _variable.append(variable)
+        # elif isinstance(variable, list):
+        #     _variable = variable
+        # else:
+        #     print('Error: variable must be either a string or list of strings.')
         
-        data_dict = {}
+        # data_dict = {}
         
-        for var in _variable:
+        # for var in _variable:
 
-            if not var in var in self._recorded_variables.keys():
-                Global._print(var, 'is not a recordable variable of', self.proj.name)
-                data_dict[var] = { 'start': -1, 'stop': -1, 'data': None }
-                continue
+        #     if not var in var in self._recorded_variables.keys():
+        #         Global._print(var, 'is not a recordable variable of', self.proj.name)
+        #         data_dict[var] = { 'start': -1, 'stop': -1, 'data': None }
+        #         continue
             
-            if self._recorded_variables[var].is_running:
-                self.pause_record(var)
+        #     if self._recorded_variables[var].is_running:
+        #         self.pause_record(var)
             
-            try:
-                if Global.config['verbose']:
-                    Global._print('get record of '+var+' ('+self.proj.name+')')
+        #     try:
+        #         if Global.config['verbose']:
+        #             Global._print('get record of '+var+' ('+self.proj.name+')')
                     
-                data = getattr(self.cy_instance, '_get_recorded_'+var)()
+        #         data = getattr(self.cy_instance, '_get_recorded_'+var)()
                 
-                if as_1D:
-                    #
-                    # [ time, data(1D) ] => [ time, data(1D) ] 
-                    mat1 = data.T
+        #         if as_1D:
+        #             #
+        #             # [ time, data(1D) ] => [ time, data(1D) ] 
+        #             mat1 = data.T
     
-                    data_dict[var] = { 
-                        'data': mat1,
-                        'start': self._recorded_variables[var].start_time,
-                        'stop': self._recorded_variables[var].stop_time
-                    }
-                else:
-                    print "Please use the as1D function."
-                    return []
-                    #
-                    # [ time, data(1D) ] => [ time, data(geometry) ] 
-                    mat1 = data.reshape((data.shape[0],)+self.geometry)
+        #             data_dict[var] = { 
+        #                 'data': mat1,
+        #                 'start': self._recorded_variables[var].start_time,
+        #                 'stop': self._recorded_variables[var].stop_time
+        #             }
+        #         else:
+        #             print "Please use the as1D function."
+        #             return []
+        #             #
+        #             # [ time, data(1D) ] => [ time, data(geometry) ] 
+        #             mat1 = data.reshape((data.shape[0],)+self.geometry)
     
-                    data_dict[var] = { 
-                                #
-                                # [ time, data(geometry) ] => [  data(geometry), time ]                 
-                        'data': np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) ),
-                        'start': self._recorded_variables[var].start_time,
-                        'stop': self._recorded_variables[var].stop_time
-                    }
+        #             data_dict[var] = { 
+        #                         #
+        #                         # [ time, data(geometry) ] => [  data(geometry), time ]                 
+        #                 'data': np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) ),
+        #                 'start': self._recorded_variables[var].start_time,
+        #                 'stop': self._recorded_variables[var].stop_time
+        #             }
                                 
-                self._recorded_variables[var].reset()
-            except:
-                print("Error: only possible after compilation.")
+        #         self._recorded_variables[var].reset()
+        #     except:
+        #         print("Error: only possible after compilation.")
 
-        if( len(_variable)==1 and variable!=None):
-            return data_dict[_variable[0]]
-        else:
-            return data_dict          
+        # if( len(_variable)==1 and variable!=None):
+        #     return data_dict[_variable[0]]
+        # else:
+        #     return data_dict          
     
     def set(self, value):
         """
@@ -316,9 +292,9 @@ class Dendrite(object):
                 else: 
                     val = value[val_key]           
                 # Set the value
-                setattr(self.cy_instance, val_key, val)
+                getattr(self.proj.cyInstance, '_set_'+val_key)(self.post_rank, val)
             else:
-                Global._error("dendrite has no parameter/variable called", val_key)
+                Global._error("Dendrite has no parameter/variable called", val_key)
                 
     def get(self, value):
         """
@@ -328,84 +304,59 @@ class Dendrite(object):
         
             * *value*: value name as string
         """
-        if value in self.variables:
-            return self.get_variable(value)
-        elif value in self.parameters:
-            return self.get_parameter(value)
+        if value in self.attributes:
+            return getattr(self.proj.cyInstance, '_get_'+value)(self.post_rank)
         else:
-            Global._error("dendrite has no parameter/variable called", value)     
+            Global._error("Dendrite has no parameter/variable called", value)     
     
     @property
     def size(self):
         """
         Number of synapses.
         """
-        return self.cy_instance.size
-    
-    @property 
-    def learnable(self):
-        return self.cy_instance.learnable
-    
-    @learnable.setter
-    def learnable(self, value):
-        self.cy_instance.learnable = value
+        if self.proj.cyInstance:
+            return self.proj.cyInstance._nb_synapses(self.post_rank)
+        return 0
 
-    @property 
-    def learn_offset(self):
-        return self.cy_instance.learn_offset
-    
-    @learn_offset.setter
-    def learn_offset(self, value):
-        self.cy_instance.learn_offset = value
-
-    @property 
-    def learn_frequency(self):
-        return self.cy_instance.learn_frequency
-    
-    @learn_frequency.setter
-    def learn_frequency(self, value):
-        self.cy_instance.learn_frequency = value
-        
     def __len__(self):
         """
         Number of synapses.
         """
-        return self.cy_instance.size
+        return self.size
+    
+    # @property 
+    # def learnable(self):
+    #     return False
+    
+    # @learnable.setter
+    # def learnable(self, value):
+    #     pass
+    #     #self.cy_instance.learnable = value
+
+    # @property 
+    # def learn_offset(self):
+    #     return self.cy_instance.learn_offset
+    
+    # @learn_offset.setter
+    # def learn_offset(self, value):
+    #     self.cy_instance.learn_offset = value
+
+    # @property 
+    # def learn_frequency(self):
+    #     return self.cy_instance.learn_frequency
+    
+    # @learn_frequency.setter
+    # def learn_frequency(self, value):
+    #     self.cy_instance.learn_frequency = value
+        
         
     @property
     def target(self):
         """
         Connection type id.
         """
-        return self.cy_instance.get_target()
-        
-    def get_variable(self, variable):
-        """
-        Returns the value of the given variable for all synapses in the dendrite, as a NumPy array having the same geometry as the presynaptic population.
-        
-        Parameter:
-        
-        * *variable*:    a string representing the variable's name.
-        """
-        if hasattr(self.cy_instance, variable):
-            return getattr(self.cy_instance, variable)
-        else:
-            Global._error("variable", variable, "does not exist in this dendrite.")
-            Global._print(traceback.print_stack())
+        return self.proj.target
 
-    def get_parameter(self, parameter):
-        """
-        Returns the value of the given parameter, which is common for all synapses in the dendrite.
-        
-        Parameter:
-        
-        * *parameter*:    a string representing the parameter's name.
-        """
-        if hasattr(self.cy_instance, parameter):
-            return getattr(self.cy_instance, parameter)
-        else:
-            Global._error("parameter", parameter, "does not exist in this dendrite.")
-            Global._print(traceback.print_stack())
 
     def add_synapse(self, rank, value, delay=0):
         """
@@ -417,7 +368,8 @@ class Dendrite(object):
             * *value*:    synaptic weight
             * *delay*:    additional delay of the synapse (as default a delay of 1ms is assumed)
         """
-        self.cy_instance.add_synapse(rank, value, delay)
+        print 'TODO: not implemented yet'
+        #self.cy_instance.add_synapse(rank, value, delay)
     
     def remove_synapse(self, rank):
         """
@@ -427,5 +379,6 @@ class Dendrite(object):
         
             * *rank*:     rank of the presynaptic neuron
         """
-        self.cy_instance.remove_synapse(rank)
+        print 'TODO: not implemented yet'
+        #self.cy_instance.remove_synapse(rank)
 

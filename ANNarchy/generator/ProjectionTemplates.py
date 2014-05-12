@@ -389,13 +389,7 @@ local_idx_variable_access_body = \
 """
 // Access methods for the local variable %(name)s
 std::vector<%(type)s> %(class)s::get%(Name)s(int post_rank) 
-{ 
-    std::cout << "Access %(name)s of dendrite " << post_rank << "( ptr = " << dendrites_[post_rank] << ")" << std::endl;
-    auto tmp = (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s();
-    for ( auto it = tmp.begin(); it != tmp.end(); it++)
-        std::cout << *it << " ";
-    std::cout << std::endl;
-    
+{     
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s(); 
 }
 
@@ -494,6 +488,10 @@ cdef extern from "../build/%(name)s.h":
         
         vector[int] getDelay(int post_rank)
         
+        int nbDendrites()
+
+        int nbSynapses(int post_rank)
+        
 %(cFunction)s
 
 cdef class py%(name)s:
@@ -509,6 +507,9 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_value(self, int post_rank):
         return np.array(self.cInstance.getValue(post_rank))
 
+    cpdef np.ndarray _get_delay(self, int post_rank):
+        return np.array(self.cInstance.getDelay(post_rank))
+
     cpdef createFromDict( self, dict dendrites ):
         cdef int rank
         cdef dict data
@@ -519,6 +520,12 @@ cdef class py%(name)s:
             
             # initialize variables
             self.cInstance.initValues(rank)
+
+    cpdef int _nb_dendrites(self):
+        return self.cInstance.nbDendrites()
+
+    cpdef int _nb_synapses(self, int post_rank):
+        return self.cInstance.nbSynapses(post_rank)
 
 %(pyFunction)s
 """ 

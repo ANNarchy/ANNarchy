@@ -277,33 +277,34 @@ def _net_description(variables, connections):
             synapse_count = []
             dendrites = []  
             
-            for dendrite in proj.dendrites:
-                dendrite_desc = {}
-                synapse_count.append(dendrite.size)
-                dendrite_desc['post_rank'] = dendrite.post_rank
+            print 'TODO: save the dendrite variables'
+            # for dendrite in proj.dendrites:
+            #     dendrite_desc = {}
+            #     synapse_count.append(dendrite.size)
+            #     dendrite_desc['post_rank'] = dendrite.post_rank
                 
-                varias = {}
+            #     varias = {}
                 
-                for var in dendrite.variables:
-                    varias[var] = dendrite.get(var)
+            #     for var in dendrite.variables:
+            #         varias[var] = dendrite.get(var)
 
-                if 'value' not in dendrite.variables:
-                    varias['values'] = dendrite.cy_instance.value 
+            #     if 'value' not in dendrite.variables:
+            #         varias['values'] = dendrite.cyInstance.value 
                 
-                varias['delays'] = dendrite.cy_instance.delay
-                varias['pre_ranks'] = dendrite.cy_instance.rank
+            #     varias['delays'] = dendrite.cyInstance.delay
+            #     varias['pre_ranks'] = dendrite.cyInstance.rank
                                 
-                if varias != {}:
-                    dendrite_desc['variables'] = varias
+            #     if varias != {}:
+            #         dendrite_desc['variables'] = varias
 
-                params = {}
-                for par in dendrite.parameters:
-                    params[par] = dendrite.get(par)
+            #     params = {}
+            #     for par in dendrite.parameters:
+            #         params[par] = dendrite.get(par)
                 
-                if params != {}:
-                    dendrite_desc['parameter'] = params
+            #     if params != {}:
+            #         dendrite_desc['parameter'] = params
                 
-                dendrites.append(dendrite_desc)
+            #     dendrites.append(dendrite_desc)
             
             proj_desc['dendrites'] = dendrites
             proj_desc['number_of_synapses'] = synapse_count
