@@ -120,7 +120,18 @@ class ProjectionGenerator(object):
         for param in self.desc['parameters'] + self.desc['variables']:
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
-            if param['name'] in self.desc['local']: # local attribute
+            
+            if param['name'] == "value":
+                func = """
+    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
+    void startRecord%(Name)s() { this->record_%(name)s_ = true; }
+    void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
+    void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
+"""
+                members += func % { 'name' : param['name'], 
+                                    'Name': param['name'].capitalize(),
+                                    'type': param['ctype']}
+            elif param['name'] in self.desc['local']: # local attribute
                 members += local_template % { 'name' : param['name'], 
                                               'Name': param['name'].capitalize(),
                                               'type': param['ctype']}
@@ -149,7 +160,19 @@ class ProjectionGenerator(object):
         for param in self.desc['parameters'] + self.desc['variables']:
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
-            if param['name'] in self.desc['local']: # local attribute
+            
+            if param['name'] == "value":
+                func = """
+    std::vector< std::vector< %(type)s > >getRecorded%(Name)s(int post_rank);                    
+    void startRecord%(Name)s(int post_rank);
+    void stopRecord%(Name)s(int post_rank);
+    void clearRecorded%(Name)s(int post_rank);
+"""             
+                members_header += func % { 'name' : param['name'], 
+                                           'Name': param['name'].capitalize(),
+                                           'type': param['ctype'],
+                                           'class': self.name.replace('Projection', 'Dendrite')}
+            elif param['name'] in self.desc['local']: # local attribute
                 members_header += local_template % { 'name' : param['name'], 
                                               'Name': param['name'].capitalize(),
                                               'type': param['ctype'],
@@ -180,7 +203,33 @@ class ProjectionGenerator(object):
         for param in self.desc['parameters'] + self.desc['variables']:
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
-            if param['name'] in self.desc['local']: # local attribute
+            
+            if param['name'] == "value":
+                func = """
+std::vector< std::vector< %(type)s > > %(class)s::getRecorded%(Name)s(int post_rank) 
+{ 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRecorded%(Name)s(); 
+}                    
+void %(class)s::startRecord%(Name)s(int post_rank) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->startRecord%(Name)s(); 
+}
+void %(class)s::stopRecord%(Name)s(int post_rank) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->stopRecord%(Name)s(); 
+}
+void %(class)s::clearRecorded%(Name)s(int post_rank) 
+{ 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->clearRecorded%(Name)s(); 
+}
+"""             
+                members_body += func % { 'name' : param['name'], 
+                                         'Name': param['name'].capitalize(),
+                                         'type': param['ctype'],
+                                         'class': self.name,
+                                         'dend_class': self.name.replace('Projection', 'Dendrite')}
+                
+            elif param['name'] in self.desc['local']: # local attribute
                 members_body += local_template % { 'name' : param['name'], 
                                               'Name': param['name'].capitalize(),
                                               'type': param['ctype'],
@@ -246,6 +295,8 @@ class ProjectionGenerator(object):
         global_template = Templates.global_wrapper_pyx
         
         for param in self.desc['parameters'] + self.desc['variables']:
+            if param['name'] == "value":
+                continue
             
             if param['name'] in self.desc['local']: # local attribute
                 code += local_template % { 'Name': param['name'].capitalize(), 
@@ -272,6 +323,8 @@ class ProjectionGenerator(object):
         global_template = Templates.global_property_pyx
          
         for param in self.desc['parameters'] + self.desc['variables']:
+            if param['name'] == "value":
+                continue
             
             if param['name'] in self.desc['local']: # local attribute
                 code += local_template % { 'Name': param['name'].capitalize(), 
@@ -605,25 +658,34 @@ class RateProjectionGenerator(ProjectionGenerator):
                         pval = val
                     if bound == 'min':
                         local_learn += """
-        if(%(var)s_[i] < %(val)s)
-            %(var)s_[i] = %(val)s;
+            if(%(var)s_[i] < %(val)s)
+                %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : pval}
                     if bound == 'max':
                         local_learn += """
-        if(%(var)s_[i] > %(val)s)
-            %(var)s_[i] = %(val)s;
+            if(%(var)s_[i] > %(val)s)
+                %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : pval}
         
         if len(local_learn) > 1:
             #
             # build final code
             code="""
-        post_rate_ = (*post_rates_)[post_neuron_rank_];
-        
-        for(int i=0; i < nbSynapses_; i++) 
-        {
-            %(local_learn)s
-        }
+#ifdef _DEBUG
+    std::cout << "Dendrite (n = " << post_neuron_rank_ << ", ptr = " << this << "): update " << nbSynapses_ << " synapse(s)." << std::endl;
+#endif
+    post_rate_ = (*post_population_->getRates())[post_neuron_rank_];
+    
+    for ( auto it = (*post_rates_).begin(); it != (*post_rates_).end(); it++)
+        std::cout << *it << " ";
+    std::cout << std::endl;
+    
+    std::cout << post_rate_ << "(from post_rates_ = "<< post_rates_ << ")" << std::endl;
+    
+    for(int i=0; i < nbSynapses_; i++) 
+    {
+ %(local_learn)s
+    }
     """ % { 'local_learn': local_learn }
         else:
             code = ""

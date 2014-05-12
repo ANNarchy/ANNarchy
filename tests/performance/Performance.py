@@ -32,5 +32,8 @@ compile() # needed to save connectivity matrix
 
 simulate(1)
 
+print 'values:'
+proj._cython_instance._get_value(0)
+
 # recompile as stand alone
 #compile(cpp_stand_alone = True)

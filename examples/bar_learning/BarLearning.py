@@ -56,7 +56,7 @@ feature_feature = Projection(
     pre=feature_pop, 
     post=feature_pop, 
     target='inh', 
-    synapse = Oja
+    #synapse = Oja
 ).connect_all_to_all( weights = Uniform(0.0, 1.0) )
 feature_feature.alpha = 0.3
 
@@ -114,13 +114,20 @@ class Viewer(object):
         
 
     def update(self):
-        # Simulate for 50 ms with a new input
+        
+        self.rv_vis.setImage(input_feature._gather_data('value').transpose())
+        
+        
+        ## Simulate for 50 ms with a new input
         set_input()
-        simulate(50) 
+        simulate(1) 
+        simulate(1)
+        simulate(1)
+        exit()
         # Refresh the GUI
         self.input_vis.setImage(input_pop.rate)
         self.feature_vis.setImage(feature_pop.rate)
-        self.rv_vis.setImage(input_feature._gather_data('value').transpose())
+        #self.rv_vis.setImage(input_feature._gather_data('value').transpose())
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         

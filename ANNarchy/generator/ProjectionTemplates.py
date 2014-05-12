@@ -34,6 +34,8 @@ public:
 
     std::vector<int> getRank(int post_rank);
     
+    std::vector<DATA_TYPE> getValue(int post_rank);
+    
     std::vector<int> getDelay(int post_rank);
     
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
@@ -112,6 +114,11 @@ std::vector<int> %(class)s::getRank(int post_rank)
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRank();
 }
 
+std::vector<DATA_TYPE> %(class)s::getValue(int post_rank)
+{
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getValue();
+}
+
 std::vector<int> %(class)s::getDelay(int post_rank)
 {
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getDelay();
@@ -121,7 +128,6 @@ std::vector<int> %(class)s::getDelay(int post_rank)
 
 void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay)
 {
-
     dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
     
     dendrites_[post_rank]->setRank(rank);
@@ -286,7 +292,8 @@ void %(class)s::computeSum() {
 %(sum)s
 }
 
-void %(class)s::localLearn() {
+void %(class)s::localLearn() 
+{
 %(local)s
 }
 
@@ -383,8 +390,15 @@ local_idx_variable_access_body = \
 // Access methods for the local variable %(name)s
 std::vector<%(type)s> %(class)s::get%(Name)s(int post_rank) 
 { 
+    std::cout << "Access %(name)s of dendrite " << post_rank << "( ptr = " << dendrites_[post_rank] << ")" << std::endl;
+    auto tmp = (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s();
+    for ( auto it = tmp.begin(); it != tmp.end(); it++)
+        std::cout << *it << " ";
+    std::cout << std::endl;
+    
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s(); 
 }
+
 void %(class)s::set%(Name)s(int post_rank, std::vector<%(type)s> %(name)s) 
 { 
     (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->set%(Name)s(%(name)s); 
@@ -438,7 +452,7 @@ global_idx_variable_access_body = \
 """
     // Access methods for the global variable %(name)s
     %(type)s %(class)s::get%(Name)s(int post_rank) 
-    { 
+    {  
         return (static_cast<class %(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s(); 
     }
     
@@ -473,6 +487,8 @@ cdef extern from "../build/%(name)s.h":
         void addDendrite(int, vector[int], vector[float], vector[int])
 
         vector[int] getRank(int post_rank)
+
+        vector[float] getValue(int post_rank)
         
         vector[int] getDelay(int post_rank)
         
@@ -487,6 +503,9 @@ cdef class py%(name)s:
 
     cpdef np.ndarray _get_rank(self, int post_rank):
         return np.array(self.cInstance.getRank(post_rank))
+
+    cpdef np.ndarray _get_value(self, int post_rank):
+        return np.array(self.cInstance.getValue(post_rank))
 
     cpdef createFromDict( self, dict dendrites ):
         cdef int rank
