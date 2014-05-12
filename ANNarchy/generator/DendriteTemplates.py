@@ -175,6 +175,10 @@ using namespace ANNarchy_Global;
     pre_rates_ = pre_population_->getRates();
     post_rates_ = post_population_->getRates();
 
+#ifdef _DEBUG
+    std::cout << "pre_rates_ = " << pre_rates_ << ", post_rates_ = " << post_rates_ << std::endl;  
+#endif    
+
     target_ = target;
     post_neuron_rank_ = postRank;
 }
@@ -189,6 +193,10 @@ using namespace ANNarchy_Global;
 
     pre_rates_ = pre_population_->getRates();
     post_rates_ = post_population_->getRates();
+
+#ifdef _DEBUG
+    std::cout << "pre_rates_ = " << pre_rates_ << ", post_rates_ = " << post_rates_ << std::endl;  
+#endif    
 
     target_ = target;
     post_neuron_rank_ = postRank;

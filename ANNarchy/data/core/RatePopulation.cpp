@@ -27,6 +27,10 @@
 RatePopulation::RatePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
 {
     rate_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
+
+#ifdef _DEBUG
+    std::cout << "Rate reference: " << &rate_ << std::endl;
+#endif
     delayedRates_ = std::deque< std::vector<DATA_TYPE> >();
 }
 
