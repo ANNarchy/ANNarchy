@@ -49,6 +49,8 @@ public:
 
     virtual void record() = 0;
 
+    virtual void initValues(int postNeuronRank) = 0;
+
     bool isLearning() { return isLearning_; }
 
     int getTarget() { return target_; }

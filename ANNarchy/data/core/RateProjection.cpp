@@ -127,3 +127,9 @@ void RateProjection::removeDendrite(int postNeuronRank, class Population *pre)
 {
 
 }
+
+void RateProjection::initValues(int postNeuronRank)
+{
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->initValues();
+}

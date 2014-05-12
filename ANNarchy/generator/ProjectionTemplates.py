@@ -486,6 +486,8 @@ cdef extern from "../build/%(name)s.h":
 
         void addDendrite(int, vector[int], vector[float], vector[int])
 
+        void initValues(int post_rank)
+         
         vector[int] getRank(int post_rank)
 
         vector[float] getValue(int post_rank)
@@ -512,7 +514,11 @@ cdef class py%(name)s:
         cdef dict data
         
         for rank, data in dendrites.iteritems():
+            # create dendrite instance
             self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])
+            
+            # initialize variables
+            self.cInstance.initValues(rank)
 
 %(pyFunction)s
 """ 
@@ -539,7 +545,7 @@ cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(int preLayer, int postLayer, int postNeuronRank, int target)
 
-        void initValues()
+        void initValues(int post_rank)
         
 %(cFunction)s
 

@@ -674,13 +674,7 @@ class RateProjectionGenerator(ProjectionGenerator):
 #ifdef _DEBUG
     std::cout << "Dendrite (n = " << post_neuron_rank_ << ", ptr = " << this << "): update " << nbSynapses_ << " synapse(s)." << std::endl;
 #endif
-    post_rate_ = (*post_population_->getRates())[post_neuron_rank_];
-    
-    for ( auto it = (*post_rates_).begin(); it != (*post_rates_).end(); it++)
-        std::cout << *it << " ";
-    std::cout << std::endl;
-    
-    std::cout << post_rate_ << "(from post_rates_ = "<< post_rates_ << ")" << std::endl;
+    post_rate_ = post_rates_[post_neuron_rank_];
     
     for(int i=0; i < nbSynapses_; i++) 
     {

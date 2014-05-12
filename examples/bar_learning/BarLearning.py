@@ -5,7 +5,7 @@
 from ANNarchy import *
 import time
 
-setup(paradigm="openmp", num_threads=1)
+setup(paradigm="openmp")
 
 # Defining the neuron
 InputNeuron = RateNeuron(   
@@ -115,19 +115,14 @@ class Viewer(object):
 
     def update(self):
         
-        self.rv_vis.setImage(input_feature._gather_data('value').transpose())
-        
-        
         ## Simulate for 50 ms with a new input
         set_input()
-        simulate(1) 
-        simulate(1)
-        simulate(1)
-        exit()
+        simulate(50)
+        
         # Refresh the GUI
         self.input_vis.setImage(input_pop.rate)
         self.feature_vis.setImage(feature_pop.rate)
-        #self.rv_vis.setImage(input_feature._gather_data('value').transpose())
+        self.rv_vis.setImage(input_feature._gather_data('value').transpose())
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         

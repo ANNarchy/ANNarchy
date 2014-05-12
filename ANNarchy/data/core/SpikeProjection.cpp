@@ -123,3 +123,9 @@ void SpikeProjection::record()
 		(*it)->record();
 	}
 }
+
+void SpikeProjection::initValues(int postNeuronRank)
+{
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->initValues();
+}
