@@ -437,9 +437,9 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
 #
 global_idx_variable_access = \
 """
-// Access methods for the global variable %(name)s
-%(type)s get%(Name)s(int post_rank);
-void set%(Name)s(int post_rank, %(type)s %(name)s);
+    // Access methods for the global variable %(name)s
+    %(type)s get%(Name)s(int post_rank);
+    void set%(Name)s(int post_rank, %(type)s %(name)s);
 """
 
 global_idx_variable_access_body = \
@@ -485,6 +485,10 @@ cdef extern from "../build/%(name)s.h":
         vector[int] getRank(int post_rank)
 
         vector[float] getValue(int post_rank)
+        void startRecordValue(int post_rank)
+        void stopRecordValue(int post_rank)
+        void clearRecordedValue(int post_rank)
+        vector[vector[float]] getRecordedValue(int post_rank)
         
         vector[int] getDelay(int post_rank)
         
@@ -501,12 +505,26 @@ cdef class py%(name)s:
     def __cinit__(self, preID, postID, target):
         self.cInstance = new %(name)s(preID, postID, target)
 
+    # Rank (read only)
     cpdef np.ndarray _get_rank(self, int post_rank):
         return np.array(self.cInstance.getRank(post_rank))
 
+    # Value
     cpdef np.ndarray _get_value(self, int post_rank):
         return np.array(self.cInstance.getValue(post_rank))
 
+    def _start_record_value(self, int post_rank):
+        self.cInstance.startRecordValue(post_rank)
+
+    def _stop_record_value(self, int post_rank):
+        self.cInstance.stopRecordValue(post_rank)
+
+    cpdef np.ndarray _get_recorded_value(self, int post_rank):
+        tmp = np.array(self.cInstance.getRecordedValue(post_rank))
+        self.cInstance.clearRecordedValue(post_rank)
+        return tmp
+
+    # Delay (read-only)
     cpdef np.ndarray _get_delay(self, int post_rank):
         return np.array(self.cInstance.getDelay(post_rank))
 

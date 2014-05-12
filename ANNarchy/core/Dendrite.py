@@ -26,8 +26,6 @@ from ANNarchy.core.Random import RandomDistribution
 import numpy as np
 import traceback
 
-from ANNarchy.core.Record import Record
-
 
 class Dendrite(object):
     """
@@ -46,12 +44,30 @@ class Dendrite(object):
         self.post_rank = post_rank
         self.proj = proj
         self.pre = proj.pre
+
+        self.target = self.proj.target
         
         self.parameters = self.proj.parameters
         self.variables = self.proj.variables
         self.attributes = self.proj.attributes
 
+    def size(self):
+        """
+        Number of synapses.
+        """
+        if self.proj.cyInstance:
+            return self.proj.cyInstance._nb_synapses(self.post_rank)
+        return 0
 
+    def __len__(self):
+        """
+        Number of synapses.
+        """
+        return self.size
+
+    #########################
+    ### Access to attributes
+    #########################
     def __getattr__(self, name):
         " Method called when accessing an attribute."
         if name == 'proj':
@@ -79,199 +95,7 @@ class Dendrite(object):
                 object.__setattr__(self, name, value)
         else:
             object.__setattr__(self, name, value)
-    
-    def start_record(self, variable):
-        """
-        Start recording the previous defined variables.
-        
-        Parameter:
-            
-            * *variable*: single variable name or list of variable names.        
-        """
-        print 'TODO: not implemented yet'
-        # _variable = []
-        
-        # if isinstance(variable, str):
-        #     _variable.append(variable)
-        # elif isinstance(variable, list):
-        #     _variable = variable
-        # else:
-        #     print('Error: variable must be either a string or list of strings.')
-        
-        # for var in _variable:
-            
-        #     if not var in self._recorded_variables.keys():
-        #         print(var, 'is not a recordable variable of', self.proj.name)
-        #         continue
 
-        #     if not self._recorded_variables[var].is_inited:
-        #         print('variable',var,'is not inited.')
-        #         continue
-            
-        #     try:
-        #         getattr(self.cy_instance, '_start_record_'+var)()
-    
-        #         if Global.config['verbose']:
-        #             print('start record of', var, '(', self.proj.name, ')')
-                    
-        #         self._recorded_variables[var].start()
-        #     except:
-        #         #TODO:
-        #         print self.cy_instance
-        #         print '_start_record_'+var
-        #         print "Error (start_record): only possible after compilation."
-        #         pass
-
-    def pause_record(self, variable=None):
-        """
-        pause recording the previous defined variables.
-
-        Parameter:
-            
-        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
-        """
-        print 'TODO: not implemented yet'
-        # _variable = []
-        # if variable == None:
-        #     _variable = self._running_recorded_variables
-        # elif isinstance(variable, str):
-        #     _variable.append(variable)
-        # elif isinstance(variable, list):
-        #     _variable = variable
-        # else:
-        #     print('Error: variable must be either a string or list of strings.')       
-        
-        # for var in _variable:
-            
-        #     if not var in self._recorded_variables.keys():
-        #         print(var, 'is not a recordable variable of', self.name)
-        #         continue
-
-        #     if not self._recorded_variables[var].is_running:
-        #         print('record of', var, 'was not running on population', self.name)
-        #         continue
-            
-        #     try:
-        #         getattr(self.cy_instance, '_stop_record_'+var)()
-
-        #         if Global.config['verbose']:
-        #             print('pause record of', var, '(', self.name, ')')
-        #         self._recorded_variables[var].pause()
-        #     except:
-        #         print("Error (pause_record): only possible after compilation.")
-
-    def resume_record(self, variable):
-        """
-        Resume recording the previous defined variables.
-        
-        Parameter:
-            
-            * *variable*: single variable name or list of variable names.        
-        """
-        print 'TODO: not implemented yet'
-        # _variable = []
-        
-        # if isinstance(variable, str):
-        #     _variable.append(variable)
-        # elif isinstance(variable, list):
-        #     _variable = variable
-        # else:
-        #     print('Error: variable must be either a string or list of strings.')
-        
-        # for var in _variable:
-            
-        #     if not var in var in self._recorded_variables.keys():
-        #         print(var, 'is not a recordable variable of', self.name)
-        #         continue
-            
-        #     if not self._recorded_variables[var].is_running:
-        #         print('record of', var, 'is already running on population', self.name)
-        #         continue
-            
-        #     try:
-        #         getattr(self.cy_instance, '_start_record_'+var)()
-                
-        #         if Global.config['verbose']:
-        #             print('resume record of', var, '(' , self.name, ')')
-
-        #         self._recorded_variables[var].start()
-        #     except:
-        #         print("Error: only possible after compilation.")
-                
-    def get_record(self, variable=None, as_1D=False):
-        """
-        Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
-        The last dimension represents the time, the remaining dimensions are the population geometry.
-        
-        Parameter:
-            
-        * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
-        * *as_1D*: by default this functions returns the data as matrix (geometry shape, time). If as_1D set to True, the data will be returned as two-dimensional plot (neuron x time)
-        """
-        print 'TODO: not implemented yet'
-        
-        # _variable = []
-        # if variable == None:
-        #     _variable = self._recorded_variables
-        # elif isinstance(variable, str):
-        #     _variable.append(variable)
-        # elif isinstance(variable, list):
-        #     _variable = variable
-        # else:
-        #     print('Error: variable must be either a string or list of strings.')
-        
-        # data_dict = {}
-        
-        # for var in _variable:
-
-        #     if not var in var in self._recorded_variables.keys():
-        #         Global._print(var, 'is not a recordable variable of', self.proj.name)
-        #         data_dict[var] = { 'start': -1, 'stop': -1, 'data': None }
-        #         continue
-            
-        #     if self._recorded_variables[var].is_running:
-        #         self.pause_record(var)
-            
-        #     try:
-        #         if Global.config['verbose']:
-        #             Global._print('get record of '+var+' ('+self.proj.name+')')
-                    
-        #         data = getattr(self.cy_instance, '_get_recorded_'+var)()
-                
-        #         if as_1D:
-        #             #
-        #             # [ time, data(1D) ] => [ time, data(1D) ] 
-        #             mat1 = data.T
-    
-        #             data_dict[var] = { 
-        #                 'data': mat1,
-        #                 'start': self._recorded_variables[var].start_time,
-        #                 'stop': self._recorded_variables[var].stop_time
-        #             }
-        #         else:
-        #             print "Please use the as1D function."
-        #             return []
-        #             #
-        #             # [ time, data(1D) ] => [ time, data(geometry) ] 
-        #             mat1 = data.reshape((data.shape[0],)+self.geometry)
-    
-        #             data_dict[var] = { 
-        #                         #
-        #                         # [ time, data(geometry) ] => [  data(geometry), time ]                 
-        #                 'data': np.transpose(mat1, tuple( range(1,self.dimension+1)+[0]) ),
-        #                 'start': self._recorded_variables[var].start_time,
-        #                 'stop': self._recorded_variables[var].stop_time
-        #             }
-                                
-        #         self._recorded_variables[var].reset()
-        #     except:
-        #         print("Error: only possible after compilation.")
-
-        # if( len(_variable)==1 and variable!=None):
-        #     return data_dict[_variable[0]]
-        # else:
-        #     return data_dict          
-    
     def set(self, value):
         """
         Update dendrite variable/parameter.
@@ -309,20 +133,6 @@ class Dendrite(object):
         else:
             Global._error("Dendrite has no parameter/variable called", value)     
     
-    @property
-    def size(self):
-        """
-        Number of synapses.
-        """
-        if self.proj.cyInstance:
-            return self.proj.cyInstance._nb_synapses(self.post_rank)
-        return 0
-
-    def __len__(self):
-        """
-        Number of synapses.
-        """
-        return self.size
     
     # @property 
     # def learnable(self):
@@ -350,14 +160,10 @@ class Dendrite(object):
     #     self.cy_instance.learn_frequency = value
         
         
-    @property
-    def target(self):
-        """
-        Connection type id.
-        """
-        return self.proj.target
 
-
+    #########################
+    ### Structural plasticity
+    ######################### 
     def add_synapse(self, rank, value, delay=0):
         """
         Adds a synapse to the dendrite.
@@ -381,4 +187,176 @@ class Dendrite(object):
         """
         print 'TODO: not implemented yet'
         #self.cy_instance.remove_synapse(rank)
+
+    #########################
+    ### Recording
+    #########################   
+    def start_record(self, variable):
+        """
+        Start recording the given variables.
+        
+        Parameter:
+            
+            * *variable*: single variable name or list of variable names.        
+        """
+        _variable = []
+        
+        if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        for var in _variable:
+            
+            if not var in self.proj._recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.proj.name)
+                continue
+
+            # if not self.proj._recorded_variables[var].is_inited:
+            #     print('variable',var,'is not initilaized.')
+            #     continue
+            
+            try:
+                getattr(self.proj.cyInstance, '_start_record_'+var)(self.post_rank)
+    
+                if Global.config['verbose']:
+                    print('start record of', var, '(', self.proj.name, ')')
+                    
+                self.proj._recorded_variables[var].start()
+            except:
+                #TODO:
+                print self.proj.cyInstance
+                print '_start_record_'+var
+                print "Error (start_record): only possible after compilation."
+                pass
+
+    def pause_record(self, variable=None):
+        """
+        Pause in recording the defined variables.
+
+        Parameter:
+            
+        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
+        """
+        _variable = []
+        if variable == None:
+            _variable = self.proj._running_recorded_variables # TODO: what is it?
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')       
+        
+        for var in _variable:
+            
+            if not var in self.proj._recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.proj.name)
+                continue
+
+            if not self.proj._recorded_variables[var].is_running:
+                print('The recording of', var, 'was not running on population', self.proj.name)
+                continue
+            
+            try:
+                getattr(self.proj.cyInstance, '_stop_record_'+var)(self.post_rank)
+
+                if Global.config['verbose']:
+                    print('pause record of', var, '(', self.name, ')')
+                self.proj._recorded_variables[var].pause()
+            except:
+                print("Error (pause_record): only possible after compilation.")
+
+    def resume_record(self, variable):
+        """
+        Resume recording the previous defined variables.
+        
+        Parameter:
+            
+            * *variable*: single variable name or list of variable names.        
+        """
+        _variable = []
+        
+        if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        for var in _variable:
+            
+            if not var in var in self.proj._recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.proj.name)
+                continue
+            
+            if not self.proj._recorded_variables[var].is_running:
+                print('record of', var, 'is already running on population', self.proj.name)
+                continue
+            
+            try:
+                getattr(self.proj.cyInstance, '_start_record_'+var)(self.post_rank)
+                
+                if Global.config['verbose']:
+                    print('resume record of', var, '(' , self.proj.name, ')')
+
+                self.proj._recorded_variables[var].start()
+            except:
+                print("Error: only possible after compilation.")
+                
+    def get_record(self, variable=None):
+        """
+        Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
+        The first dimension is the neuron index, the last dimension represents the number of simulation steps.
+        
+        Parameter:
+            
+        * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
+        """        
+        _variable = []
+        if variable == None:
+            _variable = self.proj._recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        data_dict = {}
+        
+        for var in _variable:
+
+            if not var in var in self.proj._recorded_variables.keys():
+                Global._print(var, 'is not a recordable variable of', self.proj.name)
+                data_dict[var] = { 'start': -1, 'stop': -1, 'data': None }
+                continue
+            
+            if self.proj._recorded_variables[var].is_running:
+                self.pause_record(var)
+            
+            try:
+                if Global.config['verbose']:
+                    Global._print('get record of '+var+' ('+self.proj.name+')')
+                    
+                data = getattr(self.proj.cyInstance, '_get_recorded_'+var)(self.post_rank)
+                
+                data_dict[var] = { 
+                    'data': data.T,
+                    'start': self.proj._recorded_variables[var].start_time,
+                    'stop': self.proj._recorded_variables[var].stop_time
+                }
+                                
+                self.proj._recorded_variables[var].reset()
+            except:
+                print("Error: only possible after compilation.")
+
+        if( len(_variable)==1 and variable!=None):
+            return data_dict[_variable[0]]
+        else:
+            return data_dict          
+    
+
 

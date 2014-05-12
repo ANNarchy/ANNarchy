@@ -30,6 +30,7 @@ from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy.parser.Analyser import analyse_projection
 from ANNarchy.core.Dendrite import Dendrite
+from ANNarchy.core.Record import Record
 
 class Projection(object):
     """
@@ -121,6 +122,11 @@ class Projection(object):
         # Add the population to the global variable
         Global._projections.append(self)
         
+        # Allow recording of variables
+        self._recorded_variables = {}        
+        for var in self.variables:
+            self._recorded_variables[var] = Record(var)
+            
         # Finalize initialization
         self.initialized = False
         
@@ -180,7 +186,7 @@ class Projection(object):
         if rank in self._post_ranks:
             return Dendrite(self, rank)
         else:
-            Global._error("neuron of rank", str(rank),"has no synapse in this projection.")
+            Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
             return None
     
 
