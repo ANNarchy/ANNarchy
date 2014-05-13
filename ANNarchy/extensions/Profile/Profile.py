@@ -163,7 +163,7 @@ class Profile:
             data['local'][thread, trial] = self._average_local(name, begin, end)
             data['global'][thread, trial] = self._average_global(name, begin, end)
             
-    def analyse_data(self):
+    def analyse_data(self, error_bar = False):
         
         self._net_win = pg.GraphicsWindow(title="Speedup: network overall")
         # additional customizations        
@@ -232,12 +232,13 @@ class Profile:
             pop_mean_plot = tmp2.addPlot(title = "weighted sum", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of trials",)
-            err = pg.ErrorBarItem( x=thread_num, 
-                                   y=data['sum']._mean,
-                                   top=data['sum']._max, 
-                                   bottom=data['sum']._min, 
-                                   beam=0.5)
-            pop_mean_plot.addItem(err)
+            if error_bar:
+                err = pg.ErrorBarItem( x=thread_num, 
+                                       y=data['sum']._mean,
+                                       top=data['sum']._max, 
+                                       bottom=data['sum']._min, 
+                                       beam=0.5)
+                pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['sum']._mean, 
                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
@@ -263,12 +264,13 @@ class Profile:
             pop_mean_plot = tmp2.addPlot(title = "step", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of trials",)
-            err = pg.ErrorBarItem( x=thread_num, 
-                                   y=data['step']._mean, 
-                                   top=data['step']._max, 
-                                   bottom=data['step']._min, 
-                                   beam=0.5)
-            pop_mean_plot.addItem(err)
+            if error_bar:
+                err = pg.ErrorBarItem( x=thread_num, 
+                                       y=data['step']._mean, 
+                                       top=data['step']._max, 
+                                       bottom=data['step']._min, 
+                                       beam=0.5)
+                pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['step']._mean, 
                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
@@ -299,12 +301,13 @@ class Profile:
             pop_mean_plot = tmp2.addPlot(title = "global learn", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of trials",)
-            err = pg.ErrorBarItem( x=thread_num, 
-                                   y=data['global']._mean, 
-                                   top=data['global']._max, 
-                                   bottom=data['global']._min, 
-                                   beam=0.5)
-            pop_mean_plot.addItem(err)
+            if error_bar:
+                err = pg.ErrorBarItem( x=thread_num, 
+                                       y=data['global']._mean, 
+                                       top=data['global']._max, 
+                                       bottom=data['global']._min, 
+                                       beam=0.5)
+                pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['global']._mean, 
                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
@@ -330,12 +333,13 @@ class Profile:
             pop_mean_plot = tmp2.addPlot(title = "local learn", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of trials",)
-            err = pg.ErrorBarItem( x=thread_num, 
-                                   y=data['local']._mean, 
-                                   top=data['local']._max, 
-                                   bottom=data['local']._min, 
-                                   beam=0.5)
-            pop_mean_plot.addItem(err)
+            if error_bar:
+                err = pg.ErrorBarItem( x=thread_num, 
+                                       y=data['local']._mean, 
+                                       top=data['local']._max, 
+                                       bottom=data['local']._min, 
+                                       beam=0.5)
+                pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['local']._mean, 
                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
