@@ -31,7 +31,9 @@ import ANNarchy
 import ANNarchy.core.Global as Global
 from ANNarchy.parser.Analyser import Analyser, _extract_functions
 from ANNarchy.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
+from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator
+from ANNarchy.generator.DendriteGenerator import RateDendriteGenerator, SpikeDendriteGenerator
+  
 from templates import *
 
 # String containing the extra libs which can be added by extensions
@@ -249,9 +251,12 @@ class Generator(object):
                 if Global.config['paradigm'] == "openmp":
                     if desc['type'] == 'rate':
                         proj_generator = RateProjectionGenerator(name, desc)
+                        dend_generator = RateDendriteGenerator(name.replace('Projection','Dendrite'), desc)
                     elif desc['type'] == 'spike':
                         proj_generator = SpikeProjectionGenerator(name, desc)
+                        dend_generator = SpikeDendriteGenerator(name.replace('Projection','Dendrite'), desc)
                     proj_generator.generate(Global.config['verbose'])
+                    dend_generator.generate(Global.config['verbose'])
                 else:
                     if desc['type'] == 'rate':
                         proj_generator = RateProjectionGeneratorCUDA(name, desc)
