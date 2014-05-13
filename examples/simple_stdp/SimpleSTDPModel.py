@@ -86,14 +86,14 @@ record ( to_record )
 
 testAll2AllSpike.dendrite(0).start_record('Apre')
 testAll2AllSpike.dendrite(0).start_record('Apost')
-#testAll2AllSpike.dendrite(0).start_record('value')
+testAll2AllSpike.dendrite(0).start_record('value')
 
 simulate(1000)
 
 data = get_record( to_record )
 Apre = testAll2AllSpike.dendrite(0).get_record('Apre')
 Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
-#weight = testAll2AllSpike.dendrite(0).get_record('value')
+weight = testAll2AllSpike.dendrite(0).get_record('value')
 
 print Apost
 
