@@ -41,7 +41,7 @@ Oja = RateSynapse(
 
 # Creating the populations
 input_pop = Population(geometry=(8,8), neuron=InputNeuron)
-feature_pop = Population(geometry=(8, 4), neuron=LeakyNeuron)
+feature_pop = Population(geometry=(8,4), neuron=LeakyNeuron)
 
 # Creating the projections
 input_feature = Projection(
@@ -71,6 +71,7 @@ def set_input():
     for h in range(input_pop.geometry[0]):
         if np.random.random() < 1./ float(input_pop.geometry[0]):
             values[h, :] = 1.
+    
     # Set the input
     input_pop.baseline = values
     
@@ -122,10 +123,10 @@ class Viewer(object):
         # Refresh the GUI
         self.input_vis.setImage(input_pop.rate)
         self.feature_vis.setImage(feature_pop.rate)
-        self.rv_vis.setImage(input_feature._gather_data('value').transpose())
+        self.rv_vis.setImage(input_feature._gather_data('value'))
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
-        
+                
     def run(self):
         
         timer = QtCore.QTimer()

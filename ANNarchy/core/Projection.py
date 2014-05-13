@@ -900,8 +900,8 @@ class Projection(object):
                 dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [conn[2]], 'delay': [conn[3]] }
 
         return dendrites
-		
-    def _gather_data(self, variable):
+
+    def _gather_data_dendrite(self, variable, rank):
         """ 
         Gathers synaptic values for visualization
         
@@ -909,40 +909,58 @@ class Projection(object):
         
             * *variable*: name of variable
         """
-        blank_col=np.zeros((self.pre.geometry[1], 1))
-        blank_row=np.zeros((1,self.post.geometry[0]*self.pre.geometry[0]+self.post.geometry[0] +1))
-        
-        m_ges = None
-        i=0
-        
-        for y in xrange(self.post.geometry[1]):
-            m_row = None
+        if rank in self._post_ranks:
+            m = getattr(self.cyInstance, '_get_'+variable)(rank)
             
-            for x in xrange(self.post.geometry[0]):
-                m = getattr(self.cyInstance, '_get_'+variable)(x+self.post.geometry[0]*y)
+            if m.shape != self.pre.geometry:
+                new_m = np.zeros( self.pre.geometry )
                 
-                if m.shape != self.pre.geometry:
-                    new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
+                j = 0
+                for r in self.cyInstance._get_rank( rank ):
+                    new_m[self.pre.coordinates_from_rank(r)] = m[j]
+                    j+=1 
                     
-                    j = 0
-                    for r in self.cyInstance._get_rank(x+self.post.geometry[0]*y):
-                        new_m[r] = m[j]
-                        j+=1 
-                    m = new_m
+                m = new_m
                 
+            return m
+        else:
+            return np.zeros( self.pre.geometry )
+        		
+    def _gather_data(self, variable, in_post_geometry = True):
+        """ 
+        Gathers synaptic values for visualization
+        
+        *Paramater*:
+        
+            * *variable*: name of variable
+        """
+        rank = 0
+        m_ges = None
+        
+        if in_post_geometry:
+            x_size = self.post.geometry[1]
+            y_size = self.post.geometry[0]
+        else:
+            x_size = int( math.floor(math.sqrt(self.post.size)) )
+            y_size = int( math.ceil(math.sqrt(self.post.size)) )
+        
+        for y in xrange ( y_size ):
+            m_row = None
+             
+            for x in xrange ( x_size ):
+                m = self._gather_data_dendrite(variable, rank)
+                 
                 if m_row == None:
-                    m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
+                    m_row = m
                 else:
-                    m_row = np.ma.concatenate( [ m_row, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
-                m_row = np.ma.concatenate( [ m_row , blank_col], axis = 1 )
-                
-                i += 1
-            
+                    m_row = np.ma.concatenate( [ m_row, m ], axis = 1 )
+
+                rank += 1
+             
             if m_ges == None:
-                m_ges = np.ma.concatenate( [ blank_row, m_row ] )
+                m_ges = m_row
             else:
                 m_ges = np.ma.concatenate( [ m_ges, m_row ] )
-            m_ges = np.ma.concatenate( [ m_ges, blank_row ] )
         
         return m_ges
                 
