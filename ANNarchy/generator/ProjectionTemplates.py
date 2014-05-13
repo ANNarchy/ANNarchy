@@ -520,6 +520,7 @@ cdef class py%(name)s:
         self.cInstance.stopRecordValue(post_rank)
 
     cpdef np.ndarray _get_recorded_value(self, int post_rank):
+        cdef np.ndarray tmp
         tmp = np.array(self.cInstance.getRecordedValue(post_rank))
         self.cInstance.clearRecordedValue(post_rank)
         return tmp

@@ -256,6 +256,10 @@ void %(class)s::globalOperations()
 void %(class)s::record() 
 {
 %(record)s
+    for(unsigned int p=0; p< projections_.size(); p++)
+    {
+        projections_[p]->record();
+    }
 }
 
 %(single_global_ops)s
@@ -362,7 +366,6 @@ void %(class)s::globalOperations()
 void %(class)s::record() 
 {
 %(record)s
-    
     for(unsigned int p=0; p< projections_.size(); p++)
     {
         projections_[p]->record();

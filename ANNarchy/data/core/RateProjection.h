@@ -53,7 +53,7 @@ public:
 
 	bool isRateCoded() { return true; }
 
-	void record() {}
+	void record();
 
 	int nbDendrites() { return dendrites_.size();}
 

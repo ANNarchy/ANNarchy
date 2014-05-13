@@ -262,7 +262,8 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
                     cinit = float(param['init'])
                 constructor += """
     // %(name)s_ : local
-    %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s);    
+    %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s); 
+    record_%(name)s_ = false;  
 """ % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
 
             elif param['name'] in self.desc['global']: # global attribute
@@ -278,7 +279,12 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
     %(name)s_ = %(init)s;   
 """ % {'name' : param['name'], 'init': str(cinit)}   
 
-        constructor += '\n    // Time step dt_\n    dt_ = ' + str(Global.config['dt']) + ';\n'
+        constructor += """
+    record_value_ = false;
+
+    // Time step dt_
+    dt_ = %(dt)s;
+        """ % {'dt': str(Global.config['dt'])}
         return constructor 
         
     def generate_cwrappers(self):
@@ -346,12 +352,12 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
         """
         code = ""
         # Attributes
-        for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] in self.desc['local']: # local attribute
-                code += """
-    if(record_%(var)s_)
+        for param  in self.desc['local']: # local attribute
+            code += """
+    if(record_%(var)s_){
         recorded_%(var)s_.push_back(%(var)s_);
-""" % { 'var': param['name'] }
+    }
+""" % { 'var': param }
 
         return code
   
@@ -543,7 +549,8 @@ class RateProjectionGenerator(ProjectionGenerator):
         rem_synapse = self.generate_rem_synapse()
         rem_all_synapse = self.generate_rem_all_synapse()
         
-        record = ""
+        # recording
+        record = self.generate_record()
         
         # Generate the code
         template = DendTemplates.rate_dendrite_body
@@ -731,7 +738,7 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
         rem_synapse = self.generate_rem_synapse()
         rem_all_synapse = self.generate_rem_all_synapse()
 
-        record = ""
+        record = self.generate_record()
         
         # Generate the code
         template = Templates.rate_projection_body

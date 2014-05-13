@@ -137,3 +137,12 @@ void RateProjection::initValues(int postNeuronRank)
 	if (dendrites_[postNeuronRank] != NULL)
 		dendrites_[postNeuronRank]->initValues();
 }
+
+void RateProjection::record(){
+
+	for ( int n = 0; n < nbDendrites_; n++ )
+	{
+		dendrites_[n]->record();
+	}
+}
+

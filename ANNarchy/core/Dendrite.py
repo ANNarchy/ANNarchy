@@ -23,6 +23,8 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.Neuron import RateNeuron
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Record import Record
+
 import numpy as np
 import traceback
 
@@ -210,24 +212,27 @@ class Dendrite(object):
         
         for var in _variable:
             
-            if not var in self.proj._recorded_variables.keys():
+            if not var in self.proj._recordable_variables:
                 print(var, 'is not a recordable variable of', self.proj.name)
                 continue
 
+            if not self.post_rank in self.proj._recorded_variables.keys(): # dendrite not recorded yet
+                self.proj._recorded_variables[self.post_rank] = {var: Record(var)}
+            elif var in self.proj._recorded_variables[self.post_rank].keys(): 
+                self.proj._recorded_variables[self.post_rank] = {var: Record(var)}
+            self.proj._recorded_variables[self.post_rank][var].start()
+
             # if not self.proj._recorded_variables[var].is_inited:
-            #     print('variable',var,'is not initilaized.')
+            #     print('variable',var,'is not initialized.')
             #     continue
             
             try:
                 getattr(self.proj.cyInstance, '_start_record_'+var)(self.post_rank)
     
                 if Global.config['verbose']:
-                    print('start record of', var, '(', self.proj.name, ')')
+                    print('start recording of', var, '(', self.proj.name, ')')
                     
-                self.proj._recorded_variables[var].start()
             except:
-                #TODO:
-                print self.proj.cyInstance
                 print '_start_record_'+var
                 print "Error (start_record): only possible after compilation."
                 pass
@@ -242,7 +247,7 @@ class Dendrite(object):
         """
         _variable = []
         if variable == None:
-            _variable = self.proj._running_recorded_variables # TODO: what is it?
+            _variable = self.proj._recorded_variables[self.post_rank].keys() # TODO: what is it?
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -252,12 +257,14 @@ class Dendrite(object):
         
         for var in _variable:
             
-            if not var in self.proj._recorded_variables.keys():
+            if not var in self.proj._recordable_variables:
                 print(var, 'is not a recordable variable of', self.proj.name)
                 continue
 
-            if not self.proj._recorded_variables[var].is_running:
-                print('The recording of', var, 'was not running on population', self.proj.name)
+            if not self.post_rank in self.proj._recorded_variables.keys() or \
+               not var in self.proj._recorded_variables[self.post_rank].keys() or \
+               not self.proj._recorded_variables[self.post_rank][var].is_running :
+                print('The recording of', var, 'was not running on projection', self.proj.name)
                 continue
             
             try:
@@ -265,7 +272,7 @@ class Dendrite(object):
 
                 if Global.config['verbose']:
                     print('pause record of', var, '(', self.name, ')')
-                self.proj._recorded_variables[var].pause()
+                self.proj._recorded_variables[self.post_rank][var].pause()
             except:
                 print("Error (pause_record): only possible after compilation.")
 
@@ -288,12 +295,18 @@ class Dendrite(object):
         
         for var in _variable:
             
-            if not var in var in self.proj._recorded_variables.keys():
+            if not var in var in self.proj._recordable_variables:
                 print(var, 'is not a recordable variable of', self.proj.name)
                 continue
             
-            if not self.proj._recorded_variables[var].is_running:
-                print('record of', var, 'is already running on population', self.proj.name)
+            if not self.post_rank in self.proj._recorded_variables.keys() or \
+               not var in self.proj._recorded_variables[self.post_rank].keys() :
+                print('The recording of', var, 'was not running on projection', self.proj.name)
+                continue
+
+
+            if not self.proj._recorded_variables[self.post_rank][var].is_running:
+                print('Recording of', var, 'is already running on projection', self.proj.name)
                 continue
             
             try:
@@ -302,7 +315,7 @@ class Dendrite(object):
                 if Global.config['verbose']:
                     print('resume record of', var, '(' , self.proj.name, ')')
 
-                self.proj._recorded_variables[var].start()
+                self.proj._recorded_variables[self.post_rank][var].start()
             except:
                 print("Error: only possible after compilation.")
                 
@@ -317,7 +330,7 @@ class Dendrite(object):
         """        
         _variable = []
         if variable == None:
-            _variable = self.proj._recorded_variables
+            _variable = self.proj._recorded_variables[self.post_rank].keys()
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -329,12 +342,17 @@ class Dendrite(object):
         
         for var in _variable:
 
-            if not var in var in self.proj._recorded_variables.keys():
+            if not var in self.proj._recordable_variables:
                 Global._print(var, 'is not a recordable variable of', self.proj.name)
                 data_dict[var] = { 'start': -1, 'stop': -1, 'data': None }
                 continue
             
-            if self.proj._recorded_variables[var].is_running:
+            if not self.post_rank in self.proj._recorded_variables.keys() or \
+               not var in self.proj._recorded_variables[self.post_rank].keys() :
+                print('The recording of', var, 'was not running on projection', self.proj.name)
+                continue
+
+            if self.proj._recorded_variables[self.post_rank][var].is_running:
                 self.pause_record(var)
             
             try:
@@ -345,11 +363,11 @@ class Dendrite(object):
                 
                 data_dict[var] = { 
                     'data': data.T,
-                    'start': self.proj._recorded_variables[var].start_time,
-                    'stop': self.proj._recorded_variables[var].stop_time
+                    'start': self.proj._recorded_variables[self.post_rank][var].start_time,
+                    'stop': self.proj._recorded_variables[self.post_rank][var].stop_time
                 }
                                 
-                self.proj._recorded_variables[var].reset()
+                self.proj._recorded_variables[self.post_rank][var].reset()
             except:
                 print("Error: only possible after compilation.")
 
