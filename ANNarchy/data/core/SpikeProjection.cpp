@@ -119,3 +119,7 @@ void SpikeProjection::initValues(int postNeuronRank)
 	if (dendrites_[postNeuronRank] != NULL)
 		dendrites_[postNeuronRank]->initValues();
 }
+
+int SpikeProjection::nbSynapses(int post_rank) {
+	return dendrites_[post_rank]->getSynapseCount();
+}

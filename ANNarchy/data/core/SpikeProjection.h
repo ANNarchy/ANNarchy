@@ -51,6 +51,10 @@ public:
 
 	void record();
 
+	int nbDendrites() { return dendrites_.size();}
+
+	int nbSynapses(int post_rank);
+
 protected:
 	int nbDendrites_;
 
