@@ -95,7 +95,6 @@ Apre = testAll2AllSpike.dendrite(0).get_record('Apre')
 Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
 weight = testAll2AllSpike.dendrite(0).get_record('value')
 
-print Apost
 
 close('all')
 
@@ -122,6 +121,7 @@ close('all')
 # to correctly identify the data we need to take this in mind
 pre_ranks = testAll2AllSpike.dendrite(0).rank
 neur_col = ['b','g','r']
+
 #
 # plot post neurons
 for i in range(Middle.size):
@@ -176,29 +176,29 @@ for i in range(Middle.size):
 for i in range(Middle.size):
     fig = figure()
     fig.suptitle(Middle.name+', neuron '+str(i)+' (conductance)')
-     
+      
     ax = subplot(511)
-     
+      
     ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
     ax.legend(loc=2)
-
+ 
     ax = subplot(512)
-     
+      
     ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
     ax.legend(loc=2)
-
+ 
     ax = subplot(513)
-     
+      
     ax.plot( data['Population0']['v']['data'][0,:], label = "membrane potential (Pop0, n="+str(pre_ranks[0])+")", color='b')
     ax.legend(loc=2)
-
+ 
     ax = subplot(514)
-     
+      
     ax.plot( data['Population0']['v']['data'][1,:], label = "membrane potential (Pop0, n="+str(pre_ranks[1])+")", color='g')
     ax.legend(loc=2)
-
+ 
     ax = subplot(515)
-     
+      
     ax.plot( data['Population0']['v']['data'][2,:], label = "membrane potential (Pop0, n="+str(pre_ranks[2])+")", color='r')
     ax.legend(loc=2)
     
