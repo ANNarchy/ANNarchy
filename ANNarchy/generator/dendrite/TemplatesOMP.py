@@ -6,7 +6,7 @@
 #
 # * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * value_[i];) 
 #
-psp_code_body = \
+psp_code_body_omp = \
 """
     sum_ =0.0;
     

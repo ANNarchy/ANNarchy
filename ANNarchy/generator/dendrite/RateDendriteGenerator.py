@@ -27,11 +27,14 @@ from ANNarchy.core.Random import *
 from DendriteGenerator import DendriteGenerator
 from Templates import *
 from TemplatesOMP import *
+from TemplatesCUDA import *
 
 class RateDendriteGenerator(DendriteGenerator):
     """ Class for generating C++ code from a rate dendrite description. """
-    def __init__(self, name, desc):
+    def __init__(self, name, desc, paradigm):
         DendriteGenerator.__init__(self, name, desc)
+        
+        self.paradigm = paradigm
             
     def generate_header(self):
         " Generates the C++ header file for dendrite class."        
@@ -100,13 +103,19 @@ class RateDendriteGenerator(DendriteGenerator):
             psp_code = self.desc['psp']['cpp']
         else:
             psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
+
         # Generate the code
-        template = psp_code_body
         dictionary = {
             'psp': psp_code, 
             'psp_const_delay': psp_code,
             'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
         }    
+
+        if self.paradigm == "openmp":
+            template = psp_code_body_omp
+        else:
+            template = psp_code_body_cuda
+            
         return template % dictionary
     
     def generate_globallearn(self):

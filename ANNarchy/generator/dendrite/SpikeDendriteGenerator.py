@@ -30,8 +30,10 @@ from TemplatesOMP import *
 
 class SpikeDendriteGenerator(DendriteGenerator):
     """ Class for generating dendrite C++ code from a spike synapse description. """
-    def __init__(self, name, desc):
+    def __init__(self, name, desc, paradigm):
         DendriteGenerator.__init__(self, name, desc)
+        
+        self.paradigm = paradigm
             
     def generate_header(self):
         " Generates the C++ header file for dendrite class."        

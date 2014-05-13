@@ -6,7 +6,7 @@
 #
 # * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * value_[i];) 
 #
-psp_code_body = \
+psp_code_body_cuda = \
 """
     sum_ =0.0;
     
@@ -83,7 +83,7 @@ psp_code_body = \
 #
 # * eq: equations for the update 
 #
-pre_event_body="""
+pre_event_body_cuda = """
 #ifdef _DEBUG
     std::cout << "Emitted a pre-synaptic event: "<< rank << " to " << post_neuron_rank_  << std::endl;
     std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
@@ -97,7 +97,7 @@ pre_event_body="""
 #
 # * eq: equations for the update
 #
-post_event_body="""
+post_event_body_cuda = """
 #ifdef _DEBUG
     std::cout << "Emitted a post-synaptic event" << std::endl;
 #endif
