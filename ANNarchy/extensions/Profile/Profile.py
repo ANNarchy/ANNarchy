@@ -231,7 +231,7 @@ class Profile:
             # mean, min, max
             pop_mean_plot = tmp2.addPlot(title = "weighted sum", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
-            pop_mean_plot.setLabel('bottom', "number of trials",)
+            pop_mean_plot.setLabel('bottom', "number of cores",)
             if error_bar:
                 err = pg.ErrorBarItem( x=thread_num, 
                                        y=data['sum']._mean,
@@ -263,7 +263,7 @@ class Profile:
             # mean, min, max
             pop_mean_plot = tmp2.addPlot(title = "step", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
-            pop_mean_plot.setLabel('bottom', "number of trials",)
+            pop_mean_plot.setLabel('bottom', "number of cores",)
             if error_bar:
                 err = pg.ErrorBarItem( x=thread_num, 
                                        y=data['step']._mean, 
@@ -300,7 +300,7 @@ class Profile:
             # mean, min, max
             pop_mean_plot = tmp2.addPlot(title = "global learn", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
-            pop_mean_plot.setLabel('bottom', "number of trials",)
+            pop_mean_plot.setLabel('bottom', "number of cores",)
             if error_bar:
                 err = pg.ErrorBarItem( x=thread_num, 
                                        y=data['global']._mean, 
@@ -332,7 +332,7 @@ class Profile:
             # mean, min, max
             pop_mean_plot = tmp2.addPlot(title = "local learn", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
-            pop_mean_plot.setLabel('bottom', "number of trials",)
+            pop_mean_plot.setLabel('bottom', "number of cores",)
             if error_bar:
                 err = pg.ErrorBarItem( x=thread_num, 
                                        y=data['local']._mean, 
