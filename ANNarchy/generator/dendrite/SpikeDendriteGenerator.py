@@ -45,7 +45,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         functions = self.generate_functions()
          
         # Generate the code
-        template = Templates.spike_dendrite_header
+        template = spike_dendrite_header
         dictionary = { 
             'class': self.name.replace('Projection', 'Dendrite'), 
             'pre_name': self.desc['pre_class'],
@@ -78,7 +78,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         record = ""
          
         # Generate the code
-        template = Templates.spike_dendrite_body
+        template = spike_dendrite_body
         dictionary = {         
             'class': self.name.replace('Projection','Dendrite'),
             'add_include': self.generate_add_proj_include(),
@@ -110,7 +110,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         pyfunctions = self.generate_pyfunctions()
         # Generate the code
  
-        template = Templates.spike_projection_pyx
+        template = spike_projection_pyx
         dictionary = { 
             'name': self.name, 
             'cFunction': cwrappers, 
@@ -160,12 +160,11 @@ class SpikeDendriteGenerator(DendriteGenerator):
     %(eq)s
 """ % { 'eq' : tmp['eq'] }
          
-        template = OMPTemplates.pre_event_body
         dictionary = {
             'eq' : code,
             'target': self.desc['target']
         }
-        return template % dictionary
+        return pre_event_body % dictionary
  
     def generate_post_event(self):
         """ """
@@ -178,12 +177,11 @@ class SpikeDendriteGenerator(DendriteGenerator):
     %(eq)s
 """ % { 'eq' : tmp['eq'] }
          
-        template = OMPTemplates.post_event_body
         dictionary = {
             'eq' : code,
             'target': self.desc['target']
         }
-        return template % dictionary
+        return post_event_body % dictionary
      
     def generate_globallearn(self):
         return ""
