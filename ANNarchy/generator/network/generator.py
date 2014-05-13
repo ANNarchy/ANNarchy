@@ -10,3 +10,14 @@ py_extension = """include "Network.pyx"
 %(profile)s
 include "Connector.pyx"
 """
+
+core = [
+
+]
+rate_code = [
+'RateDendrite.cpp','RateDendrite.h',
+'RateProjection.cpp','RateProjection.h',
+]
+
+spike_code = """
+"""

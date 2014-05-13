@@ -48,11 +48,8 @@ except:
 # cython
 try:
     import cython
-    if parse_version(cython.__version__) > parse_version('0.19.0'):
-        print('Checking for cython... OK')
-    else:
-        print('Checking for cython... NO')
-        print 'Cython', cython.__version__, 'is not sufficient, expected >= 0.19.0' 
+    print('Checking for cython... OK')
+
 except:
     print('Checking for cython... NO')
     print('Error : Python package "cython" is required.')

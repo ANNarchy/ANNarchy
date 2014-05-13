@@ -29,12 +29,14 @@ import time
 # ANNarchy core informations
 import ANNarchy
 import ANNarchy.core.Global as Global
+
 from ANNarchy.parser.Analyser import Analyser, _extract_functions
-from ANNarchy.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, SpikeProjectionGenerator
-from ANNarchy.generator.DendriteGenerator import RateDendriteGenerator, SpikeDendriteGenerator
+
+from ANNarchy.generator.population import RatePopulationGenerator, SpikePopulationGenerator  
+from ANNarchy.generator.projection import RateProjectionGenerator, SpikeProjectionGenerator
+from ANNarchy.generator.dendrite import RateDendriteGenerator, SpikeDendriteGenerator
   
-from templates import *
+from network import *
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']

@@ -195,7 +195,8 @@ class Projection(object):
         
         If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
         """
-        # TODO: coordinates 
+        if len(args) == 1:
+            return self.dendrite(args[0])
         return self.dendrite(args)
         
     def __iter__(self):

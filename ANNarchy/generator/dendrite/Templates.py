@@ -226,6 +226,8 @@ int %(class)s::removeAllSynapses()
 
 void %(class)s::initValues() 
 {
+    // Recording of weights disabled by default
+    record_value_ = false;
 %(init)s
 }
 
@@ -372,7 +374,7 @@ local_variable_access = \
     %(type)s getSingle%(Name)s(int rank) { return this->%(name)s_[rank]; }
     void setSingle%(Name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
 
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
+    std::vector< std::vector< %(type)s > > getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
     void startRecord%(Name)s() { this->record_%(name)s_ = true; }
     void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
     void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
