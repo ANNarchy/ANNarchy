@@ -118,6 +118,10 @@ Dendrite *RateProjection::getDendrite(int postNeuronRank)
 	return dendrites_[postNeuronRank];
 }
 
+int RateProjection::nbSynapses(int post_rank) { 
+	return dendrites_[post_rank]->getSynapseCount();
+}
+
 void RateProjection::removeDendrite(int postNeuronRank, class Population *pre)
 {
 

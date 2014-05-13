@@ -30,6 +30,7 @@ from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy.parser.Analyser import analyse_projection
 from ANNarchy.core.Dendrite import Dendrite
+from ANNarchy.core.Record import Record
 
 class Projection(object):
     """
@@ -94,7 +95,6 @@ class Projection(object):
             
         self._synapses = {}
         self._connector = None
-        self._dendrites = []
         self._post_ranks = []
 
         # Get a list of parameters and variables
@@ -122,6 +122,11 @@ class Projection(object):
         # Add the population to the global variable
         Global._projections.append(self)
         
+        # Allow recording of variables
+        self._recorded_variables = {}        
+        for var in self.variables:
+            self._recorded_variables[var] = Record(var)
+            
         # Finalize initialization
         self.initialized = False
         
@@ -134,43 +139,30 @@ class Projection(object):
             3: cy_functions.comp_dist3D
         }
 
-        self._cython_instance = None
+        self.cyInstance = None
 
+    ################################
+    ## Dendrite access
+    ################################
     @property
     def size(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
-        return len(self._dendrites)
+        if self.cyInstance:
+            return self.cyInstance._nb_dendrites
+        else:
+            return 0
         
     def __len__(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
-        return len(self._dendrites)
-    
-    def enable_learning(self, params={ 'freq': 1, 'offset': 0} ):
-        """
-        Enable the learning for all attached dendrites
-        
-        Parameter:
-        
-            * *params*: optional parameter to configure the learning
-        """
-        for dendrite in self._dendrites:
-            dendrite.learnable = True
-            #dendrite.learn_frequency = params['freq']
-            #dendrite.learn_offset = params['offset']
-            
-    def disable_learning(self):
-        """
-        Disable the learning for all attached dendrites
-        """
-        for dendrite in self._dendrites:
-            dendrite.learnable = False
+        return self.size
 
     @property
     def dendrites(self):
         """
-        List of dendrites corresponding to this projection.
+        Iteratively returns a list of dendrites corresponding to this projection.
         """
-        return self._dendrites
+        for n in self._post_ranks:
+            yield Dendrite(self, n)
         
     @property
     def post_ranks(self):
@@ -192,11 +184,271 @@ class Projection(object):
         else:
             rank = self.post.rank_from_coordinates(pos)
         if rank in self._post_ranks:
-            return self._dendrites[rank]
+            return Dendrite(self, rank)
         else:
-            Global._error("neuron of rank", str(rank),"has no synapse in this projection.")
+            Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
             return None
     
+
+    # Iterators
+    def __getitem__(self, *args, **kwds):
+        """ Returns dendrite of the given position in the postsynaptic population. 
+        
+        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        """
+        # TODO: coordinates 
+        return self.dendrite(args)
+        
+    def __iter__(self):
+        " Returns iteratively each dendrite in the population in ascending rank order."
+        for n in self._post_ranks:
+            yield Dendrite(self, n)
+
+    ################################
+    ## Access to attributes
+    ################################
+
+    def get(self, name):
+        """ Returns a list of parameters/variables values for each dendrite in the projection.
+        
+        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.        
+        """       
+        return self.__getattr__(name)
+            
+    def set(self, value):
+        """ Sets the parameters/variables values for each dendrite in the projection.
+        
+        For parameters, you can provide:
+        
+            * a single value, which will be the same for all dendrites.
+            
+            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
+            
+        For variables, you can provide:
+        
+            * a single value, which will be the same for all synapses of all dendrites.
+            
+            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will have the same value.
+            
+            * a list of lists or 2D numpy array representing for each connected postsynaptic neuron, the value to be taken by each synapse. The first dimension must be self.size, while the second must correspond to the number of synapses in each particular dendrite.
+            
+        .. hint::
+        
+            In the latter case, it would be less error-prone to iterate over all dendrites in the projection:
+            
+            .. code-block:: python
+            
+                for dendrite in proj.dendrites:
+                    dendrite.set( ... )    
+        
+        """
+        
+        for name, val in value:
+            self.__setattr__(name, val)
+
+    def _init_attributes(self):
+        """ 
+        Method used after compilation to initialize the attributes.
+        """
+        self.initialized = True  
+        for attr in self.attributes:
+            if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
+                if isinstance(self.init[attr], list) or isinstance(self.init[attr], np.ndarray):
+                    self._set_cython_attribute(attr, self.init[attr])
+
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+        if not hasattr(self, 'initialized'): # Before the end of the constructor
+            return object.__getattribute__(self, name)
+        elif name == 'attributes':
+            return object.__getattribute__(self, 'attributes')
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                if not self.initialized:
+                    if name in self.description['local']:
+                        return self.init[name] # Dendrites are not initialized
+                    else:
+                        return self.init[name]
+                else:
+                    return self._get_cython_attribute( name )
+            else:
+                return object.__getattribute__(self, name)
+        return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if not hasattr(self, 'initialized'): # Before the end of the constructor
+            object.__setattr__(self, name, value)
+        elif name == 'attributes':
+            object.__setattr__(self, name, value)
+        elif hasattr(self, 'attributes'):
+            if name in self.attributes:
+                if not self.initialized:
+                    self.init[name] = value
+                else:
+                    self._set_cython_attribute(name, value)      
+            else:
+                object.__setattr__(self, name, value)     
+        else:
+            object.__setattr__(self, name, value)
+            
+    def _get_cython_attribute(self, attribute):
+        """
+        Returns the value of the given attribute for all neurons in the population, 
+        as a NumPy array having the same geometry as the population if it is local.
+        
+        Parameter:
+        
+        * *attribute*: should be a string representing the variables's name.
+        
+        """
+        return np.array([getattr(self.cyInstance, '_get_'+attribute)(i) for i in self._post_ranks])
+        
+    def _set_cython_attribute(self, attribute, value):
+        """
+        Sets the value of the given attribute for all neurons in the population, 
+        as a NumPy array having the same geometry as the population if it is local.
+        
+        Parameter:
+        
+        * *attribute*: should be a string representing the variables's name.
+        
+        """
+        if isinstance(value, np.ndarray):
+            if value.dim == 1:
+                if value.shape == (self.size, ):
+                    for n in self._post_ranks:
+                        getattr(self.cyInstance, '_set_'+attribute)(n, value)
+                else:
+                    Global._error('The projection has '+self.size+ ' dendrites.')
+        elif isinstance(value, list):
+            if len(value) == self.size:
+                for n in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(n, value)
+            else:
+                Global._error('The projection has '+self.size+ ' dendrites.')
+        else: # a single value
+            if attribute in self.description['local']:
+                for i in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(i, value*np.ones(self.size))
+            else:
+                for i in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(i, value)
+
+ 
+    ################################
+    ## Variable flags
+    ################################           
+    def set_variable_flags(self, name, value):
+        """ Sets the flags of a variable for the projection.
+        
+        If the variable ``rate`` is defined in the Synapse description through:
+        
+            value = pre.rate * post.rate : max=1.0  
+            
+        one can change its maximum value with:
+        
+            proj.set_variable_flags('value', {'max': 2.0})
+            
+        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
+        
+        For positional flags (postsynaptic, implicit), the value in the dictionary must be set to the empty string '':
+        
+            proj.set_variable_flags('value', {'implicit': ''})
+        
+        A None value in the dictionary deletes the corresponding flag:
+        
+            proj.set_variable_flags('value', {'max': None})
+            
+        """
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The projection '+self.name+' has no variable called ' + name)
+            return
+            
+        for key, val in value.iteritems():
+            if val == '': # a flag
+                try:
+                    self.description['variables'][rk_var]['flags'].index(key)
+                except: # the flag does not exist yet, we can add it
+                    self.description['variables'][rk_var]['flags'].append(key)
+            elif val == None: # delete the flag
+                try:
+                    self.description['variables'][rk_var]['flags'].remove(key)
+                except: # the flag did not exist, check if it is a bound
+                    if has_key(self.description['variables'][rk_var]['bounds'], key):
+                        self.description['variables'][rk_var]['bounds'].pop(key)
+            else: # new value for init, min, max...
+                if key == 'init':
+                    self.description['variables'][rk_var]['init'] = val 
+                    self.init[name] = val              
+                else:
+                    self.description['variables'][rk_var]['bounds'][key] = val
+                
+       
+            
+    def set_variable_equation(self, name, equation):
+        """ Changes the equation of a variable for the projection.
+        
+        If the variable ``value`` is defined in the Synapse description through:
+        
+            eta * dvalue/dt = pre.rate * post.rate 
+            
+        one can change the equation with:
+        
+            proj.set_variable_equation('value', 'eta * dvalue/dt = pre.rate * (post.rate - 0.1) ')
+            
+        Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
+        
+        .. warning::
+            
+            This method should be used with great care, it is advised to define another Synapse object instead. 
+            
+        """         
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The projection '+self.name+' has no variable called ' + name)
+            return               
+        self.description['variables'][rk_var]['eq'] = equation    
+            
+            
+    def _find_variable_index(self, name):
+        " Returns the index of the variable name in self.description['variables']"
+        for idx in range(len(self.description['variables'])):
+            if self.description['variables'][idx]['name'] == name:
+                return idx
+        return -1
+
+    ################################
+    ## Learning flags
+    ################################
+    def enable_learning(self, params={ 'freq': 1, 'offset': 0} ):
+        """
+        Enable the learning for all attached dendrites
+        
+        Parameter:
+        
+            * *params*: optional parameter to configure the learning
+        """
+        print 'TODO: not implemented'
+        #for dendrite in self._dendrites:
+            #dendrite.learnable = True
+            #dendrite.learn_frequency = params['freq']
+            #dendrite.learn_offset = params['offset']
+            
+    def disable_learning(self):
+        """
+        Disable the learning for all attached dendrites
+        """
+        print 'TODO: not implemented'
+        # for dendrite in self._dendrites:
+        #     dendrite.learnable = False
+
+
+    
+    ################################
+    ## Connector methods
+    ################################
     def connect_one_to_one(self, weights=1.0, delays=0.0):
         """
         Establish one to one connections within the two projections.
@@ -377,7 +629,7 @@ class Projection(object):
 
         return self
        
-    def connect_fixed_propability(self, propability, weights, delays=0.0, allow_self_connections=False):
+    def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
         """ fixed_probability projection between two populations. 
     
         Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided.
@@ -413,7 +665,7 @@ class Projection(object):
                 if (pre_rank == post_rank) and not allow_self_connections:
                     continue
 
-                if np.random.random() < propability:
+                if np.random.random() < probability:
                     self._synapses[(pre_rank, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
   
         return self
@@ -578,63 +830,35 @@ class Projection(object):
                                  str(next(delay_iter))+'\n'
                                  )
       
-    def get(self, name):
-        """ Returns a list of parameters/variables values for each dendrite in the projection.
-        
-        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.        
-        """       
-        return self.__getattr__(name)
-            
-    def set(self, value):
-        """ Sets the parameters/variables values for each dendrite in the projection.
-        
-        For parameters, you can provide:
-        
-            * a single value, which will be the same for all dendrites.
-            
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
-            
-        For variables, you can provide:
-        
-            * a single value, which will be the same for all synapses of all dendrites.
-            
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will have the same value.
-            
-            * a list of lists or 2D numpy array representing for each connected postsynaptic neuron, the value to be taken by each synapse. The first dimension must be self.size, while the second must correspond to the number of synapses in each particular dendrite.
-            
-        .. hint::
-        
-            In the latter case, it would be less error-prone to iterate over all dendrites in the projection:
-            
-            .. code-block:: python
-            
-                for dendrite in proj.dendrites:
-                    dendrite.set( ... )    
-        
-        """
-        
-        for name, val in value:
-            self.__setattr__(name, val)
 
     def _connect(self):
         """
-        build up dendrites either from list or dictionary
+        Builds up dendrites either from list or dictionary. Called by instantiate().
         """
 
         cython_module = __import__('ANNarchyCython') 
         proj = getattr(cython_module, 'py'+self.name)
-        self._cython_instance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
+        self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
         
+        # Sort the dendrites to be created based on _synapses
         if ( isinstance(self._synapses, list) ):
         	dendrites = self._build_pattern_from_list()
         else:
         	dendrites = self._build_pattern_from_dict()
 
-        self._cython_instance.createFromDict(dendrites)
+        # Store the keys of dendrites in _post_ranks
+        self._post_ranks = dendrites.keys()
+
+        # Create the dendrites in Cython
+        self.cyInstance.createFromDict(dendrites)
+
+        # Delete the _synapses array, not needed anymore
+        del self._synapses
+        self._synapses = None
 
     def _comp_dist(self, pre, post):
         """
-        Compute euklidean distance between two coordinates. 
+        Compute euclidean distance between two coordinates. 
         """
         res = 0.0
 
@@ -695,13 +919,13 @@ class Projection(object):
             m_row = None
             
             for x in xrange(self.post.geometry[0]):
-                m = getattr(self._cython_instance, '_get_'+variable)(x+self.post.geometry[0]*y)
+                m = getattr(self.cyInstance, '_get_'+variable)(x+self.post.geometry[0]*y)
                 
                 if m.shape != self.pre.geometry:
                     new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
                     
                     j = 0
-                    for r in self._cython_instance._get_rank(x+self.post.geometry[0]*y):
+                    for r in self.cyInstance._get_rank(x+self.post.geometry[0]*y):
                         new_m[r] = m[j]
                         j+=1 
                     m = new_m
@@ -722,186 +946,4 @@ class Projection(object):
         
         return m_ges
                 
-    def _init_attributes(self):
-        """ 
-        Method used after compilation to initialize the attributes.
-        """
-        self.initialized = True  
-        for attr in self.attributes:
-            if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
-                if isinstance(self.init[attr], list) or isinstance(self.init[attr], np.ndarray):
-                    self._set_cython_attribute(attr, self.init[attr])
 
-    def __getattr__(self, name):
-        " Method called when accessing an attribute."
-        if not hasattr(self, 'initialized'): # Before the end of the constructor
-            return object.__getattribute__(self, name)
-        elif name == 'attributes':
-            return object.__getattribute__(self, 'attributes')
-        elif hasattr(self, 'attributes'):
-            if name in self.attributes:
-                if not self.initialized:
-                    if name in self.description['local']:
-                        return self.init[name] # Dendrites are not initialized
-                    else:
-                        return self.init[name]
-                else:
-                    return self._get_cython_attribute( name )
-            else:
-                return object.__getattribute__(self, name)
-        return object.__getattribute__(self, name)
-        
-    def __setattr__(self, name, value):
-        " Method called when setting an attribute."
-        if not hasattr(self, 'initialized'): # Before the end of the constructor
-            object.__setattr__(self, name, value)
-        elif name == 'attributes':
-            object.__setattr__(self, name, value)
-        elif hasattr(self, 'attributes'):
-            if name in self.attributes:
-                if not self.initialized:
-                    self.init[name] = value
-                else:
-                    self._set_cython_attribute(name, value)      
-            else:
-                object.__setattr__(self, name, value)     
-        else:
-            object.__setattr__(self, name, value)
-            
-    def _get_cython_attribute(self, attribute):
-        """
-        Returns the value of the given attribute for all neurons in the population, 
-        as a NumPy array having the same geometry as the population if it is local.
-        
-        Parameter:
-        
-        * *attribute*: should be a string representing the variables's name.
-        
-        """
-        return np.array([getattr(self.cy_instance, '_get_'+attribute)(i) for i in xrange(self.size)])
-        
-    def _set_cython_attribute(self, attribute, value):
-        """
-        Sets the value of the given attribute for all neurons in the population, 
-        as a NumPy array having the same geometry as the population if it is local.
-        
-        Parameter:
-        
-        * *attribute*: should be a string representing the variables's name.
-        
-        """
-        if isinstance(value, np.ndarray):
-            if value.dim == 1:
-                if value.shape == (self.size, ):
-                    for n in range(self.size):
-                        getattr(self.cy_instance, '_set_'+attribute)(n, value)
-                else:
-                    Global._error('The projection has '+self.size+ ' dendrites.')
-        elif isinstance(value, list):
-            if len(value) == self.size:
-                for n in range(self.size):
-                    getattr(self.cy_instance, '_set_'+attribute)(n, value)
-            else:
-                Global._error('The projection has '+self.size+ ' dendrites.')
-        else: # a single value
-            if attribute in self.description['local']:
-                for i in xrange(self.size):
-                    getattr(self.cy_instance, '_set_'+attribute)(i, value*np.ones(self.size))
-            else:
-                for i in xrange(self.size):
-                    getattr(self.cy_instance, '_set_'+attribute)(i, value)
-
-            
-           
-    # Iterators
-    def __getitem__(self, *args, **kwds):
-        """ Returns dendrite of the given position in the postsynaptic population. 
-        
-        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
-        """
-        return self.dendrite(args[0])
-        
-    def __iter__(self):
-        " Returns iteratively each dendrite in the population in ascending rank order."
-        for n in range(self.size):
-            yield self._dendrites[n] 
-            
-    def set_variable_flags(self, name, value):
-        """ Sets the flags of a variable for the projection.
-        
-        If the variable ``rate`` is defined in the Synapse description through:
-        
-            value = pre.rate * post.rate : max=1.0  
-            
-        one can change its maximum value with:
-        
-            proj.set_variable_flags('value', {'max': 2.0})
-            
-        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
-        
-        For positional flags (postsynaptic, implicit), the value in the dictionary must be set to the empty string '':
-        
-            proj.set_variable_flags('value', {'implicit': ''})
-        
-        A None value in the dictionary deletes the corresponding flag:
-        
-            proj.set_variable_flags('value', {'max': None})
-            
-        """
-        rk_var = self._find_variable_index(name)
-        if rk_var == -1:
-            Global._error('The projection '+self.name+' has no variable called ' + name)
-            return
-            
-        for key, val in value.iteritems():
-            if val == '': # a flag
-                try:
-                    self.description['variables'][rk_var]['flags'].index(key)
-                except: # the flag does not exist yet, we can add it
-                    self.description['variables'][rk_var]['flags'].append(key)
-            elif val == None: # delete the flag
-                try:
-                    self.description['variables'][rk_var]['flags'].remove(key)
-                except: # the flag did not exist, check if it is a bound
-                    if has_key(self.description['variables'][rk_var]['bounds'], key):
-                        self.description['variables'][rk_var]['bounds'].pop(key)
-            else: # new value for init, min, max...
-                if key == 'init':
-                    self.description['variables'][rk_var]['init'] = val 
-                    self.init[name] = val              
-                else:
-                    self.description['variables'][rk_var]['bounds'][key] = val
-                
-       
-            
-    def set_variable_equation(self, name, equation):
-        """ Changes the equation of a variable for the projection.
-        
-        If the variable ``value`` is defined in the Synapse description through:
-        
-            eta * dvalue/dt = pre.rate * post.rate 
-            
-        one can change the equation with:
-        
-            proj.set_variable_equation('value', 'eta * dvalue/dt = pre.rate * (post.rate - 0.1) ')
-            
-        Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
-        
-        .. warning::
-            
-            This method should be used with great care, it is advised to define another Synapse object instead. 
-            
-        """         
-        rk_var = self._find_variable_index(name)
-        if rk_var == -1:
-            Global._error('The projection '+self.name+' has no variable called ' + name)
-            return               
-        self.description['variables'][rk_var]['eq'] = equation    
-            
-            
-    def _find_variable_index(self, name):
-        " Returns the index of the variable name in self.description['variables']"
-        for idx in range(len(self.description['variables'])):
-            if self.description['variables'][idx]['name'] == name:
-                return idx
-        return -1
