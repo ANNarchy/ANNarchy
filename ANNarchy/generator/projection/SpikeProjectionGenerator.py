@@ -34,31 +34,24 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             
     def generate_header(self):
         " Generates the C++ header file."        
-        # Private members declarations
-        members = self.generate_members_declaration()
-        
         # Access method for attributes
-        access = self.generate_dendrite_access_definition()
+        access = self.generate_dendrite_access_declaration()
         
         # Custom function
         functions = self.generate_functions()
                 
         # Generate the code
-        template = Templates.spike_projection_header
+        template = spike_projection_header
         dictionary = { 
             'class': self.name, 
             'pre_name': self.desc['pre_class'],
             'post_name': self.desc['post_class'],
             'access': access,
-            'member': members,
             'functions': functions 
         }
         return template % dictionary
 
     def generate_body(self):
-        
-        # Computation of psp for the weighted sum
-        psp = self.generate_psp()
         
         # Generate code for the global variables
         global_learn = self.generate_globallearn()
@@ -67,18 +60,16 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         local_learn = self.generate_locallearn()
         
         # Access method for attributes
-        access = self.generate_dendrite_access_deklaration()
+        access = self.generate_dendrite_access_definition()
 
         # Generate the code
-        template = Templates.spike_projection_body
+        template = spike_projection_body
         dictionary = {         
             'class': self.name,
             'dend_class': self.name.replace('Projection', 'Dendrite'), 
             'add_include': self.generate_add_proj_include(),
-            'destructor': self.generate_destructor() ,
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],
-            'init': self.generate_constructor(), 
             'access': access
         }
         return template % dictionary
@@ -96,7 +87,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         pyfunctions = self.generate_pyfunctions()
         # Generate the code
 
-        template = Templates.spike_projection_pyx
+        template = spike_projection_pyx
         dictionary = { 
             'name': self.name, 
             'cFunction': cwrappers, 
