@@ -53,85 +53,8 @@ class ProjectionGenerator(object):
 
         with open(self.pyx, mode = 'w') as w_file:
             w_file.write(self.generate_pyx()) 
-    
-    def generate_members_declaration(self):
-        """ 
-        Returns private members declaration. 
-        
-        Notes:            
-            * depend only on locality
-            * value should not be defined twice.
-        """
-        members = ""
-        
-        for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] in ['rank', 'delay', 'psp']: # Already declared
-                continue
 
-            if param['name'] == 'value': # the vector is already declared
-                members += """
-    // value_ : local
-    bool record_%(name)s_; 
-    std::vector< std::vector<%(type)s> > recorded_%(name)s_;    
-""" % {'name' : param['name'], 'type': param['ctype']}
-
-            elif param['name'] in self.desc['local']: # local attribute
-                members += """
-    // %(name)s_ : local
-    std::vector<%(type)s> %(name)s_;  
-    bool record_%(name)s_; 
-    std::vector< std::vector<%(type)s> > recorded_%(name)s_;    
-""" % {'name' : param['name'], 'type': param['ctype']}
-
-            elif param['name'] in self.desc['global']: # global attribute
-                members += """
-    // %(name)s_ : global
-    %(type)s %(name)s_;   
-""" % {'name' : param['name'], 'type': param['ctype']}
-
-        return members
-    
-    def generate_members_access(self):
-        """ 
-        Returns public members access. 
-        
-        Notes:
-            * depend only on locality.
-            * rank, delay access is already implemented in base class
-            * psp are skipped, hence it should not be accessible 
-        """
-        members = ""
-        
-        local_template = Templates.local_variable_access
-        global_template = Templates.global_variable_access
-        
-        for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] in ['rank', 'delay', 'psp']: # Already declared
-                continue
-            
-            if param['name'] == "value":
-                func = """
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
-    void startRecord%(Name)s() { this->record_%(name)s_ = true; }
-    void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
-    void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
-"""
-                members += func % { 'name' : param['name'], 
-                                    'Name': param['name'].capitalize(),
-                                    'type': param['ctype']}
-            elif param['name'] in self.desc['local']: # local attribute
-                members += local_template % { 'name' : param['name'], 
-                                              'Name': param['name'].capitalize(),
-                                              'type': param['ctype']}
-                
-            elif param['name'] in self.desc['global']: # global attribute
-                members += global_template % { 'name' : param['name'], 
-                                               'Name': param['name'].capitalize(),
-                                               'type': param['ctype']}
-
-        return members
-
-    def generate_dendrite_access_deklaration(self):
+    def generate_dendrite_access_declaration(self):
         """ 
         Returns access methods towards the attached dendrites 
         
@@ -197,7 +120,6 @@ class ProjectionGenerator(object):
                 func = """
 std::vector< std::vector< %(type)s > > %(class)s::getRecorded%(Name)s(int post_rank) 
 { 
-    std::cout << "Get recorded data for " << post_rank << std::endl;
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRecorded%(Name)s(); 
 }                    
 void %(class)s::startRecord%(Name)s(int post_rank) 
@@ -234,52 +156,6 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
                                                'dend_class': self.name.replace('Projection', 'Dendrite')}
 
         return members_body
-    
-    def generate_constructor(self):
-        """ Content of the Projection constructor."""
-        constructor = ""
-        # Attributes
-        for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "value":
-                continue
-            elif param['name'] in self.desc['local']: # local attribute
-                ctype = param['ctype']
-                if ctype == 'bool':
-                    cinit = 'true' if param['init'] else 'false'
-                elif ctype == 'int':
-                    cinit = int(param['init'])
-                elif ctype == 'DATA_TYPE':
-                    cinit = float(param['init'])
-                constructor += """
-    // %(name)s_ : local
-    %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s); 
-    record_%(name)s_ = false;  
-""" % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
-
-            elif param['name'] in self.desc['global']: # global attribute
-                ctype = param['ctype']
-                if ctype == 'bool':
-                    cinit = 'true' if param['init'] else 'false'
-                elif ctype == 'int':
-                    cinit = int(param['init'])
-                elif ctype == 'DATA_TYPE':
-                    cinit = float(param['init'])
-                constructor += """
-    // %(name)s_ : global
-    %(name)s_ = %(init)s;   
-""" % {'name' : param['name'], 'init': str(cinit)}   
-
-        constructor += """
-    record_value_ = false;
-
-    // Time step dt_
-    dt_ = %(dt)s;
-        """ % {'dt': str(Global.config['dt'])}
-        return constructor 
-        
-    def generate_destructor(self):
-        """ Content of the Projection destructor."""
-        return ""
     
     def generate_cwrappers(self):
         """
@@ -336,24 +212,6 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
                                             'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
         return code
 
-        
-    def generate_record(self):
-        """ 
-        Code for recording.
-
-        Notes:
-            * only local variables / parameters are recorded.
-        """
-        code = ""
-        # Attributes
-        for param  in self.desc['local']: # local attribute
-            code += """
-    if(record_%(var)s_){
-        recorded_%(var)s_.push_back(%(var)s_);
-    }
-""" % { 'var': param }
-
-        return code
   
     def generate_functions(self):
         "Custom functions"
@@ -381,12 +239,10 @@ class RateProjectionGenerator(ProjectionGenerator):
         ProjectionGenerator.__init__(self, name, desc)
             
     def generate_header(self):
-        " Generates the C++ header file."        
-        # Private members declarations
-        members = self.generate_members_declaration()
+        " Generates the C++ header file."
         
         # Access method for attributes
-        access_header = self.generate_dendrite_access_deklaration()
+        access_header = self.generate_dendrite_access_declaration()
         
         # Custom function
         functions = self.generate_functions()
@@ -399,14 +255,11 @@ class RateProjectionGenerator(ProjectionGenerator):
             'pre_name': self.desc['pre_class'],
             'post_name': self.desc['post_class'],
             'access': access_header,
-            'member': members,
             'functions': functions }
         return template % dictionary
 
     def generate_body(self):
-        # Initialize parameters and variables
-        constructor = self.generate_constructor()
-    
+
         # Access method for attributes
         access_body = self.generate_dendrite_access_definition()
         
@@ -417,10 +270,9 @@ class RateProjectionGenerator(ProjectionGenerator):
             'add_include': self.generate_add_proj_include(),
             'dend_class': self.name.replace('Projection', 'Dendrite'), 
             'access': access_body,
-            'destructor': self.generate_destructor() ,
+            'destructor': '' ,
             'pre_type': self.desc['pre_class'],
-            'post_type': self.desc['post_class'],
-            'init': constructor
+            'post_type': self.desc['post_class']
         } 
         return template % dictionary
     
@@ -452,11 +304,6 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
             
     def generate_header(self):
         " Generates the C++ header file."        
-        # Private members declarations
-        members = self.generate_members_declaration()
-        
-        # Access method for attributes
-        access = self.generate_members_access()
         
         # Custom function
         functions = self.generate_functions()
@@ -467,8 +314,7 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
             'class': self.name, 
             'pre_name': self.desc['pre_class'],
             'post_name': self.desc['post_class'],
-            'access': access,
-            'member': members,
+            'access': '',
             'functions': functions }
         return template % dictionary
     
@@ -599,9 +445,6 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         # Private members declarations
         members = self.generate_members_declaration()
         
-        # Access method for attributes
-        access = self.generate_members_access()
-        
         # Custom function
         functions = self.generate_functions()
         
@@ -611,7 +454,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'class': self.name.replace('Projection', 'Dendrite'), 
             'pre_name': self.desc['pre_class'],
             'post_name': self.desc['post_class'],
-            'access': access,
+            'access': '',
             'member': members,
             'functions': functions 
         }

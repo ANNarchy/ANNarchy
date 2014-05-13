@@ -107,7 +107,7 @@ class DendriteGenerator(object):
             
             if param['name'] == "value":
                 func = """
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
+    std::vector< std::vector< %(type)s > > getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
     void startRecord%(Name)s() { this->record_%(name)s_ = true; }
     void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
     void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
@@ -144,7 +144,8 @@ class DendriteGenerator(object):
                     cinit = float(param['init'])
                 constructor += """
     // %(name)s_ : local
-    %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s);    
+    %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s);  
+    record_%(name)s_ = false; 
 """ % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
 
             elif param['name'] in self.desc['global']: # global attribute
@@ -232,11 +233,10 @@ class DendriteGenerator(object):
         """
         code = ""
         # Attributes
-        for param in self.desc['local']: # local attribute
+        for param in list(set(self.desc['local'] + ['value'])): # local attribute
             code += """
     if(record_%(var)s_)
     {
-        std::cout << "record %(var)s " << std::endl;
         recorded_%(var)s_.push_back(%(var)s_);
     }
 """ % { 'var': param }

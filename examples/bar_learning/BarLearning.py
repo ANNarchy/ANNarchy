@@ -118,11 +118,13 @@ class Viewer(object):
         ## Simulate for 50 ms with a new input
         set_input()
         
-        feature_feature.dendrite(0).start_record('value')
+        input_feature[1].start_record('value')
+        feature_feature[1].start_record('value')
         
         simulate(2)
         
-        print feature_feature.dendrite(0).get_record() 
+        print input_feature[1].get_record('value') 
+        print feature_feature[1].get_record('value') 
         
         # Refresh the GUI
         self.input_vis.setImage(input_pop.rate)
