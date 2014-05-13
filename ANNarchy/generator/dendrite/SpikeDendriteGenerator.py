@@ -27,6 +27,7 @@ from ANNarchy.core.Random import *
 from DendriteGenerator import DendriteGenerator
 from Templates import *
 from TemplatesOMP import *
+import re
 
 class SpikeDendriteGenerator(DendriteGenerator):
     """ Class for generating dendrite C++ code from a spike synapse description. """
@@ -77,7 +78,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         rem_synapse = self.generate_rem_synapse()
         rem_all_synapse = self.generate_rem_all_synapse()
          
-        record = ""
+        record = self.generate_record()
          
         # Generate the code
         template = spike_dendrite_body
@@ -121,14 +122,13 @@ class SpikeDendriteGenerator(DendriteGenerator):
         return template % dictionary    
      
     def generate_record(self):
-        code = ProjectionGenerator.generate_record(self)
+        code = DendriteGenerator.generate_record(self)
  
         if 'pre_spike' in self.desc.keys():
             for param in self.desc['pre_spike']:
                 if param['name'] in self.desc['local']:
                     continue
-                 
-                #
+
                 # if a variable matches g_exc, g_inh ... we skip
                 if re.findall("(?<=g\_)[A-Za-z]+", param['name']) != []:
                     #print 'skipped', param['name']
