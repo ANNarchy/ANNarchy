@@ -8,8 +8,8 @@ DefaultNeuron = RateNeuron(
     """,
     equations= """
         noise = Uniform(-0.1, 0.1)
-        tau * dmp /dt + mp = sum(exc) ...
-                            - sum(inh) ...
+        tau * dmp/dt + mp = sum(exc) 
+                            - sum(inh) 
                             + baseline + noise : implicit
         rate = pos(mp) 
     """
@@ -34,8 +34,7 @@ pop2 = Population(name='pop2', neuron=DefaultNeuron, geometry=1)
 proj = Projection(
     pre=pop1, post=pop2, target='exc',
     synapse = Oja, 
-    connector = All2All(weights= Uniform (-0.5, 0.5 ) ) 
-)
+).connect_all_to_all(weights= Uniform (-0.5, 0.5 ) ) 
 
 # Call only the analyser
 from ANNarchy.core.Global import _populations, _projections
