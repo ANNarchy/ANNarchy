@@ -248,30 +248,19 @@ class Generator(object):
         
         # create projections cpp class for each synapse
         for name, desc in self.analyser.analysed_projections.iteritems():
+
+            paradigm = Global.config['paradigm'] if Global.config.has_key('paradigm') else "openmp"
             
-            if Global.config.has_key('paradigm'):
-                if Global.config['paradigm'] == "openmp":
-                    if desc['type'] == 'rate':
-                        proj_generator = RateProjectionGenerator(name, desc)
-                        dend_generator = RateDendriteGenerator(name.replace('Projection','Dendrite'), desc)
-                    elif desc['type'] == 'spike':
-                        proj_generator = SpikeProjectionGenerator(name, desc)
-                        dend_generator = SpikeDendriteGenerator(name.replace('Projection','Dendrite'), desc)
-                    proj_generator.generate(Global.config['verbose'])
-                    dend_generator.generate(Global.config['verbose'])
-                else:
-                    if desc['type'] == 'rate':
-                        proj_generator = RateProjectionGenerator(name, desc)
-                    elif desc['type'] == 'spike':
-                        proj_generator = SpikeProjectionGenerator(name, desc)
-                    proj_generator.generate(Global.config['verbose'])
+            if desc['type'] == 'rate':
+                proj_generator = RateProjectionGenerator(name, desc)
+                dend_generator = RateDendriteGenerator(name.replace('Projection','Dendrite'), desc, paradigm)
             else:
-                if desc['type'] == 'rate':
-                    proj_generator = RateProjectionGenerator(name, desc)
-                elif desc['type'] == 'spike':
-                    proj_generator = SpikeProjectionGenerator(name, desc)
-                proj_generator.generate(Global.config['verbose'])
-                
+                proj_generator = SpikeProjectionGenerator(name, desc)
+                dend_generator = SpikeDendriteGenerator(name.replace('Projection','Dendrite'), desc, paradigm)
+            
+            proj_generator.generate(Global.config['verbose'])
+            dend_generator.generate(Global.config['verbose'])
+            
         # Create default files mainly based on the number of populations and projections
         if Global.config['verbose']:
             print('\nCreate Includes.h ...')
