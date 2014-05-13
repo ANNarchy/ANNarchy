@@ -603,7 +603,7 @@ class SpikePopulationGenerator(PopulationGenerator):
         for proj in Global._projections:
             if (self.desc['name'] == proj.post.name) and \
                (proj.target in proj.post.targets):
-                code+= """friend class %(name)s;""" % { 'name': proj.name }
+                code+= """friend class %(name)s;""" % { 'name': proj.name.replace('Projection','Dendrite') }
                 
         return code    
     

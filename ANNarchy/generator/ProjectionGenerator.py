@@ -281,6 +281,10 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
         constructor += '\n    // Time step dt_\n    dt_ = ' + str(Global.config['dt']) + ';\n'
         return constructor 
         
+    def generate_destructor(self):
+        """ Content of the Projection destructor."""
+        return ""
+    
     def generate_cwrappers(self):
         """
         Parts of the C++ header which are exported to Python through Cython.
@@ -872,13 +876,13 @@ class SpikeProjectionGenerator(ProjectionGenerator):
     def __init__(self, name, desc):
         ProjectionGenerator.__init__(self, name, desc)
             
-    def generate_header(self):
+    def generate_proj_header(self):
         " Generates the C++ header file."        
         # Private members declarations
         members = self.generate_members_declaration()
         
         # Access method for attributes
-        access = self.generate_members_access()
+        access = self.generate_idx_members_access_header()
         
         # Custom function
         functions = self.generate_functions()
@@ -891,10 +895,75 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'post_name': self.desc['post_class'],
             'access': access,
             'member': members,
-            'functions': functions }
+            'functions': functions 
+        }
+        return template % dictionary
+
+    def generate_proj_body(self):
+        
+        # Computation of psp for the weighted sum
+        psp = self.generate_psp()
+        
+        # Generate code for the global variables
+        global_learn = self.generate_globallearn()
+        
+        # Generate code for the local variables
+        local_learn = self.generate_locallearn()
+        
+        # Access method for attributes
+        access = self.generate_idx_members_access_body()
+
+        # structural plasticity
+        add_synapse = self.generate_add_synapse()
+        rem_synapse = self.generate_rem_synapse()
+        rem_all_synapse = self.generate_rem_all_synapse()
+        
+        record = self.generate_record()
+
+        # Generate the code
+        template = Templates.spike_projection_body
+        dictionary = {         
+            'class': self.name,
+            'dend_class': self.name.replace('Projection', 'Dendrite'), 
+            'add_include': self.generate_add_proj_include(),
+            'destructor': self.generate_destructor() ,
+            'pre_type': self.desc['pre_class'],
+            'post_type': self.desc['post_class'],
+            'init': self.generate_constructor(), 
+            'access': access,
+            'local': local_learn, 
+            'global': global_learn,
+            'add_synapse_body': add_synapse,
+            'rem_synapse_body': rem_synapse,
+            'rem_all_synapse_body': rem_all_synapse,
+            'record' : record 
+        }
         return template % dictionary
     
-    def generate_body(self):
+    def generate_dendrite_header(self):
+        " Generates the C++ header file for dendrite class."        
+        # Private members declarations
+        members = self.generate_members_declaration()
+        
+        # Access method for attributes
+        access = self.generate_members_access()
+        
+        # Custom function
+        functions = self.generate_functions()
+        
+        # Generate the code
+        template = DendTemplates.spike_dendrite_header
+        dictionary = { 
+            'class': self.name.replace('Projection', 'Dendrite'), 
+            'pre_name': self.desc['pre_class'],
+            'post_name': self.desc['post_class'],
+            'access': access,
+            'member': members,
+            'functions': functions 
+        }
+        return template % dictionary
+    
+    def generate_dendrite_body(self):
         # Initialize parameters and variables
         constructor = self.generate_constructor()
         
@@ -910,35 +979,34 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         # Generate code for the pre- and postsynaptic events
         pre_event = self.generate_pre_event()
         post_event = self.generate_post_event()
-
+        
         # structural plasticity
         add_synapse = self.generate_add_synapse()
         rem_synapse = self.generate_rem_synapse()
         rem_all_synapse = self.generate_rem_all_synapse()
         
-        record = self.generate_record()
-
+        record = ""
+        
         # Generate the code
-        template = Templates.spike_projection_body
+        template = DendTemplates.spike_dendrite_body
         dictionary = {         
-            'class': self.name,
+            'class': self.name.replace('Projection','Dendrite'),
             'add_include': self.generate_add_proj_include(),
-            'destructor': '' ,
+            'destructor': self.generate_destructor(),
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],
             'init': constructor, 
-            'init_val': '', # contains nothing
-            'sum': psp, 
             'local': local_learn, 
-            'global': global_learn,
+            'global': global_learn,#
             'pre_event': pre_event,
             'post_event': post_event,
+            'record' : record,
             'add_synapse_body': add_synapse,
             'rem_synapse_body': rem_synapse,
-            'rem_all_synapse_body': rem_all_synapse,
-            'record' : record }
+            'rem_all_synapse_body': rem_all_synapse 
+        }
         return template % dictionary
-    
+        
     def generate_pyx(self):
         """
         Generate complete cython wrapper class

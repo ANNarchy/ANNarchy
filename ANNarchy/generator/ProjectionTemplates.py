@@ -79,7 +79,7 @@ rate_projection_body = \
 
 using namespace ANNarchy_Global;
 
-%(class)s::%(class)s(Population* pre, Population* post, int target) : RateProjection(pre, post, target) 
+%(class)s::%(class)s(Population* pre, Population* post, int target) : RateProjection() 
 {
 #ifdef _DEBUG
     std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
@@ -94,7 +94,7 @@ using namespace ANNarchy_Global;
     dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
 }
 
-%(class)s::%(class)s(int pre, int post, int target) : RateProjection(NULL, NULL, target) 
+%(class)s::%(class)s(int pre, int post, int target) : RateProjection() 
 {
 #ifdef _DEBUG
     std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
@@ -159,49 +159,30 @@ spike_projection_header = \
 
 #include "Global.h"
 #include "Includes.h"
-#include "SpikeDendrite.h"
+#include "SpikeProjection.h"
 
-class %(class)s : public SpikeDendrite 
+class %(class)s : public SpikeProjection 
 {
 public:
-    %(class)s(Population* pre, Population* post, int postRank, int target);
+    %(class)s(Population* pre, Population* post, int target);
     
-    %(class)s(int preID, int postID, int postRank, int target);
+    %(class)s(int preID, int postID, int target);
     
     ~%(class)s();
-    
-    class Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
 
-    int getSynapseCount() { return nbSynapses_; }
-
-    int addSynapse(int rank, DATA_TYPE value, int delay);
-
-    int removeSynapse(int rank);
+    std::vector<int> getRank(int post_rank);
     
-    int removeAllSynapses();
+    std::vector<DATA_TYPE> getValue(int post_rank);
     
-    void initValues();
+    std::vector<int> getDelay(int post_rank);
     
-    void computeSum();
+    Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
-    void globalLearn();
-    
-    void localLearn();
-
-    void preEvent(int rank);
-    
-    void postEvent();
-    
-    bool isPreSynaptic(Population* pop) { return pop == static_cast<Population*>(pre_population_); }
-        
-    void record();
+    void addDendrite(int, std::vector<int>, std::vector<DATA_TYPE>, std::vector<int>);
     
 %(access)s
 
-%(functions)s
-
-private:
-%(member)s
+protected:
 
     %(pre_name)s* pre_population_;
     %(post_name)s* post_population_;
@@ -230,90 +211,66 @@ private:
 spike_projection_body = \
 """#include "%(class)s.h"        
 #include "Global.h"
+#include "%(dend_class)s.h"
 
 %(add_include)s
 
 using namespace ANNarchy_Global;
-        
-%(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : SpikeDendrite() 
-{
-    pre_population_ = static_cast<%(pre_type)s*>(pre);
-    post_population_ = static_cast<%(post_type)s*>(post);
 
-    target_ = target;
-    post_neuron_rank_ = postRank;
-    
-    post_population_->getProjection(pre, target)->addDendrite(postRank, this);
-    pre_population_->addSpikeTarget(this);
-}
-
-%(class)s::%(class)s(int preID, int postID, int postRank, int target) : SpikeDendrite() 
-{
-    pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
-    post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
-
-    target_ = target;
-    post_neuron_rank_ = postRank;
-    
-    post_population_->getProjection(pre_population_, target)->addDendrite(postRank, this);
-    pre_population_->addSpikeTarget(this);
-}
-
-%(class)s::~%(class)s() 
+%(class)s::%(class)s(Population* pre, Population* post, int target) : SpikeProjection() 
 {
 #ifdef _DEBUG
-    std::cout<<"%(class)s::Destructor"<<std::endl;
+    std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
 #endif
+    pre_population_ = static_cast<class %(pre_type)s*>( pre );
+    post_population_ = static_cast<class %(post_type)s*>( post );
 
-%(destructor)s
+    target_ = target;
+    post_population_->addProjection(this);
+
+    nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
+    dendrites_ = std::vector< SpikeDendrite* >(nbDendrites_, NULL);
 }
 
-int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
+%(class)s::%(class)s(int pre, int post, int target) : SpikeProjection() 
 {
-%(add_synapse_body)s
+#ifdef _DEBUG
+    std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
+#endif
+    pre_population_ = static_cast<class %(pre_type)s*>(Network::instance()->getPopulation(pre));
+    post_population_ = static_cast<class %(post_type)s*>(Network::instance()->getPopulation(post));
+
+    target_ = target;
+    post_population_->addProjection(this);
+
+    nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
+    dendrites_ = std::vector< SpikeDendrite* >(nbDendrites_, NULL);
 }
 
-int %(class)s::removeSynapse(int rank)
+std::vector<int> %(class)s::getRank(int post_rank)
 {
-%(rem_synapse_body)s
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRank();
 }
 
-int %(class)s::removeAllSynapses()
+std::vector<DATA_TYPE> %(class)s::getValue(int post_rank)
 {
-%(rem_all_synapse_body)s
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getValue();
 }
 
-void %(class)s::initValues() 
+std::vector<int> %(class)s::getDelay(int post_rank)
 {
-%(init)s
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getDelay();
 }
 
-void %(class)s::computeSum() {   
-%(sum)s
-}
+%(access)s
 
-void %(class)s::localLearn() 
+void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay)
 {
-%(local)s
-}
-
-void %(class)s::globalLearn() {
-%(global)s
-}
-
-void %(class)s::record() 
-{
-%(record)s
-}
-
-void %(class)s::preEvent(int rank) 
-{
-%(pre_event)s
-}
-
-void %(class)s::postEvent() 
-{
-%(post_event)s
+    dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
+    
+    dendrites_[post_rank]->setRank(rank);
+    dendrites_[post_rank]->setValue(value);
+    dendrites_[post_rank]->setDelay(delay);    
 }
 """
 
@@ -543,24 +500,45 @@ cimport numpy as np
 
 cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
-        %(name)s(int preLayer, int postLayer, int postNeuronRank, int target)
+        %(name)s(int preLayer, int postLayer, int target)
+
+        void addDendrite(int, vector[int], vector[float], vector[int])
 
         void initValues(int post_rank)
+         
+        vector[int] getRank(int post_rank)
+
+        vector[float] getValue(int post_rank)
+        
+        vector[int] getDelay(int post_rank)
         
 %(cFunction)s
 
-cdef class Local%(name)s(pyxDendrite):
+cdef class py%(name)s:
 
-    cdef %(name)s* cInhInstance
+    cdef %(name)s* cInstance
 
-    def __cinit__(self, proj_type, preID, postID, rank, target, rateCoded):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, rateCoded))
+    def __cinit__(self, preID, postID, target):
+        self.cInstance = new %(name)s(preID, postID, target)
 
-    def init_values(self):
-        self.cInhInstance.initValues()
+    cpdef np.ndarray _get_rank(self, int post_rank):
+        return np.array(self.cInstance.getRank(post_rank))
+
+    cpdef np.ndarray _get_value(self, int post_rank):
+        return np.array(self.cInstance.getValue(post_rank))
+
+    cpdef createFromDict( self, dict dendrites ):
+        cdef int rank
+        cdef dict data
+        
+        for rank, data in dendrites.iteritems():
+            # create dendrite instance
+            self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])
+            
+            # initialize variables
+            self.cInstance.initValues(rank)
 
 %(pyFunction)s
-
 """ 
 
 # Local Cython property

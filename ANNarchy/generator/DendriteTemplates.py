@@ -111,8 +111,6 @@ public:
     
     void initValues();
     
-    void computeSum();
-    
     void globalLearn();
     
     void localLearn();
@@ -329,10 +327,6 @@ int %(class)s::removeAllSynapses()
 void %(class)s::initValues() 
 {
 %(init)s
-}
-
-void %(class)s::computeSum() {   
-%(sum)s
 }
 
 void %(class)s::localLearn() {
