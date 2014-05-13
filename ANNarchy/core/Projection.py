@@ -123,10 +123,9 @@ class Projection(object):
         Global._projections.append(self)
         
         # Allow recording of variables
-        self._recorded_variables = {}        
-        for var in self.variables:
-            self._recorded_variables[var] = Record(var)
-            
+        self._recorded_variables = {}  
+        self._recordable_variables = list(set(self.variables + ['value']))
+
         # Finalize initialization
         self.initialized = False
         

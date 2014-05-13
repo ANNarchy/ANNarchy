@@ -232,12 +232,14 @@ class DendriteGenerator(object):
         """
         code = ""
         # Attributes
-        for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] in self.desc['local']: # local attribute
-                code += """
+        for param in self.desc['local']: # local attribute
+            code += """
     if(record_%(var)s_)
+    {
+        std::cout << "record %(var)s " << std::endl;
         recorded_%(var)s_.push_back(%(var)s_);
-""" % { 'var': param['name'] }
+    }
+""" % { 'var': param }
 
         return code
   
@@ -363,7 +365,7 @@ class RateDendriteGenerator(DendriteGenerator):
         rem_synapse = self.generate_rem_synapse()
         rem_all_synapse = self.generate_rem_all_synapse()
         
-        record = ""
+        record = self.generate_record()
         
         # Generate the code
         template = Templates.rate_dendrite_body
