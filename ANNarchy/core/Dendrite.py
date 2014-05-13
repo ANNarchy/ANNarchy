@@ -218,8 +218,9 @@ class Dendrite(object):
 
             if not self.post_rank in self.proj._recorded_variables.keys(): # dendrite not recorded yet
                 self.proj._recorded_variables[self.post_rank] = {var: Record(var)}
-            elif var in self.proj._recorded_variables[self.post_rank].keys(): 
-                self.proj._recorded_variables[self.post_rank] = {var: Record(var)}
+            elif not var in self.proj._recorded_variables[self.post_rank].keys(): 
+                self.proj._recorded_variables[self.post_rank][var] = Record(var)
+                
             self.proj._recorded_variables[self.post_rank][var].start()
 
             # if not self.proj._recorded_variables[var].is_inited:

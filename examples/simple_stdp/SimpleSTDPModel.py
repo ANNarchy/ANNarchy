@@ -86,15 +86,14 @@ record ( to_record )
 
 testAll2AllSpike.dendrite(0).start_record('Apre')
 testAll2AllSpike.dendrite(0).start_record('Apost')
-testAll2AllSpike.dendrite(0).start_record('value')
+#testAll2AllSpike.dendrite(0).start_record('value')
 
-for i in range(1000):
-    simulate(1)
+simulate(1000)
 
 data = get_record( to_record )
-Apre = testAll2AllSpike.dendrite(0).get_record('Apre', as_1D=True)
-Apost = testAll2AllSpike.dendrite(0).get_record('Apost', as_1D=True)
-weight = testAll2AllSpike.dendrite(0).get_record('value', as_1D=True)
+Apre = testAll2AllSpike.dendrite(0).get_record('Apre')
+Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
+#weight = testAll2AllSpike.dendrite(0).get_record('value')
 
 close('all')
 
@@ -119,7 +118,7 @@ close('all')
 #
 # The synapse are not ordered ascending in relation to presynaptic ranks
 # to correctly identify the data we need to take this in mind
-pre_ranks = testAll2AllSpike.dendrite(0).cy_instance.rank
+pre_ranks = testAll2AllSpike.dendrite(0).rank
 neur_col = ['b','g','r']
 #
 # plot post neurons
