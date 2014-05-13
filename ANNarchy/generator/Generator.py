@@ -31,7 +31,7 @@ import ANNarchy
 import ANNarchy.core.Global as Global
 from ANNarchy.parser.Analyser import Analyser, _extract_functions
 from ANNarchy.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator
+from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, SpikeProjectionGenerator
 from ANNarchy.generator.DendriteGenerator import RateDendriteGenerator, SpikeDendriteGenerator
   
 from templates import *
@@ -259,7 +259,7 @@ class Generator(object):
                     dend_generator.generate(Global.config['verbose'])
                 else:
                     if desc['type'] == 'rate':
-                        proj_generator = RateProjectionGeneratorCUDA(name, desc)
+                        proj_generator = RateProjectionGenerator(name, desc)
                     elif desc['type'] == 'spike':
                         proj_generator = SpikeProjectionGenerator(name, desc)
                     proj_generator.generate(Global.config['verbose'])

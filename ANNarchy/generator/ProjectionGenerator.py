@@ -445,8 +445,8 @@ class RateProjectionGenerator(ProjectionGenerator):
         }
         return template % dictionary    
     
-class RateProjectionGeneratorCUDA(ProjectionGenerator):
-    """ Class for generating CUDA/C++ code from a rate population description. """
+class SpikeProjectionGenerator(ProjectionGenerator):
+    """ Class for generating C++ code from a spike population description. """
     def __init__(self, name, desc):
         ProjectionGenerator.__init__(self, name, desc)
             
@@ -456,90 +456,7 @@ class RateProjectionGeneratorCUDA(ProjectionGenerator):
         members = self.generate_members_declaration()
         
         # Access method for attributes
-        access = self.generate_members_access()
-        
-        # Custom function
-        functions = self.generate_functions()
-        
-        # Generate the code
-        template = Templates.rate_projection_header
-        dictionary = { 
-            'class': self.name, 
-            'pre_name': self.desc['pre_class'],
-            'post_name': self.desc['post_class'],
-            'access': access,
-            'member': members,
-            'functions': functions }
-        return template % dictionary
-    
-    def generate_body(self):
-        # Initialize parameters and variables
-        constructor = self.generate_constructor()
-        
-        # Computation of psp for the weighted sum
-        psp = self.generate_psp()
-        
-        # Generate code for the global variables
-        global_learn = self.generate_globallearn()
-        
-        # Generate code for the local variables
-        local_learn = self.generate_locallearn()
-        
-        # structural plasticity
-        add_synapse = self.generate_add_synapse()
-        rem_synapse = self.generate_rem_synapse()
-        rem_all_synapse = self.generate_rem_all_synapse()
-
-        # Generate the code
-        template = Templates.rate_projection_body
-        dictionary = {         
-            'class': self.name,
-            'add_include': self.generate_add_proj_include(),
-            'destructor': '' ,
-            'pre_type': self.desc['pre_class'],
-            'post_type': self.desc['post_class'],
-            'init': constructor, 
-            'sum': psp, 
-            'local': local_learn, 
-            'global': global_learn,
-            'add_synapse_body': add_synapse,
-            'rem_synapse_body': rem_synapse,
-            'rem_all_synapse_body': rem_all_synapse }
-        return template % dictionary
-
-    def generate_pyx(self):
-        """
-        Generate complete cython wrapper class
-            
-        Notes:
-            * dependent on coding.
-        """
-        # Get the C++ methods
-        cwrappers = self.generate_cwrappers()
-        # Get the python functions
-        pyfunctions = self.generate_pyfunctions()
-        # Generate the code
-
-        template = Templates.rate_projection_pyx
-        dictionary = { 
-            'name': self.name, 
-            'cFunction': cwrappers, 
-            'pyFunction': pyfunctions
-        }
-        return template % dictionary
-        
-class SpikeProjectionGenerator(ProjectionGenerator):
-    """ Class for generating C++ code from a spike population description. """
-    def __init__(self, name, desc):
-        ProjectionGenerator.__init__(self, name, desc)
-            
-    def generate_proj_header(self):
-        " Generates the C++ header file."        
-        # Private members declarations
-        members = self.generate_members_declaration()
-        
-        # Access method for attributes
-        access = self.generate_idx_members_access_header()
+        access = self.generate_dendrite_access_definition()
         
         # Custom function
         functions = self.generate_functions()
@@ -556,7 +473,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         }
         return template % dictionary
 
-    def generate_proj_body(self):
+    def generate_body(self):
         
         # Computation of psp for the weighted sum
         psp = self.generate_psp()
@@ -568,12 +485,7 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         local_learn = self.generate_locallearn()
         
         # Access method for attributes
-        access = self.generate_idx_members_access_body()
-
-        # structural plasticity
-        add_synapse = self.generate_add_synapse()
-        rem_synapse = self.generate_rem_synapse()
-        rem_all_synapse = self.generate_rem_all_synapse()
+        access = self.generate_dendrite_access_deklaration()
 
         # Generate the code
         template = Templates.spike_projection_body
@@ -585,82 +497,10 @@ class SpikeProjectionGenerator(ProjectionGenerator):
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],
             'init': self.generate_constructor(), 
-            'access': access,
-            'local': local_learn, 
-            'global': global_learn,
-            'add_synapse_body': add_synapse,
-            'rem_synapse_body': rem_synapse,
-            'rem_all_synapse_body': rem_all_synapse
+            'access': access
         }
         return template % dictionary
     
-    def generate_dendrite_header(self):
-        " Generates the C++ header file for dendrite class."        
-        # Private members declarations
-        members = self.generate_members_declaration()
-        
-        # Access method for attributes
-        access = self.generate_members_access()
-        
-        # Custom function
-        functions = self.generate_functions()
-        
-        # Generate the code
-        template = DendTemplates.spike_dendrite_header
-        dictionary = { 
-            'class': self.name.replace('Projection', 'Dendrite'), 
-            'pre_name': self.desc['pre_class'],
-            'post_name': self.desc['post_class'],
-            'access': access,
-            'member': members,
-            'functions': functions 
-        }
-        return template % dictionary
-    
-    def generate_dendrite_body(self):
-        # Initialize parameters and variables
-        constructor = self.generate_constructor()
-        
-        # Computation of psp for the weighted sum
-        psp = self.generate_psp()
-        
-        # Generate code for the global variables
-        global_learn = self.generate_globallearn()
-        
-        # Generate code for the local variables
-        local_learn = self.generate_locallearn()
-        
-        # Generate code for the pre- and postsynaptic events
-        pre_event = self.generate_pre_event()
-        post_event = self.generate_post_event()
-        
-        # structural plasticity
-        add_synapse = self.generate_add_synapse()
-        rem_synapse = self.generate_rem_synapse()
-        rem_all_synapse = self.generate_rem_all_synapse()
-        
-        record = ""
-        
-        # Generate the code
-        template = DendTemplates.spike_dendrite_body
-        dictionary = {         
-            'class': self.name.replace('Projection','Dendrite'),
-            'add_include': self.generate_add_proj_include(),
-            'destructor': self.generate_destructor(),
-            'pre_type': self.desc['pre_class'],
-            'post_type': self.desc['post_class'],
-            'init': constructor, 
-            'local': local_learn, 
-            'global': global_learn,#
-            'pre_event': pre_event,
-            'post_event': post_event,
-            'record' : record,
-            'add_synapse_body': add_synapse,
-            'rem_synapse_body': rem_synapse,
-            'rem_all_synapse_body': rem_all_synapse 
-        }
-        return template % dictionary
-        
     def generate_pyx(self):
         """
         Generate complete cython wrapper class
