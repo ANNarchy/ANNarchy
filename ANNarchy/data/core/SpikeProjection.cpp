@@ -23,19 +23,9 @@
 #include "SpikePopulation.h"
 #include "SpikeDendrite.h"
 
-SpikeProjection::SpikeProjection(std::string pre, std::string post, int target): Projection()
+SpikeProjection::SpikeProjection(): Projection()
 {
-#ifdef _DEBUG
-	std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'spike' ) " << std::endl;
-#endif
-	pre_population_ = static_cast<class SpikePopulation*>(Network::instance()->getPopulation(pre));
-	post_population_ = static_cast<class SpikePopulation*>(Network::instance()->getPopulation(post));
 
-	target_ = target;
-	post_population_->addProjection(this);
-
-	nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-	dendrites_ = std::vector< class SpikeDendrite* >(nbDendrites_, NULL);
 }
 
 void SpikeProjection::globalLearn()

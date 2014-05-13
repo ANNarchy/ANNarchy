@@ -23,12 +23,7 @@
 #include "RatePopulation.h"
 #include "RateDendrite.h"
 
-RateProjection::RateProjection(std::string pre, std::string post, int target): Projection()
-{
-
-}
-
-RateProjection::RateProjection(Population *pre, Population* post, int target): Projection()
+RateProjection::RateProjection(): Projection()
 {
 
 }

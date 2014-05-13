@@ -27,9 +27,7 @@
 class RateProjection : public Projection
 {
 public:
-	RateProjection(std::string pre, std::string post, int target);
-
-	RateProjection(Population *pre, Population* post, int target);
+	RateProjection();
 
 	void computeSum();
 

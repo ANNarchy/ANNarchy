@@ -27,7 +27,7 @@
 class SpikeProjection : public Projection
 {
 public:
-	SpikeProjection(std::string pre, std::string post, int target);
+	SpikeProjection();
 
     void globalLearn();
 
@@ -51,7 +51,7 @@ public:
 
 	void record();
 
-private:
+protected:
 	int nbDendrites_;
 
 	class SpikePopulation* pre_population_;
