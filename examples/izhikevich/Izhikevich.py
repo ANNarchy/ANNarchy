@@ -71,41 +71,12 @@ if __name__ == '__main__':
     # Compile
     compile()
 
-<<<<<<< HEAD
-
-    # Define what to record during the simulation
-    to_record = [
-        { 'pop': Excitatory, 'var': 's' }, 
-        { 'pop': Inhibitory, 'var': 's' },      
-    ]
-    record( to_record )
-
-=======
->>>>>>> proj_refactor
     # Simulate 1s   
     print 'Starting simulation' 
     simulate(1000.0)
     print 'Done'
 
-<<<<<<< HEAD
-    # Retrieve the recordings
-    data = get_record( to_record )        
-    data_exc = data['Excitatory']['s']['data']
-    data_inh = data['Inhibitory']['s']['data']
-    data_all = np.concatenate((data_exc, data_inh), axis=0)
-
-    # Prepare data for the raster plot
-    spikes =  np.nonzero(data_all > 0.5)
-    
-    # Plot the results
-    try:
-        import pyqtgraph as pg
-        pg.plot(spikes[1], spikes[0], pen=None, symbol='o', symbolSize=3)
-        raw_input()
-    except:
-        print 'PyQtGraph is not installed, can not visualize the simulation.'
-        exit(0)
-=======
+    # Retrieve the spike timings
     spikes_exc = Excitatory.raster_plot()
     spikes_inh = Inhibitory.raster_plot()
     spikes = np.concatenate((spikes_exc, spikes_inh + [0, 800]), axis=0)
@@ -119,4 +90,3 @@ if __name__ == '__main__':
     else:
         pg.plot(spikes[:, 0], spikes[:, 1], pen=None, symbol='o', symbolSize=3)
         raw_input()
->>>>>>> proj_refactor
