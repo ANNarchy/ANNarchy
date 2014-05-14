@@ -36,7 +36,7 @@ Oja = RateSynapse(
 
 
 # Creating the populations
-Input = Population(geometry=(8,8), neuron=InputNeuron)
+Input = Population(geometry=(8, 8), neuron=InputNeuron)
 Feature = Population(geometry=(8, 4), neuron=LeakyNeuron)
 
 # Creating the projections

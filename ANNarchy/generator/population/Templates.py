@@ -451,8 +451,8 @@ cdef class py%(class_name)s:
 
     cdef %(class_name)s* cInstance
 
-    def __cinit__(self):
-        self.cInstance = new %(class_name)s('%(name)s', %(neuron_count)s)
+    def __cinit__(self, int size):
+        self.cInstance = new %(class_name)s('%(name)s', size)
 
     def name(self):
         return self.cInstance.getName()
@@ -511,8 +511,8 @@ cdef class py%(class_name)s:
 
     cdef %(class_name)s* cInstance
 
-    def __cinit__(self):
-        self.cInstance = new %(class_name)s('%(name)s', %(neuron_count)s)
+    def __cinit__(self, int size):
+        self.cInstance = new %(class_name)s('%(name)s', size)
 
     def name(self):
         return self.cInstance.getName()
