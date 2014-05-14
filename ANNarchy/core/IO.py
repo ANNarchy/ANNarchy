@@ -277,34 +277,32 @@ def _net_description(variables, connections):
             synapse_count = []
             dendrites = []  
             
-            print 'TODO: save the dendrite variables'
-            # for dendrite in proj.dendrites:
-            #     dendrite_desc = {}
-            #     synapse_count.append(dendrite.size)
-            #     dendrite_desc['post_rank'] = dendrite.post_rank
-                
-            #     varias = {}
-                
-            #     for var in dendrite.variables:
-            #         varias[var] = dendrite.get(var)
+            for d in proj.post_ranks:
+                dendrite_desc = {}
+                # Number of synapses in the dendrite
+                synapse_count.append(proj[d].size())
+                # Postsynaptic rank
+                dendrite_desc['post_rank'] = d
 
-            #     if 'value' not in dendrite.variables:
-            #         varias['values'] = dendrite.cyInstance.value 
-                
-            #     varias['delays'] = dendrite.cyInstance.delay
-            #     varias['pre_ranks'] = dendrite.cyInstance.rank
-                                
-            #     if varias != {}:
-            #         dendrite_desc['variables'] = varias
+                # Variables
+                varias = {}                
+                for var in proj.variables:
+                    varias[var] = getattr(proj.cyInstance, '_get_'+var)(d)
+                if 'value' not in proj.variables:
+                    varias['values'] = proj.cyInstance._get_value(d)                
+                varias['delays'] = proj.cyInstance._get_delay(d)
+                varias['pre_ranks'] = proj.cyInstance._get_rank(d)                                
+                if varias != {}:
+                    dendrite_desc['variables'] = varias
 
-            #     params = {}
-            #     for par in dendrite.parameters:
-            #         params[par] = dendrite.get(par)
+                # Parameters
+                params = {}
+                for par in proj.parameters:
+                    params[par] = getattr(proj.cyInstance, '_get_'+par)(d)                
+                if params != {}:
+                    dendrite_desc['parameter'] = params
                 
-            #     if params != {}:
-            #         dendrite_desc['parameter'] = params
-                
-            #     dendrites.append(dendrite_desc)
+                dendrites.append(dendrite_desc)
             
             proj_desc['dendrites'] = dendrites
             proj_desc['number_of_synapses'] = synapse_count
