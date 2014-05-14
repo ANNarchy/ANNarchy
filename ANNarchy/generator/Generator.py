@@ -559,14 +559,17 @@ class Generator(object):
                 if a_line.find('//AddProjection') != -1:
                     code += a_line
                     if(self.cpp_stand_alone):
-                        template = """\t\tnet_->connect(%(preID)i, %(postID)i, %(projID)i, %(target)i, %(spike)s, "%(filename)s");\n""" 
+                        
+                        template = """
+        auto proj_%(preID)s_%(postID)s = new %(name)s ( %(preID)s, %(postID)s, %(target)s ); \n
+        net_->connect(%(preID)i, %(postID)i, %(target)i, "%(filename)s");\n
+""" 
                         
                         for proj in self.projections:
                             dictionary = { 'preID' : proj.pre._id,
                                            'postID' : proj.post._id,
-                                           'projID' : proj._id,
                                            'target' : proj.post.targets.index(proj.target),
-                                           'spike' : 'false', # TODO!!!!
+                                           'name': proj.name,
                                            'filename' : proj.pre.name+'_'+proj.post.name+'_'+proj.target+'.csv'
                                           } 
                             
@@ -577,7 +580,7 @@ class Generator(object):
                     if(self.cpp_stand_alone):
                         #
                         # populations register themselves on the network object, so only create the objects
-                        template = """\t\tnew %(class)s("%(name)s", %(size)s);\n"""
+                        template = """new %(class)s("%(name)s", %(size)s);\n"""
                         for pop in self.populations:
                             code += template % { 'name': pop.name,
                                                  'class': pop.class_name,
