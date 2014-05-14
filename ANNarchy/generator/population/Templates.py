@@ -517,8 +517,8 @@ cdef class py%(class_name)s:
     def name(self):
         return self.cInstance.getName()
 
-    def get_spike_timings(self):
-        return np.array( self.cInstance.getSpikeTimings() )
+    cpdef list get_spike_timings(self):
+        return list( self.cInstance.getSpikeTimings() )
 
     def reset(self):
         self.cInstance.resetToInit()

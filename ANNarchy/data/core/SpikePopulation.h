@@ -55,7 +55,7 @@ public:
     void addSpikeTarget(class Dendrite* dendrite);
 
     /**
-     * \brief       Get the spike times of all neurons.
+     * \brief       Get the spike timings of all neurons.
      * \details     Sometimes it may useful to trace all the emited spikes, e.g. visualization.
      *              Please note:
      *              #   that the spike times will reseted through call of
@@ -65,7 +65,7 @@ public:
      * \param[OUT]  1st dimension: neurons sorted by their rank
      *              2nd dimension: spike times of the neuron
      */
-	std::vector< std::vector<int> > getSpikeTimings() { return spike_timings_;}
+    std::vector< std::vector<int> > getSpikeTimings() { return spike_timings_;}
 
     /**
      * \brief       Get the laste spike time of a neuron.

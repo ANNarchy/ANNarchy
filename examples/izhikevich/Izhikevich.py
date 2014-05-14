@@ -17,7 +17,6 @@ Izhikevich = SpikeNeuron(
         u += a * (b*v - u) : init = -13.0
         g_exc = 0.0
         g_inh = 0.0 
-        s = 0.0
     """,
     spike = """
         v >= 30.0
@@ -25,7 +24,6 @@ Izhikevich = SpikeNeuron(
     reset = """
         v = c
         u += d
-        s = 1.0
     """
 )
 
@@ -71,33 +69,23 @@ if __name__ == '__main__':
     # Compile
     compile()
 
-
-    # Define what to record during the simulation
-    to_record = [
-        { 'pop': Excitatory, 'var': 's' }, 
-        { 'pop': Inhibitory, 'var': 's' },      
-    ]
-    record( to_record )
-
     # Simulate 1s   
     print 'Starting simulation' 
     simulate(1000.0)
     print 'Done'
 
-    # Retrieve the recordings
-    data = get_record( to_record )        
-    data_exc = data['Excitatory']['s']['data']
-    data_inh = data['Inhibitory']['s']['data']
-    data_all = np.concatenate((data_exc, data_inh), axis=0)
+    data_exc = Excitatory.cyInstance.get_spike_timings()
+    data_inh = Inhibitory.cyInstance.get_spike_timings()
+    spikes = np.array([ [t, neuron] for neuron in range(800) for t in data_exc[neuron]] + \
+                      [ [t, neuron+800] for neuron in range(200) for t in data_inh[neuron]] 
+                    )
 
-    # Prepare data for the raster plot
-    spikes =  np.nonzero(data_all > 0.5)
-    
-    # Plot the results
+    #Plot the results
     try:
         import pyqtgraph as pg
-        pg.plot(spikes[1], spikes[0], pen=None, symbol='o', symbolSize=3)
-        raw_input()
     except:
         print 'PyQtGraph is not installed, can not visualize the simulation.'
         exit(0)
+    else:
+        pg.plot(spikes[:, 0], spikes[:, 1], pen=None, symbol='o', symbolSize=3)
+        raw_input()
