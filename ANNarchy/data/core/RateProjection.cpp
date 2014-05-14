@@ -56,13 +56,16 @@ void RateProjection::globalLearn()
 	}
 #endif
 
-	#pragma omp for
-	for ( int n = 0; n < nbDendrites_; n++ )
+	if ( ANNarchy_Global::time % learnFrequency_ == learnOffset_ )
 	{
-		if (!dendrites_[n])
-			continue;
+		#pragma omp for
+		for ( int n = 0; n < nbDendrites_; n++ )
+		{
+			if (!dendrites_[n])
+				continue;
 
-		dendrites_[n]->globalLearn();
+			dendrites_[n]->globalLearn();
+		}
 	}
 }
 
@@ -75,13 +78,16 @@ void RateProjection::localLearn()
 	}
 #endif
 
-	#pragma omp for
-	for ( int n = 0; n < nbDendrites_; n++ )
+	if ( ANNarchy_Global::time % learnFrequency_ == learnOffset_ )
 	{
-		if (!dendrites_[n])
-			continue;
+		#pragma omp for
+		for ( int n = 0; n < nbDendrites_; n++ )
+		{
+			if (!dendrites_[n])
+				continue;
 
-		dendrites_[n]->localLearn();
+			dendrites_[n]->localLearn();
+		}
 	}
 }
 

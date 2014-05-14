@@ -454,6 +454,18 @@ cdef extern from "../build/%(name)s.h":
 
         int nbSynapses(int post_rank)
         
+        void setLearning(bool)
+    
+        void setLearnFrequency(int)
+    
+        int getLearnFrequency()
+    
+        void setLearnOffset( int )
+    
+        int getLearnOffset( )
+    
+        bool isLearning()
+        
 %(cFunction)s
 
 cdef class py%(name)s:
@@ -504,6 +516,24 @@ cdef class py%(name)s:
     cpdef int _nb_synapses(self, int post_rank):
         return self.cInstance.nbSynapses(post_rank)
 
+    cpdef bool _get_learning(self):
+        return self.cInstance.isLearning()
+        
+    cpdef _set_learning(self, bool learning):
+        self.cInstance.setLearning(learning)        
+
+    cpdef int _get_learn_frequency(self):
+        return self.cInstance.getLearnFrequency()
+        
+    cpdef _set_learn_frequency(self, int frequency):
+        self.cInstance.setLearnFrequency(frequency)        
+
+    cpdef int _get_learn_offset(self):
+        return self.cInstance.getLearnOffset()
+        
+    cpdef _set_learn_offset(self, int offset):
+        self.cInstance.setLearnOffset(offset)        
+    
 %(pyFunction)s
 """ 
 
@@ -547,6 +577,18 @@ cdef extern from "../build/%(name)s.h":
         int nbDendrites()
 
         int nbSynapses(int post_rank)
+
+        void setLearning(bool)
+    
+        void setLearnFrequency(int)
+    
+        int getLearnFrequency()
+    
+        void setLearnOffset( int )
+    
+        int getLearnOffset( )
+    
+        bool isLearning()
                 
 %(cFunction)s
 
@@ -597,6 +639,24 @@ cdef class py%(name)s:
 
     cpdef int _nb_synapses(self, int post_rank):
         return self.cInstance.nbSynapses(post_rank)
+        
+    cpdef bool _get_learning(self):
+        return self.cInstance.isLearning()
+        
+    cpdef _set_learning(self, bool learning):
+        self.cInstance.setLearning(learning)        
+
+    cpdef int _get_learn_frequency(self):
+        return self.cInstance.getLearnFrequency()
+        
+    cpdef _set_learn_frequency(self, int frequency):
+        self.cInstance.setLearnFrequency(frequency)        
+
+    cpdef int _get_learn_offset(self):
+        return self.cInstance.getLearnOffset()
+        
+    cpdef _set_learn_offset(self, int offset):
+        self.cInstance.setLearnOffset(offset)        
         
 %(pyFunction)s
 """ 

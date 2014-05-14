@@ -430,19 +430,15 @@ class Projection(object):
         
             * *params*: optional parameter to configure the learning
         """
-        print 'TODO: not implemented'
-        #for dendrite in self._dendrites:
-            #dendrite.learnable = True
-            #dendrite.learn_frequency = params['freq']
-            #dendrite.learn_offset = params['offset']
+        self.cyInstance._set_learning(True)
+        self.cyInstance._set_learn_frequency(params['freq'])
+        self.cyInstance._set_learn_offset(params['offset'])
             
     def disable_learning(self):
         """
         Disable the learning for all attached dendrites
         """
-        print 'TODO: not implemented'
-        # for dendrite in self._dendrites:
-        #     dendrite.learnable = False
+        self.cyInstance._set_learning(False)
 
 
     

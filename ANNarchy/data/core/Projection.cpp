@@ -24,6 +24,8 @@
 Projection::Projection()
 {
 	isLearning_ = true;
+	learnFrequency_ = 1;
+	learnOffset_ = 0;
 }
 
 Projection::~Projection()

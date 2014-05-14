@@ -51,12 +51,25 @@ public:
 
     virtual void initValues(int postNeuronRank) = 0;
 
+    void setLearning(bool isLearning) { isLearning_ = isLearning; }
+
+    void setLearnFrequency( int frequency ) { learnFrequency_ = frequency; }
+
+    int getLearnFrequency( ) { return learnFrequency_; }
+
+    void setLearnOffset( int learnOffset ) { learnOffset_ = learnOffset; }
+
+    int getLearnOffset( ) { return learnOffset_; }
+
     bool isLearning() { return isLearning_; }
 
     int getTarget() { return target_; }
 
 protected:
     bool isLearning_;
+    int learnFrequency_;
+    int learnOffset_;
+
     int target_;
 };
 #endif
