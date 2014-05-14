@@ -136,6 +136,30 @@ class Dendrite(object):
             Global._error("Dendrite has no parameter/variable called", value)     
     
     
+    def receptive_field(self, variable = 'value'):
+        """
+        Get the variable data as receptive field.
+        
+        Parameter:
+        
+        * *variable*: name of the variable (default = 'value')
+        """
+        data = getattr(self.proj.cyInstance, '_get_'+variable)(self.post_rank)
+            
+        if data.size != self.pre.size:
+            m = np.zeros( self.pre.geometry )
+            
+            j = 0
+            for r in self.cyInstance._get_rank( rank ):
+                m[self.pre.coordinates_from_rank(r)] = m[j]
+                j+=1 
+                
+        else:
+            m = data.reshape(self.pre.geometry)
+             
+        return m
+
+        
     # @property 
     # def learnable(self):
     #     return False

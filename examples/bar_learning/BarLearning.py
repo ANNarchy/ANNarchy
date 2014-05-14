@@ -116,7 +116,7 @@ class Viewer(object):
         # Refresh the GUI
         self.input_vis.setImage(Input.rate)
         self.feature_vis.setImage(Feature.rate)
-        self.rv_vis.setImage(Input_Feature._gather_data('value'))
+        self.rv_vis.setImage(Input_Feature.receptive_fields())
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         
