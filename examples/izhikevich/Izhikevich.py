@@ -1,55 +1,41 @@
 from ANNarchy import *
-from pylab import show, figure, subplot, legend, close
-
-#
-# experiment setup
-setup(dt=1.0)
-nb_steps = 1000
-nb_exc_neurons = 800
-nb_inh_neurons = 200
-
-param_dict = {
-    'a' : 0.02,
-    'b' : 0.2, 
-    'c' : -65.0, 
-    'd' : 2.0  
-}
 
 # Define the neurons
-Izhikevitch = SpikeNeuron(
+Izhikevich = SpikeNeuron(
     parameters="""
         noise_scale = 5.0 : population
-        a = 'a'
-        b = 'b'
-        c = 'c'
-        d = 'd' 
+        a = 0.02
+        b = 0.2
+        c = -65.0
+        d = 2.0 
         tau = 5.0: population
     """,
     equations="""
-        noise = Normal(0.0, 1.0)
-        I = g_exc + g_inh + noise * noise_scale : init = 0.0
+        noise = Normal(0.0, 1.0) * noise_scale
+        I = g_exc - g_inh + noise : init = 0.0
         v += 0.04 * v * v + 5.0*v + 140.0 -u + I : init=-65.0
         u += a * (b*v - u) : init = -13.0
         g_exc = 0.0
         g_inh = 0.0 
+        s = 0.0
     """,
-    extra_values=param_dict,
     spike = """
         v >= 30.0
     """,
     reset = """
         v = c
         u += d
+        s = 1.0
     """
 )
 
-Excitatory = Population(name='Excitatory', geometry=(nb_exc_neurons), neuron=Izhikevitch)
-re = np.random.random(nb_exc_neurons)
+Excitatory = Population(name='Excitatory', geometry=800, neuron=Izhikevich)
+re = np.random.random(800)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
 
-Inhibitory = Population(name='Inhibitory', geometry=(nb_inh_neurons), neuron=Izhikevitch)
-ri = np.random.random(nb_inh_neurons)
+Inhibitory = Population(name='Inhibitory', geometry=200, neuron=Izhikevich)
+ri = np.random.random(200)
 Inhibitory.noise_scale = 2.0
 Inhibitory.b = 0.25 - 0.05*ri
 Inhibitory.a = 0.02 + 0.08*ri
@@ -71,93 +57,47 @@ inh_exc = Projection(
     pre=Inhibitory, 
     post=Excitatory, 
     target='inh'
-).connect_all_to_all(weights=Uniform(-1.0, 0.0))
+).connect_all_to_all(weights=Uniform(0.0, 1.0))
   
 inh_inh = Projection(
     pre=Inhibitory, 
     post=Inhibitory, 
     target='inh'
-).connect_all_to_all(weights=Uniform(-1.0, 0.0))
+).connect_all_to_all(weights=Uniform(0.0, 1.0))
 
-# Compile
-compile()
-
-def plot(population, data):
-    """
-    Plot the recorded data of one population.
-    """
-    input =  data[population.name]['I']['data']
-    neur_v =  data[population.name]['v']['data']
-    neur_u =  data[population.name]['u']['data']    
-    
-    nb_neurons = population.size
-    
-    X = np.arange(nb_steps)
-    spikes = np.zeros((nb_neurons, nb_steps))
-    timing = population.cyInstance.get_spike_timings()
-        
-    # reformat data for plot  
-    if timing.shape == (nb_neurons,):  
-        for i in xrange(nb_neurons):
-            if len(timing[i])>1:
-                neur_v[ i, timing[i] ] = 60.0
-                spikes[ i, timing[i] ] = 1.0
-        
-    rest_pot = np.ones((nb_steps,1)) * -65.0
-    threshold = np.ones((nb_steps,1)) * 30.0
-        
-    X = np.arange(nb_steps)
-    for i in range(1):
-        fig = figure()
-        fig.suptitle('Population '+population.name)
-        
-        ax = subplot(311)
-        ax.plot( neur_v[i,:], label = "membrane potential")
-        ax.plot( neur_u[i,:], label = "membrane recovery")
-        ax.plot( rest_pot, label = "resting potential")
-        ax.plot( threshold, label = "threshold")
-        ax.legend(loc=2)
-        #ax.set_ylim([-70,70])
-        
-        ax = subplot(312)
-        ax.plot( input[i,:] )
-        #ax.set_ylim([-70,70])
-        
-        ax = subplot(313)
-        ax.plot( X, spikes.sum(axis=0) )
-        ax.set_xlim([0,nb_steps])
-
-    fig = figure()
-    fig.suptitle('Population '+population.name)
-    
-    ax = subplot(111)
-    ax.imshow( 1.0 - spikes, cmap='gray' )
-    ax.set_xlim([0,nb_steps])
-                
+                   
 if __name__ == '__main__':
     
-    print 'start simulation'
-    #
-    # close previous opened figures
-    close('all')
+    # Compile
+    compile()
 
-    # Run the simulation
+
+    # Define what to record during the simulation
     to_record = [
-        { 'pop': Excitatory, 'var': 'u' }, 
-        { 'pop': Excitatory, 'var': 'v' },
-        { 'pop': Excitatory, 'var': 'I' },
-        { 'pop': Inhibitory, 'var': 'u' }, 
-        { 'pop': Inhibitory, 'var': 'v' },
-        { 'pop': Inhibitory, 'var': 'I', 'as_1D': True }        
+        { 'pop': Excitatory, 'var': 's' }, 
+        { 'pop': Inhibitory, 'var': 's' },      
     ]
     record( to_record )
-    
-    # Simulate 1s    
-    simulate(nb_steps)
+
+    # Simulate 1s   
+    print 'Starting simulation' 
+    simulate(1000.0)
     print 'Done'
+
+    # Retrieve the recordings
+    data = get_record( to_record )        
+    data_exc = data['Excitatory']['s']['data']
+    data_inh = data['Inhibitory']['s']['data']
+    data_all = np.concatenate((data_exc, data_inh), axis=0)
+
+    # Prepare data for the raster plot
+    spikes =  np.nonzero(data_all > 0.5)
     
-    # Plot data
-    data = get_record( to_record )
-    plot( Excitatory, data )
-    plot( Inhibitory, data )
-    show()
+    # Plot the results
+    try:
+        import pyqtgraph as pg
+        pg.plot(spikes[1], spikes[0], pen=None, symbol='o', symbolSize=3)
+        raw_input()
+    except:
+        print 'PyQtGraph is not installed, can not visualize the simulation.'
+        exit(0)
