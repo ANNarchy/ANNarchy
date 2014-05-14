@@ -51,9 +51,21 @@ void SpikePopulation::addSpikeTarget(Dendrite* dendrite)
 int SpikePopulation::getLastSpikeTime(int rank)
 {
     if(spike_timings_[rank].empty())
-        return 0;
+        return -10000;
     else
         return spike_timings_[rank].back();
+}
+
+void SpikePopulation::resetSpikeTimings()
+{
+    int last_spike;
+    for(int i=0; i<spike_timings_.size(); i++)
+    {
+        last_spike = spike_timings_[i].back();
+        spike_timings_[i].clear();
+        spike_timings_[i].push_back(last_spike);
+    }
+
 }
 
 void SpikePopulation::setMaxDelay(int delay)

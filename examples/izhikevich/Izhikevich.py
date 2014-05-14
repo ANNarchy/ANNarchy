@@ -74,11 +74,9 @@ if __name__ == '__main__':
     simulate(1000.0)
     print 'Done'
 
-    data_exc = Excitatory.cyInstance.get_spike_timings()
-    data_inh = Inhibitory.cyInstance.get_spike_timings()
-    spikes = np.array([ [t, neuron] for neuron in range(800) for t in data_exc[neuron]] + \
-                      [ [t, neuron+800] for neuron in range(200) for t in data_inh[neuron]] 
-                    )
+    spikes_exc = Excitatory.raster_plot()
+    spikes_inh = Inhibitory.raster_plot()
+    spikes = np.concatenate((spikes_exc, spikes_inh + [0, 800]), axis=0)
 
     #Plot the results
     try:
