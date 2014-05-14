@@ -95,6 +95,7 @@ Apre = testAll2AllSpike.dendrite(0).get_record('Apre')
 Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
 weight = testAll2AllSpike.dendrite(0).get_record('value')
 
+
 close('all')
 
 #

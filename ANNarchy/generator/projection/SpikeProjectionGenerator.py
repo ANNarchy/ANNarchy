@@ -95,36 +95,6 @@ class SpikeProjectionGenerator(ProjectionGenerator):
         }
         return template % dictionary    
     
-    def generate_record(self):
-        code = ProjectionGenerator.generate_record(self)
-
-        if 'pre_spike' in self.desc.keys():
-            for param in self.desc['pre_spike']:
-                if param['name'] in self.desc['local']:
-                    continue
-                
-                #
-                # if a variable matches g_exc, g_inh ... we skip
-                if re.findall("(?<=g\_)[A-Za-z]+", param['name']) != []:
-                    #print 'skipped', param['name']
-                    continue
-                
-                code += """
-    if ( record_%(var)s_ )
-        recorded_%(var)s_.push_back(%(var)s_);
-""" % { 'var': param['name'] }
-
-        if 'post_spike' in self.desc.keys():
-            for param in self.desc['post_spike']:
-                if param['name'] in self.desc['local']:
-                    continue
-                
-                code += """
-    if ( record_%(var)s_ )
-        recorded_%(var)s_.push_back(%(var)s_);
-""" % { 'var': param['name'] }
-
-        return code
         
     def generate_pre_event(self):
         """ """
