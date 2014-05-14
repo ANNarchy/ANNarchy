@@ -67,9 +67,9 @@ class GLViewer(object):
         self.world = world          
         self.win = gl.GLViewWidget()
         self.win.show()
-        self.win.setCameraPosition(distance=50)
+        self.win.setCameraPosition(distance=40)
         self.plots = []
-        shift = - 20
+        shift = 0
         for pop in self.populations: 
             p = gl.GLSurfacePlotItem(
                 x = np.linspace(0, pop.geometry[0]-1, pop.geometry[0]), 
@@ -81,7 +81,7 @@ class GLViewer(object):
             p.translate(shift, -10, -1)
             self.win.addItem(p)
             self.plots.append(p)
-            shift += 25
+            shift -= 25
     def scale(self, data):
         " Colors are shown in the range [-1, 1] per default."
         return 1.8 * data -0.9

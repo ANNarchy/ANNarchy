@@ -114,7 +114,7 @@ class Viewer(object):
         set_input()
         simulate(50) 
         # Refresh the GUI
-        self.input_vis.setImage(Input.rate.T)
+        self.input_vis.setImage(Input.rate)
         self.feature_vis.setImage(Feature.rate)
         self.rv_vis.setImage(Input_Feature._gather_data('value'))
         # Listen to mouse/keyboard events
