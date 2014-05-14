@@ -154,7 +154,7 @@ void Network::addPopulation(class Population* population)
     }
 }
 
-void Network::connect(int prePopulationID, int postPopulationID, int projectionID, int targetID, bool spike, std::string filename)
+void Network::connect(int prePopulationID, int postPopulationID, int targetID, std::string filename)
 {
 	/*
 	std::fstream file(filename, std::ios_base::in);

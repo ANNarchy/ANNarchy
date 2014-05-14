@@ -27,13 +27,10 @@ output_pop = Population(geometry=(1), neuron=OutputNeuron)
 
 proj = Projection(input_pop, output_pop, 'exc').connect_fixed_number_pre(CONN)
 
-compile() # needed to save connectivity matrix
+#compile() # needed to save connectivity matrix
 #proj.save_connectivity_as_csv()
 
-simulate(1)
-
-print 'values:'
-proj._cython_instance._get_value(0)
+#simulate(1)
 
 # recompile as stand alone
-#compile(cpp_stand_alone = True)
+compile(cpp_stand_alone = True)

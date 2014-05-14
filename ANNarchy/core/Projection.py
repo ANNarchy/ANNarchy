@@ -87,11 +87,11 @@ class Projection(object):
         else:
             self.synapse_type = synapse
 
-        type_prefix = "Rate" if isinstance(self.synapse_type, RateSynapse) else "Spike"
+        self.type_prefix = "Rate" if isinstance(self.synapse_type, RateSynapse) else "Spike"
 
         # Create a default name
         self._id = len(Global._projections)
-        self.name = type_prefix+'Projection'+str(self._id)
+        self.name = self.type_prefix+'Projection'+str(self._id)
             
         self._synapses = {}
         self._connector = None
@@ -817,13 +817,13 @@ class Projection(object):
         
         with open(filename, mode='w') as w_file:
             
-            for dendrite in self._dendrites:
+            for dendrite in self.dendrites:
                 rank_iter = iter(dendrite.rank)
                 value_iter = iter(dendrite.value)
                 delay_iter = iter(dendrite.delay)
                 post_rank = dendrite.post_rank
 
-                for i in xrange(dendrite.size):
+                for i in xrange(dendrite.size()):
                     w_file.write(str(next(rank_iter))+', '+
                                  str(post_rank)+', '+
                                  str(next(value_iter))+', '+

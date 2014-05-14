@@ -50,7 +50,7 @@ public:
 	    omp_set_num_threads(threads);
 	}
 
-	void connect(int prePopulationID, int postPopulationID, int projectionID, int target, bool spike, std::string filename);
+	void connect(int prePopulationID, int postPopulationID, int target, std::string filename);
 
 	void disconnect(int prePopulationID, int postPopulationID, bool preIsSpike, bool postIsSpike, int target=-1);
 

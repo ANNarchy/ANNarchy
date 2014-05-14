@@ -46,9 +46,12 @@ void SpikeProjection::localLearn()
 #endif
 
 	#pragma omp for
-	for ( int d = 0; d < nbDendrites_; d++ )
+	for ( int n = 0; n < nbDendrites_; n++ )
 	{
-		dendrites_[d]->localLearn();
+		if ( !dendrites_[n] )
+			continue;
+
+		dendrites_[n]->localLearn();
 	}
 
 	#pragma omp barrier
@@ -60,9 +63,12 @@ void SpikeProjection::postEvent(std::vector<int> post_ranks)
 	std::cout << "number of post events: " << post_ranks.size() << std::endl;
 #endif
 
-	for ( int r = 0; r < post_ranks.size(); r++ )
+	for ( unsigned int n = 0; n < post_ranks.size(); n++ )
 	{
-		dendrites_[r]->postEvent();
+		if ( !dendrites_[n] )
+			continue;
+
+		dendrites_[n]->postEvent();
 	}
 }
 
@@ -110,6 +116,9 @@ void SpikeProjection::record()
 {
 	for ( auto it = dendrites_.begin(); it != dendrites_.end(); it++ )
 	{
+		if (*it == NULL)
+			continue;
+
 		(*it)->record();
 	}
 }
@@ -120,6 +129,10 @@ void SpikeProjection::initValues(int postNeuronRank)
 		dendrites_[postNeuronRank]->initValues();
 }
 
-int SpikeProjection::nbSynapses(int post_rank) {
-	return dendrites_[post_rank]->getSynapseCount();
+int SpikeProjection::nbSynapses(int post_rank)
+{
+	if ( !dendrites_[post_rank] )
+		return 0;
+	else
+		return dendrites_[post_rank]->getSynapseCount();
 }

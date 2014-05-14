@@ -37,6 +37,9 @@ void RateProjection::computeSum()
 	#pragma omp for
 	for ( int n = 0; n < nbDendrites_; n++ )
 	{
+		if (!dendrites_[n])
+			continue;
+
 	#ifdef _DEBUG
 		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
 	#endif
@@ -56,6 +59,9 @@ void RateProjection::globalLearn()
 	#pragma omp for
 	for ( int n = 0; n < nbDendrites_; n++ )
 	{
+		if (!dendrites_[n])
+			continue;
+
 		dendrites_[n]->globalLearn();
 	}
 }
@@ -72,6 +78,9 @@ void RateProjection::localLearn()
 	#pragma omp for
 	for ( int n = 0; n < nbDendrites_; n++ )
 	{
+		if (!dendrites_[n])
+			continue;
+
 		dendrites_[n]->localLearn();
 	}
 }
@@ -81,6 +90,10 @@ DATA_TYPE RateProjection::getSum(int neuron)
 	if ( neuron >= dendrites_.size() )
 	{
 		std::cout << "No dendrite " << neuron << "on this projection."<< std::endl;
+		return 0.0;
+	}
+	else if  ( !dendrites_[neuron] )
+	{
 		return 0.0;
 	}
 	else
@@ -137,6 +150,9 @@ void RateProjection::record()
 {
 	for ( int n = 0; n < nbDendrites_; n++ )
 	{
+		if ( !dendrites_[n] )
+			continue;
+
 		dendrites_[n]->record();
 	}
 }

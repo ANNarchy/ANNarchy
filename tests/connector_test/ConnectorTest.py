@@ -21,7 +21,7 @@ OneDimOut = Population((1,3), Simple)
 
 In = Population((30, 30), Simple)
 Middle = Population((30, 30), Simple)
-Out = Population((5, 5), Simple)
+Out = Population((2, 2), Simple)
  
 testOne2One = Projection( 
     pre = In, 
