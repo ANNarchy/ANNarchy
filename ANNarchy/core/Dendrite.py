@@ -144,17 +144,13 @@ class Dendrite(object):
         
         * *variable*: name of the variable (default = 'value')
         """
-        data = getattr(self.proj.cyInstance, '_get_'+variable)(self.post_rank)
-            
-        if data.size != self.pre.size:
-            ranks = self.proj.cyInstance._get_rank( self.post_rank )
-            res = np.zeros( self.pre.size )
-            res[ranks] = data
-            return res.reshape(self.pre.geometry)
-                
-        else:
-            return data.reshape(self.pre.geometry)
+        values = getattr(self.proj.cyInstance, '_get_'+variable)(self.post_rank)
+        ranks = self.proj.cyInstance._get_rank( self.post_rank )
              
+        m = np.zeros( self.pre.size )
+        m[ranks] = values
+
+        return m.reshape(self.pre.geometry)
 
         
     # @property 
