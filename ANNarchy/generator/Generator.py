@@ -29,10 +29,14 @@ import time
 # ANNarchy core informations
 import ANNarchy
 import ANNarchy.core.Global as Global
+
 from ANNarchy.parser.Analyser import Analyser, _extract_functions
-from ANNarchy.generator.PopulationGenerator import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy.generator.ProjectionGenerator import RateProjectionGenerator, RateProjectionGeneratorCUDA, SpikeProjectionGenerator  
-from templates import *
+
+from ANNarchy.generator.population import RatePopulationGenerator, SpikePopulationGenerator  
+from ANNarchy.generator.projection import RateProjectionGenerator, SpikeProjectionGenerator
+from ANNarchy.generator.dendrite import RateDendriteGenerator, SpikeDendriteGenerator
+  
+from network import *
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -244,27 +248,19 @@ class Generator(object):
         
         # create projections cpp class for each synapse
         for name, desc in self.analyser.analysed_projections.iteritems():
+
+            paradigm = Global.config['paradigm'] if Global.config.has_key('paradigm') else "openmp"
             
-            if Global.config.has_key('paradigm'):
-                if Global.config['paradigm'] == "openmp":
-                    if desc['type'] == 'rate':
-                        proj_generator = RateProjectionGenerator(name, desc)
-                    elif desc['type'] == 'spike':
-                        proj_generator = SpikeProjectionGenerator(name, desc)
-                    proj_generator.generate(Global.config['verbose'])
-                else:
-                    if desc['type'] == 'rate':
-                        proj_generator = RateProjectionGeneratorCUDA(name, desc)
-                    elif desc['type'] == 'spike':
-                        proj_generator = SpikeProjectionGenerator(name, desc)
-                    proj_generator.generate(Global.config['verbose'])
+            if desc['type'] == 'rate':
+                proj_generator = RateProjectionGenerator(name, desc)
+                dend_generator = RateDendriteGenerator(name.replace('Projection','Dendrite'), desc, paradigm)
             else:
-                if desc['type'] == 'rate':
-                    proj_generator = RateProjectionGenerator(name, desc)
-                elif desc['type'] == 'spike':
-                    proj_generator = SpikeProjectionGenerator(name, desc)
-                proj_generator.generate(Global.config['verbose'])
-                
+                proj_generator = SpikeProjectionGenerator(name, desc)
+                dend_generator = SpikeDendriteGenerator(name.replace('Projection','Dendrite'), desc, paradigm)
+            
+            proj_generator.generate(Global.config['verbose'])
+            dend_generator.generate(Global.config['verbose'])
+            
         # Create default files mainly based on the number of populations and projections
         if Global.config['verbose']:
             print('\nCreate Includes.h ...')
@@ -476,6 +472,7 @@ class Generator(object):
                 Global._print(e)
                 Global._error('The Cython library was not correctly compiled.\n Check the compilation logs in annarchy/compile_sterr.log')
                 exit(0)
+                
         # Bind the py extensions to the corresponding python objects
         for pop in self.populations:
             if Global.config['verbose']:
@@ -483,7 +480,7 @@ class Generator(object):
             if Global.config['show_time']:
                 t0 = time.time()
             # Create the Cython instance 
-            pop.cyInstance = eval('ANNarchyCython.py'+ pop.class_name+'()')
+            pop.cyInstance = eval('ANNarchyCython.py'+ pop.class_name+'('+str(pop.size)+')')
             # Create the attributes and actualize the initial values
             pop._init_attributes()
             if Global.config['show_time']:
@@ -495,7 +492,8 @@ class Generator(object):
                 Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')        
             if Global.config['show_time']:
                 t0 = time.time()
-            # Create the synapses
+            
+            # Create the projection
             proj._connect() 
             
             #TODO:
@@ -561,14 +559,17 @@ class Generator(object):
                 if a_line.find('//AddProjection') != -1:
                     code += a_line
                     if(self.cpp_stand_alone):
-                        template = """\t\tnet_->connect(%(preID)i, %(postID)i, %(projID)i, %(target)i, %(spike)s, "%(filename)s");\n""" 
+                        
+                        template = """
+        auto proj_%(preID)s_%(postID)s = new %(name)s ( %(preID)s, %(postID)s, %(target)s ); \n
+        net_->connect(%(preID)i, %(postID)i, %(target)i, "%(filename)s");\n
+""" 
                         
                         for proj in self.projections:
                             dictionary = { 'preID' : proj.pre._id,
                                            'postID' : proj.post._id,
-                                           'projID' : proj._id,
                                            'target' : proj.post.targets.index(proj.target),
-                                           'spike' : 'false', # TODO!!!!
+                                           'name': proj.name,
                                            'filename' : proj.pre.name+'_'+proj.post.name+'_'+proj.target+'.csv'
                                           } 
                             
@@ -579,15 +580,12 @@ class Generator(object):
                     if(self.cpp_stand_alone):
                         #
                         # populations register themselves on the network object, so only create the objects
-                        template = """\t\tnew %(class)s("%(name)s", %(size)s);\n"""
+                        template = """new %(class)s("%(name)s", %(size)s);\n"""
                         for pop in self.populations:
                             code += template % { 'name': pop.name,
                                                  'class': pop.class_name,
                                                  'size': pop.size }
                                                          
-                elif a_line.find('//createProjInstance') != -1:
-                    code += a_line
-                    code += self.generate_proj_instance_class()
                 else:
                     code += a_line
     
@@ -595,23 +593,6 @@ class Generator(object):
             w_file.write(code)
             
 
-    def generate_proj_instance_class(self):
-        """
-        The standard ANNarchy core has no knowledge about the full amount of projection
-        classes. On the other hand we want to instantiate the object from there. To achieve this
-        we introduce a projection instantiation class, which returns a projections instance corresponding
-        to the given ID.
-        """
-        projections = self.analyser.analysed_projections
-        # single cases
-        cases_ptr = ''
-        for name in projections.iterkeys():
-            cases_ptr += proj_instance % { 'name': name, 'id': name.split('Dendrite')[1]}
-
-        # complete code
-        code = create_proj_instance % { 'case1': cases_ptr }
-        return code
-    
     def update_global_header(self):
         """
         update Global.h dependent on compilation modes:

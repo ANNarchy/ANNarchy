@@ -138,12 +138,16 @@ public:
 	/**
 	 * 	\brief		get synaptic weights
 	 */
-	std::vector<DATA_TYPE> getValue() { return value_; }
+	std::vector<DATA_TYPE> getValue();
 
 	/**
 	 * 	\brief		set synaptic weights
 	 */
-	void setValue(std::vector<DATA_TYPE> value) { value_ = value; }
+	void setValue(std::vector<DATA_TYPE> value);
+
+    DATA_TYPE getSingleValue(int rank) { return this->value_[rank]; }
+
+    void setSingleValue(int rank, DATA_TYPE value) { this->value_[rank] = value; }
 
     /**
      * 	\brief		return if the projection is between rate coded or spike coded populations

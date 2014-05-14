@@ -36,7 +36,11 @@ Oja = RateSynapse(
 
 
 # Creating the populations
+<<<<<<< HEAD
 Input = Population(geometry=(8,10), neuron=InputNeuron)
+=======
+Input = Population(geometry=(8, 8), neuron=InputNeuron)
+>>>>>>> proj_refactor
 Feature = Population(geometry=(8, 4), neuron=LeakyNeuron)
 
 # Creating the projections
@@ -114,9 +118,15 @@ class Viewer(object):
         set_input()
         simulate(50) 
         # Refresh the GUI
+<<<<<<< HEAD
         self.input_vis.setImage(Input.rate.T)
         self.feature_vis.setImage(Feature.rate)
         self.rv_vis.setImage(Input_Feature._gather_data('value').transpose())
+=======
+        self.input_vis.setImage(Input.rate)
+        self.feature_vis.setImage(Feature.rate)
+        self.rv_vis.setImage(Input_Feature.receptive_fields())
+>>>>>>> proj_refactor
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         

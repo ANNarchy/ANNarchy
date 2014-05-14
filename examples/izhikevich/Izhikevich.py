@@ -71,6 +71,7 @@ if __name__ == '__main__':
     # Compile
     compile()
 
+<<<<<<< HEAD
 
     # Define what to record during the simulation
     to_record = [
@@ -79,11 +80,14 @@ if __name__ == '__main__':
     ]
     record( to_record )
 
+=======
+>>>>>>> proj_refactor
     # Simulate 1s   
     print 'Starting simulation' 
     simulate(1000.0)
     print 'Done'
 
+<<<<<<< HEAD
     # Retrieve the recordings
     data = get_record( to_record )        
     data_exc = data['Excitatory']['s']['data']
@@ -101,3 +105,18 @@ if __name__ == '__main__':
     except:
         print 'PyQtGraph is not installed, can not visualize the simulation.'
         exit(0)
+=======
+    spikes_exc = Excitatory.raster_plot()
+    spikes_inh = Inhibitory.raster_plot()
+    spikes = np.concatenate((spikes_exc, spikes_inh + [0, 800]), axis=0)
+
+    #Plot the results
+    try:
+        import pyqtgraph as pg
+    except:
+        print 'PyQtGraph is not installed, can not visualize the simulation.'
+        exit(0)
+    else:
+        pg.plot(spikes[:, 0], spikes[:, 1], pen=None, symbol='o', symbolSize=3)
+        raw_input()
+>>>>>>> proj_refactor

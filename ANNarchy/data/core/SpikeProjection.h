@@ -27,7 +27,7 @@
 class SpikeProjection : public Projection
 {
 public:
-	SpikeProjection(std::string pre, std::string post, int target);
+	SpikeProjection();
 
     void globalLearn();
 
@@ -39,15 +39,23 @@ public:
 
 	void addDendrite(int postNeuronRank, class Dendrite *dendrite);
 
+	void addDendrite(int postNeuronRank, std::vector<int> ranks, std::vector<DATA_TYPE> values, std::vector<int> delays) {}
+
 	class Dendrite *getDendrite(int postNeuronRank);
 
 	void removeDendrite(int postNeuronRank, class Population *pre);
+
+	void initValues(int postNeuronRank);
 
 	bool isRateCoded() { return false; }
 
 	void record();
 
-private:
+	int nbDendrites() { return dendrites_.size();}
+
+	int nbSynapses(int post_rank);
+
+protected:
 	int nbDendrites_;
 
 	class SpikePopulation* pre_population_;

@@ -256,6 +256,10 @@ void %(class)s::globalOperations()
 void %(class)s::record() 
 {
 %(record)s
+    for(unsigned int p=0; p< projections_.size(); p++)
+    {
+        projections_[p]->record();
+    }
 }
 
 %(single_global_ops)s
@@ -362,7 +366,6 @@ void %(class)s::globalOperations()
 void %(class)s::record() 
 {
 %(record)s
-    
     for(unsigned int p=0; p< projections_.size(); p++)
     {
         projections_[p]->record();
@@ -448,8 +451,8 @@ cdef class py%(class_name)s:
 
     cdef %(class_name)s* cInstance
 
-    def __cinit__(self):
-        self.cInstance = new %(class_name)s('%(name)s', %(neuron_count)s)
+    def __cinit__(self, int size):
+        self.cInstance = new %(class_name)s('%(name)s', size)
 
     def name(self):
         return self.cInstance.getName()
@@ -497,6 +500,8 @@ cdef extern from "../build/%(class_name)s.h":
         
         vector[ vector[int] ] getSpikeTimings()
         
+        void resetSpikeTimings()
+        
         void resetToInit()
         
         void setMaxDelay(int)
@@ -508,14 +513,17 @@ cdef class py%(class_name)s:
 
     cdef %(class_name)s* cInstance
 
-    def __cinit__(self):
-        self.cInstance = new %(class_name)s('%(name)s', %(neuron_count)s)
+    def __cinit__(self, int size):
+        self.cInstance = new %(class_name)s('%(name)s', size)
 
     def name(self):
         return self.cInstance.getName()
 
-    def get_spike_timings(self):
-        return np.array( self.cInstance.getSpikeTimings() )
+    cpdef list get_spike_timings(self):
+        return list( self.cInstance.getSpikeTimings() )
+
+    def reset_spike_timings(self):
+        self.cInstance.resetSpikeTimings() 
 
     def reset(self):
         self.cInstance.resetToInit()

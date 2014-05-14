@@ -738,4 +738,35 @@ class Population(object):
                 return idx
         return -1
 
+    def raster_plot(self, compact=False, clear=True):
+        """ Returns data allowing to display a raster plot for a spiking population.
+
+        For all neurons in the population, the absolute time (in simulation steps since the beginning) where a spike was emitted is given.
+
+        By default, it returns a (N, 2) Numpy array where each spike (first index) is represented by the corresponding time (first column) and the neuron index (second column).  It can be very easily plotted, for example with matplotlib::
+
+            >>> spikes = pop.raster_plot()
+            >>> from pylab import *
+            >>> plot(spikes[:, 0], spikes[:, 1], 'o')
+            >>> show()
+
+        If ``compact`` is set to ``True``, it will return a list of lists, where the first index corresponds to the neurons' ranks, and the second is a list of time steps where a spike was emitted.
+
+        Parameters:
+
+        * ``compact``: defines the format of the returned array.
+
+        * ``clear``: defines if the recorded spike times should be cleared from memory (i.e. if ``True``, the next call to ``raster_plot()`` will display only spikes emitted since the last call). By default, ``raster_plot()`` returns all the spikes emitted since the beginning of the simulation (can become huge for long simulations).
+
+        """
+        if self.description['type'] != 'spike':
+            Global._warning('raster_plot() is only available for spiking populations.')
+            return []
+        data = self.cyInstance.get_spike_timings()
+        if clear:
+            self.cyInstance.reset_spike_timings()
+        if compact:
+            return data
+        else:
+            return np.array([ [t, neuron] for neuron in range(len(data)) for t in data[neuron] ] )
 
