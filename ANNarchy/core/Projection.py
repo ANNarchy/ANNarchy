@@ -901,38 +901,14 @@ class Projection(object):
 
         return dendrites
 
-    def _gather_data_dendrite(self, variable, rank):
+    def receptive_fields(self, variable = 'value', in_post_geometry = True):
         """ 
-        Gathers synaptic values for visualization
+        Gathers all receptive fields within this projection.
         
         *Paramater*:
         
             * *variable*: name of variable
-        """
-        if rank in self._post_ranks:
-            m = getattr(self.cyInstance, '_get_'+variable)(rank)
-            
-            if m.shape != self.pre.geometry:
-                new_m = np.zeros( self.pre.geometry )
-                
-                j = 0
-                for r in self.cyInstance._get_rank( rank ):
-                    new_m[self.pre.coordinates_from_rank(r)] = m[j]
-                    j+=1 
-                    
-                m = new_m
-                
-            return m
-        else:
-            return np.zeros( self.pre.geometry )
-        		
-    def _gather_data(self, variable, in_post_geometry = True):
-        """ 
-        Gathers synaptic values for visualization
-        
-        *Paramater*:
-        
-            * *variable*: name of variable
+            * *in_post_geometry*: if set to false, the data will be plotted as square grid. (default = True)
         """
         rank = 0
         m_ges = None
@@ -948,7 +924,10 @@ class Projection(object):
             m_row = None
              
             for x in xrange ( x_size ):
-                m = self._gather_data_dendrite(variable, rank)
+                if rank in self._post_ranks:
+                    m = self.dendrite(rank).receptive_field(variable)
+                else:
+                    m = np.zeros( self.pre.geometry )
                  
                 if m_row == None:
                     m_row = m
