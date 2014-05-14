@@ -147,17 +147,14 @@ class Dendrite(object):
         data = getattr(self.proj.cyInstance, '_get_'+variable)(self.post_rank)
             
         if data.size != self.pre.size:
-            m = np.zeros( self.pre.geometry )
-            
-            j = 0
-            for r in self.cyInstance._get_rank( rank ):
-                m[self.pre.coordinates_from_rank(r)] = m[j]
-                j+=1 
+            ranks = self.proj.cyInstance._get_rank( self.post_rank )
+            res = np.zeros( self.pre.size )
+            res[ranks] = data
+            return res.reshape(self.pre.geometry)
                 
         else:
-            m = data.reshape(self.pre.geometry)
+            return data.reshape(self.pre.geometry)
              
-        return m
 
         
     # @property 

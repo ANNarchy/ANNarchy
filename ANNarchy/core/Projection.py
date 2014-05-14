@@ -905,7 +905,7 @@ class Projection(object):
         """ 
         Gathers all receptive fields within this projection.
         
-        *Paramater*:
+        *Parameters*:
         
             * *variable*: name of variable
             * *in_post_geometry*: if set to false, the data will be plotted as square grid. (default = True)
@@ -920,27 +920,19 @@ class Projection(object):
             x_size = int( math.floor(math.sqrt(self.post.size)) )
             y_size = int( math.ceil(math.sqrt(self.post.size)) )
         
-        for y in xrange ( y_size ):
-            m_row = None
-             
-            for x in xrange ( x_size ):
-                if rank in self._post_ranks:
-                    m = self.dendrite(rank).receptive_field(variable)
-                else:
-                    m = np.zeros( self.pre.geometry )
-                 
-                if m_row == None:
-                    m_row = m
-                else:
-                    m_row = np.ma.concatenate( [ m_row, m ], axis = 1 )
 
-                rank += 1
-             
-            if m_ges == None:
-                m_ges = m_row
+
+        def get_rf(rank):
+            if rank in self._post_ranks:
+                return self.dendrite(rank).receptive_field(variable)
             else:
-                m_ges = np.ma.concatenate( [ m_ges, m_row ] )
+                return np.zeros( self.pre.geometry )
+
+        res = np.zeros((1, x_size*self.pre.geometry[1]))
+        for y in xrange ( y_size ):
+            row = np.concatenate(  [ get_rf(self.post.rank_from_coordinates( (y, x) ) ) for x in range ( x_size ) ], axis = 1)
+            res = np.concatenate((res, row))
         
-        return m_ges
+        return res
                 
 
