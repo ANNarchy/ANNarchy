@@ -68,6 +68,14 @@ public:
     std::vector< std::vector<int> > getSpikeTimings() { return spike_timings_;}
 
     /**
+     * \brief       Clears the spike timings of all neurons.
+     * \details     Needed by the Python interface
+     * \param[OUT]  1st dimension: neurons sorted by their rank
+     *              2nd dimension: spike times of the neuron
+     */
+    void resetSpikeTimings() ;
+
+    /**
      * \brief       Get the laste spike time of a neuron.
      * \details     Sometimes it may useful to trace all the emited spikes, e.g.
      *              visualization.

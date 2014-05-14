@@ -500,6 +500,8 @@ cdef extern from "../build/%(class_name)s.h":
         
         vector[ vector[int] ] getSpikeTimings()
         
+        void resetSpikeTimings()
+        
         void resetToInit()
         
         void setMaxDelay(int)
@@ -519,6 +521,9 @@ cdef class py%(class_name)s:
 
     cpdef list get_spike_timings(self):
         return list( self.cInstance.getSpikeTimings() )
+
+    def reset_spike_timings(self):
+        self.cInstance.resetSpikeTimings() 
 
     def reset(self):
         self.cInstance.resetToInit()
