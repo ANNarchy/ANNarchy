@@ -31,6 +31,8 @@ from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy.parser.Analyser import analyse_projection
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.Record import Record
+import ANNarchy.core.cython_ext.Coordinates as Coordinates
+import ANNarchy.core.cython_ext.Connector as Connector
 
 class Projection(object):
     """
@@ -129,13 +131,11 @@ class Projection(object):
         # Finalize initialization
         self.initialized = False
         
-        import pyximport
-        pyximport.install()
-        import cy_functions
+        
         self._comp_dict = {
-            1: cy_functions.comp_dist1D,
-            2: cy_functions.comp_dist2D,
-            3: cy_functions.comp_dist3D
+            1: Coordinates.comp_dist1D,
+            2: Coordinates.comp_dist2D,
+            3: Coordinates.comp_dist3D
         }
 
         self.cyInstance = None
@@ -505,6 +505,24 @@ class Projection(object):
                                                           'd': next(delay_iter) }
         
         return self
+    
+    def connect_all_to_all2(self, weights, delays=0.0, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+    
+        self._synapses = Connector.all_to_all(self.pre.size, self.post.size, weights, int(delays))
+
+
+        
+        return self
 
     def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
@@ -531,7 +549,7 @@ class Projection(object):
             comp_func = self._comp_dict[self.pre.dimension]
         except KeyError:
             # 4 and higher dimensionality
-            comp_func = cy_functions.comp_distND
+            comp_func = Coordinates.comp_distND
 
         if isinstance(delays, (int, float)):
             delay_values = [ delays for n in range(self.pre.size) ]
@@ -589,7 +607,7 @@ class Projection(object):
             comp_func = self._comp_dict[self.pre.dimension]
         except KeyError:
             # 4 and higher dimensionality
-            comp_func = cy_functions.comp_distND
+            comp_func = Coordinates.comp_distND
 
         if isinstance(delays, (int, float)):
             delay_values = [ delays for n in range(self.pre.size) ]
@@ -837,7 +855,11 @@ class Projection(object):
         self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
         
         # Sort the dendrites to be created based on _synapses
-        if ( isinstance(self._synapses, list) ):
+        if ( isinstance(self._synapses, Connector.CSR) ):
+            self.cyInstance.createFromCSR(self._synapses)
+            self._post_ranks = self._synapses.keys()
+            return
+        elif ( isinstance(self._synapses, list) ):
         	dendrites = self._build_pattern_from_list()
         else:
         	dendrites = self._build_pattern_from_dict()

@@ -48,6 +48,7 @@ except:
 # cython
 try:
     import cython
+    from Cython.Build import cythonize
     print('Checking for cython... OK')
 
 except:
@@ -70,6 +71,10 @@ setup(  name='ANNarchy',
 		author_email='julien.vitay@informatik.tu-chemnitz.de',
 		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['data/core/*', 'data/cuda/*', 'data/pyx/*', 'core/cy_functions.pyx']}
+        package_data={'ANNarchy': ['data/core/*', 'data/cuda/*', 'data/pyx/*', 'core/cy_functions.pyx']},
+        ext_modules = cythonize(
+           ["ANNarchy/core/cython_ext/Connector.pyx", "ANNarchy/core/cython_ext/Coordinates.pyx"],                 # our Cython source
+           language='c++'
+      )
  )
 

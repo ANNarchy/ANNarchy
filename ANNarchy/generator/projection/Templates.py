@@ -431,6 +431,9 @@ from libcpp cimport bool
 import numpy as np
 cimport numpy as np
 
+import ANNarchy
+from ANNarchy.core.cython_ext.Connector import CSR as CSR
+
 cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(int preLayer, int postLayer, int target)
@@ -502,10 +505,21 @@ cdef class py%(name)s:
     cpdef createFromDict( self, dict dendrites ):
         cdef int rank
         cdef dict data
-        
+
         for rank, data in dendrites.iteritems():
             # create dendrite instance
             self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])
+            
+            # initialize variables
+            self.cInstance.initValues(rank)
+
+    cpdef createFromCSR( self, dendrites ):
+        cdef int rank
+        cdef list data
+
+        for rank, data in dendrites.data().iteritems():
+            # create dendrite instance
+            self.cInstance.addDendrite(rank, data[0], data[1], data[2])
             
             # initialize variables
             self.cInstance.initValues(rank)
