@@ -470,7 +470,7 @@ class Projection(object):
             
         return self
     
-    def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
+    def connect_all_to_all_old(self, weights, delays=0.0, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
         
@@ -506,22 +506,24 @@ class Projection(object):
         
         return self
     
-    def connect_all_to_all2(self, weights, delays=0.0, allow_self_connections=False):
+    def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
         """
-        Establish all to all connections within the two projections.
+        Establish an all-to-all connection pattern between the two populations.
         
         Parameters:
         
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+            * *weights*: synaptic values, either one value (float) or a random distribution object.
+            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
+            * *allow_self_connections*: if True, self-connections between a neuron and itself is allowed (default=False).
         """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-    
-        self._synapses = Connector.all_to_all(self.pre.size, self.post.size, weights, int(delays))
+        if self.pre!=self.post:
+            allow_self_connections = True
 
+        if isinstance(delays, float):
+            delays = int(delays/Global.config['dt'])
 
-        
+        self._synapses = Connector.all_to_all(self.pre.size, self.post.size, weights, delays, allow_self_connections)
+
         return self
 
     def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
