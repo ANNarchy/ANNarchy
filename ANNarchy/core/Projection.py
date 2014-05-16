@@ -451,8 +451,8 @@ class Projection(object):
         
         Parameters:
         
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
+            * *weights*: initial synaptic values, either one value (float) or a random distribution object.
+            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
         """
         synapses = {}
     
@@ -470,7 +470,7 @@ class Projection(object):
             
         return self
     
-    def connect_all_to_all_old(self, weights, delays=0.0, allow_self_connections=False):
+    def _connect_all_to_all_old(self, weights, delays=0.0, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
         
@@ -508,19 +508,16 @@ class Projection(object):
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
         """
-        Establish an all-to-all connection pattern between the two populations.
+        Establishes an all-to-all connection pattern between the two populations.
         
         Parameters:
         
             * *weights*: synaptic values, either one value (float) or a random distribution object.
             * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
-            * *allow_self_connections*: if True, self-connections between a neuron and itself is allowed (default=False).
+            * *allow_self_connections*: if True, self-connections between a neuron and itself are allowed (default=False).
         """
         if self.pre!=self.post:
             allow_self_connections = True
-
-        if isinstance(delays, float):
-            delays = int(delays/Global.config['dt'])
 
         self._synapses = Connector.all_to_all(self.pre.size, self.post.size, weights, delays, allow_self_connections)
 
@@ -645,18 +642,18 @@ class Projection(object):
 
         return self
        
-    def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
+    def _connect_fixed_probability_old(self, probability, weights, delays=0.0, allow_self_connections=False):
         """ fixed_probability projection between two populations. 
     
-        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided.
+        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided by default.
     
         Parameters:
         
-        * probability: probability that a synapse is created.
+        * probability: probability that an individual synapse is created.
         
-        * weights: either the value common for all connections or a RandomDistribution object.
+        * weights: either a single value for all synapses or a RandomDistribution object.
         
-        * delays: either the value common for all connections or a RandomDistribution object (default = 0.0)
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
         
         * allow_self_connections : defines if self-connections are allowed (default=False).
         """        
@@ -684,6 +681,28 @@ class Projection(object):
                 if np.random.random() < probability:
                     self._synapses[(pre_rank, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
   
+        return self
+
+    def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
+        """ fixed_probability projection between two populations. 
+    
+        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided by default.
+    
+        Parameters:
+        
+        * probability: probability that an individual synapse is created.
+        
+        * weights: either a single value for all synapses or a RandomDistribution object.
+        
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """         
+        if self.pre!=self.post:
+            allow_self_connections = True
+
+        self._synapses = Connector.fixed_probability(self.pre.size, self.post.size, probability, weights, delays, allow_self_connections)
+
         return self
 
     def connect_fixed_number_pre(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
