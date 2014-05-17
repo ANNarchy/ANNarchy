@@ -686,7 +686,7 @@ class Projection(object):
     def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
         """ fixed_probability projection between two populations. 
     
-        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided by default.
+        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self-connections are avoided by default.
     
         Parameters:
         
@@ -705,7 +705,7 @@ class Projection(object):
 
         return self
 
-    def connect_fixed_number_pre(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+    def _connect_fixed_number_pre_old(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
         """ fixed_number_pre projection between two populations.
     
         Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
@@ -714,9 +714,9 @@ class Projection(object):
         
         * number: number of synapses per presynaptic neuron.
         
-        * weights: either the value common for all the connection weights or random distribution object.
+        * weights: either a single value for all synapses or a RandomDistribution object.
         
-        * delays : the delay of the synapse transmission, either as a float (milliseconds) or a DiscreteDistribution object (default=0).
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
         
         * allow_self_connections : defines if self-connections are allowed (default=False).
         """
@@ -756,21 +756,33 @@ class Projection(object):
                 ranks.append(choice)
                 
         return self
-            
-    def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+
+    def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False):
         """ fixed_number_pre projection between two populations.
     
         Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
     
         Parameters:
         
-        * number: number of synapses per presynaptic neuron.
+        * number: number of synapses per postsynaptic neuron.
         
-        * weights: either the value common for all the connection weights or random distribution object.
+        * weights: either a single value for all synapses or a RandomDistribution object.
         
-        * delays : the delay of the synapse transmission, either as a float (milliseconds) or a DiscreteDistribution object (default=0).
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
         
         * allow_self_connections : defines if self-connections are allowed (default=False).
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+        
+        self._synapses = Connector.fixed_number_pre(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
+
+        return self
+            
+    def _connect_fixed_number_post_old(self, number, weights, delays=0.0, allow_self_connections=False):
+        """ fixed_number_pre projection between two populations.
+    
+        Old and slow, do not use.
         """
         allow_self_connections = (self.pre!=self.post) and not allow_self_connections
         
@@ -807,6 +819,28 @@ class Projection(object):
                 self._synapses[(pre_rank, choice)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
                 ranks.append(choice)
                 
+        return self
+            
+    def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+        """ fixed_number_post projection between two populations.
+    
+        Each neuron in the presynaptic population sends connections to a fixed number of neurons of the postsynaptic population chosen randomly. 
+    
+        Parameters:
+        
+        * number: number of synapses per presynaptic neuron.
+        
+        * weights: either a single value for all synapses or a RandomDistribution object.
+        
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+        
+        self._synapses = Connector.fixed_number_post(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
+
         return self
 
     def connect_from_list(self, connection_list):
