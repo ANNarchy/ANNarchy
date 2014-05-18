@@ -523,7 +523,7 @@ class Projection(object):
 
         return self
 
-    def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
+    def _connect_gaussian_old(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
 
@@ -578,8 +578,30 @@ class Projection(object):
                     self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }   
                          
         return self
+
+    def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish a Guassian conneciton pattern between the two populations.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same normalized coordinates using a Gaussian distribution.
+        
+        Parameters:
+        
+            * *amp*: amp value
+            * *sigma*: sigma value
+            * *delays*: synaptic delay, either a single value or a random distribution object (default : 0.0).
+            * *limit*: proportion of *amp* below which synapses are not created (default: 0.01)
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+
+        self._synapses = Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections)
+
+        return self
     
-    def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+    def _connect_dog_old(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
         Establish all to all connections within the two projections.
 
@@ -639,6 +661,30 @@ class Projection(object):
                 # important: math.fabs is only a well solution in float case
                 if ( math.fabs(value) > limit * math.fabs( amp_pos - amp_neg ) ):
                     self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }
+
+        return self
+    
+    def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+        
+        Parameters:
+        
+            * *amp_pos*: amp of positive gaussian function
+            * *sigma_pos*: sigma of positive gaussian function
+            * *amp_neg*: amp of negative gaussian function
+            * *sigma_neg*: sigma of negative gaussian function
+            * *delays*: synaptic delay, either a single value or a random distribution.
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+
+        self._synapses = Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
+
 
         return self
        
