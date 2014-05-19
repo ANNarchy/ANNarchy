@@ -45,6 +45,8 @@ public:
 
     virtual void removeDendrite(int postNeuronRank, class Population *pre) = 0;
 
+    virtual void addSynapse(int post, int pre, double, int) = 0;
+
     virtual bool isRateCoded() = 0;
 
     virtual void record() = 0;

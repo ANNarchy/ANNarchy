@@ -47,6 +47,10 @@ public:
 
 	void removeDendrite(int postNeuronRank, class Population *pre);
 
+	void addSynapse(int post, int pre, double value, int delay);
+
+	void removeSynapse(int post, int pre);
+
 	void initValues(int postNeuronRank);
 
 	bool isRateCoded() { return true; }

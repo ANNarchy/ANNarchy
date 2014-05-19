@@ -109,7 +109,27 @@ Dendrite *SpikeProjection::getDendrite(int postNeuronRank)
 
 void SpikeProjection::removeDendrite(int postNeuronRank, class Population *pre)
 {
+	std::cout << "Need to implemented in CPP core."<< std::endl;
+}
 
+void SpikeProjection::addSynapse(int postNeuronRank, int pre, double value, int delay)
+{
+#ifdef _DEBUG
+	std::cout << "Dendrite "<<postNeuronRank << " extend by synapse ( pre = " << pre << ", value = "<< value << ", delay = "<< delay << ")." << std::endl;
+#endif
+
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->addSynapse(pre, value, delay);
+}
+
+void SpikeProjection::removeSynapse(int postNeuronRank, int pre)
+{
+#ifdef _DEBUG
+	std::cout << "Dendrite "<< postNeuronRank << " remove synapse to pre = " << pre << "." << std::endl;
+#endif
+
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->removeSynapse(pre);
 }
 
 void SpikeProjection::record()
