@@ -8,7 +8,6 @@ Izhikevich = SpikeNeuron(
         b = 0.2
         c = -65.0
         d = 2.0 
-        tau = 5.0: population
     """,
     equations="""
         noise = Normal(0.0, 1.0) * noise_scale
@@ -27,18 +26,6 @@ Izhikevich = SpikeNeuron(
     """
 )
 
-ExpSynapse = SpikeSynapse(
-    parameters="""
-        tau = 10.0
-    """,
-    equations="""
-        tau * dtrace/dt + trace = t - t_spike
-    """,
-    pre_spike="""
-    g_target += value
-    """
-)
-
 Excitatory = Population(name='Excitatory', geometry=800, neuron=Izhikevich)
 re = np.random.random(800)
 Excitatory.c = -65.0 + 15.0*re**2
@@ -54,8 +41,7 @@ Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * v
 exc_exc = Projection(
     pre=Excitatory, 
     post=Excitatory, 
-    target='exc',
-    #synapse = ExpSynapse
+    target='exc'
 ).connect_all_to_all(weights=Uniform(0.0, 0.5))
    
 exc_inh = Projection(
