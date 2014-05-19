@@ -55,7 +55,7 @@ exc_exc = Projection(
     pre=Excitatory, 
     post=Excitatory, 
     target='exc',
-    synapse = ExpSynapse
+    #synapse = ExpSynapse
 ).connect_all_to_all(weights=Uniform(0.0, 0.5))
    
 exc_inh = Projection(
