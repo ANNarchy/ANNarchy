@@ -91,7 +91,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 %(class)s::%(class)s(int pre, int post, int target) : RateProjection() 
@@ -106,7 +106,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 std::vector<int> %(class)s::getRank(int post_rank)
@@ -229,7 +229,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< SpikeDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 %(class)s::%(class)s(int pre, int post, int target) : SpikeProjection() 
@@ -244,7 +244,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< SpikeDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 std::vector<int> %(class)s::getRank(int post_rank)

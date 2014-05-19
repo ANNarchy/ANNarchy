@@ -47,10 +47,6 @@ public:
 
 	void removeDendrite(int postNeuronRank, class Population *pre);
 
-	void addSynapse(int post, int pre, double value, int delay);
-
-	void removeSynapse(int post, int pre);
-
 	void initValues(int postNeuronRank);
 
 	bool isRateCoded() { return true; }
@@ -64,6 +60,6 @@ public:
 protected:
 	int nbDendrites_;
 
-	std::vector< class RateDendrite* > dendrites_;
+	//std::vector< class RateDendrite* > dendrites_;
 };
 #endif
