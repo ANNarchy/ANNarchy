@@ -81,7 +81,7 @@ class ImagePopulation(Population):
         if not Global._compiled:
             self.rate = (np.array(im))/255.
         else:
-            self.cyInstance._set_rate(np.array(im)/255.)
+            self.cyInstance._set_rate(np.array(im).reshape(self.size)/255.)
 
 
 class VideoPopulation(ImagePopulation):
