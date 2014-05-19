@@ -75,11 +75,8 @@ class Dendrite(object):
             return object.__getattribute__(self, name)
         elif name == 'attributes':
             return object.__getattribute__(self, name)
-        elif hasattr(self, 'attributes'):
-            if name in self.attributes:
-                return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
-            else:
-                return object.__getattribute__(self, name)
+        elif name in self.proj.attributes+['rank', 'delay']:
+            return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
         else:
             return object.__getattribute__(self, name)
         
