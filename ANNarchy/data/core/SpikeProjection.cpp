@@ -23,19 +23,9 @@
 #include "SpikePopulation.h"
 #include "SpikeDendrite.h"
 
-SpikeProjection::SpikeProjection(std::string pre, std::string post, int target): Projection()
+SpikeProjection::SpikeProjection(): Projection()
 {
-#ifdef _DEBUG
-	std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'spike' ) " << std::endl;
-#endif
-	pre_population_ = static_cast<class SpikePopulation*>(Network::instance()->getPopulation(pre));
-	post_population_ = static_cast<class SpikePopulation*>(Network::instance()->getPopulation(post));
 
-	target_ = target;
-	post_population_->addProjection(this);
-
-	nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-	dendrites_ = std::vector< class SpikeDendrite* >(nbDendrites_, NULL);
 }
 
 void SpikeProjection::globalLearn()
@@ -56,9 +46,12 @@ void SpikeProjection::localLearn()
 #endif
 
 	#pragma omp for
-	for ( int d = 0; d < nbDendrites_; d++ )
+	for ( int n = 0; n < nbDendrites_; n++ )
 	{
-		dendrites_[d]->localLearn();
+		if ( !dendrites_[n] )
+			continue;
+
+		dendrites_[n]->localLearn();
 	}
 
 	#pragma omp barrier
@@ -70,9 +63,12 @@ void SpikeProjection::postEvent(std::vector<int> post_ranks)
 	std::cout << "number of post events: " << post_ranks.size() << std::endl;
 #endif
 
-	for ( int r = 0; r < post_ranks.size(); r++ )
+	for ( unsigned int n = 0; n < post_ranks.size(); n++ )
 	{
-		dendrites_[r]->postEvent();
+		if ( !dendrites_[n] )
+			continue;
+
+		dendrites_[n]->postEvent();
 	}
 }
 
@@ -120,6 +116,23 @@ void SpikeProjection::record()
 {
 	for ( auto it = dendrites_.begin(); it != dendrites_.end(); it++ )
 	{
+		if (*it == NULL)
+			continue;
+
 		(*it)->record();
 	}
+}
+
+void SpikeProjection::initValues(int postNeuronRank)
+{
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->initValues();
+}
+
+int SpikeProjection::nbSynapses(int post_rank)
+{
+	if ( !dendrites_[post_rank] )
+		return 0;
+	else
+		return dendrites_[post_rank]->getSynapseCount();
 }

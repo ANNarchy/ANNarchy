@@ -30,6 +30,9 @@ from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy.parser.Analyser import analyse_projection
 from ANNarchy.core.Dendrite import Dendrite
+from ANNarchy.core.Record import Record
+import ANNarchy.core.cython_ext.Coordinates as Coordinates
+import ANNarchy.core.cython_ext.Connector as Connector
 
 class Projection(object):
     """
@@ -86,15 +89,14 @@ class Projection(object):
         else:
             self.synapse_type = synapse
 
-        type_prefix = "Rate" if isinstance(self.synapse_type, RateSynapse) else "Spike"
+        self.type_prefix = "Rate" if isinstance(self.synapse_type, RateSynapse) else "Spike"
 
         # Create a default name
         self._id = len(Global._projections)
-        self.name = type_prefix+'Dendrite'+str(self._id)
+        self.name = self.type_prefix+'Projection'+str(self._id)
             
         self._synapses = {}
         self._connector = None
-        self._dendrites = []
         self._post_ranks = []
 
         # Get a list of parameters and variables
@@ -122,55 +124,44 @@ class Projection(object):
         # Add the population to the global variable
         Global._projections.append(self)
         
+        # Allow recording of variables
+        self._recorded_variables = {}  
+        self._recordable_variables = list(set(self.variables + ['value']))
+
         # Finalize initialization
         self.initialized = False
         
-        import pyximport
-        pyximport.install()
-        import cy_functions
+        
         self._comp_dict = {
-            1: cy_functions.comp_dist1D,
-            2: cy_functions.comp_dist2D,
-            3: cy_functions.comp_dist3D
+            1: Coordinates.comp_dist1D,
+            2: Coordinates.comp_dist2D,
+            3: Coordinates.comp_dist3D
         }
 
-        self._cython_instance = None
+        self.cyInstance = None
 
+    ################################
+    ## Dendrite access
+    ################################
     @property
     def size(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
-        return len(self._dendrites)
+        if self.cyInstance:
+            return self.cyInstance._nb_dendrites
+        else:
+            return 0
         
     def __len__(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
-        return len(self._dendrites)
-    
-    def enable_learning(self, params={ 'freq': 1, 'offset': 0} ):
-        """
-        Enable the learning for all attached dendrites
-        
-        Parameter:
-        
-            * *params*: optional parameter to configure the learning
-        """
-        for dendrite in self._dendrites:
-            dendrite.learnable = True
-            #dendrite.learn_frequency = params['freq']
-            #dendrite.learn_offset = params['offset']
-            
-    def disable_learning(self):
-        """
-        Disable the learning for all attached dendrites
-        """
-        for dendrite in self._dendrites:
-            dendrite.learnable = False
+        return self.size
 
     @property
     def dendrites(self):
         """
-        List of dendrites corresponding to this projection.
+        Iteratively returns a list of dendrites corresponding to this projection.
         """
-        return self._dendrites
+        for n in self._post_ranks:
+            yield Dendrite(self, n)
         
     @property
     def post_ranks(self):
@@ -185,399 +176,38 @@ class Projection(object):
 
         Parameters:
 
-            * *pos*: could be either rank or coordinate of the requested postsynaptic neuron
+            * *pos*: could be either the rank or the coordinates of the requested postsynaptic neuron
         """
         if isinstance(pos, int):
             rank = pos
         else:
             rank = self.post.rank_from_coordinates(pos)
         if rank in self._post_ranks:
-            return self._dendrites[rank]
+            return Dendrite(self, rank)
         else:
-            Global._error("neuron of rank", str(rank),"has no synapse in this projection.")
+            Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
             return None
     
-    def connect_one_to_one(self, weights=1.0, delays=0.0):
+
+    # Iterators
+    def __getitem__(self, *args, **kwds):
+        """ Returns dendrite of the given position in the postsynaptic population. 
+        
+        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
         """
-        Establish one to one connections within the two projections.
+        if len(args) == 1:
+            return self.dendrite(args[0])
+        return self.dendrite(args)
         
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-        """
-        synapses = {}
-    
-        for pre_neur in xrange(self.pre.size):
-            try:
-                w = weights.get_value()
-            except:
-                w = weights
-                
-            try:
-                d = delays.get_value()
-            except:
-                d = delays
-            self._synapses[(pre_neur, pre_neur)] = { 'w': w, 'd': d }
-            
-        return self
-    
-    def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-    
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(self.pre.size) ]
-        if isinstance(delays, (int, float)):
-            delay_values = [ delays for n in range(self.pre.size) ]
-    
-        for post_neur in xrange(self.post.size):
+    def __iter__(self):
+        " Returns iteratively each dendrite in the population in ascending postsynaptic rank order."
+        for n in self._post_ranks:
+            yield Dendrite(self, n)
 
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((self.pre.size))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            for pre_neur in xrange(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
+    ################################
+    ## Access to attributes
+    ################################
 
-                self._synapses[(pre_neur, post_neur)] = { 'w': next(weight_iter), 
-                                                          'd': next(delay_iter) }
-        
-        return self
-
-    def connect_gaussian(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-
-        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a gaussians distribution.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma*: sigma value
-            * *amp*: amp value
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        #
-        # choose the right euklidean distance function depending on 
-        # population dimension
-        try:
-            # dim = (1 .. 3)
-            comp_func = self._comp_dict[self.pre.dimension]
-        except KeyError:
-            # 4 and higher dimensionality
-            comp_func = cy_functions.comp_distND
-
-        if isinstance(delays, (int, float)):
-            delay_values = [ delays for n in range(self.pre.size) ]
-        
-        #
-        # create dog pattern by iterating over both populations
-        #
-        # 1st post ranks
-        for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank(post_neur)
-
-            # get a new array of random values
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-            
-            delay_iter = iter(delay_values)
-            
-            for pre_neur in range(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-
-                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
-                dist = comp_func(normPre, normPost)
-                
-                value = amp * math.exp(-dist/2.0/sigma/sigma)
-                if (math.fabs(value) > limit * math.fabs(amp)):
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }   
-                         
-        return self
-    
-    def connect_dog(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-
-        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma_pos*: sigma of positive gaussian function
-            * *sigma_neg*: sigma of negative gaussian function
-            * *amp_pos*: amp of positive gaussian function
-            * *amp_neg*: amp of negative gaussian function
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        #
-        # choose the right euklidean distance function depending on 
-        # population dimension
-        try:
-            # dim = (1 .. 3)
-            comp_func = self._comp_dict[self.pre.dimension]
-        except KeyError:
-            # 4 and higher dimensionality
-            comp_func = cy_functions.comp_distND
-
-        if isinstance(delays, (int, float)):
-            delay_values = [ delays for n in range(self.pre.size) ]
-        
-        #
-        # create dog pattern by iterating over both populations
-        #
-        # 1st post ranks
-        for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank(post_neur)
-
-            # get a new array of random values
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-                
-            # set iterator on begin of the array
-            delay_iter = iter(delay_values)
-            
-            # 2nd pre ranks
-            for pre_neur in range(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-    
-                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
-                dist = comp_func( normPre, normPost )
-    
-                value = amp_pos * math.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * math.exp(-dist/2.0/sigma_neg/sigma_neg)
-                
-                #
-                # important: math.fabs is only a well solution in float case
-                if ( math.fabs(value) > limit * math.fabs( amp_pos - amp_neg ) ):
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }
-
-        return self
-       
-    def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
-        """ fixed_probability projection between two populations. 
-    
-        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided.
-    
-        Parameters:
-        
-        * probability: probability that a synapse is created.
-        
-        * weights: either the value common for all connections or a RandomDistribution object.
-        
-        * delays: either the value common for all connections or a RandomDistribution object (default = 0.0)
-        
-        * allow_self_connections : defines if self-connections are allowed (default=False).
-        """        
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(self.pre.size) ]
-        if isinstance(delays, (int, float)):    
-            delay_values = [ delays for n in range(self.pre.size) ]
-        
-        for post_rank in xrange(self.post.size):
-        
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((self.pre.size))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            for pre_rank in xrange(self.pre.size):
-                if (pre_rank == post_rank) and not allow_self_connections:
-                    continue
-
-                if np.random.random() < probability:
-                    self._synapses[(pre_rank, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
-  
-        return self
-
-    def connect_fixed_number_pre(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
-        """ fixed_number_pre projection between two populations.
-    
-        Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
-    
-        Parameters:
-        
-        * number: number of synapses per presynaptic neuron.
-        
-        * weights: either the value common for all the connection weights or random distribution object.
-        
-        * delays : the delay of the synapse transmission, either as a float (milliseconds) or a DiscreteDistribution object (default=0).
-        
-        * allow_self_connections : defines if self-connections are allowed (default=False).
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(number) ]
-        if isinstance(delays, (int, float)):    
-            delay_values = [ delays for n in range(number) ]
-        
-        for post_rank in xrange(self.post.size):
-        
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((number))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((number,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            ranks = []
-            for i in xrange(number):
-                
-                unique=False
-                choice=-1
-                while (not unique):
-                    choice = np.random.randint(0, self.pre.size)
-                    
-                    if choice == post_rank and not allow_self_connections:
-                        unique = False
-                    elif choice in ranks:
-                        unique = False
-                    else:
-                        unique = True
-                    
-                self._synapses[(choice, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
-                ranks.append(choice)
-                
-        return self
-            
-    def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
-        """ fixed_number_pre projection between two populations.
-    
-        Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
-    
-        Parameters:
-        
-        * number: number of synapses per presynaptic neuron.
-        
-        * weights: either the value common for all the connection weights or random distribution object.
-        
-        * delays : the delay of the synapse transmission, either as a float (milliseconds) or a DiscreteDistribution object (default=0).
-        
-        * allow_self_connections : defines if self-connections are allowed (default=False).
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(number) ]
-        if isinstance(delays, (int, float)):    
-            delay_values = [ delays for n in range(number) ]
-        
-        for pre_rank in xrange(self.pre.size):
-        
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((number))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((number,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            ranks = []
-            for i in xrange(number):
-                
-                unique=False
-                choice=-1
-                while (not unique):
-                    choice = np.random.randint(0, self.post.size)
-                    
-                    if choice == pre_rank and not allow_self_connections:
-                        unique = False
-                    elif choice in ranks:
-                        unique = False
-                    else:
-                        unique = True
-                    
-                self._synapses[(pre_rank, choice)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
-                ranks.append(choice)
-                
-        return self
-
-    def connect_from_list(self, connection_list):
-        """
-        Initialize projection initilized by specific list.
-        
-        Expected format:
-        
-            * list of tuples ( pre, post, weight, delay )
-            
-        Example:
-        
-            >>> conn_list = [
-            ...     ( 0, 0, 0.0, 0.1 )
-            ...     ( 0, 1, 0.0, 0.1 )
-            ...     ( 0, 2, 0.0, 0.1 )
-            ...     ( 1, 5, 0.0, 0.1 )
-            ... ]
-            
-            proj = Projection(pre_pop, post_pop, 'exc').connect_from_list( conn_list )
-        """
-        self._synapses = connection_list
-                
-    def connect_with_func(self, method, **args):
-        """
-        Establish connections provided by user defined function.
-
-        * *method*: function handle. The function **need** to return a dictionary of synapses.
-        * *args*: list of arguments needed by the function 
-        """
-        self._connector = method
-        self._connector_params = args
-        self._synapses = self._connector(self.pre, self.post, **self._connector_params)
-
-        return self
-
-    def save_connectivity_as_csv(self):
-        """
-        Save the projection pattern as csv format. 
-        Please note, that only the pure connectivity data pre_rank, post_rank, value and delay are stored.
-        """
-        filename = self.pre.name + '_' + self.post.name + '_' + self.target+'.csv'
-        
-        with open(filename, mode='w') as w_file:
-            
-            for dendrite in self._dendrites:
-                rank_iter = iter(dendrite.rank)
-                value_iter = iter(dendrite.value)
-                delay_iter = iter(dendrite.delay)
-                post_rank = dendrite.post_rank
-
-                for i in xrange(dendrite.size):
-                    w_file.write(str(next(rank_iter))+', '+
-                                 str(post_rank)+', '+
-                                 str(next(value_iter))+', '+
-                                 str(next(delay_iter))+'\n'
-                                 )
-      
     def get(self, name):
         """ Returns a list of parameters/variables values for each dendrite in the projection.
         
@@ -616,127 +246,6 @@ class Projection(object):
         for name, val in value:
             self.__setattr__(name, val)
 
-    def _connect(self):
-        """
-        build up dendrites either from list or dictionary
-        """
-
-        cython_module = __import__('ANNarchyCython') 
-        if isinstance(self.synapse_type, RateSynapse):
-            RateProj = getattr(cython_module, 'pyRateProjection')
-            self._cython_instance = RateProj(self.pre.name, self.post.name, self.post.targets.index(self.target))  
-        else:
-            SpikeProj = getattr(cython_module, 'pySpikeProjection')
-            SpikeProj(self.pre.name, self.post.name, self.post.targets.index(self.target))
-        
-        if ( isinstance(self._synapses, list) ):
-        	self._dendrites, self._post_ranks = self._build_pattern_from_list()
-        else:
-        	self._dendrites, self._post_ranks = self._build_pattern_from_dict()
-
-    def _comp_dist(self, pre, post):
-        """
-        Compute euklidean distance between two coordinates. 
-        """
-        res = 0.0
-
-        for i in range(len(pre)):
-            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
-
-        return res
-      
-    def _build_pattern_from_dict(self):
-        """
-        build up the dendrites from the dictionary of synapses
-        """
-        #
-        # the synapse objects are stored as pre-post pairs.
-        dendrites = {} 
-        
-        for conn, data in self._synapses.iteritems():
-            try:
-                dendrites[conn[1]]['rank'].append(conn[0])
-                dendrites[conn[1]]['weight'].append(data['w'])
-                dendrites[conn[1]]['delay'].append(data['d'])
-            except KeyError:
-                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [data['w']], 'delay': [data['d']] }
-        
-        ret_value = []
-        ret_ranks = []
-        for post_id, data in dendrites.iteritems():
-            ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
-            ret_ranks.append(post_id)
-        
-        return ret_value, ret_ranks
-
-    def _build_pattern_from_list(self):
-        """
-        build up the dendrites from the list of synapses
-        """
-        dendrites = {} 
-        
-        for conn in self._synapses:
-            try:
-                dendrites[conn[1]]['rank'].append(conn[0])
-                dendrites[conn[1]]['weight'].append(conn[2])
-                dendrites[conn[1]]['delay'].append(conn[3])
-            except KeyError:
-                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [conn[2]], 'delay': [conn[3]] }
-
-            
-        ret_value = []
-        ret_ranks = []
-        for post_id, data in dendrites.iteritems():
-            ret_value.append(Dendrite(self, post_id, ranks = data['rank'], weights = data['weight'], delays = data['delay']))
-            ret_ranks.append(post_id)
-        
-        return ret_value, ret_ranks
-		
-    def _gather_data(self, variable):
-        """ 
-        Gathers synaptic values for visualization
-        
-        *Paramater*:
-        
-            * *variable*: name of variable
-        """
-        blank_col=np.zeros((self.pre.geometry[1], 1))
-        blank_row=np.zeros((1,self.post.geometry[0]*self.pre.geometry[0]+self.post.geometry[0] +1))
-        
-        m_ges = None
-        i=0
-        
-        for y in xrange(self.post.geometry[1]):
-            m_row = None
-            
-            for x in xrange(self.post.geometry[0]):
-                m = getattr(self._dendrites[i].cy_instance, '_get_'+variable)()
-                
-                if m.shape != self.pre.geometry:
-                    new_m = np.zeros(self.pre.geometry[0]*self.pre.geometry[1])
-                    
-                    j = 0
-                    for r in self._dendrites[i].cy_instance._get_rank():
-                        new_m[r] = m[j]
-                        j+=1 
-                    m = new_m
-                
-                if m_row == None:
-                    m_row = np.ma.concatenate( [ blank_col, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
-                else:
-                    m_row = np.ma.concatenate( [ m_row, m.reshape(self.pre.geometry[1], self.pre.geometry[0]) ], axis = 1 )
-                m_row = np.ma.concatenate( [ m_row , blank_col], axis = 1 )
-                
-                i += 1
-            
-            if m_ges == None:
-                m_ges = np.ma.concatenate( [ blank_row, m_row ] )
-            else:
-                m_ges = np.ma.concatenate( [ m_ges, m_row ] )
-            m_ges = np.ma.concatenate( [ m_ges, blank_row ] )
-        
-        return m_ges
-                
     def _init_attributes(self):
         """ 
         Method used after compilation to initialize the attributes.
@@ -793,7 +302,7 @@ class Projection(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        return np.array([getattr(dendrite.cy_instance, '_get_'+attribute)() for dendrite in self._dendrites])
+        return np.array([getattr(self.cyInstance, '_get_'+attribute)(i) for i in self._post_ranks])
         
     def _set_cython_attribute(self, attribute, value):
         """
@@ -808,39 +317,28 @@ class Projection(object):
         if isinstance(value, np.ndarray):
             if value.dim == 1:
                 if value.shape == (self.size, ):
-                    for n in range(self.size):
-                        getattr(self._dendrites[n].cy_instance, '_set_'+attribute)(value[n])
+                    for n in self._post_ranks:
+                        getattr(self.cyInstance, '_set_'+attribute)(n, value)
                 else:
                     Global._error('The projection has '+self.size+ ' dendrites.')
         elif isinstance(value, list):
             if len(value) == self.size:
-                for n in range(self.size):
-                    getattr(self._dendrites[n].cy_instance, '_set_'+attribute)(value[n])
+                for n in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(n, value)
             else:
                 Global._error('The projection has '+self.size+ ' dendrites.')
         else: # a single value
             if attribute in self.description['local']:
-                for dendrite in self._dendrites:
-                    getattr(dendrite.cy_instance, '_set_'+attribute)(value*np.ones(dendrite.size))
+                for i in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(i, value*np.ones(self.size))
             else:
-                for dendrite in self._dendrites:
-                    getattr(dendrite.cy_instance, '_set_'+attribute)(value)
+                for i in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(i, value)
 
-            
-           
-    # Iterators
-    def __getitem__(self, *args, **kwds):
-        """ Returns dendrite of the given position in the postsynaptic population. 
-        
-        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
-        """
-        return self.dendrite(args[0])
-        
-    def __iter__(self):
-        " Returns iteratively each dendrite in the population in ascending rank order."
-        for n in range(self.size):
-            yield self._dendrites[n] 
-            
+ 
+    ################################
+    ## Variable flags
+    ################################           
     def set_variable_flags(self, name, value):
         """ Sets the flags of a variable for the projection.
         
@@ -920,3 +418,649 @@ class Projection(object):
             if self.description['variables'][idx]['name'] == name:
                 return idx
         return -1
+
+    ################################
+    ## Learning flags
+    ################################
+    def enable_learning(self, params={ 'freq': 1, 'offset': 0} ):
+        """
+        Enable the learning for all attached dendrites
+        
+        Parameter:
+        
+            * *params*: optional parameter to configure the learning
+        """
+        self.cyInstance._set_learning(True)
+        self.cyInstance._set_learn_frequency(params['freq'])
+        self.cyInstance._set_learn_offset(params['offset'])
+            
+    def disable_learning(self):
+        """
+        Disable the learning for all attached dendrites
+        """
+        self.cyInstance._set_learning(False)
+
+
+    
+    ################################
+    ## Connector methods
+    ################################
+    def _connect_one_to_one_old(self, weights=1.0, delays=0.0):
+        """
+        Establish one to one connections within the two projections.
+        
+        Parameters:
+        
+            * *weights*: initial synaptic values, either one value (float) or a random distribution object.
+            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
+        """
+        synapses = {}
+    
+        for pre_neur in xrange(self.pre.size):
+            try:
+                w = weights.get_value()
+            except:
+                w = weights
+                
+            try:
+                d = delays.get_value()
+            except:
+                d = delays
+            self._synapses[(pre_neur, pre_neur)] = { 'w': w, 'd': d }
+            
+        return self
+    
+    def connect_one_to_one(self, weights=1.0, delays=0.0):
+        """
+        Establish a one-to-one connections between the two populations.
+        
+        Parameters:
+        
+            * *weights*: initial synaptic values, either a single value (float) or a random distribution object.
+            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
+        """
+        self._synapses = Connector.one_to_one(self.pre.size, self.post.size, weights, delays)
+        return self
+    
+    def _connect_all_to_all_old(self, weights, delays=0.0, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+    
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(self.pre.size) ]
+        if isinstance(delays, (int, float)):
+            delay_values = [ delays for n in range(self.pre.size) ]
+    
+        for post_neur in xrange(self.post.size):
+
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((self.pre.size))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            for pre_neur in xrange(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+
+                self._synapses[(pre_neur, post_neur)] = { 'w': next(weight_iter), 
+                                                          'd': next(delay_iter) }
+        
+        return self
+    
+    def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
+        """
+        Establishes an all-to-all connection pattern between the two populations.
+        
+        Parameters:
+        
+            * *weights*: synaptic values, either one value (float) or a random distribution object.
+            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
+            * *allow_self_connections*: if True, self-connections between a neuron and itself are allowed (default=False).
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+
+        self._synapses = Connector.all_to_all(self.pre.size, self.post.size, weights, delays, allow_self_connections)
+
+        return self
+
+    def _connect_gaussian_old(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a gaussians distribution.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *sigma*: sigma value
+            * *amp*: amp value
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        #
+        # choose the right euklidean distance function depending on 
+        # population dimension
+        try:
+            # dim = (1 .. 3)
+            comp_func = self._comp_dict[self.pre.dimension]
+        except KeyError:
+            # 4 and higher dimensionality
+            comp_func = Coordinates.comp_distND
+
+        if isinstance(delays, (int, float)):
+            delay_values = [ delays for n in range(self.pre.size) ]
+        
+        #
+        # create dog pattern by iterating over both populations
+        #
+        # 1st post ranks
+        for post_neur in xrange(self.post.size):
+            normPost = self.post.normalized_coordinates_from_rank(post_neur)
+
+            # get a new array of random values
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+            
+            delay_iter = iter(delay_values)
+            
+            for pre_neur in range(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+
+                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
+                dist = comp_func(normPre, normPost)
+                
+                value = amp * math.exp(-dist/2.0/sigma/sigma)
+                if (math.fabs(value) > limit * math.fabs(amp)):
+                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }   
+                         
+        return self
+
+    def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish a Guassian conneciton pattern between the two populations.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same normalized coordinates using a Gaussian distribution.
+        
+        Parameters:
+        
+            * *amp*: amp value
+            * *sigma*: sigma value
+            * *delays*: synaptic delay, either a single value or a random distribution object (default : 0.0).
+            * *limit*: proportion of *amp* below which synapses are not created (default: 0.01)
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+
+        self._synapses = Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections)
+
+        return self
+    
+    def _connect_dog_old(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+        
+        Parameters:
+        
+            * *weights*: synaptic value, either one value or a random distribution.
+            * *delays*: synaptic delay, either one value or a random distribution.
+            * *sigma_pos*: sigma of positive gaussian function
+            * *sigma_neg*: sigma of negative gaussian function
+            * *amp_pos*: amp of positive gaussian function
+            * *amp_neg*: amp of negative gaussian function
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        #
+        # choose the right euklidean distance function depending on 
+        # population dimension
+        try:
+            # dim = (1 .. 3)
+            comp_func = self._comp_dict[self.pre.dimension]
+        except KeyError:
+            # 4 and higher dimensionality
+            comp_func = Coordinates.comp_distND
+
+        if isinstance(delays, (int, float)):
+            delay_values = [ delays for n in range(self.pre.size) ]
+        
+        #
+        # create dog pattern by iterating over both populations
+        #
+        # 1st post ranks
+        for post_neur in xrange(self.post.size):
+            normPost = self.post.normalized_coordinates_from_rank(post_neur)
+
+            # get a new array of random values
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+                
+            # set iterator on begin of the array
+            delay_iter = iter(delay_values)
+            
+            # 2nd pre ranks
+            for pre_neur in range(self.pre.size):
+                if (pre_neur == post_neur) and not allow_self_connections:
+                    continue
+    
+                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
+                dist = comp_func( normPre, normPost )
+    
+                value = amp_pos * math.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * math.exp(-dist/2.0/sigma_neg/sigma_neg)
+                
+                #
+                # important: math.fabs is only a well solution in float case
+                if ( math.fabs(value) > limit * math.fabs( amp_pos - amp_neg ) ):
+                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }
+
+        return self
+    
+    def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+        """
+        Establish all to all connections within the two projections.
+
+        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+        
+        Parameters:
+        
+            * *amp_pos*: amp of positive gaussian function
+            * *sigma_pos*: sigma of positive gaussian function
+            * *amp_neg*: amp of negative gaussian function
+            * *sigma_neg*: sigma of negative gaussian function
+            * *delays*: synaptic delay, either a single value or a random distribution.
+            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+
+        self._synapses = Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
+
+
+        return self
+       
+    def _connect_fixed_probability_old(self, probability, weights, delays=0.0, allow_self_connections=False):
+        """ fixed_probability projection between two populations. 
+    
+        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided by default.
+    
+        Parameters:
+        
+        * probability: probability that an individual synapse is created.
+        
+        * weights: either a single value for all synapses or a RandomDistribution object.
+        
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """        
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(self.pre.size) ]
+        if isinstance(delays, (int, float)):    
+            delay_values = [ delays for n in range(self.pre.size) ]
+        
+        for post_rank in xrange(self.post.size):
+        
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((self.pre.size))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((self.pre.size,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            for pre_rank in xrange(self.pre.size):
+                if (pre_rank == post_rank) and not allow_self_connections:
+                    continue
+
+                if np.random.random() < probability:
+                    self._synapses[(pre_rank, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
+  
+        return self
+
+    def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
+        """ fixed_probability projection between two populations. 
+    
+        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self-connections are avoided by default.
+    
+        Parameters:
+        
+        * probability: probability that an individual synapse is created.
+        
+        * weights: either a single value for all synapses or a RandomDistribution object.
+        
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """         
+        if self.pre!=self.post:
+            allow_self_connections = True
+
+        self._synapses = Connector.fixed_probability(self.pre.size, self.post.size, probability, weights, delays, allow_self_connections)
+
+        return self
+
+    def _connect_fixed_number_pre_old(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+        """ fixed_number_pre projection between two populations.
+    
+        Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
+    
+        Parameters:
+        
+        * number: number of synapses per presynaptic neuron.
+        
+        * weights: either a single value for all synapses or a RandomDistribution object.
+        
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(number) ]
+        if isinstance(delays, (int, float)):    
+            delay_values = [ delays for n in range(number) ]
+        
+        for post_rank in xrange(self.post.size):
+        
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((number))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((number,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            ranks = []
+            for i in xrange(number):
+                
+                unique=False
+                choice=-1
+                while (not unique):
+                    choice = np.random.randint(0, self.pre.size)
+                    
+                    if choice == post_rank and not allow_self_connections:
+                        unique = False
+                    elif choice in ranks:
+                        unique = False
+                    else:
+                        unique = True
+                    
+                self._synapses[(choice, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
+                ranks.append(choice)
+                
+        return self
+
+    def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False):
+        """ fixed_number_pre projection between two populations.
+    
+        Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
+    
+        Parameters:
+        
+        * number: number of synapses per postsynaptic neuron.
+        
+        * weights: either a single value for all synapses or a RandomDistribution object.
+        
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+        
+        self._synapses = Connector.fixed_number_pre(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
+
+        return self
+            
+    def _connect_fixed_number_post_old(self, number, weights, delays=0.0, allow_self_connections=False):
+        """ fixed_number_pre projection between two populations.
+    
+        Old and slow, do not use.
+        """
+        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
+        
+        if isinstance(weights, (int, float)):
+            weight_values = [ weights for n in range(number) ]
+        if isinstance(delays, (int, float)):    
+            delay_values = [ delays for n in range(number) ]
+        
+        for pre_rank in xrange(self.pre.size):
+        
+            if not isinstance(weights, (int, float)):
+                weight_values = weights.get_values((number))
+            if not isinstance(delays, (int, float)):
+                delay_values = delays.get_values((number,1))
+            
+            weight_iter = iter(weight_values)
+            delay_iter = iter(delay_values)
+            
+            ranks = []
+            for i in xrange(number):
+                
+                unique=False
+                choice=-1
+                while (not unique):
+                    choice = np.random.randint(0, self.post.size)
+                    
+                    if choice == pre_rank and not allow_self_connections:
+                        unique = False
+                    elif choice in ranks:
+                        unique = False
+                    else:
+                        unique = True
+                    
+                self._synapses[(pre_rank, choice)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
+                ranks.append(choice)
+                
+        return self
+            
+    def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+        """ fixed_number_post projection between two populations.
+    
+        Each neuron in the presynaptic population sends connections to a fixed number of neurons of the postsynaptic population chosen randomly. 
+    
+        Parameters:
+        
+        * number: number of synapses per presynaptic neuron.
+        
+        * weights: either a single value for all synapses or a RandomDistribution object.
+        
+        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        
+        * allow_self_connections : defines if self-connections are allowed (default=False).
+        """
+        if self.pre!=self.post:
+            allow_self_connections = True
+        
+        self._synapses = Connector.fixed_number_post(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
+
+        return self
+
+    def connect_from_list(self, connection_list):
+        """
+        Initialize projection initilized by specific list.
+        
+        Expected format:
+        
+            * list of tuples ( pre, post, weight, delay )
+            
+        Example:
+        
+            >>> conn_list = [
+            ...     ( 0, 0, 0.0, 0.1 )
+            ...     ( 0, 1, 0.0, 0.1 )
+            ...     ( 0, 2, 0.0, 0.1 )
+            ...     ( 1, 5, 0.0, 0.1 )
+            ... ]
+            
+            proj = Projection(pre_pop, post_pop, 'exc').connect_from_list( conn_list )
+        """
+        self._synapses = connection_list
+                
+    def connect_with_func(self, method, **args):
+        """
+        Establish connections provided by user defined function.
+
+        * *method*: function handle. The function **need** to return a dictionary of synapses.
+        * *args*: list of arguments needed by the function 
+        """
+        self._connector = method
+        self._connector_params = args
+        self._synapses = self._connector(self.pre, self.post, **self._connector_params)
+
+        return self
+
+    def save_connectivity_as_csv(self):
+        """
+        Save the projection pattern as csv format. 
+        Please note, that only the pure connectivity data pre_rank, post_rank, value and delay are stored.
+        """
+        filename = self.pre.name + '_' + self.post.name + '_' + self.target+'.csv'
+        
+        with open(filename, mode='w') as w_file:
+            
+            for dendrite in self.dendrites:
+                rank_iter = iter(dendrite.rank)
+                value_iter = iter(dendrite.value)
+                delay_iter = iter(dendrite.delay)
+                post_rank = dendrite.post_rank
+
+                for i in xrange(dendrite.size()):
+                    w_file.write(str(next(rank_iter))+', '+
+                                 str(post_rank)+', '+
+                                 str(next(value_iter))+', '+
+                                 str(next(delay_iter))+'\n'
+                                 )
+      
+
+    def _connect(self):
+        """
+        Builds up dendrites either from list or dictionary. Called by instantiate().
+        """
+
+        cython_module = __import__('ANNarchyCython') 
+        proj = getattr(cython_module, 'py'+self.name)
+        self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
+        
+        # Sort the dendrites to be created based on _synapses
+        if ( isinstance(self._synapses, Connector.CSR) ):
+            self.cyInstance.createFromCSR(self._synapses)
+            self._post_ranks = self._synapses.keys()
+            return
+        elif ( isinstance(self._synapses, list) ):
+        	dendrites = self._build_pattern_from_list()
+        else:
+        	dendrites = self._build_pattern_from_dict()
+
+        # Store the keys of dendrites in _post_ranks
+        self._post_ranks = dendrites.keys()
+
+        # Create the dendrites in Cython
+        self.cyInstance.createFromDict(dendrites)
+
+        # Delete the _synapses array, not needed anymore
+        del self._synapses
+        self._synapses = None
+
+    def _comp_dist(self, pre, post):
+        """
+        Compute euclidean distance between two coordinates. 
+        """
+        res = 0.0
+
+        for i in range(len(pre)):
+            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
+
+        return res
+      
+    def _build_pattern_from_dict(self):
+        """
+        build up the dendrites from the dictionary of synapses
+        """
+        #
+        # the synapse objects are stored as pre-post pairs.
+        dendrites = {} 
+        
+        for conn, data in self._synapses.iteritems():
+            try:
+                dendrites[conn[1]]['rank'].append(conn[0])
+                dendrites[conn[1]]['weight'].append(data['w'])
+                dendrites[conn[1]]['delay'].append(data['d'])
+            except KeyError:
+                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [data['w']], 'delay': [data['d']] }
+        
+        return dendrites
+    
+    def _build_pattern_from_list(self):
+        """
+        build up the dendrites from the list of synapses
+        """
+        dendrites = {} 
+        
+        for conn in self._synapses:
+            try:
+                dendrites[conn[1]]['rank'].append(conn[0])
+                dendrites[conn[1]]['weight'].append(conn[2])
+                dendrites[conn[1]]['delay'].append(conn[3])
+            except KeyError:
+                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [conn[2]], 'delay': [conn[3]] }
+
+        return dendrites
+
+    def receptive_fields(self, variable = 'value', in_post_geometry = True):
+        """ 
+        Gathers all receptive fields within this projection.
+        
+        *Parameters*:
+        
+            * *variable*: name of variable
+            * *in_post_geometry*: if set to false, the data will be plotted as square grid. (default = True)
+        """        
+        if in_post_geometry:
+            x_size = self.post.geometry[1]
+            y_size = self.post.geometry[0]
+        else:
+            x_size = int( math.floor(math.sqrt(self.post.size)) )
+            y_size = int( math.ceil(math.sqrt(self.post.size)) )
+        
+
+
+        def get_rf(rank):
+            if rank in self._post_ranks:
+                return self.dendrite(rank).receptive_field(variable)
+            else:
+                return np.zeros( self.pre.geometry )
+
+        res = np.zeros((1, x_size*self.pre.geometry[1]))
+        for y in xrange ( y_size ):
+            row = np.concatenate(  [ get_rf(self.post.rank_from_coordinates( (y, x) ) ) for x in range ( x_size ) ], axis = 1)
+            res = np.concatenate((res, row))
+        
+        return res
+                
+

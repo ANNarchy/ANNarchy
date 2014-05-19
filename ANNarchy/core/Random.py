@@ -44,6 +44,13 @@ class RandomDistribution(object):
         Global._error('instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        Global._error('instantiated base class RandomDistribution is not allowed.')
+        return []
+
     def get_value(self):
         """
         Returns a single float value.
@@ -75,6 +82,12 @@ class Constant(RandomDistribution):
         Returns a np.ndarray with the given shape
         """
         return self._value * np.ones(shape)
+        
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        return [self._value for i in range(size) ]
     
     def get_value(self):
         """
@@ -115,6 +128,12 @@ class Uniform(RandomDistribution):
         """
         return np.random.uniform(self._min, self._max, shape)
     
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        return list(np.random.uniform(self._min, self._max, size))
+
     def get_value(self):
         """
         Returns a single float value.
@@ -156,6 +175,12 @@ class Normal(RandomDistribution):
         Returns a np.ndarray with the given shape
         """
         return np.random.normal(self._mu, self._sigma, shape)
+    
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        return list(np.random.normal(self._mu, self._sigma, size))
     
     def get_value(self):
         """

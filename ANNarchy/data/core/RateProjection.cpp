@@ -23,19 +23,9 @@
 #include "RatePopulation.h"
 #include "RateDendrite.h"
 
-RateProjection::RateProjection(std::string pre, std::string post, int target): Projection()
+RateProjection::RateProjection(): Projection()
 {
-#ifdef _DEBUG
-	std::cout << "Establish projection ( ptr = "<< this <<") between pre = '"<< pre << "', post ='"<< post << "', target = '" << target << "', coding = 'rate' ) " << std::endl;
-#endif
-	pre_population_ = static_cast<class RatePopulation*>(Network::instance()->getPopulation(pre));
-	post_population_ = static_cast<class RatePopulation*>(Network::instance()->getPopulation(post));
 
-	target_ = target;
-	post_population_->addProjection(this);
-
-	nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-	dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
 }
 
 void RateProjection::computeSum()
@@ -47,6 +37,9 @@ void RateProjection::computeSum()
 	#pragma omp for
 	for ( int n = 0; n < nbDendrites_; n++ )
 	{
+		if (!dendrites_[n])
+			continue;
+
 	#ifdef _DEBUG
 		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
 	#endif
@@ -57,29 +50,44 @@ void RateProjection::computeSum()
 void RateProjection::globalLearn()
 {
 #ifdef _DEBUG
-	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
+	#pragma omp master
+	{
+		std::cout << "GlobalLearn: number of dendrites: " << nbDendrites_ << std::endl;
+	}
 #endif
 
-	#pragma omp for
-	for ( int n = 0; n < nbDendrites_; n++ )
+	if ( ANNarchy_Global::time % learnFrequency_ == learnOffset_ )
 	{
-		dendrites_[n]->globalLearn();
+		#pragma omp for
+		for ( int n = 0; n < nbDendrites_; n++ )
+		{
+			if (!dendrites_[n])
+				continue;
+
+			dendrites_[n]->globalLearn();
+		}
 	}
 }
 
 void RateProjection::localLearn()
 {
 #ifdef _DEBUG
-	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
+	#pragma omp master
+	{
+	std::cout << "LocalLearn: number of dendrites: " << nbDendrites_ << std::endl;
+	}
 #endif
 
-	#pragma omp for
-	for ( int n = 0; n < nbDendrites_; n++ )
+	if ( ANNarchy_Global::time % learnFrequency_ == learnOffset_ )
 	{
-	#ifdef _DEBUG
-		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
-	#endif
-		dendrites_[n]->localLearn();
+		#pragma omp for
+		for ( int n = 0; n < nbDendrites_; n++ )
+		{
+			if (!dendrites_[n])
+				continue;
+
+			dendrites_[n]->localLearn();
+		}
 	}
 }
 
@@ -90,15 +98,14 @@ DATA_TYPE RateProjection::getSum(int neuron)
 		std::cout << "No dendrite " << neuron << "on this projection."<< std::endl;
 		return 0.0;
 	}
+	else if  ( !dendrites_[neuron] )
+	{
+		return 0.0;
+	}
 	else
 	{
 		return dendrites_[neuron]->getSum();
 	}
-}
-
-Population* RateProjection::getPrePopulation()
-{
-	return static_cast<class Population*>(pre_population_);
 }
 
 void RateProjection::addDendrite(int postNeuronRank, class Dendrite *dendrite)
@@ -130,7 +137,29 @@ Dendrite *RateProjection::getDendrite(int postNeuronRank)
 	return dendrites_[postNeuronRank];
 }
 
+int RateProjection::nbSynapses(int post_rank) { 
+	return dendrites_[post_rank]->getSynapseCount();
+}
+
 void RateProjection::removeDendrite(int postNeuronRank, class Population *pre)
 {
 
 }
+
+void RateProjection::initValues(int postNeuronRank)
+{
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->initValues();
+}
+
+void RateProjection::record()
+{
+	for ( int n = 0; n < nbDendrites_; n++ )
+	{
+		if ( !dendrites_[n] )
+			continue;
+
+		dendrites_[n]->record();
+	}
+}
+

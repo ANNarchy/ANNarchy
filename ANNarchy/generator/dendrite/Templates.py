@@ -15,7 +15,7 @@
 #     * random : private definition of RandomDistribution arrays   
 #    
 #     * functions : inline definition of custom functions     
-rate_projection_header = \
+rate_dendrite_header = \
 """#ifndef __%(class)s_H__
 #define __%(class)s_H__
 
@@ -82,7 +82,7 @@ private:
 #     * random : private definition of RandomDistribution arrays  
 #    
 #     * functions : inline definition of custom functions      
-spike_projection_header = \
+spike_dendrite_header = \
 """#ifndef __%(class)s_H__
 #define __%(class)s_H__
 
@@ -110,8 +110,6 @@ public:
     int removeAllSynapses();
     
     void initValues();
-    
-    void computeSum();
     
     void globalLearn();
     
@@ -156,7 +154,7 @@ private:
 #
 #    * global : code for global_learn
 #
-rate_projection_body = \
+rate_dendrite_body = \
 """#include "%(class)s.h"        
 #include "Global.h"
 
@@ -166,11 +164,18 @@ using namespace ANNarchy_Global;
 
 %(class)s::%(class)s(Population* pre, Population* post, int postRank, int target) : RateDendrite() 
 {
+#ifdef _DEBUG
+    std::cout << "Create %(class)s (ptr = " << this << ") for neuron " << postRank << " between " << pre->getName() << " and " << post->getName() << std::endl;
+#endif
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
     
     pre_rates_ = pre_population_->getRates();
     post_rates_ = post_population_->getRates();
+
+#ifdef _DEBUG
+    std::cout << "pre_rates_ = " << pre_rates_ << ", post_rates_ = " << post_rates_ << std::endl;  
+#endif    
 
     target_ = target;
     post_neuron_rank_ = postRank;
@@ -178,11 +183,18 @@ using namespace ANNarchy_Global;
 
 %(class)s::%(class)s(int preID, int postID, int postRank, int target) : RateDendrite() 
 {
+#ifdef _DEBUG
+    std::cout << "Create %(class)s (ptr = " << this << ") for neuron " << postRank << " between id =" << preID << " and id =" << postID << std::endl;
+#endif    
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
     pre_rates_ = pre_population_->getRates();
     post_rates_ = post_population_->getRates();
+
+#ifdef _DEBUG
+    std::cout << "pre_rates_ = " << pre_rates_ << ", post_rates_ = " << post_rates_ << std::endl;  
+#endif    
 
     target_ = target;
     post_neuron_rank_ = postRank;
@@ -214,6 +226,8 @@ int %(class)s::removeAllSynapses()
 
 void %(class)s::initValues() 
 {
+    // Recording of weights disabled by default
+    record_value_ = false;
 %(init)s
 }
 
@@ -256,7 +270,7 @@ void %(class)s::record()
 #
 #    * global : code for global_learn
 #
-spike_projection_body = \
+spike_dendrite_body = \
 """#include "%(class)s.h"        
 #include "Global.h"
 
@@ -317,10 +331,6 @@ void %(class)s::initValues()
 %(init)s
 }
 
-void %(class)s::computeSum() {   
-%(sum)s
-}
-
 void %(class)s::localLearn() {
 %(local)s
 }
@@ -364,7 +374,7 @@ local_variable_access = \
     %(type)s getSingle%(Name)s(int rank) { return this->%(name)s_[rank]; }
     void setSingle%(Name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
 
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
+    std::vector< std::vector< %(type)s > > getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
     void startRecord%(Name)s() { this->record_%(name)s_ = true; }
     void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
     void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
@@ -386,175 +396,6 @@ global_variable_access = \
     // Access methods for the global variable %(name)s
     %(type)s get%(Name)s() { return this->%(name)s_; }
     void set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
-"""
-
-# Cython file for a rate population
-#
-# Depends on:
-#
-#    * name : the class name
-#
-#    * cFunction : c++ methods to access attributes
-# 
-#    * pyFunction ' python functions to access attributes
-# 
-rate_projection_pyx = \
-"""from libcpp.vector cimport vector
-from libcpp.string cimport string
-from libcpp cimport bool
-
-import numpy as np
-cimport numpy as np
-
-cdef extern from "../build/%(name)s.h":
-    cdef cppclass %(name)s:
-        %(name)s(int preLayer, int postLayer, int postNeuronRank, int target)
-
-        void initValues()
-
-%(cFunction)s
-
-cdef class Local%(name)s(pyxDendrite):
-
-    cdef %(name)s* cInhInstance
-
-    def __cinit__(self, proj_type, preID, postID, rank, target, rateCoded):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, rateCoded))
-
-    def init_values(self):
-        self.cInhInstance.initValues()
-        
-%(pyFunction)s
-
-""" 
-
-# Cython file for a Spike projection
-#
-# Depends on:
-#
-#    * name : the class name
-#
-#    * cFunction : c++ methods to access attributes
-# 
-#    * pyFunction ' python functions to access attributes
-# 
-spike_projection_pyx = \
-"""from libcpp.vector cimport vector
-from libcpp.string cimport string
-from libcpp cimport bool
-
-import numpy as np
-cimport numpy as np
-
-cdef extern from "../build/%(name)s.h":
-    cdef cppclass %(name)s:
-        %(name)s(int preLayer, int postLayer, int postNeuronRank, int target)
-
-        void initValues()
-        
-%(cFunction)s
-
-cdef class Local%(name)s(pyxDendrite):
-
-    cdef %(name)s* cInhInstance
-
-    def __cinit__(self, proj_type, preID, postID, rank, target, rateCoded):
-        self.cInhInstance = <%(name)s*>(createProjInstance().getInstanceOf(proj_type, preID, postID, rank, target, rateCoded))
-
-    def init_values(self):
-        self.cInhInstance.initValues()
-
-%(pyFunction)s
-
-""" 
-
-# Local Cython property
-# 
-# Depends on:
-# 
-#     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
-local_property_pyx = """
-
-    # local: %(name)s
-    cpdef np.ndarray _get_%(name)s(self):
-        return np.array(self.cInhInstance.get%(Name)s())
-        
-    cpdef _set_%(name)s(self, np.ndarray value):
-        self.cInhInstance.set%(Name)s(value)
-
-    cpdef %(type)s _get_single_%(name)s(self, int rank):
-        return self.cInhInstance.getSingle%(Name)s(rank)
-
-    cpdef _set_single_%(name)s(self, int rank, %(type)s value):
-        self.cInhInstance.setSingle%(Name)s(rank, value)
-
-    def _start_record_%(name)s(self):
-        self.cInhInstance.startRecord%(Name)s()
-
-    def _stop_record_%(name)s(self):
-        self.cInhInstance.stopRecord%(Name)s()
-
-    cpdef np.ndarray _get_recorded_%(name)s(self):
-        tmp = np.array(self.cInhInstance.getRecorded%(Name)s())
-        self.cInhInstance.clearRecorded%(Name)s()
-        return tmp
-        
-"""
-
-# Global Cython property
-# 
-# Depends on:
-# 
-#     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
-global_property_pyx = """
-    
-    # global: %(name)s
-    cpdef %(type)s _get_%(name)s(self):
-        return self.cInhInstance.get%(Name)s()
-        
-    cpdef _set_%(name)s(self, %(type)s value):
-        self.cInhInstance.set%(Name)s(value)
-        
-"""
-
-# Local Cython wrapper
-# 
-# Depends on:
-# 
-#     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
-#    
-#     * type : C type of variable
-local_wrapper_pyx = """
-        # Local %(name)s
-        vector[%(type)s] get%(Name)s()
-        void set%(Name)s(vector[%(type)s] values)
-        %(type)s getSingle%(Name)s(int rank)
-        void setSingle%(Name)s(int rank, %(type)s values)
-        void startRecord%(Name)s()
-        void stopRecord%(Name)s()
-        void clearRecorded%(Name)s()
-        vector[vector[%(type)s]] getRecorded%(Name)s()
-"""
-
-# Global Cython wrapper
-# 
-# Depends on:
-# 
-#     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
-#    
-#     * type : C type of variable
-global_wrapper_pyx = """
-        # Global %(name)s
-        %(type)s get%(Name)s()
-        void set%(Name)s(%(type)s value)                
 """
 
 # an implementation code of adding dynamically synapses.

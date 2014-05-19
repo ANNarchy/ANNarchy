@@ -2,9 +2,11 @@
 Bar learning problem
 ************************************
 
-The implementation of the bar learning problem is located in the ``examples/bar_learn`` folder. The bar learning problem describes the process of learning receptive fields on an artificial input pattern. Therefore images consisting of independent bars are used. Those images are generated as following: an 8*8 image is filled by eight horizontal bars and respectively eight vertical bars. Each bar can occur independently with the probability of 1/8. At the end of learning, the single neurons of this neuronal network should learn to respond to these components independently.
+The implementation of the bar learning problem is located in the ``examples/bar_learn`` folder. The bar learning problem describes the process of learning receptive fields on an artificial input pattern. Images consisting of independent bars are used. Those images are generated as following: an 8*8 image can filled randomly by eight horizontal or vertical bars, with a probability of 1/8 for each. 
 
-You can simply try the network by typing:
+These input images are fed into a neural population, whose neurons should learn to extract the independent coponents of the input distribution, namely single horizontal or vertical bars.
+
+If you have ``pyqtgraph`` installed, you can simply try the network by typing:
 
 .. code-block:: python
 
@@ -13,189 +15,163 @@ You can simply try the network by typing:
 Model overview
 ------------------------
 
-The model consists of two populations ``Input`` and ``Feature``. The size of ``Input`` could be chosen as you wish (in our example 8*8). The number neuron in the ``Feature`` population should be higher than the number of independent bars which could appear (we chose here 32 neurons). The ``Feature`` population gets excitory connections from ``Input`` through an all-to-all connection pattern. The same pattern is used for the inhibitory connections within ``Feature``.
+The model consists of two populations ``Input`` and ``Feature``. The size of ``Input`` should be chosen  to fit tzhe input image size (here 8*8). The number of neurons in the ``Feature`` population should be higher than the total number of independent bars  (16, we choose here 32 neurons). The ``Feature`` population gets excitory connections from ``Input`` through an all-to-all connection pattern. The same pattern is used for the inhibitory connections within ``Feature``.
 
 Defining the neurons
 ------------------------
 
-Sequently the implementation and the corresponding equations are shown. After each definition, the Population instantiation code for the three populations Input, L1 and L2 is given.
 
-    * *Input*: 
+* *Input* population: 
 
-        The input pattern will be set by the main loop for every trial, so we need just an empty neuron at this point:
+    The input pattern will be clamped into this population by the main loop for every trial, so we need just an empty neuron at this point:
+
+.. code-block:: python
+
+    InputNeuron = RateNeuron(   
+        parameters="""
+            rate = 0.0
+        """
+    )
     
-            .. code-block:: python
-            
-                InputNeuron = RateNeuron(
-                    parameters=""" 
-                        tau = 10.0 : population
-                        baseline = 0.0 
-                    """,
-                    equations="""
-                        tau * drate/dt + rate = baseline : min=0.0
-                    """
-                )
+The trick here is to declare ``rate`` as a parameter, not a variable: its value will not be computed by the simulator, but only set by external input. The ``Input`` population can then be created:
+    
+.. code-block:: python
 
-        which is used in the ``Input`` population:
+    input_pop = Population(geometry=(8, 8), neuron=InputNeuron)
         
-            .. code-block:: python
-            
-                input_pop = Population(geometry=(8, 8), neuron=InputNeuron)
+* *Feature* population: 
+
+The neuron type composing this population sums up all the excitory inputs gain from ``Input`` and the lateral inhibition within ``Feature``.
+
+.. math::
+    
+    \tau \frac {dr_{j}^{\text{Feature}}}{dt} + r_{j}^{Feature} = \sum_{i} w_{ij} \cdot r_{i}^{\text{Input}}  - \sum_{k, k \ne j} w_{kj} * r_{k}^{Feature} 
+
+could be implemented as the following:
+
+.. code-block:: python
+
+    LeakyNeuron = RateNeuron(
+        parameters=""" 
+            tau = 10.0 : population
+        """,
+        equations="""
+            tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0
+        """
+    )
+
+The firing rate is restricted to positive values with the ``min=0.0`` flag. The population is created in the following way:
+
+.. code-block:: python
         
-    * *Feature*: 
-
-        The neuron add up all the excitory inputs gain from Input and substract the own lateral inhibition (as only positives weights 
-        are allowed on this connections). As in the previous equation we also restrict the firing to positive values.
-
-        .. math::
-            
-            \tau \frac {dr_{j}^{Feature}}{dt} &= \sum r_{i}^{Input} * w_{ij} - \sum_{k, k \ne j} w_{kj} * r_{k}^{Feature} - r_{j}^{Feature}
-
-        could be implemented as the following:
-
-            .. code-block:: python
-
-                LeakyNeuron = RateNeuron(
-                    parameters=""" 
-                        tau = 10.0 : population
-                    """,
-                    equations="""
-                        tau * drate/dt + rate = sum(exc) - sum(inh)
-                    """
-                )
-
-        Additionally we want to restrict the fire rate, allowing only positive values. For this we modify the above code like the following:
-
-            .. code-block:: python
-        
-                LeakyNeuron = RateNeuron(
-                    parameters=""" 
-                        tau = 10.0 : population
-                    """,
-                    equations="""
-                        tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0
-                    """
-                )
-
-        The population is created in the following way:
-        
-            feature_pop = Population(geometry=(8, 4), neuron=LeakyNeuron)
+    feature_pop = Population(geometry=(8, 4), neuron=LeakyNeuron)
+    
+We give it a (8, 4) geometry for visualization only, it does not influence computations at all.
 
 Defining the synapses
 ------------------------
 
-As in the previous section, we describe the learning rules as equation and there implementation. After each implementation the instantiation of the 
-projection is shown.
+Both feedforward (``Input`` :math:`\rightarrow` ``Feature``) and lateral (``Feature`` :math:`\rightarrow` ``Feature``) projections are learned using the Oja learning rule (a regularized Hebbian learning rule ensuring the sum of all weights coming to a neuron is constant). Only parameters will differ between the projections.
 
-    * *Oja*: 
-
-        Implementation of the oja learning, applied on the excitory connections between Input and Fature.
-
-            .. math::
+.. math::
                 
-                \tau \frac{dw_{ij}^{L1}}{dt} &= r_{j} * r_{i} - \alpha * r_{j}^{2} * w_{ij}
+    \tau \frac{dw_{ij}}{dt} &= r_{i} * r_{j} - \alpha * r_{j}^{2} * w_{ij}
         
-        could be realized as:
+where :math:`\alpha` is a parameter defining the strength of the regularization, :math:`r_i` is the presynaptic firing rate and :math:`r_j` the postsynaptic one. The implementation of this synapse type is straightforward:
         
-            .. code-block:: python
-            
-                Oja = RateSynapse(
-                    parameters=""" 
-                        tau = 2000.0 : postsynaptic
-                        alpha = 8.0 : postsynaptic
-                    """,
-                    equations="""
-                        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value
-                    """
-                )  
 
-    * *Anit-Hebb*: 
+.. code-block:: python
 
-        defines the change of inhibitory weights within the Feature population. Additionally we want to restrict the weight, allowing only positive 
-        values.
+    Oja = RateSynapse(
+        parameters=""" 
+            tau = 2000.0 : postsynaptic
+            alpha = 8.0 : postsynaptic
+            min_value = 0.0 : postsynaptic
+        """,
+        equations="""
+            tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=min_value
+        """
+    )  
+ 
 
-            .. math::
-                
-                \tau \frac{dw_{ij}^{L1}}{dt} &= r_{j} * r_{i} - \alpha * r_{j} * w_{ij}
-
-        could be implemented as the following:
-
-            .. code-block:: python
-    
-                AntiHebb = RateSynapse(
-                    parameters=""" 
-                        tau = 2000.0 : postsynaptic
-                        alpha = 0.3 : postsynaptic
-                    """,
-                    equations="""
-                        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min = 0.0
-                    """
-                )  
-
-Create projections
+Create the projections
 ------------------------
 
-    For this network we need to create two projections, one excitory between the populations Input and Feature and one inhibitory within the 
-    population itself:
+For this network we need to create two projections, one excitory between the populations ``Input`` and ``Feature`` and one inhibitory within the ``Feature`` population itself:
     
-        .. code-block:: python
+.. code-block:: python
 
-            input_feature = Projection(
-                pre=input_pop, 
-                post=feature_pop, 
-                target='exc', 
-                synapse = Oja    
-            ).connect_all_to_all( weights = Uniform(-0.5, 0.5) )
-                                 
-            feature_feature = Projection(
-                pre=feature_pop, 
-                post=feature_pop, 
-                target='inh', 
-                synapse = AntiHebb
-            ).connect_all_to_all( weights = Uniform(0.0, 1.0) )
+    Input_Feature = Projection(
+        pre=Input, 
+        post=Feature, 
+        target='exc', 
+        synapse = Oja    
+    ).connect_all_to_all( weights = Uniform(-0.5, 0.5) )
+                         
+    Feature_Feature = Projection(
+        pre=Feature, 
+        post=Feature, 
+        target='inh', 
+        synapse = Oja
+    ).connect_all_to_all( weights = Uniform(0.0, 1.0) )
+
+The two projections are all-to-all and use the ``Oja`` synapse type. They only differ by the parameter ``alpha`` (lower in ``Feature_Feature``) and the fact that the weights of ``Input_Feature`` are allowed to be negative (so we set the minimum value to -10.0):
+
+.. code-block:: python   
+
+    Input_Feature.min_value = -10.0
+    Feature_Feature.alpha = 0.3
+
+Setting inputs
+------------------
+
+Once the network is defined, one has to specify how inputs are fed into the ``Input`` population. A simple solution is to define a method that sets the firing rate of ``Input`` according to the specified probabilities every time it is called:
+
+.. code-block:: python
+
+    def set_input():
+        # Reset the firing rate for all neurons
+        Input.rate = 0.0
+        # Clamp horizontal bars
+        for h in range(Input.geometry[0]):
+            if np.random.random() < 1.0/ float(Input.geometry[0]):
+                Input[h, :].rate = 1.0
+        # Clamp vertical bars
+        for w in range(Input.geometry[1]):
+            if np.random.random() < 1.0/ float(Input.geometry[1]):
+                Input[:, w].rate = 1.0
+                
+This method starts by resetting the firing rate of ``input`` to 0.0:
+
+.. code-block:: python
+
+    Input.rate = 0.0
+
+One can use here a single value or a Numpy array (e.g. ``np.zeros(Input.geometry))``), it does not matter.
+
+For all possible horizontal bars, a decision is then made whether the bar should appear or not, in which case the firing rate of the correspondng neurons is set to 1.0:
+
+.. code-block:: python
+
+    for h in range(Input.geometry[0]):
+        if np.random.random() < 1.0/ float(Input.geometry[0]):
+            Input[h, :].rate = 1.0
+            
+``Input[h, :]`` is a PopulationView, i.e. a group of neurons defined by the sub-indices (here the row of index ``h``). Their attributes, such as ``rate``, can be accessed as if it were a regular population. The same is done for vertical bars.
+                
+                
 
 Running the Simulation
 ------------------------
 
-As explained in the section `Starting the Simulation <manual/Simulation.html#starting-the-simulation>`_, one has the choice between running the simulation in interactive or scripting mode.
+Once the method for setting inputs is defined, the simulation can be started. A basic approach would be to define an infinite loop where the inputs are first set, and the network is simulated for 50 milliseconds afterwards:
 
-In scripting mode (``python BarLearning.py``), it is good practice to put all simulation-related commands under the ``if __name__ == "__main__":`` part of the script (executed only in scripting mode, not interactive):
+.. code-block:: python
 
-    .. code-block:: python
-
-        # neuron, population definition as above mentioned
-        # ...
-
-        # Analyse and compile everything, initialize the parameters/variables...
-        compile()    
-
-        if __name__ == "__main__":
-
-            for trial in range(50000):
-                bars = np.zeros((8,8))
-                
-                # appears a vertical bar?
-                for i in xrange(8):
-                    if np.random.rand(1) < 1.0/8.0:
-                       bars[:,i] = 1.0
-
-                # appears a horizontal bar?
-                for i in xrange(8):
-                    if np.random.rand(1) < 1.0/8.0:
-                       bars[i,:] = 1.0
-
-                InputPop.rate = bars.reshape(8*8)
-                
-                simulate(100)
-        
-The ``compile()`` creates all needed sources, compile them and build up the network objects and starts the simulation describect in the ``main function`` block. We present over 50.000 trials a new created input image (``bars``), which is set to the network model through:
-
-    .. code-block:: python
+    compile()
     
-            InputPop.rate = bars.reshape(8*8)
-
-After this we simulate 100 timesteps with:
-
-    .. code-block:: python
-
-        InputPop.rate = bars.reshape(8*8)
+    while True:
+        set_input()
+        simulate(50)
+        
+In the file ``BarLearning.py``, a visualization class using pyqtgraph is used, but the user is free to use whatever method he prefers to visualize the result of learning.

@@ -154,8 +154,9 @@ void Network::addPopulation(class Population* population)
     }
 }
 
-void Network::connect(int prePopulationID, int postPopulationID, int projectionID, int targetID, bool spike, std::string filename)
+void Network::connect(int prePopulationID, int postPopulationID, int targetID, std::string filename)
 {
+	/*
 	std::fstream file(filename, std::ios_base::in);
 	if (!file.is_open()) {
 		std::cout << "Failed to open file '"<< filename <<"' ... " << std::endl;
@@ -202,6 +203,7 @@ void Network::connect(int prePopulationID, int postPopulationID, int projectionI
 	}
 
 	std::cout << "read "<< line_counter << " line(s) and created "<< dendrite_counter <<" dendrites"<< std::endl;
+	*/
 }
 
 void Network::disconnect(int prePopulationID, int postPopulationID, bool preIsSpike, bool postIsSpike, int targetID)

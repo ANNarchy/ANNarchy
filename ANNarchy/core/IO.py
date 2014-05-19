@@ -277,29 +277,28 @@ def _net_description(variables, connections):
             synapse_count = []
             dendrites = []  
             
-            for dendrite in proj.dendrites:
+            for d in proj.post_ranks:
                 dendrite_desc = {}
-                synapse_count.append(dendrite.size)
-                dendrite_desc['post_rank'] = dendrite.post_rank
-                
-                varias = {}
-                
-                for var in dendrite.variables:
-                    varias[var] = getattr(dendrite.cy_instance, '_get_'+var)()
+                # Number of synapses in the dendrite
+                synapse_count.append(proj[d].size())
+                # Postsynaptic rank
+                dendrite_desc['post_rank'] = d
 
-                if 'value' not in dendrite.variables:
-                    varias['values'] = dendrite.cy_instance._get_value() 
-                
-                varias['delays'] = dendrite.cy_instance._get_delay()
-                varias['pre_ranks'] = dendrite.cy_instance._get_rank()
-                                
+                # Variables
+                varias = {}                
+                for var in proj.variables:
+                    varias[var] = getattr(proj.cyInstance, '_get_'+var)(d)
+                if 'value' not in proj.variables:
+                    varias['values'] = proj.cyInstance._get_value(d)                
+                varias['delays'] = proj.cyInstance._get_delay(d)
+                varias['pre_ranks'] = proj.cyInstance._get_rank(d)                                
                 if varias != {}:
                     dendrite_desc['variables'] = varias
 
+                # Parameters
                 params = {}
-                for par in dendrite.parameters:
-                    params[par] = dendrite.get(par)
-                
+                for par in proj.parameters:
+                    params[par] = getattr(proj.cyInstance, '_get_'+par)(d)                
                 if params != {}:
                     dendrite_desc['parameter'] = params
                 

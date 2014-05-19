@@ -53,6 +53,12 @@ Dendrite::~Dendrite()
 
 void Dendrite::setDelay(std::vector<int> delay)
 {
+#ifdef _DEBUG_DENDRITE_DATA
+	std::cout << "Dendrite::setDelay (ptr = "<< this << ")"<< std::endl;
+	for (auto it = delay.begin(); it != delay.end(); it++)
+		std::cout << *it << " ";
+	std::cout << std::endl;
+#endif
 #ifdef _DEBUG_DELAY
 	std::cout << "Dendrite (ptr = " << this << ")" << std::endl;
 	std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
@@ -74,6 +80,12 @@ void Dendrite::setDelay(std::vector<int> delay)
 
 void Dendrite::setRank(std::vector<int> rank)
 {
+#ifdef _DEBUG_DENDRITE_DATA
+	std::cout << "Dendrite::setRank (ptr = "<< this << ")"<< std::endl;
+	for (auto it = rank.begin(); it != rank.end(); it++)
+		std::cout << *it << " ";
+	std::cout << std::endl;
+#endif
 	rank_ = rank;
 	nbSynapses_ = rank.size();
 
@@ -86,6 +98,28 @@ void Dendrite::setRank(std::vector<int> rank)
 		    inv_rank_.insert( tmp );
 		}
 	}
+}
+
+std::vector<DATA_TYPE> Dendrite::getValue()
+{
+#ifdef _DEBUG_DENDRITE_DATA
+	std::cout << "Dendrite::getValue (ptr = "<< this << ")"<< std::endl;
+	for (auto it = value_.begin(); it != value_.end(); it++)
+		std::cout << *it << " ";
+	std::cout << std::endl;
+#endif
+	return value_;
+}
+
+void Dendrite::setValue(std::vector<DATA_TYPE> value)
+{
+#ifdef _DEBUG_DENDRITE_DATA
+	std::cout << "Dendrite::setValue (ptr = "<< this << ")"<< std::endl;
+	for (auto it = value.begin(); it != value.end(); it++)
+		std::cout << *it << " ";
+	std::cout << std::endl;
+#endif
+	value_ = value;
 }
 
 

@@ -26,6 +26,7 @@ from ANNarchy.parser.Analyser import analyse_population
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Neuron import IndividualNeuron
+import ANNarchy.core.cython_ext.Coordinates as Coordinates
 
 from ANNarchy.core.Record import Record
 import ANNarchy.core.Global as Global
@@ -33,9 +34,6 @@ import ANNarchy.core.Global as Global
 import traceback
 import numpy as np
 
-import pyximport
-pyximport.install()
-import cy_functions
 
 class Population(object):
     """
@@ -129,25 +127,25 @@ class Population(object):
         # Finalize initialization
         self.initialized = False
 
-        #
+        # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions. 
         if self._dimension==1:
-            self._rank_from_coord = cy_functions.get_rank_from_1d_coord
-            self._coord_from_rank = cy_functions.get_1d_coord
+            self._rank_from_coord = Coordinates.get_rank_from_1d_coord
+            self._coord_from_rank = Coordinates.get_1d_coord
         elif self._dimension==2:
-            self._rank_from_coord = cy_functions.get_rank_from_2d_coord
-            self._coord_from_rank = cy_functions.get_2d_coord
+            self._rank_from_coord = Coordinates.get_rank_from_2d_coord
+            self._coord_from_rank = Coordinates.get_2d_coord
         elif self._dimension==3:
-            self._rank_from_coord = cy_functions.get_rank_from_3d_coord
-            self._coord_from_rank = cy_functions.get_3d_coord
+            self._rank_from_coord = Coordinates.get_rank_from_3d_coord
+            self._coord_from_rank = Coordinates.get_3d_coord
         else:
             self._rank_from_coord = np.ravel_multi_index
             self._coord_from_rank = np.unravel_index
 
         self._norm_coord_dict = {
-            1: cy_functions.get_normalized_1d_coord,
-            2: cy_functions.get_normalized_2d_coord,
-            3: cy_functions.get_normalized_3d_coord
+            1: Coordinates.get_normalized_1d_coord,
+            2: Coordinates.get_normalized_2d_coord,
+            3: Coordinates.get_normalized_3d_coord
         }
         
     def _init_attributes(self):
@@ -738,4 +736,35 @@ class Population(object):
                 return idx
         return -1
 
+    def raster_plot(self, compact=False, clear=True):
+        """ Returns data allowing to display a raster plot for a spiking population.
+
+        For all neurons in the population, the absolute time (in simulation steps since the beginning) where a spike was emitted is given.
+
+        By default, it returns a (N, 2) Numpy array where each spike (first index) is represented by the corresponding time (first column) and the neuron index (second column).  It can be very easily plotted, for example with matplotlib::
+
+            >>> spikes = pop.raster_plot()
+            >>> from pylab import *
+            >>> plot(spikes[:, 0], spikes[:, 1], 'o')
+            >>> show()
+
+        If ``compact`` is set to ``True``, it will return a list of lists, where the first index corresponds to the neurons' ranks, and the second is a list of time steps where a spike was emitted.
+
+        Parameters:
+
+        * ``compact``: defines the format of the returned array.
+
+        * ``clear``: defines if the recorded spike times should be cleared from memory (i.e. if ``True``, the next call to ``raster_plot()`` will display only spikes emitted since the last call). By default, ``raster_plot()`` returns all the spikes emitted since the beginning of the simulation (can become huge for long simulations).
+
+        """
+        if self.description['type'] != 'spike':
+            Global._warning('raster_plot() is only available for spiking populations.')
+            return []
+        data = self.cyInstance.get_spike_timings()
+        if clear:
+            self.cyInstance.reset_spike_timings()
+        if compact:
+            return data
+        else:
+            return np.array([ [t, neuron] for neuron in range(len(data)) for t in data[neuron] ] )
 
