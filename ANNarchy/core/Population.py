@@ -122,6 +122,8 @@ class Population(object):
         self._recorded_variables = {}        
         for var in self.variables:
             self._recorded_variables[var] = Record(var)
+        if self.description['type'] == 'spike':
+            self._recorded_variables['spike'] = Record('spike')
 
         # Finalize initialization
         self.initialized = False
@@ -451,13 +453,18 @@ class Population(object):
                     
                 data = getattr(self.cyInstance, '_get_recorded_'+var)()
                 
-                if as_1D:
+                if var == 'spike':
+                    data_dict[var] = { 
+                        'data': data,
+                        'start': self._recorded_variables[var].start_time,
+                        'stop': self._recorded_variables[var].stop_time
+                    }
+
+                elif as_1D:
                     #
                     # [ time, data(1D) ] => [ time, data(1D) ] 
-                    mat1 = data.T
-
                     data_dict[var] = { 
-                        'data': mat1,
+                        'data': data.T,
                         'start': self._recorded_variables[var].start_time,
                         'stop': self._recorded_variables[var].stop_time
                     }
@@ -736,7 +743,7 @@ class Population(object):
                 return idx
         return -1
 
-    def raster_plot(self, compact=False, clear=True):
+    def raster_plot(self, compact=False):
         """ Returns data allowing to display a raster plot for a spiking population.
 
         For all neurons in the population, the absolute time (in simulation steps since the beginning) where a spike was emitted is given.
@@ -753,16 +760,11 @@ class Population(object):
         Parameters:
 
         * ``compact``: defines the format of the returned array.
-
-        * ``clear``: defines if the recorded spike times should be cleared from memory (i.e. if ``True``, the next call to ``raster_plot()`` will display only spikes emitted since the last call). By default, ``raster_plot()`` returns all the spikes emitted since the beginning of the simulation (can become huge for long simulations).
-
         """
         if self.description['type'] != 'spike':
             Global._warning('raster_plot() is only available for spiking populations.')
             return []
-        data = self.cyInstance.get_spike_timings()
-        if clear:
-            self.cyInstance.reset_spike_timings()
+        data = self.cyInstance._get_recorded_spike()
         if compact:
             return data
         else:

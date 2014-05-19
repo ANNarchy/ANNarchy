@@ -76,6 +76,16 @@ public:
     void resetSpikeTimings() ;
 
     /**
+     * \brief       Starts recording the spike timings.
+     */
+    void startRecordSpike();
+
+    /**
+     * \brief       Stops recording the spike timings.
+     */
+    void stopRecordSpike();
+
+    /**
      * \brief       Get the laste spike time of a neuron.
      * \details     Sometimes it may useful to trace all the emited spikes, e.g.
      *              visualization.
@@ -112,6 +122,8 @@ protected:
 
 	std::vector< bool > spiked_;
 	std::vector< std::vector<int> > spike_timings_;
+    bool record_spike_;
+    std::vector<int> lastSpike_;
 };
 
 
