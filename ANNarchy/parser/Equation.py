@@ -66,14 +66,14 @@ class Equation(object):
         else:
             self.type = type
         
-        # Build the default dictionary for the analysis# Dictionary of built-in symbols or functions
+        # Build the default dictionary of built-in symbols or functions
         self.local_dict = {
             'dt' : Symbol('dt_'),
             't' : Symbol('ANNarchy_Global::time'),
             'weight' : Symbol('value_' + index), 
             'value' : Symbol('value_'+index), 
             't_pre': Symbol('pre_population_->getLastSpikeTime(rank_'+index+')'),
-            't_post': Symbol('post_population_->getLastSpikeTime(rank_'+index+')'),
+            't_post': Symbol('post_population_->getLastSpikeTime(post_neuron_rank_)'),
             'pos': Function('positive'),
             'positive': Function('positive'), 
             'neg': Function('negative'), 
