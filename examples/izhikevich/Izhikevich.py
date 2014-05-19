@@ -17,7 +17,6 @@ Izhikevich = SpikeNeuron(
         u += a * (b*v - u) : init = -13.0
         g_exc = 0.0
         g_inh = 0.0 
-        s = 0.0
     """,
     spike = """
         v >= 30.0
@@ -25,7 +24,6 @@ Izhikevich = SpikeNeuron(
     reset = """
         v = c
         u += d
-        s = 1.0
     """
 )
 

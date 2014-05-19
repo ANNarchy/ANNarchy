@@ -26,7 +26,6 @@ from ANNarchy.parser.Analyser import analyse_population
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Neuron import IndividualNeuron
-import ANNarchy.core.cython_ext.Coordinates as Coordinates
 
 from ANNarchy.core.Record import Record
 import ANNarchy.core.Global as Global
@@ -129,6 +128,7 @@ class Population(object):
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions. 
+        import ANNarchy.core.cython_ext.Coordinates as Coordinates
         if self._dimension==1:
             self._rank_from_coord = Coordinates.get_rank_from_1d_coord
             self._coord_from_rank = Coordinates.get_1d_coord
