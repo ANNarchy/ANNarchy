@@ -176,7 +176,7 @@ class Projection(object):
 
         Parameters:
 
-            * *pos*: could be either rank or coordinate of the requested postsynaptic neuron
+            * *pos*: could be either the rank or the coordinates of the requested postsynaptic neuron
         """
         if isinstance(pos, int):
             rank = pos
@@ -200,7 +200,7 @@ class Projection(object):
         return self.dendrite(args)
         
     def __iter__(self):
-        " Returns iteratively each dendrite in the population in ascending rank order."
+        " Returns iteratively each dendrite in the population in ascending postsynaptic rank order."
         for n in self._post_ranks:
             yield Dendrite(self, n)
 
@@ -445,7 +445,7 @@ class Projection(object):
     ################################
     ## Connector methods
     ################################
-    def connect_one_to_one(self, weights=1.0, delays=0.0):
+    def _connect_one_to_one_old(self, weights=1.0, delays=0.0):
         """
         Establish one to one connections within the two projections.
         
@@ -468,6 +468,18 @@ class Projection(object):
                 d = delays
             self._synapses[(pre_neur, pre_neur)] = { 'w': w, 'd': d }
             
+        return self
+    
+    def connect_one_to_one(self, weights=1.0, delays=0.0):
+        """
+        Establish a one-to-one connections between the two populations.
+        
+        Parameters:
+        
+            * *weights*: initial synaptic values, either a single value (float) or a random distribution object.
+            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
+        """
+        self._synapses = Connector.one_to_one(self.pre.size, self.post.size, weights, delays)
         return self
     
     def _connect_all_to_all_old(self, weights, delays=0.0, allow_self_connections=False):

@@ -17,7 +17,15 @@ cdef class CSR:
     def __init__(self):
         self.data = {}
 
-    cdef add (self, int rk, vector[int] r, vector[float] w, vector[int] d):
+    def add (self, int rk, list r, list w, list d):
+        cdef list val
+        val = []
+        val.append(r)
+        val.append(w)
+        val.append(d)
+        self.data[rk] = val
+
+    cdef push_back (self, int rk, vector[int] r, vector[float] w, vector[int] d):
         cdef list val
         val = []
         val.append(r)
@@ -73,7 +81,46 @@ def all_to_all(int pre_size, int post_size, weights, delays, allow_self_connecti
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
-        projection.add(post, r, w, d)
+        projection.push_back(post, r, w, d)
+
+    return projection
+
+def one_to_one(int pre_size, int post_size, weights, delays):
+    """ Cython implementation of the one-to-one pattern."""
+
+    cdef CSR projection
+    cdef float dt
+    cdef int post, pre
+    cdef list tmp
+    cdef vector[int] r, d
+    cdef vector[float] w
+
+    # Retrieve simulation time step
+    dt = ANNarchy.core.Global.config['dt']
+
+    # Create the projection data as CSR
+    projection = CSR()
+
+    for post in xrange(post_size):
+        # List of pre ranks
+        tmp = [post]
+        r = tmp
+        # Weights
+        if isinstance(weights, (int, float)):
+            tmp = [float(weights)]
+        elif isinstance(weights, RandomDistribution):
+            tmp = weights.get_list_values(1)
+        w = tmp
+        # Delays
+        if isinstance(delays, float):
+            tmp = [int(delays/dt)]
+        elif isinstance(delays, int):
+            tmp = [delays]
+        elif isinstance(delays, RandomDistribution):
+            tmp = [int(a/dt) for a in delays.get_list_values(1) ]
+        d=tmp
+        # Create the dendrite
+        projection.push_back(post, r, w, d)
 
     return projection
 
@@ -118,7 +165,7 @@ def fixed_probability(int pre_size, int post_size, float probability, weights, d
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
-        projection.add(post, r, w, d)
+        projection.push_back(post, r, w, d)
 
     return projection
 
@@ -162,7 +209,7 @@ def fixed_number_pre(int pre_size, int post_size, int number, weights, delays, a
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(number) ]
         # Create the dendrite
-        projection.add(post, r, w, d)
+        projection.push_back(post, r, w, d)
 
     return projection
 
@@ -215,7 +262,7 @@ def fixed_number_post(int pre_size, int post_size, int number, weights, delays, 
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
-        projection.add(post, r, w, d)
+        projection.push_back(post, r, w, d)
 
     return projection
 
@@ -295,7 +342,7 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite
-        projection.add(post, r, w, d)
+        projection.push_back(post, r, w, d)
 
     return projection
 
@@ -375,6 +422,6 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite
-        projection.add(post, r, w, d)
+        projection.push_back(post, r, w, d)
 
     return projection
