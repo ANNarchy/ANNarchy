@@ -75,8 +75,11 @@ class Dendrite(object):
             return object.__getattribute__(self, name)
         elif name == 'attributes':
             return object.__getattribute__(self, name)
-        elif name in self.proj.attributes+['rank', 'delay']:
-            return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
+        elif hasattr(self, 'proj'):
+            if name in self.proj.attributes+['rank', 'delay']:
+                return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
+            else:
+                return object.__getattribute__(self, name)
         else:
             return object.__getattribute__(self, name)
         
@@ -86,8 +89,11 @@ class Dendrite(object):
             object.__setattr__(self, 'proj', value)
         elif name == 'attributes':
             object.__setattr__(self, 'attributes', value)
-        elif name in self.proj.attributes:
-            getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value)
+        elif hasattr(self, 'proj'):
+            if name in self.proj.attributes:
+                getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value)
+            else:
+                object.__setattr__(self, name, value)
         else:
             object.__setattr__(self, name, value)
 
@@ -104,7 +110,7 @@ class Dendrite(object):
                     set( 'tau' : 20, 'value'= np.random.rand(8,8) } )
         """
         for val_key in value.keys():
-            if hasattr(self.cy_instance, val_key):
+            if hasattr(self.proj.cy_instance, val_key):
                 # Check the type of the data!!
                 if isinstance(value[val_key], RandomDistribution):
                     val = value[val_key].getValues(self.size) 
