@@ -84,6 +84,7 @@ class ImagePopulation(Population):
             self.cyInstance._set_rate(np.array(im).reshape(self.size)/255.)
 
 
+
 class VideoPopulation(ImagePopulation):
     """ 
     Specific rate-coded Population allowing to feed a webcam input into the firing rate of a population (each neuron represents one pixel).
