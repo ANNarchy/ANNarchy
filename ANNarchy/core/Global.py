@@ -283,7 +283,7 @@ def start_record(to_record):
     
         to_record = { 
             pop1 : ['mp', 'rate'], 
-            pop2: 'mp'    
+            pop2 : 'mp'    
         }
         start_record(to_record)
     """
@@ -301,7 +301,7 @@ def get_record(to_record=None, reshape=False):
   
     Parameter:
     
-    * *to_record*: a dictionary containing population objects (or names) as keys and variable names as values. For more details check Population.record(). When omitted, the dictionary used in the last call to record() is used.
+    * *to_record*: a dictionary containing population objects (or names) as keys and variable names as values. For more details check Population.start_record(). When omitted, the dictionary provided in the last call to start_record() is used.
 
     * *reshape*: defines if the recorded variables should be reshaped to match the population geometry (default: False).
     
@@ -339,6 +339,57 @@ def get_record(to_record=None, reshape=False):
             data[pop][variables] = pop_object.get_record(variables)
     
     return data  
+
+        
+def stop_record(to_record=None):
+    """
+    Stops the recording of variables in different populations. 
+    
+    Parameter:
+    
+    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.stop_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    """
+    if not to_record:
+        to_record = _recorded_populations
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.stop_record(variables)
+        else:
+            get_population(pop).stop_record(variables)
+
+        
+def pause_record(to_record=None):
+    """
+    Pauses the recording of variables in different populations. 
+    
+    Parameter:
+    
+    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.pause_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    """
+    if not to_record:
+        to_record = _recorded_populations
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.pause_record(variables)
+        else:
+            get_population(pop).pause_record(variables)
+
+        
+def resume_record(to_record=None):
+    """
+    Resumes the recording of variables in different populations. 
+    
+    Parameter:
+    
+    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.resume_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    """
+    if not to_record:
+        to_record = _recorded_populations
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.resume_record(variables)
+        else:
+            get_population(pop).resume_record(variables)
 
 def _print(*var_text):
     """

@@ -339,13 +339,50 @@ class Population(object):
             except:
                 Global._error('(start_record): the variable ' + var + ' is not recordable.')
 
-    def pause_record(self, variable=None):
+    def stop_record(self, variable=None):
         """
-        pause recording the previous defined variables.
+        Stops recording the previous defined variables.
 
         Parameter:
             
         * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
+        """
+        _variable = []
+        if variable == None:
+            _variable = self._running_recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')       
+        
+        for var in _variable:
+            
+            if not var in self._recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.name)
+                continue
+
+            if not self._recorded_variables[var].is_running:
+                print('record of', var, 'was not running on population', self.name)
+                continue
+            
+            try:
+                getattr(self.cyInstance, '_stop_record_'+var)()
+
+                if Global.config['verbose']:
+                    print('pause record of', var, '(', self.name, ')')
+                self._recorded_variables[var].pause()
+            except:
+                print("Error (stop_record): only possible after compilation.")
+
+    def pause_record(self, variable=None):
+        """
+        Pauses the recording of variables (can be resumed later with resume_record()).
+
+        Parameter:
+            
+        * *variable*: single variable name or list of variable names. If no argument is provided all recordings will pause.
         """
         _variable = []
         if variable == None:
@@ -407,11 +444,11 @@ class Population(object):
                 getattr(self.cyInstance, '_start_record_'+var)()
                 
                 if Global.config['verbose']:
-                    print('resume record of', var, '(' , self.name, ')')
+                    Global._print('resume record of', var, '(' , self.name, ')')
 
                 self._recorded_variables[var].start()
             except:
-                print("Error: only possible after compilation.")
+                Global._error("Error: only possible after compilation.")
                 
     def get_record(self, variable=None, reshape=False):
         """
