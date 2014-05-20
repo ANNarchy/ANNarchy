@@ -77,6 +77,8 @@ authorized_keywords = [
     'bool',
     'float'
 ]
+# Dictionary of population variables being currently recorded
+_recorded_populations = {}
 
 def setup(**keyValueArgs):
     """
@@ -267,41 +269,40 @@ def set_current_step(time):
     except:
         _warning('the network is not compiled yet')
         
-def record(to_record):
+def start_record(to_record):
     """
-    Record selected variables of several populations or projections.
+    Starts recording of variables in different populations. 
     
     Parameter:
     
-    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format.
+    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). 
     
     Example:
     
-        .. code-block:: python
-        
-            to_record = [
-                { 'pop': Input, 'var': 'rate' }, 
-                { 'pop': Input, 'var': 'mp', 'as_1D': True }        
-            ]
-            record(to_record)
-            simulate(1000.0)
-            
-    By default the variable data is always returned in the same shape as the population geometry. In this example, we force the representation of ``mp`` as a one dimensional array.
-
+    .. code-block:: python
+    
+        to_record = { 
+            pop1 : ['mp', 'rate'], 
+            pop2: 'mp'    
+        }
+        start_record(to_record)
     """
+    _recorded_populations = to_record
     for data_set in to_record:
         if isinstance(data_set['pop'], Population):
             data_set['pop'].start_record(data_set['var'])
         else:
             get_population(data_set['pop']).start_record(data_set['var'])
 
-def get_record(to_record):
+def get_record(to_record=None, reshape=False):
     """
-    Retrieve recorded variables of one or more populations. For more detailed information please refer to the Population.get_record method.
+    Retrieve the recorded variables of one or more populations since the last call. 
   
     Parameter:
     
-    * *to_record*: a set of dictionaries containing population objects and variable names. Optionally you may append an as_1D key to get a different format. For more details check Population.record().
+    * *to_record*: a dictionary containing population objects (or names) as keys and variable names as values. For more details check Population.record(). When omitted, the dictionary used in the last call to record() is used.
+
+    * *reshape*: defines if the recorded varables should be reshaped to match the population geometry (default: False).
     
     Returns:
     
@@ -309,9 +310,15 @@ def get_record(to_record):
     
     Example:
     
-        .. code-block:: python
-        
-            record({'pop': Pop1, 'var':  })
+    .. code-block:: python
+    
+        to_record = { 
+            pop1 : ['mp', 'rate'], 
+            pop2: 'mp'    
+        }
+        start_record(to_record)
+        simulate(1000.0)
+        data = get_record()
         
     """    
     data = {}
