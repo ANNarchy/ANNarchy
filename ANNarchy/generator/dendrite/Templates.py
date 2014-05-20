@@ -59,6 +59,8 @@ public:
 private:
 %(member)s
 
+%(random)s
+
     %(pre_name)s* pre_population_;
     %(post_name)s* post_population_;
 };
@@ -130,6 +132,8 @@ public:
 private:
 %(member)s
 
+%(random)s
+
     %(pre_name)s* pre_population_;
     %(post_name)s* post_population_;
 };
@@ -179,6 +183,8 @@ using namespace ANNarchy_Global;
 
     target_ = target;
     post_neuron_rank_ = postRank;
+    
+%(constructor)s
 }
 
 %(class)s::%(class)s(int preID, int postID, int postRank, int target) : RateDendrite() 
@@ -198,6 +204,8 @@ using namespace ANNarchy_Global;
 
     target_ = target;
     post_neuron_rank_ = postRank;
+    
+%(constructor)s
 }
 
 %(class)s::~%(class)s() 

@@ -49,6 +49,19 @@ class DendriteGenerator(object):
         with open(self.body, mode = 'w') as w_file:
             w_file.write(self.generate_body())
 
+    def generate_random_definition(self):
+        definition = """
+    // Random variables"""
+        for var in self.desc['random_distributions']:
+            definition += """
+    std::vector<DATA_TYPE> %(name)s_;
+    %(class)s<DATA_TYPE>* %(dist)s_;
+""" % {'name': var['name'], 
+       'dist' : var['name'].replace('rand','dist'),
+       'class': eval(var['definition'] + '._cpp_class()') 
+      }
+        return definition
+
     def generate_members_declaration(self):
         """ 
         Returns private members declaration. 
@@ -157,7 +170,21 @@ class DendriteGenerator(object):
     %(name)s_ = %(init)s;   
 """ % {'name' : param['name'], 'init': str(cinit)}   
 
-        constructor += '\n    // Time step dt_\n    dt_ = ' + str(Global.config['dt']) + ';\n'
+        # Initialize dt
+        constructor += """
+    // dt : integration step
+    dt_ = %(dt)s;
+""" % { 'dt' : str(Global.config['dt'])}
+
+        # initilaization of random distributions
+        for var in self.desc['random_distributions']:
+            constructor += """
+    %(dist)s_ = new %(class)s<DATA_TYPE>(%(args)s);
+""" % { 'dist' : var['name'].replace('rand','dist'),
+        'class': eval(var['definition'] + '._cpp_class()'),
+        'args': var['args'] 
+       }
+
         return constructor 
         
     def generate_destructor(self):
@@ -229,13 +256,14 @@ class DendriteGenerator(object):
         """
         code = ""
         # Attributes
-        for param in list(set(self.desc['local'] + ['value'])): # local attribute
-            code += """
+        for param in self.desc['parameters'] + self.desc['variables']:            
+            if param['name'] in self.desc['local']: # local attribute
+                code += """
     if(record_%(var)s_)
     {
         recorded_%(var)s_.push_back(%(var)s_);
     }
-""" % { 'var': param }
+""" % { 'var': param['name'] }
 
         return code
   

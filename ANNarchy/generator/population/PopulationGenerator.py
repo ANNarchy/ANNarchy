@@ -211,7 +211,7 @@ class PopulationGenerator(object):
     // dt : integration step
     dt_ = %(dt)s;
 """ % { 'dt' : str(Global.config['dt'])}       
-        
+      
         # initilaization of random distributions
         for var in self.desc['random_distributions']:
             constructor += """
@@ -219,7 +219,7 @@ class PopulationGenerator(object):
 """ % { 'dist' : var['name'].replace('rand','dist'),
         'class': eval(var['definition'] + '._cpp_class()'),
         'args': var['args'] 
-       }
+      }
         
         return constructor, reset
     

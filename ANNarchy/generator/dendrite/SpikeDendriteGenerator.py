@@ -43,7 +43,10 @@ class SpikeDendriteGenerator(DendriteGenerator):
          
         # Access method for attributes
         access = self.generate_members_access()
-         
+        
+        # random definition
+        random = self.generate_random_definition()
+
         # Custom function
         functions = self.generate_functions()
          
@@ -55,6 +58,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
             'post_name': self.desc['post_class'],
             'access': access,
             'member': members,
+            'random': random,
             'functions': functions 
         }
         return template % dictionary
@@ -85,6 +89,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         dictionary = {         
             'class': self.name.replace('Projection','Dendrite'),
             'add_include': self.generate_add_proj_include(),
+            'constructor': constructor,
             'destructor': self.generate_destructor(),
             'pre_type': self.desc['pre_class'],
             'post_type': self.desc['post_class'],
@@ -186,7 +191,16 @@ class SpikeDendriteGenerator(DendriteGenerator):
         return post_event_body % dictionary
      
     def generate_globallearn(self):
-        return ""
+        """ Generates code for the globalLearn() method for global variables. """
+        code = ""
+        for var in self.desc['random_distributions']:
+            code +="""
+    %(name)s_ = %(dist)s_->getValues(nbSynapses_);
+""" % { 'name' : var['name'],
+        'dist' : var['name'].replace('rand', 'dist') 
+      }
+        
+        return code
      
     def generate_locallearn(self):
         code = """
