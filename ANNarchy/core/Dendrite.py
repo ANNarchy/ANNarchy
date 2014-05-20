@@ -254,6 +254,45 @@ class Dendrite(object):
                 print "Error (start_record): only possible after compilation."
                 pass
 
+    def stop_record(self, variable=None):
+        """
+        Stops recording the defined variables.
+
+        Parameter:
+            
+        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
+        """
+        _variable = []
+        if variable == None:
+            _variable = self.proj._recorded_variables[self.post_rank].keys() # TODO: what is it?
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print 'Error: variable must be either a string or list of strings.'       
+        
+        for var in _variable:
+            
+            if not var in self.proj._recordable_variables:
+                print var, 'is not a recordable variable of', self.proj.name
+                continue
+
+            if not self.post_rank in self.proj._recorded_variables.keys() or \
+               not var in self.proj._recorded_variables[self.post_rank].keys() or \
+               not self.proj._recorded_variables[self.post_rank][var].is_running :
+                print 'The recording of', var, 'was not running on projection', self.proj.name
+                continue
+            
+            try:
+                getattr(self.proj.cyInstance, '_stop_record_'+var)(self.post_rank)
+
+                if Global.config['verbose']:
+                    print('stop record of', var, '(', self.name, ')')
+                self.proj._recorded_variables[self.post_rank][var].pause()
+            except:
+                Global._error('(pause_record): only possible after compilation.')
+
     def pause_record(self, variable=None):
         """
         Pause in recording the defined variables.

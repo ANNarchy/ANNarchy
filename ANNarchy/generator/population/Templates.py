@@ -498,9 +498,10 @@ cdef extern from "../build/%(class_name)s.h":
         
         string getName()
         
-        vector[ vector[int] ] getSpikeTimings()
-        
+        vector[ vector[int] ] getSpikeTimings()        
         void resetSpikeTimings()
+        void startRecordSpike()
+        void stopRecordSpike()
         
         void resetToInit()
         
@@ -519,11 +520,17 @@ cdef class py%(class_name)s:
     def name(self):
         return self.cInstance.getName()
 
-    cpdef list get_spike_timings(self):
-        return list( self.cInstance.getSpikeTimings() )
+    cpdef np.ndarray _get_recorded_spike(self):
+        cdef np.ndarray tmp
+        tmp = np.array( self.cInstance.getSpikeTimings() )
+        self.cInstance.resetSpikeTimings()
+        return tmp
 
-    def reset_spike_timings(self):
-        self.cInstance.resetSpikeTimings() 
+    def _start_record_spike(self):
+        self.cInstance.startRecordSpike()
+
+    def _stop_record_spike(self):
+        self.cInstance.stopRecordSpike()
 
     def reset(self):
         self.cInstance.resetToInit()

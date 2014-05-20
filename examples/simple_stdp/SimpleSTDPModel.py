@@ -77,12 +77,10 @@ testAll2AllSpike = Projection(
 
 compile()
 
-to_record = [{'pop': Small, 'var': 'v'}, 
-             {'pop': Small, 'var': 'g_exc'},
-             {'pop': Middle, 'var': 'v'}, 
-             {'pop': Middle, 'var': 'g_exc'} ]
+to_record = { Small : ['v', 'g_exc'], 
+              Middle: ['v', 'g_exc'] }
 
-record ( to_record )
+start_record ( to_record )
 
 testAll2AllSpike.dendrite(0).start_record('Apre')
 testAll2AllSpike.dendrite(0).start_record('Apost')
@@ -96,27 +94,6 @@ Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
 weight = testAll2AllSpike.dendrite(0).get_record('value')
 
 
-close('all')
-
-#
-#plot pre neurons
-#===============================================================================
-# for i in range(Small.size):
-#     fig = figure()
-#     fig.suptitle(Small.name+', neuron '+str(i))
-#       
-#     ax = subplot(211)
-#       
-#     ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
-#     ax.legend(loc=2)
-#       
-#     ax = subplot(212)
-#       
-#     ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
-#     ax.legend(loc=2)
-#===============================================================================
- 
-#
 # The synapse are not ordered ascending in relation to presynaptic ranks
 # to correctly identify the data we need to take this in mind
 pre_ranks = testAll2AllSpike.dendrite(0).rank
@@ -130,27 +107,27 @@ for i in range(Middle.size):
      
     ax = subplot(811)
      
-    ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
+    ax.plot( data[Middle]['v']['data'][i,:], label = "membrane potential")
     ax.legend(loc=2)
 
     ax = subplot(812)
      
-    ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
+    ax.plot( data[Middle]['g_exc']['data'][i,:], label = "g_exc")
     ax.legend(loc=2)
 
     ax = subplot(813)
      
-    ax.plot( data['Population0']['v']['data'][0,:], label = "membrane potential (Pop0, n=0)", color=neur_col[pre_ranks[0]])
+    ax.plot( data[Small]['v']['data'][0,:], label = "membrane potential (Pop0, n=0)", color=neur_col[pre_ranks[0]])
     ax.legend(loc=2)
 
     ax = subplot(814)
      
-    ax.plot( data['Population0']['v']['data'][1,:], label = "membrane potential (Pop0, n=1)", color=neur_col[pre_ranks[1]])
+    ax.plot( data[Small]['v']['data'][1,:], label = "membrane potential (Pop0, n=1)", color=neur_col[pre_ranks[1]])
     ax.legend(loc=2)
 
     ax = subplot(815)
      
-    ax.plot( data['Population0']['v']['data'][2,:], label = "membrane potential (Pop0, n=2)", color=neur_col[pre_ranks[2]])
+    ax.plot( data[Small]['v']['data'][2,:], label = "membrane potential (Pop0, n=2)", color=neur_col[pre_ranks[2]])
     ax.legend(loc=2)
 
     #
@@ -179,27 +156,27 @@ for i in range(Middle.size):
       
     ax = subplot(511)
       
-    ax.plot( data['Population1']['v']['data'][i,:], label = "membrane potential")
+    ax.plot( data[Middle]['v']['data'][i,:], label = "membrane potential")
     ax.legend(loc=2)
  
     ax = subplot(512)
       
-    ax.plot( data['Population1']['g_exc']['data'][i,:], label = "g_exc")
+    ax.plot( data[Middle]['g_exc']['data'][i,:], label = "g_exc")
     ax.legend(loc=2)
  
     ax = subplot(513)
       
-    ax.plot( data['Population0']['v']['data'][0,:], label = "membrane potential (Pop0, n="+str(pre_ranks[0])+")", color='b')
+    ax.plot( data[Small]['v']['data'][0,:], label = "membrane potential (Pop0, n="+str(pre_ranks[0])+")", color='b')
     ax.legend(loc=2)
  
     ax = subplot(514)
       
-    ax.plot( data['Population0']['v']['data'][1,:], label = "membrane potential (Pop0, n="+str(pre_ranks[1])+")", color='g')
+    ax.plot( data[Small]['v']['data'][1,:], label = "membrane potential (Pop0, n="+str(pre_ranks[1])+")", color='g')
     ax.legend(loc=2)
  
     ax = subplot(515)
       
-    ax.plot( data['Population0']['v']['data'][2,:], label = "membrane potential (Pop0, n="+str(pre_ranks[2])+")", color='r')
+    ax.plot( data[Small]['v']['data'][2,:], label = "membrane potential (Pop0, n="+str(pre_ranks[2])+")", color='r')
     ax.legend(loc=2)
     
 show()

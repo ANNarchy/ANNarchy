@@ -29,6 +29,10 @@ SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(n
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
 
 	spikeTargets_ = std::vector<std::vector<Dendrite*> >(nbNeurons_, std::vector<Dendrite*>());
+
+    record_spike_ = false;
+
+    lastSpike_ = std::vector<int>(nbNeurons_, -10000);
 }
 
 SpikePopulation::~SpikePopulation()
@@ -50,10 +54,7 @@ void SpikePopulation::addSpikeTarget(Dendrite* dendrite)
 
 int SpikePopulation::getLastSpikeTime(int rank)
 {
-    if(spike_timings_[rank].empty())
-        return -10000;
-    else
-        return spike_timings_[rank].back();
+    return lastSpike_[rank];
 }
 
 void SpikePopulation::resetSpikeTimings()
@@ -61,13 +62,21 @@ void SpikePopulation::resetSpikeTimings()
     int last_spike;
     for(int i=0; i<spike_timings_.size(); i++)
     {
-        last_spike = spike_timings_[i].back();
-        spike_timings_[i].clear();
-        spike_timings_[i].push_back(last_spike);
+        if (!spike_timings_[i].empty())
+        {
+            spike_timings_[i].clear();
+        }
     }
-
 }
 
+void SpikePopulation::startRecordSpike()
+{
+    record_spike_=true;
+}
+void SpikePopulation::stopRecordSpike()
+{
+    record_spike_=false;
+}
 void SpikePopulation::setMaxDelay(int delay)
 {
 	//

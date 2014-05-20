@@ -51,7 +51,7 @@ Optionally:
 
 * lxml >= 3.0
 
-* Scipy >= 0.17
+* Scipy >= 0.12
 
 * Matplotlib >= 1.1
 

@@ -26,7 +26,6 @@ from ANNarchy.parser.Analyser import analyse_population
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Neuron import IndividualNeuron
-import ANNarchy.core.cython_ext.Coordinates as Coordinates
 
 from ANNarchy.core.Record import Record
 import ANNarchy.core.Global as Global
@@ -40,7 +39,7 @@ class Population(object):
     Represents a population of neurons.
     """
 
-    def __init__(self, geometry, neuron, **kwargs):
+    def __init__(self, geometry, neuron, name=None):
         """
         Constructor of the population.
         
@@ -90,9 +89,9 @@ class Population(object):
         self._id = len(Global._populations)
         self.class_name = 'Population'+str(self._id)
         
-        try:
-            self.name = kwargs['name']
-        except:
+        if name:
+            self.name = name
+        else:
             self.name = self.class_name
                 
         # Add the population to the global variable
@@ -123,12 +122,15 @@ class Population(object):
         self._recorded_variables = {}        
         for var in self.variables:
             self._recorded_variables[var] = Record(var)
+        if self.description['type'] == 'spike':
+            self._recorded_variables['spike'] = Record('spike')
 
         # Finalize initialization
         self.initialized = False
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions. 
+        import ANNarchy.core.cython_ext.Coordinates as Coordinates
         if self._dimension==1:
             self._rank_from_coord = Coordinates.get_rank_from_1d_coord
             self._coord_from_rank = Coordinates.get_1d_coord
@@ -335,17 +337,52 @@ class Population(object):
                     
                 self._recorded_variables[var].start()
             except:
-                #TODO:
-                #print "Error (start_record): only possible after compilation."
-                pass
+                Global._error('(start_record): the variable ' + var + ' is not recordable.')
 
-    def pause_record(self, variable=None):
+    def stop_record(self, variable=None):
         """
-        pause recording the previous defined variables.
+        Stops recording the previous defined variables.
 
         Parameter:
             
         * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
+        """
+        _variable = []
+        if variable == None:
+            _variable = self._running_recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')       
+        
+        for var in _variable:
+            
+            if not var in self._recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.name)
+                continue
+
+            if not self._recorded_variables[var].is_running:
+                print('record of', var, 'was not running on population', self.name)
+                continue
+            
+            try:
+                getattr(self.cyInstance, '_stop_record_'+var)()
+
+                if Global.config['verbose']:
+                    print('pause record of', var, '(', self.name, ')')
+                self._recorded_variables[var].pause()
+            except:
+                print("Error (stop_record): only possible after compilation.")
+
+    def pause_record(self, variable=None):
+        """
+        Pauses the recording of variables (can be resumed later with resume_record()).
+
+        Parameter:
+            
+        * *variable*: single variable name or list of variable names. If no argument is provided all recordings will pause.
         """
         _variable = []
         if variable == None:
@@ -407,13 +444,13 @@ class Population(object):
                 getattr(self.cyInstance, '_start_record_'+var)()
                 
                 if Global.config['verbose']:
-                    print('resume record of', var, '(' , self.name, ')')
+                    Global._print('resume record of', var, '(' , self.name, ')')
 
                 self._recorded_variables[var].start()
             except:
-                print("Error: only possible after compilation.")
+                Global._error("Error: only possible after compilation.")
                 
-    def get_record(self, variable=None, as_1D=False):
+    def get_record(self, variable=None, reshape=False):
         """
         Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
         The last dimension represents the time, the remaining dimensions are the population geometry.
@@ -421,7 +458,7 @@ class Population(object):
         Parameter:
             
         * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
-        * *as_1D*: by default this functions returns the data as matrix (geometry shape, time). If as_1D set to True, the data will be returned as two-dimensional plot (neuron x time)
+        * *reshape*: by default this functions returns the data as a 2D matrix (number of neurons, time). If **reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
         
         _variable = []
@@ -451,13 +488,18 @@ class Population(object):
                     
                 data = getattr(self.cyInstance, '_get_recorded_'+var)()
                 
-                if as_1D:
+                if var == 'spike':
+                    data_dict[var] = { 
+                        'data': data,
+                        'start': self._recorded_variables[var].start_time,
+                        'stop': self._recorded_variables[var].stop_time
+                    }
+
+                elif not reshape:
                     #
                     # [ time, data(1D) ] => [ time, data(1D) ] 
-                    mat1 = data.T
-
                     data_dict[var] = { 
-                        'data': mat1,
+                        'data': data.T,
                         'start': self._recorded_variables[var].start_time,
                         'stop': self._recorded_variables[var].stop_time
                     }
@@ -736,7 +778,7 @@ class Population(object):
                 return idx
         return -1
 
-    def raster_plot(self, compact=False, clear=True):
+    def raster_plot(self, compact=False):
         """ Returns data allowing to display a raster plot for a spiking population.
 
         For all neurons in the population, the absolute time (in simulation steps since the beginning) where a spike was emitted is given.
@@ -753,16 +795,11 @@ class Population(object):
         Parameters:
 
         * ``compact``: defines the format of the returned array.
-
-        * ``clear``: defines if the recorded spike times should be cleared from memory (i.e. if ``True``, the next call to ``raster_plot()`` will display only spikes emitted since the last call). By default, ``raster_plot()`` returns all the spikes emitted since the beginning of the simulation (can become huge for long simulations).
-
         """
         if self.description['type'] != 'spike':
             Global._warning('raster_plot() is only available for spiking populations.')
             return []
-        data = self.cyInstance.get_spike_timings()
-        if clear:
-            self.cyInstance.reset_spike_timings()
+        data = self.cyInstance._get_recorded_spike()
         if compact:
             return data
         else:

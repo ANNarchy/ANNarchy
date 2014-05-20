@@ -90,7 +90,7 @@ The synaptic weight (``value``) is already predefined so we need only to introdu
         alpha = 8.0,
     """
 
-Please note that the simulation step ``dt`` is  globally defined in ANNarchy (default = 1 ms). The full description of a synapse learning according to the Oja learning rule would then be:
+Note that the simulation step ``dt`` is  globally defined in ANNarchy (default = 1 ms). The full description of a synapse learning according to the Oja learning rule would then be:
 
 .. code-block:: python 
 

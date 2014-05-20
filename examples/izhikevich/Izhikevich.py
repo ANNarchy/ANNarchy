@@ -8,7 +8,6 @@ Izhikevich = SpikeNeuron(
         b = 0.2
         c = -65.0
         d = 2.0 
-        tau = 5.0: population
     """,
     equations="""
         noise = Normal(0.0, 1.0) * noise_scale
@@ -17,7 +16,6 @@ Izhikevich = SpikeNeuron(
         u += a * (b*v - u) : init = -13.0
         g_exc = 0.0
         g_inh = 0.0 
-        s = 0.0
     """,
     spike = """
         v >= 30.0
@@ -25,7 +23,6 @@ Izhikevich = SpikeNeuron(
     reset = """
         v = c
         u += d
-        s = 1.0
     """
 )
 
@@ -70,6 +67,9 @@ if __name__ == '__main__':
     
     # Compile
     compile()
+
+    Excitatory.start_record('spike')
+    Inhibitory.start_record('spike')
 
     # Simulate 1s   
     print 'Starting simulation' 
