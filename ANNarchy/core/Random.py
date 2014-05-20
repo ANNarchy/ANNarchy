@@ -62,6 +62,10 @@ class RandomDistribution(object):
         Global._error('instantiated base class RandomDistribution is not allowed.')
         return ''
     
+    def _cpp_class(self):
+        Global._error('instantiated base class RandomDistribution is not allowed.')
+        return ''
+    
     def keywords(self):
         return ['Normal', 'Uniform', 'Constant']
 
@@ -98,6 +102,9 @@ class Constant(RandomDistribution):
     def _gen_cpp(self):
         return 'Constant<DATA_TYPE>('+str(self._value)+')'
         
+    def _cpp_clas(self):
+        return 'Constant'
+    
     def max(self):
         return self._value
 
@@ -146,6 +153,9 @@ class Uniform(RandomDistribution):
         else:
             return 'UniformDistribution<DATA_TYPE>('+str(self._min)+','+ str(self._max)+','+ str(self._cpp_seed)+')'
 
+    def _cpp_class(self):
+        return 'UniformDistribution'
+
     def max(self):
         return self._max
 
@@ -193,6 +203,9 @@ class Normal(RandomDistribution):
             return 'NormalDistribution<DATA_TYPE>('+str(self._mu)+','+ str(self._sigma)+')'
         else:
             return 'NormalDistribution<DATA_TYPE>('+str(self._mu)+','+ str(self._sigma)+','+ str(self._cpp_seed)+')'
+        
+    def _cpp_class(self):
+        return 'NormalDistribution'
         
     def max(self):
         return self._mu

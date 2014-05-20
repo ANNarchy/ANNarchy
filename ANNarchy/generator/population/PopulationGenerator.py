@@ -141,7 +141,11 @@ class PopulationGenerator(object):
         for var in self.desc['random_distributions']:
             definition += """
     std::vector<DATA_TYPE> %(name)s_;
-""" % {'name': var['name']}
+    %(class)s<DATA_TYPE>* %(dist)s_;
+""" % {'name': var['name'], 
+       'dist' : var['name'].replace('rand','dist'),
+       'class': eval(var['definition'] + '._cpp_class()') 
+      }
         return definition
     
     def generate_constructor(self):
@@ -207,6 +211,15 @@ class PopulationGenerator(object):
     // dt : integration step
     dt_ = %(dt)s;
 """ % { 'dt' : str(Global.config['dt'])}       
+        
+        # initilaization of random distributions
+        for var in self.desc['random_distributions']:
+            constructor += """
+    %(dist)s_ = new %(class)s<DATA_TYPE>(%(args)s);
+""" % { 'dist' : var['name'].replace('rand','dist'),
+        'class': eval(var['definition'] + '._cpp_class()'),
+        'args': var['args'] 
+       }
         
         return constructor, reset
     
@@ -291,14 +304,11 @@ void %(class)s::compute_sum_%(var)s() {
         """
         code = ""
         for var in self.desc['random_distributions']:
-            try:
-                dist = eval(var['definition'])
-            except:
-                Global._error('Random distribution ' + var['definition'] + ' is not valid.')
-                exit(0)
             code +="""
-    %(name)s_ = %(call)s.getValues(nbNeurons_);
-""" % {'name' : var['name'], 'call' : dist._gen_cpp() }
+    %(name)s_ = %(dist)s_->getValues(nbNeurons_);
+""" % { 'name' : var['name'],
+        'dist' : var['name'].replace('rand', 'dist') 
+      }
 
         code += "\
         "

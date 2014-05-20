@@ -145,11 +145,12 @@ public:
 		a_ = a;
 		b_ = b;
 		seed_ = seed;
+		gen_ = generator::instance()->getGenerator(seed_);
 	}
 
 	T getValue() {
 		std::uniform_real_distribution<T> dis(a_, b_);
-		return dis(*generator::instance()->getGenerator(seed_));
+		return dis(*gen_);
 	}
 
 	std::vector<T> getValues(int N) {
@@ -157,7 +158,7 @@ public:
 
 		std::uniform_real_distribution<T> dis(a_, b_);
 		for(int i =0; i< N; i++)
-			tmp.push_back(dis(*generator::instance()->getGenerator(seed_)));
+			tmp.push_back(dis(*gen_));
 
 		return tmp;
 	}
@@ -165,6 +166,7 @@ private:
 	T a_;
 	T b_;
 	int seed_;
+	std::mt19937 *gen_;
 };
 
 template <>
@@ -174,11 +176,12 @@ public:
 		a_ = a;
 		b_ = b;
 		seed_ = seed;
+		gen_ = generator::instance()->getGenerator(seed_);
 	}
 
 	int getValue() {
 		std::uniform_int_distribution<> dis(a_, b_);
-		return dis(*generator::instance()->getGenerator(seed_));
+		return dis(*gen_);
 	}
 
 	std::vector<int> getValues(int N) {
@@ -186,7 +189,7 @@ public:
 
 		std::uniform_int_distribution<> dis(a_, b_);
 		for(int i =0; i< N; i++)
-			tmp.push_back(dis(*generator::instance()->getGenerator(seed_)));
+			tmp.push_back(dis(*gen_));
 
 		return tmp;
 	}
@@ -194,6 +197,7 @@ private:
 	int a_;
 	int b_;
 	int seed_;
+	std::mt19937 *gen_;
 };
 
 /**
@@ -207,11 +211,12 @@ public:
 		mean_ = mean;
 		sigma_ = sigma;
 		seed_ = seed;
+		gen_ = generator::instance()->getGenerator(seed_);
 	}
 
 	T getValue() {
 		std::normal_distribution<T> dis(mean_, sigma_);
-		return dis(*generator::instance()->getGenerator(seed_));
+		return dis(*gen_);
 	}
 
 	std::vector<T> getValues(int N) {
@@ -219,7 +224,7 @@ public:
 
 		std::normal_distribution<T> dis(mean_, sigma_);
 		for(int i =0; i< N; i++)
-			tmp.push_back(dis(*generator::instance()->getGenerator(seed_)));
+			tmp.push_back(dis(*gen_));
 
 		return tmp;
 	}
@@ -227,6 +232,7 @@ private:
 	T mean_;
 	T sigma_;
 	int seed_;
+	std::mt19937 *gen_;
 };
 
 /**
@@ -236,11 +242,12 @@ class PoissonDistribution : public Distribution<int> {
 public:
 	PoissonDistribution(int interval, int seed = -1) {
 		interval_ = interval;
+		gen_ = generator::instance()->getGenerator(seed_);
 	}
 
 	int getValue() {
 		std::poisson_distribution<> dis(interval_);
-		return dis(*generator::instance()->getGenerator(seed_));
+		return dis(*gen_);
 	}
 
 	std::vector<int> getValues(int N) {
@@ -248,12 +255,13 @@ public:
 
 		std::poisson_distribution<int> dis(interval_);
 		for(int i =0; i< N; i++)
-			tmp.push_back(dis(*generator::instance()->getGenerator(seed_)));
+			tmp.push_back(dis(*gen_));
 
 		return tmp;
 	}
 private:
 	int interval_;
 	int seed_;
+	std::mt19937 *gen_;
 };
 #endif
