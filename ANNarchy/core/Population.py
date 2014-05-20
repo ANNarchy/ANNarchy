@@ -421,7 +421,7 @@ class Population(object):
         Parameter:
             
         * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
-        * *reshape*: by default this functions returns the data as matrix (geometry shape, time). If as_1D set to True, the data will be returned as two-dimensional plot (neuron x time)
+        * *reshape*: by default this functions returns the data as a 2D matrix (number of neurons, time). If **reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
         
         _variable = []
@@ -458,7 +458,7 @@ class Population(object):
                         'stop': self._recorded_variables[var].stop_time
                     }
 
-                elif as_1D:
+                elif not reshape:
                     #
                     # [ time, data(1D) ] => [ time, data(1D) ] 
                     data_dict[var] = { 

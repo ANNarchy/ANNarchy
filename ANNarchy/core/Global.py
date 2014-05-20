@@ -287,12 +287,13 @@ def start_record(to_record):
         }
         start_record(to_record)
     """
+    global _recorded_populations
     _recorded_populations = to_record
-    for data_set in to_record:
-        if isinstance(data_set['pop'], Population):
-            data_set['pop'].start_record(data_set['var'])
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.start_record(variables)
         else:
-            get_population(data_set['pop']).start_record(data_set['var'])
+            get_population(pop).start_record(variables)
 
 def get_record(to_record=None, reshape=False):
     """
@@ -302,7 +303,7 @@ def get_record(to_record=None, reshape=False):
     
     * *to_record*: a dictionary containing population objects (or names) as keys and variable names as values. For more details check Population.record(). When omitted, the dictionary used in the last call to record() is used.
 
-    * *reshape*: defines if the recorded varables should be reshaped to match the population geometry (default: False).
+    * *reshape*: defines if the recorded variables should be reshaped to match the population geometry (default: False).
     
     Returns:
     
@@ -320,20 +321,22 @@ def get_record(to_record=None, reshape=False):
         simulate(1000.0)
         data = get_record()
         
-    """    
+    """   
+    if not to_record:
+        to_record = _recorded_populations
+
     data = {}
     
-    for data_set in to_record:
-        if data_set['pop'].name in data:
-            if 'as_1D' in data_set.keys():
-                data[ data_set['pop'] ].update( { data_set['var']: data_set['pop'].get_record(data_set['var'], data_set['as_1D']) } )
-            else:
-                data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var']) } )
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop_object = pop
         else:
-            if 'as_1D' in data_set.keys():
-                data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var'], data_set['as_1D']) } } )
-            else:
-                data.update( { data_set['pop'].name: { data_set['var']: data_set['pop'].get_record(data_set['var']) } } )
+            pop_object = get_population(pop)
+        if isinstance(variables, list):
+            data[pop] = pop_object.get_record(variables)
+        else:
+            data[pop] = {}
+            data[pop][variables] = pop_object.get_record(variables)
     
     return data  
 
