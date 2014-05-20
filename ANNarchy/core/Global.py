@@ -269,7 +269,7 @@ def set_current_step(time):
         
 def record(to_record):
     """
-    Record variables of one or more populations. For more detailed information please refer to the Population.record method.
+    Record selected variables of several populations or projections.
     
     Parameter:
     
@@ -283,12 +283,17 @@ def record(to_record):
                 { 'pop': Input, 'var': 'rate' }, 
                 { 'pop': Input, 'var': 'mp', 'as_1D': True }        
             ]
+            record(to_record)
+            simulate(1000.0)
             
-        By default the variable data is always handled in population geometry shape. In this example, we force the storage of ``mp`` as one dimensional array.
+    By default the variable data is always returned in the same shape as the population geometry. In this example, we force the representation of ``mp`` as a one dimensional array.
 
     """
     for data_set in to_record:
-        data_set['pop'].start_record(data_set['var'])
+        if isinstance(data_set['pop'], Population):
+            data_set['pop'].start_record(data_set['var'])
+        else:
+            get_population(data_set['pop']).start_record(data_set['var'])
 
 def get_record(to_record):
     """
@@ -306,7 +311,7 @@ def get_record(to_record):
     
         .. code-block:: python
         
-            ...
+            record({'pop': Pop1, 'var':  })
         
     """    
     data = {}
@@ -314,7 +319,7 @@ def get_record(to_record):
     for data_set in to_record:
         if data_set['pop'].name in data:
             if 'as_1D' in data_set.keys():
-                data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var'], data_set['as_1D']) } )
+                data[ data_set['pop'] ].update( { data_set['var']: data_set['pop'].get_record(data_set['var'], data_set['as_1D']) } )
             else:
                 data[ data_set['pop'].name ].update( { data_set['var']: data_set['pop'].get_record(data_set['var']) } )
         else:

@@ -96,27 +96,6 @@ Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
 weight = testAll2AllSpike.dendrite(0).get_record('value')
 
 
-close('all')
-
-#
-#plot pre neurons
-#===============================================================================
-# for i in range(Small.size):
-#     fig = figure()
-#     fig.suptitle(Small.name+', neuron '+str(i))
-#       
-#     ax = subplot(211)
-#       
-#     ax.plot( data['Population0']['v']['data'][i,:], label = "membrane potential")
-#     ax.legend(loc=2)
-#       
-#     ax = subplot(212)
-#       
-#     ax.plot( data['Population0']['g_exc']['data'][i,:], label = "g_exc")
-#     ax.legend(loc=2)
-#===============================================================================
- 
-#
 # The synapse are not ordered ascending in relation to presynaptic ranks
 # to correctly identify the data we need to take this in mind
 pre_ranks = testAll2AllSpike.dendrite(0).rank

@@ -829,13 +829,14 @@ def _extract_spike_variable(pop_desc):
     raw_spike_code = translator.parse()
     
     raw_reset_code = ''
-    for var in _prepare_string(pop_desc['raw_reset']):
-        name = _extract_name(var)
-        translator = Equation(name, var, 
-                              pop_desc['attributes'], 
-                              pop_desc['local'], 
-                              pop_desc['global'])
-        raw_reset_code += translator.parse() +'\n'
+    if pop_desc.has_key('raw_reset') and pop_desc['raw_reset']:
+        for var in _prepare_string(pop_desc['raw_reset']):
+            name = _extract_name(var)
+            translator = Equation(name, var, 
+                                  pop_desc['attributes'], 
+                                  pop_desc['local'], 
+                                  pop_desc['global'])
+            raw_reset_code += translator.parse() +'\n'
     
     return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': raw_reset_code}
 

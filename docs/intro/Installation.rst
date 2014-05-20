@@ -37,7 +37,7 @@ Additionally, the following packages are optional but strongly recommended:
     * pyqtgraph >= 0.9.8 (to visualize the provided examples)
     * matplotlib >= 1.3.0 (for your own visualizations)
     * lxml >= 3.0 (to save the networks in .xml format)
-    * scipy >= 0.17 (to save the networks in Matlab format)
+    * scipy >= 0.12 (to save the networks in Matlab format)
     
     
 The version requirement on Sympy is rather new (as of May 2014) and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::

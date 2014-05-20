@@ -25,7 +25,7 @@ It can be implemented in the ANNarchy framework with:
         parameters="""   
             tau = 10.0,
             baseline = -0.2,
-        """
+        """,
         equations = """
             tau * dmp / dt  = baseline - mp + sum(exc)
             rate = pos(mp)
@@ -42,7 +42,7 @@ Custom functions can also be passed when creating the Neuron type:
         parameters="""   
             tau = 10.0,
             baseline = -0.2,
-        """
+        """,
         equations = """
             tau * dmp / dt  = baseline - mp + sum(exc)
             rate = sigmoid(mp)
