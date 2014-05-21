@@ -1,6 +1,8 @@
 from ANNarchy import *
 
-# Define the neurons
+setup(dt=1.0)
+
+# Define the Izhikevich neuron
 Izhikevich = SpikeNeuron(
     parameters="""
         noise_scale = 5.0 : population
@@ -8,7 +10,6 @@ Izhikevich = SpikeNeuron(
         b = 0.2
         c = -65.0
         d = 2.0 
-        tau = 5.0: population
     """,
     equations="""
         noise = Normal(0.0, 1.0) * noise_scale
@@ -17,7 +18,6 @@ Izhikevich = SpikeNeuron(
         u += a * (b*v - u) : init = -13.0
         g_exc = 0.0
         g_inh = 0.0 
-        s = 0.0
     """,
     spike = """
         v >= 30.0
@@ -25,15 +25,16 @@ Izhikevich = SpikeNeuron(
     reset = """
         v = c
         u += d
-        s = 1.0
     """
 )
 
+# Create the excitatory population
 Excitatory = Population(name='Excitatory', geometry=800, neuron=Izhikevich)
 re = np.random.random(800)
 Excitatory.c = -65.0 + 15.0*re**2
 Excitatory.d = 8.0 - 6.0*re**2
 
+# Create the Inhibitory population
 Inhibitory = Population(name='Inhibitory', geometry=200, neuron=Izhikevich)
 ri = np.random.random(200)
 Inhibitory.noise_scale = 2.0
@@ -41,6 +42,7 @@ Inhibitory.b = 0.25 - 0.05*ri
 Inhibitory.a = 0.02 + 0.08*ri
 Inhibitory.u = (0.25 - 0.05*ri) * (-65.0) # b * v
 
+# Create the projections
 exc_exc = Projection(
     pre=Excitatory, 
     post=Excitatory, 
@@ -65,28 +67,29 @@ inh_inh = Projection(
     target='inh'
 ).connect_all_to_all(weights=Uniform(0.0, 1.0))
 
-                   
+# Main loop                   
 if __name__ == '__main__':
     
     # Compile
     compile()
 
+    # Start recording the spikes in the network to produce the raster plot
+    Excitatory.start_record('spike')
+    Inhibitory.start_record('spike')
+
     # Simulate 1s   
     print 'Starting simulation' 
+    from datetime import datetime
+    t_start = datetime.now()
     simulate(1000.0)
-    print 'Done'
+    print 'Done in :', datetime.now() - t_start
 
     # Retrieve the spike timings
     spikes_exc = Excitatory.raster_plot()
     spikes_inh = Inhibitory.raster_plot()
     spikes = np.concatenate((spikes_exc, spikes_inh + [0, 800]), axis=0)
 
-    #Plot the results
-    try:
-        import pyqtgraph as pg
-    except:
-        print 'PyQtGraph is not installed, can not visualize the simulation.'
-        exit(0)
-    else:
-        pg.plot(spikes[:, 0], spikes[:, 1], pen=None, symbol='o', symbolSize=3)
-        raw_input()
+    # Plot the results
+    import pylab as plt
+    plt.plot(spikes[:, 0], spikes[:, 1], '.')
+    plt.show()

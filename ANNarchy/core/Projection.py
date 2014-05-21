@@ -31,8 +31,6 @@ from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
 from ANNarchy.parser.Analyser import analyse_projection
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.Record import Record
-import ANNarchy.core.cython_ext.Coordinates as Coordinates
-import ANNarchy.core.cython_ext.Connector as Connector
 
 class Projection(object):
     """
@@ -130,14 +128,8 @@ class Projection(object):
 
         # Finalize initialization
         self.initialized = False
-        
-        
-        self._comp_dict = {
-            1: Coordinates.comp_dist1D,
-            2: Coordinates.comp_dist2D,
-            3: Coordinates.comp_dist3D
-        }
 
+        # Cython instance
         self.cyInstance = None
 
     ################################
@@ -445,30 +437,6 @@ class Projection(object):
     ################################
     ## Connector methods
     ################################
-    def _connect_one_to_one_old(self, weights=1.0, delays=0.0):
-        """
-        Establish one to one connections within the two projections.
-        
-        Parameters:
-        
-            * *weights*: initial synaptic values, either one value (float) or a random distribution object.
-            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
-        """
-        synapses = {}
-    
-        for pre_neur in xrange(self.pre.size):
-            try:
-                w = weights.get_value()
-            except:
-                w = weights
-                
-            try:
-                d = delays.get_value()
-            except:
-                d = delays
-            self._synapses[(pre_neur, pre_neur)] = { 'w': w, 'd': d }
-            
-        return self
     
     def connect_one_to_one(self, weights=1.0, delays=0.0):
         """
@@ -479,43 +447,8 @@ class Projection(object):
             * *weights*: initial synaptic values, either a single value (float) or a random distribution object.
             * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
         """
+        import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.one_to_one(self.pre.size, self.post.size, weights, delays)
-        return self
-    
-    def _connect_all_to_all_old(self, weights, delays=0.0, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-    
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(self.pre.size) ]
-        if isinstance(delays, (int, float)):
-            delay_values = [ delays for n in range(self.pre.size) ]
-    
-        for post_neur in xrange(self.post.size):
-
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((self.pre.size))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            for pre_neur in xrange(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-
-                self._synapses[(pre_neur, post_neur)] = { 'w': next(weight_iter), 
-                                                          'd': next(delay_iter) }
-        
         return self
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
@@ -531,64 +464,9 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
 
+        import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.all_to_all(self.pre.size, self.post.size, weights, delays, allow_self_connections)
 
-        return self
-
-    def _connect_gaussian_old(self, sigma, amp, delays=0.0, limit=0.01, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-
-        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a gaussians distribution.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma*: sigma value
-            * *amp*: amp value
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        #
-        # choose the right euklidean distance function depending on 
-        # population dimension
-        try:
-            # dim = (1 .. 3)
-            comp_func = self._comp_dict[self.pre.dimension]
-        except KeyError:
-            # 4 and higher dimensionality
-            comp_func = Coordinates.comp_distND
-
-        if isinstance(delays, (int, float)):
-            delay_values = [ delays for n in range(self.pre.size) ]
-        
-        #
-        # create dog pattern by iterating over both populations
-        #
-        # 1st post ranks
-        for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank(post_neur)
-
-            # get a new array of random values
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-            
-            delay_iter = iter(delay_values)
-            
-            for pre_neur in range(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-
-                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
-                dist = comp_func(normPre, normPost)
-                
-                value = amp * math.exp(-dist/2.0/sigma/sigma)
-                if (math.fabs(value) > limit * math.fabs(amp)):
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }   
-                         
         return self
 
     def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -609,70 +487,8 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
 
+        import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections)
-
-        return self
-    
-    def _connect_dog_old(self, sigma_pos, sigma_neg, amp_pos, amp_neg, delays=0.0, limit=0.01, allow_self_connections=False):
-        """
-        Establish all to all connections within the two projections.
-
-        Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
-        
-        Parameters:
-        
-            * *weights*: synaptic value, either one value or a random distribution.
-            * *delays*: synaptic delay, either one value or a random distribution.
-            * *sigma_pos*: sigma of positive gaussian function
-            * *sigma_neg*: sigma of negative gaussian function
-            * *amp_pos*: amp of positive gaussian function
-            * *amp_neg*: amp of negative gaussian function
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        #
-        # choose the right euklidean distance function depending on 
-        # population dimension
-        try:
-            # dim = (1 .. 3)
-            comp_func = self._comp_dict[self.pre.dimension]
-        except KeyError:
-            # 4 and higher dimensionality
-            comp_func = Coordinates.comp_distND
-
-        if isinstance(delays, (int, float)):
-            delay_values = [ delays for n in range(self.pre.size) ]
-        
-        #
-        # create dog pattern by iterating over both populations
-        #
-        # 1st post ranks
-        for post_neur in xrange(self.post.size):
-            normPost = self.post.normalized_coordinates_from_rank(post_neur)
-
-            # get a new array of random values
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-                
-            # set iterator on begin of the array
-            delay_iter = iter(delay_values)
-            
-            # 2nd pre ranks
-            for pre_neur in range(self.pre.size):
-                if (pre_neur == post_neur) and not allow_self_connections:
-                    continue
-    
-                normPre = self.pre.normalized_coordinates_from_rank(pre_neur)
-                dist = comp_func( normPre, normPost )
-    
-                value = amp_pos * math.exp(-dist/2.0/sigma_pos/sigma_pos) - amp_neg * math.exp(-dist/2.0/sigma_neg/sigma_neg)
-                
-                #
-                # important: math.fabs is only a well solution in float case
-                if ( math.fabs(value) > limit * math.fabs( amp_pos - amp_neg ) ):
-                    self._synapses[(pre_neur, post_neur)] = { 'w': value, 'd': next(delay_iter) }
 
         return self
     
@@ -695,50 +511,10 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
 
+        import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
 
 
-        return self
-       
-    def _connect_fixed_probability_old(self, probability, weights, delays=0.0, allow_self_connections=False):
-        """ fixed_probability projection between two populations. 
-    
-        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self connections are avoided by default.
-    
-        Parameters:
-        
-        * probability: probability that an individual synapse is created.
-        
-        * weights: either a single value for all synapses or a RandomDistribution object.
-        
-        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
-        
-        * allow_self_connections : defines if self-connections are allowed (default=False).
-        """        
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(self.pre.size) ]
-        if isinstance(delays, (int, float)):    
-            delay_values = [ delays for n in range(self.pre.size) ]
-        
-        for post_rank in xrange(self.post.size):
-        
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((self.pre.size))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((self.pre.size,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            for pre_rank in xrange(self.pre.size):
-                if (pre_rank == post_rank) and not allow_self_connections:
-                    continue
-
-                if np.random.random() < probability:
-                    self._synapses[(pre_rank, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
-  
         return self
 
     def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
@@ -759,60 +535,9 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
 
+        import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_probability(self.pre.size, self.post.size, probability, weights, delays, allow_self_connections)
 
-        return self
-
-    def _connect_fixed_number_pre_old(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
-        """ fixed_number_pre projection between two populations.
-    
-        Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
-    
-        Parameters:
-        
-        * number: number of synapses per presynaptic neuron.
-        
-        * weights: either a single value for all synapses or a RandomDistribution object.
-        
-        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
-        
-        * allow_self_connections : defines if self-connections are allowed (default=False).
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(number) ]
-        if isinstance(delays, (int, float)):    
-            delay_values = [ delays for n in range(number) ]
-        
-        for post_rank in xrange(self.post.size):
-        
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((number))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((number,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            ranks = []
-            for i in xrange(number):
-                
-                unique=False
-                choice=-1
-                while (not unique):
-                    choice = np.random.randint(0, self.pre.size)
-                    
-                    if choice == post_rank and not allow_self_connections:
-                        unique = False
-                    elif choice in ranks:
-                        unique = False
-                    else:
-                        unique = True
-                    
-                self._synapses[(choice, post_rank)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
-                ranks.append(choice)
-                
         return self
 
     def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False):
@@ -833,50 +558,9 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
         
+        import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_number_pre(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
 
-        return self
-            
-    def _connect_fixed_number_post_old(self, number, weights, delays=0.0, allow_self_connections=False):
-        """ fixed_number_pre projection between two populations.
-    
-        Old and slow, do not use.
-        """
-        allow_self_connections = (self.pre!=self.post) and not allow_self_connections
-        
-        if isinstance(weights, (int, float)):
-            weight_values = [ weights for n in range(number) ]
-        if isinstance(delays, (int, float)):    
-            delay_values = [ delays for n in range(number) ]
-        
-        for pre_rank in xrange(self.pre.size):
-        
-            if not isinstance(weights, (int, float)):
-                weight_values = weights.get_values((number))
-            if not isinstance(delays, (int, float)):
-                delay_values = delays.get_values((number,1))
-            
-            weight_iter = iter(weight_values)
-            delay_iter = iter(delay_values)
-            
-            ranks = []
-            for i in xrange(number):
-                
-                unique=False
-                choice=-1
-                while (not unique):
-                    choice = np.random.randint(0, self.post.size)
-                    
-                    if choice == pre_rank and not allow_self_connections:
-                        unique = False
-                    elif choice in ranks:
-                        unique = False
-                    else:
-                        unique = True
-                    
-                self._synapses[(pre_rank, choice)] = { 'w': next(weight_iter), 'd': next(delay_iter) }
-                ranks.append(choice)
-                
         return self
             
     def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
@@ -897,6 +581,7 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
         
+        import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_number_post(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
 
         return self
@@ -968,6 +653,7 @@ class Projection(object):
         self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
         
         # Sort the dendrites to be created based on _synapses
+        import ANNarchy.core.cython_ext.Connector as Connector
         if ( isinstance(self._synapses, Connector.CSR) ):
             self.cyInstance.createFromCSR(self._synapses)
             self._post_ranks = self._synapses.keys()

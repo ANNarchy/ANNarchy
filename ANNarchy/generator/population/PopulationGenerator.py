@@ -347,7 +347,10 @@ void %(class)s::compute_sum_%(var)s() {
             this->propagate_.push_back(i);
             this->reset_.push_back(i);
             
-            spike_timings_[i].push_back(ANNarchy_Global::time);
+            lastSpike_[i] = ANNarchy_Global::time;
+            if(record_spike_){
+                spike_timings_[i].push_back(ANNarchy_Global::time);
+            }
             spiked_[i] = true;
         }
     }

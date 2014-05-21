@@ -37,7 +37,7 @@ Additionally, the following packages are optional but strongly recommended:
     * pyqtgraph >= 0.9.8 (to visualize the provided examples)
     * matplotlib >= 1.3.0 (for your own visualizations)
     * lxml >= 3.0 (to save the networks in .xml format)
-    * scipy >= 0.17 (to save the networks in Matlab format)
+    * scipy >= 0.12 (to save the networks in Matlab format)
     
     
 The version requirement on Sympy is rather new (as of May 2014) and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
@@ -47,7 +47,7 @@ The version requirement on Sympy is rather new (as of May 2014) and may not be a
     
 .. note::
 
-     On a fresh install of **Linux Mint Debian Edition** 64 bits (should also work on Debian unstable or Ubuntu >= 14.04 distributions), the following commands successfully install everything you need::
+     On fresh installs of Ubuntu 14.04 and **Linux Mint Debian Edition** 64 bits, the following commands successfully install everything you need::
      
         sudo apt-get install g++ gfortran git python-dev python-setuptools python-numpy python-scipy python-matplotlib cython python-opengl python-qt4-gl python-lxml python-pip
 
