@@ -1,36 +1,36 @@
 #
-#	A network comparable to Dinkelbach et al. 2012
+#	Implementation of the performance profiling as presented in Dinkelbach et al. 2012
 #
-from ANNarchy import *
+from ProfileNetwork import ProfileNetwork
 
-setup(num_threads=1)
-#setup( paradigm = "cuda", num_threads=1 )
+#
+# test SETUP
+START_NUMBER_OF_NEURONS = 10
+END_NUMBER_OF_NEURONS = 1000
 
-# Defining the neurons
-InputNeuron = RateNeuron(
-    equations="""
-        rate = 0.2 : init = 0.1 
-    """
-)
+START_NUMBER_OF_CONNECTIONS = 10
+END_NUMBER_OF_CONNECTIONS = 1000
 
-OutputNeuron = RateNeuron(
-    equations="""
-        rate = sum(exc)
-    """
-)
+n = START_NUMBER_OF_NEURONS
+neuron_config = []
+while n < END_NUMBER_OF_NEURONS:
+    neuron_config.append(n)
+    n *= 2 
 
-NEURON = 15
-CONN = 10
+c = START_NUMBER_OF_CONNECTIONS
+connection_config = []
+while c < END_NUMBER_OF_CONNECTIONS:
+    connection_config.append(c)
+    c *= 2 
 
-input_pop = Population(geometry=(NEURON), neuron=InputNeuron)
-output_pop = Population(geometry=(1), neuron=OutputNeuron)
-
-proj = Projection(input_pop, output_pop, 'exc').connect_fixed_number_pre(CONN)
-
-#compile() # needed to save connectivity matrix
-#proj.save_connectivity_as_csv()
-
-#simulate(1)
-
-# recompile as stand alone
-compile(cpp_stand_alone = True)
+for neur in neuron_config: 
+    
+    for conn in connection_config:
+        
+        net = ProfileNetwork(neur, conn)
+        
+        net.compile(False)
+    
+        #
+        # TODO: performance measurement code
+        net.simulate(1000)

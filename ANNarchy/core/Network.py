@@ -60,7 +60,7 @@ class Network(object):
             * *profile_enabled*: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
         
         """
-        generator.compile(clean, self._populations, self._projections, cpp_standalone, debug_build, profile_enabled)
+        generator.compile(clean, self._populations, self._projections, cpp_stand_alone, debug_build, profile_enabled)
         
         # copy back the data
         self.cython_module = __import__('ANNarchyCython')
@@ -154,7 +154,7 @@ class Network(object):
         Runs the network for the given duration.
         """
         nb_steps = ceil(duration / Global.config['dt'])
-        self.cy_instance.Run(nb_steps)
+        self.cy_instance.run(nb_steps)
         
     def current_time(self):
         """
