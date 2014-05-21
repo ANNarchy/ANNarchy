@@ -820,7 +820,7 @@ def _extract_targets(variables):
     return list(set(targets))
 
 def _extract_spike_variable(pop_desc):
-    spike_name = _extract_name(pop_desc['raw_spike'].strip())
+    spike_name = _extract_condition_name(pop_desc['raw_spike'].strip())
     translator = Equation('raw_spike_cond', pop_desc['raw_spike'], 
                           pop_desc['attributes'], 
                           pop_desc['local'], 
@@ -954,7 +954,17 @@ def _extract_name(equation, left=False):
     if len(name) == 1:
         return name[0].strip()
     else:
-        return '_undefined'   
+        return '_undefined' 
+
+def _extract_condition_name(equation):
+    " Extracts the name of a parameter/variable by looking the left term of an equation."
+    equation = equation.replace(' ','')
+    # Search for operators
+    operators = ['>', '<']
+    for op in operators:
+        if op in equation: 
+            return equation.split(op)[0]  
+    return '_undefined'   
     
                 
 def _extract_flags(constraint):
