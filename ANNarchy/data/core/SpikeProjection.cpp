@@ -33,7 +33,7 @@ void SpikeProjection::globalLearn()
 	#pragma omp for
 	for ( int d = 0; d < nbDendrites_; d++ )
 	{
-		dendrites_[d]->globalLearn();
+		static_cast<SpikeDendrite*>(dendrites_[d])->globalLearn();
 	}
 
 	#pragma omp barrier
@@ -51,7 +51,7 @@ void SpikeProjection::localLearn()
 		if ( !dendrites_[n] )
 			continue;
 
-		dendrites_[n]->localLearn();
+		static_cast<SpikeDendrite*>(dendrites_[n])->localLearn();
 	}
 
 	#pragma omp barrier
@@ -68,7 +68,7 @@ void SpikeProjection::postEvent(std::vector<int> post_ranks)
 		if ( !dendrites_[n] )
 			continue;
 
-		dendrites_[n]->postEvent();
+		static_cast<SpikeDendrite*>(dendrites_[n])->postEvent();
 	}
 }
 
@@ -86,7 +86,7 @@ void SpikeProjection::addDendrite(int postNeuronRank, class Dendrite *dendrite)
 	#endif
 		if ( dendrites_[postNeuronRank] == NULL)
 		{
-			dendrites_[postNeuronRank] = static_cast<SpikeDendrite*>(dendrite);
+			dendrites_[postNeuronRank] = dendrite;
 		}
 		else
 		{
@@ -109,7 +109,7 @@ Dendrite *SpikeProjection::getDendrite(int postNeuronRank)
 
 void SpikeProjection::removeDendrite(int postNeuronRank, class Population *pre)
 {
-
+	std::cout << "Need to implemented in CPP core."<< std::endl;
 }
 
 void SpikeProjection::record()
@@ -119,14 +119,14 @@ void SpikeProjection::record()
 		if (*it == NULL)
 			continue;
 
-		(*it)->record();
+		static_cast<SpikeDendrite*>((*it))->record();
 	}
 }
 
 void SpikeProjection::initValues(int postNeuronRank)
 {
 	if (dendrites_[postNeuronRank] != NULL)
-		dendrites_[postNeuronRank]->initValues();
+		static_cast<SpikeDendrite*>(dendrites_[postNeuronRank])->initValues();
 }
 
 int SpikeProjection::nbSynapses(int post_rank)

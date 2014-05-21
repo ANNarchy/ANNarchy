@@ -60,6 +60,7 @@ protected:
 
 	class SpikePopulation* pre_population_;
 	class SpikePopulation* post_population_;
-	std::vector< class SpikeDendrite* > dendrites_;
+
+	//std::vector< class SpikeDendrite* > dendrites_;
 };
 #endif

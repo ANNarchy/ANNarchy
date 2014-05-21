@@ -60,6 +60,6 @@ public:
 protected:
 	int nbDendrites_;
 
-	std::vector< class RateDendrite* > dendrites_;
+	//std::vector< class RateDendrite* > dendrites_;
 };
 #endif

@@ -150,7 +150,6 @@ class Dendrite(object):
         m[ranks] = values
 
         return m.reshape(self.pre.geometry)
-
         
     # @property 
     # def learnable(self):
@@ -192,8 +191,7 @@ class Dendrite(object):
             * *value*:    synaptic weight
             * *delay*:    additional delay of the synapse (as default a delay of 1ms is assumed)
         """
-        print 'TODO: not implemented yet'
-        #self.cy_instance.add_synapse(rank, value, delay)
+        self.proj.cyInstance.add_synapse(self.post_rank, rank, value, delay)
     
     def remove_synapse(self, rank):
         """
@@ -203,8 +201,7 @@ class Dendrite(object):
         
             * *rank*:     rank of the presynaptic neuron
         """
-        print 'TODO: not implemented yet'
-        #self.cy_instance.remove_synapse(rank)
+        self.proj.cyInstance.remove_synapse(self.post_rank, rank)
 
     #########################
     ### Recording

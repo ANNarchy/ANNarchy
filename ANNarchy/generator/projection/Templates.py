@@ -41,7 +41,7 @@ public:
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
     void addDendrite(int, std::vector<int>, std::vector<DATA_TYPE>, std::vector<int>);
-    
+        
 %(access)s
 
 private:
@@ -91,7 +91,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 %(class)s::%(class)s(int pre, int post, int target) : RateProjection() 
@@ -106,7 +106,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< RateDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 std::vector<int> %(class)s::getRank(int post_rank)
@@ -229,7 +229,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< SpikeDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 %(class)s::%(class)s(int pre, int post, int target) : SpikeProjection() 
@@ -244,7 +244,7 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
-    dendrites_ = std::vector< SpikeDendrite* >(nbDendrites_, NULL);
+    dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
 std::vector<int> %(class)s::getRank(int post_rank)
@@ -440,6 +440,10 @@ cdef extern from "../build/%(name)s.h":
 
         void addDendrite(int, vector[int], vector[float], vector[int])
 
+        void addSynapse(int, int, float, int)
+
+        void removeSynapse(int, int)
+
         void initValues(int post_rank)
          
         vector[int] getRank(int post_rank)
@@ -477,6 +481,12 @@ cdef class py%(name)s:
 
     def __cinit__(self, preID, postID, target):
         self.cInstance = new %(name)s(preID, postID, target)
+
+    cpdef add_synapse(self, int post_rank, int pre_rank, float value, int delay):
+        self.cInstance.addSynapse(post_rank, pre_rank, value, delay)
+
+    cpdef remove_synapse(self, int post_rank, int pre_rank):
+        self.cInstance.removeSynapse(post_rank, pre_rank)
 
     # Rank (read only)
     cpdef np.ndarray _get_rank(self, int post_rank):
@@ -574,6 +584,10 @@ cdef extern from "../build/%(name)s.h":
 
         void addDendrite(int, vector[int], vector[float], vector[int])
 
+        void addSynapse(int, int, float, int)
+
+        void removeSynapse(int, int)
+
         void initValues(int post_rank)
          
         vector[int] getRank(int post_rank)
@@ -611,6 +625,12 @@ cdef class py%(name)s:
 
     def __cinit__(self, preID, postID, target):
         self.cInstance = new %(name)s(preID, postID, target)
+
+    cpdef add_synapse(self, int post_rank, int pre_rank, float value, int delay):
+        self.cInstance.addSynapse(post_rank, pre_rank, value, delay)
+
+    cpdef remove_synapse(self, int post_rank, int pre_rank):
+        self.cInstance.removeSynapse(post_rank, pre_rank)
 
     # Rank (read only)
     cpdef np.ndarray _get_rank(self, int post_rank):

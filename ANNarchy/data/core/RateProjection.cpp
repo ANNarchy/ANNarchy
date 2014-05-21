@@ -43,7 +43,7 @@ void RateProjection::computeSum()
 	#ifdef _DEBUG
 		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
 	#endif
-		dendrites_[n]->computeSum();
+		static_cast<RateDendrite*>(dendrites_[n])->computeSum();
 	}
 }
 
@@ -64,7 +64,7 @@ void RateProjection::globalLearn()
 			if (!dendrites_[n])
 				continue;
 
-			dendrites_[n]->globalLearn();
+			static_cast<RateDendrite*>(dendrites_[n])->globalLearn();
 		}
 	}
 }
@@ -86,7 +86,7 @@ void RateProjection::localLearn()
 			if (!dendrites_[n])
 				continue;
 
-			dendrites_[n]->localLearn();
+			static_cast<RateDendrite*>(dendrites_[n])->localLearn();
 		}
 	}
 }
@@ -104,7 +104,7 @@ DATA_TYPE RateProjection::getSum(int neuron)
 	}
 	else
 	{
-		return dendrites_[neuron]->getSum();
+		return static_cast<RateDendrite*>(dendrites_[neuron])->getSum();
 	}
 }
 
@@ -143,13 +143,13 @@ int RateProjection::nbSynapses(int post_rank) {
 
 void RateProjection::removeDendrite(int postNeuronRank, class Population *pre)
 {
-
+	std::cout << "Need to implemented in CPP core."<< std::endl;
 }
 
 void RateProjection::initValues(int postNeuronRank)
 {
 	if (dendrites_[postNeuronRank] != NULL)
-		dendrites_[postNeuronRank]->initValues();
+		static_cast<RateDendrite*>(dendrites_[postNeuronRank])->initValues();
 }
 
 void RateProjection::record()

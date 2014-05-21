@@ -30,5 +30,25 @@ Projection::Projection()
 
 Projection::~Projection()
 {
+
 }
 
+void Projection::addSynapse(int postNeuronRank, int pre, double value, int delay)
+{
+#ifdef _DEBUG
+	std::cout << "Dendrite "<<postNeuronRank << " extend by synapse ( pre = " << pre << ", value = "<< value << ", delay = "<< delay << ")." << std::endl;
+#endif
+
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->addSynapse(pre, value, delay);
+}
+
+void Projection::removeSynapse(int postNeuronRank, int pre)
+{
+#ifdef _DEBUG
+	std::cout << "Dendrite "<< postNeuronRank << " remove synapse to pre = " << pre << "." << std::endl;
+#endif
+
+	if (dendrites_[postNeuronRank] != NULL)
+		dendrites_[postNeuronRank]->removeSynapse(pre);
+}
