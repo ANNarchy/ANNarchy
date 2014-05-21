@@ -464,23 +464,20 @@ class Generator(object):
             bind them to the Python ones."""
         # Return to the current directory
         os.chdir('..')
+
         # Import the Cython library
-        try:
-            import ANNarchyCython
-        except ImportError, e:
-            if not self.cpp_stand_alone:
-                Global._print(e)
-                Global._error('The Cython library was not correctly compiled.\n Check the compilation logs in annarchy/compile_sterr.log')
-                exit(0)
-                
+        self.cython_module = __import__('ANNarchyCython')
+         
         # Bind the py extensions to the corresponding python objects
         for pop in self.populations:
             if Global.config['verbose']:
                 Global._print('    Create population', pop.name)
             if Global.config['show_time']:
                 t0 = time.time()
+            
             # Create the Cython instance 
-            pop.cyInstance = eval('ANNarchyCython.py'+ pop.class_name+'('+str(pop.size)+')')
+            pop.cyInstance = getattr(self.cython_module, 'py'+pop.class_name)(pop.size)
+            
             # Create the attributes and actualize the initial values
             pop._init_attributes()
             if Global.config['show_time']:
@@ -505,9 +502,10 @@ class Generator(object):
             proj._init_attributes()   
             if Global.config['show_time']:
                 Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
+        
         # Instantiate the network
         global _network
-        Global._network = ANNarchyCython.pyNetwork()
+        Global._network = self.cython_module.pyNetwork()
         # check if user defined a certain number of threads.
         if Global.config['num_threads'] != None:
             Global._network.set_num_threads(Global.config['num_threads'])  
