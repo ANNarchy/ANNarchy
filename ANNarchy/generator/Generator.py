@@ -427,19 +427,25 @@ class Generator(object):
             # Force recompilation of the Cython wrappers
             if changed_pyx: 
                 os.system('touch pyx/ANNarchyCython.pyx')
+            
+            if Global.config['verbose'] == False:
+                pipe_to_cmd_line = "> compile_stdout.log 2> compile_stderr.log"
+            else:
+                pipe_to_cmd_line = ""
+                
             # Start the compilation
             try:
                 if self.cpp_stand_alone:
-                    subprocess.check_output('make ANNarchyCPP -j4 > compile_stdout.log 2> compile_stderr.log', 
+                    subprocess.check_output("make ANNarchyCPP -j4 "+ pipe_to_cmd_line, 
                                             shell=True)
                 elif sys.version_info[:2] == (2, 6):
-                    self.check_output('make ANNarchyCython_2.6 -j4 > compile_stdout.log 2> compile_stderr.log', 
+                    self.check_output("make ANNarchyCython_2.6 -j4 "+ pipe_to_cmd_line, 
                                             shell=True)
                 elif sys.version_info[:2] == (2, 7):
-                    subprocess.check_output("make ANNarchyCython_2.7 -j4 > compile_stdout.log 2> compile_stderr.log", 
+                    subprocess.check_output("make ANNarchyCython_2.7 -j4 "+ pipe_to_cmd_line, 
                                             shell=True)
                 elif sys.version_info[:2] == (3, 2):
-                    subprocess.check_output('make ANNarchyCython_3.x -j4 > compile_stdout.log 2> compile_stderr.log', 
+                    subprocess.check_output("make ANNarchyCython_3.x -j4 "+ pipe_to_cmd_line, 
                                             shell=True)
                 else:
                     Global._error('No correct setup could be found. Do you have Python installed?')
