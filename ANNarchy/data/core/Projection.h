@@ -45,6 +45,10 @@ public:
 
     virtual void removeDendrite(int postNeuronRank, class Population *pre) = 0;
 
+	void addSynapse(int post, int pre, double value, int delay);
+
+	void removeSynapse(int post, int pre);
+
     virtual bool isRateCoded() = 0;
 
     virtual void record() = 0;
@@ -71,5 +75,7 @@ protected:
     int learnOffset_;
 
     int target_;
+
+    std::vector< class Dendrite* > dendrites_;
 };
 #endif
