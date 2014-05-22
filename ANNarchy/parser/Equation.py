@@ -238,7 +238,7 @@ class Equation(object):
     
         # Update rule
         explicit_code = self.c_code(self.local_dict[self.name]) + ' += (1.0 - exp(' \
-                        + self.c_code(simplify(-stepsize)) + ')))*(' \
+                        + self.c_code(simplify(-stepsize)) + '))*(' \
                         + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
     
         # Return result
