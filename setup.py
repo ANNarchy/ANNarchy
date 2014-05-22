@@ -73,7 +73,9 @@ setup(  name='ANNarchy',
         packages=find_packages(),
         package_data={'ANNarchy': ['data/core/*', 'data/cuda/*', 'data/pyx/*', 'core/cy_functions.pyx']},
         ext_modules = cythonize(
-            ["ANNarchy/core/cython_ext/Connector.pyx", "ANNarchy/core/cython_ext/Coordinates.pyx"], 
+            [   "ANNarchy/core/cython_ext/Connector.pyx", 
+                "ANNarchy/core/cython_ext/Coordinates.pyx",
+                "ANNarchy/core/cython_ext/Transformations.pyx"], 
             language='c++'
         )
 )

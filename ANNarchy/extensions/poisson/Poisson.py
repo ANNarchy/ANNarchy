@@ -2,8 +2,56 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import SpikeNeuron
 
 class PoissonPopulation(Population):
+    """ Population of spiking neurons following a Poisson distribution.
 
-    def __init__(self, geometry, name=None, rates=10.0):
+    Each neuron of the population will randomly emit spikes, with a mean firing rate defined by the *rates* argument.
+
+    The mean firing rate in Hz can be a fixed value for all neurons::
+
+        pop = PoissonPopulation(geometry=100, rates=100.0)
+
+    but it can be modified later as a normal parameter::
+
+        pop.rates = linspace(10, 150, 100)
+
+    It is also possible to define a temporal equation for the rates, by passing a string to the argument::
+
+        pop = PoissonPopulation(geometry=100, rates="100.0 * (1.0 + sin(2*pi*frequency*t/dt/1000.0) )/2.0")
+
+    The syntax of this equation follows the same structure as neural variables.
+
+    It is also possible to add parameters to the population which can be used in the equation of *rates*::
+
+        pop = PoissonPopulation( 
+            geometry=100, 
+            parameters = '''
+                amp = 100.0
+                frequency = 1.0
+            ''',
+            rates="amp * (1.0 + sin(2*pi*frequency*t/dt/1000.0) )/2.0"
+        )
+
+    .. note::
+
+        The preceding definition is fully equivalent to the definition of this neuron::
+
+            poisson = SpikeNeuron(
+                parameters = '''
+                    amp = 100.0
+                    frequency = 1.0
+                ''',
+                equations = '''
+                    rates = amp * (1.0 + sin(2*pi*frequency*t/dt/1000.0) )/2.0
+                    p = Uniform(0.0, 1.0) * 1000.0 / dt
+                ''',
+                spike = '''
+                    p < rates
+                '''
+            )
+
+    """
+
+    def __init__(self, geometry, name=None, rates=10.0, parameters=None):
         """        
         *Parameters*:
         
@@ -11,19 +59,34 @@ class PoissonPopulation(Population):
 
             * *name*: unique name of the population (optional).
 
-            * *rates*: mean firing rate of each neuron (default: 10.0 Hz)
-        
-        """  
-        poisson_neuron = SpikeNeuron(
-            parameters = """
-            rates = %(rates)s
-            """ % {'rates': rates},
-            equations = """
-            p = Uniform(0.0, 1.0) * 1000.0 / dt
-            """,
-            spike = """
-                p <= rates
-            """
+            * *rates*: mean firing rate of each neuron (default: 10.0 Hz). It can be a single value (e.g. 10.0) or an equation (as string).
 
-        )
+            * *parameters*: additional parameters which can be used in the *rates* equation.
+        """  
+        if isinstance(rates, str):
+            poisson_neuron = SpikeNeuron(
+                parameters = """
+                %(params)s
+                """ % {'params': parameters if parameters else ''},
+                equations = """
+                rates = %(rates)s
+                p = Uniform(0.0, 1.0) * 1000.0 / dt
+                """ % {'rates': rates},
+                spike = """
+                    p < rates
+                """
+            )
+
+        else:
+            poisson_neuron = SpikeNeuron(
+                parameters = """
+                rates = %(rates)s
+                """ % {'rates': rates},
+                equations = """
+                p = Uniform(0.0, 1.0) * 1000.0 / dt
+                """,
+                spike = """
+                    p <= rates
+                """
+            )
         Population.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
