@@ -237,7 +237,7 @@ void Network::run(int steps)
     {
         for(int i =0; i<steps; i++)
         {
-        #ifdef _DEBUG
+		#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
             #pragma omp master
             std::cout << "current step " << i << " ANNarchy "<< ANNarchy_Global::time << std::endl;
         #endif
@@ -284,17 +284,21 @@ void Network::run(int steps)
 
             //
             // parallel population wise
-            #pragma omp for
-            for(unsigned int p = 0; p < rate_populations_.size(); p++)
+            #pragma omp master
             {
-            	rate_populations_[p]->globalOperations();
+				for(unsigned int p = 0; p < rate_populations_.size(); p++)
+				{
+					rate_populations_[p]->globalOperations();
+				}
             }
 
-			#pragma omp for
-			for(unsigned int p = 0; p < spike_populations_.size(); p++)
-			{
-				spike_populations_[p]->globalOperations();
-			}
+			#pragma omp master
+            {
+				for(unsigned int p = 0; p < spike_populations_.size(); p++)
+				{
+					spike_populations_[p]->globalOperations();
+				}
+            }
 
             //
             // parallel neuron wise

@@ -59,8 +59,11 @@ psp_code_body_omp = \
 # * eq: equations for the update 
 #
 pre_event_body="""
+#if defined(_DEBUG) && defined(_DEBUG_PARALLELISM)
+    std::cout << "ID of active thread(s) in this block: " << omp_get_thread_num() << std::endl;
+#endif
 #ifdef _DEBUG
-    std::cout << "Emitted a pre-synaptic event: "<< rank << " to " << post_neuron_rank_  << std::endl;
+    std::cout << "Evaluate a pre-synaptic event ( time = "<< ANNarchy_Global::time <<"): "<< rank << " to " << post_neuron_rank_  << std::endl;
     std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
     std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
 #endif
@@ -74,7 +77,7 @@ pre_event_body="""
 #
 post_event_body="""
 #ifdef _DEBUG
-    std::cout << "Emitted a post-synaptic event" << std::endl;
+    std::cout << "Evaluate a post-synaptic event" << std::endl;
 #endif
     for(int i = 0; i < rank_.size(); i++)
     {

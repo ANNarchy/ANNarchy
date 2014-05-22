@@ -51,10 +51,11 @@ class IntAxis(pg.AxisItem):
                 return pg.AxisItem.tickSpacing(self,minVal, maxVal, size)  
             
 class DataLog(object):
-    def __init__(self, threads, num_trials):
+    def __init__(self, threads, num_trials, operation):
         """
         Constructor
         """
+        self._operation = operation
         self._num_trials = threads
         self._threads = threads            
         self._data = np.zeros((num_trials, len(threads))) 
@@ -85,6 +86,59 @@ class DataLog(object):
             self._std[t] = np.std(self._data[:,t], axis=0)
             self._min[t] = np.amin(self._data[:,t], axis=0)
             self._max[t] = np.amax(self._data[:,t], axis=0)
+
+    def mean(self):
+        """
+        """
+        mean = np.zeros(len(self._threads))
+        
+        i = 0
+        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
+            mean[i] = self._mean[self._threads[t]]
+            i+=1
+        
+        return mean
+
+    def min(self):
+        """
+        """
+        min = np.zeros(len(self._threads))
+        
+        i = 0
+        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
+            min[i] = self._min[self._threads[t]]
+            i+=1
+        
+        return min
+    
+    def max(self):
+        """
+        """
+        max = np.zeros(len(self._threads))
+        
+        i = 0
+        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
+            max[i] = self._max[self._threads[t]]
+            i+=1
+        
+        return max
+
+    def std(self):
+        """
+        """
+        std = np.zeros(len(self._threads))
+        
+        i = 0
+        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
+            std[i] = self._std[self._threads[t]]
+            i+=1
+        
+        return std
+    
+    def asc_idx(self):
+        """
+        """
+        return np.array([i+1 for i in xrange(len(self._threads))])
         
     def save_to_file(self, name):
         """
@@ -130,12 +184,12 @@ class Profile:
             * *object*: either 'network' or a population name
         """
         if object == "network":
-            self._net_data = DataLog(self._threads, self._num_trials)
+            self._net_data = DataLog(self._threads, self._num_trials,'overall')
         else:
-            self._pop_data[object] = { 'sum' : DataLog(self._threads, self._num_trials),
-                                       'step' : DataLog(self._threads, self._num_trials), 
-                                       'local' : DataLog(self._threads, self._num_trials),
-                                       'global' : DataLog(self._threads, self._num_trials)
+            self._pop_data[object] = { 'sum' : DataLog(self._threads, self._num_trials, 'sum'),
+                                       'step' : DataLog(self._threads, self._num_trials, 'step'), 
+                                       'local' : DataLog(self._threads, self._num_trials, 'local'),
+                                       'global' : DataLog(self._threads, self._num_trials, 'global')
                                      }
         
     def measure(self, thread, trial, begin, end):
@@ -163,8 +217,26 @@ class Profile:
             data['local'][thread, trial] = self._average_local(name, begin, end)
             data['global'][thread, trial] = self._average_global(name, begin, end)
             
-    def analyse_data(self, error_bar = False):
+    def analyse_data(self):
+        """
+        Iterate over all data fields and create evaluation data.
+        """
+        # evaluate datasets - network
+        self._net_data.analyse_data()
         
+        # evaluate datasets - layer and operation wise
+        for pop in self._pop_data.itervalues():
+            for tmp in pop.itervalues():
+                tmp.analyse_data()
+        
+    def visualize_data(self, error_bar = False):
+        """
+        Visualize current analyzed data with pyqtgraph.
+        
+        Parameter:
+        
+        * *error_bar*: show the min and max values for all data sets (default = False)
+        """
         self._net_win = pg.GraphicsWindow(title="Speedup: network overall")
         # additional customizations        
         #self._net_win.setBackground('w')
@@ -175,8 +247,6 @@ class Profile:
         for k,v in self._threads.iteritems():
             x_scale[v] = k
 
-        # evaluate datasets - network
-        self._net_data.analyse_data()
                 
         p1 = self._net_win.addPlot(title = "")
         p1.setLabel('left', "computation time", units='ms')
@@ -185,10 +255,6 @@ class Profile:
         # additional customizations        
         #p1.getAxis('bottom').setPen('r')
 
-        # evaluate datasets - layer and operation wise
-        for pop in self._pop_data.itervalues():
-            for tmp in pop.itervalues():
-                tmp.analyse_data()
 
         col_iter = iter(col_array)
         col_iter2 = iter(col_array)
@@ -198,6 +264,17 @@ class Profile:
 
         pop_mean_label = { 'left' : "computation time", 'bottom': "number of threads" }
         
+        def create_error_bar(idx, mean, min, max, std):
+            """
+            for equal configuration on all plots
+            """
+            err = pg.ErrorBarItem( x=idx, 
+                                   y=mean,
+                                   top=std, 
+                                   bottom=std, 
+                                   beam=0.5)
+            return err
+
         #
         # plot the population data
         for name, data in self._pop_data.iteritems():
@@ -232,12 +309,9 @@ class Profile:
             pop_mean_plot = tmp2.addPlot(title = "weighted sum", axisItems = {'bottom': IntAxis('bottom') })
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of cores",)
+
             if error_bar:
-                err = pg.ErrorBarItem( x=thread_num, 
-                                       y=data['sum']._mean,
-                                       top=data['sum']._max, 
-                                       bottom=data['sum']._min, 
-                                       beam=0.5)
+                err = create_error_bar(data['sum'].asc_idx(), data['sum'].mean(), data['sum'].min(), data['sum'].max(), data['sum'].std())
                 pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['sum']._mean, 
@@ -265,11 +339,7 @@ class Profile:
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of cores",)
             if error_bar:
-                err = pg.ErrorBarItem( x=thread_num, 
-                                       y=data['step']._mean, 
-                                       top=data['step']._max, 
-                                       bottom=data['step']._min, 
-                                       beam=0.5)
+                err = create_error_bar(data['step'].asc_idx(), data['step'].mean(), data['step'].min(), data['step'].max(), data['step'].std())
                 pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['step']._mean, 
@@ -302,11 +372,7 @@ class Profile:
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of cores",)
             if error_bar:
-                err = pg.ErrorBarItem( x=thread_num, 
-                                       y=data['global']._mean, 
-                                       top=data['global']._max, 
-                                       bottom=data['global']._min, 
-                                       beam=0.5)
+                err = create_error_bar(data['global'].asc_idx(), data['global'].mean(), data['global'].min(), data['global'].max(), data['global'].std())
                 pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['global']._mean, 
@@ -334,11 +400,7 @@ class Profile:
             pop_mean_plot.setLabel('left', "computation time", units='s')
             pop_mean_plot.setLabel('bottom', "number of cores",)
             if error_bar:
-                err = pg.ErrorBarItem( x=thread_num, 
-                                       y=data['local']._mean, 
-                                       top=data['local']._max, 
-                                       bottom=data['local']._min, 
-                                       beam=0.5)
+                err = create_error_bar(data['local'].asc_idx(), data['local'].mean(), data['local'].min(), data['local'].max(), data['local'].std())
                 pop_mean_plot.addItem(err)
             pop_mean_plot.plot( thread_num, 
                                 data['local']._mean, 

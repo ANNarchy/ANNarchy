@@ -92,7 +92,7 @@ void SpikePopulation::metaStep()
     } // end of master region
     #pragma omp barrier
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
     #pragma omp master
     {
         std::cout << "global computation done."<< std::endl;
@@ -106,7 +106,7 @@ void SpikePopulation::metaStep()
     }
     #pragma omp barrier
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
     #pragma omp master
     {
         std::cout << "local computation done."<< std::endl;
@@ -127,7 +127,7 @@ void SpikePopulation::metaLearn()
     }
 #endif
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
     #pragma omp master
     {
     std::cout << "###########################"<< std::endl;
@@ -138,7 +138,7 @@ void SpikePopulation::metaLearn()
     #pragma barrier
 #endif
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
 	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
 		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
 #endif
@@ -159,7 +159,7 @@ void SpikePopulation::metaLearn()
     }
 #endif
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
     #pragma omp master
     {
     std::cout << "###########################"<< std::endl;
@@ -169,7 +169,7 @@ void SpikePopulation::metaLearn()
     }
 #endif
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
 	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
 		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
 #endif
