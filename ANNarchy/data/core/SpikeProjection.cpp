@@ -60,7 +60,10 @@ void SpikeProjection::localLearn()
 void SpikeProjection::postEvent(std::vector<int> post_ranks)
 {
 #ifdef _DEBUG
-	std::cout << "number of post events: " << post_ranks.size() << std::endl;
+	std::cout << "number of post events: " << post_ranks.size() << ", time = "<< ANNarchy_Global::time << std::endl;
+#endif
+#if defined(_DEBUG) && defined(_DEBUG_PARALLELISM)
+	std::cout << "ID of active thread(s) in this block: " << omp_get_thread_num() << std::endl;
 #endif
 
 	for ( unsigned int n = 0; n < post_ranks.size(); n++ )
