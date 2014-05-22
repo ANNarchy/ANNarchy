@@ -34,7 +34,8 @@ public:
 
     std::vector<int> getRank(int post_rank);
     
-    std::vector<DATA_TYPE> getValue(int post_rank);
+    std::vector<DATA_TYPE> getValue(int post_rank);    
+    void setValue(int post_rank, std::vector<DATA_TYPE> values);
     
     std::vector<int> getDelay(int post_rank);
     
@@ -119,6 +120,11 @@ std::vector<DATA_TYPE> %(class)s::getValue(int post_rank)
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getValue();
 }
 
+void %(class)s::setValue(int post_rank, std::vector<DATA_TYPE> values)
+{
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setValue(values);
+}
+
 std::vector<int> %(class)s::getDelay(int post_rank)
 {
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getDelay();
@@ -173,6 +179,7 @@ public:
     std::vector<int> getRank(int post_rank);
     
     std::vector<DATA_TYPE> getValue(int post_rank);
+    void setValue(int post_rank, std::vector<DATA_TYPE> values);
     
     std::vector<int> getDelay(int post_rank);
     
@@ -255,6 +262,11 @@ std::vector<int> %(class)s::getRank(int post_rank)
 std::vector<DATA_TYPE> %(class)s::getValue(int post_rank)
 {
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getValue();
+}
+
+void %(class)s::setValue(int post_rank, std::vector<DATA_TYPE> values)
+{
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setValue(values);
 }
 
 std::vector<int> %(class)s::getDelay(int post_rank)
@@ -450,6 +462,7 @@ cdef extern from "../build/%(name)s.h":
 
         # local variable value
         vector[float] getValue(int post_rank)
+        void setValue(int post_rank, vector[float] values)
         void startRecordValue(int post_rank)
         void stopRecordValue(int post_rank)
         void clearRecordedValue(int post_rank)
@@ -495,6 +508,9 @@ cdef class py%(name)s:
     # Value
     cpdef np.ndarray _get_value(self, int post_rank):
         return np.array(self.cInstance.getValue(post_rank))
+
+    cpdef np.ndarray _set_value(self, int post_rank, np.ndarray value ):
+        self.cInstance.setValue(post_rank, value)
 
     def _start_record_value(self, int post_rank):
         self.cInstance.startRecordValue(post_rank)
@@ -594,6 +610,7 @@ cdef extern from "../build/%(name)s.h":
 
         # local variable value
         vector[float] getValue(int post_rank)
+        void setValue(int post_rank, vector[float] values)
         void startRecordValue(int post_rank)
         void stopRecordValue(int post_rank)
         void clearRecordedValue(int post_rank)
@@ -639,6 +656,9 @@ cdef class py%(name)s:
     # Value
     cpdef np.ndarray _get_value(self, int post_rank):
         return np.array(self.cInstance.getValue(post_rank))
+
+    cpdef void _set_value(self, int post_rank, np.ndarray value ):
+        self.cInstance.setValue(post_rank, value)
 
     def _start_record_value(self, int post_rank):
         self.cInstance.startRecordValue(post_rank)
