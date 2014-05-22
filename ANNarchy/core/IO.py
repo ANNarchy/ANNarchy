@@ -289,9 +289,9 @@ def _net_description(variables, connections):
                 for var in proj.variables:
                     varias[var] = getattr(proj.cyInstance, '_get_'+var)(d)
                 if 'value' not in proj.variables:
-                    varias['values'] = proj.cyInstance._get_value(d)                
-                varias['delays'] = proj.cyInstance._get_delay(d)
-                varias['pre_ranks'] = proj.cyInstance._get_rank(d)                                
+                    varias['value'] = proj.cyInstance._get_value(d)                
+                varias['delay'] = proj.cyInstance._get_delay(d)
+                varias['rank'] = proj.cyInstance._get_rank(d)                                
                 if varias != {}:
                     dendrite_desc['variables'] = varias
 
