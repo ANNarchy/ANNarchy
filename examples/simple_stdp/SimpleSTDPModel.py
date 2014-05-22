@@ -31,7 +31,8 @@ spike = """
 reset = """
     v = c
     u = u+d
-"""
+""",
+refractory = 5
 )
 
 Simple =SpikeSynapse(

@@ -93,6 +93,16 @@ public:
      */
 	int getLastSpikeTime(int rank);
 
+	/**
+	 * 	\brief		Set refactory time after a spike for each neuron.
+	 */
+	void setRefractoryTimes(std::vector<int> refractory_times) { refractory_times_ = refractory_times; }
+
+	/**
+	 * 	\brief		Set refactory time after a spike for each neuron.
+	 */
+	std::vector<int> getRefractoryTimes() { return refractory_times_; }
+
     /**
      *  \brief      set max delay
      *  \details    NOT IMPLEMENTED
@@ -118,7 +128,13 @@ public:
 	virtual void globalOperations() {}
 
 protected:
+
+	void updateRefactoryCounter();
+
 	std::vector< std::vector<class Dendrite*> > spikeTargets_; // first dimension, neuron wise
+
+	std::vector<int> refractory_times_;
+	std::vector<int> refractory_counter_;
 
 	std::vector< bool > spiked_;
 	std::vector< std::vector<int> > spike_timings_;

@@ -517,6 +517,7 @@ def analyse_population(pop):
     if pop_type == 'spike': # Additionally store reset and spike
         description['raw_reset'] = pop.neuron_type.reset
         description['raw_spike'] = pop.neuron_type.spike
+        description['refractory'] = pop.neuron_type.refractory
         
     # Extract parameters and variables names
     parameters = _extract_parameters(pop.neuron_type.parameters, pop.neuron_type.extra_values)

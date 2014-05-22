@@ -64,7 +64,7 @@ class SpikeNeuron(object):
     """
     Python definition of a mean rate coded neuron in ANNarchy. This object is intended to encapsulate neuronal equations and further used in population class.
     """    
-    def __init__(self, parameters="", equations="", spike=None, reset=None, extra_values={}, functions=None ):
+    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, extra_values={}, functions=None ):
         """ 
         The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
         <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
@@ -115,6 +115,13 @@ class SpikeNeuron(object):
                         u = u + d
                         v = c
                     \"\"\"
+                    
+            * *refractory*: denotes the refractory time of a neuron after a spike was emitted
+            
+                .. code-block:: python
+        
+                    refractory = 5    # 5 ms
+                
         """        
         
         # Store the parameters and equations
@@ -123,6 +130,7 @@ class SpikeNeuron(object):
         self.functions = functions
         self.spike = spike
         self.reset = reset
+        self.refractory = refractory
         self.extra_values = extra_values
         
     def __str__(self):

@@ -33,6 +33,8 @@ SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(n
     record_spike_ = false;
 
     lastSpike_ = std::vector<int>(nbNeurons_, -10000);
+
+    refractory_counter_ = std::vector<int>(nbNeurons_,  -1);
 }
 
 SpikePopulation::~SpikePopulation()
@@ -100,9 +102,10 @@ void SpikePopulation::metaStep()
 #endif
 
     #pragma omp for
-    for(int i=0; i<nbNeurons_; i++)
+    for(int n=0; n<nbNeurons_; n++)
     {
-        localMetaStep(i);
+    	if (refractory_counter_[n] < 0)
+    		localMetaStep(n);
     }
     #pragma omp barrier
 
@@ -188,4 +191,24 @@ void SpikePopulation::metaLearn()
         Profile::profileInstance()->appendTimeLocal(name_, (stop - start)*1000.0);
     }
 #endif
+}
+
+void SpikePopulation::updateRefactoryCounter()
+{
+#ifdef _DEBUG
+	#pragma omp master
+	{
+		std::cout << "updateRefactoryCounter:"<< std::endl;
+		for( auto it = refractory_counter_.begin(); it != refractory_counter_.end(); it++ )
+			std::cout << *it << " ";
+		std::cout << std::endl;
+	}
+#endif
+	#pragma omp master
+	{
+		for( int n = 0; n < nbNeurons_; n++ )
+		{
+			refractory_counter_[n]-= 1;
+		}
+	}
 }
