@@ -19,7 +19,7 @@ N = 1000 # 1000 Poisson inputs
 gmax = 0.01 # Maximum weight
 duration = 100000.0 # Simulation for 100 seconds
 
-setup(dt=dt)
+setup(dt=dt, float_prec = 'double')
 
 IF = SpikeNeuron(
     parameters = """
@@ -63,7 +63,6 @@ STDP = SpikeSynapse(
         Apost += cApost * wmax
         value = clip(value + Apre, 0.0 , wmax)
     """
-
 )
 
 # Input population
@@ -89,9 +88,6 @@ if __name__ == '__main__':
                   Output: 'spike' }
     start_record ( to_record )
 
-    # Receptive field before simulation
-    rf_pre = proj.dendrite(0).receptive_field()
-
     # Start the simulation
     print 'Start the simulation for 100 seconds'
     from time import time
@@ -101,29 +97,26 @@ if __name__ == '__main__':
 
     # Retrieve the recordings
     data = get_record( to_record )
-    input_spikes = data[Input]['spike']['data']
-    output_spikes = data[Output]['spike']['data']
+    input_spikes = data[Input]['spike']
+    output_spikes = data[Output]['spike']
 
     # Compute the mean firing rates during the simulation
-    mean_rate = []
-    for neur in input_spikes:
-        mean_rate.append(len(neur) *1000.0/duration)
-    print 'Mean firing rate in the input population: ', np.mean(mean_rate)
-    print 'Mean firing rate of the output neuron: ', len(output_spikes[0]) *1000.0/duration
+    print 'Mean firing rate in the input population: ', np.mean([len(neur) *1000.0/duration for neur in input_spikes['data']])
+    print 'Mean firing rate of the output neuron: ', len(output_spikes['data'][0]) *1000.0/duration
 
     # Compute the instantaneous firing rate of the output neuron
-    output_rate = smoothed_firing_rate(output_spikes[0], 100.0)
+    output_rate = smoothed_rate(output_spikes, 100.0)
 
     # Receptive field after simulation
     rf_post = proj.dendrite(0).receptive_field()
 
     from pylab import *
     subplot(3,1,1)
-    plot(output_rate)
+    plot(output_rate[0, :])
     title('Average firing rate')
     subplot(3,1,2)
     plot(rf_post, '.')
-    title('Weight matrix after learning')
+    title('Weight distribution after learning')
     subplot(3,1,3)
     hist(rf_post, bins=20)
     title('Weight histogram after learning')
