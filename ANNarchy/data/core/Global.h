@@ -84,6 +84,7 @@ namespace ANNarchy_Global
 // additional defines for more deeply debugging
 // #define _DEBUG_DELAY
 // #define _DEBUG_DENDRITE_DATA
+// #define _DEBUG_SIMULATION_CONTROL	// Function calls, etc.
 
 //
 // profiling extension

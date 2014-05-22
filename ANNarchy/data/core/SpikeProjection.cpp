@@ -41,8 +41,8 @@ void SpikeProjection::globalLearn()
 
 void SpikeProjection::localLearn()
 {
-#ifdef _DEBUG
-	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
+#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
+	std::cout << "LocalLearn: number of dendrites: " << nbDendrites_ << std::endl;
 #endif
 
 	#pragma omp for

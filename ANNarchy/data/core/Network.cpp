@@ -237,7 +237,7 @@ void Network::run(int steps)
     {
         for(int i =0; i<steps; i++)
         {
-        #ifdef _DEBUG
+		#if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
             #pragma omp master
             std::cout << "current step " << i << " ANNarchy "<< ANNarchy_Global::time << std::endl;
         #endif

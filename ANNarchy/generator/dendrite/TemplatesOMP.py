@@ -60,7 +60,7 @@ psp_code_body_omp = \
 #
 pre_event_body="""
 #ifdef _DEBUG
-    std::cout << "Emitted a pre-synaptic event: "<< rank << " to " << post_neuron_rank_  << std::endl;
+    std::cout << "Emitted a pre-synaptic event ( time = "<< ANNarchy_Global::time <<"): "<< rank << " to " << post_neuron_rank_  << std::endl;
     std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
     std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
 #endif
