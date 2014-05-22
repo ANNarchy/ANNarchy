@@ -2,6 +2,7 @@
 #	Implementation of the performance profiling as presented in Dinkelbach et al. 2012
 #
 from ProfileNetwork import ProfileNetwork
+from ANNarchy.extensions.Profile import *
 
 #
 # test SETUP
