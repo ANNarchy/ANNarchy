@@ -46,7 +46,7 @@ STDP = SpikeSynapse(
     parameters="""
         tau_pre = 20.0 : postsynaptic
         tau_post = 20.0 : postsynaptic
-        cApre = 0.0095 : postsynaptic
+        cApre = 0.01 : postsynaptic
         cApost = -0.0105 : postsynaptic
         wmax = 0.01 : postsynaptic
     """,
@@ -62,9 +62,6 @@ STDP = SpikeSynapse(
     post_spike="""
         Apost += cApost * wmax
         value = clip(value + Apre, 0.0 , wmax)
-    """,
-    functions =  """
-        clip(x, a, b) = if x > b: b else: if x < a : a else: x
     """
 
 )
@@ -81,23 +78,6 @@ proj = Projection(
     synapse = STDP
 ).connect_all_to_all(weights=Uniform(0.0, gmax))
 
-
-def firing_rate(data):
-    rates = np.zeros(duration)
-    last_spike = 0
-    for t_spike in data:
-        fr = 1000.0 /dt / (t_spike - last_spike)
-        rates[t_spike:] = fr
-        last_spike = t_spike
-
-    return rates
-
-def smoothed_firing_rate(data, smooth):
-    rates = firing_rate(data)
-    srates = np.zeros(duration)
-    for t in xrange(1, int(duration)):
-        srates[t] = srates[t-1] +  (rates[t] - srates[t-1]) / smooth
-    return srates
 
 if __name__ == '__main__':
 

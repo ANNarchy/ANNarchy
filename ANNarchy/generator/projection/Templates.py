@@ -509,7 +509,7 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_value(self, int post_rank):
         return np.array(self.cInstance.getValue(post_rank))
 
-    cpdef np.ndarray _set_value(self, int post_rank, np.ndarray value ):
+    cpdef _set_value(self, int post_rank, np.ndarray value ):
         self.cInstance.setValue(post_rank, value)
 
     def _start_record_value(self, int post_rank):
@@ -657,7 +657,7 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_value(self, int post_rank):
         return np.array(self.cInstance.getValue(post_rank))
 
-    cpdef void _set_value(self, int post_rank, np.ndarray value ):
+    cpdef _set_value(self, int post_rank, np.ndarray value ):
         self.cInstance.setValue(post_rank, value)
 
     def _start_record_value(self, int post_rank):
