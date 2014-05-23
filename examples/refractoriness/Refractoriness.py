@@ -29,13 +29,13 @@ reset = """
 refractory = 5.0
 )
 
-Population = SpikePopulation( geometry=(25,), neuron = Neuron )
+pop = Population( geometry=(25,), neuron = Neuron )
 
 compile()
 
 simulate ( 500.0 )
 
-spikes = Population.raster_plot()
+spikes = pop.raster_plot()
 # Plot the results
 import pylab as plt
 plt.plot(spikes[:, 0], spikes[:, 1], '.')
