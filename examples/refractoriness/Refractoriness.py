@@ -29,7 +29,7 @@ reset = """
 refractory = 5.0
 )
 
-pop = Population( geometry=(10,), neuron = Neuron )
+pop = Population( geometry=(25,), neuron = Neuron )
 
 compile()
 
