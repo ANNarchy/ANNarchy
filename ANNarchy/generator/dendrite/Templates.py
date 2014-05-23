@@ -354,6 +354,9 @@ void %(class)s::record()
 
 void %(class)s::preEvent(int rank) 
 {
+    if ( post_population_->hasSpiked(post_neuron_rank_) )
+        return;
+        
 %(pre_event)s
 }
 
