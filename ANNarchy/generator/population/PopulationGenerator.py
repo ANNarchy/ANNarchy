@@ -221,10 +221,11 @@ class PopulationGenerator(object):
         'args': var['args'] 
       }
         
-        refractor_value = str(self.desc['refractory'] * Global.config['dt']) if isinstance(self.desc['refractory'], (float, int)) else '0.0'
-        constructor += """
-    refractory_times_ = std::vector<int>(nbNeurons, %(value)s);
-""" % { 'value': refractor_value }
+        if 'refractory' in self.desc.keys():
+            refractor_value = str(self.desc['refractory'] * Global.config['dt']) if isinstance(self.desc['refractory'], (float, int)) else '-1.0'
+            constructor += """
+        refractory_times_ = std::vector<int>(nbNeurons, %(value)s);
+    """ % { 'value': refractor_value }
 
         return constructor, reset
     
