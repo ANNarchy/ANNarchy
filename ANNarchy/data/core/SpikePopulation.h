@@ -126,6 +126,7 @@ public:
 	virtual void globalMetaStep() {}
 	virtual void localMetaStep(int rank) {}
 	virtual void globalOperations() {}
+	virtual void reset(int rank) {}
 
 protected:
 

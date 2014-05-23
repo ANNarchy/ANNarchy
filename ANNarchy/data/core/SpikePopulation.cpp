@@ -34,7 +34,7 @@ SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(n
 
     lastSpike_ = std::vector<int>(nbNeurons_, -10000);
 
-    refractory_counter_ = std::vector<int>(nbNeurons_,  -1);
+    refractory_counter_ = std::vector<int>(nbNeurons_,  0);
 }
 
 SpikePopulation::~SpikePopulation()
@@ -104,8 +104,10 @@ void SpikePopulation::metaStep()
     #pragma omp for
     for(int n=0; n<nbNeurons_; n++)
     {
-    	if (refractory_counter_[n] < 0)
-    		localMetaStep(n);
+    	localMetaStep(n);
+
+    	if (refractory_counter_[n] > 0)
+    		reset(n);
     }
     #pragma omp barrier
 
