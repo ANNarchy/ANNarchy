@@ -95,7 +95,7 @@ public:
      * 	\details	common to all objects, its globally changed through python.
      * 	\param[in]	dt 	new value of dt
      */
-    void setDt(float dt) { dt_ = dt; }
+    void setDt(DATA_TYPE dt) { dt_ = dt; }
 
 	/**
 	 * 	\brief		get number of synapses

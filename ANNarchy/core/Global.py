@@ -136,7 +136,7 @@ def get_population(name):
 
     Returns:
     
-    the requested population if existing otherwise None is returned.
+    * the requested population if existing, otherwise None is returned.
     """
     for pop in _populations:
         if pop.name == name:

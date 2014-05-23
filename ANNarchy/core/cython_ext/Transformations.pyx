@@ -17,7 +17,7 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
     cdef np.ndarray res
     cdef int N, d
     cdef int n, t, timing, last_spike
-    cdef float dt
+    cdef float dt, delta
 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
@@ -39,8 +39,9 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
 
     if smooth > 0.0:
         smoothed_rate = np.zeros((N, d))
+        delta = dt/smooth
         for t in xrange(d-1):
-            smoothed_rate[:, t+1] = smoothed_rate[:, t] + (rates[:, t+1] - smoothed_rate[:, t])/smooth
+            smoothed_rate[:, t+1] = smoothed_rate[:, t] + (rates[:, t+1] - smoothed_rate[:, t])*delta
         return smoothed_rate
     else:
         return rates

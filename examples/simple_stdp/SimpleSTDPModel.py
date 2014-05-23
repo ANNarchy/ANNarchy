@@ -19,7 +19,7 @@ N = 1000 # 1000 Poisson inputs
 gmax = 0.01 # Maximum weight
 duration = 100000.0 # Simulation for 100 seconds
 
-setup(dt=dt, float_prec = 'double')
+setup(dt=dt)
 
 IF = SpikeNeuron(
     parameters = """
@@ -32,7 +32,7 @@ IF = SpikeNeuron(
     """,
     equations = """
         tau_m * dv/dt = El - v + g_exc * (Ee - vr) : init = -60.0
-        tau_e * dg_exc/dt = -g_exc 
+        tau_e * dg_exc/dt = -g_exc
     """,
     spike = """
         v > vt
