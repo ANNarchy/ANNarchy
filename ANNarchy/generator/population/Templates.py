@@ -111,7 +111,9 @@ public:
 
     void propagateSpike();
     
-    void reset();
+    void reset();    // called by global_operations
+
+    void reset(int rank);    // called by metaStep during refractoring phase
 
 %(global_ops_access)s
     
@@ -374,7 +376,8 @@ void %(class)s::record()
     }
 }
 
-void %(class)s::propagateSpike() {
+void %(class)s::propagateSpike() 
+{
 
     if (!propagate_.empty())
     {
@@ -399,7 +402,8 @@ void %(class)s::propagateSpike() {
     }
 }
 
-void %(class)s::reset() {
+void %(class)s::reset() 
+{
 
     if (!reset_.empty())
     {
@@ -413,6 +417,11 @@ void %(class)s::reset() {
         reset_.erase(reset_.begin(), reset_.end());
     }
     
+}
+
+void %(class)s::reset(int rank)
+{
+    %(reset_neuron)s
 }
 
 %(single_global_ops)s

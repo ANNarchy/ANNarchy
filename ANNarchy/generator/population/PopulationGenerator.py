@@ -222,7 +222,7 @@ class PopulationGenerator(object):
       }
         
         if 'refractory' in self.desc.keys():
-            refractor_value = str(self.desc['refractory'] * Global.config['dt']) if isinstance(self.desc['refractory'], (float, int)) else '-1.0'
+            refractor_value = str( int(self.desc['refractory'] / Global.config['dt'])) if isinstance(self.desc['refractory'], (float, int)) else '0'
             constructor += """
         refractory_times_ = std::vector<int>(nbNeurons, %(value)s);
     """ % { 'value': refractor_value }

@@ -169,6 +169,7 @@ class SpikePopulationGenerator(PopulationGenerator):
             'global_ops' : globalops,
             'record' : record,
             'reset_event': reset_event,
+            'reset_neuron': reset_event.replace('(*it)', 'rank'),
             'single_global_ops' : singleops
         }
         return template % dictionary

@@ -15,10 +15,10 @@ from ANNarchy.extensions.poisson import PoissonPopulation
 Neuron = SpikeNeuron(
 parameters = """
     tau = 20.0 : population
-    sigma = 0.015
+    sigma = 0.015 : population
 """,
 equations = """
-    dx/dt = (1.1 - x) / tau + sigma * ( ( 2.0 / tau ) ** 0.5 ) * x
+    dx/dt = (1.1 - x) / tau + sigma * ( sqrt( 2.0 / tau ) ) * Normal(0.0, 1.0) 
 """,
 spike = """
     x > 1
@@ -29,17 +29,20 @@ reset = """
 refractory = 5.0
 )
 
-pop = Population( geometry=(25,), neuron = Neuron )
+pop = Population( geometry=(10,), neuron = Neuron )
 
 compile()
 
 pop.start_record('spike')
+pop.start_record('x')
 simulate ( 500.0 )
-data = pop.get_record('spike')
+data = pop.get_record()
 
-spikes = raster_plot(data)
+spikes = raster_plot(data['spike'])
 
 # Plot the results
 import pylab as plt
+
+#plt.imshow(np.array(data['x']['data']))
 plt.plot(spikes[:, 0], spikes[:, 1], '.')
 plt.show()
