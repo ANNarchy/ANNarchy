@@ -514,9 +514,10 @@ class Generator(object):
         # Instantiate the network
         global _network
         Global._network = self.cython_module.pyNetwork()
+
         # check if user defined a certain number of threads.
-        if Global.config['num_threads'] != None:
-            Global._network.set_num_threads(Global.config['num_threads'])  
+        Global._network.set_num_threads(Global.config['num_threads'])
+            
                 
     def create_includes(self):
         """ Generates 'Includes.h' containing all generated headers.

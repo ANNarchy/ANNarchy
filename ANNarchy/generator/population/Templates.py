@@ -111,7 +111,9 @@ public:
 
     void propagateSpike();
     
-    void reset();
+    void reset();    // called by global_operations
+
+    void reset(int rank);    // called by metaStep during refractoring phase
 
 %(global_ops_access)s
     
@@ -120,10 +122,10 @@ public:
 %(functions)s
 
 private:
+    
+%(global_ops_method)s
 
 %(member)s
-
-%(global_ops_method)s
 
 %(random)s
 
@@ -335,6 +337,8 @@ spike_population_body = """#include "%(class)s.h"
 void %(class)s::prepareNeurons() 
 {
 %(prepare)s
+
+    updateRefactoryCounter();
 }
 
 void %(class)s::resetToInit() 
@@ -372,7 +376,8 @@ void %(class)s::record()
     }
 }
 
-void %(class)s::propagateSpike() {
+void %(class)s::propagateSpike() 
+{
 
     if (!propagate_.empty())
     {
@@ -397,18 +402,26 @@ void %(class)s::propagateSpike() {
     }
 }
 
-void %(class)s::reset() {
+void %(class)s::reset() 
+{
 
     if (!reset_.empty())
     {
         for (auto it = reset_.begin(); it != reset_.end(); it++)
         {
 %(reset_event)s
+
+            refractory_counter_[*it] = refractory_times_[*it];
         }
         
         reset_.erase(reset_.begin(), reset_.end());
     }
     
+}
+
+void %(class)s::reset(int rank)
+{
+    %(reset_neuron)s
 }
 
 %(single_global_ops)s
@@ -506,6 +519,11 @@ cdef extern from "../build/%(class_name)s.h":
         void resetToInit()
         
         void setMaxDelay(int)
+        
+        void setRefractoryTimes(vector[int])
+        
+        vector[int] getRefractoryTimes()
+
 
 %(cFunction)s
 
@@ -543,6 +561,12 @@ cdef class py%(class_name)s:
             return self.cInstance.getNeuronCount()
         def __set__(self, value):
             print "py%(name)s.size is a read-only attribute."
+
+    cpdef np.ndarray _get_refractory_times(self):
+        return np.array(self.cInstance.getRefractoryTimes())
+        
+    cpdef _set_refractory_times(self, np.ndarray value):
+        self.cInstance.setRefractoryTimes(value)
             
 %(pyFunction)s
 """

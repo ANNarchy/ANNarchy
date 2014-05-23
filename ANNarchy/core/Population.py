@@ -106,7 +106,7 @@ class Population(object):
         for var in self.description['variables']:
             self.variables.append(var['name'])
         self.attributes = self.parameters + self.variables
-        
+
         # Store initial values
         self.init = {}
         for param in self.description['parameters']:
