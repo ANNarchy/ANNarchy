@@ -11,11 +11,11 @@ Let's consider first a simple rate-coded neuron of the leaky-integrator type, wh
 
 .. math::
 
-    \tau \frac{d \text{mp}(t)}{dt} &= ( B - \text{mp}(t) ) + \sum_{i}^{\text{exc}} \text{rate}_{i} * w_{i} \\ 
+    \tau \frac{d \text{mp}(t)}{dt} &= ( B - \text{mp}(t) ) + \sum_{i}^{\text{exc}} \text{r}_{i} * w_{i} \\ 
            
-    \text{rate}(t) & = ( \text{mp}(t) )^+
+    \text{r}(t) & = ( \text{mp}(t) )^+
     
-where :math:`mp(t)` represents the membrane potential of the neuron, :math:`\tau` the time constant of the neuron, :math:`B` its baseline firing rate, :math:`\text{rate}(t)` its instantaneous firing rate, :math:`i` an index over all excitatory synapses of this neuron, :math:`w_i` the efficiency of the synapse with the presynaptic neuron of firing rate :math:`\text{rate}_{i}`. 
+where :math:`mp(t)` represents the membrane potential of the neuron, :math:`\tau` the time constant of the neuron, :math:`B` its baseline firing rate, :math:`\text{r}(t)` its instantaneous firing rate, :math:`i` an index over all excitatory synapses of this neuron, :math:`w_i` the efficiency of the synapse with the presynaptic neuron of firing rate :math:`\text{r}_{i}`. 
 
 It can be implemented in the ANNarchy framework with:
 
@@ -95,7 +95,7 @@ This neural model can be defined in ANNarchy by:
         """,
         equations="""
             I = Normal(0.0,1.0) 
-            dv/dt = 0.04 * v * v + 5*v + 140 -u + I : init = 0.0
+            dv/dt = 0.04 * v**2 + 5.*v + 140.0 -u + I : init = 0.0
             du/dt = a * (b*v - u) : init = -13.0
         """,
         spike = """
@@ -109,9 +109,9 @@ This neural model can be defined in ANNarchy by:
 
 **Spike condition**
 
-The spike condition is a single constraint definition. You may use the different available comparison operators using all previously defined neuron variables.
+The spike condition is a single constraint definition. You may use the different available comparison operators using the previously defined neuron variables.
 
-The use of assignment statements or full ODEs will lead to an error. Furthermore the decision variable of the condition need to be placed on the **left** side.
+The use of assignment statements or full ODEs will lead to an error. Furthermore the decision variable of the condition needs to be placed on the **left** side.
 
 **Reset**
 

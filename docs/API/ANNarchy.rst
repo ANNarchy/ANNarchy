@@ -58,10 +58,20 @@ For instance you may run multiple experiments with one network or your experimen
 
     .. autofunction:: ANNarchy.reset
 
-ANNarchy.record()
+ANNarchy.start_record()
 -------------------------------------------------
 
-    .. autofunction:: ANNarchy.record
+    .. autofunction:: ANNarchy.start_record
+
+ANNarchy.start_record()
+-------------------------------------------------
+
+    .. autofunction:: ANNarchy.stop_record
+
+ANNarchy.get_record()
+-------------------------------------------------
+
+    .. autofunction:: ANNarchy.get_record
 
 
 ANNarchy.save()

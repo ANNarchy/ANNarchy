@@ -458,7 +458,7 @@ class Population(object):
         Parameter:
             
         * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
-        * *reshape*: by default this functions returns the data as a 2D matrix (number of neurons, time). If **reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
+        * *reshape*: by default this functions returns the data as a 2D matrix (number of neurons, time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
         
         _variable = []
