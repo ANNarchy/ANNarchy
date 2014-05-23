@@ -20,7 +20,7 @@ equations="""
 )
 
 Simple2 = RateSynapse(
-psp = """ value * (1.0-pre.rate) """                      
+psp = """ w * (1.0-pre.rate) """                      
 )
 
 OneDimIn = Population((10,1), Simple)
@@ -220,31 +220,31 @@ if __name__=='__main__':
     # Start the simulation
     view.run()
 #===============================================================================
-# visOne2One = Visualization( [ { 'proj': testOne2One, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights one2one'} ] )
+# visOne2One = Visualization( [ { 'proj': testOne2One, 'var': 'w', 'min': 0.0, 'max': 1.0, 'title': 'weights one2one'} ] )
 # visOne2One.render()
 #    
-# visAll2All = Visualization( [ { 'proj': testAll2All, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'weights all2all'} ] )
+# visAll2All = Visualization( [ { 'proj': testAll2All, 'var': 'w', 'min': 0.0, 'max': 1.0, 'title': 'weights all2all'} ] )
 # visAll2All.render()
 # 
-# visGaussian = Visualization( [ { 'proj': testGaussian, 'var': 'value', 'min': 0.0, 'max': 0.2, 'title': 'weights gaussian'} ] )
+# visGaussian = Visualization( [ { 'proj': testGaussian, 'var': 'w', 'min': 0.0, 'max': 0.2, 'title': 'weights gaussian'} ] )
 # visGaussian.render()
 #  
-# visDog = Visualization( [ { 'proj': testDog, 'var': 'value', 'min': -0.1, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
+# visDog = Visualization( [ { 'proj': testDog, 'var': 'w', 'min': -0.1, 'max': 0.1, 'title': 'weights difference of gaussian'} ] )
 # visDog.render()
 # 
-# visFixedPropPattern = Visualization( [ { 'proj': testFixedPropability, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'fixed propability'} ] )
+# visFixedPropPattern = Visualization( [ { 'proj': testFixedPropability, 'var': 'w', 'min': 0.0, 'max': 1.0, 'title': 'fixed propability'} ] )
 # visFixedPropPattern.render()
 # 
-# visFixedPrePattern = Visualization( [ { 'proj': testFixedNumberPre, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'fixed number pre'} ] )
+# visFixedPrePattern = Visualization( [ { 'proj': testFixedNumberPre, 'var': 'w', 'min': 0.0, 'max': 1.0, 'title': 'fixed number pre'} ] )
 # visFixedPrePattern.render()
 # 
-# visFixedPostPattern = Visualization( [ { 'proj': testFixedNumberPost, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'fixed number post'} ] )
+# visFixedPostPattern = Visualization( [ { 'proj': testFixedNumberPost, 'var': 'w', 'min': 0.0, 'max': 1.0, 'title': 'fixed number post'} ] )
 # visFixedPostPattern.render()
 # 
-# visTestUserPattern = Visualization( [ { 'proj': testUserPattern, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'user defined pattern'} ] )
+# visTestUserPattern = Visualization( [ { 'proj': testUserPattern, 'var': 'w', 'min': 0.0, 'max': 1.0, 'title': 'user defined pattern'} ] )
 # visTestUserPattern.render()
 # 
-# visTestUserPattern2 = Visualization( [ { 'proj': testUserPattern2, 'var': 'value', 'min': 0.0, 'max': 1.0, 'title': 'user defined pattern2'} ] )
+# visTestUserPattern2 = Visualization( [ { 'proj': testUserPattern2, 'var': 'w', 'min': 0.0, 'max': 1.0, 'title': 'user defined pattern2'} ] )
 # visTestUserPattern2.render()
 #===============================================================================
 

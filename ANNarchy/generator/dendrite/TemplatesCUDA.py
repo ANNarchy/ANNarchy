@@ -1,10 +1,10 @@
 # Template for the computeSum() method of a projection
 #
-# * psp: basic code for the psp (default (*pre_rates_)[rank_[i]] * value_[i];) 
+# * psp: basic code for the psp (default (*pre_rates_)[rank_[i]] * w_[i];) 
 #
 # * psp_const_delay : code when the delay is constant (normally the same as psp)
 #
-# * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * value_[i];) 
+# * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * w_[i];) 
 #
 psp_code_body_cuda = \
 """
@@ -57,7 +57,7 @@ psp_code_body_cuda = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-        gpu_sum = weightedSum(rank_, value_, *pre_rates_);
+        gpu_sum = weightedSum(rank_, w_, *pre_rates_);
     }
     else    // delayed connections
     {
@@ -65,13 +65,13 @@ psp_code_body_cuda = \
         {
             pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRates(delay_[0]);
             
-            gpu_sum = weightedSum(rank_, value_, *pre_rates_);
+            gpu_sum = weightedSum(rank_, w_, *pre_rates_);
         }
         else    // different delays [0..maxDelay]
         {
             std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRates(delay_, rank_);
 
-            gpu_sum = weightedSum(rank_, value_, delayedRates);
+            gpu_sum = weightedSum(rank_, w_, delayedRates);
         }
     }
     

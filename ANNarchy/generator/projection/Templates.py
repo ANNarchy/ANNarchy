@@ -34,8 +34,8 @@ public:
 
     std::vector<int> getRank(int post_rank);
     
-    std::vector<DATA_TYPE> getValue(int post_rank);    
-    void setValue(int post_rank, std::vector<DATA_TYPE> values);
+    std::vector<DATA_TYPE> getW(int post_rank);    
+    void setW(int post_rank, std::vector<DATA_TYPE> values);
     
     std::vector<int> getDelay(int post_rank);
     
@@ -115,14 +115,14 @@ std::vector<int> %(class)s::getRank(int post_rank)
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRank();
 }
 
-std::vector<DATA_TYPE> %(class)s::getValue(int post_rank)
+std::vector<DATA_TYPE> %(class)s::getW(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getValue();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getW();
 }
 
-void %(class)s::setValue(int post_rank, std::vector<DATA_TYPE> values)
+void %(class)s::setW(int post_rank, std::vector<DATA_TYPE> values)
 {
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setValue(values);
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setW(values);
 }
 
 std::vector<int> %(class)s::getDelay(int post_rank)
@@ -132,12 +132,12 @@ std::vector<int> %(class)s::getDelay(int post_rank)
 
 %(access)s
 
-void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay)
+void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
 {
     dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
     
     dendrites_[post_rank]->setRank(rank);
-    dendrites_[post_rank]->setValue(value);
+    dendrites_[post_rank]->setW(w);
     dendrites_[post_rank]->setDelay(delay);    
 }
 """
@@ -178,8 +178,8 @@ public:
 
     std::vector<int> getRank(int post_rank);
     
-    std::vector<DATA_TYPE> getValue(int post_rank);
-    void setValue(int post_rank, std::vector<DATA_TYPE> values);
+    std::vector<DATA_TYPE> getW(int post_rank);
+    void setW(int post_rank, std::vector<DATA_TYPE> values);
     
     std::vector<int> getDelay(int post_rank);
     
@@ -259,14 +259,14 @@ std::vector<int> %(class)s::getRank(int post_rank)
     return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRank();
 }
 
-std::vector<DATA_TYPE> %(class)s::getValue(int post_rank)
+std::vector<DATA_TYPE> %(class)s::getW(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getValue();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getW();
 }
 
-void %(class)s::setValue(int post_rank, std::vector<DATA_TYPE> values)
+void %(class)s::setW(int post_rank, std::vector<DATA_TYPE> values)
 {
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setValue(values);
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setW(values);
 }
 
 std::vector<int> %(class)s::getDelay(int post_rank)
@@ -276,12 +276,12 @@ std::vector<int> %(class)s::getDelay(int post_rank)
 
 %(access)s
 
-void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> value, std::vector<int> delay)
+void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
 {
     dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
     
     dendrites_[post_rank]->setRank(rank);
-    dendrites_[post_rank]->setValue(value);
+    dendrites_[post_rank]->setW(w);
     dendrites_[post_rank]->setDelay(delay);    
 }
 """
@@ -460,13 +460,13 @@ cdef extern from "../build/%(name)s.h":
          
         vector[int] getRank(int post_rank)
 
-        # local variable value
-        vector[float] getValue(int post_rank)
-        void setValue(int post_rank, vector[float] values)
-        void startRecordValue(int post_rank)
-        void stopRecordValue(int post_rank)
-        void clearRecordedValue(int post_rank)
-        vector[vector[float]] getRecordedValue(int post_rank)
+        # local variable w
+        vector[float] getW(int post_rank)
+        void setW(int post_rank, vector[float] values)
+        void startRecordW(int post_rank)
+        void stopRecordW(int post_rank)
+        void clearRecordedW(int post_rank)
+        vector[vector[float]] getRecordedW(int post_rank)
         
         vector[int] getDelay(int post_rank)
         
@@ -495,8 +495,8 @@ cdef class py%(name)s:
     def __cinit__(self, preID, postID, target):
         self.cInstance = new %(name)s(preID, postID, target)
 
-    cpdef add_synapse(self, int post_rank, int pre_rank, float value, int delay):
-        self.cInstance.addSynapse(post_rank, pre_rank, value, delay)
+    cpdef add_synapse(self, int post_rank, int pre_rank, float w, int delay):
+        self.cInstance.addSynapse(post_rank, pre_rank, w, delay)
 
     cpdef remove_synapse(self, int post_rank, int pre_rank):
         self.cInstance.removeSynapse(post_rank, pre_rank)
@@ -505,23 +505,23 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_rank(self, int post_rank):
         return np.array(self.cInstance.getRank(post_rank))
 
-    # Value
-    cpdef np.ndarray _get_value(self, int post_rank):
-        return np.array(self.cInstance.getValue(post_rank))
+    # W
+    cpdef np.ndarray _get_w(self, int post_rank):
+        return np.array(self.cInstance.getW(post_rank))
 
-    cpdef _set_value(self, int post_rank, np.ndarray value ):
-        self.cInstance.setValue(post_rank, value)
+    cpdef _set_w(self, int post_rank, np.ndarray value ):
+        self.cInstance.setW(post_rank, value)
 
-    def _start_record_value(self, int post_rank):
-        self.cInstance.startRecordValue(post_rank)
+    def _start_record_w(self, int post_rank):
+        self.cInstance.startRecordW(post_rank)
 
-    def _stop_record_value(self, int post_rank):
-        self.cInstance.stopRecordValue(post_rank)
+    def _stop_record_w(self, int post_rank):
+        self.cInstance.stopRecordW(post_rank)
 
-    cpdef np.ndarray _get_recorded_value(self, int post_rank):
+    cpdef np.ndarray _get_recorded_w(self, int post_rank):
         cdef np.ndarray tmp
-        tmp = np.array(self.cInstance.getRecordedValue(post_rank))
-        self.cInstance.clearRecordedValue(post_rank)
+        tmp = np.array(self.cInstance.getRecordedW(post_rank))
+        self.cInstance.clearRecordedW(post_rank)
         return tmp
 
     # Delay (read-only)
@@ -608,13 +608,13 @@ cdef extern from "../build/%(name)s.h":
          
         vector[int] getRank(int post_rank)
 
-        # local variable value
-        vector[float] getValue(int post_rank)
-        void setValue(int post_rank, vector[float] values)
-        void startRecordValue(int post_rank)
-        void stopRecordValue(int post_rank)
-        void clearRecordedValue(int post_rank)
-        vector[vector[float]] getRecordedValue(int post_rank)
+        # local variable w
+        vector[float] getW(int post_rank)
+        void setW(int post_rank, vector[float] values)
+        void startRecordW(int post_rank)
+        void stopRecordW(int post_rank)
+        void clearRecordedW(int post_rank)
+        vector[vector[float]] getRecordedW(int post_rank)
         
         vector[int] getDelay(int post_rank)
         
@@ -643,8 +643,8 @@ cdef class py%(name)s:
     def __cinit__(self, preID, postID, target):
         self.cInstance = new %(name)s(preID, postID, target)
 
-    cpdef add_synapse(self, int post_rank, int pre_rank, float value, int delay):
-        self.cInstance.addSynapse(post_rank, pre_rank, value, delay)
+    cpdef add_synapse(self, int post_rank, int pre_rank, float w, int delay):
+        self.cInstance.addSynapse(post_rank, pre_rank, w, delay)
 
     cpdef remove_synapse(self, int post_rank, int pre_rank):
         self.cInstance.removeSynapse(post_rank, pre_rank)
@@ -653,23 +653,23 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_rank(self, int post_rank):
         return np.array(self.cInstance.getRank(post_rank))
 
-    # Value
-    cpdef np.ndarray _get_value(self, int post_rank):
-        return np.array(self.cInstance.getValue(post_rank))
+    # w
+    cpdef np.ndarray _get_w(self, int post_rank):
+        return np.array(self.cInstance.getW(post_rank))
 
-    cpdef _set_value(self, int post_rank, np.ndarray value ):
-        self.cInstance.setValue(post_rank, value)
+    cpdef _set_w(self, int post_rank, np.ndarray value ):
+        self.cInstance.setW(post_rank, value)
 
-    def _start_record_value(self, int post_rank):
-        self.cInstance.startRecordValue(post_rank)
+    def _start_record_w(self, int post_rank):
+        self.cInstance.startRecordW(post_rank)
 
-    def _stop_record_value(self, int post_rank):
-        self.cInstance.stopRecordValue(post_rank)
+    def _stop_record_w(self, int post_rank):
+        self.cInstance.stopRecordW(post_rank)
 
-    cpdef np.ndarray _get_recorded_value(self, int post_rank):
+    cpdef np.ndarray _get_recorded_w(self, int post_rank):
         cdef np.ndarray tmp
-        tmp = np.array(self.cInstance.getRecordedValue(post_rank))
-        self.cInstance.clearRecordedValue(post_rank)
+        tmp = np.array(self.cInstance.getRecordedW(post_rank))
+        self.cInstance.clearRecordedW(post_rank)
         return tmp
 
     # Delay (read-only)
@@ -828,7 +828,7 @@ add_synapse_body = """
     }
 
     rank_.push_back(rank);
-    value_.push_back(value);
+    w_.push_back(w);
     
     if( delay > 0 )
     {
@@ -856,7 +856,7 @@ add_synapse_body = """
 # 
 # Depends on:
 # 
-#     * rem_synapse : erase of local variables, except value, delay, rank
+#     * rem_synapse : erase of local variables, except w, delay, rank
 rem_synapse_body = """
 #ifdef _DEBUG
     std::cout << "suppress synapse - pre = " << rank << std::endl;
@@ -871,7 +871,7 @@ rem_synapse_body = """
         #endif
         
            rank_.erase(rank_.begin()+i);
-           value_.erase(value_.begin()+i);
+           w_.erase(w_.begin()+i);
 
            if (delay_.size() > 1)
                delay_.erase(delay_.begin()+i);
@@ -888,7 +888,7 @@ rem_synapse_body = """
 
 rem_all_synapse_body = """
     rank_.clear();
-    value_.clear();
+    w_.clear();
     delay_.clear();
     
     nbSynapses_ = 0;

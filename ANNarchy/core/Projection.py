@@ -83,7 +83,7 @@ class Projection(object):
             if isinstance(self.pre.neuron_type, RateNeuron):
                 self.synapse_type = RateSynapse(parameters = "", equations = "")
             else:
-                self.synapse_type = SpikeSynapse(parameters = "", equations = "", pre_spike="g_target += value", post_spike="")
+                self.synapse_type = SpikeSynapse(parameters = "", equations = "", pre_spike="g_target += w", post_spike="")
         else:
             self.synapse_type = synapse
 
@@ -124,7 +124,7 @@ class Projection(object):
         
         # Allow recording of variables
         self._recorded_variables = {}  
-        self._recordable_variables = list(set(self.variables + ['value']))
+        self._recordable_variables = list(set(self.variables + ['w']))
 
         # Finalize initialization
         self.initialized = False
@@ -336,21 +336,21 @@ class Projection(object):
         
         If the variable ``rate`` is defined in the Synapse description through:
         
-            value = pre.rate * post.rate : max=1.0  
+            w = pre.rate * post.rate : max=1.0  
             
         one can change its maximum value with:
         
-            proj.set_variable_flags('value', {'max': 2.0})
+            proj.set_variable_flags('w', {'max': 2.0})
             
         For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
         
         For positional flags (postsynaptic, implicit), the value in the dictionary must be set to the empty string '':
         
-            proj.set_variable_flags('value', {'implicit': ''})
+            proj.set_variable_flags('w', {'implicit': ''})
         
         A None value in the dictionary deletes the corresponding flag:
         
-            proj.set_variable_flags('value', {'max': None})
+            proj.set_variable_flags('w', {'max': None})
             
         """
         rk_var = self._find_variable_index(name)
@@ -382,13 +382,13 @@ class Projection(object):
     def set_variable_equation(self, name, equation):
         """ Changes the equation of a variable for the projection.
         
-        If the variable ``value`` is defined in the Synapse description through:
+        If the variable ``w`` is defined in the Synapse description through:
         
-            eta * dvalue/dt = pre.rate * post.rate 
+            eta * dw/dt = pre.rate * post.rate 
             
         one can change the equation with:
         
-            proj.set_variable_equation('value', 'eta * dvalue/dt = pre.rate * (post.rate - 0.1) ')
+            proj.set_variable_equation('w', 'eta * dw/dt = pre.rate * (post.rate - 0.1) ')
             
         Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
         
@@ -623,7 +623,7 @@ class Projection(object):
     def save_connectivity_as_csv(self):
         """
         Save the projection pattern as csv format. 
-        Please note, that only the pure connectivity data pre_rank, post_rank, value and delay are stored.
+        Please note, that only the pure connectivity data pre_rank, post_rank, w and delay are stored.
         """
         filename = self.pre.name + '_' + self.post.name + '_' + self.target+'.csv'
         
@@ -631,14 +631,14 @@ class Projection(object):
             
             for dendrite in self.dendrites:
                 rank_iter = iter(dendrite.rank)
-                value_iter = iter(dendrite.value)
+                w_iter = iter(dendrite.w)
                 delay_iter = iter(dendrite.delay)
                 post_rank = dendrite.post_rank
 
                 for i in xrange(dendrite.size()):
                     w_file.write(str(next(rank_iter))+', '+
                                  str(post_rank)+', '+
-                                 str(next(value_iter))+', '+
+                                 str(next(w_iter))+', '+
                                  str(next(delay_iter))+'\n'
                                  )
       
@@ -718,7 +718,7 @@ class Projection(object):
 
         return dendrites
 
-    def receptive_fields(self, variable = 'value', in_post_geometry = True):
+    def receptive_fields(self, variable = 'w', in_post_geometry = True):
         """ 
         Gathers all receptive fields within this projection.
         

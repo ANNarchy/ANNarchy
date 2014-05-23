@@ -8,7 +8,6 @@ py_extension = """include "Network.pyx"
 %(proj_inc)s  
 
 %(profile)s
-include "Connector.pyx"
 """
 
 core = [

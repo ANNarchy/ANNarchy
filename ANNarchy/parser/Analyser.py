@@ -576,7 +576,7 @@ def analyse_projection(proj):
         if proj.synapse_type.pre_spike:
             description['raw_pre_spike'] = proj.synapse_type.pre_spike
         else: # pre_spike not defined, but other fields yes
-            description['raw_pre_spike'] = "g_target += value"
+            description['raw_pre_spike'] = "g_target += w"
         description['raw_post_spike'] = proj.synapse_type.post_spike
 
     if proj.synapse_type.psp:
@@ -600,15 +600,15 @@ def analyse_projection(proj):
                   ]
     
     # if no synapse was set during creation of the projection
-    # the variable value is not attached to the set of variables
+    # the variable w is not attached to the set of variables
     found = False
     for var in variables+parameters:
-        if var['name'] == "value":
+        if var['name'] == "w":
             found = True
     
-    # value is not declared so far, so we simply add a parameter
+    # w is not declared so far, so we simply add a parameter
     if not found:
-        parameters += [ { 'name': 'value', 'init': 0, 'ctype': 'DATA_TYPE', 'flags': [] } ]
+        parameters += [ { 'name': 'w', 'init': 0, 'ctype': 'DATA_TYPE', 'flags': [] } ]
         
     # Add this info to the description
     description['parameters'] = parameters

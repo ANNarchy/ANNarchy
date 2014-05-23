@@ -30,7 +30,7 @@ class RateSynapse(object):
     
     def __init__(self, parameters="", equations="", psp=None, extra_values=None, functions=None):
         """ The user describes the initialization of variables / parameters as *key-value pairs* 'variable'='value'. 
-        Synapse variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialzation value'.
+        Synapse variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialization value'.
         
         *Parameters*:
         

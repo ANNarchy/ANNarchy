@@ -44,8 +44,8 @@ Dendrite::~Dendrite()
 
     if(!rank_.empty())
         rank_.erase(rank_.begin(), rank_.end());
-    if(!value_.empty())
-        value_.erase(value_.begin(), value_.end());
+    if(!w_.empty())
+        w_.erase(w_.begin(), w_.end());
     if(!delay_.empty())
         delay_.erase(delay_.begin(), delay_.end());
 
@@ -100,26 +100,26 @@ void Dendrite::setRank(std::vector<int> rank)
 	}
 }
 
-std::vector<DATA_TYPE> Dendrite::getValue()
+std::vector<DATA_TYPE> Dendrite::getW()
 {
 #ifdef _DEBUG_DENDRITE_DATA
-	std::cout << "Dendrite::getValue (ptr = "<< this << ")"<< std::endl;
-	for (auto it = value_.begin(); it != value_.end(); it++)
+	std::cout << "Dendrite::getW (ptr = "<< this << ")"<< std::endl;
+	for (auto it = w_.begin(); it != w_.end(); it++)
 		std::cout << *it << " ";
 	std::cout << std::endl;
 #endif
-	return value_;
+	return w_;
 }
 
-void Dendrite::setValue(std::vector<DATA_TYPE> value)
+void Dendrite::setW(std::vector<DATA_TYPE> value)
 {
 #ifdef _DEBUG_DENDRITE_DATA
-	std::cout << "Dendrite::setValue (ptr = "<< this << ")"<< std::endl;
+	std::cout << "Dendrite::setW (ptr = "<< this << ")"<< std::endl;
 	for (auto it = value.begin(); it != value.end(); it++)
 		std::cout << *it << " ";
 	std::cout << std::endl;
 #endif
-	value_ = value;
+	w_ = value;
 }
 
 

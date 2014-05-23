@@ -112,7 +112,7 @@ class Dendrite(object):
             
                 .. code-block:: python
                 
-                    set( 'tau' : 20, 'value'= np.random.rand(8,8) } )
+                    set( 'tau' : 20, 'w'= np.random.rand(8,8) } )
         """
         for val_key in value.keys():
             if hasattr(self.proj.cy_instance, val_key):
@@ -140,13 +140,13 @@ class Dendrite(object):
             Global._error("Dendrite has no parameter/variable called", value)     
     
     
-    def receptive_field(self, variable = 'value'):
+    def receptive_field(self, variable = 'w'):
         """
         Get the variable data as receptive field.
         
         Parameter:
         
-        * *variable*: name of the variable (default = 'value')
+        * *variable*: name of the variable (default = 'w')
         """
         values = getattr(self.proj.cyInstance, '_get_'+variable)(self.post_rank)
         ranks = self.proj.cyInstance._get_rank( self.post_rank )
@@ -186,17 +186,17 @@ class Dendrite(object):
     #########################
     ### Structural plasticity
     ######################### 
-    def add_synapse(self, rank, value, delay=0):
+    def add_synapse(self, rank, w, delay=0):
         """
         Adds a synapse to the dendrite.
         
         Parameters:
         
             * *rank*:     rank of the presynaptic neuron
-            * *value*:    synaptic weight
+            * *w*:    synaptic weight
             * *delay*:    additional delay of the synapse (as default a delay of 1ms is assumed)
         """
-        self.proj.cyInstance.add_synapse(self.post_rank, rank, value, delay)
+        self.proj.cyInstance.add_synapse(self.post_rank, rank, w, delay)
     
     def remove_synapse(self, rank):
         """

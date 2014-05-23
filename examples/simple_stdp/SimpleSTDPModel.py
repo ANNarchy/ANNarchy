@@ -55,13 +55,13 @@ STDP = SpikeSynapse(
         tau_post * dApost/dt = -Apost : init=0.0
     """,
     pre_spike="""
-        g_target += value
+        g_target += w
         Apre += cApre * wmax
-        value = clip(value + Apost, 0.0 , wmax)
+        w = clip(w + Apost, 0.0 , wmax)
     """,                  
     post_spike="""
         Apost += cApost * wmax
-        value = clip(value + Apre, 0.0 , wmax)
+        w = clip(w + Apre, 0.0 , wmax)
     """
 )
 

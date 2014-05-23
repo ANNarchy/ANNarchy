@@ -28,7 +28,7 @@ from sympy.parsing.sympy_parser import parse_expr, standard_transformations, con
 
 
 # Predefined symbols which must not be declared by the user, but used in the equations
-_predefined = ['weight', 'value']
+_predefined = ['weight', 'w']
 
 class Equation(object):
     '''
@@ -70,8 +70,8 @@ class Equation(object):
         self.local_dict = {
             'dt' : Symbol('dt_'),
             't' : Symbol('ANNarchy_Global::time'),
-            'weight' : Symbol('value_' + index), 
-            'value' : Symbol('value_'+index), 
+            'weight' : Symbol('w_' + index), 
+            'w' : Symbol('w_'+index), 
             't_pre': Symbol('pre_population_->getLastSpikeTime(rank_'+index+')'),
             't_post': Symbol('post_population_->getLastSpikeTime(post_neuron_rank_)'),
             'pos': Function('positive'),
@@ -367,7 +367,7 @@ class Equation(object):
         return code
     
     def analyse_return(self, expression):
-        " Analyzes a return statement (e.g. value * pre.rate)."
+        " Analyzes a return statement (e.g. w * pre.rate)."
                 
         # Parse the string
         analysed = self.parse_expression(expression,

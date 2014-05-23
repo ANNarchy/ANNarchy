@@ -61,7 +61,7 @@ class ProjectionGenerator(object):
         Notes:
             * depend only on locality.
             * rank, delay access is already implemented in base class
-            * values are partly predefined
+            * w is partly predefined
             * the definition of the function is implemented in the body 
         """
         members_header = ""
@@ -73,7 +73,7 @@ class ProjectionGenerator(object):
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
             
-            if param['name'] == "value":
+            if param['name'] == "w":
                 func = """
     std::vector< std::vector< %(type)s > >getRecorded%(Name)s(int post_rank);                    
     void startRecord%(Name)s(int post_rank);
@@ -116,7 +116,7 @@ class ProjectionGenerator(object):
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
             
-            if param['name'] == "value":
+            if param['name'] == "w":
                 func = """
 std::vector< std::vector< %(type)s > > %(class)s::getRecorded%(Name)s(int post_rank) 
 { 
@@ -168,7 +168,7 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
         code = ""
         
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "value":
+            if param['name'] == "w":
                 continue
             
             if param['name'] in self.desc['local']: # local attribute
@@ -193,7 +193,7 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
         code = ""        
          
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "value":
+            if param['name'] == "w":
                 continue
             
             if param['name'] in self.desc['local']: # local attribute

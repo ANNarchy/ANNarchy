@@ -277,8 +277,8 @@ def _net_description(variables, connections):
                 dendrite_desc['post_rank'] = d
                 # Attributes
                 attributes = proj.attributes
-                if not 'value' in attributes:
-                    attributes.append('value')
+                if not 'w' in attributes:
+                    attributes.append('w')
                 if not 'rank' in attributes:
                     attributes.append('rank')
                 if not 'delay' in attributes:

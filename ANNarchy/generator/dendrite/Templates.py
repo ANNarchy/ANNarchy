@@ -36,7 +36,7 @@ public:
     
     int getSynapseCount() { return nbSynapses_; }
     
-    int addSynapse(int rank, DATA_TYPE value, int delay);
+    int addSynapse(int rank, DATA_TYPE w, int delay);
 
     int removeSynapse(int rank);
     
@@ -105,7 +105,7 @@ public:
 
     int getSynapseCount() { return nbSynapses_; }
 
-    int addSynapse(int rank, DATA_TYPE value, int delay);
+    int addSynapse(int rank, DATA_TYPE w, int delay);
 
     int removeSynapse(int rank);
     
@@ -217,7 +217,7 @@ using namespace ANNarchy_Global;
 %(destructor)s
 }
 
-int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
+int %(class)s::addSynapse(int rank, DATA_TYPE w, int delay)
 {
 %(add_synapse_body)s
 }
@@ -235,7 +235,7 @@ int %(class)s::removeAllSynapses()
 void %(class)s::initValues() 
 {
     // Recording of weights disabled by default
-    record_value_ = false;
+    record_w_ = false;
 %(init)s
 }
 
@@ -319,7 +319,7 @@ using namespace ANNarchy_Global;
 %(destructor)s
 }
 
-int %(class)s::addSynapse(int rank, DATA_TYPE value, int delay)
+int %(class)s::addSynapse(int rank, DATA_TYPE w, int delay)
 {
 %(add_synapse_body)s
 }
@@ -427,7 +427,7 @@ add_synapse_body = """
     }
 
     rank_.push_back(rank);
-    value_.push_back(value);
+    w_.push_back(w);
     
     if( delay > 0 )
     {
@@ -470,7 +470,7 @@ rem_synapse_body = """
         #endif
         
            rank_.erase(rank_.begin()+i);
-           value_.erase(value_.begin()+i);
+           w_.erase(w_.begin()+i);
 
            if (delay_.size() > 1)
                delay_.erase(delay_.begin()+i);
@@ -487,7 +487,7 @@ rem_synapse_body = """
 
 rem_all_synapse_body = """
     rank_.clear();
-    value_.clear();
+    w_.clear();
     delay_.clear();
     
     nbSynapses_ = 0;

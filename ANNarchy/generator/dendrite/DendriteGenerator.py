@@ -68,7 +68,7 @@ class DendriteGenerator(object):
         
         Notes:            
             * depend only on locality
-            * value should not be defined twice.
+            * w should not be defined twice.
         """
         members = ""
         
@@ -76,9 +76,9 @@ class DendriteGenerator(object):
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
 
-            if param['name'] == 'value': # the vector is already declared
+            if param['name'] == 'w': # the vector is already declared
                 members += """
-    // value_ : local
+    // w_ : local
     bool record_%(name)s_; 
     std::vector< std::vector<%(type)s> > recorded_%(name)s_;    
 """ % {'name' : param['name'], 'type': param['ctype']}
@@ -114,7 +114,7 @@ class DendriteGenerator(object):
             if param['name'] in ['rank', 'delay', 'psp']: # Already declared
                 continue
             
-            if param['name'] == "value":
+            if param['name'] == "w":
                 func = """
     std::vector< std::vector< %(type)s > > getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
     void startRecord%(Name)s() { this->record_%(name)s_ = true; }
@@ -141,7 +141,7 @@ class DendriteGenerator(object):
         constructor = ""
         # Attributes
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "value":
+            if param['name'] == "w":
                 continue
             elif param['name'] in self.desc['local']: # local attribute
                 ctype = param['ctype']
@@ -205,7 +205,7 @@ class DendriteGenerator(object):
         global_template = Templates.global_wrapper_pyx
         
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "value":
+            if param['name'] == "w":
                 continue
             
             if param['name'] in self.desc['local']: # local attribute
@@ -233,7 +233,7 @@ class DendriteGenerator(object):
         global_template = Templates.global_property_pyx
          
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "value":
+            if param['name'] == "w":
                 continue
             
             if param['name'] in self.desc['local']: # local attribute
@@ -273,12 +273,12 @@ class DendriteGenerator(object):
         
         Notes:
             * the implemented template is only extended by local variables / parameters
-            * value and delay are skipped.
+            * w and delay are skipped.
         """
         code = ""
         
         for var in self.desc['variables'] + self.desc['parameters']:
-            if var['name'] == 'value' or var['name'] == 'delay':
+            if var['name'] == 'w' or var['name'] == 'delay':
                 continue
 
             if var['name'] in self.desc['local']:
@@ -292,12 +292,12 @@ class DendriteGenerator(object):
         
         Notes:
             * the implemented template is only extended by local variables / parameters
-            * value and delay are skipped.
+            * w and delay are skipped.
         """
         code = ""
         
         for var in self.desc['variables'] + self.desc['parameters']:
-            if var['name'] == 'value'or var['name'] == 'delay':
+            if var['name'] == 'w'or var['name'] == 'delay':
                 continue
 
             if var['name'] in self.desc['local']:
@@ -311,12 +311,12 @@ class DendriteGenerator(object):
         
         Notes:
             * the implemented template is only extended by local variables / parameters
-            * value and delay are skipped.
+            * w and delay are skipped.
         """
         code = ""
         
         for var in self.desc['variables'] + self.desc['parameters']:
-            if var['name'] == 'value'or var['name'] == 'delay':
+            if var['name'] == 'w'or var['name'] == 'delay':
                 continue
 
             if var['name'] in self.desc['local']:

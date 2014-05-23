@@ -1,10 +1,10 @@
 # Template for the computeSum() method of a projection
 #
-# * psp: basic code for the psp (default (*pre_rates_)[rank_[i]] * value_[i];) 
+# * psp: basic code for the psp (default (*pre_rates_)[rank_[i]] * w_[i];) 
 #
 # * psp_const_delay : code when the delay is constant (normally the same as psp)
 #
-# * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * value_[i];) 
+# * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * w_[i];) 
 #
 psp_code_body_omp = \
 """

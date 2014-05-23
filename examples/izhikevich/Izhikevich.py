@@ -79,14 +79,14 @@ if __name__ == '__main__':
 
     # Simulate 1s   
     print 'Starting simulation' 
-    from datetime import datetime
-    t_start = datetime.now()
+    from time import time
+    t_start = time()
     simulate(1000.0)
-    print 'Done in :', datetime.now() - t_start
+    print 'Done in :', time() - t_start
 
     # Retrieve the spike timings
-    spikes_exc = Excitatory.raster_plot()
-    spikes_inh = Inhibitory.raster_plot()
+    spikes_exc = raster_plot(Excitatory.get_record('spike'))
+    spikes_inh = raster_plot(Inhibitory.get_record('spike'))
     spikes = np.concatenate((spikes_exc, spikes_inh + [0, 800]), axis=0)
 
     # Plot the results

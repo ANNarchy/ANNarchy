@@ -46,7 +46,6 @@ parameters="""
     tau_post = 5 : postsynaptic
     cApre = 1 : postsynaptic
     cApost = -1 : postsynaptic
-    value = 0.0
 """,
 equations = """
     tau_pre * dApre/dt = -Apre
@@ -54,12 +53,12 @@ equations = """
 """,
 pre_spike="""
     Apre = Apre + cApre
-    g_target += value
-    value = value + Apost
+    g_target += w
+    w = w + Apost
 """,                  
 post_spike="""
     Apost = Apost + cApost
-    value = value + Apre
+    w = w + Apre
 """      
 )
 
@@ -84,14 +83,14 @@ start_record ( to_record )
 
 testAll2AllSpike.dendrite(0).start_record('Apre')
 testAll2AllSpike.dendrite(0).start_record('Apost')
-testAll2AllSpike.dendrite(0).start_record('value')
+testAll2AllSpike.dendrite(0).start_record('w')
 
 simulate(1000)
 
 data = get_record( to_record )
 Apre = testAll2AllSpike.dendrite(0).get_record('Apre')
 Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
-weight = testAll2AllSpike.dendrite(0).get_record('value')
+weight = testAll2AllSpike.dendrite(0).get_record('w')
 
 
 close('all')
@@ -165,10 +164,10 @@ for i in range(Middle.size):
     ax.legend(loc=2)    
 
     #
-    # value    
+    # w    
     ax = subplot(818)
     for j in range(Small.size):
-        ax.plot( weight['data'][j,:], label = "value ("+str(pre_ranks[j])+")", color=neur_col[j])
+        ax.plot( weight['data'][j,:], label = "w ("+str(pre_ranks[j])+")", color=neur_col[j])
     ax.legend(loc=2)    
  
 for i in range(Middle.size):

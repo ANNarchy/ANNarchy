@@ -33,14 +33,7 @@ _populations = []       # created populations
 _projections = []       # created projections
 _functions = []         # created functions
 
-# Predefined variables / parameters
-_pre_def_synapse = ['value', 'rank', 'delay', 'psp']
-_pre_def_synapse_var = ['value', 'rank', 'delay', 'psp']
-_pre_def_synapse_par = []
-
-_pre_def_neuron = ['rank', 'rate']
-
-# Aditional instances
+# Additional instances
 _cy_instance = None
 _visualizer = None
 

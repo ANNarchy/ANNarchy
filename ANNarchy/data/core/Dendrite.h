@@ -59,10 +59,10 @@ public:
      * 	\brief		add a synapse to this dendrite
      * 	\details	is abstract, cause the behavior is implemented by the child class.
      * 	\param[in]	rank	presynaptic rank
-     * 	\param[in]	value	synaptic weight
+     * 	\param[in]	w    	synaptic weight
      * 	\param[in]	delay	synaptic delay
      */
-	virtual int addSynapse(int rank, DATA_TYPE value, int delay) = 0;
+	virtual int addSynapse(int rank, DATA_TYPE w, int delay) = 0;
 
     /**
      * 	\brief		removes a synapse from this dendrite
@@ -138,16 +138,16 @@ public:
 	/**
 	 * 	\brief		get synaptic weights
 	 */
-	std::vector<DATA_TYPE> getValue();
+	std::vector<DATA_TYPE> getW();
 
 	/**
 	 * 	\brief		set synaptic weights
 	 */
-	void setValue(std::vector<DATA_TYPE> value);
+	void setW(std::vector<DATA_TYPE> value);
 
-    DATA_TYPE getSingleValue(int rank) { return this->value_[rank]; }
+    DATA_TYPE getSingleW(int rank) { return this->w_[rank]; }
 
-    void setSingleValue(int rank, DATA_TYPE value) { this->value_[rank] = value; }
+    void setSingleW(int rank, DATA_TYPE value) { this->w_[rank] = value; }
 
     /**
      * 	\brief		return if the projection is between rate coded or spike coded populations
@@ -209,7 +209,7 @@ protected:
     bool constDelay_;	///< true: a delay != 0 and common to all synapses
     int maxDelay_;	///< maximum delay value in this dendrite
 
-    std::vector<DATA_TYPE> value_;	///< synaptic weights
+    std::vector<DATA_TYPE> w_;	///< synaptic weights
 
     int learnFrequency_; 	///< the learn frequency determines after which amount of steps the next learn will executed.
     int learnOffset_;	///< the learn offset determines the time step within the learn frequency window, where learning will be executed.

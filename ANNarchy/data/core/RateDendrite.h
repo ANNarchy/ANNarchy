@@ -37,7 +37,7 @@ public:
 
 	virtual int getSynapseCount() = 0;
 
-	virtual int addSynapse(int rank, DATA_TYPE value, int delay) = 0;
+	virtual int addSynapse(int rank, DATA_TYPE w, int delay) = 0;
 
     virtual int removeSynapse(int rank) = 0;
 

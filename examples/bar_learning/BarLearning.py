@@ -27,10 +27,10 @@ Oja = RateSynapse(
     parameters=""" 
         tau = 2000.0 : postsynaptic
         alpha = 8.0 : postsynaptic
-        min_value = 0.0 : postsynaptic
+        min_w = 0.0 : postsynaptic
     """,
     equations="""
-        tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=min_value
+        tau * dw/dt = pre.rate * post.rate - alpha * post.rate^2 * w : min=min_w
     """
 )  
 
@@ -46,7 +46,7 @@ Input_Feature = Projection(
     target='exc', 
     synapse = Oja    
 ).connect_all_to_all( weights = Uniform(-0.5, 0.5) )
-Input_Feature.min_value = -10.0
+Input_Feature.min_w = -10.0
                      
 Feature_Feature = Projection(
     pre=Feature, 

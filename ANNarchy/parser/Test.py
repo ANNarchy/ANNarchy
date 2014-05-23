@@ -22,10 +22,10 @@ Oja = RateSynapse(
     """,
     equations = """
         tau * dalpha/dt + alpha = pos(post.rate - 1.0) : postsynaptic
-        eta * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=0.0
+        eta * dw/dt = pre.rate * post.rate - alpha * post.rate^2 * w : min=0.0
     """,
     psp = """
-        value * pre.rate
+        w * pre.rate
     """
 ) 
 

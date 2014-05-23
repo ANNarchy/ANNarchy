@@ -107,7 +107,7 @@ class RateDendriteGenerator(DendriteGenerator):
         if 'psp' in self.desc.keys():
             psp_code = self.desc['psp']['cpp']
         else:
-            psp_code = '(*pre_rates_)[rank_[i]] * value_[i];'
+            psp_code = '(*pre_rates_)[rank_[i]] * w_[i];'
 
         # Generate the code
         dictionary = {

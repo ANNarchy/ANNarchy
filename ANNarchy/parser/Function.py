@@ -29,7 +29,7 @@ from sympy.parsing.sympy_parser import parse_expr, standard_transformations, con
 
 
 # Predefined symbols which must not be declared by the user, but used in the equations
-_predefined = ['weight', 'value']
+_predefined = ['weight', 'w']
 
 class FunctionParser(object):
     '''

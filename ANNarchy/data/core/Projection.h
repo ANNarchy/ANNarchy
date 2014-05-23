@@ -39,13 +39,13 @@ public:
 
     virtual void addDendrite(int postNeuronRank, class Dendrite *dendrite) = 0;
 
-    virtual void addDendrite(int postNeuronRank, std::vector<int> ranks, std::vector<DATA_TYPE> values, std::vector<int> delays) = 0;
+    virtual void addDendrite(int postNeuronRank, std::vector<int> ranks, std::vector<DATA_TYPE> ws, std::vector<int> delays) = 0;
 
     virtual class Dendrite* getDendrite(int postNeuronRank) = 0;
 
     virtual void removeDendrite(int postNeuronRank, class Population *pre) = 0;
 
-	void addSynapse(int post, int pre, double value, int delay);
+	void addSynapse(int post, int pre, double w, int delay);
 
 	void removeSynapse(int post, int pre);
 
