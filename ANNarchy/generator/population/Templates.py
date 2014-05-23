@@ -109,7 +109,9 @@ public:
     
     void record();
 
-    void propagateSpike();
+    void propagatePreSpike();
+    
+    void propagatePostSpike();
     
     void reset();    // called by global_operations
 
@@ -361,8 +363,6 @@ void %(class)s::globalMetaStep()
 void %(class)s::globalOperations() 
 {
     reset();
-    
-    propagateSpike();
 
 %(global_ops)s
 }
@@ -376,35 +376,40 @@ void %(class)s::record()
     }
 }
 
-void %(class)s::propagateSpike() 
+void %(class)s::propagatePostSpike() 
 {
-
     if (!propagate_.empty())
     {
-        for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
-        {
-            // emit a postsynaptic spike on outgoing projections
-            for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
-            {
-                static_cast<SpikeDendrite*>(*p_it)->preEvent(*n_it);
-            }
-            
-        }
-        
         // emit a postsynaptic spike on receiving projections
         for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
         {
             static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
             
         }
-        
+    }
+}
+
+void %(class)s::propagatePreSpike() 
+{
+    if (!propagate_.empty())
+    {
+        for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
+        {
+            // emit a presynaptic spike on outgoing projections
+            for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
+            {
+                static_cast<SpikeDendrite*>(*p_it)->preEvent(*n_it);
+            }
+            
+        }
+    
+        // spike handling is completed
         propagate_.erase(propagate_.begin(), propagate_.end());
     }
 }
 
 void %(class)s::reset() 
 {
-
     if (!reset_.empty())
     {
         for (auto it = reset_.begin(); it != reset_.end(); it++)
