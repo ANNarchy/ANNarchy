@@ -15,3 +15,4 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/AccessingVariables.rst
     manual/Connector.rst
     manual/Simulation.rst
+    manual/Plasticity.rst

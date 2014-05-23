@@ -36,13 +36,14 @@ Added
 
     - new connection patterns - fixed_number_pre, fixed_number_post, connection_from_list
     - learning of projections can be disabled / enabled during simulation
-    - structural plasticity for spike coded neurons
+    - structural plasticity for spiking neurons
 
 Changed
 ----------------------------------------------
 
     - interface for connection patterns
     - calling of connection patterns
+    - structure of matlab files
 
 Removed
 ----------------------------------------------
