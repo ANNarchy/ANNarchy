@@ -1,186 +1,123 @@
 #
 #   ANNarchy - SimpleSTDP
 #
-#   A simple model showing the STDP learning on small amount of neurons
+#   A simple model showing the STDP learning on a single neuron.
+# 
+#   Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
+#
+#   Code adapted from the Brian example: https://brian2.readthedocs.org/en/latest/examples/synapses_STDP.html
 #
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
+from ANNarchy.extensions.poisson import PoissonPopulation
 
-from pylab import show, figure, subplot, legend, close
+# Parameters
+dt = 1.0 # Time step
+F = 15.0 # Poisson distribution at 15 Hz
+N = 1000 # 1000 Poisson inputs
+gmax = 0.01 # Maximum weight
+duration = 100000.0 # Simulation for 100 seconds
 
-Izhikevitch = SpikeNeuron(
-parameters="""
-    noise_scale = 0.0 : population
-    a = 0.02 : population
-    b = 0.2 : population
-    c = -65.0 : population
-    d = 2.0 : population
-    tau = 10.0 : population
-""",
-equations="""
-    noise = Normal(0.0,1.0)
-    I = g_exc + noise * noise_scale : init = 0.0
-    tau * dg_exc / dt = -g_exc
-    dv/dt = 0.04 * v * v + 5*v + 140 -u + I : init = -65.0
-    du/dt = a * (b*v - u) : init = 0.2
-""",
-spike = """
-    v >= 30.0
-""",
-reset = """
-    v = c
-    u = u+d
-""",
-refractory = 5
-)
+setup(dt=dt, float_prec = 'double')
 
-Simple =SpikeSynapse(
-pre_spike="""
-    g_target += 1.0
-"""              
+IF = SpikeNeuron(
+    parameters = """
+        tau_m = 10.0 : population
+        tau_e = 5.0 : population
+        vt = -54.0 : population
+        vr = -60.0 : population
+        El = -74.0 : population
+        Ee = 0.0 : population
+    """,
+    equations = """
+        tau_m * dv/dt = El - v + g_exc * (Ee - vr) : init = -60.0
+        tau_e * dg_exc/dt = -g_exc 
+    """,
+    spike = """
+        v > vt
+    """,
+    reset = """
+        v = vr
+    """
 )
  
-SimpleLearn=SpikeSynapse(
-parameters="""
-    tau_pre = 5 : postsynaptic
-    tau_post = 5 : postsynaptic
-    cApre = 1 : postsynaptic
-    cApost = -1 : postsynaptic
-    value = 0.0
-""",
-equations = """
-    tau_pre * dApre/dt = -Apre
-    tau_post * dApost/dt = -Apost
-""",
-pre_spike="""
-    Apre = Apre + cApre
-    g_target += value
-    value = value + Apost
-""",                  
-post_spike="""
-    Apost = Apost + cApost
-    value = value + Apre
-"""      
+STDP = SpikeSynapse(
+    parameters="""
+        tau_pre = 20.0 : postsynaptic
+        tau_post = 20.0 : postsynaptic
+        cApre = 0.01 : postsynaptic
+        cApost = -0.0105 : postsynaptic
+        wmax = 0.01 : postsynaptic
+    """,
+    equations = """
+        tau_pre * dApre/dt = -Apre : init=0.0
+        tau_post * dApost/dt = -Apost : init=0.0
+    """,
+    pre_spike="""
+        g_target += value
+        Apre += cApre * wmax
+        value = clip(value + Apost, 0.0 , wmax)
+    """,                  
+    post_spike="""
+        Apost += cApost * wmax
+        value = clip(value + Apre, 0.0 , wmax)
+    """
 )
 
-Small = Population(3, Izhikevitch)
-Small.noise_scale = 5.0
-Middle = Population(1, Izhikevitch)
-Middle.noise_scale = 5.0
-
-testAll2AllSpike = Projection( 
-    pre = Small, 
-    post = Middle, 
+# Input population
+Input = PoissonPopulation(name = 'Input', geometry=N, rates=F)
+# Output neuron
+Output = Population(name = 'Output', geometry=1, neuron=IF)
+# Projection learned using STDP
+proj = Projection( 
+    pre = Input, 
+    post = Output, 
     target = 'exc',
-    synapse = SimpleLearn
-).connect_all_to_all(weights=Uniform(0.0, 1.0))
-
-compile()
-
-to_record = { Small : ['v', 'g_exc'], 
-              Middle: ['v', 'g_exc'] }
-
-start_record ( to_record )
-
-testAll2AllSpike.dendrite(0).start_record('Apre')
-testAll2AllSpike.dendrite(0).start_record('Apost')
-testAll2AllSpike.dendrite(0).start_record('value')
-
-simulate(1000)
-
-data = get_record( to_record )
-Apre = testAll2AllSpike.dendrite(0).get_record('Apre')
-Apost = testAll2AllSpike.dendrite(0).get_record('Apost')
-weight = testAll2AllSpike.dendrite(0).get_record('value')
+    synapse = STDP
+).connect_all_to_all(weights=Uniform(0.0, gmax))
 
 
-# The synapse are not ordered ascending in relation to presynaptic ranks
-# to correctly identify the data we need to take this in mind
-pre_ranks = testAll2AllSpike.dendrite(0).rank
-neur_col = ['b','g','r']
+if __name__ == '__main__':
 
-#
-# plot post neurons
-for i in range(Middle.size):
-    fig = figure()
-    fig.suptitle(Middle.name+', neuron '+str(i) + 'Apre, Apost')
-     
-    ax = subplot(811)
-     
-    ax.plot( data[Middle]['v']['data'][i,:], label = "membrane potential")
-    ax.legend(loc=2)
+    # Compile the network
+    compile()
 
-    ax = subplot(812)
-     
-    ax.plot( data[Middle]['g_exc']['data'][i,:], label = "g_exc")
-    ax.legend(loc=2)
+    # Define which variables to record
+    to_record = { Input:  'spike', 
+                  Output: 'spike' }
+    start_record ( to_record )
 
-    ax = subplot(813)
-     
-    ax.plot( data[Small]['v']['data'][0,:], label = "membrane potential (Pop0, n=0)", color=neur_col[pre_ranks[0]])
-    ax.legend(loc=2)
+    # Start the simulation
+    print 'Start the simulation for 100 seconds'
+    from time import time
+    t_start = time()
+    simulate(duration)
+    print 'Done in', time() - t_start, 'seconds.'
 
-    ax = subplot(814)
-     
-    ax.plot( data[Small]['v']['data'][1,:], label = "membrane potential (Pop0, n=1)", color=neur_col[pre_ranks[1]])
-    ax.legend(loc=2)
+    # Retrieve the recordings
+    data = get_record( to_record )
+    input_spikes = data[Input]['spike']
+    output_spikes = data[Output]['spike']
 
-    ax = subplot(815)
-     
-    ax.plot( data[Small]['v']['data'][2,:], label = "membrane potential (Pop0, n=2)", color=neur_col[pre_ranks[2]])
-    ax.legend(loc=2)
+    # Compute the mean firing rates during the simulation
+    print 'Mean firing rate in the input population: ', np.mean([len(neur) *1000.0/duration for neur in input_spikes['data']])
+    print 'Mean firing rate of the output neuron: ', len(output_spikes['data'][0]) *1000.0/duration
 
-    #
-    # Apost    
-    ax = subplot(816)
-    ax.plot( Apost['data'][0,:], label = "Apost")
-    ax.legend(loc=2)    
+    # Compute the instantaneous firing rate of the output neuron
+    output_rate = smoothed_rate(output_spikes, 100.0)
 
-    #
-    # Apre    
-    ax = subplot(817)
-    for j in range(Small.size):
-        ax.plot( Apre['data'][j,:], label = "Apre ("+str(pre_ranks[j])+")", color=neur_col[j])
-    ax.legend(loc=2)    
+    # Receptive field after simulation
+    rf_post = proj.dendrite(0).receptive_field()
 
-    #
-    # value    
-    ax = subplot(818)
-    for j in range(Small.size):
-        ax.plot( weight['data'][j,:], label = "value ("+str(pre_ranks[j])+")", color=neur_col[j])
-    ax.legend(loc=2)    
- 
-for i in range(Middle.size):
-    fig = figure()
-    fig.suptitle(Middle.name+', neuron '+str(i)+' (conductance)')
-      
-    ax = subplot(511)
-      
-    ax.plot( data[Middle]['v']['data'][i,:], label = "membrane potential")
-    ax.legend(loc=2)
- 
-    ax = subplot(512)
-      
-    ax.plot( data[Middle]['g_exc']['data'][i,:], label = "g_exc")
-    ax.legend(loc=2)
- 
-    ax = subplot(513)
-      
-    ax.plot( data[Small]['v']['data'][0,:], label = "membrane potential (Pop0, n="+str(pre_ranks[0])+")", color='b')
-    ax.legend(loc=2)
- 
-    ax = subplot(514)
-      
-    ax.plot( data[Small]['v']['data'][1,:], label = "membrane potential (Pop0, n="+str(pre_ranks[1])+")", color='g')
-    ax.legend(loc=2)
- 
-    ax = subplot(515)
-      
-    ax.plot( data[Small]['v']['data'][2,:], label = "membrane potential (Pop0, n="+str(pre_ranks[2])+")", color='r')
-    ax.legend(loc=2)
-    
-show()
-
-print 'done'
-raw_input()
+    from pylab import *
+    subplot(3,1,1)
+    plot(output_rate[0, :])
+    title('Average firing rate')
+    subplot(3,1,2)
+    plot(rf_post, '.')
+    title('Weight distribution after learning')
+    subplot(3,1,3)
+    hist(rf_post, bins=20)
+    title('Weight histogram after learning')
+    show()
