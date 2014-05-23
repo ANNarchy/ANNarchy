@@ -71,7 +71,7 @@ void SpikeProjection::postEvent(std::vector<int> post_ranks)
 		if ( !dendrites_[n] )
 			continue;
 
-		static_cast<SpikeDendrite*>(dendrites_[n])->postEvent();
+		static_cast<SpikeDendrite*>(dendrites_[post_ranks[n]])->postEvent();
 	}
 }
 
