@@ -1,3 +1,5 @@
+import numpy as np
+
 def raster_plot(data, compact=False):
     """ Transforms recorded spikes to display easily a raster plot for a spiking population.
 

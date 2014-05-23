@@ -33,9 +33,12 @@ pop = Population( geometry=(25,), neuron = Neuron )
 
 compile()
 
+pop.start_record('spike')
 simulate ( 500.0 )
+data = pop.get_record('spike')
 
-spikes = pop.raster_plot()
+spikes = raster_plot(data)
+
 # Plot the results
 import pylab as plt
 plt.plot(spikes[:, 0], spikes[:, 1], '.')
