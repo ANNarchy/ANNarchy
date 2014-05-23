@@ -58,7 +58,7 @@ config = dict(
     'show_time': False,
     'suppress_warnings': False,
     'float_prec': 'double',
-    'num_threads': None, #default by os
+    'num_threads': 1,
     'paradigm': "openmp"
    }
 )
