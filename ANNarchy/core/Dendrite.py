@@ -91,7 +91,12 @@ class Dendrite(object):
             object.__setattr__(self, 'attributes', value)
         elif hasattr(self, 'proj'):
             if name in self.proj.attributes:
-                getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value)
+                if isinstance(value, np.ndarray):
+                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value)
+                elif isinstance(value, list):
+                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, np.ndarray(value))
+                else :
+                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value * np.ones(self.size()))
             else:
                 object.__setattr__(self, name, value)
         else:

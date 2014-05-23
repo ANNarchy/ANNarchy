@@ -56,6 +56,8 @@ namespace ANNarchy_Global
 
     inline DATA_TYPE negative(DATA_TYPE x) { return x < 0.0 ? x : 0.0; }
 
+    inline DATA_TYPE clip(DATA_TYPE x, DATA_TYPE a, DATA_TYPE b) { return (x < a ? a : (x > b ? b : x)); }
+
     extern int time;
 
     /**

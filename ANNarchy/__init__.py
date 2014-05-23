@@ -9,6 +9,7 @@ from .core.PopulationView import PopulationView
 from .core.Projection import Projection
 from .core.Dendrite import Dendrite
 from .core.Random import Constant, Uniform, Normal
+from .core.Utils import raster_plot, smoothed_rate
 
 # ANNarchy4 compilation
 from .generator import compile

@@ -243,29 +243,21 @@ def _net_description(variables, connections):
         * *variables*: if *True* the population data will be saved
         * *projection*: if *True* the projection data will be saved
     """
-    network_desc = {}
-    
+    network_desc = {}   
     
     if variables:
         for pop in Global._populations:
             pop_desc = {}
             pop_desc['name'] = pop.name
             pop_desc['geometry'] = pop.geometry
-            
-            varias = {}
-            for var in pop.variables:
-                varias[var] = pop.get(var)
-
-            if varias != {}:
-                pop_desc['variables'] = varias
-                
-            params = {}
-            for par in pop.parameters:
-                params[par] = pop.get(par)
-            
-            if params != {}:
-                pop_desc['parameter'] = params
-            
+            # Attributes
+            attributes = pop.attributes
+            # Save all attributes           
+            for var in attributes:
+                try:
+                    pop_desc[var] = getattr(pop.cyInstance, '_get_'+var)()
+                except:
+                    Global._error('Can not save the attribute ' + var + 'in the projection.')              
             network_desc[pop.name] = pop_desc 
 
     if connections:
@@ -283,25 +275,20 @@ def _net_description(variables, connections):
                 synapse_count.append(proj[d].size())
                 # Postsynaptic rank
                 dendrite_desc['post_rank'] = d
-
-                # Variables
-                varias = {}                
-                for var in proj.variables:
-                    varias[var] = getattr(proj.cyInstance, '_get_'+var)(d)
-                if 'value' not in proj.variables:
-                    varias['values'] = proj.cyInstance._get_value(d)                
-                varias['delays'] = proj.cyInstance._get_delay(d)
-                varias['pre_ranks'] = proj.cyInstance._get_rank(d)                                
-                if varias != {}:
-                    dendrite_desc['variables'] = varias
-
-                # Parameters
-                params = {}
-                for par in proj.parameters:
-                    params[par] = getattr(proj.cyInstance, '_get_'+par)(d)                
-                if params != {}:
-                    dendrite_desc['parameter'] = params
-                
+                # Attributes
+                attributes = proj.attributes
+                if not 'value' in attributes:
+                    attributes.append('value')
+                if not 'rank' in attributes:
+                    attributes.append('rank')
+                if not 'delay' in attributes:
+                    attributes.append('delay')
+                # Save all attributes           
+                for var in attributes:
+                    try:
+                        dendrite_desc[var] = getattr(proj.cyInstance, '_get_'+var)(d) 
+                    except:
+                        Global._error('Can not save the attribute ' + var + 'in the projection.')               
                 dendrites.append(dendrite_desc)
             
             proj_desc['dendrites'] = dendrites
@@ -314,43 +301,39 @@ def _load_pop_data(net_desc):
     """
     Update populations with the stored data set. 
     """
-    #
-    # over all popolations
-    for pop in Global._populations:
-        
+    # Over all populations
+    for pop in Global._populations:        
         # check if the population is contained in save file
         if pop.name in net_desc.keys():
             pop_desc = net_desc[pop.name]
-            
-            if 'variables' in pop_desc.keys():
-                for var in pop_desc['variables'].keys():
-                    setattr(pop, var, pop_desc['variables'][var].reshape(pop.size) )
-
-            if 'parameter' in pop_desc.keys():                
-                for par in pop_desc['parameter'].keys():
-                    setattr(pop, par, pop_desc['parameter'][par] )
+            for var in pop_desc.keys():
+                if var in pop.attributes:
+                    try:
+                        getattr(pop.cyInstance, '_set_'+var)(pop_desc[var]) 
+                    except:
+                        Global._error('Can not load the variable ' + var * ' in the population ' + pop.name)
+                        return
     
 def _load_proj_data(net_desc):
     """
     Update projections with the stored data set. 
     """
-    for net_proj in Global._projections:
+    for proj in Global._projections:
+        if proj.name in net_desc.keys():            
+            proj_desc = net_desc[proj.name]
+            if not proj_desc['post_ranks'] == proj._post_ranks:
+                Global._error('The projection has not the same number of postsynaptic neurons.')
+                return
+            for dendrite in proj_desc['dendrites']:
+                rk = dendrite['post_rank']
+                for var in dendrite.keys():
+                    if not var in ['post_rank', 'rank', 'delay']:
+                        try:
+                            getattr(proj.cyInstance, '_set_' + var)(rk, dendrite[var])
+                        except Exception, e:
+                            print e
+                            Global._error('Can not set attribute ' + var + ' in the projection.')
+                            return
 
-        if net_proj.name in net_desc.keys():
-            
-            proj_desc = net_desc[net_proj.name]
-            
-            #
-            # over all stored dendrites
-            for saved_dendrite in proj_desc['dendrites']:
-                
-                net_dendrite = net_proj.dendrite(saved_dendrite['post_rank'])
-                
-                if 'variables' in saved_dendrite.keys():
-                    for var in saved_dendrite['variables'].keys():
-                        setattr(net_dendrite, var, saved_dendrite['variables'][var])
-                    
-                if 'parameter' in saved_dendrite.keys():
-                    for par in saved_dendrite['parameter'].keys():
-                        setattr(net_dendrite, par, saved_dendrite['parameter'][par])
+
                     

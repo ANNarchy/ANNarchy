@@ -90,7 +90,7 @@ def setup(**keyValueArgs):
     
     * *num_threads*: number of treads used by openMP (overrides the environment variable OMP_NUM_THREADS when set, default = None).
     
-    * *float_prec*: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses single floating point precision. 
+    * *float_prec*: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses double floating point precision. 
     
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
     
