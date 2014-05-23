@@ -42,11 +42,8 @@ Parallel computing with OpenMP
 
 The default paradigm for an ANNarchy simulation is through openMP, which distributes automatically the computations over the available CPU cores.
 
-By default, OpenMP uses all the available cores for your simulation, even if it is not optimal: small networks in particular tend to run faster with a small amount of cores (for the provided example with Neural Fields, it is for example 2). You can control the number of cores by passing the ``OMP_NUM_THREADS`` environment variable to the command line before the call to Python::
-
-    user@machine:~$ OMP_NUM_THREADS=2 python NeuralField.py
-    
-or by passing the ``-j`` flag::
+By default, OpenMP would use all the available cores for your simulation, even if it is not optimal: small networks in particular tend to run faster with a small amount of cores (for the provided example with Neural Fields, it is for example 2). 
+For this reason, the ``OMP_NUM_THREADS`` environment variable has no effect in ANNarchy. You can control the number of cores by passing  the ``-j`` flag to the Python command::
 
     user@machine:~$ python NeuralField.py -j2
     
