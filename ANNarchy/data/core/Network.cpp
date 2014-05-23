@@ -296,7 +296,25 @@ void Network::run(int steps)
 				spike_populations_[p]->globalOperations();
 			}
 
-            //
+			#pragma omp master
+            {
+				for(unsigned int p = 0; p < spike_populations_.size(); p++)
+				{
+					spike_populations_[p]->propagatePostSpike();
+				}
+            }
+			#pragma omp barrier
+
+			#pragma omp master
+			{
+				for(unsigned int p = 0; p < spike_populations_.size(); p++)
+				{
+					spike_populations_[p]->propagatePreSpike();
+				}
+			}
+			#pragma omp barrier
+
+			//
             // parallel neuron wise
             for(int p = 0; p < rate_populations_.size(); p++)
             {
