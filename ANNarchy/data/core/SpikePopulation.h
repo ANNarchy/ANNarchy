@@ -119,7 +119,11 @@ public:
      */
 	void metaLearn();
 
+	bool hasSpiked(int rank) { return spiked_[rank]; }
+
 	// override
+    virtual void propagatePreSpike() {}
+    virtual void propagatePostSpike() {}
 	virtual void prepareNeurons() {}
 	virtual void resetToInit() {}
 	virtual void record() {}
