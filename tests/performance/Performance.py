@@ -24,14 +24,20 @@ while c < END_NUMBER_OF_CONNECTIONS:
     connection_config.append(c)
     c *= 2 
 
+print neuron_config
+print connection_config
+
 for neur in neuron_config: 
     
     for conn in connection_config:
         
         net = ProfileNetwork(neur, conn)
         
-        net.compile(False)
+        print 'Script: compile'
+        net.compile()
     
-        #
-        # TODO: performance measurement code
+        print 'Script: simulate'
         net.simulate(1000)
+        
+        print 'Script: destroy'
+        net.destroy()
