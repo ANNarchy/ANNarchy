@@ -12,9 +12,6 @@ psp_code_body_omp = \
     
     if(delay_.empty() || maxDelay_ == 0)    // no delay
     {
-    #ifdef _DEBUG
-        std::cout << "sum over " << nbSynapses_ << " elements." << std::endl;
-    #endif
         for(int i=0; i < nbSynapses_; i++) 
         {
             sum_ += %(psp)s
