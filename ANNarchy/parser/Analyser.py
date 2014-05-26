@@ -327,7 +327,7 @@ def _extract_ite(name, eq, proj, split=True):
         
         
     def parse(lines):
-        " Recursive analysis of if-else statmenets"
+        " Recursive analysis of if-else statements"
         result = []
         while lines:
             if lines[0].startswith('if'):
@@ -463,8 +463,8 @@ def _extract_globalops_synapse(name, eq, proj):
 def _extract_prepost(name, eq, proj):
     " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."
     untouched = {}                
-    pre_matches = re.findall('pre\.([a-zA-Z0-9_]+)', eq)
-    post_matches = re.findall('post\.([a-zA-Z0-9_]+)', eq)
+    pre_matches = re.findall(r'pre\.([a-zA-Z0-9_]+)', eq)
+    post_matches = re.findall(r'post\.([a-zA-Z0-9_]+)', eq)
     # Check if a global variable depends on pre
     if len(pre_matches) > 0 and name in proj.description['global']:
         _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
@@ -472,7 +472,16 @@ def _extract_prepost(name, eq, proj):
     # Replace all pre.* occurences with a temporary variable
     for var in list(set(pre_matches)):
         if var == 'sum': # pre.sum(exc)
-            pass
+            def idx_target(val):
+                try:
+                    idx = proj.pre.targets.index(val.group(1))
+                except:
+                    _warning('The target ' + val.group(1) + ' does not exist in the population ' + proj.pre.name)
+                    return '0.0'
+                rep = '_pre_sum_' + str(idx)
+                untouched[rep] = ' pre_population_->sum(i, '+str(idx)+' ) '
+                return rep
+            eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         elif var in proj.pre.attributes:
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var+'_ ')
@@ -485,10 +494,17 @@ def _extract_prepost(name, eq, proj):
             exit(0)
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
-        if var == 'sum': # pre.sum(exc)
-            target = 'post.sum(' + var
-            eq = eq.replace(target, ' _post_'+var+'_ ')
-            print eq, var
+        if var == 'sum': # post.sum(exc)
+            def idx_target(val):
+                try:
+                    idx = proj.post.targets.index(val.group(1))
+                except:
+                    _warning('The target ' + val.group(1) + ' does not exist in the population ' + proj.post.name)
+                    return '0.0'
+                rep = '_post_sum_' + str(idx)
+                untouched[rep] = ' post_population_->sum(post_neuron_rank_, '+str(idx)+' ) '
+                return rep
+            eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         elif var in proj.post.attributes:
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var+'_ ')
