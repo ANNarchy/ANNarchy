@@ -421,12 +421,12 @@ def _warning(*var_text):
     text = 'WARNING: '
     for var in var_text:
         text += str(var) + ' '
-
-    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-        p = print        
-        p(text)
-    else:
-        print(text)
+    if not config['suppress_warnings']:
+        if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+            p = print        
+            p(text)
+        else:
+            print(text)
         
 def _error(*var_text):
     """
