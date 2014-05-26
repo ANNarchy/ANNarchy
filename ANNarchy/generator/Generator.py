@@ -104,6 +104,10 @@ def _folder_management(profile_enabled, clean):
         shutil.copy(sources_dir+'/pyx/'+pfile, #src
                     Global.annarchy_dir+'/generate/pyx/'+pfile #dest
                     )
+    # Save current ANNarchy version
+    with open(Global.annarchy_dir+'release', 'w') as f:
+        f.write(ANNarchy.__release__)
+
     # profile files
     if profile_enabled:
         profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')    
@@ -167,6 +171,17 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
 
     if projections == None: # Default network
         projections = Global._projections
+
+    # Test if the current ANNarchy version is newer than what was used to create the subfolder
+    from pkg_resources import parse_version
+    if os.path.isfile(Global.annarchy_dir+'release'):
+        with open(Global.annarchy_dir+'release', 'r') as f:
+            prev_release = f.read().strip()
+            if parse_version(prev_release) < parse_version(ANNarchy.__release__):
+                print 'ANNarchy has been updated, recompiling...'
+                clean = True
+    else:
+        clean = True
             
     # Test if profiling is enabled
     if profile_enabled:
