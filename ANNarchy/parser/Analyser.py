@@ -53,6 +53,10 @@ class Analyser(object):
             # Make sure population have targets declared only once 
             pop.targets = list(set(pop.targets))  
             pop.sources = list(set(pop.sources))
+
+            for t in  pop.description['targets']:
+                if not t in pop.targets:
+                    _warning('The target ' + t + ' is used in the neuron of population ' + pop.name + ' but not connected.')
             
             # internal id
             pop.description['id'] = pop._id
