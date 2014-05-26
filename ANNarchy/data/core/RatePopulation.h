@@ -53,11 +53,11 @@ public:
 
     DATA_TYPE sum(int neur, int type);
 
-    std::vector<DATA_TYPE>* getRates();
+    std::vector<DATA_TYPE>* getRs();
 
-    std::vector<DATA_TYPE>* getRates(int delay);
+    std::vector<DATA_TYPE>* getRs(int delay);
 
-    std::vector<DATA_TYPE> getRates(std::vector<int> delays, std::vector<int> ranks);
+    std::vector<DATA_TYPE> getRs(std::vector<int> delays, std::vector<int> ranks);
 
     /**
      *  \brief      evaluation of summing up presynaptic inputs, called by Network::run
@@ -83,7 +83,7 @@ public:
     virtual void resetToInit() {}
 
 protected:
-    std::vector<DATA_TYPE>  rate_;
+    std::vector<DATA_TYPE>  r_;
     std::deque< std::vector<DATA_TYPE> > delayedRates_;
 };
 

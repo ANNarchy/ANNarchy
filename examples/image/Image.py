@@ -27,7 +27,7 @@ class Viewer(object):
         # Simulate for 50 ms with a new input
         self.pop.grab_image()
         # Refresh the GUI
-        self.vis.setImage(np.swapaxes(self.pop.rate,0,1))
+        self.vis.setImage(np.swapaxes(self.pop.r,0,1))
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         
@@ -59,19 +59,19 @@ if __name__ == '__main__':
         ax.imshow(mpimg.imread('test.jpg'))
         ax.set_title('Original')
         ax = fig.add_subplot(222)
-        ax.imshow(pop.rate[:,:,0], cmap='gray', vmin= 0.0, vmax=1.0)
-        ax.set_title('pop.rate R')
+        ax.imshow(pop.r[:,:,0], cmap='gray', vmin= 0.0, vmax=1.0)
+        ax.set_title('pop.r R')
         ax = fig.add_subplot(223)
-        ax.imshow(pop.rate[:,:,1], cmap='gray', vmin= 0.0, vmax=1.0)
-        ax.set_title('pop.rate G')
+        ax.imshow(pop.r[:,:,1], cmap='gray', vmin= 0.0, vmax=1.0)
+        ax.set_title('pop.r G')
         ax = fig.add_subplot(224)
-        ax.imshow(pop.rate[:,:,2], cmap='gray', vmin= 0.0, vmax=1.0)
-        ax.set_title('pop.rate B')
+        ax.imshow(pop.r[:,:,2], cmap='gray', vmin= 0.0, vmax=1.0)
+        ax.set_title('pop.r B')
     else: # grayscale
         ax = fig.add_subplot(121)
         ax.imshow(mpimg.imread('test.jpg'))
         ax.set_title('Original')
         ax = fig.add_subplot(122)
-        ax.imshow(pop.rate, cmap='gray', vmin= 0.0, vmax=1.0)
-        ax.set_title('pop.rate')
+        ax.imshow(pop.r, cmap='gray', vmin= 0.0, vmax=1.0)
+        ax.set_title('pop.r')
     plt.show()

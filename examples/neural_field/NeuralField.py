@@ -13,7 +13,7 @@ InputNeuron = RateNeuron(
     """,
     equations="""
         noise = Uniform(-0.5, 0.5)
-        rate = pos(baseline + noise)
+        r = pos(baseline + noise)
     """ 
 )
 
@@ -24,7 +24,7 @@ NeuralFieldNeuron = RateNeuron(
     equations="""
         noise = Uniform(-0.5, 0.5)
         tau * dmp / dt + mp = sum(exc) + sum(inh) + noise
-        rate = if mp < 1.0 : pos(mp) else: 1.0 
+        r = if mp < 1.0 : pos(mp) else: 1.0 
     """
 )
 
@@ -90,7 +90,7 @@ class GLViewer(object):
         self.world.rotate(200)      
         # Refresh the GUI
         for i in range(len(self.populations)):
-            self.plots[i].setData(z=self.scale(self.populations[i].rate)) 
+            self.plots[i].setData(z=self.scale(self.populations[i].r)) 
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
     def run(self):

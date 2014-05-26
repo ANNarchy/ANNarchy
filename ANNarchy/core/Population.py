@@ -586,7 +586,7 @@ class Population(object):
             
             .. code-block:: python
                 
-                set({ 'tau' : 20.0, 'rate'= np.random.rand((8,8)) } )
+                set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
         """
         for name, value in values.iteritems():
             self.__setattr__(name, value)
@@ -628,12 +628,12 @@ class Population(object):
         For instance, if you want to iterate over all neurons of a population:
         
             >>> for neur in pop.neurons:
-            ...     print neur.rate
+            ...     print neur.r
             
         Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:
         
             >>> for neur in pop:
-            ...     print neur.rate               
+            ...     print neur.r               
         """
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)
@@ -701,23 +701,23 @@ class Population(object):
     def set_variable_flags(self, name, value):
         """ Sets the flags of a variable for the population.
         
-        If the variable ``rate`` is defined in the Neuron description through:
+        If the variable ``r`` is defined in the Neuron description through:
         
-            rate = sum(exc) : max=1.0  
+            r = sum(exc) : max=1.0  
             
         one can change its maximum value with:
         
-            pop.set_variable_flags('rate', {'max': 2.0})
+            pop.set_variable_flags('r', {'max': 2.0})
             
         For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
         
         For positional flags (population, implicit), the value in the dictionary must be set to the empty string '':
         
-            pop.set_variable_flags('rate', {'implicit': ''})
+            pop.set_variable_flags('r', {'implicit': ''})
         
         A None value in the dictionary deletes the corresponding flag:
         
-            pop.set_variable_flags('rate', {'max': None})
+            pop.set_variable_flags('r', {'max': None})
             
         """
         rk_var = self._find_variable_index(name)
@@ -749,13 +749,13 @@ class Population(object):
     def set_variable_equation(self, name, equation):
         """ Changes the equation of a variable for the population.
         
-        If the variable ``rate`` is defined in the Neuron description through:
+        If the variable ``r`` is defined in the Neuron description through:
         
-            tau * drate/dt + rate  = sum(exc) : max=1.0  
+            tau * dr/dt + r  = sum(exc) : max=1.0  
             
         one can change the equation with:
         
-            pop.set_variable_equation('rate', 'rate = sum(exc)')
+            pop.set_variable_equation('r', 'r = sum(exc)')
             
         Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
         

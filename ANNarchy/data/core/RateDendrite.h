@@ -63,7 +63,7 @@ protected:
 
 	DATA_TYPE sum_;
 
-    DATA_TYPE post_rate_;
+    DATA_TYPE post_r_;
     std::vector<DATA_TYPE>* post_rates_;
     std::vector<DATA_TYPE>* pre_rates_;
 };

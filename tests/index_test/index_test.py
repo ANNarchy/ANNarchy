@@ -8,7 +8,7 @@ parameters="""
 equations="""
     noise = Uniform(0,1)
     tau * dmp / dt + mp = baseline + noise
-    rate = pos(mp)
+    r = pos(mp)
 """ 
 )
 

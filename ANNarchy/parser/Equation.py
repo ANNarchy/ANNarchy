@@ -108,8 +108,8 @@ class Equation(object):
         
         * inc for "a += 0.2"
         * ODE for "dV/dt + V = A"
-        * cond for "mp > 30.0" or "rate != 0.0"
-        * simple for the rest, e.g. "rate = pos(mp)" or "baseline = Uniform(0,1)"
+        * cond for "mp > 30.0" or "r != 0.0"
+        * simple for the rest, e.g. "r = pos(mp)" or "baseline = Uniform(0,1)"
         """
         # Suppress spaces to extract dvar/dt
         expression = self.expression.replace(' ', '')
@@ -367,7 +367,7 @@ class Equation(object):
         return code
     
     def analyse_return(self, expression):
-        " Analyzes a return statement (e.g. w * pre.rate)."
+        " Analyzes a return statement (e.g. w * pre.r)."
                 
         # Parse the string
         analysed = self.parse_expression(expression,

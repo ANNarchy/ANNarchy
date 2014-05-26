@@ -54,7 +54,7 @@ class ImagePopulation(Population):
             geometry = (geometry[0], geometry[1])
             
         # Create the population     
-        Population.__init__(self, geometry = geometry, name=name, neuron = RateNeuron(parameters="""rate = 0.0""") )
+        Population.__init__(self, geometry = geometry, name=name, neuron = RateNeuron(parameters="""r = 0.0""") )
 
         
     def set_image(self, image_name):
@@ -79,9 +79,9 @@ class ImagePopulation(Population):
             im=im.convert("L")
         # Set the rate of the population
         if not Global._compiled:
-            self.rate = (np.array(im))/255.
+            self.r = (np.array(im))/255.
         else:
-            self.cyInstance._set_rate(np.array(im).reshape(self.size)/255.)
+            self.cyInstance._set_r(np.array(im).reshape(self.size)/255.)
 
 
 

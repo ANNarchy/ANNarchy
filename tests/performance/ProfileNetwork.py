@@ -9,13 +9,13 @@ setup(num_threads=1)
 # Defining the neurons
 InputNeuron = RateNeuron(
     equations="""
-        rate = 0.2 : init = 0.1 
+        r = 0.2 : init = 0.1 
     """
 )
 
 OutputNeuron = RateNeuron(
     equations="""
-        rate = sum(exc)
+        r = sum(exc)
     """
 )
 

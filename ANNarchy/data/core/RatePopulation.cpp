@@ -26,10 +26,10 @@
 
 RatePopulation::RatePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, true)
 {
-    rate_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
+    r_ = std::vector<DATA_TYPE>(nbNeurons_, 0.0);
 
 #ifdef _DEBUG
-    std::cout << "Rate reference: " << &rate_ << std::endl;
+    std::cout << "Rate reference: " << &r_ << std::endl;
 #endif
     delayedRates_ = std::deque< std::vector<DATA_TYPE> >();
 }
@@ -39,12 +39,12 @@ RatePopulation::~RatePopulation()
 
 }
 
-std::vector<DATA_TYPE>* RatePopulation::getRates()
+std::vector<DATA_TYPE>* RatePopulation::getRs()
 {
-    return &rate_;
+    return &r_;
 }
 
-std::vector<DATA_TYPE>* RatePopulation::getRates(int delay)
+std::vector<DATA_TYPE>* RatePopulation::getRs(int delay)
 {
     if ( delay <= (int)delayedRates_.size())
     {
@@ -62,7 +62,7 @@ std::vector<DATA_TYPE>* RatePopulation::getRates(int delay)
     }
 }
 
-std::vector<DATA_TYPE> RatePopulation::getRates(std::vector<int> delays, std::vector<int> ranks)
+std::vector<DATA_TYPE> RatePopulation::getRs(std::vector<int> delays, std::vector<int> ranks)
 {
     std::vector<DATA_TYPE> vec = std::vector<DATA_TYPE>(delays.size(), 0.0);
 
@@ -86,7 +86,7 @@ void RatePopulation::setMaxDelay(int delay)
     if(delay > maxDelay_)
     {
         for(int oldSize = delayedRates_.size(); oldSize < delay; oldSize++)
-            delayedRates_.push_front( rate_ );
+            delayedRates_.push_front( r_ );
 
         maxDelay_ = delay;
     }

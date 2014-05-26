@@ -275,7 +275,7 @@ def start_record(to_record):
     .. code-block:: python
     
         to_record = { 
-            pop1 : ['mp', 'rate'], 
+            pop1 : ['mp', 'r'], 
             pop2 : 'mp'    
         }
         start_record(to_record)
@@ -307,7 +307,7 @@ def get_record(to_record=None, reshape=False):
     .. code-block:: python
     
         to_record = { 
-            pop1 : ['mp', 'rate'], 
+            pop1 : ['mp', 'r'], 
             pop2: 'mp'    
         }
         start_record(to_record)

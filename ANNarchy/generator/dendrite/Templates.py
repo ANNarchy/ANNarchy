@@ -174,8 +174,8 @@ using namespace ANNarchy_Global;
     pre_population_ = static_cast<%(pre_type)s*>(pre);
     post_population_ = static_cast<%(post_type)s*>(post);
     
-    pre_rates_ = pre_population_->getRates();
-    post_rates_ = post_population_->getRates();
+    pre_rates_ = pre_population_->getRs();
+    post_rates_ = post_population_->getRs();
 
 #ifdef _DEBUG
     std::cout << "pre_rates_ = " << pre_rates_ << ", post_rates_ = " << post_rates_ << std::endl;  
@@ -195,8 +195,8 @@ using namespace ANNarchy_Global;
     pre_population_ = static_cast<%(pre_type)s*>(Network::instance()->getPopulation(preID));
     post_population_ = static_cast<%(post_type)s*>(Network::instance()->getPopulation(postID));
 
-    pre_rates_ = pre_population_->getRates();
-    post_rates_ = post_population_->getRates();
+    pre_rates_ = pre_population_->getRs();
+    post_rates_ = post_population_->getRs();
 
 #ifdef _DEBUG
     std::cout << "pre_rates_ = " << pre_rates_ << ", post_rates_ = " << post_rates_ << std::endl;  

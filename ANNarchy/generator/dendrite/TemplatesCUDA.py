@@ -25,7 +25,7 @@ psp_code_body_cuda = \
     {
         if(constDelay_) // one delay for all connections
         {
-            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRates(delay_[0]);
+            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getR(delay_[0]);
             
         #ifdef _DEBUG
             std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
@@ -43,7 +43,7 @@ psp_code_body_cuda = \
         }
         else    // different delays [0..maxDelay]
         {
-            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRates(delay_, rank_);
+            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getR(delay_, rank_);
 
             for(int i=0; i < nbSynapses_; i++) 
             {
@@ -63,13 +63,13 @@ psp_code_body_cuda = \
     {
         if(constDelay_) // one delay for all connections
         {
-            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRates(delay_[0]);
+            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getR(delay_[0]);
             
             gpu_sum = weightedSum(rank_, w_, *pre_rates_);
         }
         else    // different delays [0..maxDelay]
         {
-            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRates(delay_, rank_);
+            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getR(delay_, rank_);
 
             gpu_sum = weightedSum(rank_, w_, delayedRates);
         }

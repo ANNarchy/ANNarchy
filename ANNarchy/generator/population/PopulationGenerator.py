@@ -65,9 +65,9 @@ class PopulationGenerator(object):
         """
         members = ""
         for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == 'rate': # the vector is already declared
+            if param['name'] == 'r': # the vector is already declared
                 members += """
-    // rate_ : local
+    // r_ : local
     bool record_%(name)s_; 
     std::vector< std::vector<%(type)s> > recorded_%(name)s_;    
 """ % {'name' : param['name'], 'type': param['ctype']}

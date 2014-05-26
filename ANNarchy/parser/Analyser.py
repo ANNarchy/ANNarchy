@@ -401,7 +401,7 @@ def _extract_randomdist(pop):
     return random_objects
     
 def _extract_globalops_neuron(name, eq, pop):
-    """ Replaces global operations (mean(rate), etc)  with arbitrary names and 
+    """ Replaces global operations (mean(r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
     untouched = {}    
@@ -423,7 +423,7 @@ def _extract_globalops_neuron(name, eq, pop):
     return eq, untouched, globs
     
 def _extract_globalops_synapse(name, eq, proj):
-    """ Replaces global operations (mean(pre.rate), etc)  with arbitrary names and 
+    """ Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
     untouched = {}    
@@ -476,7 +476,7 @@ def _extract_prepost(name, eq, proj):
         elif var in proj.pre.attributes:
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var+'_ ')
-            if var=='rate':
+            if var=='r':
                 untouched['_pre_rate_'] = ' (*pre_rates_)[ rank_[i] ] '
             else:
                 untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
@@ -490,9 +490,9 @@ def _extract_prepost(name, eq, proj):
         elif var in proj.post.attributes:
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var+'_ ')
-            if var=='rate':
+            if var.strip() =='r':
                 #the firing rates are solved in a slightly different way
-                untouched['_post_rate_'] = ' post_rate_ '
+                untouched['_post_rate_'] = ' post_r_ '
             else:
                 untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
         else:

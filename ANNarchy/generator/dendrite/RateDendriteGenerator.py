@@ -204,7 +204,7 @@ class RateDendriteGenerator(DendriteGenerator):
 #ifdef _DEBUG
     std::cout << "Dendrite (n = " << post_neuron_rank_ << ", ptr = " << this << "): update " << nbSynapses_ << " synapse(s)." << std::endl;
 #endif
-    post_rate_ = (*post_rates_)[post_neuron_rank_];
+    post_r_ = (*post_rates_)[post_neuron_rank_];
     
     for(int i=0; i < nbSynapses_; i++) 
     {

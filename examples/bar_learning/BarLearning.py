@@ -9,7 +9,7 @@ setup()
 # Defining the neuron
 InputNeuron = RateNeuron(   
     parameters="""
-        rate = 0.0
+        r = 0.0
     """
 )
 
@@ -18,7 +18,7 @@ LeakyNeuron = RateNeuron(
         tau = 10.0 : population
     """,
     equations="""
-        tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0
+        tau * dr/dt + r = sum(exc) - sum(inh) : min=0.0
     """
 )
 
@@ -30,7 +30,7 @@ Oja = RateSynapse(
         min_w = 0.0 : postsynaptic
     """,
     equations="""
-        tau * dw/dt = pre.rate * post.rate - alpha * post.rate^2 * w : min=min_w
+        tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w : min=min_w
     """
 )  
 
@@ -60,15 +60,15 @@ Feature_Feature.alpha = 0.3
 # Definition of the environment
 def set_input():
     # Reset the firing rate for all neurons
-    Input.rate = 0.0
+    Input.r = 0.0
     # Clamp horizontal bars
     for h in range(Input.geometry[0]):
         if np.random.random() < 1.0/ float(Input.geometry[0]):
-            Input[h, :].rate = 1.0
+            Input[h, :].r = 1.0
     # Clamp vertical bars
     for w in range(Input.geometry[1]):
         if np.random.random() < 1.0/ float(Input.geometry[1]):
-            Input[:, w].rate = 1.0
+            Input[:, w].r = 1.0
     
 
 # Visualizer
@@ -114,8 +114,8 @@ class Viewer(object):
         set_input()
         simulate(50) 
         # Refresh the GUI
-        self.input_vis.setImage(Input.rate)
-        self.feature_vis.setImage(Feature.rate)
+        self.input_vis.setImage(Input.r)
+        self.feature_vis.setImage(Feature.r)
         self.rv_vis.setImage(Input_Feature.receptive_fields())
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()

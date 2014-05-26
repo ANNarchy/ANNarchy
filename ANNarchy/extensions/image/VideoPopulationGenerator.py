@@ -62,17 +62,17 @@ public:
     
     void record();
 
-    // Access methods for the local variable rate
-    std::vector<float> getRate() { return this->rate_; }
-    void setRate(std::vector<float> rate) { this->rate_ = rate; }
+    // Access methods for the local variable r
+    std::vector<float> getR() { return this->r_; }
+    void setR(std::vector<float> r) { this->r_ = r; }
 
-    float getSingleRate(int rank) { return this->rate_[rank]; }
-    void setSingleRate(int rank, float rate) { this->rate_[rank] = rate; }
+    float getSingleR(int rank) { return this->r_[rank]; }
+    void setSingleR(int rank, float r) { this->r_[rank] = r; }
 
-    std::vector< std::vector< float > >getRecordedRate() { return this->recorded_rate_; }                    
-    void startRecordRate() { this->record_rate_ = true; }
-    void stopRecordRate() { this->record_rate_ = false; }
-    void clearRecordedRate() { this->recorded_rate_.clear(); }
+    std::vector< std::vector< float > >getRecordedR() { return this->recorded_r_; }                    
+    void startRecordR() { this->record_r_ = true; }
+    void stopRecordR() { this->record_r_ = false; }
+    void clearRecordedR() { this->recorded_r_.clear(); }
     
     // Camera
     void StartCamera(int id, int width, int height, int depth);
@@ -83,9 +83,9 @@ private:
     // CameraDevice
     CameraDeviceCPP* camera_;
 
-    // rate_ : local
-    bool record_rate_; 
-    std::vector< std::vector<float> > recorded_rate_;    
+    // r_ : local
+    bool record_r_; 
+    std::vector< std::vector<float> > recorded_r_;    
 
 };
 #endif
@@ -107,10 +107,10 @@ body_template = """
 #endif
 
 
-    // rate_ : local
-    rate_ = std::vector<float> (nbNeurons_, 0.0);
-    record_rate_ = false; 
-    recorded_rate_ = std::vector< std::vector< float > >();    
+    // r_ : local
+    r_ = std::vector<float> (nbNeurons_, 0.0);
+    record_r_ = false; 
+    recorded_r_ = std::vector< std::vector< float > >();    
 
     // dt : integration step
     dt_ = 1.0;
@@ -133,7 +133,7 @@ body_template = """
     std::cout << "Population0::Destructor" << std::endl;
 #endif
 
-    rate_.clear();
+    r_.clear();
 }
 
 void %(class_name)s::StartCamera(int id, int width, int height, int depth){
@@ -147,7 +147,7 @@ void %(class_name)s::StartCamera(int id, int width, int height, int depth){
 void %(class_name)s::GrabImage(){
 
     if(camera_->isOpened()){
-        rate_ = camera_->GrabImage();   
+        r_ = camera_->GrabImage();   
     }
 }
 
@@ -159,15 +159,15 @@ void %(class_name)s::prepareNeurons()
         std::cout << name_ << ": got delayed rates = " << maxDelay_ << std::endl;
     #endif
     
-        delayedRates_.push_front(rate_);
+        delayedRates_.push_front(r_);
         delayedRates_.pop_back();
     }
 }
 
 void %(class_name)s::record() 
 {
-    if(record_rate_)
-        recorded_rate_.push_back(rate_);
+    if(record_r_)
+        recorded_r_.push_back(r_);
 }
 
 // Camera device
@@ -232,15 +232,15 @@ cdef extern from "../build/%(class_name)s.h":
         void GrabImage()
 
 
-        # Local rate
-        vector[float] getRate()
-        void setRate(vector[float] values)
-        float getSingleRate(int rank)
-        void setSingleRate(int rank, float values)
-        void startRecordRate()
-        void stopRecordRate()
-        void clearRecordedRate()
-        vector[vector[float]] getRecordedRate()
+        # Local r
+        vector[float] getR()
+        void setR(vector[float] values)
+        float getSingleR(int rank)
+        void setSingleR(int rank, float values)
+        void startRecordR()
+        void stopRecordR()
+        void clearRecordedR()
+        vector[vector[float]] getRecordedR()
 
 
 
@@ -266,28 +266,28 @@ cdef class py%(class_name)s:
         def __set__(self, value):
             print "py%(class_name)s.size is a read-only attribute."
             
-    # local: rate
-    cpdef np.ndarray _get_rate(self):
-        return np.array(self.cInstance.getRate())
+    # local: r
+    cpdef np.ndarray _get_r(self):
+        return np.array(self.cInstance.getR())
         
-    cpdef _set_rate(self, np.ndarray value):
-        self.cInstance.setRate(value)
+    cpdef _set_r(self, np.ndarray value):
+        self.cInstance.setR(value)
         
-    cpdef float _get_single_rate(self, rank):
-        return self.cInstance.getSingleRate(rank)
+    cpdef float _get_single_r(self, rank):
+        return self.cInstance.getSingleR(rank)
 
-    def _set_single_rate(self, int rank, float value):
-        self.cInstance.setSingleRate(rank, value)
+    def _set_single_r(self, int rank, float value):
+        self.cInstance.setSingleR(rank, value)
 
-    def _start_record_rate(self):
-        self.cInstance.startRecordRate()
+    def _start_record_r(self):
+        self.cInstance.startRecordR()
 
-    def _stop_record_rate(self):
-        self.cInstance.stopRecordRate()
+    def _stop_record_r(self):
+        self.cInstance.stopRecordR()
 
-    cpdef np.ndarray _get_recorded_rate(self):
-        tmp = np.array(self.cInstance.getRecordedRate())
-        self.cInstance.clearRecordedRate()
+    cpdef np.ndarray _get_recorded_r(self):
+        tmp = np.array(self.cInstance.getRecordedR())
+        self.cInstance.clearRecordedR()
         return tmp
 
 

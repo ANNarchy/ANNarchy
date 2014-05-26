@@ -30,10 +30,10 @@ class Viewer(object):
         # Simulate for 10 ms with a new input
         self.pop.grab_image()
         # Refresh the GUI
-        self.vis.setImage(np.swapaxes(self.pop.rate,0,1))
-        #self.vis.setImage(self.pop.rate)
+        self.vis.setImage(np.swapaxes(self.pop.r,0,1))
+        #self.vis.setImage(self.pop.r)
         #self.vis.setImage(np.ones((640, 480, 3)))
-        #a = self.pop.rate
+        #a = self.pop.r
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         # FPS

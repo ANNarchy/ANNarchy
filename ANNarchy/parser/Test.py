@@ -11,7 +11,7 @@ DefaultNeuron = RateNeuron(
         tau * dmp/dt + mp = sum(exc) 
                             - sum(inh) 
                             + baseline + noise : implicit
-        rate = pos(mp) 
+        r = pos(mp) 
     """
 )
    
@@ -21,11 +21,11 @@ Oja = RateSynapse(
         tau = 10.0 : postsynaptic
     """,
     equations = """
-        tau * dalpha/dt + alpha = pos(post.rate - 1.0) : postsynaptic
-        eta * dw/dt = pre.rate * post.rate - alpha * post.rate^2 * w : min=0.0
+        tau * dalpha/dt + alpha = pos(post.r - 1.0) : postsynaptic
+        eta * dw/dt = pre.r * post.r - alpha * post.r^2 * w : min=0.0
     """,
     psp = """
-        w * pre.rate
+        w * pre.r
     """
 ) 
 

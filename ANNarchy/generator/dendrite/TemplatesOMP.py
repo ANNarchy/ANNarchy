@@ -24,7 +24,7 @@ psp_code_body_omp = \
     {
         if(constDelay_) // one delay for all connections
         {
-            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRates(delay_[0]);
+            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRs(delay_[0]);
             
         #ifdef _DEBUG
             std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
@@ -42,7 +42,7 @@ psp_code_body_omp = \
         }
         else    // different delays [0..maxDelay]
         {
-            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRates(delay_, rank_);
+            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRs(delay_, rank_);
 
             for(int i=0; i < nbSynapses_; i++) 
             {

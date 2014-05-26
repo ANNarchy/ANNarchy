@@ -15,12 +15,12 @@ parameters="""
 equations="""
     noise = Uniform(0,1)
     tau * dmp / dt + mp = baseline + noise
-    rate = pos(mp)
+    r = pos(mp)
 """ 
 )
 
 Simple2 = RateSynapse(
-psp = """ w * (1.0-pre.rate) """                      
+psp = """ w * (1.0-pre.r) """                      
 )
 
 OneDimIn = Population((10,1), Simple)

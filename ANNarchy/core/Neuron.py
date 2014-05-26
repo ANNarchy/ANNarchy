@@ -97,7 +97,7 @@ class SpikeNeuron(object):
                         dv/dt = 0.04 * v * v + 5*v + 140 -u + I
                     \"\"\"
 
-                spcifies a variable ``rate`` bases on his excitory inputs.
+                specifies a variable ``v`` based on excitory inputs.
                 
             * *spike*: denotes the conditions when a spike should be emited.
 

@@ -334,9 +334,9 @@ class Projection(object):
     def set_variable_flags(self, name, value):
         """ Sets the flags of a variable for the projection.
         
-        If the variable ``rate`` is defined in the Synapse description through:
+        If the variable ``r`` is defined in the Synapse description through:
         
-            w = pre.rate * post.rate : max=1.0  
+            w = pre.r * post.r : max=1.0  
             
         one can change its maximum value with:
         
@@ -384,11 +384,11 @@ class Projection(object):
         
         If the variable ``w`` is defined in the Synapse description through:
         
-            eta * dw/dt = pre.rate * post.rate 
+            eta * dw/dt = pre.r * post.r 
             
         one can change the equation with:
         
-            proj.set_variable_equation('w', 'eta * dw/dt = pre.rate * (post.rate - 0.1) ')
+            proj.set_variable_equation('w', 'eta * dw/dt = pre.r * (post.r - 0.1) ')
             
         Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
         

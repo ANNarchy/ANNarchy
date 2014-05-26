@@ -276,7 +276,7 @@ rate_prepare_neurons="""
         std::cout << name_ << ": got delayed rates = " << maxDelay_ << std::endl;
     #endif
     
-        delayedRates_.push_front(rate_);
+        delayedRates_.push_front(r_);
         delayedRates_.pop_back();
     }
 """

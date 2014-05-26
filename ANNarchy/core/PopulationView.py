@@ -89,7 +89,7 @@ class PopulationView(object):
                 .. code-block:: python
                 
                     >>> subpop = pop[0:5]
-                    >>> subpop.set( {'tau' : 20, 'rate'= np.random.rand(subpop.size) } )
+                    >>> subpop.set( {'tau' : 20, 'r'= np.random.rand(subpop.size) } )
                     
         .. warning::
         
