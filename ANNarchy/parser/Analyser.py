@@ -477,7 +477,7 @@ def _extract_prepost(name, eq, proj):
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var+'_ ')
             if var=='r':
-                untouched['_pre_rate_'] = ' (*pre_rates_)[ rank_[i] ] '
+                untouched['_pre_r_'] = ' (*pre_rates_)[ rank_[i] ] '
             else:
                 untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
         else:
@@ -490,9 +490,9 @@ def _extract_prepost(name, eq, proj):
         elif var in proj.post.attributes:
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var+'_ ')
-            if var.strip() =='r':
+            if var.strip() == 'r':
                 #the firing rates are solved in a slightly different way
-                untouched['_post_rate_'] = ' post_r_ '
+                untouched['_post_r_'] = ' post_r_ '
             else:
                 untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
         else:
