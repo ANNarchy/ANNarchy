@@ -6,6 +6,7 @@ from .core.Neuron import RateNeuron, SpikeNeuron, IndividualNeuron
 from .core.Synapse import RateSynapse, SpikeSynapse
 from .core.Population import Population
 from .core.PopulationView import PopulationView
+from .core.Poisson import PoissonPopulation
 from .core.Projection import Projection
 from .core.Dendrite import Dendrite
 from .core.Random import Constant, Uniform, Normal
@@ -13,7 +14,6 @@ from .core.Utils import raster_plot, smoothed_rate
 
 # ANNarchy4 compilation
 from .generator import compile
-
 from .extensions import *
 
 # Generic imports

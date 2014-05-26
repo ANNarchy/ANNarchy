@@ -10,7 +10,6 @@
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
-from ANNarchy.extensions.poisson import PoissonPopulation
 
 Neuron = SpikeNeuron(
 parameters = """

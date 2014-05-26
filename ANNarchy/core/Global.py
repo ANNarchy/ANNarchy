@@ -24,7 +24,6 @@
 from __future__ import print_function
 
 import sys, os
-from datetime import datetime
 from math import ceil
 
 # Global instances
