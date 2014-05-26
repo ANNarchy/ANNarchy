@@ -130,7 +130,7 @@ void RatePopulation::metaSum()
     }
 #endif
 
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
     #pragma omp master
     {
     std::cout << "###########################"<< std::endl;
@@ -138,7 +138,7 @@ void RatePopulation::metaSum()
     std::cout << "###########################"<< std::endl;
     }
 #endif
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
 		std::cout << name_ <<": "<< projections_.size()<< " projection(s)"<< std::endl;
 #endif
@@ -163,8 +163,8 @@ void RatePopulation::metaSum()
 
 void RatePopulation::metaStep()
 {
-#ifdef _DEBUG
-    #pragma omp master
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
+#pragma omp master
     {
     std::cout << "###########################"<< std::endl;
     std::cout << "# Meta step               #"<< std::endl;
@@ -187,7 +187,7 @@ void RatePopulation::metaStep()
     } // end of master region
     #pragma omp barrier
 
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
     #pragma omp master
     {
         std::cout << "global computation done."<< std::endl;
@@ -210,7 +210,7 @@ void RatePopulation::metaStep()
     }
 #endif
 
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
     #pragma omp master
     {
         std::cout << "local computation done."<< std::endl;
@@ -229,7 +229,7 @@ void RatePopulation::metaLearn()
     start = omp_get_wtime();
 #endif
 
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
     #pragma omp master
     {
     std::cout << "###########################"<< std::endl;
@@ -240,7 +240,7 @@ void RatePopulation::metaLearn()
     #pragma barrier
 #endif
 
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
 		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
 #endif
@@ -263,7 +263,7 @@ void RatePopulation::metaLearn()
 	start = omp_get_wtime();
 #endif
 
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
     #pragma omp master
     {
     std::cout << "###########################"<< std::endl;
@@ -272,7 +272,8 @@ void RatePopulation::metaLearn()
     std::cout << "###########################"<< std::endl;
     }
 #endif
-#ifdef _DEBUG
+
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 	if ( projections_.size() > 0 && omp_get_thread_num() == 0 )
 		std::cout << name_<<": "<< projections_.size()<< " projections."<< std::endl;
 #endif
