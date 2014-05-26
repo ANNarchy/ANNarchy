@@ -857,11 +857,11 @@ def _extract_pre_spike_variable(proj_desc):
                               proj_desc['attributes'] + [name], 
                               proj_desc['local'] + [name], 
                               proj_desc['global'],
-                              index = '[inv_rank_[rank]]')
+                              index = '[i]')
         eq = translator.parse()
         
         if post_target: # the left side has to be modified
-            eq = eq.replace( "g_" + proj_desc['target'] + "_[inv_rank_[rank]]",
+            eq = eq.replace( "g_" + proj_desc['target'] + "_[i]",
                         "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_]")
 
         # Append the result of analysis
@@ -916,7 +916,7 @@ def _prepare_string(stream):
     for expr in tmp_set:
         expr = re.sub('\#[\s\S]+', ' ', expr)   # remove comments
         expr = re.sub('\s+', ' ', expr)     # remove additional tabs etc.
-        if expr == ' ' or len(expr)==0: # through beginning line breaks or something similar empty strings are contained in the set
+        if expr.strip() == '' or len(expr)==0: # through beginning line breaks or something similar empty strings are contained in the set
             continue           
         expr_set.append(''.join(expr))        
     return expr_set 
