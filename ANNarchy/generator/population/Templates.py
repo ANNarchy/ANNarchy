@@ -144,24 +144,22 @@ private:
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 #
 #     * type : type of the variable
 #
 local_variable_access = \
 """
     // Access methods for the local variable %(name)s
-    std::vector<%(type)s> get%(Name)s() { return this->%(name)s_; }
-    void set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
+    std::vector<%(type)s> get_%(name)s() { return this->%(name)s_; }
+    void set_%(name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
+    
+    %(type)s get_single_%(name)s(int rank) { return this->%(name)s_[rank]; }
+    void set_single_%(name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
 
-    %(type)s getSingle%(Name)s(int rank) { return this->%(name)s_[rank]; }
-    void setSingle%(Name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
-
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
-    void startRecord%(Name)s() { this->record_%(name)s_ = true; }
-    void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
-    void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
+    std::vector< std::vector< %(type)s > > get_recorded_%(name)s() { return this->recorded_%(name)s_; }                    
+    void start_record_%(name)s() { this->record_%(name)s_ = true; }
+    void stop_record_%(name)s() { this->record_%(name)s_ = false; }
+    void clear_recorded_%(name)s() { this->recorded_%(name)s_.clear(); }
 """
 
 # Template for a global variable
@@ -169,16 +167,14 @@ local_variable_access = \
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 #
 #     * type : type of the variable
 #
 global_variable_access = \
 """
     // Access methods for the global variable %(name)s
-    %(type)s get%(Name)s() { return this->%(name)s_; }
-    void set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
+    %(type)s get_%(name)s() { return this->%(name)s_; }
+    void set_%(name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
 """
 
 # Body for a rate population
@@ -516,10 +512,10 @@ cdef extern from "../build/%(class_name)s.h":
         
         string getName()
         
-        vector[ vector[int] ] getSpikeTimings()        
-        void resetSpikeTimings()
-        void startRecordSpike()
-        void stopRecordSpike()
+        vector[ vector[int] ] get_spike_timings()        
+        void reset_spike_timings()
+        void start_record_spike()
+        void stop_record_spike()
         
         void resetToInit()
         
@@ -545,15 +541,15 @@ cdef class py%(class_name)s:
 
     cpdef np.ndarray _get_recorded_spike(self):
         cdef np.ndarray tmp
-        tmp = np.array( self.cInstance.getSpikeTimings() )
-        self.cInstance.resetSpikeTimings()
+        tmp = np.array( self.cInstance.get_spike_timings() )
+        self.cInstance.reset_spike_timings()
         return tmp
 
     def _start_record_spike(self):
-        self.cInstance.startRecordSpike()
+        self.cInstance.start_record_spike()
 
     def _stop_record_spike(self):
-        self.cInstance.stopRecordSpike()
+        self.cInstance.stop_record_spike()
 
     def reset(self):
         self.cInstance.resetToInit()
@@ -582,33 +578,31 @@ cdef class py%(class_name)s:
 # 
 #     * name : name of the variable
 #    
-#     * Name : Capitalized name of variable
-#    
 #     * type : The type of the variable
 local_property_pyx = """
 
     # local: %(name)s
     cpdef np.ndarray _get_%(name)s(self):
-        return np.array(self.cInstance.get%(Name)s())
+        return np.array(self.cInstance.get_%(name)s())
         
     cpdef _set_%(name)s(self, np.ndarray value):
-        self.cInstance.set%(Name)s(value)
+        self.cInstance.set_%(name)s(value)
         
     cpdef %(type)s _get_single_%(name)s(self, rank):
-        return self.cInstance.getSingle%(Name)s(rank)
+        return self.cInstance.get_single_%(name)s(rank)
 
     def _set_single_%(name)s(self, int rank, %(type)s value):
-        self.cInstance.setSingle%(Name)s(rank, value)
+        self.cInstance.set_single_%(name)s(rank, value)
 
     def _start_record_%(name)s(self):
-        self.cInstance.startRecord%(Name)s()
+        self.cInstance.start_record_%(name)s()
 
     def _stop_record_%(name)s(self):
-        self.cInstance.stopRecord%(Name)s()
+        self.cInstance.stop_record_%(name)s()
 
     cpdef np.ndarray _get_recorded_%(name)s(self):
-        tmp = np.array(self.cInstance.getRecorded%(Name)s())
-        self.cInstance.clearRecorded%(Name)s()
+        tmp = np.array(self.cInstance.get_recorded_%(name)s())
+        self.cInstance.clear_recorded_%(name)s()
         return tmp
         
 """
@@ -619,15 +613,15 @@ local_property_pyx = """
 # 
 #     * name : name of the variable
 #    
-#     * Name : Capitalized name of variable
+#     * type : The type of the variable
 global_property_pyx = """
 
     # global: %(name)s
     cpdef %(type)s _get_%(name)s(self):
-        return self.cInstance.get%(Name)s()
+        return self.cInstance.get_%(name)s()
 
     cpdef _set_%(name)s(self, %(type)s value):
-        self.cInstance.set%(Name)s(value)
+        self.cInstance.set_%(name)s(value)
         
 """
 
@@ -637,19 +631,17 @@ global_property_pyx = """
 # 
 #     * name : name of the variable
 #    
-#     * Name : Capitalized name of variable
-#    
 #     * type : C type of variable
 local_wrapper_pyx = """
         # Local %(name)s
-        vector[%(type)s] get%(Name)s()
-        void set%(Name)s(vector[%(type)s] values)
-        %(type)s getSingle%(Name)s(int rank)
-        void setSingle%(Name)s(int rank, %(type)s values)
-        void startRecord%(Name)s()
-        void stopRecord%(Name)s()
-        void clearRecorded%(Name)s()
-        vector[vector[%(type)s]] getRecorded%(Name)s()
+        vector[%(type)s] get_%(name)s()
+        void set_%(name)s(vector[%(type)s] values)
+        %(type)s get_single_%(name)s(int rank)
+        void set_single_%(name)s(int rank, %(type)s values)
+        void start_record_%(name)s()
+        void stop_record_%(name)s()
+        void clear_recorded_%(name)s()
+        vector[vector[%(type)s]] get_recorded_%(name)s()
 """
 
 # Global Cython wrapper
@@ -658,11 +650,9 @@ local_wrapper_pyx = """
 # 
 #     * name : name of the variable
 #    
-#     * Name : Capitalized name of variable
-#    
 #     * type : C type of variable
 global_wrapper_pyx = """
         # Global %(name)s
-        %(type)s get%(Name)s()
-        void set%(Name)s(%(type)s value)                
+        %(type)s get_%(name)s()
+        void set_%(name)s(%(type)s value)                
 """

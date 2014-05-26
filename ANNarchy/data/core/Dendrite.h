@@ -113,41 +113,41 @@ public:
 	 * 	\brief		get synaptic delays
 	 * 	\return		synaptic delays
 	 */
-	std::vector<int> getDelay() { return delay_; };
+	std::vector<int> get_delay() { return delay_; };
 
 	/**
 	 * 	\brief		set synaptic delays
 	 * 	\details	automatically update constDelay_ and maxDelay_.
 	 * 	\param[in]	vector of synaptic delays.
 	 */
-	void setDelay(std::vector<int> delay);
+	void set_delay(std::vector<int> delay);
 
 	/**
 	 * 	\brief		get ranks of presynaptic neurons
 	 * 	\return		ranks of presynaptic neurons
 	 */
-	std::vector<int> getRank() { return rank_; }
+	std::vector<int> get_rank() { return rank_; }
 
 	/**
 	 * 	\brief		set ranks of presynaptic neurons
 	 * 	\details	if the projection is spike coded, the inverted rank arrays is updated.
 	 * 	\param[in]	rank	ranks of presynaptic neurons
 	 */
-	void setRank(std::vector<int> rank);
+	void set_rank(std::vector<int> rank);
 
 	/**
 	 * 	\brief		get synaptic weights
 	 */
-	std::vector<DATA_TYPE> getW();
+	std::vector<DATA_TYPE> get_w();
 
 	/**
 	 * 	\brief		set synaptic weights
 	 */
-	void setW(std::vector<DATA_TYPE> value);
+	void set_w(std::vector<DATA_TYPE> value);
 
-    DATA_TYPE getSingleW(int rank) { return this->w_[rank]; }
+    DATA_TYPE get_single_w(int rank) { return this->w_[rank]; }
 
-    void setSingleW(int rank, DATA_TYPE value) { this->w_[rank] = value; }
+    void set_single_w(int rank, DATA_TYPE value) { this->w_[rank] = value; }
 
     /**
      * 	\brief		return if the projection is between rate coded or spike coded populations

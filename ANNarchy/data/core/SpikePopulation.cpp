@@ -59,7 +59,7 @@ int SpikePopulation::getLastSpikeTime(int rank)
     return lastSpike_[rank];
 }
 
-void SpikePopulation::resetSpikeTimings()
+void SpikePopulation::reset_spike_timings()
 {
     int last_spike;
     for(int i=0; i<spike_timings_.size(); i++)
@@ -71,11 +71,11 @@ void SpikePopulation::resetSpikeTimings()
     }
 }
 
-void SpikePopulation::startRecordSpike()
+void SpikePopulation::start_record_spike()
 {
     record_spike_=true;
 }
-void SpikePopulation::stopRecordSpike()
+void SpikePopulation::stop_record_spike()
 {
     record_spike_=false;
 }

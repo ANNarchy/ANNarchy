@@ -371,24 +371,22 @@ void %(class)s::postEvent()
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 #
 #     * type : type of the variable
 #
 local_variable_access = \
 """
     // Access methods for the local variable %(name)s
-    std::vector<%(type)s> get%(Name)s() { return this->%(name)s_; }
-    void set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
+    std::vector<%(type)s> get_%(name)s() { return this->%(name)s_; }
+    void set_%(name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
     
-    %(type)s getSingle%(Name)s(int rank) { return this->%(name)s_[rank]; }
-    void setSingle%(Name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
+    %(type)s get_single_%(name)s(int rank) { return this->%(name)s_[rank]; }
+    void set_single_%(name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
 
-    std::vector< std::vector< %(type)s > > getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
-    void startRecord%(Name)s() { this->record_%(name)s_ = true; }
-    void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
-    void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
+    std::vector< std::vector< %(type)s > > get_recorded_%(name)s() { return this->recorded_%(name)s_; }                    
+    void start_record_%(name)s() { this->record_%(name)s_ = true; }
+    void stop_record_%(name)s() { this->record_%(name)s_ = false; }
+    void clear_recorded_%(name)s() { this->recorded_%(name)s_.clear(); }
     
 """
 
@@ -397,16 +395,14 @@ local_variable_access = \
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 #
 #     * type : type of the variable
 #
 global_variable_access = \
 """
     // Access methods for the global variable %(name)s
-    %(type)s get%(Name)s() { return this->%(name)s_; }
-    void set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
+    %(type)s get_%(name)s() { return this->%(name)s_; }
+    void set_%(name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
 """
 
 # an implementation code of adding dynamically synapses.

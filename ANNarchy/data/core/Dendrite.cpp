@@ -51,7 +51,7 @@ Dendrite::~Dendrite()
 
 }
 
-void Dendrite::setDelay(std::vector<int> delay)
+void Dendrite::set_delay(std::vector<int> delay)
 {
 #ifdef _DEBUG_DENDRITE_DATA
 	std::cout << "Dendrite::setDelay (ptr = "<< this << ")"<< std::endl;
@@ -78,7 +78,7 @@ void Dendrite::setDelay(std::vector<int> delay)
 	delay_ = delay;
 };
 
-void Dendrite::setRank(std::vector<int> rank)
+void Dendrite::set_rank(std::vector<int> rank)
 {
 #ifdef _DEBUG_DENDRITE_DATA
 	std::cout << "Dendrite::setRank (ptr = "<< this << ")"<< std::endl;
@@ -100,7 +100,7 @@ void Dendrite::setRank(std::vector<int> rank)
 	}
 }
 
-std::vector<DATA_TYPE> Dendrite::getW()
+std::vector<DATA_TYPE> Dendrite::get_w()
 {
 #ifdef _DEBUG_DENDRITE_DATA
 	std::cout << "Dendrite::getW (ptr = "<< this << ")"<< std::endl;
@@ -111,7 +111,7 @@ std::vector<DATA_TYPE> Dendrite::getW()
 	return w_;
 }
 
-void Dendrite::setW(std::vector<DATA_TYPE> value)
+void Dendrite::set_w(std::vector<DATA_TYPE> value)
 {
 #ifdef _DEBUG_DENDRITE_DATA
 	std::cout << "Dendrite::setW (ptr = "<< this << ")"<< std::endl;
@@ -122,105 +122,3 @@ void Dendrite::setW(std::vector<DATA_TYPE> value)
 	w_ = value;
 }
 
-
-/*
-Projection::Projection()
-{
-     constDelay_ = true;
-     maxDelay_ = 0;
-     nbWeights_ = 0;
-
-     //
-     // learning in every time step as default
-     learnFrequency_ = 1;
-     learnOffset_ = 0;
-     learnable_ = true;
-}
-
-Projection::~Projection() {
-#ifdef _DEBUG
-    std::cout<<"Projection::Destructor (" << this << ")"<<std::endl;
-#endif
-    
-    if(!rank_.empty())
-        rank_.erase(rank_.begin(), rank_.end());
-    if(!value_.empty())
-        value_.erase(value_.begin(), value_.end());
-    if(!delay_.empty())
-        delay_.erase(delay_.begin(), delay_.end());
-
-}
-
-void Projection::initValues()
-{
-    /*
-	rank_ = rank;
-	value_ = value;
-	delay_ = delay;
-
-	nbWeights_ = rank_.size();
-
-	constDelay_ = true;
-	maxDelay_ =0;
-
-	if(!delay_.empty()) {
-		maxDelay_=delay[0];
-
-		for(auto it=delay.begin(); it!=delay.end();it++) {
-			if(*it>maxDelay_)
-				maxDelay_ = *it;
-
-			if(*it != maxDelay_)
-				constDelay_ = false;
-		}
-
-		//will be set by derived projection!!!
-		//pre_population_->setMaxDelay(maxDelay_);
-	}
-	*/
-/*
-}
-
-int Projection::addSynapse(int rank, DATA_TYPE value, int delay) {
-    bool found = false;
-    for(unsigned int i=0; i < rank_.size(); i++) {
-        if(rank_[i] == rank ) {
-            found = true;
-            continue;
-        }
-    }
-
-    if(!found){
-        rank_.push_back(rank);
-        value_.push_back(value);
-        delay_.push_back(delay);
-        nbWeights_++;
-        return 0;
-    }else{
-        return -1;
-    }
-}
-
-int Projection::removeSynapse(int rank) {
-#ifdef _DEBUG
-    std::cout << "suppress synapse - pre = "<<rank<<std::endl;
-    std::cout << "check "<<rank_.size()<<" synapses."<< std::endl;
-#endif
-
-    for(unsigned int i=0; i < rank_.size(); i++) {
-        if(rank_[i] == rank ) {
-           std::cout << "found the synapse at: "<< i <<std::endl;
-           rank_.erase(rank_.begin()+i);
-           value_.erase(value_.begin()+i);
-
-           if (delay_.size() > 1)
-               delay_.erase(delay_.begin()+i);
-
-           nbWeights_--;
-           return 0;
-        }
-    }
-
-    return -1;
-}
-*/

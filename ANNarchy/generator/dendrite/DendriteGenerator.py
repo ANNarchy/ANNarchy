@@ -116,22 +116,19 @@ class DendriteGenerator(object):
             
             if param['name'] == "w":
                 func = """
-    std::vector< std::vector< %(type)s > > getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
-    void startRecord%(Name)s() { this->record_%(name)s_ = true; }
-    void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
-    void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
+    std::vector< std::vector< %(type)s > > get_recorded_%(name)s() { return this->recorded_%(name)s_; }                    
+    void start_record_%(name)s() { this->record_%(name)s_ = true; }
+    void stop_record_%(name)s() { this->record_%(name)s_ = false; }
+    void clear_recorded_%(name)s() { this->recorded_%(name)s_.clear(); }
 """
                 members += func % { 'name' : param['name'], 
-                                    'Name': param['name'].capitalize(),
                                     'type': param['ctype']}
             elif param['name'] in self.desc['local']: # local attribute
                 members += local_variable_access % { 'name' : param['name'], 
-                                                     'Name': param['name'].capitalize(),
                                                      'type': param['ctype']}
                 
             elif param['name'] in self.desc['global']: # global attribute
                 members += global_variable_access % { 'name' : param['name'], 
-                                                      'Name': param['name'].capitalize(),
                                                       'type': param['ctype']}
 
         return members
@@ -190,61 +187,6 @@ class DendriteGenerator(object):
     def generate_destructor(self):
         """ Content of the Projection destructor."""
         return ""
-    
-    def generate_cwrappers(self):
-        """
-        Parts of the C++ header which are exported to Python through Cython.
-        
-        Notes:
-            * each exported function need a wrapper method, in this function the wrappers for variables and parameters are generated. 
-            * the access to GPU data is only possible through host. Through this detail the implementation of the cython wrappers are equal to all paradigms.
-        """
-        code = ""
-
-        local_template = Templates.local_wrapper_pyx
-        global_template = Templates.global_wrapper_pyx
-        
-        for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "w":
-                continue
-            
-            if param['name'] in self.desc['local']: # local attribute
-                code += local_template % { 'Name': param['name'].capitalize(), 
-                                              'name': param['name'], 
-                                              'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
-                
-            elif param['name'] in self.desc['global']: # global attribute
-                code += global_template % { 'Name': param['name'].capitalize(), 
-                                               'name': param['name'], 
-                                               'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
-        
-        return code
-
-    def generate_pyfunctions(self):
-        """
-        Python functions accessing the Cython wrapper
-        
-        Notes:
-            * the access to GPU data is only possible through host. Through this detail the implementation of the cython wrappers are equal to all paradigms.
-        """
-        code = ""        
-
-        local_template = Templates.local_property_pyx
-        global_template = Templates.global_property_pyx
-         
-        for param in self.desc['parameters'] + self.desc['variables']:
-            if param['name'] == "w":
-                continue
-            
-            if param['name'] in self.desc['local']: # local attribute
-                code += local_template % { 'Name': param['name'].capitalize(), 
-                                           'name': param['name'],
-                                           'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
-            elif param['name'] in self.desc['global']: # global attribute
-                code += global_template % { 'Name': param['name'].capitalize(), 
-                                            'name': param['name'],
-                                            'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
-        return code
 
         
     def generate_record(self):

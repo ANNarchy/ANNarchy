@@ -97,12 +97,10 @@ class PopulationGenerator(object):
         for param in self.desc['parameters'] + self.desc['variables']:
             if param['name'] in self.desc['local']: # local attribute
                 members += local_variable_access % {'name' : param['name'], 
-                                                    'Name': param['name'].capitalize(),
                                                     'type': param['ctype']}
 
             elif param['name'] in self.desc['global']: # global attribute
                 members += global_variable_access % {'name' : param['name'], 
-                                                     'Name': param['name'].capitalize(),
                                                      'type': param['ctype']}
 
         return members
@@ -395,15 +393,13 @@ void %(class)s::compute_sum_%(var)s() {
         for param in self.desc['parameters'] + self.desc['variables']:
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_wrapper_pyx % { 'Name': param['name'].capitalize(), 
-                                                 'name': param['name'], 
-                                                 'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
+                code += local_wrapper_pyx % {   'name': param['name'], 
+                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         
                 
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_wrapper_pyx % { 'Name': param['name'].capitalize(), 
-                                                  'name': param['name'], 
-                                                  'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
+                code += global_wrapper_pyx % {  'name': param['name'], 
+                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         return code
     
     def generate_pyfunctions(self):
@@ -413,12 +409,10 @@ void %(class)s::compute_sum_%(var)s() {
             
             if param['name'] in self.desc['local']: # local attribute
                 code += local_property_pyx % { 'name': param['name'], 
-                                               'Name': param['name'].capitalize(),
                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
                 
             elif param['name'] in self.desc['global']: # global attribute
                 code += global_property_pyx % { 'name': param['name'], 
-                                                'Name': param['name'].capitalize(),
                                                 'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         return code
                 

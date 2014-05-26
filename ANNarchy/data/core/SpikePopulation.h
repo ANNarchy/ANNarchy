@@ -65,7 +65,7 @@ public:
      * \param[OUT]  1st dimension: neurons sorted by their rank
      *              2nd dimension: spike times of the neuron
      */
-    std::vector< std::vector<int> > getSpikeTimings() { return spike_timings_;}
+    std::vector< std::vector<int> > get_spike_timings() { return spike_timings_;}
 
     /**
      * \brief       Clears the spike timings of all neurons.
@@ -73,17 +73,17 @@ public:
      * \param[OUT]  1st dimension: neurons sorted by their rank
      *              2nd dimension: spike times of the neuron
      */
-    void resetSpikeTimings() ;
+    void reset_spike_timings() ;
 
     /**
      * \brief       Starts recording the spike timings.
      */
-    void startRecordSpike();
+    void start_record_spike();
 
     /**
      * \brief       Stops recording the spike timings.
      */
-    void stopRecordSpike();
+    void stop_record_spike();
 
     /**
      * \brief       Get the laste spike time of a neuron.

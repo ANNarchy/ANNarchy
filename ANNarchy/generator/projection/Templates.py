@@ -32,12 +32,12 @@ public:
     
     ~%(class)s();
 
-    std::vector<int> getRank(int post_rank);
+    std::vector<int> get_rank(int post_rank);
     
-    std::vector<DATA_TYPE> getW(int post_rank);    
-    void setW(int post_rank, std::vector<DATA_TYPE> values);
+    std::vector<DATA_TYPE> get_w(int post_rank);    
+    void set_w(int post_rank, std::vector<DATA_TYPE> values);
     
-    std::vector<int> getDelay(int post_rank);
+    std::vector<int> get_delay(int post_rank);
     
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
@@ -110,24 +110,24 @@ using namespace ANNarchy_Global;
     dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
-std::vector<int> %(class)s::getRank(int post_rank)
+std::vector<int> %(class)s::get_rank(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRank();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_rank();
 }
 
-std::vector<DATA_TYPE> %(class)s::getW(int post_rank)
+std::vector<DATA_TYPE> %(class)s::get_w(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getW();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_w();
 }
 
-void %(class)s::setW(int post_rank, std::vector<DATA_TYPE> values)
+void %(class)s::set_w(int post_rank, std::vector<DATA_TYPE> values)
 {
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setW(values);
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->set_w(values);
 }
 
-std::vector<int> %(class)s::getDelay(int post_rank)
+std::vector<int> %(class)s::get_delay(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getDelay();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_delay();
 }
 
 %(access)s
@@ -136,9 +136,9 @@ void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DA
 {
     dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
     
-    dendrites_[post_rank]->setRank(rank);
-    dendrites_[post_rank]->setW(w);
-    dendrites_[post_rank]->setDelay(delay);    
+    dendrites_[post_rank]->set_rank(rank);
+    dendrites_[post_rank]->set_w(w);
+    dendrites_[post_rank]->set_delay(delay);    
 }
 """
 
@@ -176,12 +176,12 @@ public:
     
     ~%(class)s();
 
-    std::vector<int> getRank(int post_rank);
+    std::vector<int> get_rank(int post_rank);
     
-    std::vector<DATA_TYPE> getW(int post_rank);
-    void setW(int post_rank, std::vector<DATA_TYPE> values);
+    std::vector<DATA_TYPE> get_w(int post_rank);
+    void set_w(int post_rank, std::vector<DATA_TYPE> values);
     
-    std::vector<int> getDelay(int post_rank);
+    std::vector<int> get_delay(int post_rank);
     
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
     
@@ -254,24 +254,24 @@ using namespace ANNarchy_Global;
     dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
-std::vector<int> %(class)s::getRank(int post_rank)
+std::vector<int> %(class)s::get_rank(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRank();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_rank();
 }
 
-std::vector<DATA_TYPE> %(class)s::getW(int post_rank)
+std::vector<DATA_TYPE> %(class)s::get_w(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getW();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_w();
 }
 
-void %(class)s::setW(int post_rank, std::vector<DATA_TYPE> values)
+void %(class)s::set_w(int post_rank, std::vector<DATA_TYPE> values)
 {
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setW(values);
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->set_w(values);
 }
 
-std::vector<int> %(class)s::getDelay(int post_rank)
+std::vector<int> %(class)s::get_delay(int post_rank)
 {
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getDelay();
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_delay();
 }
 
 %(access)s
@@ -280,9 +280,9 @@ void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DA
 {
     dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
     
-    dendrites_[post_rank]->setRank(rank);
-    dendrites_[post_rank]->setW(w);
-    dendrites_[post_rank]->setDelay(delay);    
+    dendrites_[post_rank]->set_rank(rank);
+    dendrites_[post_rank]->set_w(w);
+    dendrites_[post_rank]->set_delay(delay);    
 }
 """
 
@@ -291,106 +291,61 @@ void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DA
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
-#
-#     * type : type of the variable
-#
-local_variable_access = \
-"""
-    // Access methods for the local variable %(name)s
-    std::vector<%(type)s> get%(Name)s() { return this->%(name)s_; }
-    void set%(Name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
-    
-    %(type)s getSingle%(Name)s(int rank) { return this->%(name)s_[rank]; }
-    void setSingle%(Name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
-
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s() { return this->recorded_%(name)s_; }                    
-    void startRecord%(Name)s() { this->record_%(name)s_ = true; }
-    void stopRecord%(Name)s() { this->record_%(name)s_ = false; }
-    void clearRecorded%(Name)s() { this->recorded_%(name)s_.clear(); }
-    
-"""
-
-# Template for a global variable
-# 
-# Depends on:
-# 
-#     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
-#
-#     * type : type of the variable
-#
-global_variable_access = \
-"""
-    // Access methods for the global variable %(name)s
-    %(type)s get%(Name)s() { return this->%(name)s_; }
-    void set%(Name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
-"""
-
-# Template for a local variable
-# 
-# Depends on:
-# 
-#     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 #
 #     * type : type of the variable
 #
 local_idx_variable_access = \
 """
     // Access methods for the local variable %(name)s
-    std::vector<%(type)s> get%(Name)s(int post_rank);
-    void set%(Name)s(int post_rank, std::vector<%(type)s> %(name)s);
+    std::vector<%(type)s> get_%(name)s(int post_rank);
+    void set_%(name)s(int post_rank, std::vector<%(type)s> %(name)s);
     
-    %(type)s getSingle%(Name)s(int post_rank, int rank);
-    void setSingle%(Name)s(int post_rank, int rank, %(type)s %(name)s);
+    %(type)s get_single_%(name)s(int post_rank, int rank);
+    void set_single_%(name)s(int post_rank, int rank, %(type)s %(name)s);
 
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s(int post_rank);                    
-    void startRecord%(Name)s(int post_rank);
-    void stopRecord%(Name)s(int post_rank);
-    void clearRecorded%(Name)s(int post_rank);
+    std::vector< std::vector< %(type)s > >get_recorded_%(name)s(int post_rank);                    
+    void start_record_%(name)s(int post_rank);
+    void stop_record_%(name)s(int post_rank);
+    void clear_recorded_%(name)s(int post_rank);
 """
 
 local_idx_variable_access_body = \
 """
 // Access methods for the local variable %(name)s
-std::vector<%(type)s> %(class)s::get%(Name)s(int post_rank) 
+std::vector<%(type)s> %(class)s::get_%(name)s(int post_rank) 
 {     
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s(); 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_%(name)s(); 
 }
 
-void %(class)s::set%(Name)s(int post_rank, std::vector<%(type)s> %(name)s) 
+void %(class)s::set_%(name)s(int post_rank, std::vector<%(type)s> %(name)s) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->set%(Name)s(%(name)s); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->set_%(name)s(%(name)s); 
 }
 
-%(type)s %(class)s::getSingle%(Name)s(int post_rank, int rank) 
+%(type)s %(class)s::get_single_%(name)s(int post_rank, int rank) 
 { 
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getSingle%(Name)s(rank); 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_single_%(name)s(rank); 
 }
-void %(class)s::setSingle%(Name)s(int post_rank, int rank, %(type)s %(name)s) 
+void %(class)s::set_single_%(name)s(int post_rank, int rank, %(type)s %(name)s) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->setSingle%(Name)s(rank, %(name)s); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->set_single_%(name)s(rank, %(name)s); 
 }
 
-std::vector< std::vector< %(type)s > > %(class)s::getRecorded%(Name)s(int post_rank) 
+std::vector< std::vector< %(type)s > > %(class)s::get_recorded_%(name)s(int post_rank) 
 { 
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRecorded%(Name)s(); 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_recorded_%(name)s(); 
 }                    
-void %(class)s::startRecord%(Name)s(int post_rank) 
+void %(class)s::start_record_%(name)s(int post_rank) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->startRecord%(Name)s(); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->start_record_%(name)s(); 
 }
-void %(class)s::stopRecord%(Name)s(int post_rank) 
+void %(class)s::stop_record_%(name)s(int post_rank) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->stopRecord%(Name)s(); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->stop_record_%(name)s(); 
 }
-void %(class)s::clearRecorded%(Name)s(int post_rank) 
+void %(class)s::clear_recorded_%(name)s(int post_rank) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->clearRecorded%(Name)s(); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->clear_recorded_%(name)s(); 
 }
 """
 
@@ -399,29 +354,27 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 #
 #     * type : type of the variable
 #
 global_idx_variable_access = \
 """
     // Access methods for the global variable %(name)s
-    %(type)s get%(Name)s(int post_rank);
-    void set%(Name)s(int post_rank, %(type)s %(name)s);
+    %(type)s get_%(name)s(int post_rank);
+    void set_%(name)s(int post_rank, %(type)s %(name)s);
 """
 
 global_idx_variable_access_body = \
 """
     // Access methods for the global variable %(name)s
-    %(type)s %(class)s::get%(Name)s(int post_rank) 
+    %(type)s %(class)s::get_%(name)s(int post_rank) 
     {  
-        return (static_cast<class %(dend_class)s*>(dendrites_[post_rank]))->get%(Name)s(); 
+        return (static_cast<class %(dend_class)s*>(dendrites_[post_rank]))->get_%(name)s(); 
     }
     
-    void %(class)s::set%(Name)s(int post_rank, %(type)s %(name)s) 
+    void %(class)s::set_%(name)s(int post_rank, %(type)s %(name)s) 
     { 
-        (static_cast<class %(dend_class)s*>(dendrites_[post_rank]))->set%(Name)s( %(name)s ); 
+        (static_cast<class %(dend_class)s*>(dendrites_[post_rank]))->set_%(name)s( %(name)s ); 
     }
 """
 
@@ -458,17 +411,17 @@ cdef extern from "../build/%(name)s.h":
 
         void initValues(int post_rank)
          
-        vector[int] getRank(int post_rank)
+        vector[int] get_rank(int post_rank)
 
         # local variable w
-        vector[float] getW(int post_rank)
-        void setW(int post_rank, vector[float] values)
-        void startRecordW(int post_rank)
-        void stopRecordW(int post_rank)
-        void clearRecordedW(int post_rank)
-        vector[vector[float]] getRecordedW(int post_rank)
+        vector[float] get_w(int post_rank)
+        void set_w(int post_rank, vector[float] values)
+        void start_record_w(int post_rank)
+        void stop_record_w(int post_rank)
+        void clear_recorded_w(int post_rank)
+        vector[vector[float]] get_recorded_w(int post_rank)
         
-        vector[int] getDelay(int post_rank)
+        vector[int] get_delay(int post_rank)
         
         int nbDendrites()
 
@@ -503,30 +456,30 @@ cdef class py%(name)s:
 
     # Rank (read only)
     cpdef np.ndarray _get_rank(self, int post_rank):
-        return np.array(self.cInstance.getRank(post_rank))
+        return np.array(self.cInstance.get_rank(post_rank))
 
-    # W
+    # w
     cpdef np.ndarray _get_w(self, int post_rank):
-        return np.array(self.cInstance.getW(post_rank))
+        return np.array(self.cInstance.get_w(post_rank))
 
     cpdef _set_w(self, int post_rank, np.ndarray value ):
-        self.cInstance.setW(post_rank, value)
+        self.cInstance.set_w(post_rank, value)
 
     def _start_record_w(self, int post_rank):
-        self.cInstance.startRecordW(post_rank)
+        self.cInstance.start_record_w(post_rank)
 
     def _stop_record_w(self, int post_rank):
-        self.cInstance.stopRecordW(post_rank)
+        self.cInstance.stop_record_w(post_rank)
 
     cpdef np.ndarray _get_recorded_w(self, int post_rank):
         cdef np.ndarray tmp
-        tmp = np.array(self.cInstance.getRecordedW(post_rank))
-        self.cInstance.clearRecordedW(post_rank)
+        tmp = np.array(self.cInstance.get_recorded_w(post_rank))
+        self.cInstance.clear_recorded_w(post_rank)
         return tmp
 
     # Delay (read-only)
     cpdef np.ndarray _get_delay(self, int post_rank):
-        return np.array(self.cInstance.getDelay(post_rank))
+        return np.array(self.cInstance.get_delay(post_rank))
 
     cpdef createFromDict( self, dict dendrites ):
         cdef int rank
@@ -606,17 +559,17 @@ cdef extern from "../build/%(name)s.h":
 
         void initValues(int post_rank)
          
-        vector[int] getRank(int post_rank)
+        vector[int] get_rank(int post_rank)
 
         # local variable w
-        vector[float] getW(int post_rank)
-        void setW(int post_rank, vector[float] values)
-        void startRecordW(int post_rank)
-        void stopRecordW(int post_rank)
-        void clearRecordedW(int post_rank)
-        vector[vector[float]] getRecordedW(int post_rank)
+        vector[float] get_w(int post_rank)
+        void set_w(int post_rank, vector[float] values)
+        void start_record_w(int post_rank)
+        void stop_record_w(int post_rank)
+        void clear_recorded_w(int post_rank)
+        vector[vector[float]] get_recorded_w(int post_rank)
         
-        vector[int] getDelay(int post_rank)
+        vector[int] get_delay(int post_rank)
         
         int nbDendrites()
 
@@ -651,30 +604,30 @@ cdef class py%(name)s:
 
     # Rank (read only)
     cpdef np.ndarray _get_rank(self, int post_rank):
-        return np.array(self.cInstance.getRank(post_rank))
+        return np.array(self.cInstance.get_rank(post_rank))
 
     # w
     cpdef np.ndarray _get_w(self, int post_rank):
-        return np.array(self.cInstance.getW(post_rank))
+        return np.array(self.cInstance.get_w(post_rank))
 
     cpdef _set_w(self, int post_rank, np.ndarray value ):
-        self.cInstance.setW(post_rank, value)
+        self.cInstance.set_w(post_rank, value)
 
     def _start_record_w(self, int post_rank):
-        self.cInstance.startRecordW(post_rank)
+        self.cInstance.start_record_w(post_rank)
 
     def _stop_record_w(self, int post_rank):
-        self.cInstance.stopRecordW(post_rank)
+        self.cInstance.stop_record_w(post_rank)
 
     cpdef np.ndarray _get_recorded_w(self, int post_rank):
         cdef np.ndarray tmp
-        tmp = np.array(self.cInstance.getRecordedW(post_rank))
-        self.cInstance.clearRecordedW(post_rank)
+        tmp = np.array(self.cInstance.get_recorded_w(post_rank))
+        self.cInstance.clear_recorded_w(post_rank)
         return tmp
 
     # Delay (read-only)
     cpdef np.ndarray _get_delay(self, int post_rank):
-        return np.array(self.cInstance.getDelay(post_rank))
+        return np.array(self.cInstance.get_delay(post_rank))
 
     cpdef createFromDict( self, dict dendrites ):
         cdef int rank
@@ -726,32 +679,30 @@ cdef class py%(name)s:
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 local_property_pyx = """
 
     # local: %(name)s
     cpdef np.ndarray _get_%(name)s(self, int post_rank):
-        return np.array(self.cInstance.get%(Name)s(post_rank))
+        return np.array(self.cInstance.get_%(name)s(post_rank))
         
     cpdef _set_%(name)s(self, int post_rank, np.ndarray value):
-        self.cInstance.set%(Name)s(post_rank, value)
+        self.cInstance.set_%(name)s(post_rank, value)
 
     cpdef %(type)s _get_single_%(name)s(self, int post_rank, int rank):
-        return self.cInstance.getSingle%(Name)s(post_rank, rank)
+        return self.cInstance.get_single_%(name)s(post_rank, rank)
 
     cpdef _set_single_%(name)s(self, int post_rank, int rank, %(type)s value):
-        self.cInstance.setSingle%(Name)s(post_rank, rank, value)
+        self.cInstance.set_single_%(name)s(post_rank, rank, value)
 
     def _start_record_%(name)s(self, int post_rank):
-        self.cInstance.startRecord%(Name)s(post_rank)
+        self.cInstance.start_record_%(name)s(post_rank)
 
     def _stop_record_%(name)s(self, int post_rank):
-        self.cInstance.stopRecord%(Name)s(post_rank)
+        self.cInstance.stop_record_%(name)s(post_rank)
 
     cpdef np.ndarray _get_recorded_%(name)s(self, int post_rank):
-        tmp = np.array(self.cInstance.getRecorded%(Name)s(post_rank))
-        self.cInstance.clearRecorded%(Name)s(post_rank)
+        tmp = np.array(self.cInstance.get_recorded_%(name)s(post_rank))
+        self.cInstance.clear_recorded_%(name)s(post_rank)
         return tmp
         
 """
@@ -761,16 +712,14 @@ local_property_pyx = """
 # Depends on:
 # 
 #     * name : name of the variable
-#    
-#     * Name : Capitalized name of variable
 global_property_pyx = """
     
     # global: %(name)s
     cpdef %(type)s _get_%(name)s(self, int post_rank):
-        return self.cInstance.get%(Name)s(post_rank)
+        return self.cInstance.get_%(name)s(post_rank)
         
     cpdef _set_%(name)s(self, int post_rank, %(type)s value):
-        self.cInstance.set%(Name)s(post_rank, value)
+        self.cInstance.set_%(name)s(post_rank, value)
         
 """
 
@@ -785,14 +734,14 @@ global_property_pyx = """
 #     * type : C type of variable
 local_wrapper_pyx = """
         # Local %(name)s
-        vector[%(type)s] get%(Name)s(int post_rank)
-        void set%(Name)s(int post_rank, vector[%(type)s] values)
-        %(type)s getSingle%(Name)s(int post_rank, int rank)
-        void setSingle%(Name)s(int post_rank, int rank, %(type)s values)
-        void startRecord%(Name)s(int post_rank)
-        void stopRecord%(Name)s(int post_rank)
-        void clearRecorded%(Name)s(int post_rank)
-        vector[vector[%(type)s]] getRecorded%(Name)s(int post_rank)
+        vector[%(type)s] get_%(name)s(int post_rank)
+        void set_%(name)s(int post_rank, vector[%(type)s] values)
+        %(type)s get_single_%(name)s(int post_rank, int rank)
+        void set_single_%(name)s(int post_rank, int rank, %(type)s values)
+        void start_record_%(name)s(int post_rank)
+        void stop_record_%(name)s(int post_rank)
+        void clear_recorded_%(name)s(int post_rank)
+        vector[vector[%(type)s]] get_recorded_%(name)s(int post_rank)
 """
 
 # Global Cython wrapper
@@ -806,8 +755,8 @@ local_wrapper_pyx = """
 #     * type : C type of variable
 global_wrapper_pyx = """
         # Global %(name)s
-        %(type)s get%(Name)s(int post_rank)
-        void set%(Name)s(int post_rank, %(type)s value)                
+        %(type)s get_%(name)s(int post_rank)
+        void set_%(name)s(int post_rank, %(type)s value)                
 """
 
 # an implementation code of adding dynamically synapses.

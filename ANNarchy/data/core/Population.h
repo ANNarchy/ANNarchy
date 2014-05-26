@@ -112,6 +112,7 @@ public:
     bool isMeanRateCoded() { return isRateType_; }
 
     unsigned int getRank() { return rank_; }
+    
 protected:
     unsigned int nbNeurons_; 	///< amount of neurons in the layer
     std::string name_;  		///< name of layer

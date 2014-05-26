@@ -103,28 +103,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
             'rem_synapse_body': rem_synapse,
             'rem_all_synapse_body': rem_all_synapse 
         }
-        return template % dictionary
-         
-    def generate_pyx(self):
-        """
-        Generate complete cython wrapper class
-             
-        Notes:
-            * dependent on coding and paradigm
-        """
-        # Get the C++ methods
-        cwrappers = self.generate_cwrappers()
-        # Get the python functions
-        pyfunctions = self.generate_pyfunctions()
-        # Generate the code
- 
-        template = spike_projection_pyx
-        dictionary = { 
-            'name': self.name, 
-            'cFunction': cwrappers, 
-            'pyFunction': pyfunctions
-        }
-        return template % dictionary    
+        return template % dictionary  
      
     def generate_record(self):
         code = DendriteGenerator.generate_record(self)

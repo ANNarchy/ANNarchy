@@ -75,24 +75,21 @@ class ProjectionGenerator(object):
             
             if param['name'] == "w":
                 func = """
-    std::vector< std::vector< %(type)s > >getRecorded%(Name)s(int post_rank);                    
-    void startRecord%(Name)s(int post_rank);
-    void stopRecord%(Name)s(int post_rank);
-    void clearRecorded%(Name)s(int post_rank);
+    std::vector< std::vector< %(type)s > >get_recorded_%(name)s(int post_rank);                    
+    void start_record_%(name)s(int post_rank);
+    void stop_record_%(name)s(int post_rank);
+    void clear_recorded_%(name)s(int post_rank);
 """             
                 members_header += func % { 'name' : param['name'], 
-                                           'Name': param['name'].capitalize(),
                                            'type': param['ctype'],
                                            'class': self.name.replace('Projection', 'Dendrite')}
             elif param['name'] in self.desc['local']: # local attribute
                 members_header += local_template % { 'name' : param['name'], 
-                                              'Name': param['name'].capitalize(),
                                               'type': param['ctype'],
                                               'class': self.name.replace('Projection', 'Dendrite')}
                 
             elif param['name'] in self.desc['global']: # global attribute
                 members_header += global_template % { 'name' : param['name'], 
-                                               'Name': param['name'].capitalize(),
                                                'type': param['ctype'],
                                                'class': self.name.replace('Projection', 'Dendrite')}
 
@@ -118,39 +115,36 @@ class ProjectionGenerator(object):
             
             if param['name'] == "w":
                 func = """
-std::vector< std::vector< %(type)s > > %(class)s::getRecorded%(Name)s(int post_rank) 
+std::vector< std::vector< %(type)s > > %(class)s::get_recorded_%(name)s(int post_rank) 
 { 
-    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->getRecorded%(Name)s(); 
+    return (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->get_recorded_%(name)s(); 
 }                    
-void %(class)s::startRecord%(Name)s(int post_rank) 
+void %(class)s::start_record_%(name)s(int post_rank) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->startRecord%(Name)s(); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->start_record_%(name)s(); 
 }
-void %(class)s::stopRecord%(Name)s(int post_rank) 
+void %(class)s::stop_record_%(name)s(int post_rank) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->stopRecord%(Name)s(); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->stop_record_%(name)s(); 
 }
-void %(class)s::clearRecorded%(Name)s(int post_rank) 
+void %(class)s::clear_recorded_%(name)s(int post_rank) 
 { 
-    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->clearRecorded%(Name)s(); 
+    (static_cast<%(dend_class)s*>(dendrites_[post_rank]))->clear_recorded_%(name)s(); 
 }
 """             
                 members_body += func % { 'name' : param['name'], 
-                                         'Name': param['name'].capitalize(),
                                          'type': param['ctype'],
                                          'class': self.name,
                                          'dend_class': self.name.replace('Projection', 'Dendrite')}
                 
             elif param['name'] in self.desc['local']: # local attribute
                 members_body += local_template % { 'name' : param['name'], 
-                                              'Name': param['name'].capitalize(),
                                               'type': param['ctype'],
                                               'class': self.name,
                                               'dend_class': self.name.replace('Projection', 'Dendrite')}
                 
             elif param['name'] in self.desc['global']: # global attribute
                 members_body += global_template % { 'name' : param['name'], 
-                                               'Name': param['name'].capitalize(),
                                                'type': param['ctype'],
                                                'class': self.name,
                                                'dend_class': self.name.replace('Projection', 'Dendrite')}
@@ -172,13 +166,11 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
                 continue
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_wrapper_pyx % { 'Name': param['name'].capitalize(), 
-                                              'name': param['name'], 
+                code += local_wrapper_pyx % { 'name': param['name'], 
                                               'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
                 
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_wrapper_pyx % { 'Name': param['name'].capitalize(), 
-                                               'name': param['name'], 
+                code += global_wrapper_pyx % { 'name': param['name'], 
                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         
         return code
@@ -197,12 +189,10 @@ void %(class)s::clearRecorded%(Name)s(int post_rank)
                 continue
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_property_pyx % { 'Name': param['name'].capitalize(), 
-                                               'name': param['name'],
+                code += local_property_pyx % { 'name': param['name'],
                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_property_pyx % { 'Name': param['name'].capitalize(), 
-                                                'name': param['name'],
+                code += global_property_pyx % { 'name': param['name'],
                                                 'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float' }
         return code
 
