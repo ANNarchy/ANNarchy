@@ -21,14 +21,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _warning
+from ANNarchy.core.Global import _warning, _error
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 
 
 # Predefined symbols which must not be declared by the user, but used in the equations
-_predefined = ['weight', 'w']
+_predefined = ['w']
 
 class Equation(object):
     '''
@@ -70,7 +70,6 @@ class Equation(object):
         self.local_dict = {
             'dt' : Symbol('dt_'),
             't' : Symbol('ANNarchy_Global::time'),
-            'weight' : Symbol('w_' + index), 
             'w' : Symbol('w_'+index), 
             't_pre': Symbol('pre_population_->getLastSpikeTime(rank_'+index+')'),
             't_post': Symbol('post_population_->getLastSpikeTime(post_neuron_rank_)'),
@@ -136,15 +135,25 @@ class Equation(object):
     def c_code(self, equation):
         "Returns the C version of a Sympy expression"
         return ccode(equation, precision=8)#, user_functions=custom_functions)
+
+    def latex_code(self, equation):
+        "Returns the LaTeX version of a Sympy expression"
+        return latex(equation)
     
     def parse_expression(self, expression, local_dict):
         " Parses a string with respect to the vocabulary defined in local_dict."
         
-        return parse_expr(transform_condition(expression),
-            local_dict = local_dict,
-            transformations = (standard_transformations + (convert_xor,)) 
-                                            # to use ^ for power functions
-        )
+        try:
+            res =  parse_expr(transform_condition(expression),
+                local_dict = local_dict,
+                transformations = (standard_transformations + (convert_xor,)) 
+            )
+        except Exception, e:
+            print e
+            _error('Can not analyse the expression :' +  expression)
+            exit(0)
+        else:
+            return res
     
     def analyse_ODE(self, expression):
         " Returns the C++ code corresponding to an ODE with the method defined in self.method"

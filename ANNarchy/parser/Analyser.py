@@ -479,14 +479,16 @@ def _extract_prepost(name, eq, proj):
             if var=='r':
                 untouched['_pre_r_'] = ' (*pre_rates_)[ rank_[i] ] '
             else:
-                untouched['_pre_'+var+'_'] = ' pre_population_->getSingle'+var.capitalize()+'( rank_[i] ) '
+                untouched['_pre_'+var+'_'] = ' pre_population_->get_single_'+var+'( rank_[i] ) '
         else:
             _error(eq+'\nPopulation '+proj.pre.description['name']+' has no attribute '+var+'.')
             exit(0)
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
         if var == 'sum': # pre.sum(exc)
-            pass
+            target = 'post.sum(' + var
+            eq = eq.replace(target, ' _post_'+var+'_ ')
+            print eq, var
         elif var in proj.post.attributes:
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var+'_ ')
@@ -494,7 +496,7 @@ def _extract_prepost(name, eq, proj):
                 #the firing rates are solved in a slightly different way
                 untouched['_post_r_'] = ' post_r_ '
             else:
-                untouched['_post_'+var+'_'] = ' post_population_->getSingle'+var.capitalize()+'(  post_neuron_rank_ ) '
+                untouched['_post_'+var+'_'] = ' post_population_->get_single_'+var+'(  post_neuron_rank_ ) '
         else:
             _error(eq+'\nPopulation '+proj.post.description['name']+' has no attribute '+var+'.')
             exit(0)
