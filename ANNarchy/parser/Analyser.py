@@ -236,7 +236,7 @@ class Analyser(object):
                     code = self._translate_ITE('psp', eq, condition, proj, untouched, split=False)
 
                 # Replace _pre_rate_ with (*pre_rates_)[rank_[i]]
-                code = code.replace('_pre_rate_', '(*pre_rates_)[rank_[i]]')
+                code = code.replace('_pre_r_', '(*pre_rates_)[rank_[i]]')
                 # Store the result
                 psp['cpp'] = code
                 proj.description['psp'] = psp               
