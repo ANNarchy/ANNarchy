@@ -235,7 +235,7 @@ class Analyser(object):
                 else:
                     code = self._translate_ITE('psp', eq, condition, proj, untouched, split=False)
 
-                # Replace _pre_rate_ with (*pre_rates_)[rank_[i]]
+                # Replace _pre_r_ with (*pre_rates_)[rank_[i]]
                 code = code.replace('_pre_r_', '(*pre_rates_)[rank_[i]]')
                 # Store the result
                 psp['cpp'] = code
@@ -439,9 +439,9 @@ def _extract_globalops_synapse(name, eq, proj):
         pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*pre\.([a-zA-Z0-9]+)\s*\)', eq)
         post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*post\.([a-zA-Z0-9]+)\s*\)', eq)
         # Check if a global variable depends on pre
-        if len(pre_matches) > 0 and name in proj.description['global']:
-            _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
-            exit(0)
+        # if len(pre_matches) > 0 and name in proj.description['global']:
+        #     _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
+        #     exit(0)
         for pre, var in pre_matches:
             if var in proj.pre.attributes:
                 globs['pre'].append({'function': op, 'variable': var})
