@@ -360,12 +360,12 @@ class Population(object):
         for var in _variable:
             
             if not var in self._recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
+                print var, 'is not a recordable variable of', self.name
                 continue
 
-            if not self._recorded_variables[var].is_running:
-                print('record of', var, 'was not running on population', self.name)
-                continue
+            # if not self._recorded_variables[var].is_running:
+            #     print 'record of', var, 'was not running on population', self.name
+            #     continue
             
             try:
                 getattr(self.cyInstance, '_stop_record_'+var)()
