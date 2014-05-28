@@ -323,10 +323,9 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
-    
         # Obtain C code
-        code = self.c_code(simplify(analysed)) 
-    
+        #code = self.c_code(simplify(analysed)) 
+        code = self.c_code(analysed)
         # Return result
         return code
     
