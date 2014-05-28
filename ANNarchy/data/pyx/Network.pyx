@@ -26,6 +26,8 @@
 cdef extern from "../build/Network.h":
 	cdef cppclass Network:
 		Network()
+        
+		void destroy()
 
 		int getTime()
 
@@ -44,6 +46,9 @@ cdef class pyNetwork:
 
 	def __cinit__(self):
 		self.cInstance = instance()
+
+	def destroy(self):
+		self.cInstance.destroy()
 
 	def get_time(self):
 		return self.cInstance.getTime()

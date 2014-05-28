@@ -66,6 +66,25 @@ class Network(object):
         self.cython_module = __import__('ANNarchyCython')
         self.cy_instance = self.cython_module.pyNetwork()
     
+    def destroy(self):
+        """
+        Destroy the current active network, to allow the recompilation of the network.
+
+        Please note: works only if the set of python population- and projectionclasses remains unchanged. 
+        """
+        self.cy_instance.destroy()
+
+        #
+        # we access here directly the global stored 
+        # populations, as they will be reinstantiated 
+        for pop in Global._populations:
+            del pop
+        for proj in Global._projections:
+            del proj
+
+        Global._populations = []
+        Global._projections = []
+
     def add(self, object):
         """
         Add additional object to network.

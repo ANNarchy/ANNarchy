@@ -37,6 +37,8 @@ public:
 
 	~Network();
 
+	void destroy();
+
 	class Population* getPopulation(std::string name);
 
 	class Population* getPopulation(std::string name, bool isRateCoded);

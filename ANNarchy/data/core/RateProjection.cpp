@@ -30,7 +30,7 @@ RateProjection::RateProjection(): Projection()
 
 void RateProjection::computeSum()
 {
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
 #endif
 
@@ -40,7 +40,7 @@ void RateProjection::computeSum()
 		if (!dendrites_[n])
 			continue;
 
-	#ifdef _DEBUG
+	#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
 	#endif
 		static_cast<RateDendrite*>(dendrites_[n])->computeSum();
@@ -49,7 +49,7 @@ void RateProjection::computeSum()
 
 void RateProjection::globalLearn()
 {
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 	#pragma omp master
 	{
 		std::cout << "GlobalLearn: number of dendrites: " << nbDendrites_ << std::endl;
@@ -71,7 +71,7 @@ void RateProjection::globalLearn()
 
 void RateProjection::localLearn()
 {
-#ifdef _DEBUG
+#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 	#pragma omp master
 	{
 	std::cout << "LocalLearn: number of dendrites: " << nbDendrites_ << std::endl;

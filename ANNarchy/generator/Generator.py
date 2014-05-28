@@ -156,6 +156,8 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
             debug_build = True
         elif arg == '--verbose':
             Global.config['verbose'] = True
+        elif arg == '--profile':
+            profile_enabled = True
         elif str(arg).find('-j')!= -1:
             try:
                 num_threads = int(arg.replace('-j',''))

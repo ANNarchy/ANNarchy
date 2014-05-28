@@ -22,6 +22,7 @@
     
 """
 import exceptions
+from ANNarchy.core import Global
 from ANNarchy import *
 import numpy as np
 
@@ -147,7 +148,8 @@ class DataLog(object):
         np.savetxt(name, self._data, delimiter=',')
                 
 class Profile:
-    def __init__(self, num_threads, num_trials, name='profile'):
+
+    def __init__(self, num_threads, num_trials, name=None, folder='.'):
         """
         Constructor, setup the overall configuration of profiling session.
         
@@ -164,7 +166,8 @@ class Profile:
             print 'Inited profiler.'
             self._profile_instance = ANNarchyCython.pyProfile()
             self._network = ANNarchyCython.pyNetwork()
-            
+        
+        self._folder = folder
         self._name = name
         self._threads = {}
         for i in range(len(num_threads)):
@@ -185,12 +188,22 @@ class Profile:
         """
         if object == "network":
             self._net_data = DataLog(self._threads, self._num_trials,'overall')
-        else:
+        elif isinstance(object, Population):
             self._pop_data[object] = { 'sum' : DataLog(self._threads, self._num_trials, 'sum'),
                                        'step' : DataLog(self._threads, self._num_trials, 'step'), 
                                        'local' : DataLog(self._threads, self._num_trials, 'local'),
                                        'global' : DataLog(self._threads, self._num_trials, 'global')
                                      }
+        else:
+            self._net_data = DataLog(self._threads, self._num_trials,'overall')
+            
+            for pop in object._populations:
+                self._pop_data[pop.name] = { 'sum' : DataLog(self._threads, self._num_trials, 'sum'),
+                                             'step' : DataLog(self._threads, self._num_trials, 'step'), 
+                                             'local' : DataLog(self._threads, self._num_trials, 'local'),
+                                             'global' : DataLog(self._threads, self._num_trials, 'global')
+                                            }
+                
         
     def measure(self, thread, trial, begin, end):
         """
@@ -216,7 +229,23 @@ class Profile:
             data['step'][thread, trial] = self._average_step(name, begin, end)
             data['local'][thread, trial] = self._average_local(name, begin, end)
             data['global'][thread, trial] = self._average_global(name, begin, end)
-            
+    
+    def measure_func(self, func, steps):
+        """
+        Profiles the provided simulation loop
+        """
+        for thread in self._threads:
+            Global._network.set_num_threads(thread)
+        
+            i = 0
+            for trial in xrange(self._num_trials):
+                func(steps)
+                
+                self.measure(thread, trial, i*steps, (i+1)*steps)
+                i+= 1
+                
+            self.reset_timer()
+               
     def analyse_data(self):
         """
         Iterate over all data fields and create evaluation data.
@@ -514,12 +543,18 @@ class Profile:
         time = datetime.datetime.now().strftime("%Y%m%d_%H-%M")
         
         if self._net_data:
-            out_file = time+self._name+'_overall.csv'
+            if self._name == None:
+                out_file = self._folder+'/'+time+'_profile_overall.csv'
+            else:
+                out_file = self._folder+'/'+self._name+'_overall.csv'
             self._net_data.save_to_file(out_file)
             
         empty_row = np.zeros((self._num_trials,1))
         for name, data in self._pop_data.iteritems():
-            out_file = time+self._name+'_'+name+'.csv'
+            if self._name == None:
+                out_file = self._folder+'/'+time+'_profile_name.csv'
+            else:
+                out_file = self._folder+'/'+self._name+'.csv'
             
             complete = np.concatenate( 
                             ( data['sum']._data, empty_row,

@@ -29,6 +29,9 @@
 
 Network::Network()
 {
+#ifdef _DEBUG
+	std::cout << "Network singleton instance created (ptr = " << this << " )"<< std::endl;
+#endif
 	rate_populations_.clear();
 	spike_populations_.clear();
 
@@ -37,7 +40,9 @@ Network::Network()
 
 Network::~Network()
 {
+#ifdef _DEBUG
     std::cout << "Network destructor." << std::endl;
+#endif
 
 	while(!rate_populations_.empty())
 	{
@@ -50,6 +55,26 @@ Network::~Network()
 		delete spike_populations_.back();
 		spike_populations_.pop_back();
 	}
+}
+
+void Network::destroy()
+{
+#ifdef _DEBUG
+    std::cout << "Network::destroy() called." << std::endl;
+#endif
+
+	while(!rate_populations_.empty())
+	{
+		delete rate_populations_.back();
+		rate_populations_.pop_back();
+	}
+
+	while(!spike_populations_.empty())
+	{
+		delete spike_populations_.back();
+		spike_populations_.pop_back();
+	}
+
 }
 
 class Population* Network::getPopulation(std::string name)
