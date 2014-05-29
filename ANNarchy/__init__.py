@@ -12,7 +12,7 @@ from .core.Dendrite import Dendrite
 from .core.Random import Constant, Uniform, Normal
 from .core.Utils import raster_plot, smoothed_rate
 
-# ANNarchy4 compilation
+# ANNarchy compilation
 from .generator import compile
 from .extensions import *
 
@@ -22,6 +22,6 @@ import os, sys
 
 # Version
 __version__ = '4.1'
-__release__ = '4.1.2'
+__release__ = '4.1.3'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                    ') on ' + sys.platform + ' (' + os.name + ').' )
