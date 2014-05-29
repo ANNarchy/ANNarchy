@@ -102,7 +102,7 @@ class Constant(RandomDistribution):
     def _gen_cpp(self):
         return 'Constant<DATA_TYPE>('+str(self._value)+')'
         
-    def _cpp_clas(self):
+    def _cpp_class(self):
         return 'Constant'
     
     def max(self):
@@ -207,9 +207,9 @@ class Normal(RandomDistribution):
     def _cpp_class(self):
         return 'NormalDistribution'
         
-    def max(self):
+    def mu(self):
         return self._mu
 
-    def min(self):
-        return 0
+    def sigma(self):
+        return self._sigma
 

@@ -76,7 +76,8 @@ class Analyser(object):
                
             # Extract RandomDistribution objects
             pop.description['random_distributions'] = _extract_randomdist(pop)
-                   
+            print pop.description['random_distributions']
+
             if 'raw_spike' in pop.description.keys() and 'raw_reset' in pop.description.keys():
                 pop.description['spike'] = _extract_spike_variable(pop.description)
 
@@ -425,15 +426,35 @@ def _extract_randomdist(pop):
         for dist in available_distributions:
             matches = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+dist+'\(([^()]+)\)', eq)
             for l, v in matches:
+                # Check the arguments
+                arguments = v.split(',')
+                processed_arguments = ""
+                for idx in range(len(arguments)):
+                    try:
+                        arg = float(arguments[idx])
+                    except: # A global parameter
+                        print pop.description['global']
+                        if arguments[idx].strip() in pop.description['global']:
+                            arg = arguments[idx] + '_'
+                        else:
+                            _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
+                            exit(0)
+
+                    processed_arguments += str(arg)
+                    if idx != len(arguments)-1: # not the last one
+                        processed_arguments += ', '
+                definition = dist + '(' + processed_arguments + ')'
                 # Store its definition
                 desc = {'name': '__rand_' + str(rk_rand) + '_',
-                        'definition': dist + '(' + v + ')',
-                        'args' : v}
+                        'dist': dist,
+                        'definition': definition,
+                        'args' : processed_arguments}
+                print desc
                 rk_rand += 1
                 random_objects.append(desc)
                 # Replace its definition by its temporary name
                 # Problem: when one uses twice the same RD in a single equation (perverse...)
-                eq = eq.replace(desc['definition'], desc['name'])
+                eq = eq.replace(dist+'('+v+')', desc['name'])
                 # Add the new variable to the vocabulary
                 pop.description['attributes'].append(desc['name'])
                 if variable['name'] in pop.description['local']:
