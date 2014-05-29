@@ -25,6 +25,7 @@ from ANNarchy.core.Global import _warning, _error
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
+import re
 
 
 # Predefined symbols which must not be declared by the user, but used in the equations
@@ -77,6 +78,8 @@ class Equation(object):
             'positive': Function('positive'), 
             'neg': Function('negative'), 
             'negative': Function('negative'), 
+            'True': Symbol('true'), 
+            'False': Symbol('false'), 
         }
         for var in self.variables: # Add each variable of the neuron
             if var in self.local_variables:
@@ -319,12 +322,32 @@ class Equation(object):
     def analyse_condition(self, expression):
         " Analyzes a boolean condition (e.g. for the spike argument)."
                 
+        expression =  transform_condition(expression)
+
+        # Check if there is a == in the condition
+        if '==' in expression:
+            # Is it the only term, or are there other operations?
+            if '&' in expression or '|' in expression:
+                expression = re.sub(r'([\w\s.]+)==([\w\s.]+)', r'Equality(\1, \2)', expression)
+            else:
+                terms = expression.split('==')
+                expression = 'Equality(' + terms[0] + ', ' + terms[1] + ')'
+
+        # Check if there is a != in the condition
+        if '!=' in expression:
+            # Is it the only term, or are there other operations?
+            if '&' in expression or '|' in expression:
+                expression = re.sub(r'([\w\s.]+)!=([\w\s.]+)', r'Not(Equality(\1, \2))', expression)
+            else:
+                terms = expression.split('!=')
+                expression = 'Not(Equality(' + terms[0] + ', ' + terms[1] + '))'
+
         # Parse the string
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+
         # Obtain C code
-        #code = self.c_code(simplify(analysed)) 
         code = self.c_code(analysed)
         # Return result
         return code
@@ -391,6 +414,8 @@ class Equation(object):
 def transform_condition(expr):
     expr = expr.replace (' and ', ' & ')
     expr = expr.replace (' or ', ' | ')
+    expr = expr.replace (' is not ', ' != ')
     expr = expr.replace (' not ', ' Not ')
     expr = expr.replace (' not(', ' Not(')
+    expr = expr.replace (' is ', ' == ')
     return expr

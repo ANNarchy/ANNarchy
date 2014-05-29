@@ -981,12 +981,12 @@ def _extract_name(equation, left=False):
 
 def _extract_condition_name(equation):
     " Extracts the name of a parameter/variable by looking the left term of an equation."
-    equation = equation.replace(' ','')
+    #equation = equation.replace(' ','')
     # Search for operators
-    operators = ['>', '<']
+    operators = ['>', '<', '!=', '==', ' is ']
     for op in operators:
         if op in equation: 
-            return equation.split(op)[0]  
+            return equation.split(op)[0].strip()
     return '_undefined'   
     
                 
