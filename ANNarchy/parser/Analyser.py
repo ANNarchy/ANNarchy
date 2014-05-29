@@ -111,6 +111,26 @@ class Analyser(object):
                     method = 'exponential'
                 else:
                     method = 'explicit'
+
+                # Process the bounds
+                if 'min' in variable['bounds'].keys():
+                    if isinstance(variable['bounds']['min'], str):
+                        translator = Equation(variable['name'], variable['bounds']['min'], 
+                                              pop.description['attributes'], 
+                                              pop.description['local'], 
+                                              pop.description['global'], 
+                                              type = 'return',
+                                              untouched = untouched.keys())
+                        variable['bounds']['min'] = translator.parse().replace(';', '')
+                if 'max' in variable['bounds'].keys():
+                    if isinstance(variable['bounds']['max'], str):
+                        translator = Equation(variable['name'], variable['bounds']['max'], 
+                                              pop.description['attributes'], 
+                                              pop.description['local'], 
+                                              pop.description['global'], 
+                                              type = 'return',
+                                              untouched = untouched.keys())
+                        variable['bounds']['max'] = translator.parse().replace(';', '')
                 
                 # Analyse the equation
                 if condition == []:
@@ -196,6 +216,26 @@ class Analyser(object):
                     method = 'exponential'
                 else:
                     method = 'explicit'
+
+                # Process the bounds
+                if 'min' in variable['bounds'].keys():
+                    if isinstance(variable['bounds']['min'], str):
+                        translator = Equation(variable['name'], variable['bounds']['min'], 
+                                              proj.description['attributes'], 
+                                              proj.description['local'], 
+                                              proj.description['global'], 
+                                              type = 'return',
+                                              untouched = untouched.keys())
+                        variable['bounds']['min'] = translator.parse().replace(';', '')
+                if 'max' in variable['bounds'].keys():
+                    if isinstance(variable['bounds']['max'], str):
+                        translator = Equation(variable['name'], variable['bounds']['max'], 
+                                              proj.description['attributes'], 
+                                              proj.description['local'], 
+                                              proj.description['global'], 
+                                              type = 'return',
+                                              untouched = untouched.keys())
+                        variable['bounds']['max'] = translator.parse().replace(';', '')
                     
                 # Analyse the equation
                 if condition == []: # Call Equation
@@ -981,7 +1021,6 @@ def _extract_name(equation, left=False):
 
 def _extract_condition_name(equation):
     " Extracts the name of a parameter/variable by looking the left term of an equation."
-    #equation = equation.replace(' ','')
     # Search for operators
     operators = ['>', '<', '!=', '==', ' is ']
     for op in operators:

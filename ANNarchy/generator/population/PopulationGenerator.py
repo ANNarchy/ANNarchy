@@ -365,25 +365,18 @@ void %(class)s::compute_sum_%(var)s() {
 
             # Process the bounds min and max
             for bound, val in param['bounds'].iteritems():
-                # Check if the min/max value is a float/int or another parameter/variable
-                if val in self.desc['local']:
-                    pval = val + '_[i]'
-                elif val in self.desc['global']:
-                    pval = val + '_'
-                else:
-                    pval = val
                 # Bound min
                 if bound == 'min':
                     code += """
     if(%(var)s_[i] < %(val)s)
         %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
+""" % {'var' : param['name'], 'val' : val}
                 # Bound max 
                 if bound == 'max':
                     code += """
     if(%(var)s_[i] > %(val)s)
         %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
+""" % {'var' : param['name'], 'val' : val}
         return code
     
     def generate_cwrappers(self):

@@ -153,7 +153,7 @@ class Equation(object):
             )
         except Exception, e:
             print e
-            _error('Can not analyse the expression :' +  expression)
+            _error('Can not analyse the expression :' +  str(expression))
             exit(0)
         else:
             return res

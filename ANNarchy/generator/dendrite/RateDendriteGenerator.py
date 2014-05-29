@@ -146,22 +146,16 @@ class RateDendriteGenerator(DendriteGenerator):
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
                     # Check if the min/max value is a float/int or another parameter/variable
-                    if val in self.desc['local']:
-                        pval = val + '_[i]'
-                    elif val in self.desc['global']:
-                        pval = val + '_'
-                    else:
-                        pval = val
                     if bound == 'min':
                         code += """
     if(%(var)s_ < %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
+""" % {'var' : param['name'], 'val' : val}
                     if bound == 'max':
                         code += """
     if(%(var)s_ > %(val)s)
         %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
+""" % {'var' : param['name'], 'val' : val}
         return code
     
     def generate_locallearn(self):
@@ -180,22 +174,16 @@ class RateDendriteGenerator(DendriteGenerator):
                 # Set the min and max values 
                 for bound, val in param['bounds'].iteritems():
                     # Check if the min/max value is a float/int or another parameter/variable
-                    if val in self.desc['local']:
-                        pval = val + '_[i]'
-                    elif val in self.desc['global']:
-                        pval = val + '_'
-                    else:
-                        pval = val
                     if bound == 'min':
                         local_learn += """
             if(%(var)s_[i] < %(val)s)
                 %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
+""" % {'var' : param['name'], 'val' : val}
                     if bound == 'max':
                         local_learn += """
             if(%(var)s_[i] > %(val)s)
                 %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
+""" % {'var' : param['name'], 'val' : val}
         
         if len(local_learn) > 1:
             #
