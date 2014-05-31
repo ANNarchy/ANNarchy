@@ -22,133 +22,20 @@
     
 """
 import exceptions
+import datetime
+import pyqtgraph as pg
+from math import ceil, floor, sqrt
+
 from ANNarchy.core import Global
 from ANNarchy import *
-import numpy as np
 
-import datetime
-import matplotlib.pyplot as plt
+from DataLog import DataLog
+from Custom import IntAxis
 
-import pyqtgraph as pg
-from math import floor, ceil, sqrt
-
-class IntAxis(pg.AxisItem):
-    """
-    Overridden class of pyqtgraph framework.
-    
-    To customize the xAxis of the plots ( refer to: customizable plots of the example pyqtgraph package ) 
-    """
-    def tickSpacing(self, minVal, maxVal, size):
-        """
-        Parameters as original, returns only major tick spacing of length 1.0
-        """
-        if maxVal <= 11.0:
-            return [(1,0)]
-        else:
-            idx = np.linspace(minVal, maxVal, num=11)
-            if int(floor(idx[1])) > 0:
-                return [(int(floor(idx[1])),0)]
-            else:
-                return pg.AxisItem.tickSpacing(self,minVal, maxVal, size)  
-            
-class DataLog(object):
-    def __init__(self, threads, num_trials, operation):
-        """
-        Constructor
-        """
-        self._operation = operation
-        self._num_trials = threads
-        self._threads = threads            
-        self._data = np.zeros((num_trials, len(threads))) 
-
-        self._mean = np.array([ 0.0 for x in xrange(len(self._threads))])
-        self._std = np.array([ 0.0 for x in xrange(len(self._threads))])
-        self._min = np.array([ 0.0 for x in xrange(len(self._threads))])
-        self._max = np.array([ 0.0 for x in xrange(len(self._threads))])
-        
-    def __getitem__(self, idx):
-        if not isinstance(idx, tuple) or len(idx) != 2:
-            raise IndexError
-        
-        return self._data[ idx[1], self._threads[idx[0]] ]
-
-    def __setitem__(self, idx, value):
-        if not isinstance(idx, tuple) or len(idx) != 2:
-            raise IndexError
-
-        self._data[ idx[1], self._threads[idx[0]] ] = value
-
-    def analyse_data(self):
-        """
-        Calculate mean and standard deviation for logged data.
-        """
-        for t in xrange(len(self._threads)):
-            self._mean[t] = np.mean(self._data[:,t], axis=0)
-            self._std[t] = np.std(self._data[:,t], axis=0)
-            self._min[t] = np.amin(self._data[:,t], axis=0)
-            self._max[t] = np.amax(self._data[:,t], axis=0)
-
-    def mean(self):
-        """
-        """
-        mean = np.zeros(len(self._threads))
-        
-        i = 0
-        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
-            mean[i] = self._mean[self._threads[t]]
-            i+=1
-        
-        return mean
-
-    def min(self):
-        """
-        """
-        min = np.zeros(len(self._threads))
-        
-        i = 0
-        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
-            min[i] = self._min[self._threads[t]]
-            i+=1
-        
-        return min
-    
-    def max(self):
-        """
-        """
-        max = np.zeros(len(self._threads))
-        
-        i = 0
-        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
-            max[i] = self._max[self._threads[t]]
-            i+=1
-        
-        return max
-
-    def std(self):
-        """
-        """
-        std = np.zeros(len(self._threads))
-        
-        i = 0
-        for t in self._threads.keys(): # assume here, that threads are stored ascending in the key value pair
-            std[i] = self._std[self._threads[t]]
-            i+=1
-        
-        return std
-    
-    def asc_idx(self):
-        """
-        """
-        return np.array([i+1 for i in xrange(len(self._threads))])
-        
-    def save_to_file(self, name):
-        """
-        Save the data to file *name*.
-        """
-        np.savetxt(name, self._data, delimiter=',')
-                
 class Profile:
-
+    """
+    Contains all the functionality to retrieve, analyze and visualize the profiling of **one** network instance. 
+    """
     def __init__(self, num_threads, num_trials, name=None, folder='.'):
         """
         Constructor, setup the overall configuration of profiling session.
@@ -204,7 +91,6 @@ class Profile:
                                              'global' : DataLog(self._threads, self._num_trials, 'global')
                                             }
                 
-        
     def measure(self, thread, trial, begin, end):
         """
         Retrieve measure data.
@@ -234,15 +120,14 @@ class Profile:
         """
         Profiles the provided simulation loop
         """
+        print self._threads
         for thread in self._threads:
             Global._network.set_num_threads(thread)
         
-            i = 0
             for trial in xrange(self._num_trials):
                 func(steps)
                 
-                self.measure(thread, trial, i*steps, (i+1)*steps)
-                i+= 1
+                self.measure(thread, trial, trial*steps, (trial+1)*steps)
                 
             self.reset_timer()
                
@@ -257,6 +142,14 @@ class Profile:
         for pop in self._pop_data.itervalues():
             for tmp in pop.itervalues():
                 tmp.analyse_data()
+
+    def print_data(self):
+        for name, data in self._pop_data.iteritems():
+            print name,'(sum):'
+            
+            print '    mean:', data['sum'].mean()
+            print '    min: ', data['sum'].min()
+            print '    max: ', data['sum'].max()
         
     def visualize_data(self, error_bar = False):
         """
@@ -286,7 +179,6 @@ class Profile:
 
 
         col_iter = iter(col_array)
-        col_iter2 = iter(col_array)
 
         self._pop_win1 = []
         self._pop_win2 = []
@@ -307,6 +199,7 @@ class Profile:
         #
         # plot the population data
         for name, data in self._pop_data.iteritems():
+            col_iter2 = iter(col_array)
             
             tmp = pg.GraphicsWindow(title="raw data: "+name)
             tmp.resize(1000,600)
@@ -438,103 +331,6 @@ class Profile:
             
             self._pop_win1.append(tmp)
             self._pop_win2.append(tmp2)
-
-    def analyse_data_mp(self):
-        """
-        """
-        num_row = 2
-        num_col = 2
-        
-        #
-        # pre setup
-        x_scale = [i for i in xrange(len(self._threads))]
-        for k,v in self._threads.iteritems():
-            x_scale[v] = k
-        # evaluate datasets - network
-        self._net_data.analyse_data()
-        # evaluate datasets - layer and operation wise
-        for pop in self._pop_data.itervalues():
-            for tmp in pop.itervalues():
-                tmp.analyse_data()
-                
-        #
-        #mean and std
-        mean_figure, mean_handles = plt.subplots(num_row, num_col)
-        plt.suptitle("Mean and STD")
-        
-        mean_handles[0,0].errorbar(x_scale, self._net_data._mean, yerr=self._net_data._std)
-        mean_handles[0,0].set_xlim([1,len(self._threads)])
-        mean_handles[0,0].set_xticks(x_scale) 
-        
-        #
-        # population data
-        pop_iter = iter(self._pop_data)
-        for y in xrange(1,num_row):
-            for x in xrange(num_col):
-                
-                #try:
-                it = next(pop_iter)
-                
-                
-                mean_data = self._pop_data[it]['sum']._mean
-                std_data = self._pop_data[it]['sum']._std
-                p1 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
-                mean_handles[y,x].set_xlabel('trials')
-                mean_handles[y,x].set_ylabel('time in ms')
-
-                mean_data = self._pop_data[it]['step']._mean
-                std_data = self._pop_data[it]['step']._std
-                p2 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
-
-                mean_data = self._pop_data[it]['local']._mean
-                std_data = self._pop_data[it]['local']._std
-                p3 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
-
-                mean_data = self._pop_data[it]['global']._mean
-                std_data = self._pop_data[it]['global']._std
-                p4 = mean_handles[y,x].errorbar(x_scale, mean_data, yerr=std_data)
-                    
-                #except:
-                #    pass
-                
-                mean_handles[y,x].set_title(it)
-                mean_handles[y,x].legend([p1, p2, p3, p4], ["sum", "step", "local", "global"])
-                mean_handles[y,x].set_xlim([1,len(self._threads)])
-                mean_handles[y,x].set_xticks(x_scale)
-                    
-        mean_figure.canvas.draw()
-
-        #
-        # raw data
-        num_row = 2
-        num_col = 2
-        for name, data in self._pop_data.iteritems():
-            
-            raw_figure, raw_handles = plt.subplots(num_row, num_col)
-            plt.suptitle(name, fontsize=14)
-            
-            #
-            # population data
-            pop_iter = iter(self._pop_data[name])
-            for y in xrange(num_row):
-                for x in xrange(num_col):
-                    
-                    try:
-                        it = next(pop_iter)
-                        plt_data = data[it]._data
-                        x_scale = [i for i in xrange(plt_data.shape[0])]
-                        
-                        for i in xrange( plt_data.shape[1] ):
-                            raw_handles[y,x].plot(x_scale, plt_data[:,i])
-                        
-                        raw_handles[y,x].set_title(it)
-                    except:
-                        pass
-
-            raw_figure.canvas.draw()
-        
-        #plt.draw()
-        plt.pause(0.01)
             
     def save_to_file(self):
         """

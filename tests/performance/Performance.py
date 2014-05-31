@@ -14,8 +14,8 @@ from ANNarchy.extensions.Profile import *
 # END_NUMBER_OF_CONNECTIONS = 100
 #===============================================================================
 
-START_NUMBER_OF_NEURONS = 40000
-END_NUMBER_OF_NEURONS = 40000
+START_NUMBER_OF_NEURONS = 2000
+END_NUMBER_OF_NEURONS = 2000
 
 START_NUMBER_OF_CONNECTIONS = 16
 END_NUMBER_OF_CONNECTIONS = 4096
@@ -29,13 +29,21 @@ while n <= END_NUMBER_OF_NEURONS:
 c = START_NUMBER_OF_CONNECTIONS
 connection_config = []
 while c <= END_NUMBER_OF_CONNECTIONS:
+    if c > END_NUMBER_OF_NEURONS:
+        break
+        
     connection_config.append(c)
     c *= 2 
 
+thread_config = [1,2,4]
+
 print neuron_config
 print connection_config
+print thread_config
 
 for neur in neuron_config: 
+    
+    neuron_scalability = Scalability(['sum'], connection_config, thread_config, 3)
     
     for conn in connection_config:
         
@@ -47,7 +55,7 @@ for neur in neuron_config:
         net.compile()
 
         # setup profiler
-        profiler = Profile([3,2,1], 50, 'profile_'+str(neur)+'_'+str(conn), 'tests')
+        profiler = Profile(thread_config, 50, 'profile_'+str(neur)+'_'+str(conn), 'tests')
         profiler.add_to_profile(net)
         
         # profiling ...
@@ -57,4 +65,13 @@ for neur in neuron_config:
         
         profiler.save_to_file()
         
+        neuron_scalability.add_data_set('sum', conn, profiler._pop_data['Population1']['sum'].mean())
         net.destroy()
+        
+        profiler.print_data()
+        
+    neuron_scalability.analyze_data()
+    
+    neuron_scalability.visualize_data()
+    
+    raw_input()
