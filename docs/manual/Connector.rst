@@ -134,7 +134,7 @@ A connector method must take on the first position the reference to the presynap
 
     probabilistic_pattern(pre, post, <other arguments>)
 
-As an example, we will recreate the probabilistic connector method, building synapses with a given probability. For this new pattern we need a weight value (common for all synapses) and a probability value as additional arguments.
+As an example, we will recreate the fixed_probability connector method, building synapses with a given probability. For this new pattern we need a weight value (common for all synapses) and a probability value as additional arguments. We consider delays to be 0 for all synapses.
 
 .. code-block:: python
     
@@ -148,14 +148,14 @@ As an example, we will recreate the probabilistic connector method, building syn
 
         return synapses
 
-The probabilistic pattern in Python
+fixed_probability in Python
 ------------------------------------
 
 The connector method needs to return a ``CSR`` object storing the connectivity. For each post-synaptic neuron receiving synapses, a list of pre-synaptic ranks, weight values and delays must be added to the structure. If you use 2D or 3D populations you need to transform the coordinates into ranks with the ``rank_from_coordinates`` function. 
 
 .. code-block:: python
 
-    import numpy as np
+    import random
     from ANNarchy import *
     
     def probabilistic_pattern(pre, post, weight, probability):
@@ -166,7 +166,7 @@ The connector method needs to return a ``CSR`` object storing the connectivity. 
             # Decide which pre-synaptic neurons should form synapses
             ranks = []
             for pre_rank in xrange(pre.size):
-                if np.random.random() < probability:
+                if random.random() < probability:
                     ranks.append(pre_rank)
             # Create weights and delays arrays of the same size
             values = [weight for i in xrange(len(ranks)) ]
@@ -203,7 +203,7 @@ either directly after defining the Projection pattern as above, or afterwards:
 
     proj.connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)   
 
-The probabilistic pattern in Cython
+fixed_probability in Cython
 ------------------------------------
 
 For this example, we will create a Cython file ``CustomPatterns.pyx`` in the same directory as the script. Its content should be relatively similar to the Python version, except some type definitions:
@@ -211,8 +211,7 @@ For this example, we will create a Cython file ``CustomPatterns.pyx`` in the sam
 .. code-block:: cython
 
     # distutils: language = c++
-    import numpy as np
-    cimport numpy as np
+    import random
     import ANNarchy
     cimport ANNarchy.core.cython_ext.Connector as Connector
 
@@ -229,7 +228,7 @@ For this example, we will create a Cython file ``CustomPatterns.pyx`` in the sam
             # Decide which pre-synaptic neurons should form synapses
             ranks = []
             for pre_rank in xrange(pre.size):
-                if np.random.random() < probability:
+                if random.random() < probability:
                     ranks.append(pre_rank)
             # Create weights and delays arrays of the same size
             values = [weight for i in xrange(len(ranks)) ]
@@ -287,4 +286,4 @@ Now you can import the method ``probabilistic_pattern()`` into your Python code 
     from CustomConnector import probabilistic_pattern
     proj.connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)
 
-
+Writing the connector in Cython can bring speedups up to 100x compared to Python if the projection has a lot of synapses.
