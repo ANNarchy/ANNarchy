@@ -616,7 +616,7 @@ class Projection(object):
         """
         self._connector = method
         self._connector_params = args
-        self._synapses = self._connector(self.pre, self.post, **self._connector_params)
+        self._synapses = self._connector(self.pre, self.post, **args)
 
         return self
 

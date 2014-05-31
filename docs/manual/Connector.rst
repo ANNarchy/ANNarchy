@@ -5,7 +5,7 @@ Connection patterns
 Available connector methods
 =============================        
 
-For further detailed information about these connectors, please refer to the library reference `Projections <../ANNarchyDoc/Projections.html>`_.
+For further detailed information about these connectors, please refer to the library reference :doc:`../API/Projections`.
     
 connect_all_to_all
 -------------------------
@@ -137,55 +137,55 @@ A connector method must take on the first position the reference to the presynap
 As an example, we will recreate the probabilistic connector method, building synapses with a given probability. For this new pattern we need a weight value (common for all synapses) and a probability value as additional arguments.
 
 .. code-block:: python
+    
+    from ANNarchy import *
 
     def probabilistic_pattern(pre, post, weight, probability):
 
-        synapse_dict = {}
+        synapses = CSR()
 
         ... pattern code comes here ...
 
-        return synapse_dict
+        return synapses
 
-The probabilistic pattern
---------------------------
+The probabilistic pattern in Python
+------------------------------------
 
-
-The connector method needs to return a dictionary of synapses with the following structure: the key consists of a tuple (``pre_rank``, ``post_rank``) representing a connection from presynaptic neuron *pre_rank* towards a postsynaptic neuron *post_rank*. Please note, that its necessary to use the ranks of the neuron. If you use 2D or 3D populations you need to transform the coordinates into rank with the ``rank_from_coordinates`` function. The value of the dictionary is a dictionary containing the synapse variables, at least a value ('w') and delay ('d').
-
-.. code-block:: python
-
-    import numpy as np
-
-    synapse_dict = {}
-
-    for post_rank in xrange(post.size):
-        for pre_rank in xrange(pre.size):
-            if np.random.random() < probability:
-                synapse_dict[(pre_rank, post_rank)] = { 'w': weight, 'd': delay }
-                
-    return synapse_dict
-
-The first *for* - loop is needed to create all dendrites within the projection. As said before, a dendrite is a collection of synapses corresponding to on postsynaptic neuron. The inner *for* - loop creates the single synapses within the dendrite, based on a stochastic process defining whether the synapse is build up or not. The variable probability is an argument provided to the function.
-
-In the end the complete pattern could be implemented like the following:
+The connector method needs to return a ``CSR`` object storing the connectivity. For each post-synaptic neuron receiving synapses, a list of pre-synaptic ranks, weight values and delays must be added to the structure. If you use 2D or 3D populations you need to transform the coordinates into ranks with the ``rank_from_coordinates`` function. 
 
 .. code-block:: python
 
     import numpy as np
+    from ANNarchy import *
     
     def probabilistic_pattern(pre, post, weight, probability):
-    
-        synapse_dict = {}
-
-        for post_rank in xrange(post.size): # All postsynaptic neurons
-            for pre_rank in xrange(pre.size): # All presynaptic neurons
+        # Create a compressed sparse row (CSR) structure for the connectivity matrix
+        synapses = CSR()
+        # For all neurons in the post-synaptic population
+        for post_rank in xrange(post.size):
+            # Decide which pre-synaptic neurons should form synapses
+            ranks = []
+            for pre_rank in xrange(pre.size):
                 if np.random.random() < probability:
-                    synapse_dict[(pre_rank, post_rank)] = { 'w': weight, 'd': 0.0 }
+                    ranks.append(pre_rank)
+            # Create weights and delays arrays of the same size
+            values = [weight for i in xrange(len(ranks)) ]
+            delays = [0 for i in xrange(len(ranks)) ]
+            # Add this information to the CSR matrix
+            synapses.add(post_rank, ranks, values, delays)
                     
-        return synapse_dict
+        return synapses
 
-Usage of the pattern
---------------------
+The first *for* - loop iterates over all post-synaptic neurons in the projection. The inner *for* - loop decides for each of these neurons if a synapse with a pre-synaptic neuron should be created, based on the value ``probability`` provided as argument to the function.
+
+The lists ``values`` and ``delays`` are then created with the same size as ``ranks`` (important!), and filled with the desired value. All this information is then fed into the CSR matrix using the ``add(post_rank, ranks, values, delays)`` method.
+
+.. note::
+
+    Building such connectivity matrices in Python can be extremely slow, as Python is not made for tight nested loops. If the construction of your network lasts too long, you should definitely write this function in **Cython**.
+
+
+**Usage of the pattern**
 
 To use the pattern within a projection you provide the pattern method to the ``connect_with_func`` method of ``Projection``
 
@@ -202,3 +202,89 @@ either directly after defining the Projection pattern as above, or afterwards:
 .. code-block:: python
 
     proj.connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)   
+
+The probabilistic pattern in Cython
+------------------------------------
+
+For this example, we will create a Cython file ``CustomPatterns.pyx`` in the same directory as the script. Its content should be relatively similar to the Python version, except some type definitions:
+
+.. code-block:: cython
+
+    # distutils: language = c++
+    import numpy as np
+    cimport numpy as np
+    import ANNarchy
+    cimport ANNarchy.core.cython_ext.Connector as Connector
+
+    def probabilistic_pattern(pre, post, weight, probability):
+        # Typedefs
+        cdef Connector.CSR synapses
+        cdef int post_rank, pre_rank
+        cdef list ranks, values, delays
+
+        # Create a compressed sparse row (CSR) structure for the connectivity matrix
+        synapses = Connector.CSR()
+        # For all neurons in the post-synaptic population
+        for post_rank in xrange(post.size):
+            # Decide which pre-synaptic neurons should form synapses
+            ranks = []
+            for pre_rank in xrange(pre.size):
+                if np.random.random() < probability:
+                    ranks.append(pre_rank)
+            # Create weights and delays arrays of the same size
+            values = [weight for i in xrange(len(ranks)) ]
+            delays = [0 for i in xrange(len(ranks)) ]
+            # Add this information to the CSR matrix
+            synapses.push_back(post_rank, ranks, values, delays)
+                    
+        return synapses
+
+The only differences with the Python code are:
+
+* The module ``Connector`` where the ``CSR`` connection matrix class is defined should be cimported with:
+  
+.. code-block:: cython
+
+    cimport ANNarchy.core.cython_ext.Connector as Connector
+
+* Data structures should be declared with ``cdef`` at the beginning of the method:
+  
+.. code-block:: cython
+
+    # Typedefs
+    cdef Connector.CSR synapses
+    cdef int post_rank, pre_rank
+    cdef list ranks, values, delays 
+
+* The data should be added to the CSR matrix with ``push_back()`` instead of ``add()``
+  
+.. code-block:: cython
+
+    synapses.push_back(post_rank, ranks, values, delays)
+
+To allow Cython to compile this file, we also need to provide with a kind of "Makefile" specifying that the code should be generated in C++, not C. This file should have the same name as the Cython file but end with ``.pyxbld``, here : ``CustomPatterns.pyxbld``.
+
+  
+.. code-block:: cython
+
+    from distutils.extension import Extension
+
+    def make_ext(modname, pyxfilename):
+        return Extension(name=modname,
+                         sources=[pyxfilename],
+                         language="c++")
+
+.. note::
+
+    This ``.pyxbld`` is generic, you don't need to modify anything, except its name.
+
+
+Now you can import the method ``probabilistic_pattern()`` into your Python code using the ``pyximport`` module of Cython and build the Projection normally:
+
+.. code-block:: python
+
+    import pyximport; pyximport.install()
+    from CustomConnector import probabilistic_pattern
+    proj.connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)
+
+
