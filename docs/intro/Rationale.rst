@@ -7,10 +7,10 @@ Existing simulators
 
 There is already a huge variety of neural simulators available, among which:
 
-    * `NEURON <http://www.neuron.yale.edu/neuron>`_, a simulation environment for modeling individual neurons and networks of neurons developed by Ted Carnevale and Michael Hines.
-    * `Brian <http://briansimulator.org>`_, a pure Python simulator written by Romain Brette and Dan Goodman.
-    * `NEST <http://www.nest-initiative.org>`_ (Neural Simulation Technology), a simulation system for large networks of biologically realistic spiking point-neurons, written in C++ with a Python interface by Marc-Oliver Gewaltig and Markus Diesmann.
-    * `PCSIM <http://www.lsm.tugraz.at/pcsim>`_ (Parallel neural Circuit SIMulator), a tool for simulating heterogeneous networks composed of different model neurons and synapses, written in C++ with a Python interface by Dejan Pecevski, Thomas Natschläger and Klaus Schuch.
+* `NEURON <http://www.neuron.yale.edu/neuron>`_, a simulation environment for modeling individual neurons and networks of neurons developed by Ted Carnevale and Michael Hines.
+* `Brian <http://briansimulator.org>`_, a pure Python simulator written by Romain Brette and Dan Goodman.
+* `NEST <http://www.nest-initiative.org>`_ (Neural Simulation Technology), a simulation system for large networks of biologically realistic spiking point-neurons, written in C++ with a Python interface by Marc-Oliver Gewaltig and Markus Diesmann.
+* `PCSIM <http://www.lsm.tugraz.at/pcsim>`_ (Parallel neural Circuit SIMulator), a tool for simulating heterogeneous networks composed of different model neurons and synapses, written in C++ with a Python interface by Dejan Pecevski, Thomas Natschläger and Klaus Schuch.      
    
 Although these simulators have different structures, scopes, interfaces, there exists some initiatives such as NeuroML or PyNN which provide a common interface allowing to simulate the same description of a model on different simulators. A lot of efforts have also been made recently on the parallel simulation of neural networks on multicore CPUs using MPI or openMP, or even GPGPUs (general-purpose graphics processing units) using CUDA or OpenCL. 
 

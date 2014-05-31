@@ -76,7 +76,6 @@ class Analyser(object):
                
             # Extract RandomDistribution objects
             pop.description['random_distributions'] = _extract_randomdist(pop)
-            print pop.description['random_distributions']
 
             if 'raw_spike' in pop.description.keys() and 'raw_reset' in pop.description.keys():
                 pop.description['spike'] = _extract_spike_variable(pop.description)
@@ -433,7 +432,6 @@ def _extract_randomdist(pop):
                     try:
                         arg = float(arguments[idx])
                     except: # A global parameter
-                        print pop.description['global']
                         if arguments[idx].strip() in pop.description['global']:
                             arg = arguments[idx] + '_'
                         else:
@@ -449,7 +447,6 @@ def _extract_randomdist(pop):
                         'dist': dist,
                         'definition': definition,
                         'args' : processed_arguments}
-                print desc
                 rk_rand += 1
                 random_objects.append(desc)
                 # Replace its definition by its temporary name

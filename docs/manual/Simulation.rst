@@ -2,6 +2,26 @@
 Simulating the network
 ***********************************
 
+Compiling the network
+=====================
+
+Once all the relevant information has been defined, one needs to actually compile the network, by calling the ``ANNarchy.compile()`` method:
+
+.. code-block:: python
+
+    compile()
+    
+The optimized C++ code will be generated in the ``annarchy/`` subfolder relative to your script, compiled, the underlying objects created and made available to the Python interface.
+
+Simulating the network
+======================
+
+After the network is correctly compiled, the simulation can be run for the specified duration (in milliseconds) through the ``ANNarchy.simulate()`` method:
+
+.. code-block:: python
+
+    simulate(1000.0) # Simulate for 1 second
+
 Running the simulation
 ===================================
 

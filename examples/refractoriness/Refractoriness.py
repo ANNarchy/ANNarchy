@@ -15,9 +15,11 @@ Neuron = SpikeNeuron(
 parameters = """
     tau = 20.0 : population
     sigma = 0.015 : population
+    target = 1.1 : population
 """,
 equations = """
-    dx/dt = (1.1 - x) / tau + sigma * ( sqrt( 2.0 / tau ) ) * Normal(0.0, 1.0) 
+    noise =  sqrt( 2.0 * tau ) * Normal(0.0, sigma) 
+    tau * dx/dt + x = target + noise
 """,
 spike = """
     x > 1
@@ -28,12 +30,11 @@ reset = """
 refractory = 5.0
 )
 
-pop = Population( geometry=(25,), neuron = Neuron )
+pop = Population( geometry=25, neuron = Neuron )
 
 compile()
 
 pop.start_record('spike')
-pop.start_record('x')
 simulate ( 500.0 )
 data = pop.get_record()
 
@@ -41,7 +42,5 @@ spikes = raster_plot(data['spike'])
 
 # Plot the results
 import pylab as plt
-
-#plt.imshow(np.array(data['x']['data']))
 plt.plot(spikes[:, 0], spikes[:, 1], '.')
 plt.show()

@@ -8,12 +8,13 @@ The following sections describes the underlying structure of ANNarchy and how to
     :maxdepth: 2
 
     manual/Network.rst
-    manual/General.rst
-    manual/Neuron.rst
-    manual/Synapse.rst
-    manual/CreatingNetwork.rst
-    manual/AccessingVariables.rst
+    manual/Parser.rst
+    manual/RateNeuron.rst
+    manual/SpikeNeuron.rst
+    manual/RateSynapse.rst
+    manual/SpikeSynapse.rst
+    manual/Populations.rst
+    manual/Projections.rst
     manual/Connector.rst
     manual/Simulation.rst
-    manual/Plasticity.rst
-    manual/Refractoriness.rst
+    manual/StructuralPlasticity.rst
