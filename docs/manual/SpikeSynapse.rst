@@ -52,17 +52,3 @@ To define the learning rule you can describe the pre- and postsynaptic events se
     
 The parameters are declared postsynaptic because they are the same for all synapses in the projection. The variables ``Apre`` and ``Apost`` are exponentially decreasing traces of pre- and post-synaptic spikes, as shown by the leaky integration in ``equations``. When a presynaptic spike is emitted, ``Apre`` is incremented, the conductance level of the postsynaptic neuron ``g_target`` too, and the synaptic efficiency is decreased proportionally to ``Apost`` (this means that if a post-synaptic spike was emitted shortly before, LTD will strongly be apllied, while if it was longer ago, no major change will be observed). When a post-synaptic spike is observed, ``Apost`` increases and the synaptic efficiency is increased proportionally to ``Apre``. 
 
-Defining the refractory period
-==============================
-
-The refractory period is specified by the ''refractory'' parameter of ''SpikeNeuron''. As any other variable, it can be later modified for the whole population.
-
-.. code-block :: python
-
-    RefractoryNeuron = SpikeNeuron (
-        parameters = """ ... """,
-        equations = """ ... """,
-        spike = """ ... """,
-        reset = """ ... """,
-        refractory = 5.0
-    )
