@@ -86,6 +86,25 @@ class Scalability:
         for name in self._data.keys():
 
             #
+            #    computation time
+            #
+            col_iter = iter(col_array)
+
+            plt_data = self._data[name].raw_data()
+            x_scale = [i for i in xrange(plt_data.shape[1])]
+            
+            tmp_plot = self._perf_win.addPlot(title = "sum (measured time)", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='s')
+            tmp_plot.setLabel('bottom', "number of connections",)
+            
+            for i in xrange( plt_data.shape[0] ):
+                tmp_plot.plot(x_scale, 
+                              plt_data[i,:], 
+                              pen = next(col_iter), 
+                              name = str(self._thread_scale[i])+' thread(s)')
+
+            #
             #    speedup
             #
             col_iter = iter(col_array)
@@ -93,13 +112,13 @@ class Scalability:
             plt_data = self._speedup[name]
             x_scale = [i for i in xrange(plt_data.shape[1])]
             
-            tmp_plot = self._perf_win.addPlot(title = "sum (speedup)", axisItems = {'bottom': IntAxis('bottom') })
-            tmp_plot.addLegend()
-            tmp_plot.setLabel('left', "achieved speedup")
-            tmp_plot.setLabel('bottom', "number of connections",)
+            tmp_plot2 = self._perf_win.addPlot(title = "sum (speedup)", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot2.addLegend()
+            tmp_plot2.setLabel('left', "achieved speedup")
+            tmp_plot2.setLabel('bottom', "number of connections",)
             
             for i in xrange( plt_data.shape[0] ):
-                tmp_plot.plot(x_scale, 
+                tmp_plot2.plot(x_scale, 
                               plt_data[i,:], 
                               pen = next(col_iter), 
                               name = str(self._thread_scale[i])+' thread(s)')
@@ -109,15 +128,15 @@ class Scalability:
             #
             col_iter = iter(col_array)
 
-            tmp_plot2 = self._perf_win.addPlot(title = "sum (efficiency)", axisItems = {'bottom': IntAxis('bottom') })
-            tmp_plot2.addLegend()
-            tmp_plot2.setLabel('left', "achieved efficiency")
-            tmp_plot2.setLabel('bottom', "number of connections",)
+            tmp_plot3 = self._perf_win.addPlot(title = "sum (efficiency)", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot3.addLegend()
+            tmp_plot3.setLabel('left', "achieved efficiency")
+            tmp_plot3.setLabel('bottom', "number of connections",)
 
             plt_data = self._efficiency[name]
             
             for i in xrange( plt_data.shape[0] ):
-                tmp_plot2.plot(x_scale, 
+                tmp_plot3.plot(x_scale, 
                                plt_data[i,:], 
                                pen = next(col_iter), 
                                name = str(self._thread_scale[i])+' thread(s)')                
