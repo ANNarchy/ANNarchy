@@ -84,25 +84,31 @@ def all_to_all(int pre_size, int post_size, weights, delays, allow_self_connecti
 
     return projection
 
-def one_to_one(int pre_size, int post_size, weights, delays):
+def one_to_one(pre, post, weights, delays):
     """ Cython implementation of the one-to-one pattern."""
 
     cdef CSR projection
     cdef float dt
-    cdef int post, pre
-    cdef list tmp
+    cdef int r_post
+    cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
     cdef vector[float] w
 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
 
+    # Retríeve ranks
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
+
     # Create the projection data as CSR
     projection = CSR()
 
-    for post in xrange(post_size):
+    for r_post in post_ranks:
         # List of pre ranks
-        tmp = [post]
+        if not r_post in pre_ranks:
+            continue
+        tmp = [r_post]
         r = tmp
         # Weights
         if isinstance(weights, (int, float)):
@@ -119,7 +125,7 @@ def one_to_one(int pre_size, int post_size, weights, delays):
             tmp = [int(a/dt) for a in delays.get_list_values(1) ]
         d=tmp
         # Create the dendrite
-        projection.push_back(post, r, w, d)
+        projection.push_back(r_post, r, w, d)
 
     return projection
 

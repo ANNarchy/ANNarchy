@@ -40,6 +40,12 @@ class PopulationView(object):
         self.population = population
         self.ranks = ranks
         self.size = len(self.ranks)
+        self.targets = self.population.targets
+        self.neuron_type = self.population.neuron_type
+        self.description = self.population.description
+        self.name = self.population.name
+        self.class_name = self.population.class_name
+        self._id = self.population._id
         
     def __getattr__(self, name):
         " Method called when accessing an attribute."

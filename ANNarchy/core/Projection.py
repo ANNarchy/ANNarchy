@@ -448,7 +448,7 @@ class Projection(object):
             * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
         """
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._synapses = Connector.one_to_one(self.pre.size, self.post.size, weights, delays)
+        self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays)
         return self
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
