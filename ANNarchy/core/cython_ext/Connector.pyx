@@ -38,35 +38,36 @@ cdef class CSR:
     cpdef get_data(self):
         return self.data
 
-def all_to_all(int pre_size, int post_size, weights, delays, allow_self_connections):
+def all_to_all(pre, post, weights, delays, allow_self_connections):
     """ Cython implementation of the all-to-all pattern."""
 
     cdef CSR projection
     cdef float dt
-    cdef int post, pre, size_pre
-    cdef list tmp
+    cdef int r_post, size_pre
+    cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
     cdef vector[float] w
 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
 
+    # Retríeve ranks
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
+
     # Create the projection data as CSR
     projection = CSR()
 
-    # Determine the size of the the pre-field 
-    # (the passed argument allow_self_connections already knows if it is the same population or not)
-    if allow_self_connections:
-        size_pre = pre_size
-    else:
-        size_pre = pre_size -1 
-
-    for post in xrange(post_size):
+    for r_post in post_ranks:
         # List of pre ranks
-        tmp = [i for i in xrange(pre_size)]
+        tmp = [i for i in pre_ranks]
         if not allow_self_connections:
-            tmp.remove(post)
+            try:
+                tmp.remove(r_post)
+            except: # was not in the list
+                pass
         r = tmp
+        size_pre = len(tmp)
         # Weights
         if isinstance(weights, (int, float)):
             w = vector[float](size_pre, float(weights))
@@ -80,7 +81,7 @@ def all_to_all(int pre_size, int post_size, weights, delays, allow_self_connecti
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
-        projection.push_back(post, r, w, d)
+        projection.push_back(r_post, r, w, d)
 
     return projection
 
@@ -131,30 +132,34 @@ def one_to_one(pre, post, weights, delays):
 
 
 
-def fixed_probability(int pre_size, int post_size, float probability, weights, delays, allow_self_connections):
+def fixed_probability(pre, post, probability, weights, delays, allow_self_connections):
     """ Cython implementation of the fixed_probability pattern."""
 
     cdef CSR projection
     cdef float dt
-    cdef int post, pre, size_pre
-    cdef list tmp
+    cdef int r_post, r_pre, size_pre
+    cdef list tmp, pre_ranks, post_ranks
     cdef vector[int] r, d
     cdef vector[float] w
 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
 
+    # Retríeve ranks
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
+
     # Create the projection data as CSR
     projection = CSR()
 
-    for post in xrange(post_size):
+    for r_post in post_ranks:
         # List of pre ranks
         tmp = []
-        for i in xrange(pre_size):
-            if not allow_self_connections and (i==post):
+        for r_pre in pre_ranks:
+            if not allow_self_connections and (r_pre==r_post):
                 continue
             if np.random.random() < probability:
-                tmp .append(i) 
+                tmp .append(r_pre) 
         r = tmp
         size_pre = len(tmp)
         # Weights
@@ -170,36 +175,41 @@ def fixed_probability(int pre_size, int post_size, float probability, weights, d
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
-        projection.push_back(post, r, w, d)
+        projection.push_back(r_post, r, w, d)
 
     return projection
 
-def fixed_number_pre(int pre_size, int post_size, int number, weights, delays, allow_self_connections):
+def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections):
     """ Cython implementation of the fixed_number_pre pattern."""
 
     cdef CSR projection
     cdef float dt
-    cdef int post, pre, size_pre
+    cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
+    cdef list pre_ranks, post_ranks
     cdef vector[int] r, d
     cdef vector[float] w
 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
     
+    # Retríeve ranks
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
+
     # Create the projection data as CSR
     projection = CSR()
     
     # Array to permute
-    indices = np.array(range(0, pre_size))
+    indices = np.array(pre_ranks)
 
-    for post in xrange(post_size):
+    for r_post in post_ranks:
         # List of pre ranks
         indices = np.random.permutation(indices)
         tmp = indices[:number]
         if not allow_self_connections:
-            if (tmp == post).any(): # the post index is in the list
-                tmp[tmp==post] = indices[number]
+            if (tmp == r_post).any(): # the post index is in the list
+                tmp[tmp==r_post] = indices[number]
         r = list(tmp)
         # Weights
         if isinstance(weights, (int, float)):
@@ -214,17 +224,18 @@ def fixed_number_pre(int pre_size, int post_size, int number, weights, delays, a
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(number) ]
         # Create the dendrite
-        projection.push_back(post, r, w, d)
+        projection.push_back(r_post, r, w, d)
 
     return projection
 
-def fixed_number_post(int pre_size, int post_size, int number, weights, delays, allow_self_connections):
+def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections):
     """ Cython implementation of the fixed_number_post pattern."""
 
     cdef CSR projection
     cdef float dt
-    cdef int post, pre, size_pre
+    cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
+    cdef list pre_ranks, post_ranks
     cdef list rk_mat, pre_r
     cdef vector[int] r, d
     cdef vector[float] w
@@ -232,28 +243,32 @@ def fixed_number_post(int pre_size, int post_size, int number, weights, delays, 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
     
+    # Retríeve ranks
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
+    
     # Create the projection data as CSR
     projection = CSR()
     
     # Array to permute
-    indices = np.array(range(0, post_size))
+    indices = np.array(post_ranks)
 
     # Build the backward matrix
-    rk_mat = [ [] for i in xrange(post_size)]
-    for pre in xrange(pre_size):
+    rk_mat = [ [] for i in xrange(post.size)]
+    for r_pre in pre_ranks:
         indices = np.random.permutation(indices)
         tmp = indices[:number]
         if not allow_self_connections:
-            if (tmp == pre).any(): # the post index is in the list
-                tmp[tmp==pre] = indices[number] # pick the next one
+            if (tmp == r_pre).any(): # the post index is in the list
+                tmp[tmp==r_pre] = indices[number] # pick the next one
         for i in xrange(number):
-            rk_mat[tmp[i]].append(pre)
+            rk_mat[tmp[i]].append(r_pre)
 
     # Create the dendrites
-    for post in xrange(post_size):
+    for r_post in post_ranks:
         # List of pre ranks
-        r = rk_mat[post]
-        size_pre = len(rk_mat[post])
+        r = rk_mat[r_post]
+        size_pre = len(rk_mat[r_post])
         # Weights
         if isinstance(weights, (int, float)):
             w = vector[float](size_pre, float(weights))
@@ -267,7 +282,7 @@ def fixed_number_post(int pre_size, int post_size, int number, weights, delays, 
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
-        projection.push_back(post, r, w, d)
+        projection.push_back(r_post, r, w, d)
 
     return projection
 
