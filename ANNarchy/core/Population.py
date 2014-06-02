@@ -81,6 +81,9 @@ class Population(object):
             size *= self._geometry[i]
             
         self._size = size
+
+        # List of ranks
+        self.ranks = range(self._size)
         
         # Store the neuron type
         self.neuron_type = neuron

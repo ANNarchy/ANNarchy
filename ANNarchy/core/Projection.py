@@ -28,6 +28,7 @@ import math
 from ANNarchy.core import Global
 from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
 from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.Analyser import analyse_projection
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.Record import Record
@@ -448,7 +449,7 @@ class Projection(object):
             * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
         """
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._synapses = Connector.one_to_one(self.pre.size, self.post.size, weights, delays)
+        self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays)
         return self
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
@@ -465,7 +466,7 @@ class Projection(object):
             allow_self_connections = True
 
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._synapses = Connector.all_to_all(self.pre.size, self.post.size, weights, delays, allow_self_connections)
+        self._synapses = Connector.all_to_all(self.pre, self.post, weights, delays, allow_self_connections)
 
         return self
 
@@ -486,6 +487,10 @@ class Projection(object):
         """
         if self.pre!=self.post:
             allow_self_connections = True
+
+        if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
+            _error('gaussian connector is only possible on whole populations, not PopulationViews.')
+            exit(0)
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections)
@@ -510,6 +515,10 @@ class Projection(object):
         """
         if self.pre!=self.post:
             allow_self_connections = True
+
+        if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
+            _error('DoG connector is only possible on whole populations, not PopulationViews.')
+            exit(0)
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
@@ -536,7 +545,7 @@ class Projection(object):
             allow_self_connections = True
 
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._synapses = Connector.fixed_probability(self.pre.size, self.post.size, probability, weights, delays, allow_self_connections)
+        self._synapses = Connector.fixed_probability(self.pre, self.post, probability, weights, delays, allow_self_connections)
 
         return self
 
@@ -559,7 +568,7 @@ class Projection(object):
             allow_self_connections = True
         
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._synapses = Connector.fixed_number_pre(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
+        self._synapses = Connector.fixed_number_pre(self.pre, self.post, number, weights, delays, allow_self_connections)
 
         return self
             
@@ -582,7 +591,7 @@ class Projection(object):
             allow_self_connections = True
         
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._synapses = Connector.fixed_number_post(self.pre.size, self.post.size, number, weights, delays, allow_self_connections)
+        self._synapses = Connector.fixed_number_post(self.pre, self.post, number, weights, delays, allow_self_connections)
 
         return self
 
