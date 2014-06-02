@@ -26,7 +26,7 @@ class ProfileNetwork(Network):
         print 'Config: n =', neuron_count,' c =', connection_count
 
         input_pop = Population(geometry=(neuron_count), neuron=InputNeuron)
-        output_pop = Population(geometry=(1), neuron=OutputNeuron)
+        output_pop = Population(geometry=(neuron_count), neuron=OutputNeuron)
         
         input_output = Projection( input_pop, output_pop, 'exc').connect_fixed_number_pre(connection_count, 1.0)
         
