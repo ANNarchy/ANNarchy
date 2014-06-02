@@ -14,7 +14,7 @@ The ODEs for synaptic variables follow the same syntax as for neurons. The follo
 
 * *t*: current step of the simulation (incremented after each step of the simulation).
 
-* ``psp`` represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron with all other synapses of the same projection in ``sum(type)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.rate``) and the weight value (``value``).
+* ``psp`` represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron with all other synapses of the same projection in ``sum(type)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
 
 Neural variables therefore have to be prefixed with ``pre.`` or ``post.``: 
 
@@ -24,15 +24,19 @@ Neural variables therefore have to be prefixed with ``pre.`` or ``post.``:
     
 ANNarchy will check before the compilation that the pre- or post-synaptic neuron types indeed define such variables.
 
+.. warning::
+
+    TODO: Only pre.r takes delays into account.
+
 **Defining the postsynaptic potential (psp)**
 
 The postsynaptic potential of a single synapse is by default:
 
 .. code-block:: python
 
-    psp = value * pre.rate
+    psp = w * pre.r
     
-where ``pre.rate`` is the presynaptic firing rate, but you may want to override this behaviour in certain cases. 
+where ``pre.r`` is the presynaptic firing rate, but you may want to override this behaviour in certain cases. 
 
 For example, you may want to model a non linear synapse with a logarithmic term:
 

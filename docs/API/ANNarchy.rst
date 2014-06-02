@@ -63,7 +63,7 @@ ANNarchy.start_record()
 
     .. autofunction:: ANNarchy.start_record
 
-ANNarchy.start_record()
+ANNarchy.stop_record()
 -------------------------------------------------
 
     .. autofunction:: ANNarchy.stop_record

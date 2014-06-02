@@ -35,62 +35,77 @@ class SpikePopulationGenerator(PopulationGenerator):
     def __init__(self, name, desc):
         PopulationGenerator.__init__(self, name, desc)
         
-        self._app_proj = []
-        for proj in Global._projections:
-            if (self.desc['name'] == proj.post.name) and \
-               (proj.target in proj.post.targets):
-                self._app_proj.append(proj)
-        print self._app_proj
+        self.declared_targets = desc['targets']
+        self.connected_targets = desc['pop'].targets
     
     def generate_members_declaration(self):
         members = PopulationGenerator.generate_members_declaration(self)
 
-        if self._app_proj:
-            for variable in self.desc['variables']:
-                if re.findall("(?<=g_)[A-Za-z]+", variable['name']):
-                     members += """
-    // %(name)s_ : local
-    std::vector<%(type)s> %(name)s_;
-""" % {'name' : variable['name']+'_new', 'type': variable['ctype']}
+        for variable in self.connected_targets: # Actually connected
+            members += """
+    // g_%(name)s_new_ : local
+    std::vector<DATA_TYPE> g_%(name)s_new_;
+""" % {'name' : variable}
+
+        for variable in self.declared_targets: # Only declared
+            if not 'g_'+variable in self.desc['local']:
+                members += """
+    // g_%(name)s_ : local
+    std::vector<DATA_TYPE> g_%(name)s_;
+""" % {'name' : variable}
 
         return members
     
     def generate_constructor(self):
         constructor, reset = PopulationGenerator.generate_constructor(self)
 
-        if self._app_proj:
-            for variable in self.desc['variables']:
-                if re.findall("(?<=g_)[A-Za-z]+", variable['name']):
-                    constructor += """
-    %(name)s_new_ = std::vector<%(type)s> (nbNeurons_, %(init)s);
-""" % {'name' : variable['name'], 
-       'type': variable['ctype'], 
+        for variable in self.declared_targets:
+            if not 'g_'+variable in self.desc['local']:
+                constructor += """
+    // g_%(name)s_ : local
+    g_%(name)s_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
+""" % {'name' : variable,
        'init' : str(0.0)
        }
-                    reset += """
-    %(name)s_new_ = std::vector<%(type)s> (nbNeurons_, %(init)s);
-""" % {'name' : variable['name'], 
-       'type': variable['ctype'], 
+                reset += """
+    // g_%(name)s_ : local
+    g_%(name)s_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
+""" % {'name' : variable,
        'init' : str(0.0)
-       }       
+       }  
+
+        for variable in self.connected_targets: # actually connected, need the _new temp array
+            # Constructor
+            constructor += """
+    // g_%(name)s_new_ : local
+    g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
+""" % {'name' : variable,
+       'init' : str(0.0)
+       }
+            # Reset
+            reset += """
+    // g_%(name)s_new_ : local
+    g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
+""" % {'name' : variable, 
+       'init' : str(0.0)
+       }  
+   
  
         return constructor, reset
     
     def generate_prepare_neurons(self):
         prepare = ""
-        if self._app_proj:
-            for variable in self.desc['variables']:
-                if re.findall("(?<=g_)[A-Za-z]+", variable['name']):
-                     prepare += """
+        for variable in self.connected_targets:
+            prepare += """
     
     // add the new conductance to the old one
     // and reset the new conductance values
-    std::transform(%(name)s_.begin(), %(name)s_.end(),
-                   %(name)s_new_.begin(), %(name)s_.begin(),
-                   std::plus<%(type)s>());
-    std::fill(%(name)s_new_.begin(), %(name)s_new_.end(), 0.0);
+    std::transform(g_%(name)s_.begin(), g_%(name)s_.end(),
+                   g_%(name)s_new_.begin(), g_%(name)s_.begin(),
+                   std::plus<DATA_TYPE>());
+    std::fill(g_%(name)s_new_.begin(), g_%(name)s_new_.end(), 0.0);
     
-""" % {'name' : variable['name'], 'type': variable['ctype']}
+""" % {'name' : variable}
         
         return prepare
         
@@ -252,5 +267,12 @@ class SpikePopulationGenerator(PopulationGenerator):
 
 
         # default = reset of target conductances
+        for target in self.connected_targets:
+            if not 'g_'+target in self.desc['local']:
+                Global._warning('Using standard behavior for the conductance g_'+target + '.')
+                code += """
+    // Default behavior for g_%(target)s_
+    g_%(target)s_[i] = 0.0;
+""" % {'target' : target}
 
         return code

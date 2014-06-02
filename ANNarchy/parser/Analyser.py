@@ -87,11 +87,14 @@ class Analyser(object):
                 
                 # Replace sum(target) with sum(i, rk_target)
                 for target in pop.description['targets']:
-                    if target in pop.targets:
-                        eq = eq.replace('sum('+target+')', '_sum_'+target )                        
-                        untouched['_sum_'+target] = 'sum(i, ' + str(pop.targets.index(target))+')'
-                    else: # used in the eq, but not connected
-                        eq = eq.replace('sum('+target+')', '0.0' ) 
+                    if pop.description['type'] == 'rate': 
+                        if target in pop.targets:
+                            eq = eq.replace('sum('+target+')', '_sum_'+target )                        
+                            untouched['_sum_'+target] = 'sum(i, ' + str(pop.targets.index(target))+')'
+                        else: # used in the eq, but not connected
+                            eq = eq.replace('sum('+target+')', '0.0' ) 
+                    else: # spiking neuron 
+                        untouched['g_'+target] = 'g_'+target+'_[i]'
                 
                 # Extract global operations
                 eq, untouched_globs, global_ops = _extract_globalops_neuron(variable['name'], eq, pop)
