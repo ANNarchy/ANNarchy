@@ -8,14 +8,7 @@ Random numbers are used for a variety of purposes in neuronal network simulation
     * to choose parameter values randomly
     * to inject noise into network simulations
 
-ANNarchy provides random numbers for these purposes through this class:
-
-----------------------------------
-Class Constant
-----------------------------------
-
-.. autoclass:: ANNarchy.Constant
-   :members:
+ANNarchy provides random numbers for these purposes through these classes:
 
 ----------------------------------
 Class Uniform

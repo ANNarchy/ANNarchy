@@ -118,3 +118,33 @@ class RatePopulationGenerator(PopulationGenerator):
 
     def generate_prepare_neurons(self):
         return rate_prepare_neurons
+
+    def generate_local_metastep(self):
+        """
+        Code for the metastep.
+        """
+        code = ""         
+        for param in self.desc['variables']: 
+            # Local attributes           
+            if param['name'] in self.desc['local']: 
+                code += """
+    %(comment)s
+    %(cpp)s
+""" % { 'comment': '// '+param['eq'],
+        'cpp': param['cpp'] }
+
+            # Process the bounds min and max
+            for bound, val in param['bounds'].iteritems():
+                # Bound min
+                if bound == 'min':
+                    code += """
+    if(%(var)s_[i] < %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+                # Bound max 
+                if bound == 'max':
+                    code += """
+    if(%(var)s_[i] > %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+        return code

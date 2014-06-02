@@ -2,58 +2,81 @@
 Spiking neurons
 ===============================
 
-Contrary to rate-coded neurons, the use of spiking neurons requires the aditional definition of a spike condition (the criteria defining the emission of a spike, typically when the membrane potential exceeds a threshold) and reset equations, governing the evolution of all variables after a spike is emitted. Let's consider a simple spiking neuron model as proposed by Izhikevich:
+Contrary to rate-coded neurons, the use of spiking neurons requires the aditional definition of a spike condition (the criteria defining the emission of a spike, typically when the membrane potential exceeds a threshold) and reset equations, governing the evolution of all variables after a spike is emitted. 
+
+Let's consider a simple leaky integrate-and-fire spiking neuron model (LIF):
 
 .. math::
 
-    \frac{ d \text{u}_i(t) }{ dt } = a * ( \text{b} * \text{v} - \text{u}_i(t) )
+    \tau \cdot  \frac{ d v(t) }{ dt } = (E_r - v(t) ) + g_\text{exc}(t) \cdot (E_e -  v(t) )
 
-    \frac{ d \text{v}_i(t) }{ dt } = 0.04 * \text{v}_i(t)^2 + 5 * \text{v}_i(t) + 140 - \text{u}_i(t) + \text{I}_i(t)
+where :math:`v(t)` is the membrane potential, :math:`\tau` is the membrane time constant (in milliseconds), :math:`E_r` the resting potential, :math:`E_e` the target potential for excitatory synapses and :math:`g_\text{exc}(t)` the total condutance of excitatory synapses.
 
 This neural model can be defined in ANNarchy by:
 
 .. code-block:: python
 
-    Izhikevitch = SpikeNeuron(
+    LIF = SpikeNeuron(
         parameters="""
-            a = 0.02
-            b = 0.2
-            c = -65.0
-            d = 2.0
-            T = 30.0
+            tau = 10.0  : population
+            Er = -60.0  : population
+            Ee = 0.0    : population
+            T = -45.0   : population
         """,
         equations="""
-            I = Normal(0.0,1.0) 
-            dv/dt = 0.04 * v**2 + 5.*v + 140.0 -u + I : init = 0.0
-            du/dt = a * (b*v - u) : init = -13.0
+            tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
+            g_exc = 0.0
         """,
         spike = """
             v > T
         """,
         reset = """
-            v = c
-            u += d
+            v = Er
         """,
         refractory = 1.0
     )
 
-**Spike condition**
+As for rate-coded neurons, the parameters are defined in the ``parameters`` description, here globally for the population. ``equations`` contains the description of the ODE followed by the membrane potential. The additional information to provide is:
 
-The spike condition is a single constraint definition. You may use the different available comparison operators using the previously defined neuron variables.
+* ``spike`` : a boolean condition on a single variable (typically the membrane potential) deciding when a spike is emitted.
+  
+* ``reset`` : the modifications to the neuron's variables after a spike is emitted (typically, clamping the membrane potential to its reset potential).
 
-The use of assignment statements or full ODEs will lead to an error. Furthermore the decision variable of the condition needs to be placed on the **left** side.
+Spike condition
+----------------
 
-**Reset**
+The spike condition is a single constraint definition. You may use the different available comparison operators (>, <,  ==, etc) on a **single** neuron variable, using as many parameters as you want.
 
-Here you define the variables which should be set to certain values after a spike occured. Any assignment statements is allowed (``=``, ``+=``, etc), but the use of ODEs is not possible at this point, as the reset is performed only once at the end of the time step.
+The use of assignment statements or full ODEs will lead to an error. Furthermore the decision variable of the condition needs to be placed alone on the **left** side.
 
-**Conductances**
+Example: 
+
+.. code-block:: python
+
+    v >= threshold + noise
+
+Reset
+------
+
+Here you define the variables which should be set to certain values after a spike occured. Any assignment statements is allowed (``=``, ``+=``, etc), but the use of ODEs is not possible, as the reset is performed only once at the end of the time step.
+
+Example: 
+
+.. code-block:: python
+
+    v = Er 
+    u += 0.1   
+    
+
+
+Conductances
+------------
 
 Contrary to rate-coded neurons, spiking neurons use conductance variables to encode the received inputs, not weighted sums. In ANNarchy, the conductances are defined by ``g_`` followed by the target name. For example, if a population receives excitatory input (exc) from another one, you may access the conductance with:
 
 .. code-block:: python
 
-    dv/dt = v + g_exc
+    dv/dt + v = g_exc
 
 The dynamics of the conductance must be specified after its usage in the membrane potential equation.
 
@@ -97,7 +120,8 @@ Incoming spikes increase ``g_exc`` and may provoke a postsynaptic spike at the n
 
     If you forget to update the conductances after the equations, they may increase indefinitely!
 
-**Refractory period**
+Refractory period
+-----------------
 
 The refractory period is specified by the ``refractory`` parameter of ``SpikeNeuron``. As any other variable, it can be later modified for the whole population.
 

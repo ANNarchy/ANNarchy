@@ -610,8 +610,10 @@ def analyse_population(pop):
     if len(attributes) != len(list(set(attributes))):
         _error(pop.name, ': attributes must be declared only once.', attributes)
         exit(0)
+    
     # Extract all targets
     targets = _extract_targets(variables)
+
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
@@ -895,7 +897,12 @@ def _get_attributes(parameters, variables):
 def _extract_targets(variables):
     targets = []
     for var in variables:
+        # Rate-coded neurons
         code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])sum\(([^()]+)\)', var['eq'])
+        for l, t in code:
+            targets.append(t)
+        # Spiking neurons
+        code = re.findall('([^\_a-zA-Z0-9.])g_([\w]+)', var['eq'])
         for l, t in code:
             targets.append(t)
     return list(set(targets))

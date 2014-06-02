@@ -40,6 +40,7 @@ class SpikePopulationGenerator(PopulationGenerator):
             if (self.desc['name'] == proj.post.name) and \
                (proj.target in proj.post.targets):
                 self._app_proj.append(proj)
+        print self._app_proj
     
     def generate_members_declaration(self):
         members = PopulationGenerator.generate_members_declaration(self)
@@ -195,4 +196,61 @@ class SpikePopulationGenerator(PopulationGenerator):
     def generate_reset_event(self):
         code = self.desc['spike']['spike_reset'].replace('[i]','[(*it)]')
         
+        return code
+
+    def generate_local_metastep(self):
+        """
+        Code for the metastep.
+        """
+        code = ""         
+        for param in self.desc['variables']:  
+             # local attribute          
+            if param['name'] in self.desc['local']:
+                code += """
+    %(comment)s
+    %(cpp)s
+""" % { 'comment': '// '+param['eq'],
+        'cpp': param['cpp'] }
+
+            # spike propagation and refractory period
+            if param['name'] == self.desc['spike']['name']:
+                code += """
+    if( %(cond)s )
+    {
+        if (refractory_counter_[i] < 1)
+        {
+            #pragma omp critical
+            {
+                //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
+                this->propagate_.push_back(i);
+                this->reset_.push_back(i);
+                
+                lastSpike_[i] = ANNarchy_Global::time;
+                if(record_spike_){
+                    spike_timings_[i].push_back(ANNarchy_Global::time);
+                }
+                spiked_[i] = true;
+            }
+        }
+    }
+""" % {'cond' : self.desc['spike']['spike_cond'] } #TODO: check code
+
+            # Process the bounds min and max
+            for bound, val in param['bounds'].iteritems():
+                # Bound min
+                if bound == 'min':
+                    code += """
+    if(%(var)s_[i] < %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+                # Bound max 
+                if bound == 'max':
+                    code += """
+    if(%(var)s_[i] > %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+
+
+        # default = reset of target conductances
+
         return code
