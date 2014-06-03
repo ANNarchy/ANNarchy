@@ -76,11 +76,11 @@ class Profile:
         if object == "network":
             self._net_data = DataLog(self._threads, self._num_trials,'overall')
         elif isinstance(object, Population):
-            self._pop_data[object] = { 'sum' : DataLog(self._threads, self._num_trials, 'sum'),
-                                       'step' : DataLog(self._threads, self._num_trials, 'step'), 
-                                       'local' : DataLog(self._threads, self._num_trials, 'local'),
-                                       'global' : DataLog(self._threads, self._num_trials, 'global')
-                                     }
+            self._pop_data[object.name] = { 'sum' : DataLog(self._threads, self._num_trials, 'sum'),
+                                            'step' : DataLog(self._threads, self._num_trials, 'step'), 
+                                            'local' : DataLog(self._threads, self._num_trials, 'local'),
+                                            'global' : DataLog(self._threads, self._num_trials, 'global')
+                                          }
         else:
             self._net_data = DataLog(self._threads, self._num_trials,'overall')
             

@@ -22,6 +22,7 @@
     
 """
 import pyqtgraph as pg
+import numpy as np
 from math import ceil, floor, sqrt
 
 class IntAxis(pg.AxisItem):
