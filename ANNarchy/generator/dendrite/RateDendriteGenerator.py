@@ -116,11 +116,14 @@ class RateDendriteGenerator(DendriteGenerator):
             'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
         }    
 
-        print "self.desc['delay'] =", self.desc['delay']
-
+        #
         # select the template according delay and paradigm
-        if isinstance(self.desc['delay'], (float, int)):        
-            if float(self.desc['delay']) == 0.0:
+        #
+        # Assumption: all dendrites have similar structure
+        delay = self.desc['csr'].get_delay()
+        first_syn_delay = delay[delay.keys()[0]]
+        if len(first_syn_delay) == 1:        
+            if first_syn_delay[0] == 0:
                 template = psp_code_no_delay_omp if (self.paradigm == "openmp") else psp_code_body_cuda
             else: 
                 template = psp_code_const_delay_omp if (self.paradigm == "openmp") else psp_code_body_cuda

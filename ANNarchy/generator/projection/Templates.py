@@ -493,9 +493,13 @@ cdef class py%(name)s:
     cpdef createFromCSR( self, dendrites ):
         cdef int rank
         cdef list data
+        cdef dict delays 
+
+        delays = dendrites.get_delay()
         for rank, data in dendrites.get_data().iteritems():
+
             # create dendrite instance
-            self.cInstance.addDendrite(rank, data[0], data[1], data[2])            
+            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])            
             # initialize variables
             self.cInstance.initValues(rank)
 
@@ -641,9 +645,13 @@ cdef class py%(name)s:
     cpdef createFromCSR( self, dendrites ):
         cdef int rank
         cdef list data
+        cdef dict delays 
+
+        delays = dendrites.get_delay()
         for rank, data in dendrites.get_data().iteritems():
+
             # create dendrite instance
-            self.cInstance.addDendrite(rank, data[0], data[1], data[2])            
+            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])            
             # initialize variables
             self.cInstance.initValues(rank)
 
