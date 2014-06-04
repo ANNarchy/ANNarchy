@@ -54,6 +54,11 @@ psp_code_const_delay_omp = \
 psp_code_dyn_delay_omp = \
 """
     sum_ =0.0;
+#ifdef _DEBUG_DELAY
+    for( auto it = delay_.begin(); it != delay_.end(); it++)
+        std::cout << *it << " ";
+    std::cout << std::endl;
+#endif    
     std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRs(delay_, rank_);
 
 #ifdef _DEBUG_DELAY

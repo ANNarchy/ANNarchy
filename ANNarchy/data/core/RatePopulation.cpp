@@ -64,7 +64,10 @@ std::vector<DATA_TYPE>* RatePopulation::getRs(int delay)
 
 std::vector<DATA_TYPE> RatePopulation::getRs(std::vector<int> delays, std::vector<int> ranks)
 {
-    std::vector<DATA_TYPE> vec = std::vector<DATA_TYPE>(delays.size(), 0.0);
+	std::cout << "delays = " << delays.size() << ", " << ranks.size() << std::endl;
+	std::cout << delayedRates_.size() << std::endl;
+
+	std::vector<DATA_TYPE> vec = std::vector<DATA_TYPE>(delays.size(), 0.0);
 
     if(delays.size() != ranks.size()) {
         std::cout << "Invalid vector ranges. " << std::endl;
@@ -72,7 +75,7 @@ std::vector<DATA_TYPE> RatePopulation::getRs(std::vector<int> delays, std::vecto
     }
 
     for(unsigned int n = 0; n < ranks.size(); n++) {
-        vec[n] = delayedRates_[ranks[n]][delays[n]-1];
+        vec[n] = delayedRates_[delays[n]-1][ranks[n]];
     }
 
     return vec;
