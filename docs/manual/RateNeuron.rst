@@ -2,6 +2,9 @@
 Rate-coded neurons
 *******************************
 
+Defining parameters and variables
+---------------------------------
+
 Let's consider first a simple rate-coded neuron of the leaky-integrator type, which simply integrates the weighted sum of its excitatory inputs:
 
 .. math::
@@ -29,6 +32,9 @@ It can be implemented in the ANNarchy framework with:
     
 The only required variable is ``r``, which represents the instantaneous firing rate and will be used to propagate activity in the network. All other parameters and variables are freely decided by the user. More detailed examples can be found in the section :doc:`../Example`.
 
+Custom functions
+-----------------
+
 Custom functions can also be passed when creating the Neuron type:
 
 .. code-block:: python
@@ -47,7 +53,8 @@ Custom functions can also be passed when creating the Neuron type:
         """
     )
 
-**Predefined attributes**
+Predefined attributes
+----------------------
 
 The ODE can depend on other parameters of the neuron (e.g. ``r`` depends on ``mp``), but not on unknown names. ANNarchy already ensures the existence of the following variables and parameters for a neuron:
     
@@ -55,9 +62,12 @@ The ODE can depend on other parameters of the neuron (e.g. ``r`` depends on ``mp
     
     * parameter *dt*: the discretization step, default is 1.0ms. 
     
-**Weighted sum of inputs**
+Weighted sum of inputs
+-----------------------
 
-The ``sum()`` method of a neuron gives a direct access to the weighted sum of all inputs to the postsynaptic neuron separately by the target. These synapses are organized in a data structure called ``Dendrite``. Some more information about the weighted sum can be found àt `RateSynapse`.
+The ``sum()`` method of a neuron gives a direct access to the weighted sum of all inputs to the postsynaptic neuron separately by the target. These synapses are organized in a data structure called ``Dendrite``. 
+
+It is possible to modify how weighted sum is computed when creating a :doc:`RateSynapse`.
 
 .. warning:: 
 
