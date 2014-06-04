@@ -43,7 +43,7 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
 
     cdef CSR projection
     cdef float dt
-    cdef int r_post, size_pre
+    cdef int r_post, size_pre, i
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
     cdef vector[float] w
@@ -52,15 +52,21 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     dt = ANNarchy.core.Global.config['dt']
 
     # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
+    if hasattr(post, 'ranks'): # PopulationView
+        post_ranks = post.ranks
+    else: # Plain population
+        post_ranks = range(post.size)
+    if hasattr(pre, 'ranks'): # PopulationView
+        pre_ranks = pre.ranks
+    else:
+        pre_ranks = range(pre.size)
 
     # Create the projection data as CSR
     projection = CSR()
 
     for r_post in post_ranks:
         # List of pre ranks
-        tmp = [i for i in pre_ranks]
+        tmp = [i for i  in pre_ranks]
         if not allow_self_connections:
             try:
                 tmp.remove(r_post)
@@ -99,8 +105,14 @@ def one_to_one(pre, post, weights, delays):
     dt = ANNarchy.core.Global.config['dt']
 
     # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
+    if hasattr(post, 'ranks'): # PopulationView
+        post_ranks = post.ranks
+    else: # Plain population
+        post_ranks = range(post.size)
+    if hasattr(pre, 'ranks'): # PopulationView
+        pre_ranks = pre.ranks
+    else:
+        pre_ranks = range(pre.size)
 
     # Create the projection data as CSR
     projection = CSR()
@@ -146,8 +158,14 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     dt = ANNarchy.core.Global.config['dt']
 
     # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
+    if hasattr(post, 'ranks'): # PopulationView
+        post_ranks = post.ranks
+    else: # Plain population
+        post_ranks = range(post.size)
+    if hasattr(pre, 'ranks'): # PopulationView
+        pre_ranks = pre.ranks
+    else:
+        pre_ranks = range(pre.size)
 
     # Create the projection data as CSR
     projection = CSR()
@@ -194,8 +212,14 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     dt = ANNarchy.core.Global.config['dt']
     
     # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
+    if hasattr(post, 'ranks'): # PopulationView
+        post_ranks = post.ranks
+    else: # Plain population
+        post_ranks = range(post.size)
+    if hasattr(pre, 'ranks'): # PopulationView
+        pre_ranks = pre.ranks
+    else:
+        pre_ranks = range(pre.size)
 
     # Create the projection data as CSR
     projection = CSR()
@@ -244,8 +268,14 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     dt = ANNarchy.core.Global.config['dt']
     
     # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
+    if hasattr(post, 'ranks'): # PopulationView
+        post_ranks = post.ranks
+    else: # Plain population
+        post_ranks = range(post.size)
+    if hasattr(pre, 'ranks'): # PopulationView
+        pre_ranks = pre.ranks
+    else:
+        pre_ranks = range(pre.size)
     
     # Create the projection data as CSR
     projection = CSR()
