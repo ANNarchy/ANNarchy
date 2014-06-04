@@ -2,19 +2,22 @@
 Rate-coded synapses
 *******************************
 
-As for neurons, you can define some synaptic behaviour using parameters and variables within the **RateSynapse** respectively **SpikeSynapse** class. Although the description is local to a synapse, the same ODE will be applied to all synapses of a given Projection from one population to another. The same vocabulary as for neurons is accessible (constants, functions, conditional statements), except that the synapse must distinguish presynaptic and postsynaptic parameters/variables. 
+As for neurons, you can define the synaptic behavior using a **RateSynapse** object. Although the description is local to a synapse, the same ODE will be applied to all synapses of a given Projection from one population to another. The same vocabulary as for neurons is accessible (constants, functions, conditional statements), except that the synapse must distinguish presynaptic and postsynaptic parameters/variables. 
 
-Like ``r`` for a neuron, one variable is critical for a rate-coded synapse:
+Like ``r`` for a rate-coded neuron, one variable is critical for a rate-coded synapse:
 
 * ``w`` represents the synaptic efficiency (or the weight of the connection). If an ODE is defined for this variable, this will implement a learning rule. If none is provided, the synapse is non-plastic.
 
-The ODEs for synaptic variables follow the same syntax as for neurons. The following attributes are defined:
+The ODEs for synaptic variables follow the same syntax as for neurons. The following variables are already defined:
 
-* *dt*: the discretization step is 1.0ms by default. 
+* ``dt``: the discretization step is 1.0ms by default. 
 
-* *t*: current step of the simulation (incremented after each step of the simulation).
+* ``t``: current step of the simulation (incremented after each step of the simulation). You will need to divide this value by ``dt`` to get the time elapsed in milliseconds.
+  
 
-* ``psp`` represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron with all other synapses of the same projection in ``sum(type)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
+Neuron-specific variables
+-----------------------------------
+
 
 Neural variables therefore have to be prefixed with ``pre.`` or ``post.``: 
 
@@ -29,6 +32,8 @@ ANNarchy will check before the compilation that the pre- or post-synaptic neuron
     TODO: Only pre.r takes delays into account.
 
 **Defining the postsynaptic potential (psp)**
+
+* ``psp`` represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron with all other synapses of the same projection in ``sum(type)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
 
 The postsynaptic potential of a single synapse is by default:
 
@@ -54,7 +59,8 @@ In this case, you can just modify the postsynaptic potential (*psp*) variable of
         """
     )
 
-**Defining the learning rule**
+Defining the learning rule
+--------------------------
 
 Learning mechanisms are implemented in ANNarchy modifying the *value* variable of a Synapse. Within this modification any other variables of the synapse, the pre- and postsynaptic populations are available. 
 

@@ -82,15 +82,15 @@ Example:
 Conductances
 ------------
 
-Contrary to rate-coded neurons, spiking neurons use conductance variables to encode the received inputs, not weighted sums. In ANNarchy, the conductances are defined by ``g_`` followed by the target name. For example, if a population receives excitatory input (exc) from another one, you may access the conductance with:
+Contrary to rate-coded neurons, spiking neurons use conductance variables to encode the received inputs, not weighted sums. In ANNarchy, the conductances are defined by ``g_`` followed by the target name. For example, if a population receives excitatory input (target ``exc``) from another one, you can access the total conductance provoked by ``exc`` spikes with:
 
 .. code-block:: python
 
-    dv/dt + v = g_exc
+    tau * dv/dt + v = g_exc
 
 The dynamics of the conductance can be specified after its usage in the membrane potential equation.
 
-* The default behaviour for conductances is an **instantaneous reset*** (or infinitely fast exponential decay). In practice, this means that all incoming spikes are summed up (weighted by the synaptic efficiency) at the beginning of a simulation step, and the resulting conductance is reset to 0.0 at the end of the step. This default behaviour is equivalent to :
+* The default behaviour for conductances is an **instantaneous reset** (or infinitely fast exponential decay). In practice, this means that all incoming spikes are summed up (weighted by the synaptic efficiency) at the beginning of a simulation step, and the resulting conductance is reset to 0.0 at the end of the step. This default behaviour is equivalent to :
   
 
 .. code-block:: python
@@ -122,6 +122,10 @@ Incoming spikes increase ``g_exc`` and can provoke a postsynaptic spike at the n
     )
 
 ``g_exc`` is increased by incoming spikes, and slowly decays back to 0.0 until the next spikes arrive.
+
+.. note::
+
+    The conductance's dynamics should be placed **after** updating the membrane potential, otherwise the value of ``g_exc`` would be already scaled down. 
 
 Refractory period
 -----------------
