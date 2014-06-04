@@ -666,6 +666,8 @@ class Projection(object):
         if ( isinstance(self._synapses, Connector.CSR) ):
             self.cyInstance.createFromCSR(self._synapses)
             self._post_ranks = self._synapses.keys()
+            # update maximum delay in presynaptic population
+            self.pre.cyInstance.set_max_delay(self._synapses.get_max_delay())
             return
         elif ( isinstance(self._synapses, list) ):
         	dendrites = self._build_pattern_from_list()
