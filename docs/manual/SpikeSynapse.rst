@@ -4,8 +4,8 @@ Spike synapses
 
 Synapses in spiking networks differ from rate-coded synapses in that they are event-driven, i.e. the most important changes occur whenever a pre- or post-synaptic spike is emitted. For this reason, the interface of a ``SpikeSynapse`` slightly differs from a ``RateSynapse``.
    
-Increase of conductance
-=======================
+Increase of conductance after a presynaptic spike
+==================================================
 
 In the simplest case, a presynaptic spike increases a ``target`` conductance value in the postsynaptic neuron. The rule defining how this conductance is modified can be placed in the pre-synaptic event section of a synapse:
 
@@ -17,14 +17,18 @@ In the simplest case, a presynaptic spike increases a ``target`` conductance val
     
 Note that this is the default behaviour, only exceptions to this rule have to be implemented.
 
-.. hint:: **current limitation**
+.. hint:: 
 
-    For the current implementation, it is obligatory to use the keyword ``g_target``. This value relates to the corresponding value in postsynaptic neuron: The ``target`` will be replaced with the projection's target (for example ``exc`` or ``inh``). So if you use this synapse in a projection with target = 'exc', the value of g_exc in postsynaptic neuron will be automatically replaced. In a further release it will be analogous to Brian.
+    For the current implementation, it is obligatory to use the keyword ``g_target``. This value relates to the corresponding value in postsynaptic neuron: The ``target`` will be replaced with the projection's target (for example ``exc`` or ``inh``). So if you use this synapse in a projection with target = 'exc', the value of g_exc in postsynaptic neuron will be automatically replaced. 
 
-Defining a learning rule
+.. note::
+
+    The ``psp`` argument of a ``RateSynapse`` is not valid for a ``SpikeSynapse``.
+
+Synaptic plasticity
 ==========================
 
-To define the learning rule you can describe the pre- and postsynaptic events separately in the synapse description (what happens when a pre- resp. post-synaptic spike is perceived at the corresponding synapse). The following example describes a basic implementation of STDP (Spike-Timing Dependent Plasticity), with the same formalism as in Brian:
+To define the learning rule you have to describe the pre- and postsynaptic events separately in the synapse description (what happens when a pre- resp. post-synaptic spike is perceived at the corresponding synapse). The following example describes a basic implementation of STDP (Spike-Timing Dependent Plasticity), with the same formalism as in Brian:
 
 .. code-block:: python
 

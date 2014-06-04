@@ -122,7 +122,7 @@ Using the global operations, such a learning rule is trivial to implement:
 Defining the postsynaptic potential (psp)
 -----------------------------------------
 
-The argument ``psp`` of a ``RateSynapse`` object represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron with all other synapses of the same projection in ``sum(target)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
+The argument ``psp`` of a ``RateSynapse`` object represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron over all other synapses of the same projection in ``sum(target)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
 
 The postsynaptic potential of a single synapse is by default:
 
