@@ -25,7 +25,6 @@ This neural model can be defined in ANNarchy by:
         """,
         equations="""
             tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
-            g_exc = 0.0
         """,
         spike = """
             v > T
@@ -53,7 +52,17 @@ Example:
 
 .. code-block:: python
 
-    v >= threshold + noise
+    parameters="""
+        ...
+        T = -45.0 
+    """,
+    equations="""
+        noise = Uniform (-5.0, 5.0)
+        ...
+    """,
+    spike = """
+        v > T + noise
+    """
 
 Reset
 ------
@@ -64,10 +73,11 @@ Example:
 
 .. code-block:: python
 
-    v = Er 
-    u += 0.1   
-    
-
+    reset = """
+        v = Er 
+        u += 0.1 
+    """
+  
 
 Conductances
 ------------
@@ -78,37 +88,34 @@ Contrary to rate-coded neurons, spiking neurons use conductance variables to enc
 
     dv/dt + v = g_exc
 
-The dynamics of the conductance must be specified after its usage in the membrane potential equation.
+The dynamics of the conductance can be specified after its usage in the membrane potential equation.
 
-* An instantaneous synaptic conductance  should be set to 0.0 at the end of ``equations``:
+* The default behaviour for conductances is an **instantaneous reset*** (or infinitely fast exponential decay). In practice, this means that all incoming spikes are summed up (weighted by the synaptic efficiency) at the beginning of a simulation step, and the resulting conductance is reset to 0.0 at the end of the step. This default behaviour is equivalent to :
+  
 
 .. code-block:: python
 
-    Izhikevitch = SpikeNeuron(
+    LIF = SpikeNeuron(
         parameters=""" ... """,
         equations="""
-            I = Normal(0.0,1.0)
-            dv/dt = 0.04 * v * v + 5*v + 140 -u + I + g_exc: init = 0.0
-            du/dt = a * (b*v - u) : init = -13.0
+            tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
             g_exc = 0.0
         """,
         spike = """ ... """,
         reset = """ ... """
     )
 
-Incoming spikes increase ``g_exc`` and may provoke a postsynaptic spike at the next step, but leave no trace beyond.
+Incoming spikes increase ``g_exc`` and can provoke a postsynaptic spike at the next step, but leave no trace beyond.
 
-* Exponentially decaying synapses should be also specified: 
+* Most models however use **exponentially decaying synapses**, where the conductance decays with a short time constant after a spike is received. This behavior should be explicitely specified in the neuron's equations: 
 
 .. code-block:: python
 
-    Izhikevitch = SpikeNeuron(
-        parameters=""" ... tau = 5.0 """,
+    LIF = SpikeNeuron(
+        parameters=""" ... """,
         equations="""
-            I = Normal(0.0,1.0)
-            dv/dt = 0.04 * v * v + 5*v + 140 -u + I + g_exc: init = 0.0
-            du/dt = a * (b*v - u) : init = -13.0
-            tau * dg_exc/dt = - g_exc 
+            tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
+            tau_exc * dg_exc/dt = - g_exc
         """,
         spike = """ ... """,
         reset = """ ... """
@@ -116,28 +123,17 @@ Incoming spikes increase ``g_exc`` and may provoke a postsynaptic spike at the n
 
 ``g_exc`` is increased by incoming spikes, and slowly decays back to 0.0 until the next spikes arrive.
 
-.. warning::
-
-    If you forget to update the conductances after the equations, they may increase indefinitely!
-
 Refractory period
 -----------------
 
-The refractory period is specified by the ``refractory`` parameter of ``SpikeNeuron``. As any other variable, it can be later modified for the whole population.
+The refractory period is specified by the ``refractory`` parameter of ``SpikeNeuron``. As any other variable, it can be later modified for the whole population, with possibly different values per neuron.
 
 .. code-block :: python
 
-    RefractoryNeuron = SpikeNeuron (
+    LIF = SpikeNeuron (
         parameters = """ ... """,
-        equations = """
-            I = Normal(0.0,1.0)
-            dv/dt = 0.04 * v * v + 5*v + 140 -u + I + g_exc: init = 0.0
-            du/dt = a * (b*v - u) : init = -13.0
-            tau * dg_exc/dt = - g_exc 
-        """,
-        spike = """
-        v > T
-        """,
+        equations = """ ... """,
+        spike = """ ... """,
         reset = """ 
             v = c
             u += d
@@ -146,4 +142,6 @@ The refractory period is specified by the ``refractory`` parameter of ``SpikeNeu
     )
 
 If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 consecutive steps after a spike is emitted, in addition to the step where the spike was emitted. The equations will be evaluated normally, so ``g_exc`` will not "miss" incoming spikes during this period, only ``v`` will be stuck to ``c`` and ``u`` incremented 6 times altogether. 
+
+
 
