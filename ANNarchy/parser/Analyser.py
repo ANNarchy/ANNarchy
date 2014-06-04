@@ -284,6 +284,9 @@ class Analyser(object):
                 psp['cpp'] = code
                 proj.description['psp'] = psp               
         
+            # handling delays
+            proj.description['delay'] = proj.delay               
+        
         # Store the result of analysis for generating the code
         for pop in self.populations:
             # Make sure global operations are generated only once
