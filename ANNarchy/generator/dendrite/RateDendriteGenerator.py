@@ -111,16 +111,23 @@ class RateDendriteGenerator(DendriteGenerator):
 
         # Generate the code
         dictionary = {
-            'psp': psp_code, 
+            'psp_no_delay': psp_code, 
             'psp_const_delay': psp_code,
             'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
         }    
 
-        if self.paradigm == "openmp":
-            template = psp_code_body_omp
+        print "self.desc['delay'] =", self.desc['delay']
+
+        # select the template according delay and paradigm
+        if isinstance(self.desc['delay'], (float, int)):        
+            if float(self.desc['delay']) == 0.0:
+                template = psp_code_no_delay_omp if (self.paradigm == "openmp") else psp_code_body_cuda
+            else: 
+                template = psp_code_const_delay_omp if (self.paradigm == "openmp") else psp_code_body_cuda
         else:
-            template = psp_code_body_cuda
-            
+            # delay is a random distribution
+            template = psp_code_dyn_delay_omp if (self.paradigm == "openmp") else psp_code_body_cuda
+
         return template % dictionary
     
     def generate_globallearn(self):

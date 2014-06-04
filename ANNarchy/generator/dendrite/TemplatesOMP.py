@@ -1,55 +1,77 @@
-# Template for the computeSum() method of a projection
+# Template for the computeSum() method of a projection without delays
 #
-# * psp: basic code for the psp (default (*pre_rates_)[rank_[i]] * w_[i];) 
+# * psp_no_delay: basic code for the psp (default (*pre_rates_)[rank_[i]] * w_[i];) 
 #
-# * psp_const_delay : code when the delay is constant (normally the same as psp)
-#
-# * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * w_[i];) 
-#
-psp_code_body_omp = \
+psp_code_no_delay_omp = \
 """
     sum_ =0.0;
-    
-    if(delay_.empty() || maxDelay_ == 0)    // no delay
-    {
-        for(int i=0; i < nbSynapses_; i++) 
-        {
-            sum_ += %(psp)s
-        }        
-    }
-    else    // delayed connections
-    {
-        if(constDelay_) // one delay for all connections
-        {
-            pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRs(delay_[0]);
-            
-        #ifdef _DEBUG
-            std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
-            for(int i=0; i<(int)(*pre_rates_).size(); i++) 
-            {
-                std::cout << (*pre_rates_)[i] << " ";
-            }
-            std::cout << std::endl;
-        #endif
-            
-            for(int i=0; i < nbSynapses_; i++) 
-            {
-                sum_ += %(psp_const_delay)s
-            }
-        }
-        else    // different delays [0..maxDelay]
-        {
-            std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRs(delay_, rank_);
 
-            for(int i=0; i < nbSynapses_; i++) 
-            {
-                sum_ += %(psp_dyn_delay)s
-            }
-        }
+#ifdef _DEBUG_DELAY
+    std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << ")" << std::endl;
+    for(int i=0; i<(int)(*pre_rates_).size(); i++) 
+    {
+        std::cout << (*pre_rates_)[i] << " ";
     }
+    std::cout << std::endl;
+#endif
+    
+    for(int i=0; i < nbSynapses_; i++) 
+    {
+        sum_ += %(psp_no_delay)s
+    }        
     
     //std::cout << "sum(CPU): " << sum_ << std::endl;
 """ 
+
+# Template for the computeSum() method of a projection with constant delay
+#
+# * psp_const_delay : code when the delay is constant (normally the same as psp)
+#
+psp_code_const_delay_omp = \
+"""
+    sum_ =0.0;
+    pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRs(delay_[0]);
+
+_DEBUG_DELAY
+    std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
+    for(int i=0; i<(int)(*pre_rates_).size(); i++) 
+        std::cout << (*pre_rates_)[i] << " ";
+    std::cout << std::endl;
+#endif
+    
+    for(int i=0; i < nbSynapses_; i++)
+    { 
+        sum_ += %(psp_const_delay)s
+    }
+    
+    //std::cout << "sum(CPU): " << sum_ << std::endl;
+"""     
+
+# Template for the computeSum() method of a projection with dynamic delays
+#
+# * psp_dyn_delay : code when delays are variable (default delayedRates[rank_[i]] * w_[i];) 
+#
+psp_code_dyn_delay_omp = \
+"""
+    sum_ =0.0;
+    std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRs(delay_, rank_);
+
+#ifdef _DEBUG_DELAY
+    std::cout << "delayedRates: " << delayedRates.size() << std::endl;
+    for(int i=0; i<(int)delayedRates.size(); i++) 
+    {
+        std::cout << delayedRates[i] << " ";
+    }
+    std::cout << std::endl;
+#endif
+
+    for(int i=0; i < nbSynapses_; i++) 
+    {
+        sum_ += %(psp_dyn_delay)s
+    }
+
+    //std::cout << "sum(CPU): " << sum_ << std::endl;
+"""
 
 # Template for the preEvent() method of a projection
 #
