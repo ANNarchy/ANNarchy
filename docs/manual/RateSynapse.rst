@@ -18,8 +18,9 @@ The ODEs for synaptic variables follow the same syntax as for neurons. The follo
 Neuron-specific variables
 -----------------------------------
 
+A synapse needs to access neural variables both at the pre- and post-synaptic levels. Biologically realistic synapses should only need the firing rate of the presynaptic neuron, but in some cases it may be useful to access other variables as well.
 
-Neural variables therefore have to be prefixed with ``pre.`` or ``post.``: 
+In order to use neural variables in a synaptic variable, you have to prefix them with ``pre.`` or ``post.``. For example: 
 
 .. code-block:: python
 
@@ -31,7 +32,8 @@ ANNarchy will check before the compilation that the pre- or post-synaptic neuron
 
     TODO: Only pre.r takes delays into account.
 
-**Defining the postsynaptic potential (psp)**
+Defining the postsynaptic potential (psp)
+-----------------------------------------
 
 * ``psp`` represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron with all other synapses of the same projection in ``sum(type)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
 
