@@ -7,6 +7,7 @@ cimport numpy as np
 from libc.math cimport exp, fabs
 
 import ANNarchy
+from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 
 cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
@@ -16,7 +17,8 @@ cdef class CSR:
     def __init__(self):
         self.data = {}
         self.delay = {}
-        self.max_delay = 0
+        self.max_delay = Global.config['dt']
+        self.dt = Global.config['dt']
 
     def add (self, int rk, list r, list w, list d):
         cdef list val
@@ -24,11 +26,15 @@ cdef class CSR:
         val.append(r)
         val.append(w)
         self.data[rk] = val
-        self.delay[rk] = d
         
         max_d = np.max(d)
-        if max_d > self.max_delay:
-            self.max_delay = max_d
+        if max_d*self.dt > self.dt:
+            self.delay[rk] = d
+
+            if max_d > self.max_delay:
+                self.max_delay = max_d
+        else:
+            self.delay[rk] = []
 
     cdef push_back (self, int rk, vector[int] r, vector[float] w, vector[int] d):
         cdef list val
@@ -36,11 +42,15 @@ cdef class CSR:
         val.append(r)
         val.append(w)
         self.data[rk] = val
-        self.delay[rk] = d
 
         max_d = np.max(d)
-        if max_d > self.max_delay:
-            self.max_delay = max_d
+        if max_d*self.dt > self.dt:
+            self.delay[rk] = d
+
+            if max_d > self.max_delay:
+                self.max_delay = max_d
+        else:
+            self.delay[rk] = []
 
     def keys(self):
         return self.data.keys()
@@ -68,7 +78,7 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Retríeve ranks
     post_ranks = post.ranks
@@ -113,7 +123,7 @@ def one_to_one(pre, post, weights, delays):
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Retríeve ranks
     post_ranks = post.ranks
@@ -158,7 +168,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Retríeve ranks
     post_ranks = post.ranks
@@ -204,7 +214,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
     
     # Retríeve ranks
     post_ranks = post.ranks
@@ -252,7 +262,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
     
     # Retríeve ranks
     post_ranks = post.ranks
@@ -309,7 +319,7 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
 
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Population sizes
     if isinstance(pre_geometry, int):

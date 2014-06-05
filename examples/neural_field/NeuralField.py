@@ -38,7 +38,7 @@ input_focus = Projection(
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc'
-).connect_one_to_one( weights=1.0 )
+).connect_one_to_one( weights=1.0, delays = 20.0 )
 
 focus_focus = Projection(
     pre = FocusPop, 

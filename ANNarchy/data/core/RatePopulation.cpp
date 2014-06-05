@@ -83,7 +83,7 @@ void RatePopulation::setMaxDelay(int delay)
 #ifdef _DEBUG_DELAY
     std::cout << "Population " << name_ << " got new max delay: " << delay << std::endl;
 #endif
-    if(delay > maxDelay_)
+    if( (delay > maxDelay_) && (delay > dt_) )
     {
         for(int oldSize = delayedRates_.size(); oldSize < delay; oldSize++)
             delayedRates_.push_front( r_ );
