@@ -266,14 +266,33 @@ void %(class)s::record()
 """
 
 rate_prepare_neurons="""
-    if (maxDelay_ > 1)
+    if (maxDelay_ > dt_)
     {
-    #ifdef _DEBUG
-        std::cout << name_ << ": got delayed rates = " << maxDelay_ << std::endl;
+    #ifdef _DEBUG_DELAY
+        std::cout << name_ << ": delay = " << maxDelay_ << std::endl;
+        std::cout << "OLD ( t = "<< ANNarchy_Global::time << ")" << std::endl;
+        for ( int i = 0; i < delayedRates_.size(); i++)
+        {
+            std::cout << i <<": ";
+            for ( auto it = delayedRates_[i].begin(); it != delayedRates_[i].end(); it++)
+                std::cout << *it << " ";
+            std::cout << std::endl;            
+        }
     #endif
     
         delayedRates_.push_front(r_);
         delayedRates_.pop_back();
+        
+    #ifdef _DEBUG_DELAY
+        std::cout << "NEW ( t = "<< ANNarchy_Global::time << ")" << std::endl;
+        for ( int i = 0; i < delayedRates_.size(); i++)
+        {
+            std::cout << i <<": ";
+            for ( auto it = delayedRates_[i].begin(); it != delayedRates_[i].end(); it++)
+                std::cout << *it << " ";
+            std::cout << std::endl;            
+        }
+    #endif
     }
 """
 

@@ -23,8 +23,8 @@
 """
 from ANNarchy.core.Neuron import RateNeuron
 from ANNarchy.core.Synapse import RateSynapse
-from ANNarchy.core.Global import _error, _warning, authorized_keywords
-from ANNarchy.core.Random import available_distributions
+from ANNarchy.core.Global import _error, _warning, authorized_keywords, config
+from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_templates
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 
@@ -145,7 +145,7 @@ class Analyser(object):
                                           untouched = untouched.keys())
                     code = translator.parse()
                 else: # An if-then-else statement
-                    code = self._translate_ITE(variable['name'], eq, condition, pop, untouched)
+                    code = _translate_ITE(variable['name'], eq, condition, pop, untouched)
                     
                 
                 # Replace untouched variables with their original name
@@ -175,10 +175,10 @@ class Analyser(object):
             
             if proj.description['type'] == 'spike': 
                 if proj.description['raw_pre_spike']:          
-                    proj.description['pre_spike'] = _extract_pre_spike_variable(proj.description)
+                    proj.description['pre_spike'] = _extract_pre_spike_variable(proj)
                 
                 if proj.description['raw_post_spike']:
-                    proj.description['post_spike'] = _extract_post_spike_variable(proj.description)
+                    proj.description['post_spike'] = _extract_post_spike_variable(proj)
                         
             # Variables names for the parser which should be left untouched
             untouched = {}   
@@ -248,7 +248,7 @@ class Analyser(object):
                     code = translator.parse()
                         
                 else: # An if-then-else statement
-                    code = self._translate_ITE(variable['name'], eq, condition, proj, untouched)
+                    code = _translate_ITE(variable['name'], eq, condition, proj, untouched)
                        
                 # Replace untouched variables with their original name
                 for prev, new in untouched.iteritems():
@@ -276,7 +276,7 @@ class Analyser(object):
                                           type='return')
                     code = translator.parse()
                 else:
-                    code = self._translate_ITE('psp', eq, condition, proj, untouched, split=False)
+                    code = _translate_ITE('psp', eq, condition, proj, untouched, split=False)
 
                 # Replace _pre_r_ with (*pre_rates_)[rank_[i]]
                 code = code.replace('_pre_r_', '(*pre_rates_)[rank_[i]]')
@@ -285,7 +285,7 @@ class Analyser(object):
                 proj.description['psp'] = psp               
         
             # handling delays
-            proj.description['delay'] = proj.delay               
+            proj.description['csr'] = proj._synapses
         
         # Store the result of analysis for generating the code
         for pop in self.populations:
@@ -302,47 +302,47 @@ class Analyser(object):
             self.analysed_projections[proj.name] = proj.description  
         return True # success
     
-    def _translate_ITE(self, name, eq, condition, proj, untouched, split=True):
-        " Recursively processes the different parts of an ITE statement"
-        def process_ITE(condition):
-            if_statement = condition[0]
-            then_statement = condition[1]
-            else_statement = condition[2]
-            if_code = Equation(name, if_statement, proj.description['attributes'], 
-                              proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(),
-                              type='cond').parse()
-            if isinstance(then_statement, list): # nested conditional
-                then_code =  process_ITE(then_statement)
-            else:
-                then_code = Equation(name, then_statement, proj.description['attributes'], 
-                              proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(),
-                              type='return').parse().split(';')[0]
-            if isinstance(else_statement, list): # nested conditional
-                else_code =  process_ITE(else_statement)
-            else:
-                else_code = Equation(name, else_statement, proj.description['attributes'], 
-                              proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys(),
-                              type='return').parse().split(';')[0]
-                              
-            code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
-            return code
-              
-        if split:
-            # Main equation, where the right part is __conditional__
-            translator = Equation(name, eq, proj.description['attributes'], 
-                                  proj.description['local'], proj.description['global'], 
-                                  method = 'explicit', untouched = untouched.keys())
-            code = translator.parse() 
+def _translate_ITE(name, eq, condition, proj, untouched, split=True):
+    " Recursively processes the different parts of an ITE statement"
+    def process_ITE(condition):
+        if_statement = condition[0]
+        then_statement = condition[1]
+        else_statement = condition[2]
+        if_code = Equation(name, if_statement, proj.description['attributes'], 
+                          proj.description['local'], proj.description['global'], 
+                          method = 'explicit', untouched = untouched.keys(),
+                          type='cond').parse()
+        if isinstance(then_statement, list): # nested conditional
+            then_code =  process_ITE(then_statement)
         else:
-            code = '__conditional__'
-        # Process the ITE
-        itecode =  process_ITE(condition)
-        # Replace
-        code = code.replace('__conditional__', itecode)
+            then_code = Equation(name, then_statement, proj.description['attributes'], 
+                          proj.description['local'], proj.description['global'], 
+                          method = 'explicit', untouched = untouched.keys(),
+                          type='return').parse().split(';')[0]
+        if isinstance(else_statement, list): # nested conditional
+            else_code =  process_ITE(else_statement)
+        else:
+            else_code = Equation(name, else_statement, proj.description['attributes'], 
+                          proj.description['local'], proj.description['global'], 
+                          method = 'explicit', untouched = untouched.keys(),
+                          type='return').parse().split(';')[0]
+                          
+        code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
         return code
+          
+    if split:
+        # Main equation, where the right part is __conditional__
+        translator = Equation(name, eq, proj.description['attributes'], 
+                              proj.description['local'], proj.description['global'], 
+                              method = 'explicit', untouched = untouched.keys())
+        code = translator.parse() 
+    else:
+        code = '__conditional__'
+    # Process the ITE
+    itecode =  process_ITE(condition)
+    # Replace
+    code = code.replace('__conditional__', itecode)
+    return code
 
 def _extract_ite(name, eq, proj, split=True):
     """ Extracts if-then-else statements and processes them.
@@ -430,9 +430,23 @@ def _extract_randomdist(pop):
         # Search for all distributions
         for dist in available_distributions:
             matches = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+dist+'\(([^()]+)\)', eq)
+            if matches == ' ':
+                continue
             for l, v in matches:
                 # Check the arguments
                 arguments = v.split(',')
+                # Check the number of provided arguments
+                if len(arguments) < distributions_arguments[dist]:
+                    _error(eq)
+                    _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
+                elif len(arguments) == distributions_arguments[dist]:
+                    arguments.append(str(config['seed']))
+                elif len(arguments) == distributions_arguments[dist] +1 :
+                    _warning('The seed is set in the distribution ' + dist)
+                else:
+                    _error(eq)
+                    _error('Too many parameters provided to the distribution ' + dist)
+                # Process the arguments
                 processed_arguments = ""
                 for idx in range(len(arguments)):
                     try:
@@ -452,7 +466,8 @@ def _extract_randomdist(pop):
                 desc = {'name': '__rand_' + str(rk_rand) + '_',
                         'dist': dist,
                         'definition': definition,
-                        'args' : processed_arguments}
+                        'args' : processed_arguments,
+                        'template': distributions_templates[dist]}
                 rk_rand += 1
                 random_objects.append(desc)
                 # Replace its definition by its temporary name
@@ -934,45 +949,60 @@ def _extract_spike_variable(pop_desc):
     
     return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': raw_reset_code}
 
-def _extract_pre_spike_variable(proj_desc):
+def _extract_pre_spike_variable(proj):
     pre_spike_var = []
     # For all variables influenced by a presynaptic spike
-    for var in _prepare_string(proj_desc['raw_pre_spike']):
+    for var in _prepare_string(proj.description['raw_pre_spike']):
         # Get its name
         name = _extract_name(var)
+        raw_eq = var
         # Replace target by its value
         post_target = False
         if name == "g_target":
-            name = name.replace("target", proj_desc['target'])
+            name = name.replace("target", proj.description['target'])
             post_target = True
+
+        # Extract if-then-else statements
+        eq, condition = _extract_ite(name, var, proj)
             
-        translator = Equation(name, var, 
-                              proj_desc['attributes'] + [name], 
-                              proj_desc['local'] + [name], 
-                              proj_desc['global'],
-                              index = '[i]')
-        eq = translator.parse()
+        if condition == []:
+            translator = Equation(name, var, 
+                                  proj.description['attributes'] + [name], 
+                                  proj.description['local'] + [name], 
+                                  proj.description['global'],
+                                  index = '[i]')
+            eq = translator.parse()
+        else: 
+            eq = _translate_ITE(name, eq, condition, proj, {})
         
         if post_target: # the left side has to be modified
-            eq = eq.replace( "g_" + proj_desc['target'] + "_[i]",
-                        "post_population_->g_"+proj_desc['target']+"_new_[post_neuron_rank_]")
+            eq = eq.replace( "g_" + proj.description['target'] + "_[i]",
+                        "post_population_->g_"+proj.description['target']+"_new_[post_neuron_rank_]")
 
         # Append the result of analysis
-        pre_spike_var.append( { 'name': name, 'eq': eq } )
+        pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )
 
     return pre_spike_var 
 
-def _extract_post_spike_variable(proj_desc):
+def _extract_post_spike_variable(proj):
     post_spike_var = []
     
-    for var in _prepare_string(proj_desc['raw_post_spike']):
+    for var in _prepare_string(proj.description['raw_post_spike']):
         name = _extract_name(var)
-        translator = Equation(name, var, 
-                              proj_desc['attributes'], 
-                              proj_desc['local'], 
-                              proj_desc['global'])
-        eq = translator.parse()            
-        post_spike_var.append( { 'name': name, 'eq': eq } )
+
+        # Extract if-then-else statements
+        eq, condition = _extract_ite(name, var, proj)
+
+        if condition == []:
+            translator = Equation(name, var, 
+                                  proj.description['attributes'], 
+                                  proj.description['local'], 
+                                  proj.description['global'])
+            eq = translator.parse()     
+        else: 
+            eq = _translate_ITE(name, eq, condition, proj, {}) 
+
+        post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
 
     return post_spike_var    
 

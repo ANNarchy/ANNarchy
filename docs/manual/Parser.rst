@@ -275,13 +275,13 @@ with backward Euler would be equivalent to:
 
     mp += dt/tau * (baseline -mp)
 
-* ``t`` : the number of simulation steps performed since the creation of the network (integer, incremented after each step). This allows to generate oscillating variables:
+* ``t`` : the time in milliseconds elapsed since the creation of the network. This allows to generate oscillating variables:
 
 .. code-block:: python
 
     f = 10.0 # Frequency of 10 Hz
     phi = pi/4 # Phase
-    ts = t / dt / 1000.0 # ts is in seconds
+    ts = t / 1000.0 # ts is in seconds
     r = 10.0 * (sin(2*pi*f*ts + phi) + 1.0)
 
 

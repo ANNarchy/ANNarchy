@@ -16,7 +16,7 @@ class PoissonPopulation(Population):
 
     It is also possible to define a temporal equation for the rates, by passing a string to the argument::
 
-        pop = PoissonPopulation(geometry=100, rates="100.0 * (1.0 + sin(2*pi*frequency*t/dt/1000.0) )/2.0")
+        pop = PoissonPopulation(geometry=100, rates="100.0 * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0")
 
     The syntax of this equation follows the same structure as neural variables.
 
@@ -28,7 +28,7 @@ class PoissonPopulation(Population):
                 amp = 100.0
                 frequency = 1.0
             ''',
-            rates="amp * (1.0 + sin(2*pi*frequency*t/dt/1000.0) )/2.0"
+            rates="amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0"
         )
 
     .. note::
@@ -41,7 +41,7 @@ class PoissonPopulation(Population):
                     frequency = 1.0
                 ''',
                 equations = '''
-                    rates = amp * (1.0 + sin(2*pi*frequency*t/dt/1000.0) )/2.0
+                    rates = amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0
                     p = Uniform(0.0, 1.0) * 1000.0 / dt
                 ''',
                 spike = '''

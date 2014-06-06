@@ -426,7 +426,7 @@ add_synapse_body = """
     rank_.push_back(rank);
     w_.push_back(w);
     
-    if( delay > 0 )
+    if( delay > dt_ )
     {
         delay_.push_back(delay);
         if(delay > maxDelay_)

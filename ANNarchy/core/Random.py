@@ -24,19 +24,27 @@
 import numpy as np
 from ANNarchy.core import Global
 
-# List of available distributions
-available_distributions = [ 'Constant',
-                            'Uniform',
-                            'Normal',
-                            'Exponential',
-                            'Gamma',
-                            'LogNormal' ]
+distributions_arguments = {
+    'Constant' : 0,
+    'Uniform' : 2,
+    'DiscreteUniform': 2,
+    'Normal' : 2,
+    'LogNormal': 2,
+    'Exponential': 1,
+    'Gamma': 2
+}
+distributions_templates = {
+    'Constant' : '<DATA_TYPE>',
+    'Uniform' : '<DATA_TYPE>',
+    'DiscreteUniform': '<>',
+    'Normal' : '<DATA_TYPE>',
+    'LogNormal': '',
+    'Exponential': '',
+    'Gamma': ''
+}
 
-# information for the generator
-cpp_no_template = ['Gamma', 
-                   'Exponential', 
-                   'LogNormal'
-                  ]
+# List of available distributions
+available_distributions = distributions_arguments.keys()
 
 class RandomDistribution(object):
     """ 
@@ -67,16 +75,8 @@ class RandomDistribution(object):
         Global._error('instantiated base class RandomDistribution is not allowed.')
         return 0.0
 
-    def _gen_cpp(self):
-        Global._error('instantiated base class RandomDistribution is not allowed.')
-        return ''
-    
-    def _cpp_class(self):
-        Global._error('instantiated base class RandomDistribution is not allowed.')
-        return ''
-    
     def keywords(self):
-        return ['Normal', 'Uniform', 'Constant']
+        return available_distributions
 
 class Constant(RandomDistribution):
     """
@@ -108,21 +108,18 @@ class Constant(RandomDistribution):
         """
         return self.get_values((1))[0]
     
-    def _gen_cpp(self):
-        return 'Constant<DATA_TYPE>('+str(self._value)+')'
-        
-    def _cpp_class(self):
-        return 'Constant'
-    
     def max(self):
         return self._value
 
     def min(self):
         return self._value
 
+    def _gen_cpp(self):
+        return 'Constant<DATA_TYPE>('+str(self._value)+')'
+
 class Uniform(RandomDistribution):
     """
-    Random distribution instance returning a random value based on uniform distribution.
+    Random distribution instance returning a random value based on uniform distribution for floating point values.
     """   
     def __init__(self, min, max, cpp_seed=-1):
         """        
@@ -155,15 +152,6 @@ class Uniform(RandomDistribution):
         Returns a single float value.
         """
         return self.get_values((1))[0]
-    
-    def _gen_cpp(self):
-        if(self._cpp_seed == -1):
-            return 'UniformDistribution<DATA_TYPE>('+str(self._min)+','+ str(self._max)+')'
-        else:
-            return 'UniformDistribution<DATA_TYPE>('+str(self._min)+','+ str(self._max)+','+ str(self._cpp_seed)+')'
-
-    def _cpp_class(self):
-        return 'UniformDistribution'
 
     def max(self):
         return self._max
@@ -171,6 +159,54 @@ class Uniform(RandomDistribution):
     def min(self):
         return self._min
 
+    def _gen_cpp(self):
+        return 'UniformDistribution<DATA_TYPE>('+str(self._min)+','+str(self._max)+', '+str(self._cpp_seed)+')'
+
+class DiscreteUniform(RandomDistribution):
+    """
+    Random distribution instance returning a random value based on uniform distribution for integer values.
+    """   
+    def __init__(self, min, max, cpp_seed=-1):
+        """        
+        Parameters:
+        
+        * *min*: minimum value
+        
+        * *max*: maximum value
+        
+        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        """
+        self._min = min
+        self._max = max
+        self._cpp_seed = cpp_seed
+        
+    def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
+        return np.random.uniform(self._min, self._max, shape)
+    
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        return list(np.random.uniform(self._min, self._max, size))
+
+    def get_value(self):
+        """
+        Returns a single float value.
+        """
+        return self.get_values((1))[0]
+
+    def max(self):
+        return self._max
+
+    def min(self):
+        return self._min
+    
+    def _gen_cpp(self):
+        return 'UniformDistribution<int>('+str(self._min)+','+str(self._max)+', '+str(self._cpp_seed)+')'
+    
 class Normal(RandomDistribution):
     """
     Random distribution instance returning a random value based on uniform distribution.
@@ -206,21 +242,15 @@ class Normal(RandomDistribution):
         Returns a single float value.
         """
         return self.get_values((1))[0]
-    
-    def _gen_cpp(self):
-        if(self._cpp_seed == -1):
-            return 'NormalDistribution<DATA_TYPE>('+str(self._mu)+','+ str(self._sigma)+')'
-        else:
-            return 'NormalDistribution<DATA_TYPE>('+str(self._mu)+','+ str(self._sigma)+','+ str(self._cpp_seed)+')'
-        
-    def _cpp_class(self):
-        return 'NormalDistribution'
         
     def mu(self):
         return self._mu
 
     def sigma(self):
         return self._sigma
+    
+    def _gen_cpp(self):
+        return 'NormalDistribution<DATA_TYPE>('+str(self._mu)+','+str(self._sigma)+', '+str(self._cpp_seed)+')'
 
 class LogNormal(RandomDistribution):
     """
@@ -257,21 +287,15 @@ class LogNormal(RandomDistribution):
         Returns a single float value.
         """
         return self.get_values((1))[0]
-    
-    def _gen_cpp(self):
-        if(self._cpp_seed == -1):
-            return 'LogNormalDistribution('+str(self._mu)+','+ str(self._sigma)+')'
-        else:
-            return 'LogNormalDistribution('+str(self._mu)+','+ str(self._sigma)+','+ str(self._cpp_seed)+')'
-        
-    def _cpp_class(self):
-        return 'LogNormalDistribution'
         
     def mu(self):
         return self._mu
 
     def sigma(self):
         return self._sigma
+
+    def _gen_cpp(self):
+        return 'LogNormalDistribution('+str(self._mu)+','+str(self._sigma)+', '+str(self._cpp_seed)+')'
 
 class Exponential(RandomDistribution):
     """
@@ -311,17 +335,11 @@ class Exponential(RandomDistribution):
         """
         return self.get_values((1))[0]
     
-    def _gen_cpp(self):
-        if(self._cpp_seed == -1):
-            return 'ExponentialDistribution('+str(self._lambda)+')'
-        else:
-            return 'ExponentialDistribution<DATA_TYPE>('+str(self._min)+','+ str(self._max)+','+ str(self._cpp_seed)+')'
-
-    def _cpp_class(self):
-        return 'ExponentialDistribution'
-
     def Lambda(self):
         return self._lambda
+
+    def _gen_cpp(self):
+        return 'ExponentialDistribution('+str(self._lambda)+')'
 
 class Gamma(RandomDistribution):
     """
@@ -359,17 +377,11 @@ class Gamma(RandomDistribution):
         """
         return self.get_values((1))[0]
     
-    def _gen_cpp(self):
-        if(self._cpp_seed == -1):
-            return 'GammaDistribution('+str(self._min)+','+ str(self._max)+')'
-        else:
-            return 'GammaDistribution('+str(self._min)+','+ str(self._max)+','+ str(self._cpp_seed)+')'
-
-    def _cpp_class(self):
-        return 'GammaDistribution'
-
     def alpha(self):
         return self._alpha
 
     def beta(self):
         return self._beta
+
+    def _gen_cpp(self):
+        return 'GammaDistribution('+str(self._alpha)+','+str(self._beta)+', '+str(self._cpp_seed)+')'

@@ -22,7 +22,7 @@
     
 """
 from ANNarchy.core import Global
-from ANNarchy.core.Random import *
+from ANNarchy.core.Random import RandomDistribution
 
 from PopulationGenerator import PopulationGenerator
 from Templates import *
@@ -58,6 +58,28 @@ class SpikePopulationGenerator(PopulationGenerator):
     
     def generate_constructor(self):
         constructor, reset = PopulationGenerator.generate_constructor(self)
+
+        if 'refractory' in self.desc.keys():
+            if isinstance(self.desc['refractory'], RandomDistribution):
+                constructor += """
+    refractory_times_ = std::vector<int>(nbNeurons, 0);
+    
+    // generate random times in range 
+    auto tmp = %(rand_init)s.getValues(nbNeurons_);
+    
+    // transform time in steps
+    std::transform(tmp.begin(), tmp.end(), refractory_times_.begin(), std::bind1st(std::multiplies<DATA_TYPE>(), dt_));
+    """ % { 'rand_init': self.desc['refractory']._gen_cpp() }
+                
+            elif isinstance(self.desc['refractory'], (float, int)):
+                refractor_value = str( int(self.desc['refractory'] / Global.config['dt']))
+                constructor += """
+    refractory_times_ = std::vector<int>(nbNeurons, %(value)s);
+    """ % { 'value': refractor_value }
+            else:
+                constructor += """
+    refractory_times_ = std::vector<int>(nbNeurons, 0);
+    """         
 
         for variable in self.declared_targets:
             if not 'g_'+variable in self.desc['local']:

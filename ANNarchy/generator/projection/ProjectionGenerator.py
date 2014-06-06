@@ -22,7 +22,6 @@
     
 """
 from ANNarchy.core import Global
-from ANNarchy.core.Random import *
 
 from Templates import *
 

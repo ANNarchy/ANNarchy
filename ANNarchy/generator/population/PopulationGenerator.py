@@ -134,21 +134,16 @@ class PopulationGenerator(object):
         return access, method
     
     def generate_random_definition(self):
-        definition = """
-    // Random variables"""
+        """ generate definition of random variables """
+        definition = ""
         for var in self.desc['random_distributions']:
-            if var['dist'] in cpp_no_template:
-                template = ""
-            else:
-                template = "<DATA_TYPE>"
-                
             definition += """
     std::vector<DATA_TYPE> %(name)s_;
     %(class)sDistribution%(template)s* %(dist)s_;
 """ % {'name': var['name'], 
        'dist' : var['name'].replace('rand','dist'),
-       'class': var['dist'],
-       'template': template
+       'class': var['dist'] ,
+       'template' : var['template']
       }
         return definition
     
@@ -216,42 +211,16 @@ class PopulationGenerator(object):
     dt_ = %(dt)s;
 """ % { 'dt' : str(Global.config['dt'])}       
       
-        # initilaization of random distributions
+        # initialization of random distributions
         for var in self.desc['random_distributions']:
-            if var['dist'] in cpp_no_template:
-                template = ""
-            else:
-                template = "<DATA_TYPE>"
-
             constructor += """
     %(dist)s_ = new %(class)sDistribution%(template)s(%(args)s);
 """ % { 'dist' : var['name'].replace('rand','dist'),
         'class': var['dist'],
-        'template': template,
-        'args': var['args']
+        'args': var['args'] ,
+        'template': var['template'] 
       }
         
-        if 'refractory' in self.desc.keys():
-            if isinstance(self.desc['refractory'], RandomDistribution):
-                constructor += """
-    refractory_times_ = std::vector<int>(nbNeurons, 0);
-    
-    // generate random times in range 
-    auto tmp = %(rand_init)s.getValues(nbNeurons_);
-    
-    // transform time in steps
-    std::transform(tmp.begin(), tmp.end(), refractory_times_.begin(), std::bind1st(std::multiplies<DATA_TYPE>(), dt_));
-    """ % { 'rand_init': self.desc['refractory']._gen_cpp() }
-                
-            elif isinstance(self.desc['refractory'], (float, int)):
-                refractor_value = str( int(self.desc['refractory'] / Global.config['dt']))
-                constructor += """
-    refractory_times_ = std::vector<int>(nbNeurons, %(value)s);
-    """ % { 'value': refractor_value }
-            else:
-                constructor += """
-    refractory_times_ = std::vector<int>(nbNeurons, 0);
-    """         
         return constructor, reset
     
     def generate_destructor(self):

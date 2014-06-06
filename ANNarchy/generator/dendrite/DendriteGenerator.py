@@ -50,21 +50,16 @@ class DendriteGenerator(object):
             w_file.write(self.generate_body())
 
     def generate_random_definition(self):
-        definition = """
-    // Random variables"""
+        """ generate definition of random variables """
+        definition = ""
         for var in self.desc['random_distributions']:
-            if var['dist'] in cpp_no_template:
-                template = ""
-            else:
-                template = "<DATA_TYPE>"
-            
             definition += """
     std::vector<DATA_TYPE> %(name)s_;
     %(class)sDistribution%(template)s* %(dist)s_;
 """ % {'name': var['name'], 
        'dist' : var['name'].replace('rand','dist'),
-       'class': var['dist'],
-       'template': template 
+       'class': var['dist'] ,
+       'template' : var['template']
       }
         return definition
 
@@ -181,17 +176,12 @@ class DendriteGenerator(object):
 
         # initilaization of random distributions
         for var in self.desc['random_distributions']:
-            if var['dist'] in cpp_no_template:
-                template = ""
-            else:
-                template = "<DATA_TYPE>"
-
             constructor += """
     %(dist)s_ = new %(class)sDistribution%(template)s(%(args)s);
 """ % { 'dist' : var['name'].replace('rand','dist'),
         'class': var['dist'],
-        'template': template,
-        'args': var['args'] 
+        'args': var['args'] ,
+        'template' : var['template']
        }
 
         return constructor 

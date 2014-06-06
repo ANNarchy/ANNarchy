@@ -7,6 +7,9 @@ psp_code_no_delay_omp = \
     sum_ =0.0;
 
 #ifdef _DEBUG_DELAY
+    if (delay_.empty())
+        std::cout << "No delays." << std::endl;
+        
     std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << ")" << std::endl;
     for(int i=0; i<(int)(*pre_rates_).size(); i++) 
     {
@@ -32,7 +35,12 @@ psp_code_const_delay_omp = \
     sum_ =0.0;
     pre_rates_ = static_cast<RatePopulation*>(pre_population_)->getRs(delay_[0]);
 
-_DEBUG_DELAY
+#ifdef _DEBUG_DELAY
+    std::cout << "delays:" << std::endl;
+    for ( auto it = delay_.begin(); it != delay_.end(); it++ )
+        std::cout << *it << " ";
+    std::cout << std::endl;
+    
     std::cout << "pre_rates_: " << (*pre_rates_).size() << "("<< pre_rates_ << "), for delay " << delay_[0] << std::endl;
     for(int i=0; i<(int)(*pre_rates_).size(); i++) 
         std::cout << (*pre_rates_)[i] << " ";
@@ -54,6 +62,12 @@ _DEBUG_DELAY
 psp_code_dyn_delay_omp = \
 """
     sum_ =0.0;
+#ifdef _DEBUG_DELAY
+    std::cout << "delays:" << std::endl;
+    for( auto it = delay_.begin(); it != delay_.end(); it++)
+        std::cout << *it << " ";
+    std::cout << std::endl;
+#endif    
     std::vector<DATA_TYPE> delayedRates = static_cast<RatePopulation*>(pre_population_)->getRs(delay_, rank_);
 
 #ifdef _DEBUG_DELAY
