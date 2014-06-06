@@ -38,7 +38,7 @@ input_focus = Projection(
     pre = InputPop, 
     post = FocusPop, 
     target = 'exc'
-).connect_one_to_one( weights=1.0 )
+).connect_one_to_one( weights=1.0, delays = 20.0 )
 
 focus_focus = Projection(
     pre = FocusPop, 
@@ -48,7 +48,8 @@ focus_focus = Projection(
     amp_pos=0.2, 
     sigma_pos=0.1, 
     amp_neg=0.1, 
-    sigma_neg=0.7                    
+    sigma_neg=0.7,
+    delays = 2.0
 )
 
 # Visualizer using PyQtGraph

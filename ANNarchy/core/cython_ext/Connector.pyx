@@ -7,6 +7,7 @@ cimport numpy as np
 from libc.math cimport exp, fabs
 
 import ANNarchy
+from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 
 cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
@@ -15,28 +16,56 @@ cdef class CSR:
 
     def __init__(self):
         self.data = {}
+        self.delay = {}
+        self.max_delay = Global.config['dt']
+        self.dt = Global.config['dt']
 
     def add (self, int rk, list r, list w, list d):
         cdef list val
         val = []
         val.append(r)
         val.append(w)
-        val.append(d)
         self.data[rk] = val
+        
+        max_d = np.max(d)
+        if max_d*self.dt > self.dt:
+            self.delay[rk] = d
+
+            if max_d > self.max_delay:
+                self.max_delay = max_d
+        else:
+            self.delay[rk] = []
 
     cdef push_back (self, int rk, vector[int] r, vector[float] w, vector[int] d):
         cdef list val
         val = []
         val.append(r)
         val.append(w)
-        val.append(d)
         self.data[rk] = val
+
+        max_d = np.max(d)
+        if max_d*self.dt > self.dt:
+            self.delay[rk] = d
+
+            if max_d > self.max_delay:
+                self.max_delay = max_d
+        else:
+            self.delay[rk] = []
 
     def keys(self):
         return self.data.keys()
 
+    cpdef set_delay(self, int rk, vector[int] d):
+        self.delay[rk] = d
+
     cpdef get_data(self):
         return self.data
+
+    cpdef get_delay(self):
+        return self.delay
+
+    cpdef get_max_delay(self):
+        return self.max_delay
 
 def all_to_all(pre, post, weights, delays, allow_self_connections):
     """ Cython implementation of the all-to-all pattern."""
@@ -49,7 +78,7 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -80,10 +109,8 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
-        if isinstance(delays, float):
-            d = vector[int](size_pre, int(delays/dt))
-        elif isinstance(delays, int):
-            d = vector[int](size_pre, delays)
+        if isinstance(delays, (float, int)):
+            d = vector[int](1, int(delays/dt))
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
@@ -102,7 +129,7 @@ def one_to_one(pre, post, weights, delays):
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -130,10 +157,8 @@ def one_to_one(pre, post, weights, delays):
             tmp = weights.get_list_values(1)
         w = tmp
         # Delays
-        if isinstance(delays, float):
+        if isinstance(delays, (float, int)):
             tmp = [int(delays/dt)]
-        elif isinstance(delays, int):
-            tmp = [delays]
         elif isinstance(delays, RandomDistribution):
             tmp = [int(a/dt) for a in delays.get_list_values(1) ]
         d=tmp
@@ -155,7 +180,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -186,10 +211,8 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
-        if isinstance(delays, float):
-            d = vector[int](size_pre, int(delays/dt))
-        elif isinstance(delays, int):
-            d = vector[int](size_pre, delays)
+        if isinstance(delays, (float, int)):
+            d = vector[int](1, int(delays/dt))
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
@@ -209,7 +232,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
     
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -241,10 +264,8 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(number)
         # Delays
-        if isinstance(delays, float):
-            d = vector[int](number, int(delays/dt))
-        elif isinstance(delays, int):
-            d = vector[int](number, delays)
+        if isinstance(delays, (float, int)):
+            d = vector[int](1, int(delays/dt))
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(number) ]
         # Create the dendrite
@@ -265,7 +286,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     cdef vector[float] w
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
     
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -305,10 +326,8 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
-        if isinstance(delays, float):
-            d = vector[int](size_pre, int(delays/dt))
-        elif isinstance(delays, int):
-            d = vector[int](size_pre, delays)
+        if isinstance(delays, (float, int)):
+            d = vector[int](1, int(delays/dt))
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
@@ -330,7 +349,7 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
 
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = Global.config['dt']
 
     # Population sizes
     if isinstance(pre_geometry, int):
@@ -385,10 +404,8 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
         nb_synapses = len(ranks)
         r = ranks
         w = values
-        if isinstance(delays, float):
-            d = vector[int](nb_synapses, int(delays/dt))
-        elif isinstance(delays, int):
-            d = vector[int](nb_synapses, delays)
+        if isinstance(delays, (float, int)):
+            d = vector[int](1, int(delays/dt))
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite
@@ -465,10 +482,8 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
         nb_synapses = len(ranks)
         r = ranks
         w = values
-        if isinstance(delays, float):
-            d = vector[int](nb_synapses, int(delays/dt))
-        elif isinstance(delays, int):
-            d = vector[int](nb_synapses, delays)
+        if isinstance(delays, (float, int)):
+            d = vector[int](1, int(delays/dt))
         elif isinstance(delays, RandomDistribution):
             d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite

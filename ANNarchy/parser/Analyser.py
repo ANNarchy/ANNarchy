@@ -285,7 +285,7 @@ class Analyser(object):
                 proj.description['psp'] = psp               
         
             # handling delays
-            proj.description['delay'] = proj.delay               
+            proj.description['csr'] = proj._synapses
         
         # Store the result of analysis for generating the code
         for pop in self.populations:

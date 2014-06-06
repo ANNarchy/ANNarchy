@@ -78,6 +78,7 @@ public:
     virtual void localMetaStep(int neur_rank) {};
     virtual void globalMetaStep() {};
     virtual void globalOperations() {};
+    virtual void prepareNeurons() {};
 
     virtual void record() {}
     virtual void resetToInit() {}
