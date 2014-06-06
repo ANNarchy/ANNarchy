@@ -70,10 +70,10 @@ class Equation(object):
         # Build the default dictionary of built-in symbols or functions
         self.local_dict = {
             'dt' : Symbol('dt_'),
-            't' : Symbol('DATA_TYPE(ANNarchy_Global::time)/dt_'),
+            't' : Symbol('DATA_TYPE(ANNarchy_Global::time)*dt_'),
             'w' : Symbol('w_'+index), 
-            't_pre': Symbol('DATA_TYPE(pre_population_->getLastSpikeTime(rank_'+index+'))/dt_'),
-            't_post': Symbol('DATA_TYPE(post_population_->getLastSpikeTime(post_neuron_rank_))/dt_'),
+            't_pre': Symbol('DATA_TYPE(pre_population_->getLastSpikeTime(rank_'+index+'))*dt_'),
+            't_post': Symbol('DATA_TYPE(post_population_->getLastSpikeTime(post_neuron_rank_))*dt_'),
             'pos': Function('positive'),
             'positive': Function('positive'), 
             'neg': Function('negative'), 

@@ -78,11 +78,11 @@ STDP2 = SpikeSynapse(
     """,
     pre_spike = """
         g_target += w
-        Apost = cApost * wmax * exp((t_post - t_pre )/tau_post)
+        Apost = cApost * wmax * exp((t_post - t_pre -1.0)/tau_post)
         w = clip(w + Apost , 0.0 , wmax) 
     """,                  
     post_spike = """
-        Apre = cApre * wmax * exp((t_pre - t_post - 1.0)/tau_pre)
+        Apre = cApre * wmax * exp((t_pre - t_post -1.0)/tau_pre)
         w = clip(w + Apre , 0.0 , wmax)
     """      
 ) 
