@@ -64,6 +64,29 @@ STDP = SpikeSynapse(
     """
 )
 
+STDP2 = SpikeSynapse(
+    parameters = """
+        tau_pre = 20.0 : postsynaptic
+        tau_post = 20.0 : postsynaptic
+        cApre = 0.01 : postsynaptic
+        cApost = -0.0105 : postsynaptic
+        wmax = 0.01 : postsynaptic
+        Apre = 0.0
+        Apost = 0.0
+    """,
+    equations = """
+    """,
+    pre_spike = """
+        g_target += w
+        Apost = cApost * wmax * exp((t_post - t_pre )/tau_post)
+        w = clip(w + Apost , 0.0 , wmax) 
+    """,                  
+    post_spike = """
+        Apre = cApre * wmax * exp((t_pre - t_post - 1.0)/tau_pre)
+        w = clip(w + Apre , 0.0 , wmax)
+    """      
+) 
+
 # Input population
 Input = PoissonPopulation(name = 'Input', geometry=N, rates=F)
 # Output neuron
@@ -73,7 +96,7 @@ proj = Projection(
     pre = Input, 
     post = Output, 
     target = 'exc',
-    synapse = STDP
+    synapse = STDP2
 ).connect_all_to_all(weights=Uniform(0.0, gmax))
 
 

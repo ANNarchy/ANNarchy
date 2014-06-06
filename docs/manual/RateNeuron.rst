@@ -58,7 +58,7 @@ Predefined attributes
 
 The ODE can depend on other parameters of the neuron (e.g. ``r`` depends on ``mp``), but not on unknown names. ANNarchy already ensures the existence of the following variables and parameters for a neuron:
     
-    * variable *t*: current step of the simulation (incremented after each step of the simulation).
+    * variable *t*: time in milliseconds elapsed since the creation of the network.
     
     * parameter *dt*: the discretization step, default is 1.0ms. 
     
