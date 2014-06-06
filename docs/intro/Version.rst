@@ -35,6 +35,7 @@ Added
 ----------------------------------------------
 
     - new connection patterns - fixed_number_pre, fixed_number_post, connection_from_list
+    - new random distributions - Lognormal, Gamma, Exponential
     - learning of projections can be disabled / enabled during simulation
     - structural plasticity for spiking neurons
 

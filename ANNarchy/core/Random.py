@@ -27,7 +27,16 @@ from ANNarchy.core import Global
 # List of available distributions
 available_distributions = [ 'Constant',
                             'Uniform',
-                            'Normal' ]
+                            'Normal',
+                            'Exponential',
+                            'Gamma',
+                            'LogNormal' ]
+
+# information for the generator
+cpp_no_template = ['Gamma', 
+                   'Exponential', 
+                   'LogNormal'
+                  ]
 
 class RandomDistribution(object):
     """ 
@@ -213,3 +222,154 @@ class Normal(RandomDistribution):
     def sigma(self):
         return self._sigma
 
+class LogNormal(RandomDistribution):
+    """
+    Random distribution instance returning a random value based on lognormal distribution.
+    """   
+    def __init__(self, mu, sigma, cpp_seed=-1):
+        """        
+        Parameters:
+        
+        * *mu*: mean of the distribution
+        
+        * *sigma*: standard deviation of the distribution
+        
+        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        """
+        self._mu = mu
+        self._sigma = sigma
+        self._cpp_seed = cpp_seed
+        
+    def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
+        return np.random.lognormal(self._mu, self._sigma, shape)
+    
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        return list(np.random.lognormal(self._mu, self._sigma, size))
+    
+    def get_value(self):
+        """
+        Returns a single float value.
+        """
+        return self.get_values((1))[0]
+    
+    def _gen_cpp(self):
+        if(self._cpp_seed == -1):
+            return 'LogNormalDistribution('+str(self._mu)+','+ str(self._sigma)+')'
+        else:
+            return 'LogNormalDistribution('+str(self._mu)+','+ str(self._sigma)+','+ str(self._cpp_seed)+')'
+        
+    def _cpp_class(self):
+        return 'LogNormalDistribution'
+        
+    def mu(self):
+        return self._mu
+
+    def sigma(self):
+        return self._sigma
+
+class Exponential(RandomDistribution):
+    """
+    Random distribution instance returning a random value based on exponential distribution, according the density function:
+    
+    .. math ::
+    
+        P(x | \lambda) = \lambda e^{(-\lambda x )}
+
+    """   
+    def __init__(self, Lambda, cpp_seed=-1):
+        """        
+        Parameters:
+        
+        * *Lambda*: rate parameter
+        
+        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        """
+        self._lambda = Lambda
+        self._cpp_seed = cpp_seed
+        
+    def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
+        return np.random.exponential(self._lambda, shape)
+    
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        return list(np.random.exponential(self._lambda, size))
+
+    def get_value(self):
+        """
+        Returns a single float value.
+        """
+        return self.get_values((1))[0]
+    
+    def _gen_cpp(self):
+        if(self._cpp_seed == -1):
+            return 'ExponentialDistribution('+str(self._lambda)+')'
+        else:
+            return 'ExponentialDistribution<DATA_TYPE>('+str(self._min)+','+ str(self._max)+','+ str(self._cpp_seed)+')'
+
+    def _cpp_class(self):
+        return 'ExponentialDistribution'
+
+    def Lambda(self):
+        return self._lambda
+
+class Gamma(RandomDistribution):
+    """
+    Random distribution instance returning a random value based on gamma distribution.
+    """   
+    def __init__(self, alpha, beta=1.0, cpp_seed=-1):
+        """        
+        Parameters:
+        
+        * *alpha*: shape of the gamma distribution
+        
+        * *beta*: scale of the gamma distribution
+        
+        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        """
+        self._alpha = alpha
+        self._beta = beta
+        self._cpp_seed = cpp_seed
+        
+    def get_values(self, shape):
+        """
+        Returns a np.ndarray with the given shape
+        """
+        return np.random.gamma(self._alpha, self._beta, shape)
+    
+    def get_list_values(self, size):
+        """
+        Returns a list of the given size.
+        """
+        return list(np.random.gamma(self._alpha, self._beta, size))
+
+    def get_value(self):
+        """
+        Returns a single float value.
+        """
+        return self.get_values((1))[0]
+    
+    def _gen_cpp(self):
+        if(self._cpp_seed == -1):
+            return 'GammaDistribution('+str(self._min)+','+ str(self._max)+')'
+        else:
+            return 'GammaDistribution('+str(self._min)+','+ str(self._max)+','+ str(self._cpp_seed)+')'
+
+    def _cpp_class(self):
+        return 'GammaDistribution'
+
+    def alpha(self):
+        return self._alpha
+
+    def beta(self):
+        return self._beta

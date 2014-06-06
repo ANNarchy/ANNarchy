@@ -264,4 +264,98 @@ private:
 	int seed_;
 	std::mt19937 *gen_;
 };
+
+/**
+ *  \brief		exponential distribution
+ */
+class ExponentialDistribution : public Distribution<DATA_TYPE> {
+public:
+	ExponentialDistribution(DATA_TYPE lambda, int seed = -1) {
+		lambda_ = lambda;
+		gen_ = generator::instance()->getGenerator(seed_);
+	}
+
+	DATA_TYPE getValue() {
+		std::exponential_distribution<DATA_TYPE> dis(lambda_);
+		return dis(*gen_);
+	}
+
+	std::vector<DATA_TYPE> getValues(int N) {
+		std::vector<DATA_TYPE> tmp = std::vector<DATA_TYPE>();
+
+		std::exponential_distribution<DATA_TYPE> dis(lambda_);
+		for(int i =0; i< N; i++)
+			tmp.push_back(dis(*gen_));
+
+		return tmp;
+	}
+private:
+	DATA_TYPE lambda_;
+	int seed_;
+	std::mt19937 *gen_;
+};
+
+/**
+ *	\brief		Gamma distribution
+ */
+class GammaDistribution : public Distribution<DATA_TYPE> {
+public:
+	GammaDistribution(DATA_TYPE alpha, DATA_TYPE beta, int seed = -1) {
+		alpha_ = alpha;
+		beta_ = beta;
+		gen_ = generator::instance()->getGenerator(seed_);
+	}
+
+	DATA_TYPE getValue() {
+		std::gamma_distribution<DATA_TYPE> dis(alpha_, beta_);
+		return dis(*gen_);
+	}
+
+	std::vector<DATA_TYPE> getValues(int N) {
+		std::vector<DATA_TYPE> tmp = std::vector<DATA_TYPE>();
+
+		std::gamma_distribution<DATA_TYPE> dis(alpha_, beta_);
+		for(int i =0; i< N; i++)
+			tmp.push_back(dis(*gen_));
+
+		return tmp;
+	}
+private:
+	DATA_TYPE alpha_;
+	DATA_TYPE beta_;
+	int seed_;
+	std::mt19937 *gen_;
+};
+
+/**
+ *	\brief		Gamma distribution
+ */
+class LogNormalDistribution : public Distribution<DATA_TYPE> {
+public:
+	LogNormalDistribution(DATA_TYPE m, DATA_TYPE s, int seed = -1) {
+		m_ = m;
+		s_ = s;
+		gen_ = generator::instance()->getGenerator(seed_);
+	}
+
+	DATA_TYPE getValue() {
+		std::lognormal_distribution<DATA_TYPE> dis(m_, s_);
+		return dis(*gen_);
+	}
+
+	std::vector<DATA_TYPE> getValues(int N) {
+		std::vector<DATA_TYPE> tmp = std::vector<DATA_TYPE>();
+
+		std::lognormal_distribution<DATA_TYPE> dis(m_, s_);
+		for(int i =0; i< N; i++)
+			tmp.push_back(dis(*gen_));
+
+		return tmp;
+	}
+private:
+	DATA_TYPE m_;
+	DATA_TYPE s_;
+	int seed_;
+	std::mt19937 *gen_;
+};
 #endif

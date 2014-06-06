@@ -23,3 +23,25 @@ Class Normal
 
 .. autoclass:: ANNarchy.Normal
    :members:
+
+----------------------------------
+Class LogNormal
+----------------------------------
+
+.. autoclass:: ANNarchy.LogNormal
+   :members:
+   
+----------------------------------
+Class Gamma
+----------------------------------
+
+.. autoclass:: ANNarchy.Gamma
+   :members:
+   
+----------------------------------
+Class Exponential
+----------------------------------
+
+.. autoclass:: ANNarchy.Exponential
+   :members:
+   
