@@ -51,7 +51,8 @@ config = dict(
     'suppress_warnings': False,
     'float_prec': 'double',
     'num_threads': 1,
-    'paradigm': "openmp"
+    'paradigm': "openmp",
+    'seed': -1
    }
 )
 
@@ -83,6 +84,8 @@ def setup(**keyValueArgs):
     * *num_threads*: number of treads used by openMP (overrides the environment variable OMP_NUM_THREADS when set, default = None).
     
     * *float_prec*: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses double floating point precision. 
+
+    * *seed*: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)). 
     
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
     

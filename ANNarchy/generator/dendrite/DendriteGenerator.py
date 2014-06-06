@@ -55,10 +55,11 @@ class DendriteGenerator(object):
         for var in self.desc['random_distributions']:
             definition += """
     std::vector<DATA_TYPE> %(name)s_;
-    %(class)sDistribution<DATA_TYPE>* %(dist)s_;
+    %(class)sDistribution%(template)s* %(dist)s_;
 """ % {'name': var['name'], 
        'dist' : var['name'].replace('rand','dist'),
-       'class': var['dist'] 
+       'class': var['dist'] ,
+       'template' : var['template']
       }
         return definition
 
@@ -176,10 +177,11 @@ class DendriteGenerator(object):
         # initilaization of random distributions
         for var in self.desc['random_distributions']:
             constructor += """
-    %(dist)s_ = new %(class)sDistribution<DATA_TYPE>(%(args)s);
+    %(dist)s_ = new %(class)sDistribution%(template)s(%(args)s);
 """ % { 'dist' : var['name'].replace('rand','dist'),
         'class': var['dist'],
-        'args': var['args'] 
+        'args': var['args'] ,
+        'template' : var['template']
        }
 
         return constructor 

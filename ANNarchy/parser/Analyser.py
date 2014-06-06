@@ -23,8 +23,8 @@
 """
 from ANNarchy.core.Neuron import RateNeuron
 from ANNarchy.core.Synapse import RateSynapse
-from ANNarchy.core.Global import _error, _warning, authorized_keywords
-from ANNarchy.core.Random import available_distributions
+from ANNarchy.core.Global import _error, _warning, authorized_keywords, config
+from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_templates
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 
@@ -430,9 +430,23 @@ def _extract_randomdist(pop):
         # Search for all distributions
         for dist in available_distributions:
             matches = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+dist+'\(([^()]+)\)', eq)
+            if matches == ' ':
+                continue
             for l, v in matches:
                 # Check the arguments
                 arguments = v.split(',')
+                # Check the number of provided arguments
+                if len(arguments) < distributions_arguments[dist]:
+                    _error(eq)
+                    _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
+                elif len(arguments) == distributions_arguments[dist]:
+                    arguments.append(str(config['seed']))
+                elif len(arguments) == distributions_arguments[dist] +1 :
+                    _warning('The seed is set in the distribution ' + dist)
+                else:
+                    _error(eq)
+                    _error('Too many parameters provided to the distribution ' + dist)
+                # Process the arguments
                 processed_arguments = ""
                 for idx in range(len(arguments)):
                     try:
@@ -452,7 +466,8 @@ def _extract_randomdist(pop):
                 desc = {'name': '__rand_' + str(rk_rand) + '_',
                         'dist': dist,
                         'definition': definition,
-                        'args' : processed_arguments}
+                        'args' : processed_arguments,
+                        'template': distributions_templates[dist]}
                 rk_rand += 1
                 random_objects.append(desc)
                 # Replace its definition by its temporary name

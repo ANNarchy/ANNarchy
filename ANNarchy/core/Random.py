@@ -25,9 +25,18 @@ import numpy as np
 from ANNarchy.core import Global
 
 # List of available distributions
-available_distributions = [ 'Constant',
-                            'Uniform',
-                            'Normal' ]
+distributions_arguments = {
+    'Constant' : 0,
+    'Uniform' : 2,
+    'Normal' : 2,
+}
+distributions_templates = {
+    'Constant' : '<DATA_TYPE>',
+    'Uniform' : '<DATA_TYPE>',
+    'Normal' : '<DATA_TYPE>',
+}
+
+available_distributions = distributions_arguments.keys()
 
 class RandomDistribution(object):
     """ 
@@ -65,7 +74,7 @@ class RandomDistribution(object):
     def _cpp_class(self):
         Global._error('instantiated base class RandomDistribution is not allowed.')
         return ''
-    
+
     def keywords(self):
         return ['Normal', 'Uniform', 'Constant']
 
