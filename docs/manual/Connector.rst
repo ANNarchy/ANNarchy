@@ -14,15 +14,13 @@ connect_all_to_all
 
 .. code-block:: python
 
-    proj.connect_all_to_all( weights = 1.0, delays=0, allow_self_connections=False ) 
+    proj.connect_all_to_all( weights = 1.0, delays = 2.0, allow_self_connections = False ) 
     
 The ``weights`` and ``delays`` arguments accept both single float values (all synapses will take this initial value), as well as random objects allowing to randomly select the initial values for different synapses:
   
 .. code-block:: python
 
     proj.connect_all_to_all( weights = Uniform(0.0, 0.5) ) 
-    
-For all the predefined connection patterns, ``weights`` and ``delays`` can take random distribution objects as value.
 
 connect_one_to_one
 ------------------------
@@ -32,6 +30,8 @@ A neuron of the postsynaptic population forms a connection with only *one* neuro
 .. code-block:: python
 
     proj.connect_one_to_one( weights = 1.0 ) 
+
+Weights and delays also accept random distributions.
 
 Below is a graphical representation of the difference between **all_to_all** and **one_to_one**:
 
@@ -55,7 +55,7 @@ In order to void creating useless synapses, the parameter ``limit`` can be set t
 
 Self-connections are avoided by default (parameter ``allow_self_connections``). 
 
-The two populations must ave the same number of dimensions, but the number of neurons can vary as the positions of each neuron are normalized in :math:`[0, 1]^d`:
+The two populations must have the same number of dimensions, but the number of neurons can vary as the positions of each neuron are normalized in :math:`[0, 1]^d`:
 
 .. code-block:: python
 
@@ -95,7 +95,7 @@ Each neuron in the postsynaptic population receives connections from a fixed num
 
     proj.connect_fixed_number_pre(number = 20, weights=1.0) 
     
-``weights`` can also take a random object.
+``weights`` and ``delays`` can also take a random object.
 
 connect_fixed_number_post
 -----------------------------
@@ -126,15 +126,15 @@ For each postsynaptic neuron, there is a fixed probability that it forms a conne
 User-defined patterns
 ==================================
 
-This section describes the creation of user-specific connection patterns in ANNarchy, if the available patterns are not enough. A connection pattern is simply implemented as a method returning a dictionary of synapse entries. 
+This section describes the creation of user-specific connection patterns in ANNarchy, if the available patterns are not enough. A connection pattern is simply implemented as a method returning a ``CSR`` (compressed sparse-row) object containing all the necessary information to create the synapses. 
 
-A connector method must take on the first position the reference to the presynaptic population and the reference to the postsynaptic population as 2nd argument.
+A connector method must take on the first position the presynaptic population (or a subset of it) and on the second one the postsynaptic population. Other arguments are free, but should be passed when creating the projection.
 
 .. code-block:: python
 
     probabilistic_pattern(pre, post, <other arguments>)
 
-As an example, we will recreate the fixed_probability connector method, building synapses with a given probability. For this new pattern we need a weight value (common for all synapses) and a probability value as additional arguments. We consider delays to be 0 for all synapses.
+As an example, we will recreate the fixed_probability connector method, building synapses with a given probability. For this new pattern we need a weight value (common for all synapses) and a probability value as additional arguments. We consider that no delay is introduced in the synaptic transmission..
 
 .. code-block:: python
     
@@ -197,11 +197,7 @@ To use the pattern within a projection you provide the pattern method to the ``c
         target = 'inh' 
     ).connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)   
 
-either directly after defining the Projection pattern as above, or afterwards:
-
-.. code-block:: python
-
-    proj.connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)   
+``method`` is the method you just wrote. Extra arguments (other than ``pre`` and ``post``) should be passed with the same name. 
 
 fixed_probability in Cython
 ------------------------------------

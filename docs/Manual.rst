@@ -17,4 +17,5 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/Projections.rst
     manual/Connector.rst
     manual/Simulation.rst
+    manual/Recording.rst
     manual/StructuralPlasticity.rst

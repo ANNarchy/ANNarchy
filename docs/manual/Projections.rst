@@ -2,13 +2,18 @@
 Projections
 ======================
 
-Once the populations are created, one can connect them by creating **Projection** instances:
+
+
+Declaring the projections
+===========================
+
+Once the populations are created, one can connect them by creating ``Projection`` instances:
 
 .. code-block:: python
 
     proj = Projection(
-        pre = Pop1, 
-        post = "population2", 
+        pre = pop1, 
+        post = "pop2", 
         target = "exc",
         synapse = Oja
    )
@@ -21,24 +26,27 @@ Once the populations are created, one can connect them by creating **Projection*
 
 .. warning::
 
-    The postsynaptic neuron type must use the ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
+    The postsynaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
     
-* ``synapse`` is an optional argument requiring a *RateSynapse* or *SpikeSynapse* instance.
+* ``synapse`` is an optional argument requiring a *RateSynapse* or *SpikeSynapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
+  
+    * the default rate-coded synapse defines``psp = w * pre.r``,
+    * the default spiking synapse defines ``g_target += w``.
 
-Creating the projections
+Building the projections
 ===========================
 
 Creating the **Projection** objects only defines the information that two populations are connected. The synapses must be explicitely created by applying a connector method on the **Projection** object.
 
-To this end, ANNarchy already provides a set of predefined connector methods (see next section). The user has also the possibility to define his own connector methods (see `Defining connection patterns <Connector.html>`_)
+To this end, ANNarchy already provides a set of predefined connector methods, but the user has also the possibility to define his own (see :doc:`Connector`).
 
 The pattern can be applied either directly at the creation of the Projection:
 
 .. code-block:: python
 
     proj = Projection(
-        pre = Pop1, 
-        post = "population2", 
+        pre = pop1, 
+        post = pop2, 
         target = "exc",
         synapse = Oja
     ).connect_all_to_all( weights = 1.0 )
@@ -48,34 +56,22 @@ or afterwards:
 .. code-block:: python
 
     proj = Projection(
-        pre = Pop1, 
-        post = "population2", 
+        pre = pop1, 
+        post = pop2, 
         target = "exc",
         synapse = Oja
     )
     proj.connect_all_to_all( weights = 1.0 ) 
+
+The connector method must be called before the network is compiled.
  
 
 Projection attributes
 =====================
 
-
-Let's suppose the following network is defined:
+Let's suppose the ``Oja`` synapse is used to create the Projection ``proj`` (spiking synapses are accessed similarly):
 
 .. code-block:: python
-    
-    from ANNarchy import *
-
-    LeakyIntegratorNeuron = RateNeuron(
-        parameters= """   
-            tau = 10.0 : population
-            baseline = -0.2
-        """,
-        equations = """
-            tau * dmp / dt + mp = baseline + sum(exc)
-            rate = pos(mp)
-        """
-    )
 
     Oja = RateSynapse(
         parameters= """   
@@ -83,19 +79,10 @@ Let's suppose the following network is defined:
             alpha = 8.0 : postsynaptic
         """,
         equations = """
-            tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value
+            tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w
         """
     ) 
 
-    pop1 = Population(name="Pop1", geometry=(8, 8), neuron=LeakyIntegratorNeuron)
-    pop2 = Population(name="Pop2", geometry=(8, 8), neuron=LeakyIntegratorNeuron)
-
-    proj = Projection(
-        pre = pop1,
-        post = pop2,
-        target = "exc",
-        synapse = Oja,
-    ).connect_all_to_all(weights=Uniform(0.0, 0.5))
     
     
 Global attributes
@@ -121,7 +108,15 @@ Contrary to population attributes, there is one value per postsynaptic neuron fo
 
 * a list of values, with the same size as the number of neurons receiving synapses (for some sparse connectivity patterns, it may not be the same as the size of the population, so no multidimensional array is accepted).
 
-You can obtain a list of the postsynaptic neurons receiving synapses with:
+After compilation (and therefore creation of the synapses), you can access how many post-synaptic neurons receive actual synapses with:
+
+.. code-block:: python
+
+    >>> proj.size
+    64
+
+
+The list of ranks of the post-synaptic neurons receiving synapses is obtained with:
 
 .. code-block:: python
 
@@ -135,7 +130,7 @@ The local parameters and variables of a projection (synapse-specific) have to be
 
 .. warning::
 
-    As projections are only instantiated after the call to ``ANNarchy.compile()``, local attributes of a Projection are only available then. Trying to access them before compilation will lead to an error!
+    As projections are only instantiated after the call to ``compile()``, local attributes of a Projection are only available then. Trying to access them before compilation will lead to an error!
     
 
 Each dendrite stores the parameters and variables of the corresponding synapses as attributes, as populations do for neurons. You can loop over all postsynaptic neurons receiving synapses with the ``dendrites`` iterator:
@@ -147,9 +142,9 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
         print dendrite.size
         print dendrite.tau
         print dendrite.alpha
-        print dendrite.value
+        print dendrite.w
         
-``dendrite.rank`` returns a list of presynaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered postsynaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) or one-dimensional Numpy arrays (``dendrite.values``).
+``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered postsynaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a one-dimensional Numpy array (``dendrite.w``).
 
 .. note::
 
@@ -162,48 +157,76 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
             print dendrite.size
             print dendrite.tau
             print dendrite.alpha
-            print dendrite.value
+            print dendrite.w
         
 You can also access the dendrites individually, either by specifying the rank of the postsynaptic neuron:
 
 .. code-block:: python
 
     dendrite = proj.dendrite(13)
-    print dendrite.value
+    print dendrite.w
     
 or its coordinates:
 
 .. code-block:: python
 
     dendrite = proj.dendrite(5, 5)
-    print dendrite.value
+    print dendrite.w
     
 .. warning::
 
-    You should make sure that the dendrite actually exist before accessing it through its rank, because it is otherwise a ``None`` object.        
+    You should make sure that the dendrite actually exists before accessing it through its rank, because it is otherwise a ``None`` object.        
         
+Connecting population views
+============================
 
+``Projections`` are usually understood as a connectivity pattern between two populations. Complex connectivity patterns have to specifically designed (see :doc:`Connector`).
+
+In some cases, it can be much simpler to connect subsets of neurons directly, using built-in connector methods. To this end, the ``Projection`` object also accepts ``PopulationView`` objects (:doc:`Populations`) for the ``pre`` and ``post`` arguments.
+
+Let's suppose we want to connect the (8,8) populations ``pop1`` and ``pop2`` in a all-to-all manner, but only for the (4,4) neurons in the center of these populations. The first step is to create the ``PopulationView`` objects using the slice operator:
+
+.. code-block:: python
+
+    pop1_center = pop1[2:7, 2:7]
+    pop2_center = pop2[2:7, 2:7]
+
+They can then be simply used to create a projection:
+
+.. code-block:: python
+
+    proj = Projection(
+        pre = pop1_center, 
+        post = pop2_center, 
+        target = "exc",
+        synapse = Oja
+    ).connect_all_to_all( weights = 1.0 )
+
+Each neuron of ``pop2_center`` will receive synapses from all neurons of ``pop1_center``, and only them. Neurons of ``pop2`` which are not in ``pop2_center`` will not receive any synapse. 
+
+.. warning::
+
+    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. Full ``Population`` objects do not have a ``ranks`` attribute. 
         
 Specifying delays in synaptic transmission
 ==============================================
 
 By default, synaptic transmission is considered to be instantaneous (or more precisely, it takes one simulation step (``dt``) for a newly computed firing rate to be taken into account by post-synaptic neurons). 
 
-In order to take longer propagation times into account in the transmission of information between two populations, one has the possibility to define synaptic delays for a projection. All the built-in connector methods take an argument ``delays`` (default=0.0), which can be a int, float or random number generator.
+In order to take longer propagation times into account in the transmission of information between two populations, one has the possibility to define synaptic delays for a projection. All the built-in connector methods take an argument ``delays`` (default=``dt``), which can be a float (in milliseconds) or a random number generator.
 
 
 .. code-block:: python
 
-    proj.connect_all_to_all( weights = 1.0, delays = 10) 
     proj.connect_all_to_all( weights = 1.0, delays = 10.0) 
     proj.connect_all_to_all( weights = 1.0, delays = Uniform(1.0, 10.0)) 
      
-If an ``int`` is given, it is a multiple of the simulation time step (``dt = 1.0`` by default). If a ``float`` is given, it is treated as milliseconds. If the float is not a multiple of ``dt``, it will be rounded to the closest multiple. The same is true for a random number generator.
+If the delay is not a multiple of the simulation time step (``dt = 1.0`` by default), it will be rounded to the closest multiple. The same is true for the values returned by a random number generator.
 
 .. hint::
 
-    Per design, if ``dt = 1.0``, a delay of 1 ms has the same effect as a delay of 0 ms, i.e. the outputs are only perceived in the next computational step. Only delays superior to ``2 * dt`` have an effect.
+    Per design, the minimal possible delay is equal to ``dt``: values smaller than ``dt`` will be replaced by ``dt``. Negative values do not make any sense.
 
 .. warning::
 
-    Synaptic delays are currently only enabled for rate-coded networks. Synaptic delays for spiking networks will be possible in a future release.
+    As of version 4.1.3, synaptic delays are only enabled for rate-coded networks. Synaptic delays for spiking networks will be possible in a future release.

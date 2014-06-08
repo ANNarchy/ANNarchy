@@ -1,5 +1,5 @@
 ***********************************
-Simulating the network
+Simulation
 ***********************************
 
 Compiling the network
@@ -22,40 +22,46 @@ After the network is correctly compiled, the simulation can be run for the speci
 
     simulate(1000.0) # Simulate for 1 second
 
+The provided duration should be a multiple of ``dt``. If not, the number of simulation steps performed will be approximated.
+
+In some cases, you may want to perform only one step of the simulation, instead of specifing the duration. The ``ANNarchy.step()`` can then be used.
+
+.. code-block:: python
+
+    step() # Simulate for 1 step
+
 Running the simulation
 ===================================
 
-The python interpreter allows to usage modes: interactive and scripting mode, both supported by ANNarchy. In the interpreter it prompts for the next command with the primary prompt, usually three greater-than signs (>>>); for continuation lines it prompts with the secondary prompt, by default three dots (...). The interpreter prints a welcome message stating its version number and a copyright notice before printing the first prompt::
+The resulting script can be directly executed in the console::
 
-        user@machine:~$ python
-        Python 2.7.3 (default, Apr 10 2013, 06:20:15)
-        [GCC 4.6.3] on linux 2
-        Type "help", "copyright", "credits" or "license" for more information.
-        >>>
-        
-Otherwise you provide a ANNarchy script as argument on python and use the scripting mode::
+    $ python MyNetwork.py
 
-    user@machine:~$ python NeuralField.py
+or in the interactive mode::
 
-In most cases you may use the scripting mode, only for debug purposes the interactive mode is more beneficial.
+    $ python
+    Python 2.7.5 (default, Feb 19 2014, 13:47:28) 
+    [GCC 4.8.2 20131212 (Red Hat 4.8.2-7)] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> from MyNetwork import *
+    ANNarchy 4.1 (4.1.3) on linux2 (posix). 
+    >>>
 
-Interactive mode
------------------------
 
-First you need to import your network:
+Cleaning the compilation directory
+-----------------------------------
 
-.. code-block:: python
+When calling ``compile()`` for the first time, a subfolder ``annarchy/`` will be created in the current directory, where the generated code will be compiled. The first compilation may last a couple of seconds, but further modifications to the script are much faster. If no modification to the network has been made, it will not be recompiled, saving this overhead.
 
-    >>> from NeuralField import *
-    >>> compile()
+ANNarchy tracks the changes in the script and re-generates the corresponding code. In some cases (a new version of ANNarchy has been installed, bugs), it may be necessary to perform a fresh compilation of the network (for example you get a segmentation fault). You can either delete the ``annarchy/`` subfolder and restart the script::
 
-If you are in interactive mode, you may want to keep the interpreter accessible while the simulation is running, in order to change some parameters live. You can use the method ``simulate()`` of **ANNarchy**:
+    $ rm -rf annarchy/
+    $ python MyNetwork.py
 
-.. code-block:: python
+or pass the ``--clean`` flag to Python::
 
-    >>> simulate(10000) # Simulate 10s
-    
-The simulation is now running in the background for 10000 steps and then return to prompt. At any point you can break the simulation with the key combination: ``Ctrl + C``. You can then change some parameters, plot some results and so on, and maybe start the simulation again.
+    $ python MyNetwork.py --clean 
+
 
 Parallel computing with OpenMP
 -------------------------------
@@ -81,7 +87,3 @@ Parallel computing with CUDA
 TODO: not implemented yet, planned in version 4.2.
 
 
-Recording variables during the simulation
-==============================================
-
-TODO

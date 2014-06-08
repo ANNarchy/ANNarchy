@@ -8,7 +8,7 @@ Let us suppose we have defined the following neural object in a rate-coded conte
 
 .. code-block:: python
     
-    LeakyIntegratorNeuron = Neuron(
+    LeakyIntegratorNeuron = RateNeuron(
         parameters = """
             tau = 10.0
             baseline = -0.2
@@ -37,14 +37,32 @@ It takes different parameters:
 
 * ``neuron`` indicates the neuron type to use for this population (which must have been defined before). It requires either a ``RateNeuron`` or a ``SpikeNeuron`` instance.
 
-* ``name`` is an unique ID string for each population in the network. If ``name`` is omitted, an internal name such as ``Population0`` will be given (the number is incremented every time a new population is defined). Although this argument is optional, it is strongly recommended to give an understandable name to each population: if you somehow "lose" the reference to the ``Population`` object in some portion of your code, you can always retrieve it using the ``get_population(name)`` method.
+* ``name`` is an unique string for each population in the network. If ``name`` is omitted, an internal name such as ``Population0`` will be given (the number is incremented every time a new population is defined). Although this argument is optional, it is strongly recommended to give an understandable name to each population: if you somehow "lose" the reference to the ``Population`` object in some portion of your code, you can always retrieve it using the ``get_population(name)`` method.
 
-After creation, each population has several attributes defined (corresponding to the parameters and variables of the ``Neuron`` type) and is assigned a fixed size (``Pop1.size`` corresponding to the total number of neurons, here 64) and geometry (``Pop1.geometry``, here ``(8, 8)``).
+After creation, each population has several attributes defined (corresponding to the parameters and variables of the ``Neuron`` type) and is assigned a fixed size (``pop1.size`` corresponding to the total number of neurons, here 64) and geometry (``pop1.geometry``, here ``(8, 8)``).
 
 Geometry and ranks
 ==================
 
-TODO 
+Each neuron in the population has therefore a set of **coordinates** (expressed relative to ``pop1.geometry``) and a **rank** (from 0 to ``pop1.size -1``). The reason is that spatial coordinates are useful for visualization, or when defining a distance-dependent connection pattern, but that ANNarchy internally uses flat arrays for performance reasons.
+
+The coordinates use the matrix notation for multi-dimensional arrays, which is also used by Numpy (for a 2D matrix, the first index represents the row, the second the column). You can therefore use safely the ``reshape()`` method of Numpy to switch between coordinates-based and rank-based representations of an array.
+
+To convert the rank of a neuron to its coordinates (and vice-versa), you can use the `ravel_multi_index <http://docs.scipy.org/doc/numpy/reference/generated/numpy.ravel_multi_index.html>`_ and `unravel_index <http://docs.scipy.org/doc/numpy/reference/generated/numpy.unravel_index.html#numpy.unravel_index>`_ methods of Numpy, but they can be quite slow. The ``Population`` class provides two more efficient methods to do this conversion:
+
+* ``coordinates_from_rank`` returns a tuple representing the coordinates of neuron based on its rank (between 0 and ``size -1``, otherwise an error is thrown).
+
+* ``rank_from_coordinates`` returns the rank corresponding to the coordinates.
+  
+For example, with ``pop1`` having a geometry ``(8, 8)``:
+
+.. code-block:: python
+  
+    >>> pop1.coordinates_from_rank(15)
+    (1, 7)
+    >>> pop1.rank_from_coordinates((4, 6))
+    38
+
 
 Population attributes
 =====================
@@ -55,6 +73,8 @@ With the previously defined populations, you can list all their parameters and v
 
 .. code-block:: python
 
+    >>> pop1.attributes
+    ['tau', 'baseline', 'mp', 'r']
     >>> pop1.parameters
     ['tau', 'baseline']
     >>> pop1.variables
@@ -128,9 +148,9 @@ For population-wise attributes, you can only specify a single value (float, int 
 
     * a single value which will be applied to all neurons of the population.
     
-    * a list or a one-dimensional Numpy array of the same length as the number of neurons in the population. This information is provided by ``pop.size``.
+    * a list or a one-dimensional Numpy array of the same length as the number of neurons in the population. This information is provided by ``pop1.size``.
     
-    * a Numpy array of the same shape as the geometry of the population. This information is provided by ``pop.geometry``.
+    * a Numpy array of the same shape as the geometry of the population. This information is provided by ``pop1.geometry``.
     
     * a random number generator object (Uniform, Normal...).
     
@@ -161,7 +181,7 @@ There exists a purely semantic access to individual neurons of a population. The
       mp = 0.0
       r = 0.0
 
-It is also possible to index directly the population, as in a Numpy array:
+It is also possible to index directly the population, as if it were a Numpy array:
 
 .. code-block:: python
 
@@ -232,8 +252,8 @@ Individual neurons can be grouped into ``PopulationView`` objects, which hold re
     Variables:
       mp = 0.0
       r = 0.0
-    >>> popview.rate = 1.0
-    >>> pop1.rate
+    >>> popview.r = 1.0
+    >>> pop1.r
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.],
@@ -248,8 +268,8 @@ One can also use the slice operators to create PopulationViews:
 .. code-block:: python
 
     >>> popview = pop1[3, :]
-    >>> popview.rate = 1.0
-    >>> pop1.rate 
+    >>> popview.r = 1.0
+    >>> pop1.r 
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
@@ -262,8 +282,8 @@ One can also use the slice operators to create PopulationViews:
 or:
 
     >>> popview = pop1[2:5, 4]
-    >>> popview.rate = 1.0
-    >>> pop1.rate 
+    >>> popview.r = 1.0
+    >>> pop1.r
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.],
@@ -273,15 +293,11 @@ or:
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
 
+``PopulationView`` objects can also be used to create projections.
+
 .. warning::
 
-    Contrary to the equivalent in PyNN, PopulationViews in ANNarchy have two limitations:
-    
-    * The neurons must be from the same population.
-    * 
-    * PopulationViews can not be used to create Projections.
-    
-    These limitations will be overcome in a future release.
+    Contrary to the equivalent in PyNN, PopulationViews in ANNarchy can only group neurons from the same population.
 
 
 
