@@ -413,9 +413,11 @@ void %(class)s::propagatePreSpike()
             // emit a presynaptic spike on outgoing projections
             for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
             {
-                static_cast<SpikeDendrite*>(*p_it)->preEvent(*n_it);
+                static_cast<SpikeDendrite*>(*p_it)->preEventPsp(*n_it);
+
+                static_cast<SpikeDendrite*>(*p_it)->preEventLearn(*n_it);
             }
-            
+
         }
     
         // spike handling is completed

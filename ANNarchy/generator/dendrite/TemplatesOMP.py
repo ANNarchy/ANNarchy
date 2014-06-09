@@ -91,6 +91,23 @@ psp_code_dyn_delay_omp = \
 #
 # * eq: equations for the update 
 #
+conductance_body="""
+#if defined(_DEBUG) && defined(_DEBUG_PARALLELISM)
+    std::cout << "ID of active thread(s) in this block: " << omp_get_thread_num() << std::endl;
+#endif
+#ifdef _DEBUG
+    std::cout << "Evaluate a pre-synaptic event ( time = "<< ANNarchy_Global::time <<"): "<< rank << " to " << post_neuron_rank_  << std::endl;
+    std::cout << "Pre: " << pre_population_->getName() << ", neuron = "<< rank << std::endl;
+    std::cout << "Post: " << post_population_->getName() << ", neuron = " << post_neuron_rank_ << std::endl;
+#endif
+
+%(eq)s
+"""
+
+# Template for the preEvent() method of a projection
+#
+# * eq: equations for the update 
+#
 pre_event_body="""
 #if defined(_DEBUG) && defined(_DEBUG_PARALLELISM)
     std::cout << "ID of active thread(s) in this block: " << omp_get_thread_num() << std::endl;

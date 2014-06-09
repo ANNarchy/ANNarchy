@@ -114,11 +114,13 @@ public:
     void initValues();
     
     void globalLearn();
-    
+
     void localLearn();
 
-    void preEvent(int rank);
-    
+    void preEventPsp(int rank);
+
+    void preEventLearn(int rank);
+
     void postEvent();
     
     bool isPreSynaptic(Population* pop) { return pop == static_cast<Population*>(pre_population_); }
@@ -352,13 +354,22 @@ void %(class)s::record()
 %(record)s
 }
 
-void %(class)s::preEvent(int rank) 
+void %(class)s::preEventPsp(int rank) 
 {
     if ( post_population_->hasSpiked(post_neuron_rank_) )
         return;
     int i = inv_rank_[rank];
         
-%(pre_event)s
+%(pre_event_psp)s
+}
+
+void %(class)s::preEventLearn(int rank) 
+{
+    if ( post_population_->hasSpiked(post_neuron_rank_) )
+        return;
+    int i = inv_rank_[rank];
+
+%(pre_event_learn)s
 }
 
 void %(class)s::postEvent() 

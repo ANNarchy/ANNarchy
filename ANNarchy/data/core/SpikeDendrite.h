@@ -49,7 +49,9 @@ public:
 
 	virtual void localLearn() = 0;
 
-    virtual void preEvent(int rank) = 0;
+    virtual void preEventPsp(int rank) = 0;
+
+    virtual void preEventLearn(int rank) = 0;
 
     virtual void postEvent() = 0;
 
