@@ -63,7 +63,7 @@ cpdef tuple get_2d_coord(int rank, tuple geometry):
     """
     row ordered
     """
-    cdef float x, y
+    cdef int x, y
     x = (rank / (geometry[1]) ) % geometry[0]
     y = rank % (geometry[1])
     
@@ -73,7 +73,7 @@ cpdef tuple get_3d_coord(int rank, tuple geometry):
     """
     row ordered
     """
-    cdef float x, y, z
+    cdef int x, y, z
     z = rank % geometry[2]
     y = (rank / geometry[2]) % geometry[1]
     x = (rank / ((geometry[1])*(geometry[2]))) % geometry[0]

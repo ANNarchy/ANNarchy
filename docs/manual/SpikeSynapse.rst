@@ -56,12 +56,11 @@ It is important here to restrict ``trace`` to positive values with the flags ``m
 Synaptic plasticity
 ==========================
 
-In spiking networks, there are usually two ways to implement synaptic plasticity (see the entry on STDP on `Scholarpedia <http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity>`_):
+In spiking networks, there are usually two ways to implement synaptic plasticity (see the entry on STDP at `Scholarpedia <http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity>`_):
 
 * by using the difference in spike times between the pre- and post-synaptic neurons;
 * by using online implementations.
-  
-.. Although the second approach should be preferred as it fits better the ANNarchy underlying structure and allows for efficient parallelization, both approaches are possible.
+
 
 Using spike-time differences
 -----------------------------
@@ -71,60 +70,101 @@ A ``SpikeSynapse`` has access to two specific variables:
 * ``t_pre`` corresponding to the time of the *last* pre-synaptic spike in milliseconds.
 
 * ``t_post`` corresponding to the time of the *last* post-synaptic spike in milliseconds.
+  
+These times are relative to the creation of the network, so they only make sense when compared to each other or to ``t``.
+
+Spike-timing dependent plasticity can for example be implemented the following way:
 
 .. code-block:: python
+
 
     STDP = SpikeSynapse(
         parameters = """
             tau_pre = 10.0 : postsynaptic
             tau_post = 10.0 : postsynaptic
-            Apre = 1.0 : postsynaptic
-            Apost = 1.0 : postsynaptic
+            cApre = 0.01 : postsynaptic
+            cApost = 0.0105 : postsynaptic
+            wmax = 0.01 : postsynaptic
         """,
-        equations = "",
         pre_spike = """
             g_target += w
-            w -= Apre * exp((t_post - t)/tau_pre)
+            w = clip(w - cApost * exp((t_post - t)/tau_post) , 0.0 , wmax) 
         """,                  
         post_spike = """
-            w += Apost * exp((t_pre - t)/tau_post)
+            w = clip(w + cApre * exp((t_pre - t)/tau_pre) , 0.0 , wmax)
         """      
     ) 
 
+* Every time a pre-synaptic spike arrives at the synapse (``pre_spike``), the postsynaptic conductance is increased from the current value of the synaptic efficiency. 
+
+.. code-block:: python
+    
+    g_target += w
+
+When a synapse object is defined, this behavior should be explicitely declared.
+
+The value ``w`` is then decreased using a decreasing exponential function of the time elapsed since the last postsynaptic spike:
+
+.. code-block:: python
+    
+    w = clip(w - cApost * exp((t_post - t)/tau_post) , 0.0 , wmax) 
+
+The ``clip()`` global function is there to ensure that ``w`` is bounded between 0.0 and ``wmax``. As ``t >= t_post``, the exponential part is smaller than 1.0. The ``pre_spike`` argument therefore ensures that the synapse is depressed is a pre-synaptic spike occurs shortly after a post-synaptic one. "Shortly" is quantified by the time constant ``tau_post``, usually in the range of 10 ms.
+
+* Every time a post-synaptic spike is emitted (``post_spike``), the value ``w`` is increased proportionally to the time elapsed since the last pre-synaptic spike:
+
+.. code-block:: python
+    
+    w = clip(w + cApre * exp((t_pre - t)/tau_pre) , 0.0 , wmax)
+
+This term defines the potentiation of a synapse when a pre-synaptic spike is followed immediately by a post-synaptic one: the inferred causality between the two events should be reinforced.
+
+.. warning::
+
+    Only the last pre- and post-synaptic spikes are accessible, not the whole history. Only **nearest-neighbor spike-interactions** are possible using ANNarchy, not temporal all-to-all interactions where the whole spike history is used for learning (see the entry on STDP at `Scholarpedia <http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity>`_).
+
+    Some networks may not work properly when using this simulation mode. For example, whenever the pre-synaptic neurons fires twice in a very short interval and causes a post-synaptic spike, the corresponding weight should be reinforced twice. With the proposed STDP rule, it would be reinforced only once.
+
+    It is therefore generally advised to use online versions of STDP.
 
 
-Online versions
+Online version
 ---------------
 
-To define a learning rule, you have to describe the pre- and postsynaptic events separately in the synapse description (what happens when a pre- or. post-synaptic spike is perceived at the corresponding synapse). 
+The online version of STDP requires two synaptic traces, which are increased whenever a pre- resp. post-synaptic spike is perceived, and decay with their own dynamics in between.
 
-
-
-The following example describes a basic implementation of STDP (Spike-Timing Dependent Plasticity), with the same formalism as in Brian:
+Using the same vocabulary as Brian, such an implementation would be:
 
 .. code-block:: python
 
-    STDP = SpikeSynapse(
+    STDP_online = SpikeSynapse(
         parameters = """
-            tau_pre = 5 : postsynaptic
-            tau_post = 5 : postsynaptic
-            cApre = 1 : postsynaptic
-            cApost = -1 : postsynaptic
+            tau_pre = 10.0 : postsynaptic
+            tau_post = 10.0 : postsynaptic
+            cApre = 0.01 : postsynaptic
+            cApost = 0.0105 : postsynaptic
+            wmax = 0.01 : postsynaptic
         """,
         equations = """
-            tau_pre * dApre/dt = -Apre
-            tau_post * dApost/dt = -Apost
+            tau_pre * dApre/dt = - Apre
+            tau_post * dApost/dt = - Apost
         """,
         pre_spike = """
-            Apre += cApre
-            g_target += value
-            value += Apost
+            g_target += w
+            Apre += cApre 
+            w = clip(w + Apost, 0.0 , wmax)
         """,                  
         post_spike = """
             Apost += cApost
-            value += Apre
+            w = clip(w + Apre, 0.0 , wmax)
         """      
     ) 
     
-The parameters are declared postsynaptic because they are the same for all synapses in the projection. The variables ``Apre`` and ``Apost`` are exponentially decreasing traces of pre- and post-synaptic spikes, as shown by the leaky integration in ``equations``. When a presynaptic spike is emitted, ``Apre`` is incremented, the conductance level of the postsynaptic neuron ``g_target`` too, and the synaptic efficiency is decreased proportionally to ``Apost`` (this means that if a post-synaptic spike was emitted shortly before, LTD will strongly be apllied, while if it was longer ago, no major change will be observed). When a post-synaptic spike is observed, ``Apost`` increases and the synaptic efficiency is increased proportionally to ``Apre``. 
+The variables ``Apre`` and ``Apost`` are exponentially decreasing traces of pre- and post-synaptic spikes, as shown by the leaky integration in ``equations``. When a presynaptic spike is emitted, ``Apre`` is incremented, the conductance level of the postsynaptic neuron ``g_target`` too, and the synaptic efficiency is decreased proportionally to ``Apost`` (this means that if a post-synaptic spike was emitted shortly before, LTD will strongly be apllied, while if it was longer ago, no major change will be observed). When a post-synaptic spike is observed, ``Apost`` increases and the synaptic efficiency is increased proportionally to ``Apre``. 
+
+The effect of this online version is globally the same as the spike timing dependent version, except that the history of pre- and post-synaptic spikes is fully contained in the variables ``Apre`` and ``Apost``.
+
+.. todo::
+
+    event-driven integration
 
