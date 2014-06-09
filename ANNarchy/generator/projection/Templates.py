@@ -74,6 +74,7 @@ private:
 rate_projection_body = \
 """#include "%(class)s.h"        
 #include "Global.h"
+#include "ParallelLogger.h"
 #include "%(dend_class)s.h"
 
 %(add_include)s
@@ -92,6 +93,9 @@ using namespace ANNarchy_Global;
     post_population_->addProjection(this);
 
     nbDendrites_ = static_cast<int>(post_population_->getNeuronCount());
+#ifdef _DEBUG_PARALLELISM
+    log_->resize(nbDendrites_);
+#endif    
     dendrites_ = std::vector< Dendrite* >(nbDendrites_, NULL);
 }
 
