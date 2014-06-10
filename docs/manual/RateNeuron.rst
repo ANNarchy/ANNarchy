@@ -21,8 +21,8 @@ It can be implemented in the ANNarchy framework with:
 
     LeakyIntegratorNeuron = RateNeuron(
         parameters="""   
-            tau = 10.0,
-            baseline = -0.2,
+            tau = 10.0
+            baseline = -0.2
         """,
         equations = """
             tau * dmp/dt + mp = baseline + sum(exc)
@@ -41,8 +41,8 @@ Custom functions can also be passed when creating the Neuron type:
 
     LeakyIntegratorNeuron = RateNeuron(
         parameters="""   
-            tau = 10.0,
-            baseline = -0.2,
+            tau = 10.0
+            baseline = -0.2
         """,
         equations = """
             tau * dmp/dt + mp = baseline + sum(exc)
