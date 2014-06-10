@@ -29,6 +29,8 @@ class RateProjection : public Projection
 public:
 	RateProjection();
 
+	~RateProjection();
+
 	void computeSum();
 
     void globalLearn();
@@ -60,6 +62,8 @@ public:
 protected:
 	int nbDendrites_;
 
-	//std::vector< class RateDendrite* > dendrites_;
+#ifdef _DEBUG_PARALLELISM
+	class ParallelLogger* log_;
+#endif
 };
 #endif

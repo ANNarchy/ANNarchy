@@ -23,9 +23,27 @@
 #include "RatePopulation.h"
 #include "RateDendrite.h"
 
+#ifdef _DEBUG_PARALLELISM
+	#include "ParallelLogger.h"
+#endif
+
 RateProjection::RateProjection(): Projection()
 {
+#ifdef _DEBUG_PARALLELISM
+	log_ = new ParallelLogger( omp_get_max_threads(), nbDendrites_ );
+#endif
+}
 
+RateProjection::~RateProjection()
+{
+#ifdef _DEBUG
+	std::cout << "RateProjection::Destructor" << std::endl;
+#endif
+
+#ifdef _DEBUG_PARALLELISM
+	if (log_)
+		delete log_;
+#endif
 }
 
 void RateProjection::computeSum()
@@ -34,17 +52,30 @@ void RateProjection::computeSum()
 	std::cout << "number of dendrites: " << nbDendrites_ << std::endl;
 #endif
 
+	// compute the dendrites in parallel, is equal to a pattern parallel evaluation
 	#pragma omp for
 	for ( int n = 0; n < nbDendrites_; n++ )
 	{
 		if (!dendrites_[n])
 			continue;
 
+	#ifdef _DEBUG_PARALLELISM
+		log_->add(omp_get_thread_num(), n);
+	#endif
+
 	#if defined( _DEBUG ) && defined ( _DEBUG_SIMULATION_CONTROL )
 		std::cout << "dendrite( ptr = " << dendrites_[n] << ", n = " << n << "): " << dendrites_[n]->getSynapseCount() << " synapse(s) " << std::endl;
 	#endif
 		static_cast<RateDendrite*>(dendrites_[n])->computeSum();
 	}
+
+#ifdef _DEBUG_PARALLELISM
+	#pragma omp master
+	{
+		log_->number_neurons_per_thread( true );
+	}
+	#pragma omp barrier
+#endif
 }
 
 void RateProjection::globalLearn()
@@ -112,6 +143,9 @@ void RateProjection::addDendrite(int postNeuronRank, class Dendrite *dendrite)
 {
 	if ( postNeuronRank < nbDendrites_ )
 	{
+	#ifdef _DEBUG_PARALLELISM
+		log_->resize(nbDendrites_);
+	#endif
 	#ifdef _DEBUG
 		std::cout << "Projection ( ptr = " << this << " ): added dendrite ( ptr = " << dendrite << " ) to neuron " << postNeuronRank << std::endl;
 	#endif

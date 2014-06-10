@@ -23,6 +23,8 @@
 """
 from copy import deepcopy
 import pyqtgraph as pg
+import pyqtgraph.opengl as gl
+from pyqtgraph.Qt import QtCore, QtGui
 
 from DataLog import DataLog
 from Custom import IntAxis
@@ -139,4 +141,18 @@ class Scalability:
                 tmp_plot3.plot(x_scale, 
                                plt_data[i,:], 
                                pen = next(col_iter), 
-                               name = str(self._thread_scale[i])+' thread(s)')                
+                               name = str(self._thread_scale[i])+' thread(s)')
+
+    def save_as_mat(self):
+
+        save_data = {}
+
+        for name, data in self._data.iteritems():
+            save_data['parameter'] = [ x for x in self._par_scale.keys() ]
+            save_data['threads'] = self._thread_scale
+            save_data[name] = data.raw_data()
+            save_data[name+'_speedup'] = self._speedup[name]
+            save_data[name+'_efficiency'] = self._efficiency[name]
+
+        from scipy.io import savemat
+        savemat('scalability.mat', save_data)

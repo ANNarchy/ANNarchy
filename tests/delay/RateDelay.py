@@ -9,7 +9,7 @@ setup(num_threads=1, dt = 0.5)
 # Defining the neurons
 InputNeuron = RateNeuron(
     equations="""
-        r = t / 10.0 : init = 0.0 
+        r = t : init = 0.0 
     """
 )
 
