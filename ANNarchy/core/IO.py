@@ -23,7 +23,7 @@
 """
 from ANNarchy.core import Global 
 import os
-import pickle
+import cPickle
 
 def load_parameter(in_file):
     """
@@ -107,27 +107,35 @@ def load_parameter(in_file):
              
     return par
     
-def save(in_file, pure_data=True, variables=True, connections=True):
+def save(in_file, populations=True, projections=True, pure_data=True):
     """
-    Save the current network state to file.
+    Save the current network state to a file.
+
+    * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+
+    * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+
+    * Otherwise, the data will be pickled into a simple text file.
     
     Parameter:
     
-    * *in_file*: filename, may contain relative or absolute path. Allowed file extensions: '.mat' and '.data'
+    * *in_file*: filename, may contain relative or absolute path.
     
-        .. warning:: Only the '.data' files are loadable by ANNarchy. 
+        .. warning:: The '.mat' data will not be loadable by ANNarchy, they are only for external analysis purpose. 
+    
+    * *populations*: if True, population data will be saved (by default True)
+    
+    * *projections*: if True, projection data will be saved (by default True)
         
-    * *pure_data*: if True only the network state will be saved. If False additionaly all neuron and synapse definitions will be saved (by default True).
-    
-    * *variables*: if True population data will be saved (by default True)
-    
-    * *connections*: if True projection data will be saved (by default True)
+    * *pure_data*: if True, only the variables will be saved. If False, all neuron and synapse definitions will be saved (by default True).
     
     Example:
     
         .. code-block:: python
         
             save('results/init.data')
+        
+            save('results/init.txt.gz')
             
             save('1000_trials.mat')
     
@@ -142,10 +150,8 @@ def save(in_file, pure_data=True, variables=True, connections=True):
     
     extension = os.path.splitext(filename)[1]
     
-    #
-    #
     if pure_data:
-        data = _net_description(variables, connections)
+        data = _net_description(populations, projections)
     else:
         #
         # steps_
@@ -159,36 +165,50 @@ def save(in_file, pure_data=True, variables=True, connections=True):
         return
     
     if extension == '.mat':
-        Global._debug("Save in matlab format.")
+        Global._debug("Save in Matlab format.")
         import scipy.io as sio
         sio.savemat(in_file, data)
         
-    elif extension == '.data':
-        Global._debug("Save in python pickle format.")
+    elif extension == '.gz':
+        Global._debug("Save in gunzipped binary format.")
+        try:
+            import gzip
+        except:
+            Global._error('gzip is not installed.')
+            return
+        with gzip.open(in_file, mode = 'wb') as w_file:
+            try:
+                cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
+            except Exception as e:
+                print('Error while saving in gzipped binary format.')
+                print(e)
+                return
         
-        #
+    else:
+        Global._debug("Save in txt format.")
         # save in Pythons pickle format
         with open(in_file, mode = 'w') as w_file:
             try:
-                pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
+                cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                print('Error while saving in Python pickle format.')
+                print('Error while saving in text format.')
                 print(e)
                 return
-    else:
-        Global._error("invalid file format.")
         return
 
-def load(in_file, pure_data=True):
+def load(in_file, populations=True, projections=True):#, pure_data=True): TODO
     """
     Load the current network state.
+
+    Warning: Matlab data can not be loaded.
     
     Parameter:
     
-    * *in_file*: the complete filename, allowed extensions are: '.data' for python pickle format.
-    * *pure_data*: if True only the network state will be loaded assumes that the network is build up. If False the stored neuron and synapse definitions will be used to build up a network (by default True).
-    * *variables*: if True population data will be saved (by default True)
-    * *connections*: if True projection data will be saved (by default True)
+    * *in_file*: the complete filename.
+    
+    * *populations*: if True, population data will be loaded (by default True)
+    
+    * *projections*: if True, projection data will be loaded (by default True)
     
     Example:
     
@@ -196,43 +216,40 @@ def load(in_file, pure_data=True):
         
             load('results/init.data')
             
-    """    
-    (path, filename) = os.path.split(in_file)
-    extension = os.path.splitext(filename)[1]
-    
-    with open(in_file, mode = 'r') as r_file:
+    """   
+
+    def _load(r_file):
         try:
-            net_desc = {}
-            
-            if extension == '.mat':
-                Global._error("currently not supported to load network data from matlab files.")
-                return
-        
-            elif extension == '.data':         
-                net_desc = pickle.load(r_file)
+            net_desc = cPickle.load(r_file)
     
-            if pure_data:
-                _load_pop_data(net_desc)
-                
+            if populations:
+                _load_pop_data(net_desc)  
+            if projections:              
                 _load_proj_data(net_desc)
-            else:
-                #
-                # steps_
-                #
-                # unpickle neuron, synapse
-                #
-                # unpickle proj, population
-                #
-                # compile()
-                #
-                # _load_only_data(net_desc)
-                print('Load network from scratch is not implemented yet.')
-                return
     
         except Exception as e:
             print('Error while loading in Python pickle format.')
             print(e)
             return
+
+    (path, filename) = os.path.split(in_file)
+    extension = os.path.splitext(filename)[1]
+
+    if extension == '.mat':
+        Global._error('Unable to load Matlab format.')
+        return
+    elif extension == '.gz':
+        try:
+            import gzip
+        except:
+            Global._error('gzip is not installed.')
+            return
+        with gzip.open(in_file, mode = 'rb') as r_file:
+            _load(r_file)
+    else:
+        with open(in_file, mode = 'r') as r_file:
+            _load(r_file)
+
   
 def _net_description(variables, connections):
     """
