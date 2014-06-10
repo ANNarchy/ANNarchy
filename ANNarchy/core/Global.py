@@ -328,10 +328,10 @@ def get_record(to_record=None, reshape=False):
         else:
             pop_object = get_population(pop)
         if isinstance(variables, list):
-            data[pop] = pop_object.get_record(variables)
+            data[pop] = pop_object.get_record(variables, reshape)
         else:
             data[pop] = {}
-            data[pop][variables] = pop_object.get_record(variables)
+            data[pop][variables] = pop_object.get_record(variables, reshape)
     
     return data  
 
