@@ -144,29 +144,29 @@ class Network(object):
         Global._error('no population with the name',name,'found.')
         return None
     
-    def get_projection(self, pre, post, target):
-        """
-        Returns the projection corresponding to the arguments.
+    # def get_projection(self, pre, post, target):
+    #     """
+    #     Returns the projection corresponding to the arguments.
         
-        Parameters:
+    #     Parameters:
         
-        * *pre*: presynaptic population
-        * *post*: postsynaptic population
-        * *target*: connection type
+    #     * *pre*: presynaptic population
+    #     * *post*: postsynaptic population
+    #     * *target*: connection type
         
-        Returns:
+    #     Returns:
         
-        * the requested projection if existing, otherwise None is returned.
-        """
-        for proj in self._projections:
+    #     * the requested projection if existing, otherwise None is returned.
+    #     """
+    #     for proj in self._projections:
             
-            if proj.post == post:
-                if proj.pre == pre:
-                    if proj.target == target:
-                        return proj
+    #         if proj.post == post:
+    #             if proj.pre == pre:
+    #                 if proj.target == target:
+    #                     return proj
         
-        Global._error("no projection '", pre.name, "'->'", post.name, "' with target '", target,"' found.")
-        return None
+    #     Global._error("no projection '", pre.name, "'->'", post.name, "' with target '", target,"' found.")
+    #     return None
     
     def simulate(self, duration):
         """

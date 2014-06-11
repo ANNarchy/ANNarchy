@@ -767,5 +767,42 @@ class Projection(object):
             res = np.concatenate((res, row))
         
         return res
+
+    ################################
+    ## Save/load methods
+    ################################
+
+    def _data(self):
+        desc = {}
+        desc['post_ranks'] = self._post_ranks
+
+        synapse_count = []
+        dendrites = []  
+        
+        for d in self.post_ranks:
+            dendrite_desc = {}
+            # Number of synapses in the dendrite
+            synapse_count.append(self.dendrite(d).size())
+            # Postsynaptic rank
+            dendrite_desc['post_rank'] = d
+            # Attributes
+            attributes = self.attributes
+            if not 'w' in self.attributes:
+                attributes.append('w')
+            if not 'rank' in self.attributes:
+                attributes.append('rank')
+            if not 'delay' in self.attributes:
+                attributes.append('delay')
+            # Save all attributes           
+            for var in attributes:
+                try:
+                    dendrite_desc[var] = getattr(self.cyInstance, '_get_'+var)(d) 
+                except:
+                    Global._error('Can not save the attribute ' + var + 'in the projection.')               
+            dendrites.append(dendrite_desc)
+        
+        desc['dendrites'] = dendrites
+        desc['number_of_synapses'] = synapse_count
+        return desc
                 
 

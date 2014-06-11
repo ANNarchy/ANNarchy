@@ -107,7 +107,7 @@ def load_parameter(in_file):
              
     return par
     
-def save(in_file, populations=True, projections=True, pure_data=True):
+def save(filename, populations=True, projections=True):#, pure_data=True):
     """
     Save the current network state to a file.
 
@@ -119,15 +119,13 @@ def save(in_file, populations=True, projections=True, pure_data=True):
     
     Parameter:
     
-    * *in_file*: filename, may contain relative or absolute path.
+    * *filename*: filename, may contain relative or absolute path.
     
-        .. warning:: The '.mat' data will not be loadable by ANNarchy, they are only for external analysis purpose. 
+        .. warning:: The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose. 
     
     * *populations*: if True, population data will be saved (by default True)
     
     * *projections*: if True, projection data will be saved (by default True)
-        
-    * *pure_data*: if True, only the variables will be saved. If False, all neuron and synapse definitions will be saved (by default True).
     
     Example:
     
@@ -141,33 +139,21 @@ def save(in_file, populations=True, projections=True, pure_data=True):
     
     """    
     # Check if the repertory exist
-    (path, filename) = os.path.split(in_file) 
+    (path, fname) = os.path.split(filename) 
     
     if not path == '':
         if not os.path.isdir(path):
             print('creating folder', path)
             os.mkdir(path)
     
-    extension = os.path.splitext(filename)[1]
+    extension = os.path.splitext(fname)[1]
     
-    if pure_data:
-        data = _net_description(populations, projections)
-    else:
-        #
-        # steps_
-        #
-        # pickle neuron, synapse
-        #
-        # pickle proj, population
-        #
-        # data = above + _description_data(variables, connections)
-        print('Complete save currently not implemented')
-        return
+    data = _net_description(populations, projections)
     
     if extension == '.mat':
         Global._debug("Save in Matlab format.")
         import scipy.io as sio
-        sio.savemat(in_file, data)
+        sio.savemat(filename, data)
         
     elif extension == '.gz':
         Global._debug("Save in gunzipped binary format.")
@@ -176,7 +162,7 @@ def save(in_file, populations=True, projections=True, pure_data=True):
         except:
             Global._error('gzip is not installed.')
             return
-        with gzip.open(in_file, mode = 'wb') as w_file:
+        with gzip.open(filename, mode = 'wb') as w_file:
             try:
                 cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
             except Exception as e:
@@ -185,9 +171,9 @@ def save(in_file, populations=True, projections=True, pure_data=True):
                 return
         
     else:
-        Global._debug("Save in txt format.")
+        Global._debug("Save in text format.")
         # save in Pythons pickle format
-        with open(in_file, mode = 'w') as w_file:
+        with open(filename, mode = 'w') as w_file:
             try:
                 cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
             except Exception as e:
@@ -196,7 +182,7 @@ def save(in_file, populations=True, projections=True, pure_data=True):
                 return
         return
 
-def load(in_file, populations=True, projections=True):#, pure_data=True): TODO
+def load(filename, populations=True, projections=True):#, pure_data=True): TODO
     """
     Load the current network state.
 
@@ -232,8 +218,8 @@ def load(in_file, populations=True, projections=True):#, pure_data=True): TODO
             print(e)
             return
 
-    (path, filename) = os.path.split(in_file)
-    extension = os.path.splitext(filename)[1]
+    (path, fname) = os.path.split(filename)
+    extension = os.path.splitext(fname)[1]
 
     if extension == '.mat':
         Global._error('Unable to load Matlab format.')
@@ -244,73 +230,32 @@ def load(in_file, populations=True, projections=True):#, pure_data=True): TODO
         except:
             Global._error('gzip is not installed.')
             return
-        with gzip.open(in_file, mode = 'rb') as r_file:
+        with gzip.open(filename, mode = 'rb') as r_file:
             _load(r_file)
     else:
-        with open(in_file, mode = 'r') as r_file:
+        with open(filename, mode = 'r') as r_file:
             _load(r_file)
 
   
-def _net_description(variables, connections):
+def _net_description(populations, projections):
     """
     Returns a dictionary containing the requested network data.
     
     Parameter:
     
-        * *variables*: if *True* the population data will be saved
-        * *projection*: if *True* the projection data will be saved
+        * *populations*: if *True* the population data will be saved
+        * *projections*: if *True* the projection data will be saved
     """
     network_desc = {}   
     
-    if variables:
-        for pop in Global._populations:
-            pop_desc = {}
-            pop_desc['name'] = pop.name
-            pop_desc['geometry'] = pop.geometry
-            # Attributes
-            attributes = pop.attributes
-            # Save all attributes           
-            for var in attributes:
-                try:
-                    pop_desc[var] = getattr(pop.cyInstance, '_get_'+var)()
-                except:
-                    Global._error('Can not save the attribute ' + var + 'in the projection.')              
-            network_desc[pop.name] = pop_desc 
+    if populations:
+        for pop in Global._populations:             
+            network_desc[pop.name] = pop._data() 
 
-    if connections:
-        for proj in Global._projections:
-    
-            proj_desc = {}
-            proj_desc['post_ranks'] = proj._post_ranks
+    if projections:
+        for proj in Global._projections:  
+            network_desc[proj.name] = proj._data() 
 
-            synapse_count = []
-            dendrites = []  
-            
-            for d in proj.post_ranks:
-                dendrite_desc = {}
-                # Number of synapses in the dendrite
-                synapse_count.append(proj[d].size())
-                # Postsynaptic rank
-                dendrite_desc['post_rank'] = d
-                # Attributes
-                attributes = proj.attributes
-                if not 'w' in attributes:
-                    attributes.append('w')
-                if not 'rank' in attributes:
-                    attributes.append('rank')
-                if not 'delay' in attributes:
-                    attributes.append('delay')
-                # Save all attributes           
-                for var in attributes:
-                    try:
-                        dendrite_desc[var] = getattr(proj.cyInstance, '_get_'+var)(d) 
-                    except:
-                        Global._error('Can not save the attribute ' + var + 'in the projection.')               
-                dendrites.append(dendrite_desc)
-            
-            proj_desc['dendrites'] = dendrites
-            proj_desc['number_of_synapses'] = synapse_count
-            network_desc[proj.name] = proj_desc 
 
     return network_desc
             
@@ -323,13 +268,16 @@ def _load_pop_data(net_desc):
         # check if the population is contained in save file
         if pop.name in net_desc.keys():
             pop_desc = net_desc[pop.name]
-            for var in pop_desc.keys():
-                if var in pop.attributes:
-                    try:
-                        getattr(pop.cyInstance, '_set_'+var)(pop_desc[var]) 
-                    except:
-                        Global._error('Can not load the variable ' + var * ' in the population ' + pop.name)
-                        return
+            if not 'attributes' in pop_desc.keys():
+                _error('Saved with a too old version of ANNarchy.')
+                return
+            for var in pop_desc['attributes']:
+                try:
+                    getattr(pop.cyInstance, '_set_'+var)(pop_desc[var]) 
+                except:
+                    Global._error('Can not load the variable ' + var * ' in the population ' + pop.name)
+                    return
+
     
 def _load_proj_data(net_desc):
     """

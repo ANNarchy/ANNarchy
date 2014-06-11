@@ -811,5 +811,23 @@ class Population(object):
                 return idx
         return -1
 
+    def _data(self):
+        "Returns a dictionary containing all information about the population. Used for saving."
+        desc = {}
+        desc['name'] = self.name
+        desc['geometry'] = self.geometry
+        desc['size'] = self.size
+        # Attributes
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+        # Save all attributes           
+        for var in self.attributes:
+            try:
+                desc[var] = getattr(self.cyInstance, '_get_'+var)()
+            except:
+                Global._error('Can not save the attribute ' + var + 'in the population ' + self.name + '.')              
+        return desc 
+
 
 
