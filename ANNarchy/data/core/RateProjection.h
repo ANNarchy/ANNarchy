@@ -61,6 +61,7 @@ public:
 
 protected:
 	int nbDendrites_;
+	class RateProjection* proj_;
 
 #ifdef _DEBUG_PARALLELISM
 	class ParallelLogger* log_;

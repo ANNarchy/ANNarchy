@@ -30,6 +30,34 @@ In some cases, you may want to perform only one step of the simulation, instead 
 
     step() # Simulate for 1 step
 
+Saving/loading the network
+==========================
+
+The state of all variables, including the synapses, can be saved in a text file, compressed binary file or Matlab file using the ``save()``:
+
+.. code-block:: python
+
+    save('data.txt')
+    save('data.txt.gz')
+    save('data.mat')
+
+Filenames ending with '.mat' correspond to Matlab files (it requires the installation of Scipy), filenames ending with '.gz' are compressed using gzip (normally standard to all Python distributions, but may require installation), other extensions are normal text files using cPickle (standard). 
+
+``save()`` also accepts the ``populations`` and ``projections`` boolean flags. If ``True`` (the default), the neural resp. synaptic variables will be saved. For example, if you only care about synaptic plasticity but not the neural variables, you can set ``populations`` to ``False``, and only synaptic variables will be saved. 
+
+.. code-block:: python
+
+    save('data.txt', populations=False)
+
+Except for the Matlab format, you can also load the state of variables stored in these files:
+
+.. code-block:: python
+
+    load('data.txt')
+
+The structure of the network must of course be exactly the same as when the file was saved (number of populations, neurons, synapses...), otherwise an error will be thrown. ``load()`` also accepts the ``populations`` and ``projections`` boolean flags (for example if you want to load only the synaptic weights but not restore the neural variables).
+
+
 Running the simulation
 ===================================
 

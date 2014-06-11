@@ -138,7 +138,7 @@ std::vector<int> %(class)s::get_delay(int post_rank)
 
 void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
 {
-    dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
+    dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
     
     dendrites_[post_rank]->set_rank(rank);
     dendrites_[post_rank]->set_w(w);
@@ -282,7 +282,7 @@ std::vector<int> %(class)s::get_delay(int post_rank)
 
 void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
 {
-    dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_));
+    dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
     
     dendrites_[post_rank]->set_rank(rank);
     dendrites_[post_rank]->set_w(w);

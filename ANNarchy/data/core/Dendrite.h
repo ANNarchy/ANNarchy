@@ -34,8 +34,9 @@ public:
 	/**
 	 * 	\brief		Constructor.
 	 * 	\param[in]	rateCoded	set to true if the population is rate coded.
+	 * 	\param[in]	proj		related projection
 	 */
-	Dendrite(bool rateCoded);
+	Dendrite(bool rateCoded, class Projection* proj);
 
 	/**
 	 * 	\brief		Destructor.
@@ -197,6 +198,8 @@ public:
     int getLearnOffset() { return learnOffset_; }
 
 protected:
+    class Projection *proj_;
+
     int post_neuron_rank_; 	///< neuron where this dendrite is attached to
     int target_;	///< dendrite type
     int nbSynapses_;	///< number of synapses within this dendrite

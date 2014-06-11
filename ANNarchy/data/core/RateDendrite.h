@@ -27,7 +27,7 @@
 class RateDendrite: public Dendrite
 {
 public:
-	RateDendrite();
+	RateDendrite(class RateProjection* proj);
 
     /**
      * 	\brief		returns the reference to presynaptic populations
@@ -60,7 +60,6 @@ public:
 	DATA_TYPE getSum() { return sum_; }
 
 protected:
-
 	DATA_TYPE sum_;
 
     DATA_TYPE post_r_;

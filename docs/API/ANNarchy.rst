@@ -4,28 +4,28 @@ Module ANNarchy
 
 This the main module of ANNarchy, which contains both Python Code and wrapping of the C++ library. 
 
-First level functions
+Configuration and compilation
 =================================================
 
-ANNarchy provides a set of first level functions. Its **important** to call these functions in the order they appear in this section. 
+Contrary to other simulators, ANNarchy is entirely based on code generation. It provides a set of first level functions to ensre the network is correctly created. Its **important** to call these functions in this order. 
 
 ANNarchy.setup()
 -------------------------------------------------
 
-Before using any other function or classes of ANNarchy4 the user must call the `setup()` in order to parameterize global parameters.
+Before using any other function or classes of ANNarchy4 the user must call the ``setup()`` method in order to define global parameters.
 
-    .. autofunction:: ANNarchy.setup
+.. autofunction:: ANNarchy.setup
 
 ANNarchy.compile()
 -------------------------------------------------
 
-The goal of this function is to generate all needed classes and then compile all C++ sources and cython wrappes needed to represent the network. Through this process two libraries will created: ``ANNarchyCore`` contains the c++ core functions and ``ANNarchyCython`` contains the cython extensions.
+The goal of this function is to generate all needed classes, compile all C++ sources and Cython wrappers needed to represent the network.
 
-    .. autofunction:: ANNarchy.compile
+.. autofunction:: ANNarchy.compile
     
 .. warning:: the `cpp_stand_alone` argument is an experimental feature, mainly used for internal debugging.
 
-Network interaction via global functions
+Simulation
 ================================================
 
 Next to read or write of the variables / parameters existing a network ANNarchy provides some additional functions available after ``ANNarchy.compile``.
@@ -37,7 +37,7 @@ After calling ``ANNarchy.compile()`` and a successful compilation process, you m
 
 .. code-block:: python
     
-    ANNarchy.simulate( 100 ) # simulate 100 time steps
+    ANNarchy.simulate(100.0) # simulate 100 milliseconds
     
 and access to all objects within your network. Complete examples could be found in the section :doc:`../Example`.
 
@@ -54,42 +54,43 @@ This function can also be called to perform a single simulation step:
 ANNarchy.reset()
 -------------------------------------------------
 
-For instance you may run multiple experiments with one network or your experiment setup requires a pre learning phase. In this case you run the simulation several steps and then reset either populations or connections to their initial values. 
+If you want to run multiple experiments with the same network, or if your experiment setup requires a pre learning phase, you can reset selectively neural or synaptic variables to their initial values. 
 
-    .. autofunction:: ANNarchy.reset
+.. autofunction:: ANNarchy.reset
 
-ANNarchy.start_record()
--------------------------------------------------
+Access to populations
+=====================
 
-    .. autofunction:: ANNarchy.start_record
+.. autofunction:: ANNarchy.get_population
 
-ANNarchy.stop_record()
--------------------------------------------------
-
-    .. autofunction:: ANNarchy.stop_record
-
-ANNarchy.get_record()
--------------------------------------------------
-
-    .. autofunction:: ANNarchy.get_record
+Recordings
+===========
 
 
-ANNarchy.save()
--------------------------------------------------
+.. autofunction:: ANNarchy.start_record
 
-To save the network state you may use the following method:
 
-    .. autofunction:: ANNarchy.save
+.. autofunction:: ANNarchy.stop_record
+
+
+.. autofunction:: ANNarchy.get_record
+
+
+.. autofunction:: ANNarchy.pause_record
+
+
+.. autofunction:: ANNarchy.resume_record
+
+Saving/Loading
+===============
+
+
+To save or load the network state you can use the following methods:
+
+.. autofunction:: ANNarchy.save
+
+.. autofunction:: ANNarchy.load
     
-Please note that these function is only usable after ANNarchy.compile().
-
-ANNarchy.load()
--------------------------------------------------
-
-To save the network state you may use the following method:
-
-    .. autofunction:: ANNarchy.load
-    
-Please note that these function is only usable after ANNarchy.compile().
+Please note that these functions are only usable after the call to ``ANNarchy.compile()``.
 
 
