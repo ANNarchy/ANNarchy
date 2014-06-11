@@ -109,6 +109,8 @@ class SpikeDendriteGenerator(DendriteGenerator):
     def generate_record(self):
         code = DendriteGenerator.generate_record(self)
  
+        added = [] # list of already added variables, to prevent double adding, e. g. w
+                
         if 'pre_spike' in self.desc.keys():
             for param in self.desc['pre_spike']:
                 if param['name'] in self.desc['local']:
@@ -118,7 +120,8 @@ class SpikeDendriteGenerator(DendriteGenerator):
                 if re.findall("(?<=g\_)[A-Za-z]+", param['name']) != []:
                     #print 'skipped', param['name']
                     continue
-                 
+                
+                added += param['name']
                 code += """
     if ( record_%(var)s_ )
         recorded_%(var)s_.push_back(%(var)s_);
@@ -126,7 +129,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
  
         if 'post_spike' in self.desc.keys():
             for param in self.desc['post_spike']:
-                if param['name'] in self.desc['local']:
+                if param['name'] in self.desc['local'] + added:
                     continue
                  
                 code += """
