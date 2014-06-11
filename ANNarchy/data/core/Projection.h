@@ -55,8 +55,6 @@ public:
 
     virtual void initValues(int postNeuronRank) = 0;
 
-    void setLearning(bool isLearning) { isLearning_ = isLearning; }
-
     void setLearnFrequency( int frequency ) { learnFrequency_ = frequency; }
 
     int getLearnFrequency( ) { return learnFrequency_; }
@@ -65,12 +63,16 @@ public:
 
     int getLearnOffset( ) { return learnOffset_; }
 
-    bool isLearning() { return isLearning_; }
+    void setLearning(bool isLearning) { learnable_  = isLearning; }
+
+    bool isLearning() { return (learnable_ && ((ANNarchy_Global::time)%learnFrequency_ == learnOffset_)); }
+
+    bool isLearnable() { return learnable_; }
 
     int getTarget() { return target_; }
 
 protected:
-    bool isLearning_;
+    bool learnable_;
     int learnFrequency_;
     int learnOffset_;
 

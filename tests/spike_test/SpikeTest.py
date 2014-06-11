@@ -87,6 +87,14 @@ testAll2AllSpike.dendrite(0).start_record('w')
 
 simulate(1000)
 
+testAll2AllSpike.disable_learning()
+
+simulate(1000)
+
+testAll2AllSpike.enable_learning()
+
+simulate(1000)
+
 data = get_record( to_record )
 Apre = testAll2AllSpike.dendrite(0).get_record('Apre')
 Apost = testAll2AllSpike.dendrite(0).get_record('Apost')

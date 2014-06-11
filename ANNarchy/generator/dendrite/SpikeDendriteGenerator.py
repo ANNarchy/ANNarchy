@@ -144,8 +144,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         code = ""
         if 'pre_spike' in self.desc.keys():
             for tmp in self.desc['pre_spike']:
-                if tmp == "g_"+self.desc['target']:
-
+                if tmp['name'] == "g_"+self.desc['target']:
                     code += """ 
     %(eq)s
 """ % { 'eq' : tmp['eq'] }
@@ -163,7 +162,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         # generate additional statements        
         if 'pre_spike' in self.desc.keys():
             for tmp in self.desc['pre_spike']:
-                if tmp == "g_"+self.desc['target']:
+                if tmp['name'] == "g_"+self.desc['target']:
                     continue
                 code += """
     %(eq)s

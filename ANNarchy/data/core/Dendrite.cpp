@@ -29,12 +29,6 @@ Dendrite::Dendrite(bool rateCoded, class Projection* proj)
     constDelay_ = true;
     maxDelay_ = 0;
     nbSynapses_ = 0;
-
-    //
-    // learning in every time step as default
-    learnFrequency_ = 1;
-    learnOffset_ = 0;
-    learnable_ = true;
 }
 
 Dendrite::~Dendrite()
@@ -122,4 +116,25 @@ void Dendrite::set_w(std::vector<DATA_TYPE> value)
 #endif
 	w_ = value;
 }
+
+bool Dendrite::isLearning()
+{
+	return proj_->isLearning();
+}
+
+bool Dendrite::isLearnable()
+{
+	return proj_->isLearnable();
+}
+
+int Dendrite::getLearnFrequency()
+{
+	return proj_->getLearnFrequency();
+}
+
+int Dendrite::getLearnOffset()
+{
+	return proj_->getLearnOffset();
+}
+
 

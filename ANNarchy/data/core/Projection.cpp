@@ -23,7 +23,7 @@
 
 Projection::Projection()
 {
-	isLearning_ = true;
+	learnable_ = true;
 	learnFrequency_ = 1;
 	learnOffset_ = 0;
 }

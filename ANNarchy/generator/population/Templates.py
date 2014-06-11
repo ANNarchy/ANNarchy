@@ -398,8 +398,8 @@ void %(class)s::propagatePostSpike()
         // emit a postsynaptic spike on receiving projections
         for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
         {
-            static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
-            
+            if ( static_cast<SpikeProjection*>(*p_it)->isLearning() )
+                static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
         }
     }
 }
@@ -415,7 +415,8 @@ void %(class)s::propagatePreSpike()
             {
                 static_cast<SpikeDendrite*>(*p_it)->preEventPsp(*n_it);
 
-                static_cast<SpikeDendrite*>(*p_it)->preEventLearn(*n_it);
+                if ( static_cast<SpikeDendrite*>(*p_it)->isLearning() )
+                    static_cast<SpikeDendrite*>(*p_it)->preEventLearn(*n_it);
             }
 
         }
