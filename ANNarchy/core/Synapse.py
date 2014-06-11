@@ -25,16 +25,17 @@ import pprint
 
 class RateSynapse(object):
     """
-    Definition of a rate coded synapse in ANNarchy. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
+    Base class to define a rate-coded synapse.
     """
     
-    def __init__(self, parameters="", equations="", psp=None, extra_values=None, functions=None):
-        """ The user describes the initialization of variables / parameters as *key-value pairs* 'variable'='value'. 
-        Synapse variables are described as Variable object consisting of 'variable'='"update rule as string"' and 'init'='initialization value'.
-        
+    def __init__(self, parameters="", equations="", psp=None, functions=None, extra_values=None):
+        """ 
         *Parameters*:
         
-            * TODO
+            * **parameters**: parameters of the neuron and their initial value.
+            * **equations**: equations defining the temporal evolution of variables.
+            * **psp**: post-synaptic potential summed by the post-synaptic neuron.
+            * **functions**: additional functions used in the variables' equations.
             
         """                
         # Store the parameters and equations
@@ -55,10 +56,20 @@ class RateSynapse(object):
         
 class SpikeSynapse(object):
     """
-    Definition of a spiking synapse in ANNarchy. This object is intended to encapsulate synapse equations, for learning or modified post-synaptic potential, and is further used in projection class.
+    Bae class to define a spiking synapse.
     """
 
-    def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, psp = None, extra_values=None, functions=None ):
+    def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, functions=None, extra_values=None ):
+        """ 
+        *Parameters*:
+        
+            * **parameters**: parameters of the neuron and their initial value.
+            * **equations**: equations defining the temporal evolution of variables.
+            * **pre_spike**: updating of variables when a pre-synaptic spike is received.
+            * **post_spike**: updating of variables when a post-synaptic spike is emitted.
+            * **functions**: additional functions used in the variables' equations.
+            
+        """  
         
         # Store the parameters and equations
         self.parameters = parameters
@@ -66,7 +77,7 @@ class SpikeSynapse(object):
         self.functions = functions
         self.pre_spike = pre_spike
         self.post_spike = post_spike
-        self.psp = psp
+        self.psp = None
         self.extra_values = extra_values
 
     def __add__(self, synapse):
