@@ -21,9 +21,10 @@
  */
 #include "Dendrite.h"
 
-Dendrite::Dendrite(bool rateCoded)
+Dendrite::Dendrite(bool rateCoded, class Projection* proj)
 {
 	isRateCoded_ = rateCoded;
+	proj_ = proj;
 
     constDelay_ = true;
     maxDelay_ = 0;

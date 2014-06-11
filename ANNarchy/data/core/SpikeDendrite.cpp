@@ -21,7 +21,7 @@
  */
 #include "SpikeDendrite.h"
 
-SpikeDendrite::SpikeDendrite(): Dendrite( false )
+SpikeDendrite::SpikeDendrite(class SpikeProjection* proj): Dendrite( false, (Projection*)proj )
 {
 
 }

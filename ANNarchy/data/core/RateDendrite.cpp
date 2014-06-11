@@ -21,8 +21,7 @@
  */
 #include "RateDendrite.h"
 
-RateDendrite::RateDendrite():Dendrite(true)
+RateDendrite::RateDendrite(class RateProjection* proj):Dendrite(true, (Projection*)proj)
 {
-
 
 }
