@@ -40,9 +40,7 @@ class Population(object):
     """
 
     def __init__(self, geometry, neuron, name=None):
-        """
-        Constructor of the population.
-        
+        """        
         *Parameters*:
         
             * *geometry*: population geometry as tuple. If an integer is given, it is the size of the population.
@@ -242,28 +240,28 @@ class Population(object):
     @property
     def geometry(self):
         """
-        Width of population.
+        Geometry of the population.
         """
         return self._geometry
 
     @property
     def width(self):
         """
-        Width of population.
+        Width of the population (geometry[1]).
         """
         return self._width
 
     @property
     def height(self):
         """
-        Height of population.
+        Height of population (geometry[0]).
         """
         return self._height
 
     @property
     def depth(self):
         """
-        Depth of population.
+        Depth of population (geometry[2]).
         """
         return self._depth
         
@@ -283,14 +281,14 @@ class Population(object):
     @property
     def dimension(self):
         """
-        Dimension of the population (1, 2 or 3)
+        Dimension of the population (``len(geometry)``)
         """
         return self._dimension
         
     @property 
     def rank(self):
         """
-        Unique identifier of the population, e.g. usable on connection patterns.
+        Unique integer identifier of the population.
         """
         return self._id
         
@@ -301,15 +299,20 @@ class Population(object):
         try:
             self.cyInstance.reset()
         except:
-            print('reset population', self.name, 'failed.')
+            print('Reset population', self.name, 'failed.')
         
     def start_record(self, variable):
         """
-        Start recording the previous defined variables.
+        Start recording neural variables.
         
         Parameter:
             
-            * *variable*: single variable name or list of variable names.        
+            * **variable**: single variable name or list of variable names.  
+
+        Example::
+
+            pop1.start_record('r')
+            pop2.start_record(['mp', 'r'])      
         """
         _variable = []
         
@@ -341,11 +344,16 @@ class Population(object):
 
     def stop_record(self, variable=None):
         """
-        Stops recording the previous defined variables.
+        Stops recording the previously defined variables.
 
         Parameter:
             
-        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
+        * **variable**: single variable name or list of variable names. If no argument is provided, all recordings will stop.
+
+        Example::
+
+            pop1.stop_record('r')
+            pop2.stop_record(['mp', 'r'])  
         """
         _variable = []
         if variable == None:
@@ -380,9 +388,14 @@ class Population(object):
         """
         Pauses the recording of variables (can be resumed later with resume_record()).
 
-        Parameter:
+        *Parameter*:
             
-        * *variable*: single variable name or list of variable names. If no argument is provided all recordings will pause.
+        * **variable**: single variable name or list of variable names. If no argument is provided all recordings will pause.
+
+        Example::
+
+            pop1.pause_record('r')
+            pop2.pause_record(['mp', 'r'])  
         """
         _variable = []
         if variable == None:
@@ -417,9 +430,14 @@ class Population(object):
         """
         Resume recording the previous defined variables.
         
-        Parameter:
+        *Parameter*:
             
-            * *variable*: single variable name or list of variable names.        
+            * **variable**: single variable name or list of variable names.  
+
+        Example::
+
+            pop1.resume_record('r')
+            pop2.resume_record(['mp', 'r'])        
         """
         _variable = []
         
@@ -452,13 +470,22 @@ class Population(object):
                 
     def get_record(self, variable=None, reshape=False):
         """
-        Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
-        The last dimension represents the time, the remaining dimensions are the population geometry.
+        Returns the recorded data as a nested dictionary. The first key corresponds to the variable name if several were recorded.
+
+        The second keys correspond to:
+
+        * ``start`` simulations step(s) were recording started.
+        * ``stop`` simulations step(s) were recording stopped or paused.
+        * ``data`` the recorded data as a numpy array. The last index represents the time, the remaining dimensions are the population size or geometry, depending on the value of ``reshape``.
+
+        .. warning::
+
+            Once get_record is called, the recorded data is internally erased.
         
-        Parameter:
+        *Parameters*:
             
-        * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
-        * *reshape*: by default this functions returns the data as a 2D matrix (number of neurons, time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
+        * **variable**: single variable name or list of variable names. If no argument provided, all currently recorded data are returned.  
+        * **reshape**: by default this functions returns the data as a 2D matrix (number of neurons * time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
         
         _variable = []
@@ -527,11 +554,11 @@ class Population(object):
 
     def rank_from_coordinates(self, coord):
         """
-        Returns rank corresponding to the given coordinates.
+        Returns the rank of a neuron based on coordinates.
         
-        Parameter:
+        *Parameter*:
         
-            * *coord*: coordinate tuple, can be multidimensional.
+            * **coord**: coordinate tuple, can be multidimensional.
         """
         rank = self._rank_from_coord( coord, self._geometry )
         
@@ -543,7 +570,11 @@ class Population(object):
 
     def coordinates_from_rank(self, rank):
         """
-        Returns a tuple representing the spatial coordinates corresponding to the geometry of the population.
+        Returns the coordinates of a neuron based on its rank.
+
+        *Parameter*:
+                
+            * **rank**: rank of the neuron.
         """
         # Check the rank
         if not rank < self.size:
@@ -554,12 +585,12 @@ class Population(object):
 
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """
-        Returns a tuple of coordinates corresponding to the rank or coordinates, normalized between 0.0 and norm in each dimension.
+        Returns normalized coordinates of a neuron based on its rank. The geometry of the population is mapped to the hypercube [0, 1]^d. 
         
-        Parameters:
+        *Parameters*:
         
-        * *rank*: position to normalize
-        * *norm*: upper limit (default = 1.0)
+        * **rank**: rank of the neuron
+        * **norm**: norm of the cube (default = 1.0)
         
         """
         try:
@@ -572,37 +603,39 @@ class Population(object):
                 if self._geometry[dim] > 1:
                     normal += ( norm * float(coord[dim])/float(self._geometry[dim]-1), )
                 else:
-                    normal += (0.0,) # default?
+                    normal += (float(rank)/(float(self.size)-1.0),) # default?
      
         return normal
 
     def set(self, values):
         """
-        Sets neuron variable/parameter values.
+        Sets the value of neural variables and parameters.
         
-        Parameter:
+        *Parameter*:
         
-        * *values*: dictionary of attributes to be updated
+        * **values**: dictionary of attributes to be updated.
             
-            .. code-block:: python
-                
-                set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
+        .. code-block:: python
+            
+            set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
         """
         for name, value in values.iteritems():
             self.__setattr__(name, value)
         
     def get(self, name):
         """
-        Gets current variable/parameter values.
+        Returns the value of neural variables and parameters.
         
-        Parameter:
+        *Parameter*:
         
-        * *name*: attribute name as string
+        * **name**: attribute name as a string.
         """
         return self.__getattr__(name)
             
     def neuron(self, *coord):  
-        " Returns neuron of coordinates coord in the population. If only one argument is given, it is the rank."  
+        """
+        Returns an ``IndividualNeuron`` object wrapping the neuron with the provided rank or coordinates.
+        """  
         # Transform arguments
         if len(coord) == 1:
             if isinstance(coord[0], int):
@@ -627,13 +660,13 @@ class Population(object):
         
         For instance, if you want to iterate over all neurons of a population:
         
-            >>> for neur in pop.neurons:
-            ...     print neur.r
+        >>> for neur in pop.neurons:
+        ...     print neur.r
             
         Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:
         
-            >>> for neur in pop:
-            ...     print neur.r               
+        >>> for neur in pop:
+        ...     print neur.r               
         """
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)
@@ -701,21 +734,21 @@ class Population(object):
     def set_variable_flags(self, name, value):
         """ Sets the flags of a variable for the population.
         
-        If the variable ``r`` is defined in the Neuron description through:
+        If the variable ``r`` is defined in the Neuron description through::
         
             r = sum(exc) : max=1.0  
             
-        one can change its maximum value with:
+        one can change its maximum value with::
         
             pop.set_variable_flags('r', {'max': 2.0})
             
         For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
         
-        For positional flags (population, implicit), the value in the dictionary must be set to the empty string '':
+        For positional flags (population, implicit), the value in the dictionary must be set to the empty string ''::
         
             pop.set_variable_flags('r', {'implicit': ''})
         
-        A None value in the dictionary deletes the corresponding flag:
+        A None value in the dictionary deletes the corresponding flag::
         
             pop.set_variable_flags('r', {'max': None})
             
@@ -749,11 +782,11 @@ class Population(object):
     def set_variable_equation(self, name, equation):
         """ Changes the equation of a variable for the population.
         
-        If the variable ``r`` is defined in the Neuron description through:
+        If the variable ``r`` is defined in the Neuron description through::
         
             tau * dr/dt + r  = sum(exc) : max=1.0  
             
-        one can change the equation with:
+        one can change the equation with::
         
             pop.set_variable_equation('r', 'r = sum(exc)')
             

@@ -105,20 +105,20 @@ def setup(**keyValueArgs):
         else:
             _print('unknown key:', key)
     
-def reset(states=True, connections=False):
+def reset(populations=True, projections=False):
     """
-    Reinitialises the network, runs each object's reset() method (resetting them to 0).
+    Reinitialises the network to its initial state.
 
     Parameter:
 
-    * *states*: if set to True then it will reinitialise the neuron state variables.
-    * *connections*: if set to True then it will reinitialise the connection variables.
+    * *populations*: if True (default), the neural variables will be reset to their initial value.
+    * *projections*: if True, the synaptic variables (including the weights) will be reset (default=False).
     """
-    if states:
+    if populations:
         for pop in _populations:
             pop.reset()
             
-    if connections:
+    if projections:
         print('currently not implemented')
         
 def get_population(name):
@@ -140,32 +140,32 @@ def get_population(name):
     print("Error: no population",name,"found.")
     return None
 
-def get_projection(pre, post, target, suppress_error=False):
-    """
-    Returns projection corresponding to the arguments.
+# TODO: now that PopulationViews can be used to create projections, this won't work!
+# def get_projection(pre, post, target, suppress_error=False):
+#     """
+#     Returns a projection corresponding to the arguments.
     
-    Parameters:
+#     *Parameters*:
     
-    * *pre*: presynaptic population
-    * *post*: postsynaptic population
-    * *target*: connection type
-    * *suppress_error*: if suppress_error is True the potential error will not prompted.
+#     * **pre**: presynaptic population
+#     * **post**: postsynaptic population
+#     * **target**: connection type
+#     * **suppress_error**: if suppress_error is True the potential error will not prompted.
     
-    Returns:
+#     Returns:
     
-    the requested projection if existing otherwise None is returned.
-    """
-    for proj in _projections:
-        
-        if proj.post == post:
-            if proj.pre == pre:
-                if proj.target == target:
-                    return proj
+#     the requested projection if existing otherwise None is returned.
+#     """
+#     for proj in _projections:        
+#         if proj.post == post:
+#             if proj.pre == pre:
+#                 if proj.target == target:
+#                     return proj
     
-    if not suppress_error:
-        _error("No projection " + pre.name + " -> " + post.name + " with target " + target + " found.")
+#     if not suppress_error:
+#         _error("No projection " + pre.name + " -> " + post.name + " with target " + target + " found.")
     
-    return None
+#     return None
     
 def add_function(function):
     """

@@ -29,16 +29,15 @@ import pprint
 
 class RateNeuron(object):
     """
-    Python definition of a mean rate coded neuron in ANNarchy. This object is intended to encapsulate neuronal equations and further used in population class.
+    Base class to define a rate-coded neuron.
     """    
-    def __init__(self, parameters="", equations="", extra_values={}, functions=None):
-        """ 
-        The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
-        <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
-        
+    def __init__(self, parameters="", equations="", functions=None, extra_values={}):
+        """        
         *Parameters*:
         
-            * TODO
+            * **parameters**: parameters of the neuron and their initial value.
+            * **equations**: equations defining the temporal evolution of variables.
+            * **functions**: additional functions used in the variables' equations.
 
         """        
         
@@ -62,65 +61,18 @@ class RateNeuron(object):
         
 class SpikeNeuron(object):
     """
-    Python definition of a mean rate coded neuron in ANNarchy. This object is intended to encapsulate neuronal equations and further used in population class.
+    Base class to define a spiking neuron.
     """    
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, extra_values={}, functions=None ):
-        """ 
-        The user describes the initialization of variables / parameters. Neuron parameters are described as Variable object consisting of key - value pairs 
-        <name> = <initialization value>. The update rule executed in each simulation step is described as equation.
-        
+    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, extra_values={} ):
+        """         
         *Parameters*:
         
-            * *parameters*: stored as *key-value pairs*. For example:
-
-                .. code-block:: python
-        
-                    parameters = \"\"\"
-                        a = 0.2
-                        b = 2
-                        c = -65 
-                    \"\"\"
-
-                initializes a parameter ``tau`` with the value 10. Please note, that you may specify several constraints for a parameter:
-            
-                * *population* : 
-                
-                * *min*:
-                
-                * *max*:
-
-            * *equations*: simply as a string contain the equations
-            
-                .. code-block:: python
-        
-                    equations = \"\"\"
-                        dv/dt = 0.04 * v * v + 5*v + 140 -u + I
-                    \"\"\"
-
-                specifies a variable ``v`` based on excitory inputs.
-                
-            * *spike*: denotes the conditions when a spike should be emited.
-
-                .. code-block:: python
-        
-                    spike = \"\"\"
-                        v > treshold
-                    \"\"\"
-
-            * *reset*: denotes the equations executed after a spike
-
-                .. code-block:: python
-        
-                    reset = \"\"\"
-                        u = u + d
-                        v = c
-                    \"\"\"
-                    
-            * *refractory*: denotes the refractory time of a neuron after a spike was emitted
-            
-                .. code-block:: python
-        
-                    refractory = 5    # 5 ms
+            * **parameters**: parameters of the neuron and their initial value.
+            * **equations**: equations defining the temporal evolution of variables.
+            * **functions**: additional functions used in the variables' equations.                
+            * **spike**: condition to emit a spike.
+            * **reset**: changes to the variables after a spike                    
+            * **refractory**: refractory period of a neuron after a spike.
                 
         """        
         
@@ -137,7 +89,8 @@ class SpikeNeuron(object):
         return pprint.pformat( self, depth=4 )
         
 class IndividualNeuron(object):
-    """Neuron object returned by the Population.neuron(rank) method.
+    """
+    Neuron object returned by the Population.neuron(rank) method.
     
     This only a wrapper around the Population data. It has the same attributes (parameter and variable) as the original population.
     """

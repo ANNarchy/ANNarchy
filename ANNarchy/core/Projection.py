@@ -35,23 +35,30 @@ from ANNarchy.core.Record import Record
 
 class Projection(object):
     """
-    Python class representing the projection between two populations.
+    Represents all synapses of the same type between two populations.
     """
 
     def __init__(self, pre, post, target, synapse=None):
         """
-        Constructor of a Projection object.
-
-        Parameters:
+        *Parameters*:
                 
-            * *pre*: pre synaptic layer (either name or Population object)
-            * *post*: post synaptic layer (either name or Population object)
-            * *target*: connection type
-            * *synapse*: synapse description
+            * **pre**: pre-synaptic population (either its name or a ``Population`` object).
+            * **post**: post-synaptic population (either its name or a ``Population`` object).
+            * **target**: type of the connection.
+            * **synapse**: either a ``RateSynapse`` or ``SpikeSynapse`` object.
+
+        By default, the synapse only ensures synaptic transmission:
+
+        * For rate-coded populations: ``psp = w * pre.r``
+        * For spiking populations: ``g_target += w``
+
         """
-        if Global.get_projection(pre, post, target, suppress_error=True) != None:
-            Global._error('population from', pre.name, 'to', post.name, 'with target', target, 'already exists.')
-            exit(0)
+
+        # TODO: now that PopulationViews can be used to create projections, this won't work!
+        # print Global.get_projection(pre, post, target, suppress_error=True)
+        # if Global.get_projection(pre, post, target, suppress_error=True) != None:
+        #     Global._error('population from', pre.name, 'to', post.name, 'with target', target, 'already exists.')
+        #     exit(0)
         
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
@@ -667,18 +674,19 @@ class Projection(object):
             self.cyInstance.createFromCSR(self._synapses)
             self._post_ranks = self._synapses.keys()
             # update maximum delay in presynaptic population
-            self.pre.cyInstance.set_max_delay(self._synapses.get_max_delay())
-            return
-        elif ( isinstance(self._synapses, list) ):
-        	dendrites = self._build_pattern_from_list()
-        else:
-        	dendrites = self._build_pattern_from_dict()
-
-        # Store the keys of dendrites in _post_ranks
-        self._post_ranks = dendrites.keys()
-
-        # Create the dendrites in Cython
-        self.cyInstance.createFromDict(dendrites)
+            if isinstance(self.pre, PopulationView):
+                self.pre.population.cyInstance.set_max_delay(self._synapses.get_max_delay())
+            else:
+                self.pre.cyInstance.set_max_delay(self._synapses.get_max_delay()) 
+        else: # a list or dict
+            if ( isinstance(self._synapses, list) ):
+        	   dendrites = self._build_pattern_from_list()
+            else:
+        	   dendrites = self._build_pattern_from_dict()
+            # Store the keys of dendrites in _post_ranks
+            self._post_ranks = dendrites.keys()
+            # Create the dendrites in Cython
+            self.cyInstance.createFromDict(dendrites)
 
         # Delete the _synapses array, not needed anymore
         del self._synapses
