@@ -775,6 +775,9 @@ class Projection(object):
     def _data(self):
         desc = {}
         desc['post_ranks'] = self._post_ranks
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
 
         synapse_count = []
         dendrites = []  

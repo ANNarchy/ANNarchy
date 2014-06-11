@@ -287,18 +287,20 @@ def _load_proj_data(net_desc):
         if proj.name in net_desc.keys():            
             proj_desc = net_desc[proj.name]
             if not proj_desc['post_ranks'] == proj._post_ranks:
-                Global._error('The projection has not the same number of postsynaptic neurons.')
+                Global._error('The current projection has not the same number of postsynaptic neurons as in the saved file.')
+                return
+            if not 'attributes' in proj_desc.keys():
+                _error('Saved with a too old version of ANNarchy.')
                 return
             for dendrite in proj_desc['dendrites']:
                 rk = dendrite['post_rank']
-                for var in dendrite.keys():
-                    if not var in ['post_rank', 'rank', 'delay']:
-                        try:
-                            getattr(proj.cyInstance, '_set_' + var)(rk, dendrite[var])
-                        except Exception, e:
-                            print e
-                            Global._error('Can not set attribute ' + var + ' in the projection.')
-                            return
+                for var in proj_desc['attributes']:
+                    try:
+                        getattr(proj.cyInstance, '_set_' + var)(rk, dendrite[var])
+                    except Exception, e:
+                        print e
+                        Global._error('Can not set attribute ' + var + ' in the projection.')
+                        return
 
 
                     
