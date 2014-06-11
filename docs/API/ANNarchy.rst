@@ -58,53 +58,39 @@ If you want to run multiple experiments with the same network, or if your experi
 
 .. autofunction:: ANNarchy.reset
 
+Access to populations
+=====================
+
+.. autofunction:: ANNarchy.get_population
+
 Recordings
 ===========
 
-ANNarchy.start_record()
--------------------------------------------------
 
 .. autofunction:: ANNarchy.start_record
 
-ANNarchy.stop_record()
--------------------------------------------------
 
 .. autofunction:: ANNarchy.stop_record
 
-ANNarchy.get_record()
--------------------------------------------------
 
 .. autofunction:: ANNarchy.get_record
 
-ANNarchy.pause_record()
--------------------------------------------------
 
 .. autofunction:: ANNarchy.pause_record
 
-ANNarchy.resume_record()
--------------------------------------------------
 
 .. autofunction:: ANNarchy.resume_record
 
 Saving/Loading
 ===============
 
-ANNarchy.save()
--------------------------------------------------
 
-To save the network state you may use the following method:
+To save or load the network state you can use the following methods:
 
 .. autofunction:: ANNarchy.save
-    
-Please note that these function is only usable after ANNarchy.compile().
-
-ANNarchy.load()
--------------------------------------------------
-
-To save the network state you may use the following method:
 
 .. autofunction:: ANNarchy.load
     
-Please note that these function is only usable after ANNarchy.compile().
+Please note that these functions are only usable after the call to ``ANNarchy.compile()``.
 
 

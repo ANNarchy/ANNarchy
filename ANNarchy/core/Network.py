@@ -146,7 +146,7 @@ class Network(object):
     
     def get_projection(self, pre, post, target):
         """
-        Returns projection corresponding to the arguments.
+        Returns the projection corresponding to the arguments.
         
         Parameters:
         
@@ -156,7 +156,7 @@ class Network(object):
         
         Returns:
         
-        the requested projection if existing otherwise None is returned.
+        * the requested projection if existing, otherwise None is returned.
         """
         for proj in self._projections:
             
