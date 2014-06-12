@@ -27,7 +27,7 @@
 class SpikeDendrite: public Dendrite
 {
 public:
-	SpikeDendrite();
+	SpikeDendrite(class SpikeProjection* proj);
 
     /**
      * 	\brief		returns the reference to presynaptic populations
@@ -54,7 +54,6 @@ public:
     virtual void postEvent() = 0;
 
 protected:
-
 };
 
 #endif

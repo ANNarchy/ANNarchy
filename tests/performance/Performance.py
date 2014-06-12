@@ -16,8 +16,8 @@ from ANNarchy.extensions.Profile import *
 # END_NUMBER_OF_CONNECTIONS = 100
 #===============================================================================
 
-START_NUMBER_OF_NEURONS = 1024
-END_NUMBER_OF_NEURONS = 1024
+START_NUMBER_OF_NEURONS = 4096
+END_NUMBER_OF_NEURONS = 4096
 
 START_NUMBER_OF_CONNECTIONS = 16
 END_NUMBER_OF_CONNECTIONS = 4096
@@ -37,7 +37,7 @@ while c <= END_NUMBER_OF_CONNECTIONS:
     connection_config.append(c)
     c *= 2 
 
-thread_config = [1,2,3,4]
+thread_config = [1,2,3,4,5,6,7,8]
 operation = 'sum'
 
 #
@@ -83,6 +83,8 @@ for neur in neuron_config:
 # evaluate scalability
 scalability.analyze_data()
 
-scalability.visualize_data()
+#scalability.visualize_data()
+
+scalability.save_as_mat()
 
 raw_input()
