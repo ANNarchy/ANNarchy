@@ -23,10 +23,30 @@
 
 SpikeDendrite::SpikeDendrite(class SpikeProjection* proj): Dendrite( false, (Projection*)proj )
 {
+	delayed_pre_spikes_ = std::deque<std::vector<int> >(maxDelay_, std::vector<int>());
+}
 
+void SpikeDendrite::set_delay(std::vector<int> delay)
+{
+	Dendrite::set_delay(delay);
+
+	while(delayed_pre_spikes_.size() < maxDelay_ )
+		delayed_pre_spikes_.push_back(std::vector<int>());
 }
 
 void SpikeDendrite::preEvent(int rank)
 {
-	pre_spikes_.push_back(inv_rank_[rank]);
+	int rk = inv_rank_[rank];
+	if (maxDelay_ > 0)
+	{
+		if (constDelay_) {
+			delayed_pre_spikes_[delay_[0]-1].push_back(rk);
+		}else{
+			delayed_pre_spikes_[delay_[rk]-1].push_back(rk);
+		}
+	}
+	else
+	{
+		pre_spikes_.push_back(rk);
+	}
 }

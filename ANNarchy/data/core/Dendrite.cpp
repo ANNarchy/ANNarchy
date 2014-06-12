@@ -59,7 +59,7 @@ void Dendrite::set_delay(std::vector<int> delay)
 	std::cout << "OLD: maxDelay = " << maxDelay_ << " and constDelay_ " << constDelay_ << std::endl;
 #endif
 	for(auto it=delay.begin(); it!=delay.end();it++)
-            {
+    {
 		if(*it>maxDelay_)
 			maxDelay_ = *it;
 

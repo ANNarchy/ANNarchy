@@ -117,11 +117,17 @@ public:
 	std::vector<int> get_delay() { return delay_; };
 
 	/**
+	 * 	\brief		get maximum value of synaptic delays
+	 * 	\return		maximum synaptic delay
+	 */
+	int get_max_delay() { return maxDelay_; }
+
+	/**
 	 * 	\brief		set synaptic delays
 	 * 	\details	automatically update constDelay_ and maxDelay_.
 	 * 	\param[in]	vector of synaptic delays.
 	 */
-	void set_delay(std::vector<int> delay);
+	virtual void set_delay(std::vector<int> delay);
 
 	/**
 	 * 	\brief		get ranks of presynaptic neurons

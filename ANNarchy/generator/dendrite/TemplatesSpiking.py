@@ -175,6 +175,23 @@ void %(class)s::postEvent()
 
 void %(class)s::evaluatePreEvent()
 {
+#if defined(_DEBUG) && defined (_DBEUG_SPIKE_DELAY)
+    std::cout << "t = "<< ANNarchy_Global::time << std::endl;
+    for ( int delay = 0;  delay < delayed_pre_spikes_.size(); delay++ )
+    {
+        std::cout << "delay = " << delay << ": [";
+        for ( auto it = delayed_pre_spikes_[delay].begin(); it != delayed_pre_spikes_[delay].end(); it++)
+            std::cout << *it << " ";
+        std::cout << "]" << std::endl;
+    }
+#endif
+    
+    if ( maxDelay_ > 0 )
+        if ( constDelay_ )
+            pre_spikes_ = delayed_pre_spikes_[0]; 
+        else
+            std::cout << "Not implemented yet.";    
+    
     if ( pre_spikes_.size() > 0 )
     {
     #ifdef _DEBUG
@@ -206,5 +223,7 @@ void %(class)s::evaluatePreEvent()
     }
 
     pre_spikes_.clear();
+    delayed_pre_spikes_.push_back( std::vector<int>() );
+    delayed_pre_spikes_.pop_front();
 }
 """

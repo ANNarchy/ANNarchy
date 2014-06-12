@@ -62,6 +62,8 @@ public:
 protected:
 	int nbDendrites_;
 	std::vector<int> post_spikes_;
+	std::deque<std::vector<int> > delayed_post_spikes_;
+
 	class SpikePopulation* pre_population_;
 	class SpikePopulation* post_population_;
 };
