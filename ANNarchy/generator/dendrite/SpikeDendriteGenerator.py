@@ -26,6 +26,8 @@ from ANNarchy.core import Global
 from DendriteGenerator import DendriteGenerator
 from Templates import *
 from TemplatesOMP import *
+from TemplatesSpiking import *
+
 import re
 
 class SpikeDendriteGenerator(DendriteGenerator):

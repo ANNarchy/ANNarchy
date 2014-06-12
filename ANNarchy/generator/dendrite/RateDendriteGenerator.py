@@ -27,6 +27,7 @@ from DendriteGenerator import DendriteGenerator
 from Templates import *
 from TemplatesOMP import *
 from TemplatesCUDA import *
+from TemplatesRateCode import *
 
 class RateDendriteGenerator(DendriteGenerator):
     """ Class for generating C++ code from a rate dendrite description. """
