@@ -25,3 +25,8 @@ SpikeDendrite::SpikeDendrite(class SpikeProjection* proj): Dendrite( false, (Pro
 {
 
 }
+
+void SpikeDendrite::preEvent(int rank)
+{
+	pre_spikes_.push_back(inv_rank_[rank]);
+}

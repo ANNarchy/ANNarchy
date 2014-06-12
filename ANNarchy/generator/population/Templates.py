@@ -63,82 +63,6 @@ private:
 #endif
 """
 
-# Header for a Spike population.
-# 
-# Depends on:
-# 
-#     * class : the class name (e.g. Population1)
-#    
-#     * access : public access methods for all parameters and variables
-#    
-#     * global_ops_access : access to the global operations (min, max, mean, etc)
-#    
-#     * global_ops_method : methods for the global operations (min, max, mean, etc)
-#    
-#     * member : private definition of parameters and variables    
-#    
-#     * random : private definition of RandomDistribution arrays  
-#    
-#     * functions : inline definition of custom functions       
-spike_population_header = \
-"""#ifndef __ANNarchy_%(class)s_H__
-#define __ANNarchy_%(class)s_H__
-
-#include "Global.h"
-#include "SpikePopulation.h"
-using namespace ANNarchy_Global;
-
-class %(class)s: public SpikePopulation
-{
-public:
-    %(class)s(std::string name, int nbNeurons);
-    
-    ~%(class)s();
-    
-    int getNeuronCount() { return nbNeurons_; }
-    
-    void prepareNeurons();
-    
-    void resetToInit();
-    
-    void localMetaStep(int neur_rank);
-    
-    void globalMetaStep();
-    
-    void globalOperations();
-    
-    void record();
-
-    void propagatePreSpike();
-    
-    void propagatePostSpike();
-    
-    void reset();    // called by global_operations
-
-    void reset(int rank);    // called by metaStep during refractoring phase
-
-%(global_ops_access)s
-    
-%(access)s
-
-%(functions)s
-
-private:
-    
-%(global_ops_method)s
-
-%(member)s
-
-%(random)s
-
-    std::vector<int> propagate_;    ///< neurons which will propagate their spike
-    std::vector<int> reset_;    ///< neurons which will reset after current eval
-    
-    %(friend)s
-};
-#endif
-"""
-
 # Template for a local variable
 # 
 # Depends on:
@@ -296,6 +220,82 @@ rate_prepare_neurons="""
     }
 """
 
+# Header for a Spike population.
+# 
+# Depends on:
+# 
+#     * class : the class name (e.g. Population1)
+#    
+#     * access : public access methods for all parameters and variables
+#    
+#     * global_ops_access : access to the global operations (min, max, mean, etc)
+#    
+#     * global_ops_method : methods for the global operations (min, max, mean, etc)
+#    
+#     * member : private definition of parameters and variables    
+#    
+#     * random : private definition of RandomDistribution arrays  
+#    
+#     * functions : inline definition of custom functions       
+spike_population_header = \
+"""#ifndef __ANNarchy_%(class)s_H__
+#define __ANNarchy_%(class)s_H__
+
+#include "Global.h"
+#include "SpikePopulation.h"
+using namespace ANNarchy_Global;
+
+class %(class)s: public SpikePopulation
+{
+public:
+    %(class)s(std::string name, int nbNeurons);
+    
+    ~%(class)s();
+    
+    int getNeuronCount() { return nbNeurons_; }
+    
+    void prepareNeurons();
+    
+    void resetToInit();
+    
+    void localMetaStep(int neur_rank);
+    
+    void globalMetaStep();
+    
+    void globalOperations();
+    
+    void record();
+
+    void propagateSpikes();
+    
+    void evaluateSpikes();
+    
+    void reset();    // called by global_operations
+
+    void reset(int rank);    // called by metaStep during refractoring phase
+
+%(global_ops_access)s
+    
+%(access)s
+
+%(functions)s
+
+private:
+    
+%(global_ops_method)s
+
+%(member)s
+
+%(random)s
+
+    std::vector<int> propagate_;    ///< neurons which will propagate their spike
+    std::vector<int> reset_;    ///< neurons which will reset after current eval
+    
+    %(friend)s
+};
+#endif
+"""
+
 # Body for a Spike population
 #
 # Depends on:
@@ -391,7 +391,7 @@ void %(class)s::record()
     }
 }
 
-void %(class)s::propagatePostSpike() 
+void %(class)s::propagateSpikes() 
 {
     if (!propagate_.empty())
     {
@@ -401,28 +401,28 @@ void %(class)s::propagatePostSpike()
             if ( static_cast<SpikeProjection*>(*p_it)->isLearning() )
                 static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
         }
-    }
-}
 
-void %(class)s::propagatePreSpike() 
-{
-    if (!propagate_.empty())
-    {
         for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
         {
             // emit a presynaptic spike on outgoing projections
             for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
             {
-                static_cast<SpikeDendrite*>(*p_it)->preEventPsp(*n_it);
-
-                if ( static_cast<SpikeDendrite*>(*p_it)->isLearning() )
-                    static_cast<SpikeDendrite*>(*p_it)->preEventLearn(*n_it);
+                static_cast<SpikeDendrite*>(*p_it)->preEvent(*n_it);
             }
-
         }
     
         // spike handling is completed
         propagate_.erase(propagate_.begin(), propagate_.end());
+    }
+}
+
+void %(class)s::evaluateSpikes()
+{
+    for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
+    {
+        static_cast<SpikeProjection*>(*p_it)->evaluatePostEvents();
+        
+        static_cast<SpikeProjection*>(*p_it)->evaluatePreEvents();
     }
 }
 

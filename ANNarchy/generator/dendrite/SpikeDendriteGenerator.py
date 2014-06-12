@@ -98,6 +98,8 @@ class SpikeDendriteGenerator(DendriteGenerator):
             'global': global_learn,
             'pre_event_psp': pre_event_psp,
             'pre_event_learn': pre_event_learn,
+            'lside': pre_event_psp.split("+=")[0],
+            'rside': pre_event_psp.split("+=")[1],
             'post_event': post_event,
             'record' : record,
             'add_synapse_body': add_synapse,

@@ -49,13 +49,14 @@ public:
 
 	virtual void localLearn() = 0;
 
-    virtual void preEventPsp(int rank) = 0;
-
-    virtual void preEventLearn(int rank) = 0;
-
     virtual void postEvent() = 0;
 
+    virtual void evaluatePreEvent() = 0;
+
+    void preEvent(int rank);
+
 protected:
+    std::vector<int> pre_spikes_;
 };
 
 #endif

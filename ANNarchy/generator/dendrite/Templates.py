@@ -127,6 +127,8 @@ public:
         
     void record();
     
+    void evaluatePreEvent();
+    
 %(access)s
 
 %(functions)s
@@ -354,27 +356,45 @@ void %(class)s::record()
 %(record)s
 }
 
-void %(class)s::preEventPsp(int rank) 
-{
-    if ( post_population_->hasSpiked(post_neuron_rank_) )
-        return;
-    int i = inv_rank_[rank];
-        
-%(pre_event_psp)s
-}
-
-void %(class)s::preEventLearn(int rank) 
-{
-    if ( post_population_->hasSpiked(post_neuron_rank_) )
-        return;
-    int i = inv_rank_[rank];
-
-%(pre_event_learn)s
-}
-
 void %(class)s::postEvent() 
 {
 %(post_event)s
+}
+
+
+void %(class)s::evaluatePreEvent()
+{
+    if ( pre_spikes_.size() > 0 )
+    {
+    #ifdef _DEBUG
+        #pragma omp master
+        {
+            std::cout << "t = " << ANNarchy_Global::time << ", n = "<< post_neuron_rank_ << ": " << pre_spikes_.size() << " presynaptic event(s)." << std::endl;
+            std::cout << "[";
+            for (auto it = pre_spikes_.begin(); it != pre_spikes_.end(); it++)
+                std::cout << *it << ", ";
+            std::cout << "]"<< std::endl;
+        }
+    #endif
+
+        for ( int n = 0; n < pre_spikes_.size(); n++)
+        {
+            int i = pre_spikes_[n];
+            
+            %(pre_event_psp)s            
+        }
+        
+        if ( isLearning() && !post_population_->hasSpiked(post_neuron_rank_) )
+        {
+            for ( int n = 0; n < pre_spikes_.size(); n++)
+            {
+                int i = pre_spikes_[n];
+                %(pre_event_learn)s
+            }
+        }
+    }
+
+    pre_spikes_.clear();
 }
 """
 
