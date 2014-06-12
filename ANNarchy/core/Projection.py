@@ -807,5 +807,49 @@ class Projection(object):
         desc['dendrites'] = dendrites
         desc['number_of_synapses'] = synapse_count
         return desc
-                
+    
+    def save(self, filename):
+        """
+        Saves all information about the projection (connectivity, current value of parameters and variables) into a file.
+
+        * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+
+        * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+
+        * Otherwise, the data will be pickled into a simple binary text file using cPickle.
+        
+        *Parameter*:
+        
+        * **filename**: filename, may contain relative or absolute path.
+        
+            .. warning:: 
+
+                The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+
+        Example::
+        
+            proj.save('pop1.txt')
+
+        """
+        from ANNarchy.core.IO import _save_data
+        _save_data(filename, self._data())
+
+
+    def load(self, filename):
+        """
+        Load the saved state of the projection.
+
+        Warning: Matlab data can not be loaded.
+        
+        *Parameters*:
+        
+        * **filename**: the filename with relative or absolute path.
+        
+        Example::
+        
+            proj.load('pop1.txt')
+
+        """
+        from ANNarchy.core.IO import _load_data, _load_proj_data
+        _load_proj_data(self, _load_data(filename))
 

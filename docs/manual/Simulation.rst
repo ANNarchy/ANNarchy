@@ -30,10 +30,13 @@ In some cases, you may want to perform only one step of the simulation, instead 
 
     step() # Simulate for 1 step
 
-Saving/loading the network
-==========================
+Saving/loading 
+===============
 
-The state of all variables, including the synapses, can be saved in a text file, compressed binary file or Matlab file using the ``save()``:
+Whole state of the network
+--------------------------
+
+The state of all variables, including the synaptic weights, can be saved in a text file, compressed binary file or Matlab file using the ``save()`` method:
 
 .. code-block:: python
 
@@ -57,6 +60,20 @@ Except for the Matlab format, you can also load the state of variables stored in
 
 The structure of the network must of course be exactly the same as when the file was saved (number of populations, neurons, synapses...), otherwise an error will be thrown. ``load()`` also accepts the ``populations`` and ``projections`` boolean flags (for example if you want to load only the synaptic weights but not restore the neural variables).
 
+Populations and projections individually
+----------------------------------------
+
+``Population`` and ``Projection`` objects also have ``save()`` and ``load()``, allowing to save only the interesting information:
+
+.. code-block:: python
+
+    pop1.save('pop1.txt')
+    proj.save('proj.txt')
+
+    pop1.load('pop1.txt')
+    proj.load('proj.txt')
+
+The same file formats are allowed (Matlad data can not be loaded).
 
 Running the simulation
 ===================================
@@ -112,6 +129,6 @@ It is the responsability of the user to find out which number of cores is optima
 Parallel computing with CUDA
 -------------------------------
 
-TODO: not implemented yet, planned in version 4.2.
+TODO: not implemented yet, planned in version 4.3.
 
 
