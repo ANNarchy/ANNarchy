@@ -117,11 +117,17 @@ public:
 	std::vector<int> get_delay() { return delay_; };
 
 	/**
+	 * 	\brief		get maximum value of synaptic delays
+	 * 	\return		maximum synaptic delay
+	 */
+	int get_max_delay() { return maxDelay_; }
+
+	/**
 	 * 	\brief		set synaptic delays
 	 * 	\details	automatically update constDelay_ and maxDelay_.
 	 * 	\param[in]	vector of synaptic delays.
 	 */
-	void set_delay(std::vector<int> delay);
+	virtual void set_delay(std::vector<int> delay);
 
 	/**
 	 * 	\brief		get ranks of presynaptic neurons
@@ -159,43 +165,25 @@ public:
 	 * 	\brief		determine if the synapses learn at current time step
 	 * 	\details	only True if learnable_ is True and time % learn frequency is equal to the learn offset, called only internally by Population::metaLearn()
 	 */
-    bool isLearning() { return (learnable_ && ((ANNarchy_Global::time)%learnFrequency_ == learnOffset_)); }
-
-    /**
-	 * 	\brief		set learnable property
-	 * 	\details	called by cython wrapper.
-	 */
-    void setLearnable( bool learnable ) { learnable_ = learnable; }
+    bool isLearning();
 
     /**
 	 * 	\brief		returns learnable property
 	 * 	\details	called by cython wrapper.
 	 */
-    bool isLearnable() { return learnable_; }
+    bool isLearnable();
 
     /**
 	 * 	\brief		set learn frequency
 	 * 	\details	called by cython wrapper.
 	 */
-    void setLearnFrequency(int learnFrequency) { learnFrequency_ = learnFrequency; }
-
-    /**
-	 * 	\brief		set learn frequency
-	 * 	\details	called by cython wrapper.
-	 */
-    int getLearnFrequency() { return learnFrequency_; }
-
-    /**
-     * 	\brief		set learn offset
-	 * 	\details	called by cython wrapper.
-     */
-    void setLearnOffset(int learnOffset) { learnOffset_ = learnOffset; }
+    int getLearnFrequency();
 
     /**
      * 	\brief		get learn offset
 	 * 	\details	called by cython wrapper.
      */
-    int getLearnOffset() { return learnOffset_; }
+    int getLearnOffset();
 
 protected:
     class Projection *proj_;
@@ -214,9 +202,6 @@ protected:
 
     std::vector<DATA_TYPE> w_;	///< synaptic weights
 
-    int learnFrequency_; 	///< the learn frequency determines after which amount of steps the next learn will executed.
-    int learnOffset_;	///< the learn offset determines the time step within the learn frequency window, where learning will be executed.
-    bool learnable_;
     bool isRateCoded_;
 };
 #endif

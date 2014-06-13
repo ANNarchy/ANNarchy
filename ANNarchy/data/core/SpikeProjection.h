@@ -35,6 +35,10 @@ public:
 
     void postEvent(std::vector<int> post_ranks);
 
+    void evaluatePostEvents();
+
+    void evaluatePreEvents();
+
 	Population* getPrePopulation();
 
 	void addDendrite(int postNeuronRank, class Dendrite *dendrite);
@@ -57,10 +61,10 @@ public:
 
 protected:
 	int nbDendrites_;
+	std::vector<int> post_spikes_;
+	std::deque<std::vector<int> > delayed_post_spikes_;
 
 	class SpikePopulation* pre_population_;
 	class SpikePopulation* post_population_;
-
-	//std::vector< class SpikeDendrite* > dendrites_;
 };
 #endif

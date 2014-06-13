@@ -53,11 +53,15 @@ void SpikeProjection::localLearn()
 
 		static_cast<SpikeDendrite*>(dendrites_[n])->localLearn();
 	}
-
 	#pragma omp barrier
 }
 
 void SpikeProjection::postEvent(std::vector<int> post_ranks)
+{
+	post_spikes_ = post_ranks;
+}
+
+void SpikeProjection::evaluatePostEvents()
 {
 #ifdef _DEBUG
 	std::cout << "number of post events: " << post_ranks.size() << ", time = "<< ANNarchy_Global::time << std::endl;
@@ -66,12 +70,31 @@ void SpikeProjection::postEvent(std::vector<int> post_ranks)
 	std::cout << "ID of active thread(s) in this block: " << omp_get_thread_num() << std::endl;
 #endif
 
-	for ( unsigned int n = 0; n < post_ranks.size(); n++ )
+	if ( post_spikes_.size() > 0 )
+	{
+		#pragma omp for
+		for ( int n = 0; n < (int)post_spikes_.size(); n++ )
+		{
+			if ( !dendrites_[post_spikes_[n]] )
+				continue;
+
+			static_cast<SpikeDendrite*>(dendrites_[post_spikes_[n]])->postEvent();
+		}
+		#pragma omp barrier
+
+		post_spikes_.clear();
+	}
+}
+
+void SpikeProjection::evaluatePreEvents()
+{
+	#pragma omp for
+	for ( unsigned int n = 0; n < nbDendrites_; n++ )
 	{
 		if ( !dendrites_[n] )
 			continue;
 
-		static_cast<SpikeDendrite*>(dendrites_[post_ranks[n]])->postEvent();
+		static_cast<SpikeDendrite*>(dendrites_[n])->evaluatePreEvent();
 	}
 }
 

@@ -26,6 +26,8 @@ from ANNarchy.core import Global
 from DendriteGenerator import DendriteGenerator
 from Templates import *
 from TemplatesOMP import *
+from TemplatesSpiking import *
+
 import re
 
 class SpikeDendriteGenerator(DendriteGenerator):
@@ -73,7 +75,8 @@ class SpikeDendriteGenerator(DendriteGenerator):
         local_learn = self.generate_locallearn()
          
         # Generate code for the pre- and postsynaptic events
-        pre_event = self.generate_pre_event()
+        pre_event_psp = self.generate_pre_event_psp()
+        pre_event_learn = self.generate_pre_event_learn()
         post_event = self.generate_post_event()
          
         # structural plasticity
@@ -94,8 +97,11 @@ class SpikeDendriteGenerator(DendriteGenerator):
             'post_type': self.desc['post_class'],
             'init': constructor, 
             'local': local_learn, 
-            'global': global_learn,#
-            'pre_event': pre_event,
+            'global': global_learn,
+            'pre_event_psp': pre_event_psp,
+            'pre_event_learn': pre_event_learn,
+            'lside': pre_event_psp.split("+=")[0],
+            'rside': pre_event_psp.split("+=")[1],
             'post_event': post_event,
             'record' : record,
             'add_synapse_body': add_synapse,
@@ -107,6 +113,8 @@ class SpikeDendriteGenerator(DendriteGenerator):
     def generate_record(self):
         code = DendriteGenerator.generate_record(self)
  
+        added = [] # list of already added variables, to prevent double adding, e. g. w
+                
         if 'pre_spike' in self.desc.keys():
             for param in self.desc['pre_spike']:
                 if param['name'] in self.desc['local']:
@@ -116,7 +124,8 @@ class SpikeDendriteGenerator(DendriteGenerator):
                 if re.findall("(?<=g\_)[A-Za-z]+", param['name']) != []:
                     #print 'skipped', param['name']
                     continue
-                 
+                
+                added += param['name']
                 code += """
     if ( record_%(var)s_ )
         recorded_%(var)s_.push_back(%(var)s_);
@@ -124,7 +133,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
  
         if 'post_spike' in self.desc.keys():
             for param in self.desc['post_spike']:
-                if param['name'] in self.desc['local']:
+                if param['name'] in self.desc['local'] + added:
                     continue
                  
                 code += """
@@ -133,14 +142,32 @@ class SpikeDendriteGenerator(DendriteGenerator):
 """ % { 'var': param['name'] }
  
         return code
+
+    def generate_pre_event_psp(self):
+        """ """
+        code = ""
+        if 'pre_spike' in self.desc.keys():
+            for tmp in self.desc['pre_spike']:
+                if tmp['name'] == "g_"+self.desc['target']:
+                    code += """ 
+    %(eq)s
+""" % { 'eq' : tmp['eq'] }
          
-    def generate_pre_event(self):
+        dictionary = {
+            'eq' : code,
+            'target': self.desc['target']
+        }
+        return conductance_body % dictionary
+
+    def generate_pre_event_learn(self):
         """ """
         code = ""
  
         # generate additional statements        
         if 'pre_spike' in self.desc.keys():
             for tmp in self.desc['pre_spike']:
+                if tmp['name'] == "g_"+self.desc['target']:
+                    continue
                 code += """
     %(eq)s
 """ % { 'eq' : tmp['eq'] }
@@ -154,20 +181,20 @@ class SpikeDendriteGenerator(DendriteGenerator):
     def generate_post_event(self):
         """ """
         code = ""
- 
+
         # generate additional statements        
         if 'post_spike' in self.desc.keys():
             for tmp in self.desc['post_spike']:
                 code += """
     %(eq)s
 """ % { 'eq' : tmp['eq'] }
-         
+
         dictionary = {
             'eq' : code,
             'target': self.desc['target']
         }
         return post_event_body % dictionary
-     
+
     def generate_globallearn(self):
         """ Generates code for the globalLearn() method for global variables. """
         code = ""

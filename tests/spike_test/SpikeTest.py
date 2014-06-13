@@ -72,7 +72,7 @@ testAll2AllSpike = Projection(
     post = Middle, 
     target = 'exc',
     synapse = SimpleLearn
-).connect_all_to_all(weights=Uniform(0.0, 1.0))
+).connect_all_to_all(weights=Uniform(0.0, 1.0), delays=100.0)
 
 compile()
 
@@ -84,6 +84,14 @@ start_record ( to_record )
 testAll2AllSpike.dendrite(0).start_record('Apre')
 testAll2AllSpike.dendrite(0).start_record('Apost')
 testAll2AllSpike.dendrite(0).start_record('w')
+
+simulate(1000)
+
+testAll2AllSpike.disable_learning()
+
+simulate(1000)
+
+testAll2AllSpike.enable_learning()
 
 simulate(1000)
 

@@ -331,17 +331,16 @@ void Network::run(int steps)
             {
 				for(unsigned int p = 0; p < spike_populations_.size(); p++)
 				{
-					spike_populations_[p]->propagatePostSpike();
+					spike_populations_[p]->propagateSpikes();
 				}
             }
 			#pragma omp barrier
 
-			#pragma omp master
+			//
+            // parallel neuron/dendrite wise
+			for(unsigned int p = 0; p < spike_populations_.size(); p++)
 			{
-				for(unsigned int p = 0; p < spike_populations_.size(); p++)
-				{
-					spike_populations_[p]->propagatePreSpike();
-				}
+				spike_populations_[p]->evaluateSpikes();
 			}
 			#pragma omp barrier
 

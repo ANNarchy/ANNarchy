@@ -29,6 +29,13 @@ class SpikeDendrite: public Dendrite
 public:
 	SpikeDendrite(class SpikeProjection* proj);
 
+	/**
+	 * 	\brief		set synaptic delays
+	 * 	\details	automatically update constDelay_ and maxDelay_.
+	 * 	\param[in]	vector of synaptic delays.
+	 */
+	void set_delay(std::vector<int> delay);
+
     /**
      * 	\brief		returns the reference to presynaptic populations
      * 	\details	is abstract, cause the reference is hold by child class.
@@ -49,11 +56,15 @@ public:
 
 	virtual void localLearn() = 0;
 
-    virtual void preEvent(int rank) = 0;
-
     virtual void postEvent() = 0;
 
+    virtual void evaluatePreEvent() = 0;
+
+    void preEvent(int rank);
+
 protected:
+    std::vector<int> pre_spikes_;
+    std::deque<std::vector<int> > delayed_pre_spikes_;
 };
 
 #endif
