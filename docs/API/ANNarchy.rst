@@ -28,31 +28,12 @@ The goal of this function is to generate all needed classes, compile all C++ sou
 Simulation
 ================================================
 
-Next to read or write of the variables / parameters existing a network ANNarchy provides some additional functions available after ``ANNarchy.compile``.
+Two methods are available to run the simulation
 
-ANNarchy.simulate()
-------------------------------------------------
-    
-After calling ``ANNarchy.compile()`` and a successful compilation process, you may run the simulation with:
 
-.. code-block:: python
-    
-    ANNarchy.simulate(100.0) # simulate 100 milliseconds
-    
-and access to all objects within your network. Complete examples could be found in the section :doc:`../Example`.
+.. autofunction:: ANNarchy.simulate
 
-ANNarchy.step()
-------------------------------------------------
-    
-This function can also be called to perform a single simulation step:
-
-.. code-block:: python
-    
-    ANNarchy.step() # simulate 1 time steps
-    
-
-ANNarchy.reset()
--------------------------------------------------
+.. autofunction:: ANNarchy.step
 
 If you want to run multiple experiments with the same network, or if your experiment setup requires a pre learning phase, you can reset selectively neural or synaptic variables to their initial values. 
 

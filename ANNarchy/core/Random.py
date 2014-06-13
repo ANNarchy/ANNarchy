@@ -51,9 +51,6 @@ class RandomDistribution(object):
     BaseClass for random distributions.
     """
 
-    def __init__(self):
-        pass
-
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
@@ -65,15 +62,13 @@ class RandomDistribution(object):
         """
         Returns a list of the given size.
         """
-        Global._error('instantiated base class RandomDistribution is not allowed.')
-        return []
+        return list(self.get_values(size))
 
     def get_value(self):
         """
         Returns a single float value.
         """
-        Global._error('instantiated base class RandomDistribution is not allowed.')
-        return 0.0
+        return self.get_values((1))[0]
 
     def keywords(self):
         return available_distributions
@@ -88,214 +83,144 @@ class Constant(RandomDistribution):
         
         * *value*: the constant value
         """
-        self._value = value
+        self.value = value
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        return self._value * np.ones(shape)
-        
-    def get_list_values(self, size):
-        """
-        Returns a list of the given size.
-        """
-        return [self._value for i in range(size) ]
-    
-    def get_value(self):
-        """
-        Returns a single float value.
-        """
-        return self.get_values((1))[0]
-    
-    def max(self):
-        return self._value
-
-    def min(self):
-        return self._value
+        return self.value * np.ones(shape)
 
     def _gen_cpp(self):
-        return 'Constant<DATA_TYPE>('+str(self._value)+')'
+        return 'Constant<DATA_TYPE>('+str(self.value)+')'
 
 class Uniform(RandomDistribution):
     """
-    Random distribution instance returning a random value based on uniform distribution for floating point values.
+    Random distribution object using the uniform distribution between ``min`` and ``max``.
+
+    The returned values are floats in the range [min, max].
     """   
-    def __init__(self, min, max, cpp_seed=-1):
+    def __init__(self, min, max, seed=-1):
         """        
-        Parameters:
+        *Parameters*:
         
-        * *min*: minimum value
+        * **min**: minimum value.
         
-        * *max*: maximum value
+        * **max**: maximum value.
         
-        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
-        self._min = min
-        self._max = max
-        self._cpp_seed = cpp_seed
+        self.min = min
+        self.max = max
+        if seed == -1:
+            seed = Global.config['seed']
+        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
-        Returns a np.ndarray with the given shape
+        Returns a Numpy array with the given shape.
         """
-        return np.random.uniform(self._min, self._max, shape)
-    
-    def get_list_values(self, size):
-        """
-        Returns a list of the given size.
-        """
-        return list(np.random.uniform(self._min, self._max, size))
-
-    def get_value(self):
-        """
-        Returns a single float value.
-        """
-        return self.get_values((1))[0]
-
-    def max(self):
-        return self._max
-
-    def min(self):
-        return self._min
+        if self._cpp_seed != -1:
+            np.random.seed(self._cpp_seed)
+        return np.random.uniform(self.min, self.max, shape)
 
     def _gen_cpp(self):
-        return 'UniformDistribution<DATA_TYPE>('+str(self._min)+','+str(self._max)+', '+str(self._cpp_seed)+')'
+        return 'UniformDistribution<DATA_TYPE>('+str(self.min)+','+str(self.max)+', '+str(self._cpp_seed)+')'
 
 class DiscreteUniform(RandomDistribution):
     """
-    Random distribution instance returning a random value based on uniform distribution for integer values.
+    Random distribution object using the discrete uniform distribution between ``min`` and ``max``.
+
+    The returned values are integers in the range [min, max].
     """   
-    def __init__(self, min, max, cpp_seed=-1):
+    def __init__(self, min, max, seed=-1):
         """        
-        Parameters:
+        *Parameters*:
         
-        * *min*: minimum value
+        * **min**: minimum value
         
-        * *max*: maximum value
+        * **max**: maximum value
         
-        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
-        self._min = min
-        self._max = max
-        self._cpp_seed = cpp_seed
+        self.min = min
+        self.max = max
+        if seed == -1:
+            seed = Global.config['seed']
+        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        return np.random.uniform(self._min, self._max, shape)
-    
-    def get_list_values(self, size):
-        """
-        Returns a list of the given size.
-        """
-        return list(np.random.uniform(self._min, self._max, size))
-
-    def get_value(self):
-        """
-        Returns a single float value.
-        """
-        return self.get_values((1))[0]
-
-    def max(self):
-        return self._max
-
-    def min(self):
-        return self._min
+        if self._cpp_seed != -1:
+            np.random.seed(self._cpp_seed)
+        return np.random.random_integers(self.min, self.max, shape)
     
     def _gen_cpp(self):
-        return 'UniformDistribution<int>('+str(self._min)+','+str(self._max)+', '+str(self._cpp_seed)+')'
+        return 'UniformDistribution<int>('+str(self.min)+','+str(self.max)+', '+str(self._cpp_seed)+')'
     
 class Normal(RandomDistribution):
     """
-    Random distribution instance returning a random value based on uniform distribution.
+    Random distribution instance returning a random value based on a normal (Gaussian) distribution.
     """   
-    def __init__(self, mu, sigma, cpp_seed=-1):
+    def __init__(self, mu, sigma, seed=-1):
         """        
-        Parameters:
+        *Parameters*:
         
-        * *mu*: mean of the distribution
+        * **mu**: mean of the distribution
         
-        * *sigma*: standard deviation of the distribution
+        * **sigma**: standard deviation of the distribution
         
-        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
-        self._mu = mu
-        self._sigma = sigma
-        self._cpp_seed = cpp_seed
+        self.mu = mu
+        self.sigma = sigma
+        if seed == -1:
+            seed = Global.config['seed']
+        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        return np.random.normal(self._mu, self._sigma, shape)
-    
-    def get_list_values(self, size):
-        """
-        Returns a list of the given size.
-        """
-        return list(np.random.normal(self._mu, self._sigma, size))
-    
-    def get_value(self):
-        """
-        Returns a single float value.
-        """
-        return self.get_values((1))[0]
-        
-    def mu(self):
-        return self._mu
-
-    def sigma(self):
-        return self._sigma
+        if self._cpp_seed != -1:
+            np.random.seed(self._cpp_seed)
+        return np.random.normal(self.mu, self.sigma, shape)
     
     def _gen_cpp(self):
-        return 'NormalDistribution<DATA_TYPE>('+str(self._mu)+','+str(self._sigma)+', '+str(self._cpp_seed)+')'
+        return 'NormalDistribution<DATA_TYPE>('+str(self.mu)+','+str(self.sigma)+', '+str(self._cpp_seed)+')'
 
 class LogNormal(RandomDistribution):
     """
     Random distribution instance returning a random value based on lognormal distribution.
     """   
-    def __init__(self, mu, sigma, cpp_seed=-1):
+    def __init__(self, mu, sigma, seed=-1):
         """        
-        Parameters:
+        *Parameters*:
         
-        * *mu*: mean of the distribution
+        * **mu**: mean of the distribution
         
-        * *sigma*: standard deviation of the distribution
+        * **sigma**: standard deviation of the distribution
         
-        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
-        self._mu = mu
-        self._sigma = sigma
-        self._cpp_seed = cpp_seed
+        self.mu = mu
+        self.sigma = sigma
+        if seed == -1:
+            seed = Global.config['seed']
+        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        return np.random.lognormal(self._mu, self._sigma, shape)
-    
-    def get_list_values(self, size):
-        """
-        Returns a list of the given size.
-        """
-        return list(np.random.lognormal(self._mu, self._sigma, size))
-    
-    def get_value(self):
-        """
-        Returns a single float value.
-        """
-        return self.get_values((1))[0]
-        
-    def mu(self):
-        return self._mu
-
-    def sigma(self):
-        return self._sigma
+        if self._cpp_seed != -1:
+            np.random.seed(self._cpp_seed)
+        return np.random.lognormal(self.mu, self.sigma, shape)
 
     def _gen_cpp(self):
-        return 'LogNormalDistribution('+str(self._mu)+','+str(self._sigma)+', '+str(self._cpp_seed)+')'
+        return 'LogNormalDistribution('+str(self.mu)+','+str(self.sigma)+', '+str(self._cpp_seed)+')'
 
 class Exponential(RandomDistribution):
     """
@@ -306,82 +231,62 @@ class Exponential(RandomDistribution):
         P(x | \lambda) = \lambda e^{(-\lambda x )}
 
     """   
-    def __init__(self, Lambda, cpp_seed=-1):
+    def __init__(self, Lambda, seed=-1):
         """        
-        Parameters:
+        *Parameters*:
         
-        * *Lambda*: rate parameter
+        * **Lambda**: rate parameter.
         
-        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
+        
+        .. note::
+
+            ``Lambda`` is capitalized, otherwise it would be a reserved Python keyword.
+
         """
-        self._lambda = Lambda
-        self._cpp_seed = cpp_seed
+        self.Lambda = Lambda
+        if seed == -1:
+            seed = Global.config['seed']
+        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
-        Returns a np.ndarray with the given shape
+        Returns a np.ndarray with the given shape.
         """
-        return np.random.exponential(self._lambda, shape)
-    
-    def get_list_values(self, size):
-        """
-        Returns a list of the given size.
-        """
-        return list(np.random.exponential(self._lambda, size))
-
-    def get_value(self):
-        """
-        Returns a single float value.
-        """
-        return self.get_values((1))[0]
-    
-    def Lambda(self):
-        return self._lambda
+        if self._cpp_seed != -1:
+            np.random.seed(self._cpp_seed)
+        return np.random.exponential(self.Lambda, shape)
 
     def _gen_cpp(self):
-        return 'ExponentialDistribution('+str(self._lambda)+')'
+        return 'ExponentialDistribution('+str(self.Lambda)+')'
 
 class Gamma(RandomDistribution):
     """
     Random distribution instance returning a random value based on gamma distribution.
     """   
-    def __init__(self, alpha, beta=1.0, cpp_seed=-1):
+    def __init__(self, alpha, beta=1.0, seed=-1):
         """        
-        Parameters:
+        *Parameters*:
         
-        * *alpha*: shape of the gamma distribution
+        * **alpha**: shape of the gamma distribution
         
-        * *beta*: scale of the gamma distribution
+        * **beta**: scale of the gamma distribution
         
-        * *cpp_seed*: seed value for cpp. If cpp_seed == -1, the cpp seed will be initialized without a special.
+        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
-        self._alpha = alpha
-        self._beta = beta
-        self._cpp_seed = cpp_seed
+        self.alpha = alpha
+        self.beta = beta
+        if seed == -1:
+            seed = Global.config['seed']
+        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        return np.random.gamma(self._alpha, self._beta, shape)
-    
-    def get_list_values(self, size):
-        """
-        Returns a list of the given size.
-        """
-        return list(np.random.gamma(self._alpha, self._beta, size))
-
-    def get_value(self):
-        """
-        Returns a single float value.
-        """
-        return self.get_values((1))[0]
-    
-    def alpha(self):
-        return self._alpha
-
-    def beta(self):
-        return self._beta
+        if self._cpp_seed != -1:
+            np.random.seed(self._cpp_seed)
+        return np.random.gamma(self.alpha, self.beta, shape)
 
     def _gen_cpp(self):
-        return 'GammaDistribution('+str(self._alpha)+','+str(self._beta)+', '+str(self._cpp_seed)+')'
+        return 'GammaDistribution('+str(self.alpha)+','+str(self.beta)+', '+str(self._cpp_seed)+')'

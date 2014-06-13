@@ -30,16 +30,12 @@ import traceback
 
 
 class Dendrite(object):
-    """
-    A dendrite encapsulates all synapses of one neuron coming from a single projection.
-    
-    *Hint*: this class is only a data wrapper  created from projection class.
-    
-    Parameter:
-    
-    * *proj*: projection instance
-    * *post_rank*: rank of the postsynaptic neuron
-    * *cython_instance*: instance of the cythonized dendrite class.
+    """    
+    A ``Dendrite`` is a sub-group of a ``Projection``, gathering the synapses between the pre-synaptic population and a single post-synaptic neuron. 
+
+    It can not be created directly, only through a call to ``Projection.dendrite(rank)``::
+
+        dendrite = proj.dendrite(6)
     """
     def __init__(self, proj, post_rank):
 
@@ -52,6 +48,7 @@ class Dendrite(object):
         self.parameters = self.proj.parameters
         self.variables = self.proj.variables
 
+    @property
     def size(self):
         """
         Number of synapses.
@@ -96,7 +93,7 @@ class Dendrite(object):
                 elif isinstance(value, list):
                     getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, np.ndarray(value))
                 else :
-                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value * np.ones(self.size()))
+                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value * np.ones(self.size))
             else:
                 object.__setattr__(self, name, value)
         else:
@@ -104,15 +101,13 @@ class Dendrite(object):
 
     def set(self, value):
         """
-        Update dendrite variable/parameter.
+        Sets the value of a parameter/variable of all synapses.
         
-        Parameter:
+        *Parameter*:
         
-            * *value*: value need to be update
+            * **value**: a dictionary containing the parameter/variable names as keys::
             
-                .. code-block:: python
-                
-                    set( 'tau' : 20, 'w'= np.random.rand(8,8) } )
+                dendrite.set( 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
         """
         for val_key in value.keys():
             if hasattr(self.proj.cy_instance, val_key):
@@ -126,32 +121,37 @@ class Dendrite(object):
             else:
                 Global._error("Dendrite has no parameter/variable called", val_key)
                 
-    def get(self, value):
+    def get(self, name):
         """
-        Get current variable/parameter value
+        Returns the value of a variable/parameter.
         
-        Parameter:
+        *Parameter*:
         
-            * *value*: value name as string
+            * *name*: name of the parameter/variable::
+
+                dendrite.get('w')
         """
-        if value in self.attributes:
-            return getattr(self.proj.cyInstance, '_get_'+value)(self.post_rank)
+        if name in self.attributes:
+            return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
         else:
-            Global._error("Dendrite has no parameter/variable called", value)     
+            Global._error("Dendrite has no parameter/variable called", name)     
     
     
-    def receptive_field(self, variable = 'w'):
+    def receptive_field(self, variable = 'w', fill = 0.0):
         """
-        Get the variable data as receptive field.
+        Returns the given variable as a receptive field.
+
+        A Numpy array of the same geometry as the pre-synaptic population is returned. Non-existing synapses are replaced by zeros (or the value ``fill``).
         
-        Parameter:
+        *Parameter*:
         
-        * *variable*: name of the variable (default = 'w')
+        * **variable**: name of the variable (default = 'w')
+        * **fill**: value to use when a synapse does not exist.
         """
         values = getattr(self.proj.cyInstance, '_get_'+variable)(self.post_rank)
         ranks = self.proj.cyInstance._get_rank( self.post_rank )
              
-        m = np.zeros( self.pre.size )
+        m = fill * np.ones( self.pre.size )
         m[ranks] = values
 
         return m.reshape(self.pre.geometry)
@@ -190,11 +190,11 @@ class Dendrite(object):
         """
         Adds a synapse to the dendrite.
         
-        Parameters:
+        *Parameters*:
         
-            * *rank*:     rank of the presynaptic neuron
-            * *w*:    synaptic weight
-            * *delay*:    additional delay of the synapse (as default a delay of 1ms is assumed)
+        * **rank**: rank of the pre-synaptic neuron
+        * **w**: synaptic weight
+        * **delay**: synaptic delay (default = dt)
         """
         self.proj.cyInstance.add_synapse(self.post_rank, rank, w, delay)
     
@@ -202,9 +202,9 @@ class Dendrite(object):
         """
         Removes the synapse from the dendrite.
         
-        Parameters:
+        *Parameters*:
         
-            * *rank*:     rank of the presynaptic neuron
+        * **rank**: rank of the pre-synaptic neuron
         """
         self.proj.cyInstance.remove_synapse(self.post_rank, rank)
 
@@ -213,11 +213,11 @@ class Dendrite(object):
     #########################   
     def start_record(self, variable):
         """
-        Start recording the given variables.
+        Starts recording the given variables.
         
-        Parameter:
+        **Parameter**:
             
-            * *variable*: single variable name or list of variable names.        
+        * **variable**: single variable name or list of variable names.        
         """
         _variable = []
         
@@ -260,9 +260,9 @@ class Dendrite(object):
         """
         Stops recording the defined variables.
 
-        Parameter:
+        *Parameter*:
             
-        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
+        * **variable**: single variable name or list of variable names. If no argument is provided all recordings will stop.
         """
         _variable = []
         if variable == None:
@@ -299,9 +299,9 @@ class Dendrite(object):
         """
         Pause in recording the defined variables.
 
-        Parameter:
+        *Parameter*:
             
-        * *variable*: single variable name or list of variable names. If no argument is provided all records will stop.
+        * **variable**: single variable name or list of variable names. If no argument is provided all records will stop.
         """
         _variable = []
         if variable == None:
@@ -338,9 +338,9 @@ class Dendrite(object):
         """
         Resume recording the previous defined variables.
         
-        Parameter:
+        *Parameter*:
             
-            * *variable*: single variable name or list of variable names.        
+        * **variable**: single variable name or list of variable names.        
         """
         _variable = []
         
@@ -382,9 +382,9 @@ class Dendrite(object):
         Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
         The first dimension is the neuron index, the last dimension represents the number of simulation steps.
         
-        Parameter:
+        *Parameter*:
             
-        * *variable*: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
+        * **variable**: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
         """        
         _variable = []
         if variable == None:

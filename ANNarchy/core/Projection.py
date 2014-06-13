@@ -158,7 +158,7 @@ class Projection(object):
     @property
     def dendrites(self):
         """
-        Iteratively returns a list of dendrites corresponding to this projection.
+        Iteratively returns the dendrites corresponding to this projection.
         """
         for n in self._post_ranks:
             yield Dendrite(self, n)
@@ -166,7 +166,7 @@ class Projection(object):
     @property
     def post_ranks(self):
         """
-        List of postsynaptic neuron ranks having synapses in this projection.
+        List of postsynaptic neuron ranks receiving synapses in this projection.
         """
         return self._post_ranks
     
@@ -174,9 +174,9 @@ class Projection(object):
         """
         Returns the dendrite of a postsynaptic neuron according to its rank.
 
-        Parameters:
+        *Parameters*:
 
-            * *pos*: could be either the rank or the coordinates of the requested postsynaptic neuron
+            * **pos**: can be either the rank or the coordinates of the postsynaptic neuron
         """
         if isinstance(pos, int):
             rank = pos
@@ -209,9 +209,14 @@ class Projection(object):
     ################################
 
     def get(self, name):
-        """ Returns a list of parameters/variables values for each dendrite in the projection.
+        """ 
+        Returns a list of parameters/variables values for each dendrite in the projection.
         
-        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.        
+        The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it. 
+
+        *Parameters*:
+
+        * **name**: the name of the parameter or variable       
         """       
         return self.__getattr__(name)
             
@@ -228,19 +233,19 @@ class Projection(object):
         
             * a single value, which will be the same for all synapses of all dendrites.
             
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will have the same value.
-            
-            * a list of lists or 2D numpy array representing for each connected postsynaptic neuron, the value to be taken by each synapse. The first dimension must be self.size, while the second must correspond to the number of synapses in each particular dendrite.
-            
-        .. hint::
+            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will take the same value.
         
-            In the latter case, it would be less error-prone to iterate over all dendrites in the projection:
-            
-            .. code-block:: python
-            
+        .. warning::
+
+            It not possible to set different values to each synapse using this method. One should iterate over the dendrites::
+
                 for dendrite in proj.dendrites:
-                    dendrite.set( ... )    
-        
+                    dendrite.w = np.ones(dendrite.size)
+
+        *Parameters*:
+
+        * **value**: a dictionary with the name of the parameter/variable as key. 
+
         """
         
         for name, val in value:
@@ -359,6 +364,13 @@ class Projection(object):
         A None value in the dictionary deletes the corresponding flag:
         
             proj.set_variable_flags('w', {'max': None})
+
+
+        *Parameters*:
+
+        * **name**: the name of the variable.
+
+        * **value**: a dictionary containing the flags.
             
         """
         rk_var = self._find_variable_index(name)
@@ -404,6 +416,11 @@ class Projection(object):
             
             This method should be used with great care, it is advised to define another Synapse object instead. 
             
+        *Parameters*:
+
+        * **name**: the name of the variable.
+
+        * **equation**: the new equation as string.
         """         
         rk_var = self._find_variable_index(name)
         if rk_var == -1:
@@ -424,11 +441,22 @@ class Projection(object):
     ################################
     def enable_learning(self, params={ 'freq': 1, 'offset': 0} ):
         """
-        Enable the learning for all attached dendrites
+        Enables learning for all the attached dendrites.
         
-        Parameter:
+        *Parameter*:
         
-            * *params*: optional parameter to configure the learning
+        * **params**: optional dictionary to configure the learning behaviour:
+
+            * the key 'freq' determines the frequency at which the synaptic plasticity-related methods will be called. 
+            * the key 'offset' determines the frequency at which the synaptic plasticity-related methods will be called. 
+
+        For example::
+
+            { 'freq': 10, 'offset': 5}
+
+        would call the learning methods at time steps 5, 15, 25, etc...
+
+        The default behaviour is that the learning methods are called at each time step.
         """
         self.cyInstance._set_learning(True)
         self.cyInstance._set_learn_frequency(params['freq'])
@@ -436,7 +464,11 @@ class Projection(object):
             
     def disable_learning(self):
         """
-        Disable the learning for all attached dendrites
+        Disables the learning methods for all attached dendrites.
+
+        When this method is called, synaptic plasticity is disabled (i.e the updating of any synaptic variable except g_target and psp) until the next call to ``enable_learning``.
+
+        This method is useful when performing some tests on a learned network without messing with the learned weights.
         """
         self.cyInstance._set_learning(False)
 
@@ -448,12 +480,12 @@ class Projection(object):
     
     def connect_one_to_one(self, weights=1.0, delays=0.0):
         """
-        Establish a one-to-one connections between the two populations.
+        Builds a one-to-one connections between the two populations.
         
-        Parameters:
+        *Parameters*:
         
-            * *weights*: initial synaptic values, either a single value (float) or a random distribution object.
-            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
+            * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
+            * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
         """
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays)
@@ -461,13 +493,13 @@ class Projection(object):
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
         """
-        Establishes an all-to-all connection pattern between the two populations.
+        Builds an all-to-all connection pattern between the two populations.
         
-        Parameters:
+        *Parameters*:
         
-            * *weights*: synaptic values, either one value (float) or a random distribution object.
-            * *delays*: synaptic delays, either one value (float or int) or a random distribution object.
-            * *allow_self_connections*: if True, self-connections between a neuron and itself are allowed (default=False).
+            * **weights**: synaptic values, either a single value or a random distribution object.
+            * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
+            * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default=False).
         """
         if self.pre!=self.post:
             allow_self_connections = True
@@ -479,18 +511,18 @@ class Projection(object):
 
     def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
         """
-        Establish a Guassian conneciton pattern between the two populations.
+        Builds a Gaussian connection pattern between the two populations.
 
         Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same normalized coordinates using a Gaussian distribution.
+        the neuron with the same normalized coordinates using a Gaussian profile.
         
-        Parameters:
+        *Parameters*:
         
-            * *amp*: amp value
-            * *sigma*: sigma value
-            * *delays*: synaptic delay, either a single value or a random distribution object (default : 0.0).
-            * *limit*: proportion of *amp* below which synapses are not created (default: 0.01)
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+            * **amp***: amplitude of the Gaussian function
+            * **sigma**: width of the Gaussian function
+            * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
+            * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
+            * **allow_self_connections**: allows connections between a neuron and itself.
         """
         if self.pre!=self.post:
             allow_self_connections = True
@@ -506,19 +538,20 @@ class Projection(object):
     
     def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
         """
-        Establish all to all connections within the two projections.
+        Builds a Difference-Of-Gaussians connection pattern between the two populations.
 
         Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
-        the neuron with the same rank and width weights following a difference-of-gaussians distribution.
+        the neuron with the same normalized coordinates using a Difference-Of-Gaussians profile.
         
-        Parameters:
+        *Parameters*:
         
-            * *amp_pos*: amp of positive gaussian function
-            * *sigma_pos*: sigma of positive gaussian function
-            * *amp_neg*: amp of negative gaussian function
-            * *sigma_neg*: sigma of negative gaussian function
-            * *delays*: synaptic delay, either a single value or a random distribution.
-            * *allow_self_connections*: set to True, if you want to allow connections within equal neurons in the same population.
+            * **amp_pos***: amplitude of the positive Gaussian function
+            * **sigma_pos**: width of the positive Gaussian function
+            * **amp_neg***: amplitude of the negative Gaussian function
+            * **sigma_neg**: width of the negative Gaussian function
+            * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
+            * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
+            * **allow_self_connections**: allows connections between a neuron and itself.
         """
         if self.pre!=self.post:
             allow_self_connections = True
@@ -534,19 +567,20 @@ class Projection(object):
         return self
 
     def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
-        """ fixed_probability projection between two populations. 
+        """ 
+        Builds a probabilistic connection pattern between the two populations.
     
-        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with a fixed probability. Self-connections are avoided by default.
+        Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with the given probability. Self-connections are avoided by default.
     
-        Parameters:
+        *Parameters*:
         
-        * probability: probability that an individual synapse is created.
+        * **probability**: probability that a synapse is created.
         
-        * weights: either a single value for all synapses or a RandomDistribution object.
+        * **weights**: either a single value for all synapses or a RandomDistribution object.
         
-        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
         
-        * allow_self_connections : defines if self-connections are allowed (default=False).
+        * **allow_self_connections** : defines if self-connections are allowed (default=False).
         """         
         if self.pre!=self.post:
             allow_self_connections = True
@@ -557,19 +591,20 @@ class Projection(object):
         return self
 
     def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False):
-        """ fixed_number_pre projection between two populations.
+        """ 
+        Builds a connection pattern between the two populations with a fixed number of pre-synaptic neurons.
     
         Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
     
-        Parameters:
+        *Parameters*:
         
-        * number: number of synapses per postsynaptic neuron.
+        * **number**: number of synapses per postsynaptic neuron.
         
-        * weights: either a single value for all synapses or a RandomDistribution object.
+        * **weights**: either a single value for all synapses or a RandomDistribution object.
         
-        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
         
-        * allow_self_connections : defines if self-connections are allowed (default=False).
+        * **allow_self_connections** : defines if self-connections are allowed (default=False).
         """
         if self.pre!=self.post:
             allow_self_connections = True
@@ -580,19 +615,21 @@ class Projection(object):
         return self
             
     def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
-        """ fixed_number_post projection between two populations.
+        """
+        Builds a connection pattern between the two populations with a fixed number of post-synaptic neurons.
     
-        Each neuron in the presynaptic population sends connections to a fixed number of neurons of the postsynaptic population chosen randomly. 
+        Each neuron in the pre-synaptic population sends connections to a fixed number of neurons of the post-synaptic population chosen randomly.
     
-        Parameters:
+        *Parameters*:
         
-        * number: number of synapses per presynaptic neuron.
+        * **number**: number of synapses per pre-synaptic neuron.
         
-        * weights: either a single value for all synapses or a RandomDistribution object.
+        * **weights**: either a single value for all synapses or a RandomDistribution object.
         
-        * delays: either a single value for all synapses or a RandomDistribution object (default = 0.0)
+        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
         
-        * allow_self_connections : defines if self-connections are allowed (default=False).
+        * **allow_self_connections** : defines if self-connections are allowed (default=False).
+
         """
         if self.pre!=self.post:
             allow_self_connections = True
@@ -602,33 +639,35 @@ class Projection(object):
 
         return self
 
-    def connect_from_list(self, connection_list):
-        """
-        Initialize projection initilized by specific list.
+    # def connect_from_list(self, connection_list):
+    #     """
+    #     Initialize projection initilized by specific list.
         
-        Expected format:
+    #     Expected format:
         
-            * list of tuples ( pre, post, weight, delay )
+    #         * list of tuples ( pre, post, weight, delay )
             
-        Example:
+    #     Example:
         
-            >>> conn_list = [
-            ...     ( 0, 0, 0.0, 0.1 )
-            ...     ( 0, 1, 0.0, 0.1 )
-            ...     ( 0, 2, 0.0, 0.1 )
-            ...     ( 1, 5, 0.0, 0.1 )
-            ... ]
+    #         >>> conn_list = [
+    #         ...     ( 0, 0, 0.0, 0.1 )
+    #         ...     ( 0, 1, 0.0, 0.1 )
+    #         ...     ( 0, 2, 0.0, 0.1 )
+    #         ...     ( 1, 5, 0.0, 0.1 )
+    #         ... ]
             
-            proj = Projection(pre_pop, post_pop, 'exc').connect_from_list( conn_list )
-        """
-        self._synapses = connection_list
+    #         proj = Projection(pre_pop, post_pop, 'exc').connect_from_list( conn_list )
+    #     """
+    #     self._synapses = connection_list
                 
     def connect_with_func(self, method, **args):
         """
-        Establish connections provided by user defined function.
+        Builds a connection pattern based on a user-defined method.
 
-        * *method*: function handle. The function **need** to return a dictionary of synapses.
-        * *args*: list of arguments needed by the function 
+        *Parameters*:
+
+        * **method**: method to call. The method **must** return a CSR object.
+        * **args**: list of arguments needed by the function 
         """
         self._connector = method
         self._connector_params = args
@@ -636,9 +675,10 @@ class Projection(object):
 
         return self
 
-    def save_connectivity_as_csv(self):
+    def _save_connectivity_as_csv(self):
         """
-        Save the projection pattern as csv format. 
+        Saves the projection pattern in the csv format. 
+
         Please note, that only the pure connectivity data pre_rank, post_rank, w and delay are stored.
         """
         filename = self.pre.name + '_' + self.post.name + '_' + self.target+'.csv'
@@ -651,7 +691,7 @@ class Projection(object):
                 delay_iter = iter(dendrite.delay)
                 post_rank = dendrite.post_rank
 
-                for i in xrange(dendrite.size()):
+                for i in xrange(dendrite.size):
                     w_file.write(str(next(rank_iter))+', '+
                                  str(post_rank)+', '+
                                  str(next(w_iter))+', '+
@@ -743,8 +783,8 @@ class Projection(object):
         
         *Parameters*:
         
-            * *variable*: name of variable
-            * *in_post_geometry*: if set to false, the data will be plotted as square grid. (default = True)
+            * **variable**: name of variable
+            * **in_post_geometry**: if set to false, the data will be plotted as square grid. (default = True)
         """        
         if in_post_geometry:
             x_size = self.post.geometry[1]
@@ -785,7 +825,7 @@ class Projection(object):
         for d in self.post_ranks:
             dendrite_desc = {}
             # Number of synapses in the dendrite
-            synapse_count.append(self.dendrite(d).size())
+            synapse_count.append(self.dendrite(d).size)
             # Postsynaptic rank
             dendrite_desc['post_rank'] = d
             # Attributes
@@ -837,7 +877,7 @@ class Projection(object):
 
     def load(self, filename):
         """
-        Load the saved state of the projection.
+        Loads the saved state of the projection.
 
         Warning: Matlab data can not be loaded.
         

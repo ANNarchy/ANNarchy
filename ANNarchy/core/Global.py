@@ -77,26 +77,28 @@ def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments: 
 
-    Parameters:
+    *Parameters*:
     
-    * *dt*: discretization constant (default: 1.0 ms).
+    * **dt**: discretization time step (default: 1.0 ms).
     
-    * *num_threads*: number of treads used by openMP (overrides the environment variable OMP_NUM_THREADS when set, default = None).
+    * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
     
-    * *float_prec*: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses double floating point precision. 
+    * **float_prec**: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses double floating point precision. 
 
-    * *seed*: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)). 
+    * **seed**: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)). 
     
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
     
-    * *verbose*: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    * **verbose**: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
     
-    * *suppress_warnings*: if True, warnings (e. g. from mathematical parser) are suppressed.
+    * **suppress_warnings**: if True, warnings (e. g. from the mathematical parser) are suppressed.
     
-    * *show_time*: if True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
+    * **show_time**: if True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
     
     
-    **Note**: this function should be used before any other functions of ANNarchy, right after ``from ANNarchy import *``.
+    .. note::
+
+        This function should be used before any other functions of ANNarchy, right after ``from ANNarchy import *``.
     """
     for key in keyValueArgs:
 
@@ -109,10 +111,10 @@ def reset(populations=True, projections=False):
     """
     Reinitialises the network to its initial state.
 
-    Parameter:
+    *Parameters*:
 
-    * *populations*: if True (default), the neural variables will be reset to their initial value.
-    * *projections*: if True, the synaptic variables (including the weights) will be reset (default=False).
+    * **populations**: if True (default), the neural variables will be reset to their initial value.
+    * **projections**: if True, the synaptic variables (including the weights) will be reset (default=False).
     """
     if populations:
         for pop in _populations:
@@ -123,15 +125,15 @@ def reset(populations=True, projections=False):
         
 def get_population(name):
     """
-    Returns population corresponding to *name*.
+    Returns the population with the given *name*.
     
-    Parameter:
+    *Parameter*:
     
-    * *name*: population name
+    * **name**: name of the population
 
     Returns:
     
-    * the requested population if existing, otherwise None is returned.
+    * The requested ``Population`` object if existing, ``None`` otherwise.
     """
     for pop in _populations:
         if pop.name == name:
@@ -139,33 +141,6 @@ def get_population(name):
         
     print("Error: no population",name,"found.")
     return None
-
-# TODO: now that PopulationViews can be used to create projections, this won't work!
-# def get_projection(pre, post, target, suppress_error=False):
-#     """
-#     Returns a projection corresponding to the arguments.
-    
-#     *Parameters*:
-    
-#     * **pre**: presynaptic population
-#     * **post**: postsynaptic population
-#     * **target**: connection type
-#     * **suppress_error**: if suppress_error is True the potential error will not prompted.
-    
-#     Returns:
-    
-#     the requested projection if existing otherwise None is returned.
-#     """
-#     for proj in _projections:        
-#         if proj.post == post:
-#             if proj.pre == pre:
-#                 if proj.target == target:
-#                     return proj
-    
-#     if not suppress_error:
-#         _error("No projection " + pre.name + " -> " + post.name + " with target " + target + " found.")
-    
-#     return None
     
 def add_function(function):
     """
@@ -191,22 +166,15 @@ def add_function(function):
     
 def simulate(duration):
     """
+    Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
 
-    Runs the network for the given duration. 
-    
+        simulate(1000.0)
 
-    If an integer is given, the argument represents the number of time steps.
-    
-    If a floating point value is given, it represents a duration in milliseconds computed relative to the discretization step declared in setup() (default: 1ms). 
+    *Parameters*:
 
+    * **duration**: the duration in milliseconds.
     """
-    if isinstance(duration, int):
-        nb_steps = duration
-    elif isinstance(duration, float):
-        nb_steps = ceil(duration / config['dt'])
-    else:
-        _error('simulate() require either integers or floats.')
-        return
+    nb_steps = ceil(float(duration) / config['dt'])
 
     if _network:      
         _network.run(nb_steps)
@@ -216,8 +184,7 @@ def simulate(duration):
     
 def step():
     """
-
-    Performs a single simulation step. 
+    Performs a single simulation step (duration = ``dt``). 
 
     """
     if _network:      
@@ -268,13 +235,11 @@ def start_record(to_record):
     """
     Starts recording of variables in different populations. 
     
-    Parameter:
+    *Parameter*:
     
-    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). 
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). 
     
-    Example:
-    
-    .. code-block:: python
+    Example::
     
         to_record = { 
             pop1 : ['mp', 'r'], 
@@ -292,21 +257,19 @@ def start_record(to_record):
 
 def get_record(to_record=None, reshape=False):
     """
-    Retrieve the recorded variables of one or more populations since the last call. 
+    Retrieves the recorded variables of one or more populations since the last call. 
   
-    Parameter:
+    *Parameter*:
     
-    * *to_record*: a dictionary containing population objects (or names) as keys and variable names as values. For more details check Population.start_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    * **to_record**: a dictionary containing population objects (or names) as keys and variable names as values. For more details check Population.start_record(). When omitted, the dictionary provided in the last call to start_record() is used.
 
-    * *reshape*: defines if the recorded variables should be reshaped to match the population geometry (default: False).
+    * **reshape**: defines if the recorded variables should be reshaped to match the population geometry (default: False).
     
     Returns:
     
     * A dictionary containing all recorded values. The dictionary is empty if no recorded data is available.
     
-    Example:
-    
-    .. code-block:: python
+    Example::
     
         to_record = { 
             pop1 : ['mp', 'r'], 
@@ -340,9 +303,9 @@ def stop_record(to_record=None):
     """
     Stops the recording of variables in different populations. 
     
-    Parameter:
+    *Parameter*:
     
-    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.stop_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.stop_record(). When omitted, the dictionary provided in the last call to start_record() is used.
     """
     if not to_record:
         to_record = _recorded_populations
@@ -357,9 +320,9 @@ def pause_record(to_record=None):
     """
     Pauses the recording of variables in different populations. 
     
-    Parameter:
+    *Parameter*:
     
-    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.pause_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.pause_record(). When omitted, the dictionary provided in the last call to start_record() is used.
     """
     if not to_record:
         to_record = _recorded_populations
@@ -374,9 +337,9 @@ def resume_record(to_record=None):
     """
     Resumes the recording of variables in different populations. 
     
-    Parameter:
+    *Parameter*:
     
-    * *to_record*: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.resume_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.resume_record(). When omitted, the dictionary provided in the last call to start_record() is used.
     """
     if not to_record:
         to_record = _recorded_populations

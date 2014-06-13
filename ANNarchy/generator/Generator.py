@@ -136,16 +136,19 @@ def _update_float_prec(filename):
     
 def compile(clean=False, populations=None, projections=None, cpp_stand_alone=False, debug_build=False, profile_enabled = False):
     """
-    This method uses the network architecture to generate optimized C++ code and compile a shared library that will carry the simulation.
+    This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
     
     *Parameters*:
 
-    * *clean*: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
-    * *populations*: set of populations which should be compiled. If set to None, all available populations will be used.
-    * *projections*: set of populations which should be compiled. If set to None, all available populations will be used.
-    * *cpp_stand_alone*: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
-    * *debug_build*: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
-    * *profile_enabled*: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
+    * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
+    * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
+    * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
+
+    The following arguments are for internal use only:
+
+    * **cpp_stand_alone**: creates a cpp library solely. It's possible to run the simulation, but no interaction possibilities exist. These argument should be always False.
+    * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
+    * **profile_enabled**: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
     """
    
     # first argument is python script itself.
