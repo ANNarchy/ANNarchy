@@ -5,7 +5,7 @@
 # 
 #   Model adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 #
-#   Code adapted from the Brian example: https://brian2.readthedocs.org/en/latest/examples/synapses_STDP.html
+#   Code adapted from the Brian example: http://brian.readthedocs.org/en/1.4.1/examples-plasticity_STDP1.html
 #
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #

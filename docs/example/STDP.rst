@@ -6,7 +6,7 @@ The script ``SimpleSTDP.py`` in ``examples/simple_stdp`` shows how to use spike-
 
 The model is directly adapted from the code provided in the Brian documentation, itself adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001):
 
-    https://brian2.readthedocs.org/en/latest/examples/synapses_STDP.html
+    http://brian.readthedocs.org/en/1.4.1/examples-plasticity_STDP1.html
 
 It is simply composed of 1000 input neurons, firing randomly following a Poisson distribution (rate of 15 Hz). They project on a single integrate-and-fire neuron, and the synaptic effiencies are learned using the STDP learning rule.
 
