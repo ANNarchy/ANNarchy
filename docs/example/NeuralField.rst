@@ -2,7 +2,7 @@
 Neural Fields
 **************************
 
-In ``examples/neural_field`` is a simple model using `Neural Fields <http://www.scholarpedia.org/article/Neural_fields>`_. It consists of two 2D populations ``Input`` and ``Focus``, with one-to-one connections between ``Input`` and ``Focus``, and Difference-of-Gaussians (DoG) lateral connections within ``Focus``.
+The folder ``examples/neural_field`` contains a simple rate-coded model using `Neural Fields <http://www.scholarpedia.org/article/Neural_fields>`_. It consists of two 2D populations ``Input`` and ``Focus``, with one-to-one connections between ``Input`` and ``Focus``, and Difference-of-Gaussians (DoG) lateral connections within ``Focus``.
 
 If you have PyQtGraph installed, you can simply try the network by typing::
 
@@ -10,8 +10,7 @@ If you have PyQtGraph installed, you can simply try the network by typing::
     
     
 .. image:: ../_static/neuralfield.png
-    :align: center
-    :width: 70%
+
     
 Model overview
 --------------------
@@ -50,23 +49,20 @@ If i and j have coordinates :math:`(x_i, y_i)` and :math:`(x_j, y_j)` in the N*N
     
 Inputs are given to the network by changing the baseline of ``input`` neurons. This example clamps one or several gaussian profiles (called "bubbles") with an additive noise, moving along a circular path at a certain speed (launch the example to understand this sentence...).
 
-Starting the script
+Importing ANNarchy
 -------------------
 
-The beginning of the script solely consists of importing the ANNarchy library and setting up the discretization step ``dt``:
+The beginning of the script solely consists of importing the ANNarchy library:
 
 .. code-block:: python
 
     from ANNarchy import *
-    
-    setup(dt=1.0)
-    
-Note that ``dt=1.0`` is already the default and the call to ``setup`` could have been skipped.
+
 
 Defining the neurons
 --------------------------
 
-There are two different equations for the neurons, so we need to define two **Neuron** objects: ``InputNeuron`` and ``NeuralFieldNeuron`` (for example). 
+There are two different equations for the neurons, so we need to define two ``RateNeuron`` objects: ``InputNeuron`` and ``NeuralFieldNeuron`` (for example). 
 
 
 **InputNeuron**
@@ -81,11 +77,11 @@ There are two different equations for the neurons, so we need to define two **Ne
         """,
         equations="""
             noise = Uniform(-0.5, 0.5)
-            rate = pos(baseline + noise)
+            r = pos(baseline + noise)
         """ 
     )
     
-``InputNeuron`` is here an instance of ``RateNeuron``, whose only parameter is ``baseline`` (initialized to 0.0, but it does not matter here). ``noise`` is a random number generator, taken from a uniform distribution between -0.5 and 0.5, whose value is randomly chosen at each computational step for each neuron. ``rate``, the only required variable, is simply the positive part of the sum of ``baseline`` and ``noise``. ``pos()`` is a built-in function of ANNarchy
+``InputNeuron`` is here an instance of ``RateNeuron``, whose only parameter is ``baseline`` (initialized to 0.0, but it does not matter here). ``noise`` is a random number generator, taken from a uniform distribution between -0.5 and 0.5, whose value is randomly chosen at each computational step for each neuron. ``r``, the only required variable, is simply the positive part of the sum of ``baseline`` and ``noise``. ``pos()`` is a built-in function of ANNarchy returning the positive part of its argument.
 
 
 
@@ -102,13 +98,21 @@ The second neuron we need is a bit more complex, as it is governed by an ODE and
         equations="""
             noise = Uniform(-0.5, 0.5)
             tau * dmp / dt + mp = sum(exc) + sum(inh) + noise
-            rate = if mp < 1.0 : pos(mp) else: 1.0 
+            r = if mp < 1.0 : pos(mp) else: 1.0 
         """
     )
     
-``tau`` is a population-wise parameter, whose value will be the same for all neuron of the population. ``noise`` is a random number generator. ``mp`` is the membrane potential, whose dynamics are governed by a first-order linear ODE, integrating the sums of excitatory and inhibitory inputs with noise. As explained in the section `Defining a Neuron <../manual/Neuron.html>`_, ``sum(exc)`` retrieves the weighted sum of presynaptic firing rates for the synapses having the connection type *exc*, here the one2one connections between ``Input`` and ``Focus``. ``sum(inh)`` does the same for *inh* type connections, here the lateral connections within ``focus``.
+``tau`` is a population-wise parameter, whose value will be the same for all neuron of the population. ``noise`` is a random number generator. ``mp`` is the membrane potential, whose dynamics are governed by a first-order linear ODE, integrating the sums of excitatory and inhibitory inputs with noise. As explained in the section :doc:`../manual/RateNeuron`, ``sum(exc)`` retrieves the weighted sum of presynaptic firing rates for the synapses having the connection type ``exc``, here the one_to_one connections between ``Input`` and ``Focus``. ``sum(inh)`` does the same for ``inh`` type connections, here the lateral connections within ``focus``.
 
-``rate`` is defined by a piecewise linear function of ``mp``, making sure that it is bounded between 0.0 and 1.0. The function is defined by the conjunction of a conditional statement (if-then-else) and the ``pos()`` positive function.
+``r`` is defined by a piecewise linear function ``clip`` of ``mp``, making sure that it is bounded between 0.0 and 1.0. The function is built-in in ANNarchy. One could also have used a series of conditional statements with the same effect::
+
+    r = if mp > 0.0 :
+            if mp < 1.0 :
+                mp
+            else :
+                1.0
+        else:
+            0.0
 
 Creating the populations
 --------------------------------
@@ -135,7 +139,7 @@ The first projection is a one-to-one projection from Input to Focus with the typ
         target = 'exc'
     ).connect_one_to_one( weights=1.0 )
     
-The refereces to the pre- and post-synaptic population (or their names), as well as the target type, are passed to the constructor of ``Projection``. The connector method ``connect_one_to_one()`` is immediately applied to the Projection, defining how many synapses will be created. The weights are initialized uniformly to 1.0. 
+The references to the pre- and post-synaptic population (or their names), as well as the target type, are passed to the constructor of ``Projection``. The connector method ``connect_one_to_one()`` is immediately applied to the Projection, defining how many synapses will be created. The weights are initialized uniformly to 1.0. 
 
 The second projection is a difference of gaussians (DoG) for the lateral connections within 'focus'. The connector method is already provided by ANNarchy, so there is nothing more to do than to call it with the right parameters:
 
@@ -379,7 +383,7 @@ The following class is defined:
             self.world.rotate(200)      
             # Actualize the GUI
             for i in range(len(self.populations)):
-                self.plots[i].setData(z=self.scale(self.populations[i].rate)) 
+                self.plots[i].setData(z=self.scale(self.populations[i].r)) 
             # Listen to mouse/keyboard events
             QtGui.QApplication.processEvents()
         def run(self):

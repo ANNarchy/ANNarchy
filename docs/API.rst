@@ -12,6 +12,8 @@ This chapter provides documentation for the different methods and classes define
     API/Neuron.rst
     API/Synapse.rst
     API/Population.rst
+    API/SpecificPopulation.rst
     API/Projections.rst
     API/Dendrite.rst
     API/RandomDistribution.rst
+    API/Utilities.rst

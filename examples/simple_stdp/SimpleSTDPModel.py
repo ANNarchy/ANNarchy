@@ -3,7 +3,7 @@
 #
 #   A simple model showing the STDP learning on a single neuron.
 # 
-#   Adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
+#   Model adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 #
 #   Code adapted from the Brian example: https://brian2.readthedocs.org/en/latest/examples/synapses_STDP.html
 #
@@ -88,11 +88,8 @@ if __name__ == '__main__':
     start_record ( to_record )
 
     # Start the simulation
-    print 'Start the simulation for 100 seconds'
-    from time import time
-    t_start = time()
-    simulate(duration)
-    print 'Done in', time() - t_start, 'seconds.'
+    print 'Start the simulation'
+    simulate(duration, measure_time=True)
 
     # Retrieve the recordings
     data = get_record( to_record )

@@ -24,6 +24,7 @@
 from __future__ import print_function
 
 import sys, os
+import time
 from math import ceil
 
 # Global instances
@@ -164,7 +165,7 @@ def add_function(function):
     """  
     _functions.append(function)
     
-def simulate(duration):
+def simulate(duration, measure_time = False):
     """
     Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
 
@@ -173,11 +174,16 @@ def simulate(duration):
     *Parameters*:
 
     * **duration**: the duration in milliseconds.
+    * **measure_time**: defines whether the simulation time should be printed (default=False).
     """
     nb_steps = ceil(float(duration) / config['dt'])
 
     if _network:      
+        if measure_time:
+            tstart = time.time() 
         _network.run(nb_steps)
+        if measure_time:
+            print('Simulating', duration, 'milliseconds took', time.time() - tstart, 'seconds.')
     else:
         _error('simulate(): the network is not compiled yet.')
         return

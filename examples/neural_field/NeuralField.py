@@ -4,8 +4,6 @@
 #
 from ANNarchy import *
 
-setup(dt=1.0)
-
 # Define the neuron classes
 InputNeuron = RateNeuron(   
     parameters="""
@@ -24,7 +22,7 @@ NeuralFieldNeuron = RateNeuron(
     equations="""
         noise = Uniform(-0.5, 0.5)
         tau * dmp / dt + mp = sum(exc) + sum(inh) + noise
-        r = if mp < 1.0 : pos(mp) else: 1.0 
+        r = clip(mp, 0.0, 1.0) 
     """
 )
 

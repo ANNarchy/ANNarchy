@@ -1,5 +1,5 @@
 ****************************************
-Class RandomDistribution
+Random Distributions
 ****************************************
 
 Random number generators can be used at several places:

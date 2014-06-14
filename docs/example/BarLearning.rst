@@ -4,7 +4,7 @@ Bar learning problem
 
 The implementation of the bar learning problem is located in the ``examples/bar_learn`` folder. The bar learning problem describes the process of learning receptive fields on an artificial input pattern. Images consisting of independent bars are used. Those images are generated as following: an 8*8 image can filled randomly by eight horizontal or vertical bars, with a probability of 1/8 for each. 
 
-These input images are fed into a neural population, whose neurons should learn to extract the independent coponents of the input distribution, namely single horizontal or vertical bars.
+These input images are fed into a neural population, whose neurons should learn to extract the independent components of the input distribution, namely single horizontal or vertical bars.
 
 If you have ``pyqtgraph`` installed, you can simply try the network by typing:
 
@@ -15,7 +15,7 @@ If you have ``pyqtgraph`` installed, you can simply try the network by typing:
 Model overview
 ------------------------
 
-The model consists of two populations ``Input`` and ``Feature``. The size of ``Input`` should be chosen  to fit tzhe input image size (here 8*8). The number of neurons in the ``Feature`` population should be higher than the total number of independent bars  (16, we choose here 32 neurons). The ``Feature`` population gets excitory connections from ``Input`` through an all-to-all connection pattern. The same pattern is used for the inhibitory connections within ``Feature``.
+The model consists of two populations ``Input`` and ``Feature``. The size of ``Input`` should be chosen  to fit the input image size (here 8*8). The number of neurons in the ``Feature`` population should be higher than the total number of independent bars  (16, we choose here 32 neurons). The ``Feature`` population gets excitory connections from ``Input`` through an all-to-all connection pattern. The same pattern is used for the inhibitory connections within ``Feature``.
 
 Defining the neurons
 ------------------------
@@ -29,11 +29,11 @@ Defining the neurons
 
     InputNeuron = RateNeuron(   
         parameters="""
-            rate = 0.0
+            r = 0.0
         """
     )
     
-The trick here is to declare ``rate`` as a parameter, not a variable: its value will not be computed by the simulator, but only set by external input. The ``Input`` population can then be created:
+The trick here is to declare ``r`` as a parameter, not a variable: its value will not be computed by the simulator, but only set by external input. The ``Input`` population can then be created:
     
 .. code-block:: python
 
@@ -56,7 +56,7 @@ could be implemented as the following:
             tau = 10.0 : population
         """,
         equations="""
-            tau * drate/dt + rate = sum(exc) - sum(inh) : min=0.0
+            tau * dr/dt + r = sum(exc) - sum(inh) : min=0.0
         """
     )
 
@@ -86,10 +86,10 @@ where :math:`\alpha` is a parameter defining the strength of the regularization,
         parameters=""" 
             tau = 2000.0 : postsynaptic
             alpha = 8.0 : postsynaptic
-            min_value = 0.0 : postsynaptic
+            min_w = 0.0 : postsynaptic
         """,
         equations="""
-            tau * dvalue/dt = pre.rate * post.rate - alpha * post.rate^2 * value : min=min_value
+            tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w : min=min_w
         """
     )  
  
@@ -119,7 +119,7 @@ The two projections are all-to-all and use the ``Oja`` synapse type. They only d
 
 .. code-block:: python   
 
-    Input_Feature.min_value = -10.0
+    Input_Feature.min_w = -10.0
     Feature_Feature.alpha = 0.3
 
 Setting inputs
@@ -131,21 +131,21 @@ Once the network is defined, one has to specify how inputs are fed into the ``In
 
     def set_input():
         # Reset the firing rate for all neurons
-        Input.rate = 0.0
+        Input.r = 0.0
         # Clamp horizontal bars
         for h in range(Input.geometry[0]):
             if np.random.random() < 1.0/ float(Input.geometry[0]):
-                Input[h, :].rate = 1.0
+                Input[h, :].r = 1.0
         # Clamp vertical bars
         for w in range(Input.geometry[1]):
             if np.random.random() < 1.0/ float(Input.geometry[1]):
-                Input[:, w].rate = 1.0
+                Input[:, w].r = 1.0
                 
 This method starts by resetting the firing rate of ``input`` to 0.0:
 
 .. code-block:: python
 
-    Input.rate = 0.0
+    Input.r = 0.0
 
 One can use here a single value or a Numpy array (e.g. ``np.zeros(Input.geometry))``), it does not matter.
 
@@ -155,9 +155,9 @@ For all possible horizontal bars, a decision is then made whether the bar should
 
     for h in range(Input.geometry[0]):
         if np.random.random() < 1.0/ float(Input.geometry[0]):
-            Input[h, :].rate = 1.0
+            Input[h, :].r = 1.0
             
-``Input[h, :]`` is a PopulationView, i.e. a group of neurons defined by the sub-indices (here the row of index ``h``). Their attributes, such as ``rate``, can be accessed as if it were a regular population. The same is done for vertical bars.
+``Input[h, :]`` is a PopulationView, i.e. a group of neurons defined by the sub-indices (here the row of index ``h``). Their attributes, such as ``r``, can be accessed as if it were a regular population. The same is done for vertical bars.
                 
                 
 

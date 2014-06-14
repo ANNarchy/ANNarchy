@@ -10,7 +10,7 @@ from .core.Poisson import PoissonPopulation
 from .core.Projection import Projection
 from .core.Dendrite import Dendrite
 from .core.Random import Constant, Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
-from .core.Utils import raster_plot, smoothed_rate
+from .core.Utils import raster_plot, smoothed_rate, histogram
 try:
     from .core.cython_ext.Connector import CSR
 except:
