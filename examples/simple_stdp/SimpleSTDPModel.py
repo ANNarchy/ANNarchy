@@ -18,16 +18,15 @@ N = 1000 # 1000 Poisson inputs
 gmax = 0.01 # Maximum weight
 duration = 100000.0 # Simulation for 100 seconds
 
-setup(dt=dt)
-
+# Definition of the neuron
 IF = SpikeNeuron(
     parameters = """
-        tau_m = 10.0 : population
-        tau_e = 5.0 : population
-        vt = -54.0 : population
-        vr = -60.0 : population
-        El = -74.0 : population
-        Ee = 0.0 : population
+        tau_m = 10.0 
+        tau_e = 5.0 
+        vt = -54.0 
+        vr = -60.0 
+        El = -74.0 
+        Ee = 0.0 
     """,
     equations = """
         tau_m * dv/dt = El - v + g_exc * (Ee - vr) : init = -60.0
@@ -41,6 +40,7 @@ IF = SpikeNeuron(
     """
 )
  
+# Definition of the STDP learning rule
 STDP = SpikeSynapse(
     parameters="""
         tau_pre = 20.0 : postsynaptic
@@ -74,7 +74,8 @@ proj = Projection(
     post = Output, 
     target = 'exc',
     synapse = STDP
-).connect_all_to_all(weights=Uniform(0.0, gmax))
+)
+proj.connect_all_to_all(weights=Uniform(0.0, gmax))
 
 
 if __name__ == '__main__':
@@ -82,17 +83,16 @@ if __name__ == '__main__':
     # Compile the network
     compile()
 
-    # Define which variables to record
-    to_record = { Input:  'spike', 
-                  Output: 'spike' }
-    start_record ( to_record )
+    # Start recording
+    start_record ({ Input:  'spike', 
+                    Output: 'spike' } )
 
     # Start the simulation
     print 'Start the simulation'
     simulate(duration, measure_time=True)
 
     # Retrieve the recordings
-    data = get_record( to_record )
+    data = get_record()
     input_spikes = data[Input]['spike']
     output_spikes = data[Output]['spike']
 
@@ -104,16 +104,13 @@ if __name__ == '__main__':
     output_rate = smoothed_rate(output_spikes, 100.0)
 
     # Receptive field after simulation
-    rf_post = proj.dendrite(0).receptive_field()
+    weights = proj.dendrite(0).w
 
     from pylab import *
     subplot(3,1,1)
     plot(output_rate[0, :])
-    title('Average firing rate')
     subplot(3,1,2)
-    plot(rf_post, '.')
-    title('Weight distribution after learning')
+    plot(weights, '.')
     subplot(3,1,3)
-    hist(rf_post, bins=20)
-    title('Weight histogram after learning')
+    hist(weights, bins=20)
     show()
