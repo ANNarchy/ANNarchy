@@ -1,5 +1,6 @@
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import SpikeNeuron
+import numpy as np
 
 class PoissonPopulation(Population):
     """ Population of spiking neurons following a Poisson distribution.
@@ -12,7 +13,7 @@ class PoissonPopulation(Population):
 
     but it can be modified later as a normal parameter::
 
-        pop.rates = linspace(10, 150, 100)
+        pop.rates = np.linspace(10, 150, 100)
 
     It is also possible to define a temporal equation for the rates, by passing a string to the argument::
 
@@ -77,6 +78,18 @@ class PoissonPopulation(Population):
                 """
             )
 
+        elif isinstance(rates, np.ndarray):
+            poisson_neuron = SpikeNeuron(
+                parameters = """
+                rates = 10.0
+                """,
+                equations = """
+                p = Uniform(0.0, 1.0) * 1000.0 / dt
+                """,
+                spike = """
+                    p <= rates
+                """
+            )
         else:
             poisson_neuron = SpikeNeuron(
                 parameters = """
@@ -90,3 +103,6 @@ class PoissonPopulation(Population):
                 """
             )
         Population.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
+        
+        if isinstance(rates, np.ndarray):
+            self.rates = rates

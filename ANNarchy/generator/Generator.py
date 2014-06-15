@@ -506,11 +506,9 @@ class Generator(object):
             if Global.config['show_time']:
                 t0 = time.time()
             
-            # Create the Cython instance 
-            pop.cyInstance = getattr(self.cython_module, 'py'+pop.class_name)(pop.size)
-            
-            # Create the attributes and actualize the initial values
-            pop._init_attributes()
+            # Instantiate the population
+            pop._instantiate(self.cython_module)
+
             if Global.config['show_time']:
                 Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds') 
                             

@@ -86,7 +86,7 @@ public:
     void stop_record_spike();
 
     /**
-     * \brief       Get the laste spike time of a neuron.
+     * \brief       Get the last spike time of a neuron.
      * \details     Sometimes it may useful to trace all the emited spikes, e.g.
      *              visualization.
      * \param[OUT]  last spike time of neuron.
@@ -119,7 +119,14 @@ public:
      */
 	void metaLearn();
 
-	bool hasSpiked(int rank) { return spiked_[rank]; }
+    /**
+     * Tells if the neuron has spikes at time t (default: current step) 
+    */
+	bool hasSpiked(int rank, int t=-1);
+    /**
+     * Returns the number of spikes in the last t steps
+    */
+    int nbSpikesInTheLast(int rank, int t);
 
 	// override
     virtual void propagateSpikes() {}

@@ -12,7 +12,6 @@
 from ANNarchy import *
 
 # Parameters
-dt = 1.0 # Time step
 F = 15.0 # Poisson distribution at 15 Hz
 N = 1000 # 1000 Poisson inputs
 gmax = 0.01 # Maximum weight

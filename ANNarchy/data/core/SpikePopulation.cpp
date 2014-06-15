@@ -59,6 +59,37 @@ int SpikePopulation::getLastSpikeTime(int rank)
     return lastSpike_[rank];
 }
 
+bool SpikePopulation::hasSpiked(int rank, int t) 
+{ 
+    if (t==-1){ // asking for the current step
+        return spiked_[rank]; 
+    }
+    else{
+        for(int i=spike_timings_[rank].size()-1; i>0; i--){
+            if(spike_timings_[rank][i] == t)
+                return true;
+            if(spike_timings_[rank][i] < t)
+                return false;
+        }
+        return false;
+    }
+}
+
+int SpikePopulation::nbSpikesInTheLast(int rank, int t) 
+{ 
+    if(!record_spike_)
+        return 0;
+    int nb = 0;
+    for(int i=spike_timings_[rank].size()-1; i>0; i--){
+        if(spike_timings_[rank][i] < ANNarchy_Global::time - t)
+            return nb;
+        nb++;
+    }
+    return nb;
+
+}
+
+
 void SpikePopulation::reset_spike_timings()
 {
     int last_spike;

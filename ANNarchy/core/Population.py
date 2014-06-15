@@ -148,6 +148,13 @@ class Population(object):
             3: Coordinates.get_normalized_3d_coord
         }
         
+    def _instantiate(self, module):
+        # Create the Cython instance 
+        self.cyInstance = getattr(module, 'py'+ self.class_name)(self.size)
+        
+        # Create the attributes and actualize the initial values
+        self._init_attributes()
+
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
         self.initialized = True  
@@ -209,9 +216,9 @@ class Population(object):
                 return getattr(self.cyInstance, '_get_'+attribute)().reshape(self._geometry)
             else:
                 return getattr(self.cyInstance, '_get_'+attribute)()
-        except:
-            print('Error: attribute', attribute, 'does not exist in this population.')
-            print(traceback.print_stack())
+        except Exception, e:
+            print e
+            Global._error('Error: the variable ' +  attribute +  ' does not exist in this population.')
         
     def _set_cython_attribute(self, attribute, value):
         """
@@ -221,6 +228,7 @@ class Population(object):
         Parameter:
         
         * *attribute*: should be a string representing the variables's name.
+        * *value*: a value or Numpy array of the right size.
         
         """
         try:
@@ -232,10 +240,11 @@ class Population(object):
                 else:
                     getattr(self.cyInstance, '_set_'+attribute)(np.array( [value]*self.size ))
             else:
+                print attribute, value
                 getattr(self.cyInstance, '_set_'+attribute)(value)
-        except:
-            print('Error: variable', attribute, 'does not exist in this population.')
-            print(traceback.print_stack())
+        except Exception, e:
+            print e
+            Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have thew right size.')
 
     @property
     def geometry(self):

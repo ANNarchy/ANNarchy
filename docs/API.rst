@@ -17,3 +17,4 @@ This chapter provides documentation for the different methods and classes define
     API/Dendrite.rst
     API/RandomDistribution.rst
     API/Utilities.rst
+    API/Hybrid.rst
