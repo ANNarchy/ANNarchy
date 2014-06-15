@@ -393,6 +393,10 @@ void %(class)s::record()
 
 void %(class)s::propagateSpikes() 
 {
+#ifdef ANNAR_PROFILE
+    double start, stop;
+    start = omp_get_wtime();
+#endif
     if (!propagate_.empty())
     {
         // emit a postsynaptic spike on receiving projections
@@ -414,16 +418,64 @@ void %(class)s::propagateSpikes()
         // spike handling is completed
         propagate_.erase(propagate_.begin(), propagate_.end());
     }
+#ifdef ANNAR_PROFILE
+    stop = omp_get_wtime();
+    Profile::profileInstance()->appendTimeSpikeDelivery(name_, (stop - start)*1000.0);
+#endif
 }
 
 void %(class)s::evaluateSpikes()
 {
+#ifdef ANNAR_PROFILE
+    double start, stop;
+    double time_post = 0.0;
+    double time_pre = 0.0;
+#endif
+
     for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
     {
+    #ifdef ANNAR_PROFILE
+        #pragma omp master
+        {
+            start = omp_get_wtime();
+        }
+    #endif
         static_cast<SpikeProjection*>(*p_it)->evaluatePostEvents();
+        #pragma omp barrier
+
+    #ifdef ANNAR_PROFILE
+        #pragma omp master
+        {
+            stop = omp_get_wtime();
+            time_post += (stop-start) * 1000.0;
+        }
+        #pragma omp barrier
+    #endif
         
+    #ifdef ANNAR_PROFILE
+        #pragma omp master
+        {
+            start = omp_get_wtime();
+        }
+    #endif
         static_cast<SpikeProjection*>(*p_it)->evaluatePreEvents();
+    #ifdef ANNAR_PROFILE
+        #pragma omp master
+        {
+            stop = omp_get_wtime();
+            time_pre += (stop-start) * 1000.0;
+        }
+        #pragma omp barrier
+    #endif
     }
+
+#ifdef ANNAR_PROFILE
+    #pragma omp master
+    {
+        Profile::profileInstance()->appendTimePostEvent(name_, time_post);
+        Profile::profileInstance()->appendTimePreEvent(name_, time_pre);
+    }
+#endif
 }
 
 void %(class)s::reset() 

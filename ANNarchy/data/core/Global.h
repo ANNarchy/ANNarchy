@@ -83,16 +83,17 @@ namespace ANNarchy_Global
 }
 
 //
-// additional defines for more deeply debugging
+// additional defines for more deeply debugging of several parts of ANNarchy framework
 // #define _DEBUG_DELAY
 // #define _DEBUG_DENDRITE_DATA
-// #define _DEBUG_SIMULATION_CONTROL	// Function calls, etc.
-// #define _DEBUG_PARALLELISM
+// #define _DEBUG_SIMULATION_CONTROL	// prove correctness of function calls, etc.
+// #define _DEBUG_PARALLELISM			// prove correctness of parallelization / partition division
 
 //
 // profiling extension
 // #define ANNAR_PROFILE
 // #define ANNAR_SCHEDULE
+// #define _DEBUG_PROFILER				// prove functionality of profiling extension
 #ifdef ANNAR_PROFILE
 #include "Profile.h"
 #endif
