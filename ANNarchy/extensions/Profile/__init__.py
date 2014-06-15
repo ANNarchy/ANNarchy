@@ -1,2 +1,3 @@
-from Profile import Profile
+from RateProfile import RateProfile
+from SpikeProfile import SpikeProfile
 from Scalability import Scalability

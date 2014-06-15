@@ -50,6 +50,22 @@ cdef extern from "../build/Profile.h":
         float getAvgTimeGlobal(string name, int begin, int end)
         
         float lastRecordedTimeGlobal(string name)
+
+        float getAvgTimeConductance(string name, int begin, int end)
+        
+        float lastRecordedTimeConductance(string name)
+
+        float getAvgTimeSpikeDelivery(string name, int begin, int end)
+        
+        float lastRecordedTimeSpikeDelivery(string name)
+
+        float getAvgTimePreEvent(string name, int begin, int end)
+        
+        float lastRecordedTimePreEvent(string name)
+
+        float getAvgTimePostEvent(string name, int begin, int end)
+        
+        float lastRecordedTimePostEvent(string name)
         
 cdef extern from "../build/Profile.h" namespace "Profile":
     cdef Profile* profileInstance()
@@ -96,3 +112,27 @@ cdef class pyProfile:
     
     def avgTimeGlobal(self, name, begin, end):
         return self.cInstance.getAvgTimeGlobal(name, begin, end)
+    
+    def lastTimeConductance(self, name):
+        return self.cInstance.lastRecordedTimeConductance(name)
+    
+    def avgTimeConductance(self, name, begin, end):
+        return self.cInstance.getAvgTimeConductance(name, begin, end)
+
+    def lastTimeSpikeDelivery(self, name):
+        return self.cInstance.lastRecordedTimeSpikeDelivery(name)
+    
+    def avgTimeSpikeDelivery(self, name, begin, end):
+        return self.cInstance.getAvgTimeSpikeDelivery(name, begin, end)
+    
+    def lastTimePreEvent(self, name):
+        return self.cInstance.lastRecordedTimePreEvent(name)
+    
+    def avgTimePreEvent(self, name, begin, end):
+        return self.cInstance.getAvgTimePreEvent(name, begin, end)
+    
+    def lastTimePostEvent(self, name):
+        return self.cInstance.lastRecordedTimePostEvent(name)
+    
+    def avgTimePostEvent(self, name, begin, end):
+        return self.cInstance.getAvgTimePostEvent(name, begin, end)
