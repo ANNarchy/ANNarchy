@@ -268,7 +268,9 @@ public:
 
     void propagateSpikes();
     
-    void evaluateSpikes();
+    void evaluatePostSpikes();
+    
+    void evaluatePreSpikes();
     
     void reset();    // called by global_operations
 
@@ -424,12 +426,11 @@ void %(class)s::propagateSpikes()
 #endif
 }
 
-void %(class)s::evaluateSpikes()
+void %(class)s::evaluatePostSpikes()
 {
 #ifdef ANNAR_PROFILE
     double start, stop;
     double time_post = 0.0;
-    double time_pre = 0.0;
 #endif
 
     for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
@@ -441,7 +442,6 @@ void %(class)s::evaluateSpikes()
         }
     #endif
         static_cast<SpikeProjection*>(*p_it)->evaluatePostEvents();
-        #pragma omp barrier
 
     #ifdef ANNAR_PROFILE
         #pragma omp master
@@ -451,7 +451,25 @@ void %(class)s::evaluateSpikes()
         }
         #pragma omp barrier
     #endif
-        
+    }
+
+#ifdef ANNAR_PROFILE
+    #pragma omp master
+    {
+        Profile::profileInstance()->appendTimePostEvent(name_, time_post);
+    }
+#endif
+}
+
+void %(class)s::evaluatePreSpikes()
+{
+#ifdef ANNAR_PROFILE
+    double start, stop;
+    double time_pre = 0.0;
+#endif
+
+    for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
+    {
     #ifdef ANNAR_PROFILE
         #pragma omp master
         {
@@ -472,7 +490,6 @@ void %(class)s::evaluateSpikes()
 #ifdef ANNAR_PROFILE
     #pragma omp master
     {
-        Profile::profileInstance()->appendTimePostEvent(name_, time_post);
         Profile::profileInstance()->appendTimePreEvent(name_, time_pre);
     }
 #endif
