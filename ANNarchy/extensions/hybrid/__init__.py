@@ -1,1 +1,1 @@
-from HybridPopulation import Spike2RatePopulation
+from HybridPopulation import Spike2RatePopulation, Rate2SpikePopulation
