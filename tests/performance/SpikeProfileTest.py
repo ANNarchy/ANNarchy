@@ -68,7 +68,7 @@ STDP = SpikeSynapse(
 # Input population
 Input = PoissonPopulation(name = 'Input', geometry=N, rates=F)
 # Output neuron
-Output = Population(name = 'Output', geometry=1, neuron=IF)
+Output = Population(name = 'Output', geometry=10, neuron=IF)
 # Projection learned using STDP
 proj = Projection( 
     pre = Input, 
@@ -90,6 +90,8 @@ if __name__ == '__main__':
     profiler.measure_func(simulate, 1)
 
     profiler.analyse_data()
+    
+    profiler.visualize_data()
     
     profiler.print_data()
     
