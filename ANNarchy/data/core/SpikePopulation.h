@@ -130,7 +130,8 @@ public:
 
 	// override
     virtual void propagateSpikes() {}
-    virtual void evaluateSpikes() {}
+    virtual void evaluatePreSpikes() {}
+    virtual void evaluatePostSpikes() {}
 
 	virtual void prepareNeurons() {}
 	virtual void resetToInit() {}

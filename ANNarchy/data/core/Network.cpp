@@ -280,8 +280,14 @@ void Network::run(int steps)
             #pragma omp for
             for(unsigned int p = 0; p < spike_populations_.size(); p++)
             {
-                spike_populations_[p]->prepareNeurons(); // increment of conductances, etc.
+                spike_populations_[p]->evaluatePreSpikes();
             }
+
+			#pragma omp for
+			for(unsigned int p = 0; p < spike_populations_.size(); p++)
+			{
+				spike_populations_[p]->prepareNeurons(); // increment of conductances, etc.
+			}
 
             #pragma omp for
             for(unsigned int p = 0; p < rate_populations_.size(); p++)
@@ -327,23 +333,6 @@ void Network::run(int steps)
 				spike_populations_[p]->globalOperations();
 			}
 
-			#pragma omp master
-            {
-				for(unsigned int p = 0; p < spike_populations_.size(); p++)
-				{
-					spike_populations_[p]->propagateSpikes();
-				}
-            }
-			#pragma omp barrier
-
-			//
-            // parallel neuron/dendrite wise
-			for(unsigned int p = 0; p < spike_populations_.size(); p++)
-			{
-				spike_populations_[p]->evaluateSpikes();
-			}
-			#pragma omp barrier
-
 			//
             // parallel neuron wise
             for(int p = 0; p < rate_populations_.size(); p++)
@@ -357,6 +346,23 @@ void Network::run(int steps)
            		spike_populations_[p]->metaLearn();
             }
             #pragma omp barrier
+
+			#pragma omp master
+			{
+				for(unsigned int p = 0; p < spike_populations_.size(); p++)
+				{
+					spike_populations_[p]->propagateSpikes();
+				}
+			}
+			#pragma omp barrier
+
+			//
+			// parallel neuron/dendrite wise
+			for(unsigned int p = 0; p < spike_populations_.size(); p++)
+			{
+				spike_populations_[p]->evaluatePostSpikes();
+			}
+			#pragma omp barrier
 
             //
             // parallel population wise
