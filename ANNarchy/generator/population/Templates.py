@@ -265,12 +265,6 @@ public:
     void globalOperations();
     
     void record();
-
-    void propagateSpikes();
-    
-    void evaluatePostSpikes();
-    
-    void evaluatePreSpikes();
     
     void reset();    // called by global_operations
 
@@ -289,9 +283,6 @@ private:
 %(member)s
 
 %(random)s
-
-    std::vector<int> propagate_;    ///< neurons which will propagate their spike
-    std::vector<int> reset_;    ///< neurons which will reset after current eval
     
     %(friend)s
 };
@@ -393,107 +384,6 @@ void %(class)s::record()
     }
 }
 
-void %(class)s::propagateSpikes() 
-{
-#ifdef ANNAR_PROFILE
-    double start, stop;
-    start = omp_get_wtime();
-#endif
-    if (!propagate_.empty())
-    {
-        // emit a postsynaptic spike on receiving projections
-        for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
-        {
-            if ( static_cast<SpikeProjection*>(*p_it)->isLearning() )
-                static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
-        }
-
-        for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
-        {
-            // emit a presynaptic spike on outgoing projections
-            for( auto p_it = spikeTargets_[(*n_it)].begin(); p_it != spikeTargets_[(*n_it)].end(); p_it++)
-            {
-                static_cast<SpikeDendrite*>(*p_it)->preEvent(*n_it);
-            }
-        }
-    
-        // spike handling is completed
-        propagate_.erase(propagate_.begin(), propagate_.end());
-    }
-#ifdef ANNAR_PROFILE
-    stop = omp_get_wtime();
-    Profile::profileInstance()->appendTimeSpikeDelivery(name_, (stop - start)*1000.0);
-#endif
-}
-
-void %(class)s::evaluatePostSpikes()
-{
-#ifdef ANNAR_PROFILE
-    double start, stop;
-    double time_post = 0.0;
-#endif
-
-    for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
-    {
-    #ifdef ANNAR_PROFILE
-        #pragma omp master
-        {
-            start = omp_get_wtime();
-        }
-    #endif
-        static_cast<SpikeProjection*>(*p_it)->evaluatePostEvents();
-
-    #ifdef ANNAR_PROFILE
-        #pragma omp master
-        {
-            stop = omp_get_wtime();
-            time_post += (stop-start) * 1000.0;
-        }
-        #pragma omp barrier
-    #endif
-    }
-
-#ifdef ANNAR_PROFILE
-    #pragma omp master
-    {
-        Profile::profileInstance()->appendTimePostEvent(name_, time_post);
-    }
-#endif
-}
-
-void %(class)s::evaluatePreSpikes()
-{
-#ifdef ANNAR_PROFILE
-    double start, stop;
-    double time_pre = 0.0;
-#endif
-
-    for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
-    {
-    #ifdef ANNAR_PROFILE
-        #pragma omp master
-        {
-            start = omp_get_wtime();
-        }
-    #endif
-        static_cast<SpikeProjection*>(*p_it)->evaluatePreEvents();
-    #ifdef ANNAR_PROFILE
-        #pragma omp master
-        {
-            stop = omp_get_wtime();
-            time_pre += (stop-start) * 1000.0;
-        }
-        #pragma omp barrier
-    #endif
-    }
-
-#ifdef ANNAR_PROFILE
-    #pragma omp master
-    {
-        Profile::profileInstance()->appendTimePreEvent(name_, time_pre);
-    }
-#endif
-}
 
 void %(class)s::reset() 
 {

@@ -129,9 +129,9 @@ public:
     int nbSpikesInTheLast(int rank, int t);
 
 	// override
-    virtual void propagateSpikes() {}
-    virtual void evaluatePreSpikes() {}
-    virtual void evaluatePostSpikes() {}
+    void propagateSpikes();
+    void evaluatePreSpikes();
+    void evaluatePostSpikes();
 
 	virtual void prepareNeurons() {}
 	virtual void resetToInit() {}
@@ -154,6 +154,10 @@ protected:
 	std::vector< std::vector<int> > spike_timings_;
     bool record_spike_;
     std::vector<int> lastSpike_;
+
+    
+    std::vector<int> propagate_;    ///< neurons which will propagate their spike
+    std::vector<int> reset_;    ///< neurons which will reset after current eval
 };
 
 

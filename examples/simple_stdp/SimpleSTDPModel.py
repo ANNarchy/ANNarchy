@@ -29,7 +29,7 @@ IF = SpikeNeuron(
     """,
     equations = """
         tau_m * dv/dt = El - v + g_exc * (Ee - vr) : init = -60.0
-        tau_e * dg_exc/dt = -g_exc
+        tau_e * dg_exc/dt = - g_exc
     """,
     spike = """
         v > vt
@@ -65,8 +65,10 @@ STDP = SpikeSynapse(
 
 # Input population
 Input = PoissonPopulation(name = 'Input', geometry=N, rates=F)
+
 # Output neuron
 Output = Population(name = 'Output', geometry=1, neuron=IF)
+
 # Projection learned using STDP
 proj = Projection( 
     pre = Input, 
