@@ -191,7 +191,7 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
     # TODO: remove when parallel spikes work!!!!
     has_spike = False
     for pop in populations:
-        if pop.desc['type'] == 'spike':
+        if pop.description['type'] == 'spike':
             has_spike = True
     if has_spike:
         Global.config['num_threads'] = 1
