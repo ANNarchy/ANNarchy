@@ -1,4 +1,4 @@
-# ANNarchy4 core
+# ANNarchy core
 from .core.Global import *
 from .core.Network import Network, MagicNetwork
 from .core.IO import save, load, load_parameter
@@ -26,6 +26,6 @@ import os, sys
 
 # Version
 __version__ = '4.2'
-__release__ = '4.2.0'
+__release__ = '4.2.1'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                    ') on ' + sys.platform + ' (' + os.name + ').' )
