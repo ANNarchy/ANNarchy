@@ -67,7 +67,7 @@ for neur in neuron_config:
 
         #
         # setup profiler for one network each
-        profiler = Profile(thread_config, 100, 'profile_'+str(neur)+'_'+str(conn), 'tests')
+        profiler = RateProfile(thread_config, 100, 'profile_'+str(neur)+'_'+str(conn), 'tests')
         profiler.add_to_profile(net)
         
         # profiling ...

@@ -146,162 +146,159 @@ class SpikeProfile(Profile):
         # additional customizations        
         #p1.getAxis('bottom').setPen('r')
 
+        col_iter = iter(col_array)
+ 
+        self._pop_win1 = []
+        self._pop_win2 = []
+ 
+        pop_mean_label = { 'left' : "computation time", 'bottom': "number of threads" }
+         
+        def create_error_bar(idx, mean, min, max, std):
+            """
+            for equal configuration on all plots
+            """
+            err = pg.ErrorBarItem( x=idx, 
+                                   y=mean,
+                                   top=std, 
+                                   bottom=std, 
+                                   beam=0.5)
+            return err
 
-#===============================================================================
-#         col_iter = iter(col_array)
-# 
-#         self._pop_win1 = []
-#         self._pop_win2 = []
-# 
-#         pop_mean_label = { 'left' : "computation time", 'bottom': "number of threads" }
-#         
-#         def create_error_bar(idx, mean, min, max, std):
-#             """
-#             for equal configuration on all plots
-#             """
-#             err = pg.ErrorBarItem( x=idx, 
-#                                    y=mean,
-#                                    top=std, 
-#                                    bottom=std, 
-#                                    beam=0.5)
-#             return err
-# 
-#         #
-#         # plot the population data
-#         for name, data in self._pop_data.iteritems():
-#             col_iter2 = iter(col_array)
-#             
-#             tmp = pg.GraphicsWindow(title="raw data: "+name)
-#             tmp.resize(1000,600)
-#             tmp2 = pg.GraphicsWindow(title="Evaluation: "+name)
-#             tmp2.resize(1000,600)
-# 
-#             #=============================#
-#             #     weighted sum            #
-#             #=============================#
-#             #
-#             # raw data
-#             plt_data = data['sum']._data
-#             x_scale = [i for i in xrange(plt_data.shape[0])]
-#             thread_num = np.array([i for i in xrange(len(self._threads))])
-#             for k,v in self._threads.iteritems():
-#                 thread_num[v] = k
-#                          
-#             tmp_plot = tmp.addPlot(title = "sum", axisItems = {'bottom': IntAxis('bottom') })
-#             tmp_plot.addLegend()
-#             tmp_plot.setLabel('left', "computation time", units='s')
-#             tmp_plot.setLabel('bottom', "number of trials",)
-#             
-#             col_iter = iter(col_array)
-#             for i in xrange( plt_data.shape[1] ):
-#                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
-# 
-#             #
-#             # mean, min, max
-#             pop_mean_plot = tmp2.addPlot(title = "weighted sum", axisItems = {'bottom': IntAxis('bottom') })
-#             pop_mean_plot.setLabel('left', "computation time", units='s')
-#             pop_mean_plot.setLabel('bottom', "number of cores",)
-# 
-#             if error_bar:
-#                 err = create_error_bar(data['sum'].asc_idx(), data['sum'].mean(), data['sum'].min(), data['sum'].max(), data['sum'].std())
-#                 pop_mean_plot.addItem(err)
-#             pop_mean_plot.plot( thread_num, 
-#                                 data['sum']._mean, 
-#                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
-#                                 labels=pop_mean_label )
-# 
-#             #=============================#
-#             #     neuron step             #
-#             #=============================#
-#             #
-#             # raw data
-#             plt_data = data['step']._data
-#             tmp_plot = tmp.addPlot(title = "neuron step", axisItems = {'bottom': IntAxis('bottom') })
-#             tmp_plot.addLegend()
-#             tmp_plot.setLabel('left', "computation time", units='s')
-#             tmp_plot.setLabel('bottom', "number of trials",)
-# 
-#             col_iter = iter(col_array)
-#             for i in xrange( plt_data.shape[1] ):
-#                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
-# 
-#             #
-#             # mean, min, max
-#             pop_mean_plot = tmp2.addPlot(title = "step", axisItems = {'bottom': IntAxis('bottom') })
-#             pop_mean_plot.setLabel('left', "computation time", units='s')
-#             pop_mean_plot.setLabel('bottom', "number of cores",)
-#             if error_bar:
-#                 err = create_error_bar(data['step'].asc_idx(), data['step'].mean(), data['step'].min(), data['step'].max(), data['step'].std())
-#                 pop_mean_plot.addItem(err)
-#             pop_mean_plot.plot( thread_num, 
-#                                 data['step']._mean, 
-#                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
-#                                 labels=pop_mean_label )
-# 
-#             #
-#             # first plot row completed
-#             tmp.nextRow()
-#             tmp2.nextRow()
-# 
-#             #=============================#
-#             #     global learn            #
-#             #=============================#
-#             #
-#             # raw data
-#             plt_data = data['global']._data
-#             tmp_plot = tmp.addPlot(title = "global", axisItems = {'bottom': IntAxis('bottom') })
-#             tmp_plot.addLegend()
-#             tmp_plot.setLabel('left', "computation time", units='s')
-#             tmp_plot.setLabel('bottom', "number of trials",)
-#             
-#             col_iter = iter(col_array)
-#             for i in xrange( plt_data.shape[1] ):
-#                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
-#             
-#             #
-#             # mean, min, max
-#             pop_mean_plot = tmp2.addPlot(title = "global learn", axisItems = {'bottom': IntAxis('bottom') })
-#             pop_mean_plot.setLabel('left', "computation time", units='s')
-#             pop_mean_plot.setLabel('bottom', "number of cores",)
-#             if error_bar:
-#                 err = create_error_bar(data['global'].asc_idx(), data['global'].mean(), data['global'].min(), data['global'].max(), data['global'].std())
-#                 pop_mean_plot.addItem(err)
-#             pop_mean_plot.plot( thread_num, 
-#                                 data['global']._mean, 
-#                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
-#                                 labels=pop_mean_label )
-#             
-#             #=============================#
-#             #     lcoal learn             #
-#             #=============================#
-#             #
-#             # raw data
-#             plt_data = data['local']._data
-#             tmp_plot = tmp.addPlot(title = "local", axisItems = {'bottom': IntAxis('bottom') })
-#             tmp_plot.addLegend()
-#             tmp_plot.setLabel('left', "computation time", units='s')
-#             tmp_plot.setLabel('bottom', "number of trials",)
-# 
-#             col_iter = iter(col_array)
-#             for i in xrange( plt_data.shape[1] ):
-#                 tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
-# 
-#             #
-#             # mean, min, max
-#             pop_mean_plot = tmp2.addPlot(title = "local learn", axisItems = {'bottom': IntAxis('bottom') })
-#             pop_mean_plot.setLabel('left', "computation time", units='s')
-#             pop_mean_plot.setLabel('bottom', "number of cores",)
-#             if error_bar:
-#                 err = create_error_bar(data['local'].asc_idx(), data['local'].mean(), data['local'].min(), data['local'].max(), data['local'].std())
-#                 pop_mean_plot.addItem(err)
-#             pop_mean_plot.plot( thread_num, 
-#                                 data['local']._mean, 
-#                                 pen = { 'color':next(col_iter2), 'width': 2 }, 
-#                                 labels=pop_mean_label )
-#             
-#             self._pop_win1.append(tmp)
-#             self._pop_win2.append(tmp2)
-#===============================================================================
+        #
+        # plot the population data
+        for name, data in self._pop_data.iteritems():
+            col_iter2 = iter(col_array)
+             
+            tmp = pg.GraphicsWindow(title="raw data: "+name)
+            tmp.resize(1000,600)
+            tmp2 = pg.GraphicsWindow(title="Evaluation: "+name)
+            tmp2.resize(1000,600)
+ 
+            #=============================#
+            #     conductance             #
+            #=============================#
+            #
+            # raw data
+            plt_data = data['cond']._data
+            x_scale = [i for i in xrange(plt_data.shape[0])]
+            thread_num = np.array([i for i in xrange(len(self._threads))])
+            for k,v in self._threads.iteritems():
+                thread_num[v] = k
+                          
+            tmp_plot = tmp.addPlot(title = "conductance", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='s')
+            tmp_plot.setLabel('bottom', "number of trials",)
+             
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+ 
+            #
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "conductance", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of cores",)
+ 
+            if error_bar:
+                err = create_error_bar(data['cond'].asc_idx(), data['cond'].mean(), data['cond'].min(), data['cond'].max(), data['cond'].std())
+                pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['cond'].mean(), 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
+ 
+            #=============================#
+            #     spike delivery          #
+            #=============================#
+            #
+            # raw data
+            plt_data = data['del']._data
+            tmp_plot = tmp.addPlot(title = "spike delivery", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='s')
+            tmp_plot.setLabel('bottom', "number of trials",)
+ 
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+ 
+            #
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "spike delivery", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of cores",)
+            if error_bar:
+                err = create_error_bar(data['del'].asc_idx(), data['del'].mean(), data['del'].min(), data['del'].max(), data['del'].std())
+                pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['del'].mean(), 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
+ 
+            #
+            # first plot row completed
+            tmp.nextRow()
+            tmp2.nextRow()
+ 
+            #=============================#
+            #     pre event               #
+            #=============================#
+            #
+            # raw data
+            plt_data = data['pre']._data
+            tmp_plot = tmp.addPlot(title = "pre_event", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='s')
+            tmp_plot.setLabel('bottom', "number of trials",)
+             
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+             
+            #
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "pre_event", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of cores",)
+            if error_bar:
+                err = create_error_bar(data['pre'].asc_idx(), data['pre'].mean(), data['pre'].min(), data['pre'].max(), data['pre'].std())
+                pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['pre'].mean(), 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
+             
+            #=============================#
+            #     post event              #
+            #=============================#
+            #
+            # raw data
+            plt_data = data['post']._data
+            tmp_plot = tmp.addPlot(title = "post event", axisItems = {'bottom': IntAxis('bottom') })
+            tmp_plot.addLegend()
+            tmp_plot.setLabel('left', "computation time", units='s')
+            tmp_plot.setLabel('bottom', "number of trials",)
+ 
+            col_iter = iter(col_array)
+            for i in xrange( plt_data.shape[1] ):
+                tmp_plot.plot(x_scale, plt_data[:,i], pen = next(col_iter), name = str(thread_num[i])+' thread(s)' )
+ 
+            #
+            # mean, min, max
+            pop_mean_plot = tmp2.addPlot(title = "post event", axisItems = {'bottom': IntAxis('bottom') })
+            pop_mean_plot.setLabel('left', "computation time", units='s')
+            pop_mean_plot.setLabel('bottom', "number of cores",)
+            if error_bar:
+                err = create_error_bar(data['post'].asc_idx(), data['post'].mean(), data['post'].min(), data['post'].max(), data['post'].std())
+                pop_mean_plot.addItem(err)
+            pop_mean_plot.plot( thread_num, 
+                                data['post'].mean(), 
+                                pen = { 'color':next(col_iter2), 'width': 2 }, 
+                                labels=pop_mean_label )
+             
+            self._pop_win1.append(tmp)
+            self._pop_win2.append(tmp2)
             
     def save_to_file(self):
         """
