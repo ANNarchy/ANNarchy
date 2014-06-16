@@ -239,7 +239,7 @@ By specifing the type of a variable (which can not be changed later contrary to 
 
 * the whole compilation procedure is very easy. One particularly simple approach is to use the ``pyximport`` module shipped with Cython. Let us suppose you wrote a ``dummy()`` method in a Cython file named ``TestModule.pyx``. All you need to use this method in your python code is to write:
 
-.. code:: python
+.. code-block:: python
 
     import pyximport; pyximport.install()
     from TestModule import dummy

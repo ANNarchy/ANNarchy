@@ -18,7 +18,7 @@ Any comment, bug report, problem, suggestion for improvement should be done thro
 
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 2
     :numbered:
 
     Introduction.rst
