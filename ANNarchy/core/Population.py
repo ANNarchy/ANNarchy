@@ -240,7 +240,6 @@ class Population(object):
                 else:
                     getattr(self.cyInstance, '_set_'+attribute)(np.array( [value]*self.size ))
             else:
-                print attribute, value
                 getattr(self.cyInstance, '_set_'+attribute)(value)
         except Exception, e:
             print e
