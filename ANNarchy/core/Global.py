@@ -234,7 +234,38 @@ def step():
     if _network:      
         _network.run(1)
 
+################################
+## Learning flags
+################################
+def enable_learning(projections=None):
+    """
+    Enables learning for all projections.
     
+    *Parameter*:
+    
+    * **projections**: the projections whose learning should be enabled. By default, all the existing projections are enabled.
+    """
+    if not projections:
+        projections = _projections
+    for proj in projections:
+        proj.enable_learning()
+        
+def disable_learning(projections=None):
+    """
+    Disables learning for all projections.
+    
+    *Parameter*:
+    
+    * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
+    """
+    if not projections:
+        projections = _projections
+    for proj in projections:
+        proj.disable_learning()
+    
+################################
+## Time
+################################
 def current_time():
     """
     Returns current simulation time in ms.
@@ -275,6 +306,9 @@ def set_current_step(time):
     except:
         _warning('the network is not compiled yet')
         
+################################
+## Recording
+################################
 def start_record(to_record):
     """
     Starts recording of variables in different populations. 
@@ -392,6 +426,11 @@ def resume_record(to_record=None):
             pop.resume_record(variables)
         else:
             get_population(pop).resume_record(variables)
+
+
+################################
+## Printing
+################################
 
 def _print(*var_text):
     """

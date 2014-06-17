@@ -46,6 +46,13 @@ Access to populations
 
 .. autofunction:: ANNarchy.get_population
 
+Learning
+=====================
+
+.. autofunction:: ANNarchy.enable_learning
+
+.. autofunction:: ANNarchy.disable_learning
+
 Recordings
 ===========
 
