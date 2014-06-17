@@ -39,15 +39,17 @@ class Population(object):
     Represents a population of neurons.
     """
 
-    def __init__(self, geometry, neuron, name=None):
+    def __init__(self, geometry, neuron, name=None, stop_condition=None):
         """        
         *Parameters*:
         
-            * *geometry*: population geometry as tuple. If an integer is given, it is the size of the population.
+            * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
 
-            * *neuron*: instance of ``ANNarchy.RateNeuron`` or ``ANNarchy.SpikeNeuron``
+            * **neuron**: instance of ``ANNarchy.RateNeuron`` or ``ANNarchy.SpikeNeuron``
 
-            * *name*: unique name of the population (optional).
+            * **name**: unique name of the population (optional).
+
+            * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
         
         """
         # Store the provided geometry
@@ -82,6 +84,9 @@ class Population(object):
         
         # Store the neuron type
         self.neuron_type = neuron
+
+        # Store the stop condition
+        self.stop_condition = stop_condition
         
         # Attribute a name if not provided
         self._id = len(Global._populations)

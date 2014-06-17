@@ -414,3 +414,14 @@ void Network::run(int steps)
     }
 
 }
+
+int Network::run_until(int steps, std::vector<int> populations)
+{
+
+    for(int n = 0; n < steps; n++)
+    {
+        this->run(1);
+    }
+
+    return steps;
+}

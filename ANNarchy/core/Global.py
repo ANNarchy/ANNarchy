@@ -188,6 +188,33 @@ def simulate(duration, measure_time = False):
         _error('simulate(): the network is not compiled yet.')
         return
     
+def simulate_until(max_duration, population, measure_time = False):
+    """
+    Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
+
+        simulate_until(max_duration=1000.0)
+
+    *Parameters*:
+
+    * **duration**: the maximum duration of the simulation in milliseconds.
+    * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+    * **measure_time**: defines whether the simulation time should be printed (default=False).
+    """
+    nb_steps = ceil(float(max_duration) / config['dt'])
+    if not instance(population, list):
+        population = [population]
+    if _network:      
+        if measure_time:
+            tstart = time.time() 
+        nb = _network.run_until(nb_steps, [pop._id for pop in population])
+        sim_time = float(nb) / config['dt']
+        if measure_time:
+            print('Simulating', nb/config['dt'], 'milliseconds took', time.time() - tstart, 'seconds.')
+        return sim_time
+    else:
+        _error('simulate(): the network is not compiled yet.')
+        return 0.0
+
 def step():
     """
     Performs a single simulation step (duration = ``dt``). 

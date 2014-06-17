@@ -23,41 +23,47 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+from libcpp.vector cimport vector
 cdef extern from "../build/Network.h":
-	cdef cppclass Network:
-		Network()
+    cdef cppclass Network:
+        Network()
         
-		void destroy()
+        void destroy()
 
-		int getTime()
+        int getTime()
 
-		void setTime(int)
+        void setTime(int)
 
-		void setNumThreads(int)
+        void setNumThreads(int)
         
-		void run(int nbSteps)
+        void run(int nbSteps)
+
+        int run_until(int nbSteps, vector[int] populations)
 		
 cdef extern from "../build/Network.h" namespace "Network":
-	cdef Network* instance()
+    cdef Network* instance()
 
 cdef class pyNetwork:
 
-	cdef Network* cInstance
+    cdef Network* cInstance
 
-	def __cinit__(self):
-		self.cInstance = instance()
+    def __cinit__(self):
+        self.cInstance = instance()
 
-	def destroy(self):
-		self.cInstance.destroy()
+    def destroy(self):
+        self.cInstance.destroy()
 
-	def get_time(self):
-		return self.cInstance.getTime()
+    def get_time(self):
+        return self.cInstance.getTime()
 
-	def set_time(self, time):
-		self.cInstance.setTime(time)
+    def set_time(self, time):
+        self.cInstance.setTime(time)
 
-	def set_num_threads(self, threads):
-		self.cInstance.setNumThreads(int(threads))
+    def set_num_threads(self, threads):
+        self.cInstance.setNumThreads(int(threads))
         
-	def run(self, int nbSteps):
-		self.cInstance.run(nbSteps)
+    def run(self, int nbSteps):
+        self.cInstance.run(nbSteps)
+        
+    def run_until(self, int nbSteps, list pops):
+        return self.cInstance.run_until(nbSteps, pops)

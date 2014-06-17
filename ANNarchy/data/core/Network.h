@@ -58,6 +58,8 @@ public:
 
 	void run(int steps);
 
+	int run_until(int steps, std::vector<int> populations);
+
 	/**
 	 * 	\brief		add a population to the network
 	 * 	\details	will be automatically called by the Population::Population() method
@@ -67,6 +69,7 @@ public:
 	int getTime() { return ANNarchy_Global::time; }
 
 	void setTime(int time) { ANNarchy_Global::time = time; }
+	
 protected:
 	Network();
 
