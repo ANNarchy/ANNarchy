@@ -86,7 +86,7 @@ class Population(object):
         self.neuron_type = neuron
 
         # Store the stop condition
-        self.stop_condition = stop_condition
+        self._stop_condition = stop_condition
         
         # Attribute a name if not provided
         self._id = len(Global._populations)

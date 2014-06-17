@@ -362,3 +362,42 @@ void %(class)s::compute_sum_%(var)s() {
             code += '    ' + func['cpp']
             
         return code
+
+    def generate_stop_condition_definition(self):
+        "Header for the stop condition"
+        if self.desc.has_key('stop_condition'):
+            return "    virtual bool stop_condition();"
+        else:
+            return ""
+
+    def generate_stop_condition_body(self):
+        "Body for the stop condition"
+        if self.desc.has_key('stop_condition'):
+            if self.desc['stop_condition']['type'] == 'any':
+                cond = """
+    bool %(class)s::stop_condition() 
+    {
+        for(int i=0; i<nbNeurons_; i++)
+        {
+            if(%(condition)s)
+                return true;
+        }
+        return false ;
+    }
+    """ % {'class': self.class_name, 'condition': self.desc['stop_condition']['cpp']}
+            else: # all
+                cond = """
+    bool %(class)s::stop_condition() 
+    {
+        for(int i=0; i<nbNeurons_; i++)
+        {
+            if(!%(condition)s)
+                return false;
+        }
+        return true ;
+    }
+    """ % {'class': self.class_name, 'condition': self.desc['stop_condition']['cpp']}
+
+        else:
+            cond = ""
+        return cond

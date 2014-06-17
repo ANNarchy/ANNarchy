@@ -155,6 +155,9 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Random variables
         randoms = self.generate_random_definition()
         
+        # Stop condition
+        stop_condition = self.generate_stop_condition_definition()
+
         # Custom function
         functions = self.generate_functions()
         
@@ -169,6 +172,7 @@ class SpikePopulationGenerator(PopulationGenerator):
             'global_ops_method' : global_ops_method,
             'member' : members,
             'random' : randoms,
+            'stop_condition' : stop_condition,
             'friend' : friends,
             'functions' : functions
         }
@@ -188,14 +192,22 @@ class SpikePopulationGenerator(PopulationGenerator):
         " Generates the C++ .cpp file"
         # Constructor
         constructor, reset = self.generate_constructor()
+
         # Destructor
         destructor = self.generate_destructor()
+
         # prepare neurons
         prepare = self.generate_prepare_neurons()
+
         # Single operations
         singleops, globalops = self.generate_globalops()
+
         # Record
         record = self.generate_record()
+
+        # Stop condition
+        stop_condition = self.generate_stop_condition_body()
+
         # Meta-step
         local_metastep = self.generate_local_metastep()
         global_metastep = self.generate_global_metastep()
@@ -216,6 +228,7 @@ class SpikePopulationGenerator(PopulationGenerator):
             'globalMetaStep' : global_metastep,
             'global_ops' : globalops,
             'record' : record,
+            'stop_condition' : stop_condition,
             'reset_event': reset_event,
             'reset_neuron': reset_event.replace('(*it)', 'rank'),
             'single_global_ops' : singleops

@@ -30,6 +30,53 @@ In some cases, you may want to perform only one step of the simulation, instead 
 
     step() # Simulate for 1 step
 
+Early-stopping of a simulation
+-------------------------------
+
+In some cases, it is desired to stop the simulation whenever a criterion is fulfilled (for example, a neural integrator exceeds a certain threshold), not after a fixed amount of time.
+
+There is the possibility to define a ``stop_condition`` at the ``Population`` level::
+
+    pop1 = Population( ... , stop_condition = "r > 1.0")
+
+When calling the ``simulate_until()`` method instead of ``simulate()``::
+
+    t = simulate_until(max_duration=1000.0, populations=pop1)
+
+the simulation will be stopped whenever the ``stop_condition`` of ``pop1`` is met, i.e. when the firing rate of *any* neuron of pop1 is above 1.0. If the condition is never met, the simulation will last maximally ``max_duration``. The methods returns the effective duration of the simulation (to compute reaction times, for example).
+
+The ``stop_condition`` can use any logical operation on the parameters and variables of the neuron associated to the population::
+
+    pop1 = Population( ... , stop_condition = "(r > 1.0) and (mp < 2.0)")
+
+By default, the simulation stops when at least one neuron in the population fulfills the criterion. If you want to stop the simulation when *all* neurons fulfill the condition, you can use the flag ``all`` after the condition::
+
+    pop1 = Population( ... , stop_condition = "r > 1.0 : all")
+
+The flag ``any`` is the default behavior and can be omitted.
+
+The stop criterion can depend on several populations, by providing a list of populations to the ``populations`` argument instead of a single population::
+
+    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2])
+
+The simulation will then stop when the criterion is met in both populations at the same time. If you want that the simulation stops when at least one population meets its criterion, you can specify the ``operator`` argument::
+
+    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2]. operator='or')
+
+The default value of ``operator`` is a ``'and'`` function between the populations' criteria.
+
+    
+.. warning::
+
+    Global operations (min, max, mean) are not possible inside the ``stop_condition``. If you need them, store them in a variable in the ``equations`` argument of the neuron and use it as the condition::
+
+        equations = """
+            r = ...
+            max_r = max(r)
+        """
+
+
+
 Saving/loading 
 ===============
 
@@ -75,7 +122,7 @@ Populations and projections individually
 
 The same file formats are allowed (Matlad data can not be loaded).
 
-Running the simulation
+Configuring the simulation
 ===================================
 
 The resulting script can be directly executed in the console::

@@ -77,8 +77,13 @@ class Analyser(object):
             # Extract RandomDistribution objects
             pop.description['random_distributions'] = _extract_randomdist(pop)
 
+            # Extract the spike condition if any
             if 'raw_spike' in pop.description.keys() and 'raw_reset' in pop.description.keys():
                 pop.description['spike'] = _extract_spike_variable(pop.description)
+
+            # Extract the stop condition if any
+            if pop.description.has_key('stop_condition'):
+                _extract_stop_condition(pop.description)
 
             # Translate the equation to C++
             for variable in pop.description['variables']:
@@ -631,6 +636,9 @@ def analyse_population(pop):
     if len(attributes) != len(list(set(attributes))):
         _error(pop.name, ': attributes must be declared only once.', attributes)
         exit(0)
+    # Extract the stop condition
+    if pop._stop_condition:
+        description['stop_condition'] = {'eq': pop._stop_condition}
     
     # Extract all targets
     targets = _extract_targets(variables)
@@ -1004,7 +1012,28 @@ def _extract_post_spike_variable(proj):
 
         post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
 
-    return post_spike_var    
+    return post_spike_var  
+
+def _extract_stop_condition(pop):
+    eq = pop['stop_condition']['eq']
+    pop['stop_condition']['type'] = 'any'
+    # Check the flags
+    split = eq.split(':')
+    if len(split) > 1: # flag given
+        eq = split[0]
+        flags = split[1].strip()
+        split = flags.split(' ')
+        for el in split:
+            if el.strip() == 'all':
+                pop['stop_condition']['type'] = 'all'
+    # Convert the expression
+    translator = Equation('stop_cond', eq, 
+                          pop['attributes'], 
+                          pop['local'], 
+                          pop['global'], 
+                          type = 'cond')
+    code = translator.parse()
+    pop['stop_condition']['cpp'] = '(' + code + ')'
 
 ####################################
 # Functions for string manipulation

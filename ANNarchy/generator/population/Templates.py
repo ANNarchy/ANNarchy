@@ -45,6 +45,8 @@ public:
     
     void record();
 
+%(stop_condition)s
+
 %(global_ops_access)s
     
 %(access)s
@@ -186,6 +188,8 @@ void %(class)s::record()
     }
 }
 
+%(stop_condition)s
+
 %(single_global_ops)s
 """
 
@@ -269,6 +273,8 @@ public:
     void reset();    // called by global_operations
 
     void reset(int rank);    // called by metaStep during refractoring phase
+
+%(stop_condition)s
 
 %(global_ops_access)s
     
@@ -384,6 +390,7 @@ void %(class)s::record()
     }
 }
 
+%(stop_condition)s
 
 void %(class)s::reset() 
 {

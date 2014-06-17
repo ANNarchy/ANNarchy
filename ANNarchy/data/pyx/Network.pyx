@@ -24,6 +24,8 @@
 
 """
 from libcpp.vector cimport vector
+from libcpp cimport bool
+
 cdef extern from "../build/Network.h":
     cdef cppclass Network:
         Network()
@@ -38,7 +40,7 @@ cdef extern from "../build/Network.h":
         
         void run(int nbSteps)
 
-        int run_until(int nbSteps, vector[int] populations)
+        int run_until(int nbSteps, vector[int] populations, bool or_and)
 		
 cdef extern from "../build/Network.h" namespace "Network":
     cdef Network* instance()
@@ -65,5 +67,5 @@ cdef class pyNetwork:
     def run(self, int nbSteps):
         self.cInstance.run(nbSteps)
         
-    def run_until(self, int nbSteps, list pops):
-        return self.cInstance.run_until(nbSteps, pops)
+    def run_until(self, int nbSteps, list pops, bool or_and):
+        return self.cInstance.run_until(nbSteps, pops, or_and)

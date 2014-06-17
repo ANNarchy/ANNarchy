@@ -58,7 +58,7 @@ public:
 
 	void run(int steps);
 
-	int run_until(int steps, std::vector<int> populations);
+	int run_until(int steps, std::vector<int> populations, bool or_and);
 
 	/**
 	 * 	\brief		add a population to the network

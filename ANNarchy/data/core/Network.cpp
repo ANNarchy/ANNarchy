@@ -415,13 +415,26 @@ void Network::run(int steps)
 
 }
 
-int Network::run_until(int steps, std::vector<int> populations)
+int Network::run_until(int steps, std::vector<int> populations, bool or_and)
 {
-
+    bool stop = false;
+    int nb = 0;
     for(int n = 0; n < steps; n++)
     {
         this->run(1);
+        nb++;
+        stop = or_and;
+        for(int i=0; i<populations.size();i++)
+        {
+            if(or_and)
+                stop = stop && getPopulation(populations[i])->stop_condition();
+            else
+                stop = stop || getPopulation(populations[i])->stop_condition();
+        }
+        if(stop)
+            break;
     }
 
-    return steps;
+
+    return nb;
 }

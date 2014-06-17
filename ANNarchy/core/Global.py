@@ -188,25 +188,36 @@ def simulate(duration, measure_time = False):
         _error('simulate(): the network is not compiled yet.')
         return
     
-def simulate_until(max_duration, population, measure_time = False):
+def simulate_until(max_duration, population, operator='and', measure_time = False):
     """
-    Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
+    Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
 
-        simulate_until(max_duration=1000.0)
+    One can specify several populations. f the stop condition is true for any of the populations, the simulation will stop ('or' function).
+
+    Example::
+
+        pop1 = Population( ..., stop_condition = "r > 1.0 : any")
+        compile()
+        simulate_until(max_duration=1000.0. population=pop1)
 
     *Parameters*:
 
     * **duration**: the maximum duration of the simulation in milliseconds.
     * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+    * **operator**: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
     * **measure_time**: defines whether the simulation time should be printed (default=False).
+
+    *Returns*:
+
+    * the actual duration of the simulation in milliseconds.
     """
     nb_steps = ceil(float(max_duration) / config['dt'])
-    if not instance(population, list):
+    if not isinstance(population, list):
         population = [population]
     if _network:      
         if measure_time:
             tstart = time.time() 
-        nb = _network.run_until(nb_steps, [pop._id for pop in population])
+        nb = _network.run_until(nb_steps, [pop._id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
             print('Simulating', nb/config['dt'], 'milliseconds took', time.time() - tstart, 'seconds.')

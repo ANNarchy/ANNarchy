@@ -28,10 +28,12 @@ The goal of this function is to generate all needed classes, compile all C++ sou
 Simulation
 ================================================
 
-Two methods are available to run the simulation
+Different methods are available to run the simulation:
 
 
 .. autofunction:: ANNarchy.simulate
+
+.. autofunction:: ANNarchy.simulate_until
 
 .. autofunction:: ANNarchy.step
 

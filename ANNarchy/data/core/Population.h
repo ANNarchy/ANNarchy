@@ -112,6 +112,8 @@ public:
     bool isMeanRateCoded() { return isRateType_; }
 
     unsigned int getRank() { return rank_; }
+
+    virtual bool stop_condition() {return false;}
     
 protected:
     unsigned int nbNeurons_; 	///< amount of neurons in the layer
