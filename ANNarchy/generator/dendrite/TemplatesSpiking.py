@@ -176,6 +176,8 @@ void %(class)s::computePsp()
     }
     
     %(lside)s += sum;
+
+    pre_spikes_.clear();
 }
 
 void %(class)s::record() 
@@ -231,8 +233,10 @@ void %(class)s::evaluatePreEvent()
         }
     }
 
-    pre_spikes_.clear();
-    delayed_pre_spikes_.push_back( std::vector<int>() );
-    delayed_pre_spikes_.pop_front();
+    if ( maxDelay_ > 0 )
+    {
+        delayed_pre_spikes_.push_back( std::vector<int>() );
+        delayed_pre_spikes_.pop_front();
+    }
 }
 """

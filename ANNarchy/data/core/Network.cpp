@@ -282,13 +282,6 @@ void Network::run(int steps)
         #endif
 
             //
-            // parallel neuron wise
-			for(unsigned int p = 0; p < spike_projections_.size(); p++)
-			{
-				spike_projections_[p]->computePsp(); // increment of conductances, etc.
-			}
-
-            //
             // parallel population wise
 			#pragma omp for
 			for(unsigned int p = 0; p < spike_projections_.size(); p++)
@@ -296,6 +289,13 @@ void Network::run(int steps)
 				spike_projections_[p]->evaluatePreEvents(); // increment of conductances, etc.
 			}
             #pragma omp barrier
+
+            //
+            // parallel neuron wise
+			for(unsigned int p = 0; p < spike_projections_.size(); p++)
+			{
+				spike_projections_[p]->computePsp(); // increment of conductances, etc.
+			}
 
 			#pragma omp for
 			for(unsigned int p = 0; p < spike_populations_.size(); p++)
