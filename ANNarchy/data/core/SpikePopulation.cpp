@@ -34,6 +34,7 @@ SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(n
 
     lastSpike_ = std::vector<int>(nbNeurons_, -10000);
 
+    refractory_period_ = 0;
     refractory_counter_ = std::vector<int>(nbNeurons_,  0);
 }
 
@@ -226,7 +227,7 @@ void SpikePopulation::metaLearn()
 #endif
 }
 
-void SpikePopulation::updateRefactoryCounter()
+void SpikePopulation::updateRefractoryCounter()
 {
 #ifdef _DEBUG
 	#pragma omp master

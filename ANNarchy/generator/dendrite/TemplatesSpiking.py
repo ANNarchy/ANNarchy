@@ -48,6 +48,8 @@ public:
 
     void localLearn();
 
+    void computePsp();
+
     void preEventPsp(int rank);
 
     void preEventLearn(int rank);
@@ -162,6 +164,20 @@ void %(class)s::globalLearn() {
 %(global)s
 }
 
+void %(class)s::computePsp() 
+{
+    DATA_TYPE sum = 0.0;
+    
+    for ( int n = 0; n < pre_spikes_.size(); n++)
+    {
+        int i = pre_spikes_[n];
+        
+        sum += %(rside)s       
+    }
+    
+    %(lside)s += sum;
+}
+
 void %(class)s::record() 
 {
 %(record)s
@@ -204,13 +220,6 @@ void %(class)s::evaluatePreEvent()
             std::cout << "]"<< std::endl;
         }
     #endif
-
-        for ( int n = 0; n < pre_spikes_.size(); n++)
-        {
-            int i = pre_spikes_[n];
-            
-            %(pre_event_psp)s            
-        }
         
         if ( isLearning() && !post_population_->hasSpiked(post_neuron_rank_) )
         {

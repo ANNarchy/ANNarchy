@@ -66,9 +66,11 @@ class SpikePopulationGenerator(PopulationGenerator):
     
     // generate random times in range 
     auto tmp = %(rand_init)s.getValues(nbNeurons_);
+    refractory_period_ = *( std::max_element(tmp.begin(), tmp.end()) );
     
     // transform time in steps
     std::transform(tmp.begin(), tmp.end(), refractory_times_.begin(), std::bind1st(std::multiplies<DATA_TYPE>(), dt_));
+    
     """ % { 'rand_init': self.desc['refractory']._gen_cpp() }
                 
             elif isinstance(self.desc['refractory'], (float, int)):
@@ -115,32 +117,6 @@ class SpikePopulationGenerator(PopulationGenerator):
  
         return constructor, reset
     
-    def generate_prepare_neurons(self):
-        prepare = """
-#ifdef ANNAR_PROFILE
-    double start, stop;
-    start = omp_get_wtime();
-#endif
-"""
-        # add up inputs, if available
-        for variable in self.connected_targets:
-            prepare += """
-    // add the new conductance to the old one
-    // and reset the new conductance values
-    std::transform(g_%(name)s_.begin(), g_%(name)s_.end(),
-                   g_%(name)s_new_.begin(), g_%(name)s_.begin(),
-                   std::plus<DATA_TYPE>());
-    std::fill(g_%(name)s_new_.begin(), g_%(name)s_new_.end(), 0.0);
-""" % {'name' : variable}
-
-        prepare += """
-#ifdef ANNAR_PROFILE
-    stop = omp_get_wtime();
-    Profile::profileInstance()->appendTimeConductance(name_, (stop-start)*1000.0);
-#endif
-"""
-        return prepare
-        
     def generate_header(self):
         " Generates the C++ header file."        
         # Private members declarations
@@ -196,9 +172,6 @@ class SpikePopulationGenerator(PopulationGenerator):
         # Destructor
         destructor = self.generate_destructor()
 
-        # prepare neurons
-        prepare = self.generate_prepare_neurons()
-
         # Single operations
         singleops, globalops = self.generate_globalops()
 
@@ -222,7 +195,6 @@ class SpikePopulationGenerator(PopulationGenerator):
             'pop_id': self.desc['id'],
             'constructor' : constructor,
             'destructor' : destructor,
-            'prepare': prepare,
             'resetToInit' : reset,
             'localMetaStep' : local_metastep,
             'globalMetaStep' : global_metastep,

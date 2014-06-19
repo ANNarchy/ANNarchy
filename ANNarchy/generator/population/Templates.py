@@ -258,8 +258,6 @@ public:
     
     int getNeuronCount() { return nbNeurons_; }
     
-    void prepareNeurons();
-    
     void resetToInit();
     
     void localMetaStep(int neur_rank);
@@ -348,13 +346,6 @@ spike_population_body = """#include "%(class)s.h"
     std::cout << "%(class)s::Destructor" << std::endl;
 #endif
 %(destructor)s
-}
-
-void %(class)s::prepareNeurons() 
-{
-%(prepare)s
-
-    updateRefactoryCounter();
 }
 
 void %(class)s::resetToInit() 

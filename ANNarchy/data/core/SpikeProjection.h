@@ -39,6 +39,8 @@ public:
 
     void evaluatePreEvents();
 
+    void computePsp();
+
 	Population* getPrePopulation();
 
 	void addDendrite(int postNeuronRank, class Dendrite *dendrite);

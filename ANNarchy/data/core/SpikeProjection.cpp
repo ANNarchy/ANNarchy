@@ -96,6 +96,19 @@ void SpikeProjection::evaluatePreEvents()
 	}
 }
 
+void SpikeProjection::computePsp()
+{
+	#pragma omp for
+	for ( unsigned int n = 0; n < nbDendrites_; n++ )
+	{
+		if ( !dendrites_[n] )
+			continue;
+
+		static_cast<SpikeDendrite*>(dendrites_[n])->computePsp();
+	}
+	#pragma omp barrier
+}
+
 Population* SpikeProjection::getPrePopulation()
 {
 	return static_cast<class Population*>(pre_population_);

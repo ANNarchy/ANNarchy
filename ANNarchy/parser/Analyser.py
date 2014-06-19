@@ -985,7 +985,7 @@ def _extract_pre_spike_variable(proj):
         
         if post_target: # the left side has to be modified
             eq = eq.replace( "g_" + proj.description['target'] + "_[i]",
-                        "post_population_->g_"+proj.description['target']+"_new_[post_neuron_rank_]")
+                        "post_population_->g_"+proj.description['target']+"_[post_neuron_rank_]")
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )

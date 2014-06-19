@@ -130,9 +130,9 @@ public:
 
     void propagateSpikes();
     void evaluatePostSpikes();
+	void updateRefractoryCounter();
 
 	// override
-	virtual void prepareNeurons() {}
 	virtual void resetToInit() {}
 	virtual void record() {}
 	virtual void globalMetaStep() {}
@@ -140,12 +140,13 @@ public:
 	virtual void globalOperations() {}
 	virtual void reset(int rank) {}
 
-protected:
+	bool isRefractoring() { return refractory_period_ > 0 ? true : false; }
 
-	void updateRefactoryCounter();
+protected:
 
 	std::vector< std::vector<class Dendrite*> > spikeTargets_; // first dimension, neuron wise
 
+	int refractory_period_;
 	std::vector<int> refractory_times_;
 	std::vector<int> refractory_counter_;
 

@@ -56,6 +56,8 @@ public:
 
 	virtual void localLearn() = 0;
 
+	virtual void computePsp()=0;
+
     virtual void postEvent() = 0;
 
     virtual void evaluatePreEvent() = 0;
