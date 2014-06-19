@@ -32,6 +32,8 @@ RateProjection::RateProjection(): Projection()
 #ifdef _DEBUG_PARALLELISM
 	log_ = new ParallelLogger( omp_get_max_threads(), nbDendrites_ );
 #endif
+	// register on network
+	Network::instance()->addProjection(this, true);
 }
 
 RateProjection::~RateProjection()

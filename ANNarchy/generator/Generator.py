@@ -189,12 +189,14 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
         clean = True
             
     # TODO: remove when parallel spikes work!!!!
-    has_spike = False
-    for pop in populations:
-        if pop.description['type'] == 'spike':
-            has_spike = True
-    if has_spike:
-        Global.config['num_threads'] = 1
+    #===========================================================================
+    # has_spike = False
+    # for pop in populations:
+    #     if pop.description['type'] == 'spike':
+    #         has_spike = True
+    # if has_spike:
+    #     Global.config['num_threads'] = 1
+    #===========================================================================
 
 
     # Test if profiling is enabled

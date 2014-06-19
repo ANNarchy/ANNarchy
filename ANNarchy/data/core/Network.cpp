@@ -22,7 +22,9 @@
 #include "Network.h"
 
 #include "RatePopulation.h"
+#include "RateProjection.h"
 #include "SpikePopulation.h"
+#include "SpikeProjection.h"
 #include "ANNarchy.h"
 #include "Global.h"
 #include "Includes.h"
@@ -35,6 +37,9 @@ Network::Network()
 	rate_populations_.clear();
 	spike_populations_.clear();
 
+	rate_projections_.clear();
+	spike_projections_.clear();
+
 	ANNarchy_Global::time = 0;
 }
 
@@ -43,18 +48,7 @@ Network::~Network()
 #ifdef _DEBUG
     std::cout << "Network destructor." << std::endl;
 #endif
-
-	while(!rate_populations_.empty())
-	{
-		delete rate_populations_.back();
-		rate_populations_.pop_back();
-	}
-
-	while(!spike_populations_.empty())
-	{
-		delete spike_populations_.back();
-		spike_populations_.pop_back();
-	}
+	destroy();
 }
 
 void Network::destroy()
@@ -75,6 +69,10 @@ void Network::destroy()
 		spike_populations_.pop_back();
 	}
 
+	// projections are destroyed by their corresponding layers,
+	// so it's enough to clear the vectors
+	rate_projections_.clear();
+	spike_projections_.clear();
 }
 
 class Population* Network::getPopulation(std::string name)
@@ -179,6 +177,14 @@ void Network::addPopulation(class Population* population)
     }
 }
 
+void Network::addProjection(class Projection* proj, bool isRateCoded)
+{
+	if ( isRateCoded )
+		rate_projections_.push_back( static_cast<class RateProjection*>(proj) );
+	else
+		spike_projections_.push_back( static_cast<class SpikeProjection*>(proj) );
+}
+
 void Network::connect(int prePopulationID, int postPopulationID, int targetID, std::string filename)
 {
 	/*
@@ -277,16 +283,14 @@ void Network::run(int steps)
 
             //
             // parallel population wise
-            #pragma omp master
-            {
-                for(unsigned int p = 0; p < spike_populations_.size(); p++)
-                {
-                    spike_populations_[p]->evaluatePreSpikes();
-                }
-            }
+			#pragma omp for
+			for(unsigned int p = 0; p < spike_projections_.size(); p++)
+			{
+				spike_projections_[p]->evaluatePreEvents(); // increment of conductances, etc.
+			}
             #pragma omp barrier
 
-			#pragma omp master
+			#pragma omp for
 			for(unsigned int p = 0; p < spike_populations_.size(); p++)
 			{
 				spike_populations_[p]->prepareNeurons(); // increment of conductances, etc.
@@ -317,13 +321,10 @@ void Network::run(int steps)
 
             //
             // parallel neuron wise
-            #pragma omp master
-            {
-            for(unsigned int p = 0; p < spike_populations_.size(); p++)
-            {
-                spike_populations_[p]->metaStep();
-            }
-            }
+			for(unsigned int p = 0; p < spike_populations_.size(); p++)
+			{
+				spike_populations_[p]->metaStep();
+			}
             #pragma omp barrier
 
             //
@@ -333,13 +334,14 @@ void Network::run(int steps)
 			{
 				rate_populations_[p]->globalOperations();
 			}
+			#pragma omp barrier
 
 			#pragma omp master
             {
-			for(unsigned int p = 0; p < spike_populations_.size(); p++)
-			{
-				spike_populations_[p]->globalOperations();
-			}
+				for(unsigned int p = 0; p < spike_populations_.size(); p++)
+				{
+					spike_populations_[p]->globalOperations();
+				}
             }
             #pragma omp barrier
 
@@ -351,12 +353,9 @@ void Network::run(int steps)
             }
             #pragma omp barrier
             
-            #pragma omp master
-            {
             for(int p = 0; p < spike_populations_.size(); p++)
             {
            		spike_populations_[p]->metaLearn();
-            }
             }
             #pragma omp barrier
 
@@ -371,12 +370,10 @@ void Network::run(int steps)
 
 			//
 			// parallel neuron/dendrite wise
-            #pragma omp master
-            {
+            #pragma omp for
 			for(unsigned int p = 0; p < spike_populations_.size(); p++)
 			{
 				spike_populations_[p]->evaluatePostSpikes();
-			}
             }
 			#pragma omp barrier
 
@@ -387,14 +384,13 @@ void Network::run(int steps)
             {
             	rate_populations_[p]->record();
             }
+			#pragma omp barrier
 
-			#pragma omp master
-            {
+			#pragma omp for
 			for(unsigned int p = 0; p < spike_populations_.size(); p++)
 			{
 				spike_populations_[p]->record();
 			}
-            }
             #pragma omp barrier
 
         #ifdef ANNAR_PROFILE

@@ -25,7 +25,8 @@
 
 SpikeProjection::SpikeProjection(): Projection()
 {
-
+	// register on network
+	Network::instance()->addProjection(this, false);
 }
 
 void SpikeProjection::globalLearn()
@@ -64,7 +65,7 @@ void SpikeProjection::postEvent(std::vector<int> post_ranks)
 void SpikeProjection::evaluatePostEvents()
 {
 #ifdef _DEBUG
-	std::cout << "number of post events: " << post_ranks.size() << ", time = "<< ANNarchy_Global::time << std::endl;
+	std::cout << "number of post events: " << post_spikes_.size() << ", time = "<< ANNarchy_Global::time << std::endl;
 #endif
 #if defined(_DEBUG) && defined(_DEBUG_PARALLELISM)
 	std::cout << "ID of active thread(s) in this block: " << omp_get_thread_num() << std::endl;
@@ -72,7 +73,6 @@ void SpikeProjection::evaluatePostEvents()
 
 	if ( post_spikes_.size() > 0 )
 	{
-		#pragma omp for
 		for ( int n = 0; n < (int)post_spikes_.size(); n++ )
 		{
 			if ( !dendrites_[post_spikes_[n]] )
@@ -80,7 +80,6 @@ void SpikeProjection::evaluatePostEvents()
 
 			static_cast<SpikeDendrite*>(dendrites_[post_spikes_[n]])->postEvent();
 		}
-		#pragma omp barrier
 
 		post_spikes_.clear();
 	}
@@ -88,7 +87,6 @@ void SpikeProjection::evaluatePostEvents()
 
 void SpikeProjection::evaluatePreEvents()
 {
-	#pragma omp for
 	for ( unsigned int n = 0; n < nbDendrites_; n++ )
 	{
 		if ( !dendrites_[n] )

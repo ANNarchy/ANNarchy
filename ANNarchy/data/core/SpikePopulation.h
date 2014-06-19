@@ -128,11 +128,10 @@ public:
     */
     int nbSpikesInTheLast(int rank, int t);
 
-	// override
     void propagateSpikes();
-    void evaluatePreSpikes();
     void evaluatePostSpikes();
 
+	// override
 	virtual void prepareNeurons() {}
 	virtual void resetToInit() {}
 	virtual void record() {}

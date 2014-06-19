@@ -279,7 +279,7 @@ class SpikePopulationGenerator(PopulationGenerator):
     {
         if (refractory_counter_[i] < 1)
         {
-            //#pragma omp critical
+            #pragma omp critical
             {
                 //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
                 this->propagate_.push_back(i);

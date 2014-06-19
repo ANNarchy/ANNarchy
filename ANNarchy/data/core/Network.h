@@ -52,6 +52,8 @@ public:
 	    omp_set_num_threads(threads);
 	}
 
+	void addProjection(class Projection*, bool isRateCoded);
+
 	void connect(int prePopulationID, int postPopulationID, int target, std::string filename);
 
 	void disconnect(int prePopulationID, int postPopulationID, bool preIsSpike, bool postIsSpike, int target=-1);
@@ -79,5 +81,8 @@ private:
 	// data
 	std::vector<class RatePopulation*> rate_populations_;
 	std::vector<class SpikePopulation*> spike_populations_;
+
+	std::vector<class RateProjection*> rate_projections_;
+	std::vector<class SpikeProjection*> spike_projections_;
 };
 #endif

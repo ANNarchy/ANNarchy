@@ -312,37 +312,3 @@ void SpikePopulation::evaluatePostSpikes()
     }
 #endif
 }
-
-void SpikePopulation::evaluatePreSpikes()
-{
-#ifdef ANNAR_PROFILE
-    double start, stop;
-    double time_pre = 0.0;
-#endif
-
-    for( auto p_it = projections_.begin(); p_it != projections_.end(); p_it++)
-    {
-    #ifdef ANNAR_PROFILE
-        #pragma omp master
-        {
-            start = omp_get_wtime();
-        }
-    #endif
-        static_cast<SpikeProjection*>(*p_it)->evaluatePreEvents();
-    #ifdef ANNAR_PROFILE
-        #pragma omp master
-        {
-            stop = omp_get_wtime();
-            time_pre += (stop-start) * 1000.0;
-        }
-        #pragma omp barrier
-    #endif
-    }
-
-#ifdef ANNAR_PROFILE
-    #pragma omp master
-    {
-        Profile::profileInstance()->appendTimePreEvent(name_, time_pre);
-    }
-#endif
-}
