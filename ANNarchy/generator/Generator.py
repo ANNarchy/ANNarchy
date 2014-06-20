@@ -30,7 +30,7 @@ import time
 import ANNarchy
 import ANNarchy.core.Global as Global
 
-from ANNarchy.parser.Analyser import Analyser, _extract_functions
+from ANNarchy.parser.Analyser import Analyser, extract_functions
 
 from ANNarchy.generator.population import RatePopulationGenerator, SpikePopulationGenerator  
 from ANNarchy.generator.projection import RateProjectionGenerator, SpikeProjectionGenerator
@@ -654,7 +654,7 @@ class Generator(object):
                 elif a_line.find('//FUNCTIONS') != -1: # Put the global functions here
                     code += a_line
                     for func in Global._functions:
-                        code += "    " +  _extract_functions(func, local_global=True)[0]['cpp']
+                        code += "    " +  extract_functions(func, local_global=True)[0]['cpp']
                 else:
                     code += a_line
     

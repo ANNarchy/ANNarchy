@@ -1,1 +1,2 @@
 import Analyser
+from SingleAnalysis import analyse_population, analyse_projection
