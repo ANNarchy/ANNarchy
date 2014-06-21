@@ -19,6 +19,8 @@ cdef class CSR:
         self.delay = {}
         self.max_delay = Global.config['dt']
         self.dt = Global.config['dt']
+        self.size = 0
+        self.nb_synapses = 0
 
     def add (self, int rk, list r, list w, list d):
         cdef list val
@@ -36,6 +38,9 @@ cdef class CSR:
         else:
             self.delay[rk] = []
 
+        self.size += 1
+        self.nb_synapses += len(r)
+
     cdef push_back (self, int rk, vector[int] r, vector[float] w, vector[int] d):
         cdef list val
         val = []
@@ -51,6 +56,9 @@ cdef class CSR:
                 self.max_delay = max_d
         else:
             self.delay[rk] = []
+
+        self.size += 1
+        self.nb_synapses += len(r)
 
     def keys(self):
         return self.data.keys()
