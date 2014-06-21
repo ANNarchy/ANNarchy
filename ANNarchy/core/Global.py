@@ -67,6 +67,7 @@ authorized_keywords = [
     'explicit',
     'implicit',
     'exponential',
+    'concurrent',
     'int',
     'bool',
     'float'

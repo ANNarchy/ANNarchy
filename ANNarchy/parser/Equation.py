@@ -190,11 +190,14 @@ class Equation(object):
         explicit_equation = solve(analysed, delta_var)[0].simplify()
     
         # Obtain C code
-        explicit_code = self.c_code(self.local_dict[self.name]) + ' += ' \
+        variable_name = self.c_code(self.local_dict[self.name])
+
+        explicit_code = 'DATA_TYPE _' + self.name + ' = ' + variable_name + '+ '\
                         +  self.c_code(explicit_equation) + ';'
-    
+        switch = variable_name + ' = _' + self.name + ' ;'
+
         # Return result
-        return explicit_code
+        return [explicit_code, switch]
     
     def implicit2(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."

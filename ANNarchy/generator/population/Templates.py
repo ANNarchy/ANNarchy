@@ -407,6 +407,27 @@ void %(class)s::reset(int rank)
 %(single_global_ops)s
 """
 
+spike_emission_template = """
+    if( %(cond)s )
+    {
+        if (refractory_counter_[i] < 1)
+        {
+            #pragma omp critical
+            {
+                //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
+                this->propagate_.push_back(i);
+                this->reset_.push_back(i);
+                
+                lastSpike_[i] = ANNarchy_Global::time;
+                if(record_spike_){
+                    spike_timings_[i].push_back(ANNarchy_Global::time);
+                }
+                spiked_[i] = true;
+            }
+        }
+    }
+"""
+
 # Cython file for a rate population
 #
 # Depends on:

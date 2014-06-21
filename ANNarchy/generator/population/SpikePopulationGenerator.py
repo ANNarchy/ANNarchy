@@ -41,11 +41,11 @@ class SpikePopulationGenerator(PopulationGenerator):
     def generate_members_declaration(self):
         members = PopulationGenerator.generate_members_declaration(self)
 
-        for variable in self.connected_targets: # Actually connected
-            members += """
-    // g_%(name)s_new_ : local
-    std::vector<DATA_TYPE> g_%(name)s_new_;
-""" % {'name' : variable}
+#         for variable in self.connected_targets: # Actually connected
+#             members += """
+#     // g_%(name)s_new_ : local
+#     std::vector<DATA_TYPE> g_%(name)s_new_;
+# """ % {'name' : variable}
 
         for variable in self.declared_targets: # Only declared
             if not 'g_'+variable in self.desc['local']:
@@ -98,21 +98,21 @@ class SpikePopulationGenerator(PopulationGenerator):
        'init' : str(0.0)
        }  
 
-        for variable in self.connected_targets: # actually connected, need the _new temp array
-            # Constructor
-            constructor += """
-    // g_%(name)s_new_ : local
-    g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
-""" % {'name' : variable,
-       'init' : str(0.0)
-       }
-            # Reset
-            reset += """
-    // g_%(name)s_new_ : local
-    g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
-""" % {'name' : variable, 
-       'init' : str(0.0)
-       }  
+#         for variable in self.connected_targets: # actually connected, need the _new temp array
+#             # Constructor
+#             constructor += """
+#     // g_%(name)s_new_ : local
+#     g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
+# """ % {'name' : variable,
+#        'init' : str(0.0)
+#        }
+#             # Reset
+#             reset += """
+#     // g_%(name)s_new_ : local
+#     g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
+# """ % {'name' : variable, 
+#        'init' : str(0.0)
+#        }  
    
  
         return constructor, reset
@@ -244,29 +244,6 @@ class SpikePopulationGenerator(PopulationGenerator):
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
 
-            # spike propagation and refractory period
-            if param['name'] == self.desc['spike']['name']:
-                code += """
-    if( %(cond)s )
-    {
-        if (refractory_counter_[i] < 1)
-        {
-            #pragma omp critical
-            {
-                //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
-                this->propagate_.push_back(i);
-                this->reset_.push_back(i);
-                
-                lastSpike_[i] = ANNarchy_Global::time;
-                if(record_spike_){
-                    spike_timings_[i].push_back(ANNarchy_Global::time);
-                }
-                spiked_[i] = true;
-            }
-        }
-    }
-""" % {'cond' : self.desc['spike']['spike_cond'] } #TODO: check code
-
             # Process the bounds min and max
             for bound, val in param['bounds'].iteritems():
                 # Bound min
@@ -291,5 +268,18 @@ class SpikePopulationGenerator(PopulationGenerator):
     // Default behavior for g_%(target)s_
     g_%(target)s_[i] = 0.0;
 """ % {'target' : target}
+
+        # Switch array values for the ODEs:
+        code += """
+    // Switch temporary arrays for the ODEs"""
+        for param in self.desc['variables']: 
+            if param['switch']: # ODE
+                code += """
+    %(switch)s 
+""" % {'switch' : param['switch']}
+
+
+        # spike propagation and refractory period
+        code += spike_emission_template % {'cond' : self.desc['spike']['spike_cond'] } 
 
         return code

@@ -153,14 +153,28 @@ class Analyser(object):
                     code = translator.parse()
                 else: # An if-then-else statement
                     code = translate_ITE(variable['name'], eq, condition, pop, untouched)
-                    
+
                 
+                if isinstance(code, str):
+                    cpp_eq = code
+                    switch = None
+                else: # ODE
+                    cpp_eq = code[0]
+                    switch = code[1]
+
+                print cpp_eq, switch
+
                 # Replace untouched variables with their original name
                 for prev, new in untouched.iteritems():
-                    code = code.replace(prev, new) 
+                    cpp_eq = re.sub(r'([^_])'+prev, r'\1'+new, cpp_eq)
+                    if switch:
+                        switch = re.sub(r's([^_])'+prev, r'\1'+new, switch)
                 
+                print cpp_eq, switch
+
                 # Store the result
-                variable['cpp'] = code
+                variable['cpp'] = cpp_eq # the C++ equation
+                variable['switch'] = switch # switch value id ODE
             
         # Generate C++ code for all projection variables 
         for proj in self.projections:
@@ -256,13 +270,21 @@ class Analyser(object):
                         
                 else: # An if-then-else statement
                     code = translate_ITE(variable['name'], eq, condition, proj, untouched)
-                       
+
+                if isinstance(code, str):
+                    cpp_eq = code
+                    switch = None
+                else: # ODE
+                    cpp_eq = code[0]
+                    switch = code[1]
+
                 # Replace untouched variables with their original name
                 for prev, new in untouched.iteritems():
-                    code = code.replace(prev, new)     
+                    cpp_eq = cpp_eq.replace(prev, new)     
                 
                 # Store the result
-                variable['cpp'] = code
+                variable['cpp'] = cpp_eq # the C++ equation
+                variable['switch'] = switch # switch value id ODE
                 
             # Translate the psp code if any
             if 'raw_psp' in proj.description.keys():                
