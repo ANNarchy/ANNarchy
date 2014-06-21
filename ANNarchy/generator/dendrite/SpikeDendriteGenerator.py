@@ -218,7 +218,18 @@ class SpikeDendriteGenerator(DendriteGenerator):
                 code +="""
         %(code)s   
 """ % {'code' : param['cpp']}
-                # Set the min and max values 
+
+        # Switch array values for the ODEs:
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['local']: # local attribute 
+                if param['switch']: # ODE
+                    code += """
+        %(switch)s 
+""" % {'switch' : param['switch']}
+
+        # Set the min and max values 
+        for param in self.desc['variables']:
+            if param['name'] in self.desc['local']: # local attribute 
                 for bound, val in param['bounds'].iteritems():
                     # Check if the min/max value is a float/int or another parameter/variable
                     if val in self.desc['local']:
@@ -237,6 +248,7 @@ class SpikeDendriteGenerator(DendriteGenerator):
         if(%(var)s_[i] > %(val)s)
             %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : pval}
+
         code+="""
     }
 """

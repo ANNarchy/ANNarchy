@@ -236,7 +236,6 @@ class SpikePopulationGenerator(PopulationGenerator):
         """
         code = ""         
         for param in self.desc['variables']:  
-             # local attribute          
             if param['name'] in self.desc['local']:
                 code += """
     %(comment)s
@@ -244,17 +243,29 @@ class SpikePopulationGenerator(PopulationGenerator):
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
 
-            # Process the bounds min and max
-            for bound, val in param['bounds'].iteritems():
-                # Bound min
-                if bound == 'min':
+        # Switch array values for the ODEs:
+        code += """
+    // Switch temporary arrays for the ODEs"""
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['local']:
+                if param['switch']: # ODE
                     code += """
+    %(switch)s 
+""" % {'switch' : param['switch']}
+
+        # Process the bounds min and max
+        for param in self.desc['variables']:  
+            if param['name'] in self.desc['local']:
+                for bound, val in param['bounds'].iteritems():
+                    # Bound min
+                    if bound == 'min':
+                        code += """
     if(%(var)s_[i] < %(val)s)
         %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
-                # Bound max 
-                if bound == 'max':
-                    code += """
+                    # Bound max 
+                    if bound == 'max':
+                        code += """
     if(%(var)s_[i] > %(val)s)
         %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
@@ -269,14 +280,6 @@ class SpikePopulationGenerator(PopulationGenerator):
     g_%(target)s_[i] = 0.0;
 """ % {'target' : target}
 
-        # Switch array values for the ODEs:
-        code += """
-    // Switch temporary arrays for the ODEs"""
-        for param in self.desc['variables']: 
-            if param['switch']: # ODE
-                code += """
-    %(switch)s 
-""" % {'switch' : param['switch']}
 
 
         # spike propagation and refractory period

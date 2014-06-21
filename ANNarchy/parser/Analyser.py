@@ -87,7 +87,7 @@ class Analyser(object):
             if pop.description.has_key('stop_condition'):
                 extract_stop_condition(pop.description)
 
-            # Translate the equation to C++
+            # Translate the equations to C++
             for variable in pop.description['variables']:
                 eq = variable['transformed_eq']
                 untouched={}
@@ -162,15 +162,17 @@ class Analyser(object):
                     cpp_eq = code[0]
                     switch = code[1]
 
-                print cpp_eq, switch
-
                 # Replace untouched variables with their original name
                 for prev, new in untouched.iteritems():
-                    cpp_eq = re.sub(r'([^_])'+prev, r'\1'+new, cpp_eq)
-                    if switch:
-                        switch = re.sub(r's([^_])'+prev, r'\1'+new, switch)
-                
-                print cpp_eq, switch
+                    if prev.startswith('g_'):
+                        cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, cpp_eq)
+                        if switch:
+                            switch = re.sub(r'^'+prev, new, switch)
+
+                    else:
+                        cpp_eq = re.sub(prev, new, cpp_eq)
+                        if switch:
+                            switch = re.sub(prev, new, switch)
 
                 # Store the result
                 variable['cpp'] = cpp_eq # the C++ equation

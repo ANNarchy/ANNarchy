@@ -192,9 +192,9 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' = ' + variable_name + '+ '\
+        explicit_code = 'DATA_TYPE _' + self.name + ' = ' \
                         +  self.c_code(explicit_equation) + ';'
-        switch = variable_name + ' = _' + self.name + ' ;'
+        switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]
@@ -221,11 +221,14 @@ class Equation(object):
         explicit_equation = simplify(explicit_equation - self.local_dict[self.name])
 
         # Obtain C code
-        explicit_code = self.c_code(self.local_dict[self.name]) + ' += ' +  \
-                        self.c_code(explicit_equation) + ';'
+        variable_name = self.c_code(self.local_dict[self.name])
+
+        explicit_code = 'DATA_TYPE _' + self.name + ' = '\
+                        +  self.c_code(explicit_equation) + ';'
+        switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
-        return explicit_code
+        return [explicit_code, switch]
     
     def implicit(self, expression):
         " Implicit or forward Euler numerical method."
@@ -237,12 +240,16 @@ class Equation(object):
     
         instepsize = simplify( stepsize / (stepsize + S(1.0)) )
     
-        # Update rule
-        explicit_code = self.c_code(self.local_dict[self.name]) + ' += (' + self.c_code(instepsize) + ')*(' \
+        # Obtain C code
+        variable_name = self.c_code(self.local_dict[self.name])
+
+        explicit_code = 'DATA_TYPE _' + self.name + ' = ('\
+                        +  self.c_code(instepsize) + ')*(' \
                         + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
-    
+        switch = variable_name + ' += _' + self.name + ' ;'
+
         # Return result
-        return explicit_code
+        return [explicit_code, switch]
     
     
     def exponential(self, expression):
@@ -251,13 +258,16 @@ class Equation(object):
         if real_tau == None: # the equation can not be standardized
             return self.explicit(expression)
     
-        # Update rule
-        explicit_code = self.c_code(self.local_dict[self.name]) + ' += (1.0 - exp(' \
+        # Obtain C code
+        variable_name = self.c_code(self.local_dict[self.name])
+
+        explicit_code = 'DATA_TYPE _' + self.name + ' =  (1.0 - exp('\
                         + self.c_code(simplify(-stepsize)) + '))*(' \
                         + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
-    
+        switch = variable_name + ' += _' + self.name + ' ;'
+
         # Return result
-        return explicit_code
+        return [explicit_code, switch]
     
     def standardize_ODE(self, expression):
         """ Transform any 1rst order ODE into the standardized form:

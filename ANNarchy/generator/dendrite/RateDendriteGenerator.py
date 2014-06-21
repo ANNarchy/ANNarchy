@@ -153,7 +153,18 @@ class RateDendriteGenerator(DendriteGenerator):
     %(code)s   
 """ % { 'comment': '// ' + param['eq'],
         'code' : param['cpp']}
-                # Set the min and max values 
+
+        # Switch temporary arrays for the ODEs
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['global']: # local attribute 
+                if param['switch']: # ODE
+                    code+= """
+        %(switch)s 
+""" % {'switch' : param['switch']}
+
+        # Set the min and max values 
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['global']: # local attribute 
                 for bound, val in param['bounds'].iteritems():
                     # Check if the min/max value is a float/int or another parameter/variable
                     if bound == 'min':
@@ -166,39 +177,51 @@ class RateDendriteGenerator(DendriteGenerator):
     if(%(var)s_ > %(val)s)
         %(var)s_ = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
+
         return code
     
     def generate_locallearn(self):
         " Generates code for the localLearn() method for local variables."
 
         # Generate the code
-        local_learn = ""
+        code = ""
         for param in self.desc['variables']:
             if param['name'] in self.desc['local']: # local attribute 
                 # The code is already in 'cpp'
-                local_learn +="""
-    %(comment)s
-    %(code)s   
+                code +="""
+        %(comment)s
+        %(code)s   
 """ % { 'comment': '// ' + param['eq'],
         'code' : param['cpp']}
-                # Set the min and max values 
+
+        # Switch temporary arrays for the ODE
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['local']: # local attribute 
+                if param['switch']: # ODE
+                    code += """
+        %(switch)s 
+""" % {'switch' : param['switch']}
+
+        # Set the min and max values
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['local']: # local attribute                  
                 for bound, val in param['bounds'].iteritems():
                     # Check if the min/max value is a float/int or another parameter/variable
                     if bound == 'min':
-                        local_learn += """
-            if(%(var)s_[i] < %(val)s)
-                %(var)s_[i] = %(val)s;
+                        code += """
+        if(%(var)s_[i] < %(val)s)
+            %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
                     if bound == 'max':
-                        local_learn += """
+                        code += """
             if(%(var)s_[i] > %(val)s)
                 %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
         
-        if len(local_learn) > 1:
+        if len(code) > 1:
             #
             # build final code
-            code="""
+            fullcode="""
 #ifdef _DEBUG
     std::cout << "Dendrite (n = " << post_neuron_rank_ << ", ptr = " << this << "): update " << nbSynapses_ << " synapse(s)." << std::endl;
 #endif
@@ -208,8 +231,8 @@ class RateDendriteGenerator(DendriteGenerator):
     {
  %(local_learn)s
     }
-    """ % { 'local_learn': local_learn }
+    """ % { 'local_learn': code }
         else:
-            code = ""
+            fullcode = ""
             
-        return code
+        return fullcode

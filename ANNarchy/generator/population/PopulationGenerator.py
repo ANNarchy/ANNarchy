@@ -310,17 +310,44 @@ void %(class)s::compute_sum_%(var)s() {
         'dist' : var['name'].replace('rand', 'dist') 
       }
 
-        code += "\
-        "
+        
         for param in self.desc['variables']:            
             if param['name'] in self.desc['global']: # global attribute
                 if '[i]' in param['cpp']:
                     Global._error('The global variable ' + param['cpp'] + \
                                   ' can not depend on local ones!')
+                    exit(0)
                 else:
                     code += """
-%(cpp)s
-""" % { 'cpp': param['cpp'] }
+    %(comment)s
+    %(cpp)s
+""" % { 'cpp': param['cpp'], 'comment': '// '+param['eq'] }
+
+        # Switch array values for the ODEs:
+        for param in self.desc['variables']:
+            if param['name'] in self.desc['global']:  
+                if param['switch']: # ODE
+                    code += """
+    %(switch)s 
+""" % {'switch' : param['switch']}
+
+        # Process the bounds min and max
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['global']: 
+                for bound, val in param['bounds'].iteritems():
+                    # Bound min
+                    if bound == 'min':
+                        code += """
+    if(%(var)s_[i] < %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+                    # Bound max 
+                    if bound == 'max':
+                        code += """
+    if(%(var)s_[i] > %(val)s)
+        %(var)s_[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val}
+
         return code
     
     def generate_cwrappers(self):
