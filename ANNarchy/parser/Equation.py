@@ -170,7 +170,7 @@ class Equation(object):
     
         if self.method == 'implicit':
             return self.semiimplicit(expression)
-        if self.method == 'fullimplicit':
+        elif self.method == 'fullimplicit':
             return self.fullimplicit(expression)
         elif self.method == 'explicit':
             return self.explicit(expression)
@@ -187,28 +187,26 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
-        equation = collect( solve(analysed, new_var)[0], self.local_dict['dt'])
 
-        variable_name = self.c_code(self.local_dict[self.name])
+        variable_name = self.local_dict[self.name]
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' = ' \
-                        +  self.c_code(equation) + ';'
+        equation = collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt'])
 
-        switch = variable_name + ' = _' + self.name + ' ;'
+        explicit_code = 'DATA_TYPE _' + self.name + ' = ' + self.c_code(equation) + ';'
+
+        switch = self.c_code(variable_name) + ' += _' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]
     
     def fullimplicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
-        print self.name
-        print expression
+        return self.semiimplicit(expression)
+
         # Transform the gradient into a difference TODO: more robust...
         new_expression = expression.replace('d'+self.name, '_t_gradient_')
         new_expression = new_expression.replace(self.name, '_'+self.name)
         new_expression = new_expression.replace('_t_gradient_', '(_'+self.name+' - '+self.name+')')
-
-        print expression
 
         # Add a sympbol for the next value of the variable
         new_var = Symbol('_'+self.name)
@@ -229,8 +227,6 @@ class Equation(object):
             solved = solved[0]
 
         equation = simplify(collect( solved, self.local_dict['dt']))
-        print solve(analysed, new_var)
-        print '_'+self.name, '=', equation
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
@@ -239,29 +235,25 @@ class Equation(object):
                         +  self.c_code(equation) + ';'
         switch = variable_name + ' = _' + self.name + ' ;'
 
-        print explicit_code
-        print switch
-        print '-'*60
-
         # Return result
         return [explicit_code, switch]
     
     def semiimplicit(self, expression):
-        " Implicit or forward Euler numerical method, but only for linear equations."
-    
+        " Implicit or forward Euler numerical method, but only for the linear part of the equation."
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
+
         if real_tau == None: # the equation can not be standardized
             return self.explicit(expression)
-    
-        instepsize = simplify( stepsize / (stepsize + S(1.0)) )
+
+        instepsize = together( stepsize / (stepsize + S(1.0)) )
     
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
         explicit_code = 'DATA_TYPE _' + self.name + ' = ('\
                         +  self.c_code(instepsize) + ')*(' \
-                        + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
+                        + self.c_code(steadystate)+ ' - ' + variable_name +');'
         switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
@@ -278,7 +270,7 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
 
         explicit_code = 'DATA_TYPE _' + self.name + ' =  (1.0 - exp('\
-                        + self.c_code(simplify(-stepsize)) + '))*(' \
+                        + self.c_code(-stepsize) + '))*(' \
                         + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
         switch = variable_name + ' += _' + self.name + ' ;'
 
@@ -314,19 +306,16 @@ class Equation(object):
         # Collect factor on the gradient and main variable A*dV/dt + B*V = C
         expanded = analysed.expand(modulus=None, power_base=False, power_exp=False, 
                                    mul=True, log=False, multinomial=False)
-        
-        
+
         # Make sure the expansion went well
-        collected_var = collect(expanded, self.local_dict[self.name], evaluate=False, exact=True)
-        if self.local_dict[self.name] in collected_var.keys():
-            factor_var = collected_var[self.local_dict[self.name]]
-        else:
-            _warning(self.expression + '\nThe ' + self.method + \
-                     ' method is reserved for linear first-order ODEs of the type tau*d'+\
-                     self.name+'/dt + '+self.name+' = f(t).\nUsing the explicit method.')
-            return None, None, None
-            
+        collected_var = collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
+        if self.method == 'exponential':
+            if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
+                _warning(self.expression + ': the exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Using the explicit method instead.')
+                return None, None, None            
     
+        factor_var = collected_var[self.local_dict[self.name]]
+        
         collected_gradient = collect(expand(analysed, grad_var), grad_var, evaluate=False, exact=True)
         if grad_var in collected_gradient.keys():
             factor_gradient = collected_gradient[grad_var]
@@ -340,10 +329,10 @@ class Equation(object):
         normalized = analysed / factor_var
     
         # Steady state A
-        steadystate = simplify(real_tau * grad_var + self.local_dict[self.name] - normalized)
+        steadystate = together(real_tau * grad_var + self.local_dict[self.name] - normalized)
     
         # Stepsize
-        stepsize = simplify(self.local_dict['dt']/real_tau)
+        stepsize = together(self.local_dict['dt']/real_tau)
     
         return real_tau, stepsize, steadystate
     

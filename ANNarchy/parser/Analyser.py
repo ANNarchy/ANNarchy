@@ -117,7 +117,7 @@ class Analyser(object):
                 # Find the numerical method if any
                 if 'implicit' in variable['flags']:
                     method = 'implicit'
-                if 'fullimplicit' in variable['flags']:
+                elif 'fullimplicit' in variable['flags']:
                     method = 'fullimplicit'
                 elif 'exponential' in variable['flags']:
                     method = 'exponential'
