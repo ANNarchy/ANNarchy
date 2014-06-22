@@ -23,6 +23,7 @@
 """
 from ANNarchy.core import Global
 
+from ANNarchy.generator.Utils import *
 from DendriteGenerator import DendriteGenerator
 from Templates import *
 from TemplatesOMP import *
@@ -145,83 +146,20 @@ class RateDendriteGenerator(DendriteGenerator):
         'dist' : var['name'].replace('rand', 'dist') 
       }
         
-        for param in self.desc['variables']:
-            if param['name'] in self.desc['global']: # global attribute 
-                # The code is already in 'cpp'
-                code +="""
-    %(comment)s
-    %(code)s   
-""" % { 'comment': '// ' + param['eq'],
-        'code' : param['cpp']}
-
-        # Switch temporary arrays for the ODEs
-        for param in self.desc['variables']: 
-            if param['name'] in self.desc['global']: # local attribute 
-                if param['switch']: # ODE
-                    code+= """
-        %(switch)s 
-""" % {'switch' : param['switch']}
-
-        # Set the min and max values 
-        for param in self.desc['variables']: 
-            if param['name'] in self.desc['global']: # local attribute 
-                for bound, val in param['bounds'].iteritems():
-                    # Check if the min/max value is a float/int or another parameter/variable
-                    if bound == 'min':
-                        code += """
-    if(%(var)s_ < %(val)s)
-        %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
-                    if bound == 'max':
-                        code += """
-    if(%(var)s_ > %(val)s)
-        %(var)s_ = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+        code += generate_equation_code(self.desc, 'global')
 
         return code
     
     def generate_locallearn(self):
         " Generates code for the localLearn() method for local variables."
-
-        # Generate the code
-        code = ""
-        for param in self.desc['variables']:
-            if param['name'] in self.desc['local']: # local attribute 
-                # The code is already in 'cpp'
-                code +="""
-        %(comment)s
-        %(code)s   
-""" % { 'comment': '// ' + param['eq'],
-        'code' : param['cpp']}
-
-        # Switch temporary arrays for the ODE
+        nb_var = 0
         for param in self.desc['variables']: 
-            if param['name'] in self.desc['local']: # local attribute 
-                if param['switch']: # ODE
-                    code += """
-        %(switch)s 
-""" % {'switch' : param['switch']}
-
-        # Set the min and max values
-        for param in self.desc['variables']: 
-            if param['name'] in self.desc['local']: # local attribute                  
-                for bound, val in param['bounds'].iteritems():
-                    # Check if the min/max value is a float/int or another parameter/variable
-                    if bound == 'min':
-                        code += """
-        if(%(var)s_[i] < %(val)s)
-            %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
-                    if bound == 'max':
-                        code += """
-            if(%(var)s_[i] > %(val)s)
-                %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+            if param['name'] in self.desc['local']: 
+                nb_var +=1
+        if nb_var == 0:
+            return ''
         
-        if len(code) > 1:
-            #
-            # build final code
-            fullcode="""
+        code="""
 #ifdef _DEBUG
     std::cout << "Dendrite (n = " << post_neuron_rank_ << ", ptr = " << this << "): update " << nbSynapses_ << " synapse(s)." << std::endl;
 #endif
@@ -231,8 +169,6 @@ class RateDendriteGenerator(DendriteGenerator):
     {
  %(local_learn)s
     }
-    """ % { 'local_learn': code }
-        else:
-            fullcode = ""
+    """ % { 'local_learn': generate_equation_code(self.desc, 'local') }
             
-        return fullcode
+        return code

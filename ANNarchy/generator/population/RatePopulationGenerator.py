@@ -22,7 +22,7 @@
     
 """
 from ANNarchy.core import Global
-
+from ANNarchy.generator.Utils import *
 from PopulationGenerator import PopulationGenerator
 from Templates import *
 
@@ -135,39 +135,7 @@ class RatePopulationGenerator(PopulationGenerator):
         """
         Code for the metastep.
         """
-        code = ""         
-        for param in self.desc['variables']: 
-            if param['name'] in self.desc['local']: 
-                code += """
-    %(comment)s
-    %(cpp)s
-""" % { 'comment': '// '+param['eq'],
-        'cpp': param['cpp'] }
-
-
-        # Switch array values for the ODEs:
-        for param in self.desc['variables']:
-            if param['name'] in self.desc['local']:  
-                if param['switch']: # ODE
-                    code += """
-    %(switch)s 
-""" % {'switch' : param['switch']}
-
-        # Process the bounds min and max
-        for param in self.desc['variables']: 
-            if param['name'] in self.desc['local']: 
-                for bound, val in param['bounds'].iteritems():
-                    # Bound min
-                    if bound == 'min':
-                        code += """
-    if(%(var)s_[i] < %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
-                    # Bound max 
-                    if bound == 'max':
-                        code += """
-    if(%(var)s_[i] > %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+        # Generate the code
+        code = generate_equation_code(self.desc, 'local')
 
         return code

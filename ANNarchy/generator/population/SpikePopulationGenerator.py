@@ -23,7 +23,7 @@
 """
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
-
+from ANNarchy.generator.Utils import *
 from PopulationGenerator import PopulationGenerator
 from Templates import *
 
@@ -234,42 +234,7 @@ class SpikePopulationGenerator(PopulationGenerator):
         """
         Code for the metastep.
         """
-        code = ""         
-        for param in self.desc['variables']:  
-            if param['name'] in self.desc['local']:
-                code += """
-    %(comment)s
-    %(cpp)s
-""" % { 'comment': '// '+param['eq'],
-        'cpp': param['cpp'] }
-
-        # Switch array values for the ODEs:
-        code += """
-    // Switch temporary arrays for the ODEs"""
-        for param in self.desc['variables']: 
-            if param['name'] in self.desc['local']:
-                if param['switch']: # ODE
-                    code += """
-    %(switch)s 
-""" % {'switch' : param['switch']}
-
-        # Process the bounds min and max
-        for param in self.desc['variables']:  
-            if param['name'] in self.desc['local']:
-                for bound, val in param['bounds'].iteritems():
-                    # Bound min
-                    if bound == 'min':
-                        code += """
-    if(%(var)s_[i] < %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
-                    # Bound max 
-                    if bound == 'max':
-                        code += """
-    if(%(var)s_[i] > %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
-
+        code = generate_equation_code(self.desc, 'local')
 
         # default = reset of target conductances
         for target in self.connected_targets:
@@ -279,8 +244,6 @@ class SpikePopulationGenerator(PopulationGenerator):
     // Default behavior for g_%(target)s_
     g_%(target)s_[i] = 0.0;
 """ % {'target' : target}
-
-
 
         # spike propagation and refractory period
         code += spike_emission_template % {'cond' : self.desc['spike']['spike_cond'] } 

@@ -22,6 +22,7 @@
     
 """
 from ANNarchy.core import Global
+from ANNarchy.generator.Utils import *
 
 from DendriteGenerator import DendriteGenerator
 from Templates import *
@@ -204,52 +205,24 @@ class SpikeDendriteGenerator(DendriteGenerator):
 """ % { 'name' : var['name'],
         'dist' : var['name'].replace('rand', 'dist') 
       }
+
+        code += generate_equation_code(self.desc, 'global')
         
         return code
      
     def generate_locallearn(self):
+        """ Generates code for the localLearn() method for local variables. """
+        nb_var = 0
+        for param in self.desc['variables']: 
+            if param['name'] in self.desc['local']: 
+                nb_var +=1
+        if nb_var == 0:
+            return ''
+            
         code = """
     for(int i=0; i<(int)rank_.size();i++) 
     {
-"""
-        for param in self.desc['variables']:
-            if param['name'] in self.desc['local']: # local attribute 
-                # The code is already in 'cpp'
-                code +="""
-        %(code)s   
-""" % {'code' : param['cpp']}
-
-        # Switch array values for the ODEs:
-        for param in self.desc['variables']: 
-            if param['name'] in self.desc['local']: # local attribute 
-                if param['switch']: # ODE
-                    code += """
-        %(switch)s 
-""" % {'switch' : param['switch']}
-
-        # Set the min and max values 
-        for param in self.desc['variables']:
-            if param['name'] in self.desc['local']: # local attribute 
-                for bound, val in param['bounds'].iteritems():
-                    # Check if the min/max value is a float/int or another parameter/variable
-                    if val in self.desc['local']:
-                        pval = val + '_[i]'
-                    elif val in self.desc['global']:
-                        pval = val + '_'
-                    else:
-                        pval = val
-                    if bound == 'min':
-                        code += """
-        if(%(var)s_[i] < %(val)s)
-            %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
-                    if bound == 'max':
-                        code += """
-        if(%(var)s_[i] > %(val)s)
-            %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : pval}
-
-        code+="""
+%(code)s
     }
-"""
+""" % {'code': generate_equation_code(self.desc, 'local')}
         return code

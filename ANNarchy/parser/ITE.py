@@ -37,21 +37,21 @@ def translate_ITE(name, eq, condition, proj, untouched, split=True):
         else_statement = condition[2]
         if_code = Equation(name, if_statement, proj.description['attributes'], 
                           proj.description['local'], proj.description['global'], 
-                          method = 'explicit', untouched = untouched.keys(),
+                          untouched = untouched.keys(),
                           type='cond').parse()
         if isinstance(then_statement, list): # nested conditional
             then_code =  process_ITE(then_statement)
         else:
             then_code = Equation(name, then_statement, proj.description['attributes'], 
                           proj.description['local'], proj.description['global'], 
-                          method = 'explicit', untouched = untouched.keys(),
+                          untouched = untouched.keys(),
                           type='return').parse().split(';')[0]
         if isinstance(else_statement, list): # nested conditional
             else_code =  process_ITE(else_statement)
         else:
             else_code = Equation(name, else_statement, proj.description['attributes'], 
                           proj.description['local'], proj.description['global'], 
-                          method = 'explicit', untouched = untouched.keys(),
+                          untouched = untouched.keys(),
                           type='return').parse().split(';')[0]
                           
         code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
@@ -61,14 +61,18 @@ def translate_ITE(name, eq, condition, proj, untouched, split=True):
         # Main equation, where the right part is __conditional__
         translator = Equation(name, eq, proj.description['attributes'], 
                               proj.description['local'], proj.description['global'], 
-                              method = 'explicit', untouched = untouched.keys())
+                              untouched = untouched.keys())
         code = translator.parse() 
     else:
         code = '__conditional__'
     # Process the ITE
     itecode =  process_ITE(condition)
     # Replace
-    code = code.replace('__conditional__', itecode)
+    if isinstance(code, str):
+        code = code.replace('__conditional__', itecode)
+    else:
+        code[0] = code[0].replace('__conditional__', itecode)
+
     return code
 
 def extract_ite(name, eq, proj, split=True):
