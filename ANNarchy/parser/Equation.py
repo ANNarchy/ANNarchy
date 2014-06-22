@@ -169,7 +169,9 @@ class Equation(object):
         expression = expression.replace(' ', '')
     
         if self.method == 'implicit':
-            return self.implicit(expression)
+            return self.semiimplicit(expression)
+        if self.method == 'fullimplicit':
+            return self.fullimplicit(expression)
         elif self.method == 'explicit':
             return self.explicit(expression)
         elif self.method == 'exponential':
@@ -178,60 +180,74 @@ class Equation(object):
     def explicit(self, expression):
         " Explicit or backward Euler numerical method"
 
-        # Add the gradient sympbol
-        delta_var = Symbol('d' + self.name)
-    
-        # Parse the string
+        expression = expression.replace('d'+self.name+'/dt', '(_'+self.name+'-'+self.name+')/dt')
+        new_var = Symbol('_'+self.name)
+        self.local_dict['_'+self.name] = new_var
+
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
-    
-        # Solve the equation for delta_mp
-        explicit_equation = solve(analysed, delta_var)[0].simplify()
-    
-        # Obtain C code
+        equation = collect( solve(analysed, new_var)[0], self.local_dict['dt'])
+
         variable_name = self.c_code(self.local_dict[self.name])
 
         explicit_code = 'DATA_TYPE _' + self.name + ' = ' \
-                        +  self.c_code(explicit_equation) + ';'
-        switch = variable_name + ' += _' + self.name + ' ;'
+                        +  self.c_code(equation) + ';'
+
+        switch = variable_name + ' = _' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]
     
-    def implicit2(self, expression):
+    def fullimplicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
+        print self.name
+        print expression
         # Transform the gradient into a difference TODO: more robust...
-        expression = expression.replace('d'+self.name, 't_gradient_')
-        expression = expression.replace(self.name, 'newval')
-        expression = expression.replace('t_gradient_', '(newval - '+self.name+')')
+        new_expression = expression.replace('d'+self.name, '_t_gradient_')
+        new_expression = new_expression.replace(self.name, '_'+self.name)
+        new_expression = new_expression.replace('_t_gradient_', '(_'+self.name+' - '+self.name+')')
+
+        print expression
 
         # Add a sympbol for the next value of the variable
-        newval = Symbol('newval')
-        self.local_dict['newval'] = newval
+        new_var = Symbol('_'+self.name)
+        self.local_dict['_'+self.name] = new_var
 
         # Parse the string
-        analysed = parse_expr(expression,
+        analysed = parse_expr(new_expression,
             local_dict = self.local_dict,
             transformations = (standard_transformations + (convert_xor,))
         )
 
         # Solve the equation for delta_mp
-        explicit_equation = solve(analysed, newval)[0].simplify()
-        explicit_equation = simplify(explicit_equation - self.local_dict[self.name])
+        solved = solve(analysed, new_var)
+        if len(solved) > 1:
+            _warning(self.expression + ': the ODE is not linear, falling back to the semi-implicit method.')
+            return self.semiimplicit(expression)
+        else:
+            solved = solved[0]
+
+        equation = simplify(collect( solved, self.local_dict['dt']))
+        print solve(analysed, new_var)
+        print '_'+self.name, '=', equation
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
         explicit_code = 'DATA_TYPE _' + self.name + ' = '\
-                        +  self.c_code(explicit_equation) + ';'
-        switch = variable_name + ' += _' + self.name + ' ;'
+                        +  self.c_code(equation) + ';'
+        switch = variable_name + ' = _' + self.name + ' ;'
+
+        print explicit_code
+        print switch
+        print '-'*60
 
         # Return result
         return [explicit_code, switch]
     
-    def implicit(self, expression):
-        " Implicit or forward Euler numerical method."
+    def semiimplicit(self, expression):
+        " Implicit or forward Euler numerical method, but only for linear equations."
     
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)

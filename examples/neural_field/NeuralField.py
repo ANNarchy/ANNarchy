@@ -21,8 +21,7 @@ NeuralFieldNeuron = RateNeuron(
     """,
     equations="""
         noise = Uniform(-0.5, 0.5)
-        tau * dmp / dt + mp = sum(exc) + sum(inh) - u + noise
-        tau*du/dt + u = mp
+        tau * dmp / dt + mp = sum(exc) + sum(inh) + noise
         r = clip(mp, 0.0, 1.0) 
     """
 )

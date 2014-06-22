@@ -66,6 +66,7 @@ authorized_keywords = [
     'postsynaptic',
     'explicit',
     'implicit',
+    'fullimplicit',
     'exponential',
     'concurrent',
     'int',
