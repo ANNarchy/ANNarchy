@@ -144,11 +144,12 @@ class DendriteGenerator(object):
             elif param['name'] in self.desc['local']: # local attribute
                 ctype = param['ctype']
                 if ctype == 'bool':
-                    cinit = 'true' if param['init'] else 'false'
+                    cinit = 'false'
                 elif ctype == 'int':
-                    cinit = int(param['init'])
+                    cinit = '0'
                 elif ctype == 'DATA_TYPE':
-                    cinit = float(param['init'])
+                    cinit = '0.0'
+
                 constructor += """
     // %(name)s_ : local
     %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s);  
@@ -158,11 +159,11 @@ class DendriteGenerator(object):
             elif param['name'] in self.desc['global']: # global attribute
                 ctype = param['ctype']
                 if ctype == 'bool':
-                    cinit = 'true' if param['init'] else 'false'
+                    cinit = 'false'
                 elif ctype == 'int':
-                    cinit = int(param['init'])
+                    cinit = '0'
                 elif ctype == 'DATA_TYPE':
-                    cinit = float(param['init'])
+                    cinit = '0.0'
                 constructor += """
     // %(name)s_ : global
     %(name)s_ = %(init)s;   

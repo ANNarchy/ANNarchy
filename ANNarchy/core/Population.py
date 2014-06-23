@@ -163,10 +163,11 @@ class Population(object):
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
         self.initialized = True  
-        for attr in self.attributes:
-            if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
-                if isinstance(self.init[attr], list) or isinstance(self.init[attr], np.ndarray):
-                    self._set_cython_attribute(attr, self.init[attr])
+        self.set(self.init)
+        # for attr in self.attributes:
+        #     if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
+        #         if isinstance(self.init[attr], list) or isinstance(self.init[attr], np.ndarray):
+        #             self._set_cython_attribute(attr, self.init[attr])
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."

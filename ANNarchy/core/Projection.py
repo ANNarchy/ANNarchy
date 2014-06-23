@@ -140,6 +140,44 @@ class Projection(object):
         # Cython instance
         self.cyInstance = None
 
+    def _instantiate(self, module):
+
+        self._connect(module)
+
+        self.initialized = True  
+
+        self._init_attributes()
+
+    def _init_attributes(self):
+        """ 
+        Method used after compilation to initialize the attributes.
+        """
+        for name, val in self.init.iteritems():
+            if not name in ['w', 'rank', 'delay']:
+                self.__setattr__(name, val)
+    
+    def _connect(self, module):
+        """
+        Builds up dendrites either from list or dictionary. Called by instantiate().
+        """
+
+        proj = getattr(module, 'py'+self.name)
+        self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
+        
+        # Sort the dendrites to be created based on _synapses
+        import ANNarchy.core.cython_ext.Connector as Connector
+        self.cyInstance.createFromCSR(self._synapses)
+        self._post_ranks = self._synapses.keys()
+        # update maximum delay in presynaptic population
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.cyInstance.set_max_delay(self._synapses.get_max_delay())
+        else:
+            self.pre.cyInstance.set_max_delay(self._synapses.get_max_delay()) 
+
+        # Delete the _synapses array, not needed anymore
+        del self._synapses
+        self._synapses = None
+
     ################################
     ## Dendrite access
     ################################
@@ -251,16 +289,6 @@ class Projection(object):
         for name, val in value:
             self.__setattr__(name, val)
 
-    def _init_attributes(self):
-        """ 
-        Method used after compilation to initialize the attributes.
-        """
-        self.initialized = True  
-        for attr in self.attributes:
-            if attr in self.description['local']: # Only local variables are not directly initialized in the C++ code
-                if isinstance(self.init[attr], list) or isinstance(self.init[attr], np.ndarray):
-                    self._set_cython_attribute(attr, self.init[attr])
-
     def __getattr__(self, name):
         " Method called when accessing an attribute."
         if not hasattr(self, 'initialized'): # Before the end of the constructor
@@ -311,7 +339,7 @@ class Projection(object):
         
     def _set_cython_attribute(self, attribute, value):
         """
-        Sets the value of the given attribute for all neurons in the population, 
+        Sets the value of the given attribute for all post-synaptic neurons in the projection, 
         as a NumPy array having the same geometry as the population if it is local.
         
         Parameter:
@@ -329,13 +357,13 @@ class Projection(object):
         elif isinstance(value, list):
             if len(value) == self.size:
                 for n in self._post_ranks:
-                    getattr(self.cyInstance, '_set_'+attribute)(n, value)
+                    getattr(self.cyInstance, '_set_'+attribute)(n, value[n])
             else:
                 Global._error('The projection has '+self.size+ ' dendrites.')
         else: # a single value
             if attribute in self.description['local']:
                 for i in self._post_ranks:
-                    getattr(self.cyInstance, '_set_'+attribute)(i, value*np.ones(self.size))
+                    getattr(self.cyInstance, '_set_'+attribute)(i, value*np.ones(self.cyInstance._nb_synapses(i)))
             else:
                 for i in self._post_ranks:
                     getattr(self.cyInstance, '_set_'+attribute)(i, value)
@@ -697,40 +725,6 @@ class Projection(object):
                                  str(next(w_iter))+', '+
                                  str(next(delay_iter))+'\n'
                                  )
-      
-
-    def _connect(self):
-        """
-        Builds up dendrites either from list or dictionary. Called by instantiate().
-        """
-
-        cython_module = __import__('ANNarchyCython') 
-        proj = getattr(cython_module, 'py'+self.name)
-        self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
-        
-        # Sort the dendrites to be created based on _synapses
-        import ANNarchy.core.cython_ext.Connector as Connector
-        if ( isinstance(self._synapses, Connector.CSR) ):
-            self.cyInstance.createFromCSR(self._synapses)
-            self._post_ranks = self._synapses.keys()
-            # update maximum delay in presynaptic population
-            if isinstance(self.pre, PopulationView):
-                self.pre.population.cyInstance.set_max_delay(self._synapses.get_max_delay())
-            else:
-                self.pre.cyInstance.set_max_delay(self._synapses.get_max_delay()) 
-        else: # a list or dict
-            if ( isinstance(self._synapses, list) ):
-        	   dendrites = self._build_pattern_from_list()
-            else:
-        	   dendrites = self._build_pattern_from_dict()
-            # Store the keys of dendrites in _post_ranks
-            self._post_ranks = dendrites.keys()
-            # Create the dendrites in Cython
-            self.cyInstance.createFromDict(dendrites)
-
-        # Delete the _synapses array, not needed anymore
-        del self._synapses
-        self._synapses = None
 
     def _comp_dist(self, pre, post):
         """

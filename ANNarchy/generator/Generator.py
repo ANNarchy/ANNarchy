@@ -531,15 +531,8 @@ class Generator(object):
                 t0 = time.time()
             
             # Create the projection
-            proj._connect() 
+            proj._instantiate(self.cython_module)
             
-            #TODO:
-            #if proj.connector.delays != None:
-                #print 'set new delay',proj.connector.delays.max(),'for',proj.pre.name
-            #    proj.pre.cyInstance.set_max_delay(int(proj.connector.delays.max()))
- 
-            # Create the attributes
-            proj._init_attributes()   
             if Global.config['show_time']:
                 Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
         

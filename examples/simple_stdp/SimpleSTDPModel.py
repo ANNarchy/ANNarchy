@@ -20,7 +20,7 @@ duration = 100000.0 # Simulation for 100 seconds
 # Definition of the neuron
 IF = SpikeNeuron(
     parameters = """
-        tau_m = 10.0 
+        tau_m = 10.0
         tau_e = 5.0 
         vt = -54.0 
         vr = -60.0 

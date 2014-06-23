@@ -153,20 +153,18 @@ class PopulationGenerator(object):
         constructor = ""
         reset=""
         # Attributes
-        for param in self.desc['parameters'] + self.desc['variables']:            
-            if param['name'] in self.desc['local']: # local attribute
-                # Determine the initial value
-                ctype = param['ctype']
-                if ctype == 'bool':
-                    cinit = 'true' if param['init'] else 'false'
-                elif ctype == 'int':
-                    cinit = int(param['init'])
-                elif ctype == 'DATA_TYPE':
-                    if isinstance(param['init'], np.ndarray): # will be set later
-                        cinit = 0.0
-                    else:
-                        cinit = float(param['init'])
-                    
+        for param in self.desc['parameters'] + self.desc['variables']:  
+
+            # Determine the initial value
+            ctype = param['ctype']
+            if ctype == 'bool':
+                cinit = 'false'
+            elif ctype == 'int':
+                cinit = '0'
+            elif ctype == 'DATA_TYPE':
+                cinit = 0.0         
+
+            if param['name'] in self.desc['local']: # local attribute                    
                 # Initialize the attribute
                 constructor += """
     // %(name)s_ : local
@@ -180,14 +178,6 @@ class PopulationGenerator(object):
 """ % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
 
             elif param['name'] in self.desc['global']: # global attribute
-                # Determine the initial value
-                ctype = param['ctype']
-                if ctype == 'bool':
-                    cinit = 'true' if param['init'] else 'false'
-                elif ctype == 'int':
-                    cinit = int(param['init'])
-                elif ctype == 'DATA_TYPE':
-                    cinit = float(param['init'])
                 # Initialize the attribute
                 constructor += """
     // %(name)s_ : global
