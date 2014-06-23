@@ -127,6 +127,8 @@ def reset(populations=True, projections=False, synapses = False):
     if projections:
         for proj in _projections:
             pop.reset(synapses)
+
+    _network.set_time(0)
         
 def get_population(name):
     """

@@ -88,7 +88,6 @@ if __name__ == '__main__':
     exc_data = Exc.get_record()
     inh_data = Inh.get_record()
 
-
     # Retrieve the spike timings
     spikes_exc = raster_plot(exc_data['spike'])
     spikes_inh = raster_plot(inh_data['spike'])
