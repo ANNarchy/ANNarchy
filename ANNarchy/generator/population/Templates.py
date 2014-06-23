@@ -438,8 +438,6 @@ cdef extern from "../build/%(class_name)s.h":
         
         string getName()
         
-        void resetToInit()
-        
         void setMaxDelay(int)
 
 %(cFunction)s
@@ -454,9 +452,6 @@ cdef class py%(class_name)s:
 
     def name(self):
         return self.cInstance.getName()
-
-    def reset(self):
-        self.cInstance.resetToInit()
 
     def set_max_delay(self, delay):
         self.cInstance.setMaxDelay(delay)
@@ -501,8 +496,6 @@ cdef extern from "../build/%(class_name)s.h":
         void start_record_spike()
         void stop_record_spike()
         
-        void resetToInit()
-        
         void setMaxDelay(int)
         
         void setRefractoryTimes(vector[int])
@@ -534,9 +527,6 @@ cdef class py%(class_name)s:
 
     def _stop_record_spike(self):
         self.cInstance.stop_record_spike()
-
-    def reset(self):
-        self.cInstance.resetToInit()
 
     def set_max_delay(self, delay):
         self.cInstance.setMaxDelay(delay)

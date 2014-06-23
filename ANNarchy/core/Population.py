@@ -165,6 +165,12 @@ class Population(object):
         self.initialized = True  
         self.set(self.init)
 
+    def reset(self):
+        """
+        Resets all parameters and variables to the value they had before the call to compile.
+        """
+        self._init_attributes()
+
     def __getattr__(self, name):
         " Method called when accessing an attribute."
         if not hasattr(self, 'initialized'): # Before the end of the constructor
@@ -301,15 +307,6 @@ class Population(object):
         Unique integer identifier of the population.
         """
         return self._id
-        
-    def reset(self):
-        """
-        Reset the population variables to their initial values.
-        """
-        try:
-            self.cyInstance.reset()
-        except:
-            print('Reset population', self.name, 'failed.')
         
     def start_record(self, variable):
         """

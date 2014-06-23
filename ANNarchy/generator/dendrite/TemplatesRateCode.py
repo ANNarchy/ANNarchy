@@ -109,6 +109,9 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
+    // Recording of weights disabled by default
+    record_w_ = false;
+    
 %(constructor)s
 }
 

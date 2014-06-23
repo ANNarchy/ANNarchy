@@ -111,6 +111,11 @@ using namespace ANNarchy_Global;
     
     post_population_->getProjection(pre, target)->addDendrite(postRank, this);
     pre_population_->addSpikeTarget(this);
+
+    // Recording of weights disabled by default
+    record_w_ = false;
+    
+%(constructor)s
 }
 
 %(class)s::%(class)s(int preID, int postID, int postRank, int target, class SpikeProjection* proj) : SpikeDendrite(proj) 
@@ -123,6 +128,11 @@ using namespace ANNarchy_Global;
     
     post_population_->getProjection(pre_population_, target)->addDendrite(postRank, this);
     pre_population_->addSpikeTarget(this);
+    
+    // Recording of weights disabled by default
+    record_w_ = false;
+    
+%(constructor)s
 }
 
 %(class)s::~%(class)s() 

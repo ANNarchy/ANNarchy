@@ -110,21 +110,23 @@ def setup(**keyValueArgs):
         else:
             _print('unknown key:', key)
     
-def reset(populations=True, projections=False):
+def reset(populations=True, projections=False, synapses = False):
     """
-    Reinitialises the network to its initial state.
+    Reinitialises the network to its state before the call to compile.
 
     *Parameters*:
 
-    * **populations**: if True (default), the neural variables will be reset to their initial value.
-    * **projections**: if True, the synaptic variables (including the weights) will be reset (default=False).
+    * **populations**: if True (default), the neural parameters and variables will be reset to their initial value.
+    * **projections**: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
+    * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
         for pop in _populations:
             pop.reset()
             
     if projections:
-        print('currently not implemented')
+        for proj in _projections:
+            pop.reset(synapses)
         
 def get_population(name):
     """

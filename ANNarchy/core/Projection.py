@@ -149,6 +149,18 @@ class Projection(object):
         for name, val in self.init.iteritems():
             if not name in ['w', 'rank', 'delay']:
                 self.__setattr__(name, val)
+
+    def reset(self, synapses=False):
+        """
+        Resets all parameters and variables to the value they had before the call to compile.
+
+        *Parameters*:
+
+        * **synapses**: if True, the connections will also be erased (default: False).
+        """
+        self._init_attributes()
+        if synapses:
+            Global._warning('not implemented yet...')
     
     def _connect(self, module):
         """
