@@ -43,8 +43,6 @@ public:
 
     virtual int removeAllSynapses() = 0;
 
-    virtual void initValues() = 0;
-
     virtual void record() = 0;
 
 	virtual void computeSum() = 0;

@@ -160,12 +160,6 @@ void SpikeProjection::record()
 	}
 }
 
-void SpikeProjection::initValues(int postNeuronRank)
-{
-	if (dendrites_[postNeuronRank] != NULL)
-		static_cast<SpikeDendrite*>(dendrites_[postNeuronRank])->initValues();
-}
-
 int SpikeProjection::nbSynapses(int post_rank)
 {
 	if ( !dendrites_[post_rank] )

@@ -42,8 +42,6 @@ public:
     
     int removeAllSynapses();
     
-    void initValues();
-    
     void computeSum();
     
     void globalLearn();
@@ -131,6 +129,10 @@ using namespace ANNarchy_Global;
 
     target_ = target;
     post_neuron_rank_ = postRank;
+
+    
+    // Recording of weights disabled by default
+    record_w_ = false;
     
 %(constructor)s
 }
@@ -157,13 +159,6 @@ int %(class)s::removeSynapse(int rank)
 int %(class)s::removeAllSynapses()
 {
 %(rem_all_synapse_body)s
-}
-
-void %(class)s::initValues() 
-{
-    // Recording of weights disabled by default
-    record_w_ = false;
-%(init)s
 }
 
 void %(class)s::computeSum() 

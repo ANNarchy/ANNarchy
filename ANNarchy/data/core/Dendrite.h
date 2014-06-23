@@ -213,8 +213,6 @@ public:
 
     virtual ~Projection();
 
-	virtual void initValues();
-
 	virtual void computeSum() {};
 
 	virtual void globalLearn() {}

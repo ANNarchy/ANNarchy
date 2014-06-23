@@ -57,7 +57,8 @@ class SpikePopulationGenerator(PopulationGenerator):
         return members
     
     def generate_constructor(self):
-        constructor, reset = PopulationGenerator.generate_constructor(self)
+
+        constructor= PopulationGenerator.generate_constructor(self)
 
         if 'refractory' in self.desc.keys():
             if isinstance(self.desc['refractory'], RandomDistribution):
@@ -91,31 +92,9 @@ class SpikePopulationGenerator(PopulationGenerator):
 """ % {'name' : variable,
        'init' : str(0.0)
        }
-                reset += """
-    // g_%(name)s_ : local
-    g_%(name)s_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
-""" % {'name' : variable,
-       'init' : str(0.0)
-       }  
-
-#         for variable in self.connected_targets: # actually connected, need the _new temp array
-#             # Constructor
-#             constructor += """
-#     // g_%(name)s_new_ : local
-#     g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
-# """ % {'name' : variable,
-#        'init' : str(0.0)
-#        }
-#             # Reset
-#             reset += """
-#     // g_%(name)s_new_ : local
-#     g_%(name)s_new_ = std::vector<DATA_TYPE> (nbNeurons_, %(init)s);
-# """ % {'name' : variable, 
-#        'init' : str(0.0)
-#        }  
    
  
-        return constructor, reset
+        return constructor
     
     def generate_header(self):
         " Generates the C++ header file."        
@@ -167,7 +146,7 @@ class SpikePopulationGenerator(PopulationGenerator):
     def generate_body(self):
         " Generates the C++ .cpp file"
         # Constructor
-        constructor, reset = self.generate_constructor()
+        constructor = self.generate_constructor()
 
         # Destructor
         destructor = self.generate_destructor()
@@ -195,7 +174,6 @@ class SpikePopulationGenerator(PopulationGenerator):
             'pop_id': self.desc['id'],
             'constructor' : constructor,
             'destructor' : destructor,
-            'resetToInit' : reset,
             'localMetaStep' : local_metastep,
             'globalMetaStep' : global_metastep,
             'global_ops' : globalops,

@@ -71,7 +71,7 @@ class RatePopulationGenerator(PopulationGenerator):
     def generate_body(self):
         " Generates the C++ .cpp file"
         # Constructor
-        constructor, reset = self.generate_constructor()
+        constructor = self.generate_constructor()
 
         # Destructor
         destructor = self.generate_destructor()
@@ -100,7 +100,6 @@ class RatePopulationGenerator(PopulationGenerator):
             'constructor' : constructor,
             'destructor' : destructor,
             'prepare': prepare,
-            'resetToInit' : reset,
             'localMetaStep' : local_metastep,
             'globalMetaStep' : global_metastep,
             'global_ops' : globalops,

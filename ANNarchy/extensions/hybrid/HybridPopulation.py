@@ -63,11 +63,6 @@ class Spike2RatePopulation(Population):
         # Create the local attributes and actualize the initial values
         self._init_attributes()
 
-        # Set the global parameters
-        self.cyInstance._set_window(self.init['window'])
-        self.cyInstance._set_scaling(self.init['scaling'])
-        self.cyInstance._set_smooth(self.init['smooth'])
-
 class Rate2SpikePopulation(Population):
     """
     Converts a population of rate-coded neurons into a population of spiking neurons.
@@ -122,8 +117,6 @@ class Rate2SpikePopulation(Population):
         # Create the local attributes and actualize the initial values
         self._init_attributes()
 
-        # Set the global parameters
-        self.cyInstance._set_scaling(self.init['scaling'])
 
 class Spike2RatePopulationGenerator(object):
     """ Base class for generating C++ code from a population description. """

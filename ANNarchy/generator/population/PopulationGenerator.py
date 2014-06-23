@@ -151,7 +151,6 @@ class PopulationGenerator(object):
     def generate_constructor(self):
         """ Content of the Population constructor and resetToInit."""
         constructor = ""
-        reset=""
         # Attributes
         for param in self.desc['parameters'] + self.desc['variables']:  
 
@@ -172,10 +171,6 @@ class PopulationGenerator(object):
     record_%(name)s_ = false; 
     recorded_%(name)s_ = std::vector< std::vector< %(type)s > >();    
 """ % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
-                reset += """
-    // %(name)s_ : local
-    %(name)s_ = std::vector<%(type)s> (nbNeurons_, %(init)s);   
-""" % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
 
             elif param['name'] in self.desc['global']: # global attribute
                 # Initialize the attribute
@@ -183,10 +178,6 @@ class PopulationGenerator(object):
     // %(name)s_ : global
     %(name)s_ = %(init)s;   
 """ % {'name' : param['name'], 'init': str(cinit)} 
-                reset += """
-    // %(name)s_ : global
-    %(name)s_ = %(init)s;   
-""" % {'name' : param['name'], 'init' : str(cinit)} 
 
         # Global operations
         for var in self.desc['global_operations']:
@@ -212,7 +203,7 @@ class PopulationGenerator(object):
         'template': var['template'] 
       }
         
-        return constructor, reset
+        return constructor
     
     def generate_destructor(self):
         """ Content of the Population destructor."""

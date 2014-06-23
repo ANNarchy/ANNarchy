@@ -49,8 +49,6 @@ public:
 
 	void removeDendrite(int postNeuronRank, class Population *pre);
 
-	void initValues(int postNeuronRank);
-
 	bool isRateCoded() { return true; }
 
 	void record();

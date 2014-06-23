@@ -42,8 +42,6 @@ public:
     
     int removeAllSynapses();
     
-    void initValues();
-    
     void globalLearn();
 
     void localLearn();
@@ -149,11 +147,6 @@ int %(class)s::removeSynapse(int rank)
 int %(class)s::removeAllSynapses()
 {
 %(rem_all_synapse_body)s
-}
-
-void %(class)s::initValues() 
-{
-%(init)s
 }
 
 void %(class)s::localLearn() {

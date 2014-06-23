@@ -53,8 +53,6 @@ public:
 
     virtual void record() = 0;
 
-    virtual void initValues(int postNeuronRank) = 0;
-
     void setLearnFrequency( int frequency ) { learnFrequency_ = frequency; }
 
     int getLearnFrequency( ) { return learnFrequency_; }

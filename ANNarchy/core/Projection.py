@@ -53,12 +53,6 @@ class Projection(object):
         * For spiking populations: ``g_target += w``
 
         """
-
-        # TODO: now that PopulationViews can be used to create projections, this won't work!
-        # print Global.get_projection(pre, post, target, suppress_error=True)
-        # if Global.get_projection(pre, post, target, suppress_error=True) != None:
-        #     Global._error('population from', pre.name, 'to', post.name, 'with target', target, 'already exists.')
-        #     exit(0)
         
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
@@ -160,7 +154,6 @@ class Projection(object):
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
-
         proj = getattr(module, 'py'+self.name)
         self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
         
@@ -351,7 +344,7 @@ class Projection(object):
             if value.dim == 1:
                 if value.shape == (self.size, ):
                     for n in self._post_ranks:
-                        getattr(self.cyInstance, '_set_'+attribute)(n, value)
+                        getattr(self.cyInstance, '_set_'+attribute)(n, value[n])
                 else:
                     Global._error('The projection has '+self.size+ ' dendrites.')
         elif isinstance(value, list):
@@ -362,11 +355,11 @@ class Projection(object):
                 Global._error('The projection has '+self.size+ ' dendrites.')
         else: # a single value
             if attribute in self.description['local']:
-                for i in self._post_ranks:
-                    getattr(self.cyInstance, '_set_'+attribute)(i, value*np.ones(self.cyInstance._nb_synapses(i)))
+                for n in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(n, value*np.ones(self.cyInstance._nb_synapses(n)))
             else:
-                for i in self._post_ranks:
-                    getattr(self.cyInstance, '_set_'+attribute)(i, value)
+                for n in self._post_ranks:
+                    getattr(self.cyInstance, '_set_'+attribute)(n, value)
 
  
     ################################

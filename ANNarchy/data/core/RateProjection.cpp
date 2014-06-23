@@ -182,11 +182,6 @@ void RateProjection::removeDendrite(int postNeuronRank, class Population *pre)
 	std::cout << "Need to implemented in CPP core."<< std::endl;
 }
 
-void RateProjection::initValues(int postNeuronRank)
-{
-	if (dendrites_[postNeuronRank] != NULL)
-		static_cast<RateDendrite*>(dendrites_[postNeuronRank])->initValues();
-}
 
 void RateProjection::record()
 {

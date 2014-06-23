@@ -412,8 +412,6 @@ cdef extern from "../build/%(name)s.h":
         void addSynapse(int, int, float, int)
 
         void removeSynapse(int, int)
-
-        void initValues(int post_rank)
          
         vector[int] get_rank(int post_rank)
 
@@ -485,15 +483,6 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_delay(self, int post_rank):
         return np.array(self.cInstance.get_delay(post_rank))
 
-    cpdef createFromDict( self, dict dendrites ):
-        cdef int rank
-        cdef dict data
-        for rank, data in dendrites.iteritems():
-            # create dendrite instance
-            self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])            
-            # initialize variables
-            self.cInstance.initValues(rank)
-
     cpdef createFromCSR( self, dendrites ):
         cdef int rank
         cdef list data
@@ -501,11 +490,8 @@ cdef class py%(name)s:
 
         delays = dendrites.get_delay()
         for rank, data in dendrites.get_data().iteritems():
-
             # create dendrite instance
-            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])            
-            # initialize variables
-            self.cInstance.initValues(rank)
+            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])
 
     cpdef int _nb_dendrites(self):
         return self.cInstance.nbDendrites()
@@ -564,8 +550,6 @@ cdef extern from "../build/%(name)s.h":
         void addSynapse(int, int, float, int)
 
         void removeSynapse(int, int)
-
-        void initValues(int post_rank)
          
         vector[int] get_rank(int post_rank)
 
@@ -642,9 +626,7 @@ cdef class py%(name)s:
         cdef dict data        
         for rank, data in dendrites.iteritems():
             # create dendrite instance
-            self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])            
-            # initialize variables
-            self.cInstance.initValues(rank)
+            self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])
 
     cpdef createFromCSR( self, dendrites ):
         cdef int rank
@@ -653,11 +635,8 @@ cdef class py%(name)s:
 
         delays = dendrites.get_delay()
         for rank, data in dendrites.get_data().iteritems():
-
             # create dendrite instance
-            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])            
-            # initialize variables
-            self.cInstance.initValues(rank)
+            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])     
 
     cpdef int _nb_dendrites(self):
         return self.cInstance.nbDendrites()

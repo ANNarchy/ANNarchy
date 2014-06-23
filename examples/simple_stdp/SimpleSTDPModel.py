@@ -49,8 +49,8 @@ STDP = SpikeSynapse(
         wmax = 0.01 : postsynaptic
     """,
     equations = """
-        tau_pre * dApre/dt = -Apre : init=0.0
-        tau_post * dApost/dt = -Apost : init=0.0
+        tau_pre * dApre/dt = -Apre 
+        tau_post * dApost/dt = -Apost 
     """,
     pre_spike="""
         g_target += w

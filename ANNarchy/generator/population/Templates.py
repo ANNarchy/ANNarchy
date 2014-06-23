@@ -35,8 +35,6 @@ public:
     
     int getNeuronCount() { return nbNeurons_; }
     
-    void resetToInit();
-    
     void localMetaStep(int neur_rank);
     
     void globalMetaStep();
@@ -159,11 +157,6 @@ void %(class)s::prepareNeurons()
 %(prepare)s
 }
 
-void %(class)s::resetToInit() 
-{
-%(resetToInit)s
-}
-
 void %(class)s::localMetaStep(int i) 
 {
 %(localMetaStep)s
@@ -258,8 +251,6 @@ public:
     
     int getNeuronCount() { return nbNeurons_; }
     
-    void resetToInit();
-    
     void localMetaStep(int neur_rank);
     
     void globalMetaStep();
@@ -303,8 +294,6 @@ private:
 #
 #    * destructor : code for the destructor where all variables are freed
 # 
-#    * resetToInit : code for the reinitialization
-# 
 #    * metaStep : code for the metastep function
 # 
 #    * global_ops : code for computing the global operations
@@ -346,11 +335,6 @@ spike_population_body = """#include "%(class)s.h"
     std::cout << "%(class)s::Destructor" << std::endl;
 #endif
 %(destructor)s
-}
-
-void %(class)s::resetToInit() 
-{
-%(resetToInit)s
 }
 
 void %(class)s::localMetaStep(int i) 

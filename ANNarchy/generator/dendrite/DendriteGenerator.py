@@ -139,17 +139,17 @@ class DendriteGenerator(object):
         constructor = ""
         # Attributes
         for param in self.desc['parameters'] + self.desc['variables']:
+            ctype = param['ctype']
+            if ctype == 'bool':
+                cinit = 'false'
+            elif ctype == 'int':
+                cinit = '0'
+            elif ctype == 'DATA_TYPE':
+                cinit = '0.0'
+
             if param['name'] == "w":
                 continue
             elif param['name'] in self.desc['local']: # local attribute
-                ctype = param['ctype']
-                if ctype == 'bool':
-                    cinit = 'false'
-                elif ctype == 'int':
-                    cinit = '0'
-                elif ctype == 'DATA_TYPE':
-                    cinit = '0.0'
-
                 constructor += """
     // %(name)s_ : local
     %(name)s_ = std::vector<%(type)s> ( rank_.size(), %(init)s);  
@@ -157,13 +157,6 @@ class DendriteGenerator(object):
 """ % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
 
             elif param['name'] in self.desc['global']: # global attribute
-                ctype = param['ctype']
-                if ctype == 'bool':
-                    cinit = 'false'
-                elif ctype == 'int':
-                    cinit = '0'
-                elif ctype == 'DATA_TYPE':
-                    cinit = '0.0'
                 constructor += """
     // %(name)s_ : global
     %(name)s_ = %(init)s;   
@@ -227,7 +220,7 @@ class DendriteGenerator(object):
                 continue
 
             if var['name'] in self.desc['local']:
-                code += """%(var)s_.push_back(%(init)s); """ % { 'var': var['name'], 'init': var['init'] }
+                code += """%(var)s_.push_back(%(init)s); """ % { 'var': var['name'], 'init': '0.0' }
             
         return add_synapse_body % { 'add_synapse': code }
 
