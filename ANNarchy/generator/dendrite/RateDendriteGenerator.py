@@ -117,8 +117,7 @@ class RateDendriteGenerator(DendriteGenerator):
             'psp_dyn_delay' : psp_code.replace('(*pre_rates_)', 'delayedRates')
         }    
 
-        #
-        # select the template according delay and paradigm
+        # Select the template according delay and paradigm
         #
         # Assumption: all dendrites have similar structure
         if self.desc['csr'].get_max_delay() > Global.config['dt']:
