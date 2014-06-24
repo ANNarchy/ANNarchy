@@ -130,9 +130,9 @@ Incoming spikes increase ``g_exc`` and can provoke a postsynaptic spike at the n
 Refractory period
 -----------------
 
-The refractory period is specified by the ``refractory`` parameter of ``SpikeNeuron``. As any other variable, it can be later modified for the whole population, with possibly different values per neuron.
+The refractory period in milliseconds is specified by the ``refractory`` parameter of ``SpikeNeuron``. 
 
-.. code-block :: python
+.. code-block:: python
 
     LIF = SpikeNeuron (
         parameters = """ ... """,
@@ -146,6 +146,40 @@ The refractory period is specified by the ``refractory`` parameter of ``SpikeNeu
     )
 
 If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 consecutive steps after a spike is emitted, in addition to the step where the spike was emitted. The equations will be evaluated normally, so ``g_exc`` will not "miss" incoming spikes during this period, only ``v`` will be stuck to ``c`` and ``u`` incremented 6 times altogether. 
+
+``refractory`` is an attribute of a spiking ``Population`` object, so it can be set specifically for a population even when omitted in the neuron definition:
+
+.. code-block:: python
+
+    LIF = SpikeNeuron (
+        parameters = """ ... """,
+        equations = """ ... """,
+        spike = """ ... """,
+        reset = """ 
+            v = c
+            u += d
+        """
+    )
+
+    pop = Population(geometry = 1000, neuron = LIF)
+    pop.refractory = Uniform(1.0, 10.0)
+
+It can be either a single value, a ``RandomDistribution`` object or a Numpy array of the same size/geometry as the population.
+
+If you want only a subpart of the ``reset`` statements to be executed during the refractory period, you can use the ``unless_refractory`` flag. Statements flagged with ``unless_refractory`` will only be executed once just after a spike is emitted, but not during the refractory period. In the example above, it would indeed make more sense to define ``u`` as non-refractory, as the increment should be executed only once:
+
+.. code-block:: python
+
+    LIF = SpikeNeuron (
+        parameters = """ ... """,
+        equations = """ ... """,
+        spike = """ ... """,
+        reset = """ 
+            v = c
+            u += d : unless_refractory
+        """,
+        refractory = 5.0
+    )
 
 
 
