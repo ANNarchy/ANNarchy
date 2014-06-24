@@ -25,6 +25,7 @@ import os, sys
 import subprocess
 import shutil
 import time
+import numpy as np
 
 # ANNarchy core informations
 import ANNarchy
@@ -441,7 +442,8 @@ class Generator(object):
                                            'obj_type': '%.o',
                                            'py_version': py_version, 
                                            'flag': flags,
-                                           'extra_libs': libs }
+                                           'extra_libs': libs,
+                                           'numpy_include': np.get_include() }
                 else: 
                     src = cuda_makefile % { 'src_type': '%.cpp',
                                             'src_gpu': '%.cu',
@@ -453,7 +455,8 @@ class Generator(object):
                                        'obj_type': '%.o',
                                        'py_version': py_version, 
                                        'flag': flags,
-                                       'extra_libs': libs }
+                                       'extra_libs': libs,
+                                       'numpy_include': np.get_include() }
 
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:

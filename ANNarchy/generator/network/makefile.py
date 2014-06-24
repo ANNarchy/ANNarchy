@@ -26,7 +26,7 @@ ANNarchyCython_%(py_version)s: $(OBJ) pyx/ANNarchyCython_%(py_version)s.o
 
 pyx/ANNarchyCython_%(py_version)s.o : pyx/ANNarchyCython.pyx
 \tcython pyx/ANNarchyCython.pyx --cplus  
-\tg++ %(flag)s -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python%(py_version)s -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_%(py_version)s.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
+\tg++ %(flag)s -pipe -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -D_GNU_SOURCE -fwrapv -fPIC -I/usr/include/python%(py_version)s -I %(numpy_include)s -c pyx/ANNarchyCython.cpp -o pyx/ANNarchyCython_%(py_version)s.o -L. -I. -Ibuild -fopenmp -std=c++0x -fpermissive 
 
 build/%(obj_type)s : build/%(src_type)s
 \tg++ %(flag)s -fPIC -pipe -fpermissive -std=c++0x -fopenmp -I. -c $< -o $@
