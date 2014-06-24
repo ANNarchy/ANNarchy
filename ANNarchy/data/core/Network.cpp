@@ -300,7 +300,7 @@ void Network::run(int steps)
 			#pragma omp for
 			for(unsigned int p = 0; p < spike_populations_.size(); p++)
 			{
-				if ( spike_populations_[p]->isRefractoring() )
+				if ( spike_populations_[p]->hasRefractory() )
 					spike_populations_[p]->updateRefractoryCounter();
 			}
             #pragma omp barrier

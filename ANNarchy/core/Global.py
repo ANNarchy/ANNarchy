@@ -69,6 +69,7 @@ authorized_keywords = [
     'fullimplicit',
     'exponential',
     'concurrent',
+    'unless_refractory',
     'int',
     'bool',
     'float'

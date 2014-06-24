@@ -424,17 +424,18 @@ def extract_spike_variable(pop_desc):
                           type = 'cond')
     raw_spike_code = translator.parse()
     
-    raw_reset_code = ''
+    reset_desc = []
     if pop_desc.has_key('raw_reset') and pop_desc['raw_reset']:
-        for var in prepare_string(pop_desc['raw_reset']):
-            name = extract_name(var)
-            translator = Equation(name, var, 
+        reset_desc = process_equations(pop_desc['raw_reset'])
+        for var in reset_desc:
+            translator = Equation(var['name'], var['eq'], 
                                   pop_desc['attributes'], 
                                   pop_desc['local'], 
-                                  pop_desc['global'])
-            raw_reset_code += translator.parse() +'\n'
+                                  pop_desc['global'],
+                                  index = '[(*it)]')
+            var['cpp'] = translator.parse() 
     
-    return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': raw_reset_code}
+    return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
 
 def extract_pre_spike_variable(proj):
     pre_spike_var = []

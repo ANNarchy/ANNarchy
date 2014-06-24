@@ -34,8 +34,9 @@ SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(n
 
     lastSpike_ = std::vector<int>(nbNeurons_, -10000);
 
-    refractory_period_ = 0;
+    has_refractory_ = false;
     refractory_counter_ = std::vector<int>(nbNeurons_,  0);
+    refractory_times_   = std::vector<int>(nbNeurons_,  0);
 }
 
 SpikePopulation::~SpikePopulation()
@@ -73,6 +74,26 @@ bool SpikePopulation::hasSpiked(int rank, int t)
                 return false;
         }
         return false;
+    }
+}
+
+void SpikePopulation::emit_spike(int i)
+{
+
+    if (refractory_counter_[i] < 1)
+    {
+        #pragma omp critical
+        {
+            //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
+            this->propagate_.push_back(i);
+            this->reset_.push_back(i);
+            
+            lastSpike_[i] = ANNarchy_Global::time;
+            if(record_spike_){
+                spike_timings_[i].push_back(ANNarchy_Global::time);
+            }
+            spiked_[i] = true;
+        }
     }
 }
 
@@ -242,7 +263,7 @@ void SpikePopulation::updateRefractoryCounter()
 	{
 		for( int n = 0; n < nbNeurons_; n++ )
 		{
-			refractory_counter_[n]-= 1;
+			refractory_counter_[n] -= 1;
 		}
 	}
 }

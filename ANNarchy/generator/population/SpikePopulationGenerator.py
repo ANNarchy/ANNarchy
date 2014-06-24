@@ -58,31 +58,7 @@ class SpikePopulationGenerator(PopulationGenerator):
     
     def generate_constructor(self):
 
-        constructor= PopulationGenerator.generate_constructor(self)
-
-        if 'refractory' in self.desc.keys():
-            if isinstance(self.desc['refractory'], RandomDistribution):
-                constructor += """
-    refractory_times_ = std::vector<int>(nbNeurons, 0);
-    
-    // generate random times in range 
-    auto tmp = %(rand_init)s.getValues(nbNeurons_);
-    refractory_period_ = *( std::max_element(tmp.begin(), tmp.end()) );
-    
-    // transform time in steps
-    std::transform(tmp.begin(), tmp.end(), refractory_times_.begin(), std::bind1st(std::multiplies<DATA_TYPE>(), dt_));
-    
-    """ % { 'rand_init': self.desc['refractory']._gen_cpp() }
-                
-            elif isinstance(self.desc['refractory'], (float, int)):
-                refractor_value = str( int(self.desc['refractory'] / Global.config['dt']))
-                constructor += """
-    refractory_times_ = std::vector<int>(nbNeurons, %(value)s);
-    """ % { 'value': refractor_value }
-            else:
-                constructor += """
-    refractory_times_ = std::vector<int>(nbNeurons, 0);
-    """         
+        constructor= PopulationGenerator.generate_constructor(self)     
 
         for variable in self.declared_targets:
             if not 'g_'+variable in self.desc['local']:
@@ -165,7 +141,7 @@ class SpikePopulationGenerator(PopulationGenerator):
         global_metastep = self.generate_global_metastep()
 
         # reset event
-        reset_event = self.generate_reset_event()
+        reset_event, refractory_event = self.generate_reset_event()
         
         # Generate the code
         template = spike_population_body
@@ -180,7 +156,7 @@ class SpikePopulationGenerator(PopulationGenerator):
             'record' : record,
             'stop_condition' : stop_condition,
             'reset_event': reset_event,
-            'reset_neuron': reset_event.replace('(*it)', 'rank'),
+            'refractory_event': refractory_event,
             'single_global_ops' : singleops
         }
         return template % dictionary
@@ -204,9 +180,15 @@ class SpikePopulationGenerator(PopulationGenerator):
         return template % dictionary
 
     def generate_reset_event(self):
-        code = self.desc['spike']['spike_reset'].replace('[i]','[(*it)]')
+        desc = self.desc['spike']['spike_reset']
+        reset_code = ''
+        refractory_code = ''
+        for var in desc:
+            reset_code += ' '*8 + var['cpp'] + '\n'
+            if not 'unless_refractory' in var['constraint']:
+                refractory_code += ' '*8 + var['cpp'].replace('(*it)', 'rank') + '\n'
         
-        return code
+        return reset_code, refractory_code
 
     def generate_local_metastep(self):
         """

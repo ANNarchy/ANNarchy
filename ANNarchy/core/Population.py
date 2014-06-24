@@ -160,6 +160,11 @@ class Population(object):
         # Create the attributes and actualize the initial values
         self._init_attributes()
 
+        # If the spike population has a refractory period:        
+        if self.description['type'] == 'spike' and self.description['refractory']:
+            self.refractory = self.description['refractory']
+
+
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
         self.initialized = True  
@@ -884,4 +889,35 @@ class Population(object):
         from ANNarchy.core.IO import _load_data, _load_pop_data
         _load_pop_data(self, _load_data(filename))
 
+
+    ################################
+    ## Refractory period
+    ################################
+    @property
+    def refractory(self):
+        if self.description['type'] == 'spike':
+            if self.initialized:
+                return self.cyInstance._get_refractory()
+            else :
+                return self.description['refractory']
+        else:
+            Global._error('rate-coded neurons do not have refractory periods...')
+            return None
+
+    @refractory.setter
+    def refractory(self, value):
+        if self.description['type'] == 'spike':
+            if self.initialized:
+                if isinstance(value, RandomDistribution):
+                    refs = (value.get_values(self.size)/Global.config['dt']).astype(int)
+                elif isinstance(value, np.ndarray):
+                    refs = (value / Global.config['dt']).astype(int).reshape(self.size)
+                else:
+                    refs = (value/ Global.config['dt']*np.ones(self.size)).astype(int)
+                # TODO cast into int
+                self.cyInstance._set_refractory(refs)
+            else: # not initialized yet, saving for later
+                self.description['refractory'] = value
+        else:
+            Global._error('rate-coded neurons do not have refractory periods...')
 

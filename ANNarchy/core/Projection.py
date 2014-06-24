@@ -157,6 +157,10 @@ class Projection(object):
         *Parameters*:
 
         * **synapses**: if True, the connections will also be erased (default: False).
+
+        .. note::
+
+            Not implemented yet...
         """
         self._init_attributes()
         if synapses:
@@ -513,7 +517,7 @@ class Projection(object):
     
     def connect_one_to_one(self, weights=1.0, delays=0.0):
         """
-        Builds a one-to-one connections between the two populations.
+        Builds a one-to-one connection pattern between the two populations.
         
         *Parameters*:
         

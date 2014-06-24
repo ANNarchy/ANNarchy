@@ -385,7 +385,7 @@ void %(class)s::reset()
 
 void %(class)s::reset(int rank)
 {
-    %(reset_neuron)s
+%(refractory_event)s
 }
 
 %(single_global_ops)s
@@ -394,21 +394,7 @@ void %(class)s::reset(int rank)
 spike_emission_template = """
     if( %(cond)s )
     {
-        if (refractory_counter_[i] < 1)
-        {
-            #pragma omp critical
-            {
-                //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
-                this->propagate_.push_back(i);
-                this->reset_.push_back(i);
-                
-                lastSpike_[i] = ANNarchy_Global::time;
-                if(record_spike_){
-                    spike_timings_[i].push_back(ANNarchy_Global::time);
-                }
-                spiked_[i] = true;
-            }
-        }
+        emit_spike(i);
     }
 """
 
@@ -498,8 +484,8 @@ cdef extern from "../build/%(class_name)s.h":
         
         void setMaxDelay(int)
         
-        void setRefractoryTimes(vector[int])
-        
+        # Refractory times
+        void setRefractoryTimes(vector[int])        
         vector[int] getRefractoryTimes()
 
 
@@ -537,10 +523,10 @@ cdef class py%(class_name)s:
         def __set__(self, value):
             print "py%(name)s.size is a read-only attribute."
 
-    cpdef np.ndarray _get_refractory_times(self):
+    cpdef np.ndarray _get_refractory(self):
         return np.array(self.cInstance.getRefractoryTimes())
         
-    cpdef _set_refractory_times(self, np.ndarray value):
+    cpdef _set_refractory(self, np.ndarray value):
         self.cInstance.setRefractoryTimes(value)
             
 %(pyFunction)s

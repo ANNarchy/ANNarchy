@@ -96,12 +96,17 @@ public:
 	/**
 	 * 	\brief		Set refactory time after a spike for each neuron.
 	 */
-	void setRefractoryTimes(std::vector<int> refractory_times) { refractory_times_ = refractory_times; }
+	void setRefractoryTimes(std::vector<int> refractory_times) { refractory_times_ = refractory_times; has_refractory_ = true;}
 
-	/**
-	 * 	\brief		Set refactory time after a spike for each neuron.
-	 */
-	std::vector<int> getRefractoryTimes() { return refractory_times_; }
+    /**
+     *  \brief      Set refactory time after a spike for each neuron.
+     */
+    std::vector<int> getRefractoryTimes() { return refractory_times_; }
+
+    /**
+     *  \brief      Tells if the population has refractory times.
+     */
+    bool hasRefractory() { return has_refractory_; }
 
     /**
      *  \brief      set max delay
@@ -128,25 +133,26 @@ public:
     */
     int nbSpikesInTheLast(int rank, int t);
 
+    void emit_spike(int i);
     void propagateSpikes();
     void evaluatePostSpikes();
 	void updateRefractoryCounter();
 
 	// override
-	virtual void resetToInit() {}
+    virtual void resetToInit() {}
 	virtual void record() {}
 	virtual void globalMetaStep() {}
 	virtual void localMetaStep(int rank) {}
 	virtual void globalOperations() {}
 	virtual void reset(int rank) {}
 
-	bool isRefractoring() { return refractory_period_ > 0 ? true : false; }
 
 protected:
 
 	std::vector< std::vector<class Dendrite*> > spikeTargets_; // first dimension, neuron wise
 
-	int refractory_period_;
+    // Refractory stuff
+    bool has_refractory_;
 	std::vector<int> refractory_times_;
 	std::vector<int> refractory_counter_;
 
