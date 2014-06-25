@@ -22,6 +22,7 @@
 
 """
 from .Analyser import *
+from ANNarchy.core.Global import _error, _warning
 
 def analyse_population(pop):
     """ Performs the initial analysis for a single population."""

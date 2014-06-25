@@ -190,7 +190,7 @@ class Equation(object):
 
         variable_name = self.local_dict[self.name]
 
-        equation = collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt'])
+        equation = simplify(collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt']))
 
         explicit_code = 'DATA_TYPE _' + self.name + ' = ' + self.c_code(equation) + ';'
 
