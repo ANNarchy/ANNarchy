@@ -159,6 +159,8 @@ class Analyser(object):
                 self.implicit_odes[pop].append(variable)
             elif 'exponential' in variable['flags']:
                 method = 'exponential'
+            elif 'midpoint' in variable['flags']:
+                method = 'midpoint'
             else:
                 method = 'explicit'
 
@@ -284,6 +286,8 @@ class Analyser(object):
                 method = 'fullimplicit'
             elif 'exponential' in variable['flags']:
                 method = 'exponential'
+            elif 'midpoint' in variable['flags']:
+                method = 'midpoint'
             else:
                 method = 'explicit'
 

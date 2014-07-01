@@ -176,6 +176,8 @@ class Equation(object):
             return self.explicit(expression)
         elif self.method == 'exponential':
             return self.exponential(expression)
+        elif self.method == 'midpoint':
+            return self.midpoint(expression)
         
     def explicit(self, expression):
         " Explicit or backward Euler numerical method"
@@ -195,6 +197,40 @@ class Equation(object):
         explicit_code = 'DATA_TYPE _' + self.name + ' = ' + self.c_code(equation) + ';'
 
         switch = self.c_code(variable_name) + ' += _' + self.name + ' ;'
+
+        # Return result
+        return [explicit_code, switch]
+    
+    def midpoint(self, expression):
+        "Midpoint method."
+
+        expression = expression.replace('d'+self.name+'/dt', '_grad_var_')
+        new_var = Symbol('_grad_var_')
+        self.local_dict['_grad_var_'] = new_var
+
+        analysed = self.parse_expression(expression,
+            local_dict = self.local_dict
+        )
+
+
+        variable_name = self.local_dict[self.name]
+
+        equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
+
+        explicit_code =  'DATA_TYPE _' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
+
+        # Midpoint method:
+        # Replace the variable x by x+_x/2
+        tmp_dict = self.local_dict
+        tmp_dict[self.name] = Symbol('(' + self.c_code(variable_name) + ' + 0.5*_' + self.name + ' )')
+        tmp_analysed = self.parse_expression(expression,
+            local_dict = self.local_dict
+        )
+        tmp_equation = solve(tmp_analysed, new_var)[0]
+
+        explicit_code += '\n    DATA_TYPE _' + self.name + '_new = ' + self.c_code(tmp_equation) + ';'
+
+        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + '_new ;'
 
         # Return result
         return [explicit_code, switch]
@@ -410,7 +446,7 @@ class Equation(object):
         )
     
         # Obtain C code
-        code = self.c_code(self.local_dict[self.name]) + ' = ' + self.c_code(simplify(analysed)) +';'
+        code = self.c_code(self.local_dict[self.name]) + ' = ' + self.c_code(analysed) +';'
     
         # Return result
         return code

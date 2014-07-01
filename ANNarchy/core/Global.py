@@ -68,6 +68,7 @@ authorized_keywords = [
     'implicit',
     'fullimplicit',
     'exponential',
+    'midpoint',
     'concurrent',
     'unless_refractory',
     'int',
