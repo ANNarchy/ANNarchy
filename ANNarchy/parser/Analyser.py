@@ -151,18 +151,7 @@ class Analyser(object):
             eq, condition = extract_ite(variable['name'], eq, pop)
             
             # Find the numerical method if any
-            if 'implicit' in variable['flags']:
-                method = 'implicit'
-                self.implicit_odes[pop].append(variable)
-            elif 'fullimplicit' in variable['flags']:
-                method = 'fullimplicit'
-                self.implicit_odes[pop].append(variable)
-            elif 'exponential' in variable['flags']:
-                method = 'exponential'
-            elif 'midpoint' in variable['flags']:
-                method = 'midpoint'
-            else:
-                method = 'explicit'
+            method = self.find_method(variable) 
 
             # Process the bounds
             if 'min' in variable['bounds'].keys():
@@ -220,6 +209,7 @@ class Analyser(object):
             variable['cpp'] = cpp_eq # the C++ equation
             variable['switch'] = switch # switch value of ODE
             variable['untouched'] = untouched # may be needed later
+            variable['method'] = method # may be needed later
 
 
     def parse_projection(self, proj):
@@ -280,16 +270,7 @@ class Analyser(object):
             variable['transformed_eq'] = eq
                     
             # Find the numerical method if any
-            if 'implicit' in variable['flags']:
-                method = 'implicit'
-            elif 'fullimplicit' in variable['flags']:
-                method = 'fullimplicit'
-            elif 'exponential' in variable['flags']:
-                method = 'exponential'
-            elif 'midpoint' in variable['flags']:
-                method = 'midpoint'
-            else:
-                method = 'explicit'
+            method = self.find_method(variable)
 
             # Process the bounds
             if 'min' in variable['bounds'].keys():
@@ -336,6 +317,7 @@ class Analyser(object):
             variable['cpp'] = cpp_eq # the C++ equation
             variable['switch'] = switch # switch value id ODE
             variable['untouched'] = untouched # may be needed later
+            variable['method'] = method # may be needed later
             
         # Translate the psp code if any
         if 'raw_psp' in proj.description.keys():                
@@ -368,3 +350,22 @@ class Analyser(object):
         if not proj._synapses:
             _warning('the projection between ' + proj.pre.name + ' and ' + proj.post.name + ' with target ' + proj.target + ' is not instantiated.')
         proj.description['csr'] = proj._synapses
+
+    def find_method(self, variable):
+
+        if 'implicit' in variable['flags']:
+            method = 'implicit'
+            self.implicit_odes[pop].append(variable)
+        elif 'fullimplicit' in variable['flags']:
+            method = 'fullimplicit'
+            self.implicit_odes[pop].append(variable)
+        elif 'exponential' in variable['flags']:
+            method = 'exponential'
+        elif 'midpoint' in variable['flags']:
+            method = 'midpoint'
+        elif 'explicit' in variable['flags']:
+            method = 'explicit'
+        else:
+            method= config['method']
+
+        return method

@@ -4,8 +4,6 @@
 
 from ANNarchy import *
 
-setup()
-
 # Defining the neuron
 InputNeuron = RateNeuron(   
     parameters="""

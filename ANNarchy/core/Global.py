@@ -53,6 +53,7 @@ config = dict(
     'float_prec': 'double',
     'num_threads': 1,
     'paradigm': "openmp",
+    'method': "explicit",
     'seed': -1
    }
 )
@@ -66,7 +67,6 @@ authorized_keywords = [
     'postsynaptic',
     'explicit',
     'implicit',
-    'fullimplicit',
     'exponential',
     'midpoint',
     'concurrent',
@@ -85,6 +85,8 @@ def setup(**keyValueArgs):
     *Parameters*:
     
     * **dt**: discretization time step (default: 1.0 ms).
+
+    * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     
     * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
     
@@ -98,19 +100,23 @@ def setup(**keyValueArgs):
     
     * **suppress_warnings**: if True, warnings (e. g. from the mathematical parser) are suppressed.
     
-    * **show_time**: if True, initialization times are shown. ATTENTION: verbose should be set to True additionally.
+    * **show_time**: if True, initialization times are shown. Attention: verbose should be set to True additionally.
     
     
     .. note::
 
-        This function should be used before any other functions of ANNarchy, right after ``from ANNarchy import *``.
+        This function should be used before any other functions of ANNarchy, right after ``from ANNarchy import *``::
+
+            from ANNarchy import *
+            setup(dt=1.0, method='midpoint', num_threads=2)
+            ...
     """
     for key in keyValueArgs:
 
         if key in config.keys():
             config[key] = keyValueArgs[key]
         else:
-            _print('unknown key:', key)
+            _print('Unknown key:', key)
     
 def reset(populations=True, projections=False, synapses = False):
     """
