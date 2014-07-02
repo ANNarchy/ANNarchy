@@ -95,7 +95,7 @@ class Projection(object):
         self._id = len(Global._projections)
         self.name = self.type_prefix+'Projection'+str(self._id)
             
-        self._synapses = {}
+        self._synapses = None
         self._connector = None
         self._post_ranks = []
 
@@ -172,7 +172,11 @@ class Projection(object):
         """
         proj = getattr(module, 'py'+self.name)
         self.cyInstance = proj(self.pre._id, self.post._id, self.post.targets.index(self.target))
-        
+
+        if not self._synapses:
+            self._post_ranks = []
+            return
+
         # Sort the dendrites to be created based on _synapses
         import ANNarchy.core.cython_ext.Connector as Connector
         self.cyInstance.createFromCSR(self._synapses)

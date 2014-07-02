@@ -120,7 +120,7 @@ class RateDendriteGenerator(DendriteGenerator):
         # Select the template according delay and paradigm
         #
         # Assumption: all dendrites have similar structure
-        if self.desc['csr'].get_max_delay() > Global.config['dt']:
+        if self.desc['csr'] and self.desc['csr'].get_max_delay() > Global.config['dt']:
             delay = self.desc['csr'].get_delay()
             first_syn_delay = delay[delay.keys()[0]]
 

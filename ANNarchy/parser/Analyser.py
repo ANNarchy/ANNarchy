@@ -364,5 +364,7 @@ class Analyser(object):
             psp['cpp'] = code
             proj.description['psp'] = psp               
     
-        # handling delays
+        # Handling delays
+        if not proj._synapses:
+            _warning('the projection between ' + proj.pre.name + ' and ' + proj.post.name + ' with target ' + proj.target + ' is not instantiated.')
         proj.description['csr'] = proj._synapses
