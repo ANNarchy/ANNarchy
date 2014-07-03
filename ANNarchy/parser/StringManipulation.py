@@ -96,15 +96,6 @@ def extract_name(equation, left=False):
         return name[0].strip()
     else:
         return '_undefined' 
-
-def extract_condition_name(equation):
-    " Extracts the name of a parameter/variable by looking the left term of an equation."
-    # Search for operators
-    operators = ['>', '<', '!=', '==', ' is ']
-    for op in operators:
-        if op in equation: 
-            return equation.split(op)[0].strip()
-    return '_undefined'   
     
                 
 def extract_flags(constraint):

@@ -416,8 +416,13 @@ def extract_targets(variables):
     return list(set(targets))
 
 def extract_spike_variable(pop_desc):
-    spike_name = extract_condition_name(pop_desc['raw_spike'].strip())
-    translator = Equation('raw_spike_cond', pop_desc['raw_spike'], 
+    cond = prepare_string(pop_desc['raw_spike'])
+    if len(cond) > 1:
+        _error('The spike condition must be a single expression')
+        _print(pop_desc['raw_spike'])
+        exit(0)
+        
+    translator = Equation('raw_spike_cond', cond[0].strip(), 
                           pop_desc['attributes'], 
                           pop_desc['local'], 
                           pop_desc['global'], 
@@ -435,7 +440,7 @@ def extract_spike_variable(pop_desc):
                                   index = '[(*it)]')
             var['cpp'] = translator.parse() 
     
-    return { 'name': spike_name, 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
+    return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
 
 def extract_pre_spike_variable(proj):
     pre_spike_var = []
