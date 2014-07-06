@@ -100,7 +100,7 @@ As it is only a parser and not a solver, some limitations exist:
 
     dmp/dt  = (baseline - mp) / tau
 
-In practice, ODEs are transformed using Sympy into the last form (only the gradient stays on the left) and numerized using either forward (the default), semi-implicit (or backward) or exponential Euler methods.
+In practice, ODEs are transformed using Sympy into the last form (only the gradient stays on the left) and numerized using the chosen numerical method.
 
 
 Constraints
@@ -153,70 +153,12 @@ At each step of the simulation, after the update rule is calculated for ``mp``, 
 
 **Numerical method**
         
-The numerization method for ODEs can be explicitely set by the ``exponential`` and ``implicit`` keywords (when omitted, the default is the explicit (or forward) Euler method):
+The numerization method for a single ODEs can be explicitely set by specifying a flag::
 
-.. code-block:: python
+    tau * dmp/dt  + mp = sum(exc) : exponential
 
-    equations = """    
-        tau * dmp/dt  + mp =  A : init = 0.0, implicit
-    """
+The available numerical methods are described in :doc:`NumericalMethods`.
 
-* The explicit (backward) Euler method computes the next value for the variable ``mp`` at the simulation step ``t+1`` using the following formula:
-
-.. math::
-
-    \text{mp}_{t+1} = \text{mp}_{t} + dt / tau * (A - \text{mp}_{t})
-
-with ``dt = 1.0`` being the default discretization step in milliseconds.
-
-* The implicit (forward) Euler method uses the next value of ``mp`` to compute the update:
-
-.. math::
-
-    \text{mp}_{t+1} = \text{mp}_{t} + dt / tau * (A - \text{mp}_{t+1})
-
-The equation then has to be solved using Sympy in order to find the correct value for :math:`\text{mp}_{t+1}`:
-
-.. math::
-
-    \text{mp}_{t+1} = \text{mp}_{t} + \frac{dt}{dt+tau} * (A - \text{mp}_{t})
-
-The implicit Euler method is know to be more computationally stable when the value of ``dt`` is too high, compared to the explicit method.
-
-.. warning::
-
-    The implicit method is currently limited to **first-order linear** ODEs. Quadratic or exponential functions of the variable will for example be treated as constants. The equation:
-
-    .. code-block:: python
-
-        tau * dmp/dt  + mp =  A * mp^2
-
-    will be numerized as:
-
-    .. math::
-
-        \text{mp}_{t+1} = \text{mp}_{t} + \frac{dt}{dt+tau} * (A * \text{mp}_{t}^2 - \text{mp}_{t})
-
-    so it is better to think of this method as a **semi-implicit** method rather than fully implicit.
-
-* The exponential Euler method is particularly stable for first-order linear equations.
-
-
-.. code-block:: python
-
-    tau * dmp/dt  + mp =  A : init = 0.0, exponential
-    
-
-will be numerized as :
-
-.. math::
-
-    \text{mp}_{t+1} = \text{mp}_{t} + (1 - \exp(- \frac{dt}{tau}) ) * (A - \text{mp}_{t})
-
-
-.. warning::
-
-    The exponential method can only be apllied to **first-order linear** ODEs. Any other form of ODE will be rejected by the parser.
 
 
 **Summary of allowed keywords for variables:**
@@ -226,8 +168,7 @@ will be numerized as :
 * *max*: maximum allowed value (unset by default)
 * *population*: the attribute is equal for all neurons in a population.
 * *postsynaptic*: the attribute is equal for all synapses of a postsynaptic neuron.
-* *exponential*: the linear ODE will be integrated using the exponential Euler method.
-* *implicit*: the ODE will be integrated using the semi-implicit (or backward) Euler method. 
+* *explicit*, *implicit*, *semiimplicit*, *exponential*, *midpoint*: the numerical method to be used. 
 
 Allowed vocabulary
 ___________________
@@ -287,13 +228,13 @@ with backward Euler would be equivalent to:
 
 **Random number generators**
 
-Several random generators are available and can be used within an equation. In the current version are available:
+Several random generators are available and can be used within an equation. In the current version are for example available:
 
 * ``Uniform(min, max)`` generates random numbers from a uniform distribution in the range :math:`[\text{min}, \text{max}]`.
 
 * ``Normal(mu, sigma)`` generates random numbers from a normal distribution with min mu and standard deviation sigma.
 
-Example:
+See :doc:`../API/RandomDistribution` for more distributions. For example:
 
 .. code-block:: python
 
@@ -360,13 +301,13 @@ For example, to define a piecewise linear function, you can write:
 
     r = if mp < 1 : pos(mp) else: 1
 
-which is equivalent to:
+which is equivalent to: 
 
 .. code-block:: python
 
     r = clip(mp, 0.0, 1.0)
  
-The condition can use the following vocabulary:
+The condition can use the following vocabulary: 
 
 .. code-block:: python
     
@@ -378,12 +319,16 @@ The condition can use the following vocabulary:
     
     .. code-block:: python
     
-        weirdo = if (mp > 0) and ( (noise < 0.1) or (not(condition)) ): 1.0 else: 0.0   
+        weird = if (mp > 0) and ( (noise < 0.1) or (not(condition)) ): 
+                    1.0 
+                else: 
+                    0.0   
 
 
     ``is`` is equivalent to ``==``, ``is not`` is equivalent to ``!=``.  
     
-Conditional statements can also be nested:
+
+Conditional statements can also be nested: 
 
 .. code-block:: python
 
@@ -394,6 +339,18 @@ Conditional statements can also be nested:
                   mp
            else:
               1.0
+
+When a conditional statement is split over multiple lines, the flags must be set after the last line: 
+
+.. code-block:: python
+
+    rate = if mp < 1.0 : 
+              if mp < 0.0 :
+                  0.0 
+              else: 
+                  mp
+           else:
+              1.0 : init = 0.6
 
 Custom functions
 -------------------

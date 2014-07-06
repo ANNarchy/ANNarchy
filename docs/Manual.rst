@@ -9,6 +9,7 @@ The following sections describes the underlying structure of ANNarchy and how to
 
     manual/Network.rst
     manual/Parser.rst
+    manual/NumericalMethods.rst
     manual/RateNeuron.rst
     manual/SpikeNeuron.rst
     manual/RateSynapse.rst

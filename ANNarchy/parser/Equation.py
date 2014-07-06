@@ -212,7 +212,6 @@ class Equation(object):
             local_dict = self.local_dict
         )
 
-
         variable_name = self.local_dict[self.name]
 
         equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
