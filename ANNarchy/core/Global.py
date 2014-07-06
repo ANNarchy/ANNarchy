@@ -60,17 +60,23 @@ config = dict(
 
 # Authorized keywork for attributes
 authorized_keywords = [
-    'init',                   
+    # Init
+    'init',      
+    # Bounds             
     'min',
     'max',
+    # Locality
     'population',
     'postsynaptic',
+    # Numerical methods
     'explicit',
     'implicit',
+    'semiimplicit',
     'exponential',
     'midpoint',
-    'concurrent',
+    # Refractory
     'unless_refractory',
+    # Type
     'int',
     'bool',
     'float'

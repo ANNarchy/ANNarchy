@@ -32,8 +32,10 @@ def generate_equation_code(desc, locality='local'):
     # Separate ODEs from the pre- and post- equations
     pre_odes, odes, post_odes = sort_odes(desc, locality)
     # Generate code
-    code = ""         
+    code = ""  
+    #########################       
     # Pre-ODE equations
+    #########################
     for param in pre_odes: 
         code += """
     %(comment)s
@@ -55,34 +57,68 @@ def generate_equation_code(desc, locality='local'):
         %(var)s_[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val}
 
+    #################
     # ODE equations
+    #################
+    # Count how many steps (midpoint has more than one step)
+    nb_step = 0
+    for param in odes: 
+        if isinstance(param['cpp'], list):
+            nb_step = max(len(param['cpp']), nb_step)
+        else:
+            nb_step = max(1, nb_step)
+
+    # Iterate over all steps
+    for step in range(nb_step):
+        code += """
+    // Step %(step)s
+        """ % {'step' : str(step+1)}
+        for param in odes:
+            if isinstance(param['cpp'], list) and step < len(param['cpp']):
+                eq = param['cpp'][step]
+            elif isinstance(param['cpp'], str) and step == 0: 
+                eq = param['cpp']
+            else:
+                eq = ''
+            code += """
+    %(comment)s
+    %(cpp)s
+    """ % { 'comment': '// '+param['eq'],
+            'cpp': eq }
+
+    # Generate the switch code
+    if len(odes)>0:
+        code += """
+    // Switch values
+    """
     for param in odes: 
         code += """
     %(comment)s
-    %(cpp)s
-""" % { 'comment': '// '+param['eq'],
-        'cpp': param['cpp'] }
-    for param in odes: 
-        code += """
     %(switch)s 
-""" % {'switch' : param['switch']}
+""" % { 'comment': '// '+param['eq'],
+        'switch' : param['switch']}
+    
+    # Min-Max bounds
     for param in odes: 
-        # Min-Max bounds
         for bound, val in param['bounds'].iteritems():
             # Bound min
             if bound == 'min':
                 code += """
+    %(comment)s
     if(%(var)s_[i] < %(val)s)
         %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'comment': '// '+param['eq'], 'var' : param['name'], 'val' : val}
             # Bound max 
             if bound == 'max':
                 code += """
+    %(comment)s
     if(%(var)s_[i] > %(val)s)
         %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+""" % {'comment': '// '+param['eq'],'var' : param['name'], 'val' : val}
 
+    #######################
     # Post-ODE equations
+    #######################
     for param in post_odes: 
         code += """
     %(comment)s

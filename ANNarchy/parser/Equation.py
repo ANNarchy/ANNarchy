@@ -168,10 +168,10 @@ class Equation(object):
         # Suppress spaces to extract dvar/dt
         expression = expression.replace(' ', '')
     
-        if self.method == 'implicit':
+        if self.method == 'semiimplicit':
             return self.semiimplicit(expression)
-        elif self.method == 'fullimplicit':
-            return self.fullimplicit(expression)
+        elif self.method == 'implicit':
+            return self.implicit(expression)
         elif self.method == 'explicit':
             return self.explicit(expression)
         elif self.method == 'exponential':
@@ -217,12 +217,12 @@ class Equation(object):
 
         equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
 
-        explicit_code =  'DATA_TYPE _' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
+        explicit_code =  'DATA_TYPE _k_' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
 
         # Midpoint method:
         # Replace the variable x by x+_x/2
         tmp_dict = self.local_dict
-        tmp_dict[self.name] = Symbol('(' + self.c_code(variable_name) + ' + 0.5*_' + self.name + ' )')
+        tmp_dict[self.name] = Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )')
         tmp_analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
@@ -235,9 +235,9 @@ class Equation(object):
         # Return result
         return [explicit_code, switch]
     
-    def fullimplicit(self, expression):
+    def implicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
-        return self.semiimplicit(expression)
+        #return self.semiimplicit(expression)
 
         # Transform the gradient into a difference TODO: more robust...
         new_expression = expression.replace('d'+self.name, '_t_gradient_')

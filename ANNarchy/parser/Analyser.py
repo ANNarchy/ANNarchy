@@ -45,9 +45,7 @@ class Analyser(object):
         self.analysed_populations = {}
         self.analysed_projections = {}
 
-        self.implicit_odes = {}
-        for pop in self.populations:
-            self.implicit_odes[pop] = []
+        self.coupled_odes = {}
         
     def analyse(self):
         """ Extracts all the relevant information in the network to prepare code generation."""
@@ -57,8 +55,8 @@ class Analyser(object):
 
             self.parse_population(pop) 
 
-            if len(self.implicit_odes[pop]) > 1: # need for system resolution
-                new_odes = CoupledEquations(pop, self.implicit_odes[pop]).process_variables()
+            if self.coupled_odes.has_key(pop) and len(self.coupled_odes[pop]) > 1: # need for system resolution
+                new_odes = CoupledEquations(pop, self.coupled_odes[pop]).process_variables()
                 if new_odes: # No failure
                     for newvar in new_odes:
                         for oldvar in pop.description['variables']:
@@ -151,7 +149,7 @@ class Analyser(object):
             eq, condition = extract_ite(variable['name'], eq, pop)
             
             # Find the numerical method if any
-            method = self.find_method(variable) 
+            method = self.find_method(pop, variable) 
 
             # Process the bounds
             if 'min' in variable['bounds'].keys():
@@ -270,7 +268,7 @@ class Analyser(object):
             variable['transformed_eq'] = eq
                     
             # Find the numerical method if any
-            method = self.find_method(variable)
+            method = self.find_method(proj, variable)
 
             # Process the bounds
             if 'min' in variable['bounds'].keys():
@@ -351,18 +349,26 @@ class Analyser(object):
             _warning('the projection between ' + proj.pre.name + ' and ' + proj.post.name + ' with target ' + proj.target + ' is not instantiated.')
         proj.description['csr'] = proj._synapses
 
-    def find_method(self, variable):
+    def find_method(self, pop, variable):
+
+        def add_ode(self, pop, variable):
+            if self.coupled_odes.has_key(pop):
+                self.coupled_odes[pop].append(variable)
+            else:
+                self.coupled_odes[pop] = [variable]
+
 
         if 'implicit' in variable['flags']:
             method = 'implicit'
-            self.implicit_odes[pop].append(variable)
-        elif 'fullimplicit' in variable['flags']:
-            method = 'fullimplicit'
-            self.implicit_odes[pop].append(variable)
+            add_ode(self, pop, variable)
+        elif 'semiimplicit' in variable['flags']:
+            method = 'semiimplicit'
+            add_ode(self, pop, variable)
         elif 'exponential' in variable['flags']:
             method = 'exponential'
         elif 'midpoint' in variable['flags']:
             method = 'midpoint'
+            add_ode(self, pop, variable)
         elif 'explicit' in variable['flags']:
             method = 'explicit'
         else:
