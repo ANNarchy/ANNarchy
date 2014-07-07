@@ -1,3 +1,12 @@
+#
+#   ANNarchy - Pulse-coupled network
+#
+#   Implementation of the pulse-coupled network proposed in:
+#
+#   Izhikevich, E.M. (2003). Simple Model of Spiking Neurons, IEEE Transaction on Neural Networks, 14:6.
+#
+#   authors: Helge Uelo Dinkelbach, Julien Vitay
+#
 from ANNarchy import *
 
 # Define the Izhikevich neuron
