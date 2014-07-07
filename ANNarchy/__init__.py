@@ -26,6 +26,6 @@ import os, sys
 
 # Version
 __version__ = '4.2'
-__release__ = '4.2.3'
+__release__ = '4.2.4'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                    ') on ' + sys.platform + ' (' + os.name + ').' )
