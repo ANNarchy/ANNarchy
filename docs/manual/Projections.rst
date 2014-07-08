@@ -28,7 +28,7 @@ Once the populations are created, one can connect them by creating ``Projection`
 
     The postsynaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
     
-* ``synapse`` is an optional argument requiring a *RateSynapse* or *SpikeSynapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
+* ``synapse`` is an optional argument requiring a *Synapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
   
     * the default rate-coded synapse defines``psp = w * pre.r``,
     * the default spiking synapse defines ``g_target += w``.
@@ -73,7 +73,7 @@ Let's suppose the ``Oja`` synapse is used to create the Projection ``proj`` (spi
 
 .. code-block:: python
 
-    Oja = RateSynapse(
+    Oja = Synapse(
         parameters= """   
             tau = 5000.0 : postsynaptic
             alpha = 8.0 : postsynaptic

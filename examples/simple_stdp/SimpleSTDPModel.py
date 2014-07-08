@@ -18,7 +18,7 @@ gmax = 0.01 # Maximum weight
 duration = 100000.0 # Simulation for 100 seconds
 
 # Definition of the neuron
-IF = SpikeNeuron(
+IF = Neuron(
     parameters = """
         tau_m = 10.0
         tau_e = 5.0 
@@ -40,7 +40,7 @@ IF = SpikeNeuron(
 )
  
 # Definition of the STDP learning rule
-STDP = SpikeSynapse(
+STDP = Synapse(
     parameters="""
         tau_pre = 20.0 : postsynaptic
         tau_post = 20.0 : postsynaptic

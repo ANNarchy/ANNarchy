@@ -1,6 +1,6 @@
 from ANNarchy import *
 
-DefaultNeuron = RateNeuron(
+DefaultNeuron = Neuron(
     parameters = """
         tau = 10.0 : population
         baseline = 1.0
@@ -15,7 +15,7 @@ DefaultNeuron = RateNeuron(
     """
 )
    
-Oja = RateSynapse(
+Oja = Synapse(
     parameters = """
         eta = 10.0 
         tau = 10.0 : postsynaptic

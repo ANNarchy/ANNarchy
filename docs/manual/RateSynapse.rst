@@ -2,7 +2,7 @@
 Rate-coded synapses
 *******************************
 
-As for neurons, you can define the synaptic behavior using a ``RateSynapse`` object. Although the description is local to a synapse, the same ODE will be applied to all synapses of a given Projection from one population to another. The same vocabulary as for neurons is accessible (constants, functions, conditional statements), except that the synapse must distinguish presynaptic and postsynaptic parameters/variables. 
+As for neurons, you can define the synaptic behavior using a ``Synapse`` object. Although the description is local to a synapse, the same ODE will be applied to all synapses of a given Projection from one population to another. The same vocabulary as for neurons is accessible (constants, functions, conditional statements), except that the synapse must distinguish presynaptic and postsynaptic parameters/variables. 
 
 Like ``r`` for a rate-coded neuron, one variable is critical for a rate-coded synapse:
 
@@ -31,7 +31,7 @@ could be implemented this way:
 
 .. code-block:: python 
 
-    Oja = RateSynapse(
+    Oja = Synapse(
         parameters="""
             tau = 5000
             alpha = 8.0
@@ -53,7 +53,7 @@ The same vocabulary as for rate-coded neurons applies. Custom functions can also
 
 .. code-block:: python 
 
-    Oja = RateSynapse(
+    Oja = Synapse(
         parameters="""
             tau = 5000
             alpha = 8.0
@@ -123,7 +123,7 @@ Using the global operations, such a learning rule is trivial to implement:
 Defining the postsynaptic potential (psp)
 -----------------------------------------
 
-The argument ``psp`` of a ``RateSynapse`` object represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron over all other synapses of the same projection in ``sum(target)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
+The argument ``psp`` of a ``Synapse`` object represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron over all other synapses of the same projection in ``sum(target)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
 
 The postsynaptic potential of a single synapse is by default:
 
@@ -143,7 +143,7 @@ In this case, you can just modify the ``psp`` argument of the synapse:
 
 .. code-block:: python 
 
-    NonLinearSynapse = RateSynapse( 
+    NonLinearSynapse = Synapse( 
         psp = """
             log( (pre.r * w + 1 ) / (pre.r * w - 1) )
         """

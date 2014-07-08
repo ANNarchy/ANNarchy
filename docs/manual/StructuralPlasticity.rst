@@ -15,7 +15,7 @@ Let's suppose that we want to add regularly new synapses between strongly active
 
 .. code-block:: python
 
-    LeakyIntegratorNeuron = RateNeuron(
+    LeakyIntegratorNeuron = Neuron(
         parameters="""   
             tau = 10.0
             baseline = -0.2
@@ -65,7 +65,7 @@ Removing useless synapses (pruning) is also possible. Let's consider a synapse t
 
 .. code-block:: python
 
-    Oja = RateSynapse(
+    Oja = Synapse(
         parameters="""
             tau = 5000
             alpha = 8.0

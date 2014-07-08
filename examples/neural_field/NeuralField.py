@@ -5,7 +5,7 @@
 from ANNarchy import *
 
 # Define the neuron classes
-InputNeuron = RateNeuron(   
+InputNeuron = Neuron(   
     parameters="""
         baseline = 0.0
     """,
@@ -15,7 +15,7 @@ InputNeuron = RateNeuron(
     """ 
 )
 
-NeuralFieldNeuron = RateNeuron(
+NeuralFieldNeuron = Neuron(
     parameters=""" 
         tau = 10.0 : population
     """,

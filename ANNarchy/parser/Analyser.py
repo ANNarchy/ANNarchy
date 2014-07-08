@@ -21,8 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Neuron import RateNeuron
-from ANNarchy.core.Synapse import RateSynapse
 from ANNarchy.core.Global import _error, _warning, authorized_keywords, config
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser

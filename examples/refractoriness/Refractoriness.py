@@ -11,7 +11,7 @@
 #
 from ANNarchy import *
 
-Neuron = SpikeNeuron(
+Neuron = Neuron(
 parameters = """
     tau = 20.0 : population
     sigma = 0.015 : population

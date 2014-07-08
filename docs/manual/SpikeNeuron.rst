@@ -2,7 +2,7 @@
 Spiking neurons
 ===============================
 
-Contrary to rate-coded neurons, the use of spiking neurons requires the aditional definition of a spike condition (the criteria defining the emission of a spike, typically when the membrane potential exceeds a threshold) and reset equations, governing the evolution of all variables after a spike is emitted. 
+Contrary to rate-coded neurons, the use of spiking neurons requires the additional definition of a spike condition (the criteria defining the emission of a spike, typically when the membrane potential exceeds a threshold) and reset equations, governing the evolution of all variables after a spike is emitted. 
 
 Let's consider a simple leaky integrate-and-fire spiking neuron model (LIF):
 
@@ -16,7 +16,7 @@ This neural model can be defined in ANNarchy by:
 
 .. code-block:: python
 
-    LIF = SpikeNeuron(
+    LIF = Neuron(
         parameters="""
             tau = 10.0  : population
             Er = -60.0  : population
@@ -95,7 +95,7 @@ The dynamics of the conductance can be specified after its usage in the membrane
 
 .. code-block:: python
 
-    LIF = SpikeNeuron(
+    LIF = Neuron(
         parameters=""" ... """,
         equations="""
             tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
@@ -111,7 +111,7 @@ Incoming spikes increase ``g_exc`` and can provoke a postsynaptic spike at the n
 
 .. code-block:: python
 
-    LIF = SpikeNeuron(
+    LIF = Neuron(
         parameters=""" ... """,
         equations="""
             tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
@@ -130,11 +130,11 @@ Incoming spikes increase ``g_exc`` and can provoke a postsynaptic spike at the n
 Refractory period
 -----------------
 
-The refractory period in milliseconds is specified by the ``refractory`` parameter of ``SpikeNeuron``. 
+The refractory period in milliseconds is specified by the ``refractory`` parameter of ``Neuron``. 
 
 .. code-block:: python
 
-    LIF = SpikeNeuron (
+    LIF = Neuron (
         parameters = """ ... """,
         equations = """ ... """,
         spike = """ ... """,
@@ -147,11 +147,11 @@ The refractory period in milliseconds is specified by the ``refractory`` paramet
 
 If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 consecutive steps after a spike is emitted, in addition to the step where the spike was emitted. The equations will be evaluated normally, so ``g_exc`` will not "miss" incoming spikes during this period, only ``v`` will be stuck to ``c`` and ``u`` incremented 6 times altogether. 
 
-``refractory`` is an attribute of a spiking ``Population`` object, so it can be set specifically for a population even when omitted in the neuron definition:
+``refractory`` becomes an attribute of a spiking ``Population`` object, so it can be set specifically for a population even when omitted in the neuron definition:
 
 .. code-block:: python
 
-    LIF = SpikeNeuron (
+    LIF = Neuron (
         parameters = """ ... """,
         equations = """ ... """,
         spike = """ ... """,
@@ -170,7 +170,7 @@ If you want only a subpart of the ``reset`` statements to be executed during the
 
 .. code-block:: python
 
-    LIF = SpikeNeuron (
+    LIF = Neuron (
         parameters = """ ... """,
         equations = """ ... """,
         spike = """ ... """,

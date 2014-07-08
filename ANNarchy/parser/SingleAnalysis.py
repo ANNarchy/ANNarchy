@@ -27,7 +27,7 @@ from ANNarchy.core.Global import _error, _warning
 def analyse_population(pop):
     """ Performs the initial analysis for a single population."""
     # Identify the population type
-    pop_type = 'rate' if isinstance(pop.neuron_type, RateNeuron) else 'spike'
+    pop_type = pop.neuron_type.type
     # Store basic information
     description = {
         'pop': pop,
@@ -73,19 +73,7 @@ def analyse_population(pop):
     return description
 
 def analyse_projection(proj):  
-    """ Performs the analysis for a single projection.""" 
-    #proj_type = 'rate' if isinstance(proj.synapse_type, RateSynapse) else 'spike'
-
-    # Identify the synapse type depending on pre and postsynaptic population
-    if proj.post.description['type'] == 'rate':
-        proj_type = 'rate'
-        if not isinstance(proj.synapse_type, RateSynapse):
-            print proj.synapse_type
-            _error("SpikeSynapse attached to rate coded populations.")        
-    else:
-        proj_type = 'spike'
-        if isinstance(proj.synapse_type, RateSynapse):
-            _error("RateSynapse attached to spike coded populations.")        
+    """ Performs the analysis for a single projection."""      
 
     # Store basic information
     description = {
@@ -94,22 +82,22 @@ def analyse_projection(proj):
         'post': proj.post.name,
         'post_class': proj.post.class_name,
         'target': proj.target,
-        'type': proj_type,
+        'type': proj.type,
         'raw_parameters': proj.synapse_type.parameters,
         'raw_equations': proj.synapse_type.equations,
         'raw_functions': proj.synapse_type.functions
     }
 
-    if proj_type == 'spike': # Additionally store pre_spike and post_spike
+    if proj.type == 'spike': # Additionally store pre_spike and post_spike
         proj.pre.sources.append(proj.target) 
         if proj.synapse_type.pre_spike:
             description['raw_pre_spike'] = proj.synapse_type.pre_spike
         else: # pre_spike not defined, but other fields yes
             description['raw_pre_spike'] = "g_target += w"
         description['raw_post_spike'] = proj.synapse_type.post_spike
-
-    if proj.synapse_type.psp:
-        description['raw_psp'] = proj.synapse_type.psp
+    else:
+        if proj.synapse_type.psp:
+            description['raw_psp'] = proj.synapse_type.psp
 
     # Extract parameters and variables names
     parameters = extract_parameters(proj.synapse_type.parameters, proj.synapse_type.extra_values)

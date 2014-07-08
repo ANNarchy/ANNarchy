@@ -8,7 +8,7 @@ Let us suppose we have defined the following neural object in a rate-coded conte
 
 .. code-block:: python
     
-    LeakyIntegratorNeuron = RateNeuron(
+    LeakyIntegratorNeuron = Neuron(
         parameters = """
             tau = 10.0
             baseline = -0.2
@@ -35,7 +35,7 @@ It takes different parameters:
         
 * ``geometry`` defines the number of neurons in the population, as well as its spatial structure (1D/2D/3D or more). For example, a two-dimensional population with 15*10 neurons takes the argument ``(15, 10)``, while a one-dimensional array of 100 neurons would take ``(100,)`` or simply ``100``.
 
-* ``neuron`` indicates the neuron type to use for this population (which must have been defined before). It requires either a ``RateNeuron`` or a ``SpikeNeuron`` instance.
+* ``neuron`` indicates the neuron type to use for this population (which must have been defined before). It requires a ``Neuron`` instance.
 
 * ``name`` is an unique string for each population in the network. If ``name`` is omitted, an internal name such as ``Population0`` will be given (the number is incremented every time a new population is defined). Although this argument is optional, it is strongly recommended to give an understandable name to each population: if you somehow "lose" the reference to the ``Population`` object in some portion of your code, you can always retrieve it using the ``get_population(name)`` method.
 

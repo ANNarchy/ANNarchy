@@ -26,8 +26,8 @@ import numpy as np
 import math
 
 from ANNarchy.core import Global
-from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
-from ANNarchy.core.Synapse import RateSynapse, SpikeSynapse
+from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser import analyse_projection
 from ANNarchy.core.Dendrite import Dendrite
@@ -45,7 +45,7 @@ class Projection(object):
             * **pre**: pre-synaptic population (either its name or a ``Population`` object).
             * **post**: post-synaptic population (either its name or a ``Population`` object).
             * **target**: type of the connection.
-            * **synapse**: either a ``RateSynapse`` or ``SpikeSynapse`` object.
+            * **synapse**: a ``Synapse`` instance.
 
         By default, the synapse only ensures synaptic transmission:
 
@@ -77,19 +77,21 @@ class Projection(object):
         # Add the target to the postsynaptic population
         self.post.targets.append(self.target)
         
-        #
+        # Type of the synapse
+        self.type = self.pre.neuron_type.type 
+        self.type_prefix = self.type.capitalize()
+
         # check if a synapse description is attached
         if not synapse:
             # No synapse attached assume default synapse based on
             # presynaptic population.
-            if isinstance(self.pre.neuron_type, RateNeuron):
-                self.synapse_type = RateSynapse(parameters = "", equations = "")
+            if self.type == 'rate':
+                self.synapse_type = Synapse(parameters = "", equations = "")
             else:
-                self.synapse_type = SpikeSynapse(parameters = "", equations = "", pre_spike="g_target += w", post_spike="")
+                self.synapse_type = Synapse(parameters = "", equations = "", pre_spike="g_target += w", post_spike="")
         else:
             self.synapse_type = synapse
 
-        self.type_prefix = "Rate" if isinstance(self.synapse_type, RateSynapse) else "Spike"
 
         # Create a default name
         self._id = len(Global._projections)

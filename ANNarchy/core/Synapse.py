@@ -23,7 +23,42 @@
 """
 import pprint
 
-class RateSynapse(object):
+        
+class Synapse(object):
+    """
+    Base class to define a synapse.
+    """
+
+    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None, extra_values=None ):
+        """ 
+        *Parameters*:
+        
+            * **parameters**: parameters of the neuron and their initial value.
+            * **equations**: equations defining the temporal evolution of variables.
+            * **psp**: post-synaptic potential summed by the post-synaptic neuron (rate-coded only).
+            * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
+            * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
+            * **functions**: additional functions used in the equations.
+            
+        """  
+        
+        # Store the parameters and equations
+        self.parameters = parameters
+        self.equations = equations
+        self.functions = functions
+        self.pre_spike = pre_spike
+        self.post_spike = post_spike
+        self.psp = psp
+        self.extra_values = extra_values
+
+    def __add__(self, synapse):        
+        self._variables.update(synapse.variables) 
+
+    def __str__(self):
+        return pprint.pformat( self, depth=4 ) #TODO
+
+
+class RateSynapse(Synapse):
     """
     Base class to define a rate-coded synapse.
     """
@@ -37,24 +72,10 @@ class RateSynapse(object):
             * **psp**: post-synaptic potential summed by the post-synaptic neuron.
             * **functions**: additional functions used in the variables' equations.
             
-        """                
-        # Store the parameters and equations
-        self.parameters = parameters
-        self.equations = equations
-        self.functions = functions
-        self.psp = psp
-        self.extra_values = extra_values        
-         
-    def __add__(self, synapse):
-        if not isinstance(synapse, RateSynapse):
-            return
+        """         
+        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, functions=functions, extra_values=extra_values)
         
-        self._variables.update(synapse.variables) 
-
-    def __str__(self):
-        return pprint.pformat( self, depth=4 ) #TODO
-        
-class SpikeSynapse(object):
+class SpikeSynapse(Synapse):
     """
     Bae class to define a spiking synapse.
     """
@@ -70,22 +91,5 @@ class SpikeSynapse(object):
             * **functions**: additional functions used in the variables' equations.
             
         """  
-        
-        # Store the parameters and equations
-        self.parameters = parameters
-        self.equations = equations
-        self.functions = functions
-        self.pre_spike = pre_spike
-        self.post_spike = post_spike
-        self.psp = None
-        self.extra_values = extra_values
-
-    def __add__(self, synapse):
-        if not isinstance(synapse, SpikeSynapse):
-            return
-        
-        self._variables.update(synapse.variables) 
-
-    def __str__(self):
-        return pprint.pformat( self, depth=4 ) #TODO
+        Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike, post_spike=post_spike, functions=functions, extra_values=extra_values)
 

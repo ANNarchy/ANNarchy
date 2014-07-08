@@ -10,7 +10,7 @@
 from ANNarchy import *
 
 # Define the Izhikevich neuron
-Izhikevich = SpikeNeuron(
+Izhikevich = Neuron(
     parameters="""
         noise = 5.0 : population
         a = 0.02

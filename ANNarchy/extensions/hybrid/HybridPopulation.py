@@ -1,5 +1,5 @@
 from ANNarchy.core.Population import Population
-from ANNarchy.core.Neuron import RateNeuron, SpikeNeuron
+from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 from .Templates import *
 
@@ -29,7 +29,7 @@ class Spike2RatePopulation(Population):
         """
         *Parameters*:
 
-        * **population**: the Population to convert. Its neuron type must be ``RateNeuron``.
+        * **population**: the Population to convert. Its neuron type must be rate-coded.
         * **name**: the (optional) name of the hybrid population.
         * **window**: the extent of the sliding window (in ms) used to compute the firing rate (default: 100.0 ms).
         * **scaling**: the scaling of the firing rate. Defines what a firing rate of 1 Hz outputs (default: 1.0).
@@ -45,7 +45,7 @@ class Spike2RatePopulation(Population):
             self, 
             geometry = self.population.geometry, 
             name=name, 
-            neuron = RateNeuron(
+            neuron = Neuron(
                 parameters="""
                     window = %(window)s : population
                     scaling = %(scaling)s : population
@@ -83,7 +83,7 @@ class Rate2SpikePopulation(Population):
         """
         *Parameters*:
 
-        * **population**: the Population to convert. Its neuron type must be ``RateNeuron``.
+        * **population**: the Population to convert. Its neuron type must be spiking.
         * **name**: the (optional) name of the hybrid population.
         * **scaling**: the scaling of the firing rate. Defines what a rate ``r`` of 1.0 means in Hz (default: 1.0).
         """
@@ -97,7 +97,7 @@ class Rate2SpikePopulation(Population):
             self, 
             geometry = self.population.geometry, 
             name=name, 
-            neuron = SpikeNeuron(
+            neuron = Neuron(
                 parameters="""
                     scaling = %(scaling)s : population
                 """ % {'scaling': scaling} ,

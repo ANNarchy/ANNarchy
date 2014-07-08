@@ -2,18 +2,18 @@
 Spike synapses
 ***********************************
 
-Synapses in spiking networks differ from rate-coded synapses in that they are event-driven, i.e. the most important changes occur whenever a pre- or post-synaptic spike is emitted. For this reason, the interface of a ``SpikeSynapse`` slightly differs from a ``RateSynapse``.
+Synapses in spiking networks differ from rate-coded synapses in that they are event-driven, i.e. the most important changes occur whenever a pre- or post-synaptic spike is emitted. For this reason, additional arguments have to be passed to the ``Synapse`` object.
    
 Increase of conductance after a presynaptic spike
 ==================================================
 
-In the simplest case, a presynaptic spike increases a ``target`` conductance value in the postsynaptic neuron. The rule defining how this conductance is modified can be placed in the ``pre_spike`` argument of a ``SpikeSynapse`` object.
+In the simplest case, a presynaptic spike increases a ``target`` conductance value in the postsynaptic neuron. The rule defining how this conductance is modified has to be placed in the ``pre_spike`` argument of a ``Synapse`` object.
 
 The default spiking synapse in ANNarchy is equivalent to:
 
 .. code-block:: python
 
-    DefaultSynapse = SpikeSynapse(
+    DefaultSynapse = Synapse(
         parameters = "",
         equations = "",
         pre_spike = """
@@ -23,11 +23,11 @@ The default spiking synapse in ANNarchy is equivalent to:
 
 The only thing it does is to increase the conductance ``g_target`` of the postsynaptic neuron (for example ``g_exc`` if the target is ``exc``) every time a pre-syanptic spike arrives at the synapse, proportionally to the synaptic efficiency ``w`` of the synapse. 
 
-You can override this default behavior by providing a new ``SpikeSynapse`` object when building a ``Projection``. For example, you may want to implement a "fatigue" mechanism for the synapse, transciently reducing the synaptic efficiency when the pre-synaptic neuron fires too strongly. One solution would be to decrease a synaptic variable everytime a pre-synaptic spike  is received and increase the post-synaptic conductance proportionally to this value. When no spike is received, this ``trace`` variable should slowly return to its maximal value.
+You can override this default behavior by providing a new ``Synapse`` object when building a ``Projection``. For example, you may want to implement a "fatigue" mechanism for the synapse, transciently reducing the synaptic efficiency when the pre-synaptic neuron fires too strongly. One solution would be to decrease a synaptic variable everytime a pre-synaptic spike  is received and increase the post-synaptic conductance proportionally to this value. When no spike is received, this ``trace`` variable should slowly return to its maximal value.
 
 .. code-block:: python
 
-    FatigueSynapse = SpikeSynapse(
+    FatigueSynapse = Synapse(
         parameters = """
             tau = 1000 : postsynaptic # Time constant of the trace is 1 second
             dec = 0.05 : postsynaptic # Decrement of the trace
@@ -51,7 +51,7 @@ It is important here to restrict ``trace`` to positive values with the flags ``m
 
 .. note::
 
-    The ``psp`` argument of a ``RateSynapse`` is not valid anymore for a ``SpikeSynapse``.
+    The ``psp`` argument will be ignored in a spiking network.
 
 Synaptic plasticity
 ==========================
@@ -65,7 +65,7 @@ In spiking networks, there are usually two ways to implement synaptic plasticity
 Using spike-time differences
 -----------------------------
 
-A ``SpikeSynapse`` has access to two specific variables:
+A ``Synapse`` has access to two specific variables:
 
 * ``t_pre`` corresponding to the time of the *last* pre-synaptic spike in milliseconds.
 
@@ -78,7 +78,7 @@ Spike-timing dependent plasticity can for example be implemented the following w
 .. code-block:: python
 
 
-    STDP = SpikeSynapse(
+    STDP = Synapse(
         parameters = """
             tau_pre = 10.0 : postsynaptic
             tau_post = 10.0 : postsynaptic
@@ -137,7 +137,7 @@ Using the same vocabulary as Brian, such an implementation would be:
 
 .. code-block:: python
 
-    STDP_online = SpikeSynapse(
+    STDP_online = Synapse(
         parameters = """
             tau_pre = 10.0 : postsynaptic
             tau_post = 10.0 : postsynaptic

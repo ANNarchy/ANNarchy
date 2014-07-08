@@ -1,5 +1,5 @@
 from ANNarchy.core.Population import Population
-from ANNarchy.core.Neuron import RateNeuron
+from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 
 try:
@@ -54,7 +54,7 @@ class ImagePopulation(Population):
             geometry = (geometry[0], geometry[1])
             
         # Create the population     
-        Population.__init__(self, geometry = geometry, name=name, neuron = RateNeuron(parameters="""r = 0.0""") )
+        Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0") )
 
         
     def set_image(self, image_name):

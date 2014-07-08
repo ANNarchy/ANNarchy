@@ -12,7 +12,7 @@ from ANNarchy import *
 dt=0.05
 setup(dt=dt)
 
-HH = SpikeNeuron(
+HH = Neuron(
 
     parameters = """
     C = 1.0 # Capacitance

@@ -27,7 +27,44 @@ from ANNarchy.core.PopulationView import PopulationView
 
 import pprint
 
-class RateNeuron(object):
+
+class Neuron(object):
+    """
+    Base class to define a neuron.
+    """    
+    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, extra_values={} ):
+        """         
+        *Parameters*:
+        
+            * **parameters**: parameters of the neuron and their initial value.
+            * **equations**: equations defining the temporal evolution of variables.
+            * **functions**: additional functions used in the variables' equations.                
+            * **spike**: condition to emit a spike (only for spiking neurons).
+            * **reset**: changes to the variables after a spike (only for spiking neurons).                  
+            * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
+                
+        """        
+        
+        # Store the parameters and equations
+        self.parameters = parameters
+        self.equations = equations
+        self.functions = functions
+        self.spike = spike
+        self.reset = reset
+        self.refractory = refractory
+        self.extra_values = extra_values
+
+        # Find the type of the neuron
+        self.type = 'spike' if self.spike else 'rate'
+        
+    def __str__(self):
+        return pprint.pformat( self, depth=4 )
+
+
+    def __add__(self, neuron):    
+        self._variables.update(neuron.variables) 
+
+class RateNeuron(Neuron):
     """
     Base class to define a rate-coded neuron.
     """    
@@ -39,27 +76,10 @@ class RateNeuron(object):
             * **equations**: equations defining the temporal evolution of variables.
             * **functions**: additional functions used in the variables' equations.
 
-        """        
-        
-        # Store the parameters and equations
-        self.parameters = parameters
-        self.equations = equations
-        self.functions = functions
-        self.extra_values = extra_values    
-
-    def __add__(self, neuron):
-        if not isinstance(neuron, RateNeuron):
-            return
-        
-        self._variables.update(neuron.variables) 
-
-    def __str__(self):
         """
-        Customized print.
-        """
-        return pprint.pformat( self, depth=4 ) 
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, extra_values=extra_values) 
         
-class SpikeNeuron(object):
+class SpikeNeuron(Neuron):
     """
     Base class to define a spiking neuron.
     """    
@@ -74,19 +94,9 @@ class SpikeNeuron(object):
             * **reset**: changes to the variables after a spike                    
             * **refractory**: refractory period of a neuron after a spike.
                 
-        """        
-        
-        # Store the parameters and equations
-        self.parameters = parameters
-        self.equations = equations
-        self.functions = functions
-        self.spike = spike
-        self.reset = reset
-        self.refractory = refractory
-        self.extra_values = extra_values
-        
-    def __str__(self):
-        return pprint.pformat( self, depth=4 )
+        """
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, extra_values=extra_values) 
+
         
 class IndividualNeuron(object):
     """

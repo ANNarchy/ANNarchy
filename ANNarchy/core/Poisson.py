@@ -1,5 +1,5 @@
 from ANNarchy.core.Population import Population
-from ANNarchy.core.Neuron import SpikeNeuron
+from ANNarchy.core.Neuron import Neuron
 import numpy as np
 
 class PoissonPopulation(Population):
@@ -36,7 +36,7 @@ class PoissonPopulation(Population):
 
         The preceding definition is fully equivalent to the definition of this neuron::
 
-            poisson = SpikeNeuron(
+            poisson = Neuron(
                 parameters = '''
                     amp = 100.0
                     frequency = 1.0
@@ -65,7 +65,7 @@ class PoissonPopulation(Population):
             * *parameters*: additional parameters which can be used in the *rates* equation.
         """  
         if isinstance(rates, str):
-            poisson_neuron = SpikeNeuron(
+            poisson_neuron = Neuron(
                 parameters = """
                 %(params)s
                 """ % {'params': parameters if parameters else ''},
@@ -79,7 +79,7 @@ class PoissonPopulation(Population):
             )
 
         elif isinstance(rates, np.ndarray):
-            poisson_neuron = SpikeNeuron(
+            poisson_neuron = Neuron(
                 parameters = """
                 rates = 10.0
                 """,
@@ -91,7 +91,7 @@ class PoissonPopulation(Population):
                 """
             )
         else:
-            poisson_neuron = SpikeNeuron(
+            poisson_neuron = Neuron(
                 parameters = """
                 rates = %(rates)s
                 """ % {'rates': rates},

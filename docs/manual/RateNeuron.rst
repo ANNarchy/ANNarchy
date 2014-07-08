@@ -19,7 +19,7 @@ It can be implemented in the ANNarchy framework with:
 
 .. code-block:: python
 
-    LeakyIntegratorNeuron = RateNeuron(
+    LeakyIntegratorNeuron = Neuron(
         parameters="""   
             tau = 10.0
             baseline = -0.2
@@ -39,7 +39,7 @@ Custom functions can also be passed when creating the Neuron type:
 
 .. code-block:: python
 
-    LeakyIntegratorNeuron = RateNeuron(
+    LeakyIntegratorNeuron = Neuron(
         parameters="""   
             tau = 10.0
             baseline = -0.2

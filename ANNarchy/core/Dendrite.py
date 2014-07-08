@@ -21,7 +21,6 @@
     
 """
 import ANNarchy.core.Global as Global
-from ANNarchy.core.Neuron import RateNeuron
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Record import Record
 

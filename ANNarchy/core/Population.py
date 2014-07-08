@@ -45,8 +45,8 @@ class Population(object):
         
             * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
 
-            * **neuron**: instance of ``ANNarchy.RateNeuron`` or ``ANNarchy.SpikeNeuron``
-
+            * **neuron**: instance of ``ANNarchy.Neuron`` 
+            
             * **name**: unique name of the population (optional).
 
             * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.

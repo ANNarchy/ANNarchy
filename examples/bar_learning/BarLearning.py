@@ -5,13 +5,13 @@
 from ANNarchy import *
 
 # Defining the neuron
-InputNeuron = RateNeuron(   
+InputNeuron = Neuron(   
     parameters="""
         r = 0.0
     """
 )
 
-LeakyNeuron = RateNeuron(
+LeakyNeuron = Neuron(
     parameters=""" 
         tau = 10.0 : population
     """,
@@ -21,7 +21,7 @@ LeakyNeuron = RateNeuron(
 )
 
 # Defining the synapse
-Oja = RateSynapse(
+Oja = Synapse(
     parameters=""" 
         tau = 2000.0 : postsynaptic
         alpha = 8.0 : postsynaptic
