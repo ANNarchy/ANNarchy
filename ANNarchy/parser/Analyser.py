@@ -192,9 +192,9 @@ class Analyser(object):
             # Replace untouched variables with their original name
             for prev, new in untouched.iteritems():
                 if prev.startswith('g_'):
-                    cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, cpp_eq)
+                    cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, ' '+cpp_eq)
                     if switch:
-                        switch = re.sub(r'^'+prev, new, switch)
+                        switch = re.sub(r'^'+prev, new, ' ' + switch)
 
                 else:
                     cpp_eq = re.sub(prev, new, cpp_eq)

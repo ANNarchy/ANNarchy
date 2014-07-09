@@ -50,7 +50,7 @@ def split_equation(definition):
     
 def prepare_string(stream):
     """ Splits up a multiline equation, remove comments and unneeded spaces or tabs."""
-    expr_set = []        
+    expr_set = []
     # replace the ,,, by empty space and split the result up
     tmp_set = re.sub('\s+\.\.\.\s+', ' ', stream).split('\n')
     for expr in tmp_set:

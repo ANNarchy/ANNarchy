@@ -37,7 +37,7 @@ The implementation of this neuron can then be:
 
 .. code-block:: python
 
-    IF = SpikeNeuron(
+    IF = Neuron(
         parameters = """
             tau_m = 10.0 
             tau_e = 5.0 
@@ -48,7 +48,7 @@ The implementation of this neuron can then be:
         """,
         equations = """
             tau_m * dv/dt = El - v + g_exc * (Ee - vr) : init = -60.0
-            tau_e * dg_exc/dt = -g_exc
+            tau_e * dg_exc/dt = -g_exc 
         """,
         spike = """
             v > vt
@@ -77,7 +77,7 @@ Using the notations of the Brian example and the corresponding parameter values,
 
 .. code-block:: python
 
-    STDP = SpikeSynapse(
+    STDP = Synapse(
         parameters="""
             tau_pre = 20.0 : postsynaptic
             tau_post = 20.0 : postsynaptic

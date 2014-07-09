@@ -57,12 +57,34 @@ class Neuron(object):
         # Find the type of the neuron
         self.type = 'spike' if self.spike else 'rate'
         
-    def __str__(self):
-        return pprint.pformat( self, depth=4 )
+    # def __add__(self, neuron):    
+    #     self._variables.update(neuron.variables) 
+
+    def __repr__(self):
+        if self.type == 'rate':
+            text= """Rate-coded neuron.
+
+Parameters:
+""" + str(self.parameters) + """
+Equations of the variables:
+""" + str(self.equations) + """
+
+""" 
+        else:
+            text= """Spiking neuron.
+
+Parameters:
+""" + str(self.parameters) + """
+Equations of the variables:
+""" + str(self.equations) + """
+Spiking condition:
+""" + str(self.spike) + """
+Reset after a spike:
+""" + str(self.reset)
+        
+        return text
 
 
-    def __add__(self, neuron):    
-        self._variables.update(neuron.variables) 
 
 class RateNeuron(Neuron):
     """

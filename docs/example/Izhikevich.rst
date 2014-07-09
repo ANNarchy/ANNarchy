@@ -64,7 +64,7 @@ where ``v`` is the membrane potential, ``u`` is the membrane recovery variable a
 
 Implementing such a neuron in ANNarchy is straightforward::
 
-    Izhikevich = SpikeNeuron(
+    Izhikevich = Neuron(
         parameters="""
             noise = 5.0 : population
             a = 0.02
@@ -99,6 +99,11 @@ The input voltage ``I`` is defined as the sum of:
 In the pulse-coupled network, synapses are considered as instantaneous, i.e. a pre-synaptic spikes increases immediately the post-synaptic conductance proportionally to the weight of the synapse, but does not leave further trace. As this is the default behavior in ANNarchy, nothing has to be specified in the neuron's equations (see :doc:`../manual/SpikeNeuron`).
 
 The ``spike`` argument specifies the condition for when a spike should be emitted (here the membrane potential ``v`` should be greater than 30 mV). The ``reset`` argument specifies the changes to neural variables that should occur after a spike is emitted: here, the membrane potential is reset to the resting potential ``c`` and the membrane recovery variable ``u`` is increased from ``d``.
+
+.. note::
+
+    This neuron is already implemented in ANNarchy, so the script does not need to declare this neuron type.
+
 
 Creating the populations
 ========================
