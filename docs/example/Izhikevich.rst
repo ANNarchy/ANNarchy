@@ -71,6 +71,7 @@ Implementing such a neuron in ANNarchy is straightforward::
             b = 0.2
             c = -65.0
             d = 2.0 
+            v_thresh = 30.0
         """,
         equations="""
             I = g_exc - g_inh + noise * Normal(0.0, 1.0)
@@ -78,7 +79,7 @@ Implementing such a neuron in ANNarchy is straightforward::
             du/dt = a * (b*v - u) 
         """,
         spike = """
-            v >= 30.0
+            v >= v_thresh
         """,
         reset = """
             v = c
@@ -88,9 +89,9 @@ Implementing such a neuron in ANNarchy is straightforward::
 
 The parameters ``a``, ``b``, ``c``, ``d`` as well as the noise amplitude ``noise`` are declared in the ``parameters`` argument, as their value is constant during the simulation. ``noise`` is declared as the same throughout the population with the ``population`` flag.
 
-The equations for ``v`` and ``u`` are direct translations of their mathematical counterparts. Note the use of ``d/dt`` for the time derivative and ``^2`` for the square function.
+The equations for ``v`` and ``u`` are direct translations of their mathematical counterparts. Note the use of ``dx/dt`` for the time derivative and ``^2`` for the square function.
 
-The input voltage ``I`` is defined as the sum of:
+The input voltage ``I`` is defined as the sum of: 
 
 * the total conductance of excitatory synapses ``g_exc``,
 * the total conductance of inhibitory synapses ``-g_inh`` (in this example, we consider all weights to be positive, so we need to invert ``g_inh`` in order to model inhibitory synapses),
@@ -98,7 +99,7 @@ The input voltage ``I`` is defined as the sum of:
   
 In the pulse-coupled network, synapses are considered as instantaneous, i.e. a pre-synaptic spikes increases immediately the post-synaptic conductance proportionally to the weight of the synapse, but does not leave further trace. As this is the default behavior in ANNarchy, nothing has to be specified in the neuron's equations (see :doc:`../manual/SpikeNeuron`).
 
-The ``spike`` argument specifies the condition for when a spike should be emitted (here the membrane potential ``v`` should be greater than 30 mV). The ``reset`` argument specifies the changes to neural variables that should occur after a spike is emitted: here, the membrane potential is reset to the resting potential ``c`` and the membrane recovery variable ``u`` is increased from ``d``.
+The ``spike`` argument specifies the condition for when a spike should be emitted (here the membrane potential ``v`` should be greater than ``v_thresh``). The ``reset`` argument specifies the changes to neural variables that should occur after a spike is emitted: here, the membrane potential is reset to the resting potential ``c`` and the membrane recovery variable ``u`` is increased from ``d``.
 
 .. note::
 
