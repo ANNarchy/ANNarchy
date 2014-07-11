@@ -163,11 +163,12 @@ class Population(object):
         # If the spike population has a refractory period:        
         if self.description['type'] == 'spike' and self.description['refractory']:
             if isinstance(self.description['refractory'], str): # a global variable
-                if not self.description['refractory'] in self.attributes:
+                try:
+                    self.refractory = eval('self.'+self.description['refractory'])
+                except:
                     Global._print(self.description['refractory'])
-                    Global._error('The initialization for the refractory period is not valid')
+                    Global._error('The initialization for the refractory period is not valid.')
                     exit(0)
-                self.refractory = eval('self.'+self.description['refractory'])
             else: # a value
                 self.refractory = self.description['refractory']
 
