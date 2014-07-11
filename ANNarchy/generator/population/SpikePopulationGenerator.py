@@ -68,11 +68,10 @@ class SpikePopulationGenerator(PopulationGenerator):
 """ % {'name' : variable,
        'init' : str(0.0)
        }
-   
  
         return constructor
     
-    def generate_header(self):
+    def generate_header(self, template = None):
         " Generates the C++ header file."        
         # Private members declarations
         members = self.generate_members_declaration()
@@ -94,8 +93,10 @@ class SpikePopulationGenerator(PopulationGenerator):
         
         # connected projections
         friends = self.generate_friend_decl()
+        
         # Generate the code
-        template = spike_population_header
+        if not template:
+            template = spike_population_header
         dictionary = {
             'class' : self.class_name,
             'access' : access,

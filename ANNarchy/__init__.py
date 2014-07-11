@@ -6,7 +6,7 @@ from .core.Neuron import Neuron, RateNeuron, SpikeNeuron, IndividualNeuron
 from .core.Synapse import Synapse, RateSynapse, SpikeSynapse
 from .core.Population import Population
 from .core.PopulationView import PopulationView
-from .core.Poisson import PoissonPopulation
+from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray
 from .core.Projection import Projection
 from .core.Dendrite import Dendrite
 from .core.Random import Constant, Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential

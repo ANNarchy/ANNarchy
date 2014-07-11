@@ -245,6 +245,13 @@ class Generator(object):
         
         # Test if the code has changed last compilation
         changed_cpp, changed_pyx = self.test_changed()
+
+        # if changed_pyx: # delete all the .o
+        #     for file in os.listdir(Global.annarchy_dir+'/build'):
+        #         if file.endswith('.o'):
+        #             os.remove(Global.annarchy_dir+'/build/'+file)
+
+
         
         # Perform compilation if something has changed
         self.partial_compilation(changed_cpp, changed_pyx)

@@ -162,7 +162,14 @@ class Population(object):
 
         # If the spike population has a refractory period:        
         if self.description['type'] == 'spike' and self.description['refractory']:
-            self.refractory = self.description['refractory']
+            if isinstance(self.description['refractory'], str): # a global variable
+                if not self.description['refractory'] in self.attributes:
+                    _print(self.description['refractory'])
+                    _error('The initialization for the refractory period is not valid')
+                    exit(0)
+                self.refractory = eval('self.'+self.description['refractory'])
+            else: # a value
+                self.refractory = self.description['refractory']
 
 
     def _init_attributes(self):
@@ -256,7 +263,7 @@ class Population(object):
                 getattr(self.cyInstance, '_set_'+attribute)(value)
         except Exception, e:
             print e
-            Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have thew right size.')
+            Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have the right size.')
 
     @property
     def geometry(self):

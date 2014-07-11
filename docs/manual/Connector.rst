@@ -279,7 +279,7 @@ Now you can import the method ``probabilistic_pattern()`` into your Python code 
 .. code-block:: python
 
     import pyximport; pyximport.install()
-    from CustomConnector import probabilistic_pattern
+    from CustomPatterns import probabilistic_pattern
     proj.connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)
 
 Writing the connector in Cython can bring speedups up to 100x compared to Python if the projection has a lot of synapses.

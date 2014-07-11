@@ -129,8 +129,8 @@ We can now create two populations ``Exc`` and ``Inh`` representing the excitator
     Inh = Population(name='Inh', geometry=200, neuron=Izhikevich)
     ri = np.random.random(200)
     Inh.noise = 2.0
-    Inh.a = 0.02 + 0.08*ri
-    Inh.b = 0.25 - 0.05*ri
+    Inh.a = 0.02 + 0.08 * ri
+    Inh.b = 0.25 - 0.05 * ri
     Inh.c = -65.0
     Inh.d = 2.0 
     Inh.v = -65.0
