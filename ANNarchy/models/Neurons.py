@@ -67,6 +67,7 @@ class IzhikevichClass(Neuron):
     d = 2.0 
     v_thresh = 30.0
     i_offset = 0.0
+    tau_refrac = 0.0
 """
         # Equations for the variables
         equations="""
