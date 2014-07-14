@@ -54,7 +54,7 @@ class PopulationView(object):
     @targets.setter
     def targets(self, value):
         self.population.targets.append(value)
-        
+
     def __getattr__(self, name):
         " Method called when accessing an attribute."
         if name == 'population':

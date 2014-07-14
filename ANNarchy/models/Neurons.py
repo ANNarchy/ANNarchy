@@ -35,11 +35,11 @@ class IzhikevichClass(Neuron):
 
         I = conductance + i_offset + noise * Normal(0.0, 1.0)
 
-    * v : membrane potential in mV (init=-65.0).
+    * v : membrane potential in mV (init=-70.0).
 
         dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I 
 
-    * u : recovery variable (init=0.0).
+    * u : recovery variable (init=-14.0).
 
         du/dt = a * (b*v - u) 
 
@@ -72,8 +72,8 @@ class IzhikevichClass(Neuron):
         # Equations for the variables
         equations="""
     I = %(conductance)s + noise * Normal(0.0, 1.0) + i_offset
-    dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init = -65.0
-    du/dt = a * (b*v - u) 
+    dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init = -70.0
+    du/dt = a * (b*v - u) : init=-14.0
 """ % { 'conductance' : conductance }
 
         # Default behavior for the conductances (avoid warning)
@@ -82,7 +82,7 @@ class IzhikevichClass(Neuron):
     g_%(target)s = 0.0""" % {'target' : target}
 
         spike = """
-    v >= v_thresh
+    v > v_thresh
 """
         reset = """
     v = c
@@ -440,6 +440,227 @@ class IF_cond_alphaClass(Neuron):
 
 
 ##################
+### EIF neurons
+##################
+
+class EIF_cond_exp_isfa_istaClass(Neuron):
+    """ 
+    EIF_cond_exp neuron.
+
+    Exponential integrate and fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
+
+        Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
+
+    Parameters:
+
+    * v_rest = -70.6 :  Resting membrane potential (mV)
+    * cm = 0.281 : Capacity of the membrane (nF)
+    * tau_m = 9.3667 : Membrane time constant (ms)
+    * tau_refrac = 0.1 : Duration of refractory period (ms)
+    * tau_syn_E = 5.0 : Decay time of excitatory synaptic current (ms)
+    * tau_syn_I = 5.0 : Decay time of inhibitory synaptic current (ms)
+    * e_rev_E = 0.0 : Reversal potential for excitatory input (mV)
+    * e_rev_I = -80.0 : Reversal potential for inhibitory input (mv)
+    * tau_w = 144.0 : Time constant of the adaptation variable (ms)
+    * a = 4.0 : Scaling of the adaptation variable
+    * b = 0.0805 : Increment on the adaptation variable after a spike
+    * i_offset = 0.0 : Offset current (nA)
+    * delta_T = 2.0 : Speed of the exponential (mV)
+    * v_thresh = -50.4 : Spike threshold for the exponential (mV)
+    * v_reset = -70.6 : Reset potential after a spike (mV)
+    * v_spike = -40.0 : Spike threshold (mV)
+
+    Variables:
+
+    * I : input current (nA)
+
+        I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+
+    * v : membrane potential in mV (init=-70.6).
+
+        tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w)
+
+    * w : adaptation variable (init=0.0).
+
+        tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w
+
+    * g_exc : excitatory current (init = 0.0)
+
+        tau_syn_E * dg_exc/dt = - g_exc
+
+    * g_inh : inhibitory current (init = 0.0)
+
+        tau_syn_I * dg_inh/dt = - g_inh
+
+
+    Spike emission:
+
+        v > v_thresh
+
+    Reset:
+
+        v = v_reset
+        u += b : unless_refractory
+
+    The ODEs are solved using the explicit Euler method.
+"""
+    def __init__(self):
+        # Create the arguments
+        parameters = """
+    v_rest = -70.6
+    cm = 0.281
+    tau_m = 9.3667
+    tau_refrac = 0.1
+    tau_syn_E = 5.0
+    tau_syn_I = 5.0
+    e_rev_E = 0.0
+    e_rev_I = -80.0
+    tau_w = 144.0
+    a = 4.0
+    b = 0.0805
+    i_offset = 0.0
+    delta_T = 2.0
+    v_thresh = -50.4
+    v_reset = -70.6
+    v_spike = -40.0
+"""
+        # Equations for the variables
+        equations="""    
+    I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+
+    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=-70.6
+
+    tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w 
+
+    tau_syn_E * dg_exc/dt = - g_exc : exponential
+    tau_syn_I * dg_inh/dt = - g_inh : exponential
+"""
+
+        spike = """
+    v >= v_spike
+"""
+        reset = """
+    v = v_reset
+    w += b : unless_refractory
+"""
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+
+    def __repr__(self):
+        return self.__doc__
+
+class EIF_cond_alpha_isfa_istaClass(Neuron):
+    """ 
+    EIF_cond_alpha neuron.
+
+    Exponential integrate and fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
+
+        Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
+
+    Parameters:
+
+    * v_rest = -70.6 :  Resting membrane potential (mV)
+    * cm = 0.281 : Capacity of the membrane (nF)
+    * tau_m = 9.3667 : Membrane time constant (ms)
+    * tau_refrac = 0.1 : Duration of refractory period (ms)
+    * tau_syn_E = 5.0 : Decay time of excitatory synaptic current (ms)
+    * tau_syn_I = 5.0 : Decay time of inhibitory synaptic current (ms)
+    * e_rev_E = 0.0 : Reversal potential for excitatory input (mV)
+    * e_rev_I = -80.0 : Reversal potential for inhibitory input (mv)
+    * tau_w = 144.0 : Time constant of the adaptation variable (ms)
+    * a = 4.0 : Scaling of the adaptation variable
+    * b = 0.0805 : Increment on the adaptation variable after a spike
+    * i_offset = 0.0 : Offset current (nA)
+    * delta_T = 2.0 : Speed of the exponential (mV)
+    * v_thresh = -50.4 : Spike threshold for the exponential (mV)
+    * v_reset = -70.6 : Reset potential after a spike (mV)
+    * v_spike = -40.0 : Spike threshold (mV)
+
+    Variables:
+
+    * I : input current (nA)
+
+        I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+
+    * v : membrane potential in mV (init=-70.6).
+
+        tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w)
+
+    * w : adaptation variable (init=0.0).
+
+        tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w
+
+    * g_exc : excitatory current (init = 0.0)
+
+        tau_syn_E * dg_exc/dt = - g_exc
+
+    * g_inh : inhibitory current (init = 0.0)
+
+        tau_syn_I * dg_inh/dt = - g_inh
+
+
+    Spike emission:
+
+        v > v_thresh
+
+    Reset:
+
+        v = v_reset
+        u += b : unless_refractory
+
+    The ODEs are solved using the explicit Euler method.
+"""
+    def __init__(self):
+        # Create the arguments
+        parameters = """
+    v_rest = -70.6
+    cm = 0.281
+    tau_m = 9.3667
+    tau_refrac = 0.1
+    tau_syn_E = 5.0
+    tau_syn_I = 5.0
+    e_rev_E = 0.0
+    e_rev_I = -80.0
+    tau_w = 144.0
+    a = 4.0
+    b = 0.0805
+    i_offset = 0.0
+    delta_T = 2.0
+    v_thresh = -50.4
+    v_reset = -70.6
+    v_spike = -40.0
+"""
+        # Equations for the variables
+        equations="""    
+
+    gmax_exc = exp((tau_syn_E - dt/2.0)/tau_syn_E)
+    gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)
+    
+    I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+
+    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=-70.6
+
+    tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w 
+
+    tau_syn_E * dg_exc/dt = - g_exc : exponential
+    tau_syn_I * dg_inh/dt = - g_inh : exponential
+    tau_syn_E * dalpha_exc/dt = gmax_exc * g_exc - alpha_exc  : exponential
+    tau_syn_I * dalpha_inh/dt = gmax_inh * g_inh - alpha_inh  : exponential
+"""
+
+        spike = """
+    v >= v_spike
+"""
+        reset = """
+    v = v_reset
+    w += b : unless_refractory
+"""
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+
+    def __repr__(self):
+        return self.__doc__
+
+
+##################
 ### HH
 ##################
 class HH_cond_expClass(Neuron):
@@ -575,3 +796,5 @@ IF_cond_exp = IF_cond_expClass()
 IF_curr_alpha = IF_curr_alphaClass()
 IF_cond_alpha = IF_cond_alphaClass()
 HH_cond_exp = HH_cond_expClass()
+EIF_cond_exp_isfa_ista = EIF_cond_exp_isfa_istaClass()
+EIF_cond_alpha_isfa_ista = EIF_cond_alpha_isfa_istaClass()

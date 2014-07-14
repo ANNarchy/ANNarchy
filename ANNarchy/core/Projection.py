@@ -183,7 +183,8 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self.cyInstance.createFromCSR(self._synapses)
         self._post_ranks = self._synapses.keys()
-        # update maximum delay in presynaptic population
+
+        # Update maximum delay in presynaptic population
         if isinstance(self.pre, PopulationView):
             self.pre.population.cyInstance.set_max_delay(self._synapses.get_max_delay())
         else:
@@ -200,7 +201,7 @@ class Projection(object):
     def size(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
         if self.cyInstance:
-            return self.cyInstance._nb_dendrites
+            return len(self._post_ranks)
         else:
             return 0
         

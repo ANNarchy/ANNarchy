@@ -85,7 +85,6 @@ class Analyser(object):
     def parse_population(self, pop):
         # Make sure population have targets declared only once 
         pop.targets = list(set(pop.targets))  
-        pop.sources = list(set(pop.sources))
 
         for t in  pop.description['targets']:
             if not t in pop.targets:

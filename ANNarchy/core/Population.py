@@ -119,7 +119,6 @@ class Population(object):
         
         # List of targets actually connected
         self.targets = []
-        self.sources = []
                 
         # Allow recording of variables
         self._recorded_variables = {}        
@@ -510,7 +509,9 @@ class Population(object):
         
         _variable = []
         if variable == None:
-            _variable = self._recorded_variables
+            for var in self._recorded_variables.keys():
+                if not self._recorded_variables[var].is_inited:
+                    _variable.append(var)
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -521,10 +522,6 @@ class Population(object):
         data_dict = {}
         
         for var in _variable:
-
-            if not var in var in self._recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
-                continue
             
             if self._recorded_variables[var].is_running:
                 self.pause_record(var)

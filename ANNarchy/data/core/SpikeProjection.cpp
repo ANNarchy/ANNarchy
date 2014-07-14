@@ -34,6 +34,8 @@ void SpikeProjection::globalLearn()
 	#pragma omp for
 	for ( int d = 0; d < nbDendrites_; d++ )
 	{
+		if ( !dendrites_[d] )
+			continue;
 		static_cast<SpikeDendrite*>(dendrites_[d])->globalLearn();
 	}
 

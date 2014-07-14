@@ -89,7 +89,6 @@ def analyse_projection(proj):
     }
 
     if proj.type == 'spike': # Additionally store pre_spike and post_spike
-        proj.pre.sources.append(proj.target) 
         if proj.synapse_type.pre_spike:
             description['raw_pre_spike'] = proj.synapse_type.pre_spike
         else: # pre_spike not defined, but other fields yes
