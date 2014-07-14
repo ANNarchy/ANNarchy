@@ -440,6 +440,133 @@ class IF_cond_alphaClass(Neuron):
 
 
 ##################
+### HH
+##################
+class HH_cond_expClass(Neuron):
+    """ 
+    HH_cond_exp neuron.
+
+    Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-rectifier potassium currents using the ion channel models from Traub.
+
+    The equations and parameter values are taken from:
+
+
+
+    Parameters:
+
+    * gbar_Na = 20.0 : Maximal conductance of the Sodium current.
+    * gbar_K = 6.0 : Maximal conductance of the Potassium current. 
+    * gleak = 0.01 : Conductance of the leak current (nF)  
+    * cm = 0.2 : Capacity of the membrane (nF)
+    * v_offset = -63.0 :  Threshold for the rate constants (mV)  
+    * e_rev_Na = 50.0 : Reversal potential for the Sodium current (mV) 
+    * e_rev_K = -90.0 : Reversal potential for the Potassium current (mV)  
+    * e_rev_leak = -65.0 : Reversal potential for the leak current (mV)   
+    * e_rev_E = 0.0 : Reversal potential for excitatory input (mV)  
+    * e_rev_I = -80.0 : Reversal potential for inhibitory input (mV)  
+    * tau_syn_E = 0.2 : Decay time of excitatory synaptic current (ms)  
+    * tau_syn_I = 2.0 : Decay time of inhibitory synaptic current (ms)   
+    * i_offset = 0.0 : Offset current (nA)
+    * v_thresh = 0.0 : Threshold for spike emission
+
+    Variables:
+
+    * Voltage-dependent rate constants an, bn, am, bm, ah, bh
+
+        an = 0.032 * (15.0 - v + v_offset) / (exp((15.0 - v + v_offset)/5.0) - 1.0)
+        am = 0.32  * (13.0 - v + v_offset) / (exp((13.0 - v + v_offset)/4.0) - 1.0)
+        ah = 0.128 * exp((17.0 - v + v_offset)/18.0) 
+
+        bn = 0.5   * exp ((10.0 - v + v_offset)/40.0)
+        bm = 0.28  * (v - v_offset - 40.0) / (exp((v - v_offset - 40.0)/5.0) - 1.0)
+        bh = 4.0/(1.0 + exp (( 10.0 - v + v_offset )) )
+
+    * Activation variables n, m, h (h is initialized to 1.0, n and m to 0.0)
+
+        dn/dt = an * (1.0 - n) - bn * n 
+        dm/dt = am * (1.0 - m) - bm * m 
+        dh/dt = ah * (1.0 - h) - bh * h 
+
+
+    * v : membrane potential in mV (init=-65.0).
+
+        cm * dv/dt = gleak*(e_rev_leak -v) + gbar_K * n**4 * (e_rev_K - v) + gbar_Na * m**3 * h * (e_rev_Na - v)
+
+                    + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+
+    * g_exc : excitatory conductance (init = 0.0)
+
+        tau_syn_E * dg_exc/dt = - g_exc
+
+    * g_inh : inhibitory conductance (init = 0.0)
+
+        tau_syn_I * dg_inh/dt = - g_inh
+
+
+    Spike emission:
+
+        v > v_thresh and v(t-1) < v_thresh (the spike is emitted only once when v crosses the threshold from below)
+
+    The ODEs for n, m, h and v are solved using the midpoint method, while the conductances g_exc and g_inh are solved using the exponential Euler method.
+"""
+    def __init__(self):
+
+        parameters = """
+    gbar_Na = 20.0 
+    gbar_K = 6.0  
+    gleak = 0.01
+    cm = 0.2 
+    v_offset = -63.0 
+    e_rev_Na = 50.0 
+    e_rev_K = -90.0  
+    e_rev_leak = -65.0 
+    e_rev_E = 0.0
+    e_rev_I = -80.0
+    tau_syn_E = 0.2 
+    tau_syn_I = 2.0
+    i_offset = 0.0
+    v_thresh = 0.0
+"""
+
+        equations = """
+    # Previous membrane potential
+    prev_v = v
+
+    # Voltage-dependent rate constants
+    an = 0.032 * (15.0 - v + v_offset) / (exp((15.0 - v + v_offset)/5.0) - 1.0)
+    am = 0.32  * (13.0 - v + v_offset) / (exp((13.0 - v + v_offset)/4.0) - 1.0)
+    ah = 0.128 * exp((17.0 - v + v_offset)/18.0) 
+
+    bn = 0.5   * exp ((10.0 - v + v_offset)/40.0)
+    bm = 0.28  * (v - v_offset - 40.0) / (exp((v - v_offset - 40.0)/5.0) - 1.0)
+    bh = 4.0/(1.0 + exp (( 10.0 - v + v_offset )) )
+
+    # Activation variables
+    dn/dt = an * (1.0 - n) - bn * n : init = 0.0, exponential
+    dm/dt = am * (1.0 - m) - bm * m : init = 0.0, exponential
+    dh/dt = ah * (1.0 - h) - bh * h : init = 1.0, exponential
+
+    # Membrane equation
+    cm * dv/dt = gleak*(e_rev_leak -v) + gbar_K * n**4 * (e_rev_K - v) + gbar_Na * m**3 * h * (e_rev_Na - v)
+                    + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset: exponential, init=-65.0
+
+    # Exponentially-decaying conductances
+    tau_syn_E * dg_exc/dt = - g_exc : exponential
+    tau_syn_I * dg_inh/dt = - g_inh : exponential
+"""
+
+        spike = "(v > v_thresh) and (prev_v <= v_thresh)"
+
+        reset = ""
+
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset)
+
+    def __repr__(self):
+        return self.__doc__
+
+
+
+##################
 ### Neuron instances
 ##################
 Izhikevich = IzhikevichClass()
@@ -447,3 +574,4 @@ IF_curr_exp = IF_curr_expClass()
 IF_cond_exp = IF_cond_expClass()
 IF_curr_alpha = IF_curr_alphaClass()
 IF_cond_alpha = IF_cond_alphaClass()
+HH_cond_exp = HH_cond_expClass()
