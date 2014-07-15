@@ -44,8 +44,8 @@ Pe_input = P[:200]
 Pi_input = P[3800:]
 
 # Projections
-we = 0.0015 # excitatory synaptic weight
-wi = 0.0025 # inhibitory synaptic weight
+we = 1.5 # excitatory synaptic weight
+wi = 2.5 # inhibitory synaptic weight
 Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
 Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
@@ -62,7 +62,6 @@ Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
 
 # Compile the Network
 compile()
-
 
 # Simulate
 P.start_record(['spike'])
