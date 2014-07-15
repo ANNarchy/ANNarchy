@@ -146,7 +146,7 @@ public:
 	virtual void globalOperations() {}
 	virtual void reset(int rank) {}
 
-
+	std::vector<int> getPropagate() { return propagate_; }
 protected:
 
 	std::vector< std::vector<class Dendrite*> > spikeTargets_; // first dimension, neuron wise
@@ -161,9 +161,7 @@ protected:
     bool record_spike_;
     std::vector<int> lastSpike_;
 
-    
     std::vector<int> propagate_;    ///< neurons which will propagate their spike
-    std::vector<int> reset_;    ///< neurons which will reset after current eval
 };
 
 

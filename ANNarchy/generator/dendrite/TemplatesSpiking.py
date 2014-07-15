@@ -169,6 +169,8 @@ void %(class)s::globalLearn() {
 
 void %(class)s::computePsp() 
 {
+    pre_spikes_ = pre_population_->getPropagate();
+    
     DATA_TYPE sum = 0.0;
     
     for ( int n = 0; n < pre_spikes_.size(); n++)
@@ -206,13 +208,20 @@ void %(class)s::evaluatePreEvent()
         std::cout << "]" << std::endl;
     }
 #endif
-    
+
+    pre_spikes_ = pre_population_->getPropagate();
+        
     if ( maxDelay_ > 0 )
+    {
         if ( constDelay_ )
-            pre_spikes_ = delayed_pre_spikes_[0]; 
+        {
+            delayed_pre_spikes_[maxDelay_] = pre_spikes_; // store current values at correct position
+            pre_spikes_ = delayed_pre_spikes_[0];
+        } 
         else
             std::cout << "Not implemented yet.";    
-    
+    }
+
     if ( pre_spikes_.size() > 0 )
     {
     #ifdef _DEBUG

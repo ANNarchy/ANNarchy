@@ -369,18 +369,15 @@ void %(class)s::record()
 
 void %(class)s::reset() 
 {
-    if (!reset_.empty())
+    if (!propagate_.empty())
     {
-        for (auto it = reset_.begin(); it != reset_.end(); it++)
+        for (auto it = propagate_.begin(); it != propagate_.end(); it++)
         {
 %(reset_event)s
 
             refractory_counter_[*it] = refractory_times_[*it];
         }
-        
-        reset_.erase(reset_.begin(), reset_.end());
     }
-    
 }
 
 void %(class)s::reset(int rank)

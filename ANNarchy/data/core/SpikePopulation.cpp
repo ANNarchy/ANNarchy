@@ -86,7 +86,6 @@ void SpikePopulation::emit_spike(int i)
         {
             //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
             this->propagate_.push_back(i);
-            this->reset_.push_back(i);
             
             lastSpike_[i] = ANNarchy_Global::time;
             if(record_spike_){
@@ -140,6 +139,8 @@ void SpikePopulation::setMaxDelay(int delay)
 
 void SpikePopulation::metaStep()
 {
+	propagate_.clear();
+
     // Random generators
     #pragma omp master
     {
@@ -282,6 +283,7 @@ void SpikePopulation::propagateSpikes()
                 static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
         }
 
+        /*
         for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
         {
             // emit a presynaptic spike on outgoing projections
@@ -293,6 +295,7 @@ void SpikePopulation::propagateSpikes()
     
         // spike handling is completed
         propagate_.erase(propagate_.begin(), propagate_.end());
+        */
     }
 #ifdef ANNAR_PROFILE
     stop = omp_get_wtime();
