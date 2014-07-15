@@ -522,7 +522,7 @@ class Projection(object):
     ## Connector methods
     ################################
     
-    def connect_one_to_one(self, weights=1.0, delays=0.0):
+    def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None):
         """
         Builds a one-to-one connection pattern between the two populations.
         
@@ -530,9 +530,16 @@ class Projection(object):
         
             * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
             * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
+            * **shift**: specifies if the ranks of the presynaptic population should be shifted to match the start of the post-synaptic population ranks. Does not work yet for populations with geometry. Default: if the two populations have the same number of neurons, it is set to True. If not, it is set to False (only the ranks count).
         """
+        if not shift:
+            if self.pre.size == self.post.size:
+                shift = True
+            else:
+                shift = False
+
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays)
+        self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays, shift)
         return self
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):

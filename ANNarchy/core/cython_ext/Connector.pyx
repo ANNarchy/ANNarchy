@@ -126,12 +126,12 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
 
     return projection
 
-def one_to_one(pre, post, weights, delays):
+def one_to_one(pre, post, weights, delays, shift):
     """ Cython implementation of the one-to-one pattern."""
 
     cdef CSR projection
     cdef float dt
-    cdef int r_post
+    cdef int r_post, offset
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
     cdef vector[float] w
@@ -149,14 +149,19 @@ def one_to_one(pre, post, weights, delays):
     else:
         pre_ranks = range(pre.size)
 
+    if shift:
+        offset = min(post_ranks) - min(pre_ranks)
+    else:
+        offset = 0
+
     # Create the projection data as CSR
     projection = CSR()
 
     for r_post in post_ranks:
         # List of pre ranks
-        if not r_post in pre_ranks:
+        if not r_post - offset in pre_ranks:
             continue
-        tmp = [r_post]
+        tmp = [r_post - offset]
         r = tmp
         # Weights
         if isinstance(weights, (int, float)):
