@@ -215,7 +215,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
             if not allow_self_connections and (r_pre==r_post):
                 continue
             if np.random.random() < probability:
-                tmp .append(r_pre) 
+                tmp.append(r_pre)
         r = tmp
         size_pre = len(tmp)
         # Weights

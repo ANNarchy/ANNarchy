@@ -19,7 +19,9 @@ EIF = Neuron(
     v_spike = -20.0 : population
 """,
     equations="""    
-    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + tau_m/cm*i_offset : init=-70.0
+    I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+    
+    tau_m * dv/dt = (v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + tau_m/cm*I : init=-70.0
     
     tau_syn_E * dg_exc/dt = - g_exc 
     tau_syn_I * dg_inh/dt = - g_inh 
@@ -44,8 +46,8 @@ Pe_input = P[:200]
 Pi_input = P[3800:]
 
 # Projections
-we = 1.5 # excitatory synaptic weight
-wi = 2.5 # inhibitory synaptic weight
+we = 1.5 / 1000.0 # excitatory synaptic weight
+wi = 2.5 * we # inhibitory synaptic weight
 Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
 Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
