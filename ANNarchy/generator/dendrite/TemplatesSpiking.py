@@ -175,7 +175,7 @@ void %(class)s::computePsp()
     
     for ( int n = 0; n < pre_spikes_.size(); n++)
     {
-        int i = pre_spikes_[n];
+        int i = pre_spikes_[inv_rank_[n]];
         
         sum += %(rside)s       
     }
@@ -239,7 +239,7 @@ void %(class)s::evaluatePreEvent()
         {
             for ( int n = 0; n < pre_spikes_.size(); n++)
             {
-                int i = pre_spikes_[n];
+                int i = pre_spikes_[inv_rank_[n]];
                 %(pre_event_learn)s
             }
         }
