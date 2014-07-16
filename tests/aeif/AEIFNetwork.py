@@ -36,6 +36,13 @@ EIF = Neuron(
 
 )
 
+ExcSynapse = Synapse(
+    pre_spike="g_target += 1.5"
+)
+InhSynapse = Synapse(
+    pre_spike="g_target += 3.75"
+)
+
 # Global population
 P = Population(geometry=4000, neuron=EIF)
 
@@ -48,8 +55,8 @@ Pi_input = P[3800:]
 # Projections
 we = 1.5 / 1000.0 # excitatory synaptic weight
 wi = 2.5 * we # inhibitory synaptic weight
-Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
-Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
+Ce = Projection(Pe, P, 'exc', ExcSynapse).connect_fixed_probability(weights=we, probability=0.05)
+Ci = Projection(Pi, P, 'inh', InhSynapse).connect_fixed_probability(weights=wi, probability=0.05)
 
 # Initialization
 P.v = -70.0 + 10.0 * np.random.rand(P.size)
@@ -59,14 +66,14 @@ P.g_inh = (np.random.randn(P.size) * 2 + 5) * wi
 # Poisson inputs
 i_exc = PoissonPopulation(geometry=200, rates="if t < 200.0 : 2000.0 else : 0.0")
 i_inh = PoissonPopulation(geometry=200, rates="if t < 100.0 : 2000.0 else : 0.0")
-Ie = Projection(i_exc, Pe_input, 'exc').connect_one_to_one(weights=we)
-Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
+Ie = Projection(i_exc, Pe_input, 'exc', ExcSynapse).connect_one_to_one(weights=we)
+Ii = Projection(i_inh, Pi_input, 'exc', ExcSynapse).connect_one_to_one(weights=we)
 
 # Compile the Network
 compile()
 
 # Simulate
-P.start_record(['spike'])
+P.start_record(['spike', 'I'])
 
 print 'Start simulation'
 simulate(250.0, measure_time=True)
@@ -77,7 +84,12 @@ spikes = raster_plot(data['spike'])
 if len(spikes) == 0 : # Nothing to plot
     exit()
 
+I = data['I']['data'][500, :]
+
 # Plot
 from pylab import *
+subplot(1,2,1)
 plot(dt*spikes[:, 0], spikes[:, 1], '.')
+subplot(1,2,2)
+plot(I)
 show()

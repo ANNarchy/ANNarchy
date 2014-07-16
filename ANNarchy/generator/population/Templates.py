@@ -63,6 +63,24 @@ private:
 #endif
 """
 
+# Template for a local parameter
+# 
+# Depends on:
+# 
+#     * name : name of the parameter
+#
+#     * type : type of the parameter
+#
+local_parameter_access = \
+"""
+    // Access methods for the local parameter %(name)s
+    std::vector<%(type)s> get_%(name)s() { return this->%(name)s_; }
+    void set_%(name)s(std::vector<%(type)s> %(name)s) { this->%(name)s_ = %(name)s; }
+    
+    %(type)s get_single_%(name)s(int rank) { return this->%(name)s_[rank]; }
+    void set_single_%(name)s(int rank, %(type)s %(name)s) { this->%(name)s_[rank] = %(name)s; }
+"""
+
 # Template for a local variable
 # 
 # Depends on:
@@ -86,6 +104,21 @@ local_variable_access = \
     void clear_recorded_%(name)s() { this->recorded_%(name)s_.clear(); }
 """
 
+# Template for a global parameter
+# 
+# Depends on:
+# 
+#     * name : name of the parameter
+#
+#     * type : type of the parameter
+#
+global_parameter_access = \
+"""
+    // Access methods for the global parameter %(name)s
+    %(type)s get_%(name)s() { return this->%(name)s_; }
+    void set_%(name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
+"""
+
 # Template for a global variable
 # 
 # Depends on:
@@ -99,6 +132,12 @@ global_variable_access = \
     // Access methods for the global variable %(name)s
     %(type)s get_%(name)s() { return this->%(name)s_; }
     void set_%(name)s(%(type)s %(name)s) { this->%(name)s_ = %(name)s; }
+
+
+    std::vector< %(type)s > get_recorded_%(name)s() { return this->recorded_%(name)s_; }                    
+    void start_record_%(name)s() { this->record_%(name)s_ = true; }
+    void stop_record_%(name)s() { this->record_%(name)s_ = false; }
+    void clear_recorded_%(name)s() { this->recorded_%(name)s_.clear(); }
 """
 
 # Body for a rate population
@@ -529,16 +568,39 @@ cdef class py%(class_name)s:
 %(pyFunction)s
 """
 
-# Local Cython property
+# Local parameter
+# 
+# Depends on:
+# 
+#     * name : name of the parameter
+#    
+#     * type : The type of the parameter
+local_parameter_pyx = """
+
+    # local parameter: %(name)s
+    cpdef np.ndarray _get_%(name)s(self):
+        return np.array(self.cInstance.get_%(name)s())
+        
+    cpdef _set_%(name)s(self, np.ndarray value):
+        self.cInstance.set_%(name)s(value)
+        
+    cpdef %(type)s _get_single_%(name)s(self, rank):
+        return self.cInstance.get_single_%(name)s(rank)
+
+    def _set_single_%(name)s(self, int rank, %(type)s value):
+        self.cInstance.set_single_%(name)s(rank, value)        
+"""
+
+# Local variable
 # 
 # Depends on:
 # 
 #     * name : name of the variable
 #    
 #     * type : The type of the variable
-local_property_pyx = """
+local_variable_pyx = """
 
-    # local: %(name)s
+    # local variable: %(name)s
     cpdef np.ndarray _get_%(name)s(self):
         return np.array(self.cInstance.get_%(name)s())
         
@@ -564,16 +626,16 @@ local_property_pyx = """
         
 """
 
-# Global Cython property
+# Global parameter
 # 
 # Depends on:
 # 
-#     * name : name of the variable
+#     * name : name of the parameter
 #    
-#     * type : The type of the variable
-global_property_pyx = """
+#     * type : The type of the parameter
+global_parameter_pyx = """
 
-    # global: %(name)s
+    # global parameter: %(name)s
     cpdef %(type)s _get_%(name)s(self):
         return self.cInstance.get_%(name)s()
 
@@ -582,14 +644,58 @@ global_property_pyx = """
         
 """
 
-# Local Cython wrapper
+# Global variable
+# 
+# Depends on:
+# 
+#     * name : name of the variable
+#    
+#     * type : The type of the variable
+global_variable_pyx = """
+
+    # global variable: %(name)s
+    cpdef %(type)s _get_%(name)s(self):
+        return self.cInstance.get_%(name)s()
+
+    cpdef _set_%(name)s(self, %(type)s value):
+        self.cInstance.set_%(name)s(value)
+    
+    def _start_record_%(name)s(self):
+        self.cInstance.start_record_%(name)s()
+
+    def _stop_record_%(name)s(self):
+        self.cInstance.stop_record_%(name)s()
+
+    cpdef np.ndarray _get_recorded_%(name)s(self):
+        tmp = np.array(self.cInstance.get_recorded_%(name)s())
+        self.cInstance.clear_recorded_%(name)s()
+        return tmp
+
+"""
+
+# Local parameter wrapper
+# 
+# Depends on:
+# 
+#     * name : name of the parameter
+#    
+#     * type : C type of parameter
+local_parameter_wrapper = """
+        # Local %(name)s
+        vector[%(type)s] get_%(name)s()
+        void set_%(name)s(vector[%(type)s] values)
+        %(type)s get_single_%(name)s(int rank)
+        void set_single_%(name)s(int rank, %(type)s values)
+"""
+
+# Local variable wrapper
 # 
 # Depends on:
 # 
 #     * name : name of the variable
 #    
 #     * type : C type of variable
-local_wrapper_pyx = """
+local_variable_wrapper = """
         # Local %(name)s
         vector[%(type)s] get_%(name)s()
         void set_%(name)s(vector[%(type)s] values)
@@ -601,15 +707,32 @@ local_wrapper_pyx = """
         vector[vector[%(type)s]] get_recorded_%(name)s()
 """
 
-# Global Cython wrapper
+# Global parameter wrapper
+# 
+# Depends on:
+# 
+#     * name : name of the parameter
+#    
+#     * type : C type of parameter
+global_parameter_wrapper = """
+        # Global parameter %(name)s
+        %(type)s get_%(name)s()
+        void set_%(name)s(%(type)s value)                
+"""
+
+# Global variable wrapper
 # 
 # Depends on:
 # 
 #     * name : name of the variable
 #    
 #     * type : C type of variable
-global_wrapper_pyx = """
-        # Global %(name)s
+global_variable_wrapper = """
+        # Global variable %(name)s
         %(type)s get_%(name)s()
-        void set_%(name)s(%(type)s value)                
+        void set_%(name)s(%(type)s value)  
+        void start_record_%(name)s()
+        void stop_record_%(name)s()
+        void clear_recorded_%(name)s()
+        vector[vector[%(type)s]] get_recorded_%(name)s()              
 """

@@ -62,10 +62,31 @@ class PopulationGenerator(object):
     def generate_members_declaration(self):
         """ Returns private members declaration. 
         
-        Depend only on locality. rate should not be defined twice.
+        The rate r should not be defined twice.
         """
         members = ""
-        for param in self.desc['parameters'] + self.desc['variables']:
+        for param in self.desc['parameters']:
+            if param['name'] == 'r': # the vector is already declared. Although it can be defined a parameter, it should be recordable
+                members += """
+    // r_ : local
+    bool record_%(name)s_; 
+    std::vector< std::vector<%(type)s> > recorded_%(name)s_;    
+""" % {'name' : param['name'], 'type': param['ctype']}
+
+            elif param['name'] in self.desc['local']: # local attribute
+                members += """
+    // %(name)s_ : local
+    std::vector<%(type)s> %(name)s_;  
+""" % {'name' : param['name'], 'type': param['ctype']}
+
+            elif param['name'] in self.desc['global']: # global attribute
+                members += """
+    // %(name)s_ : global
+    %(type)s %(name)s_;   
+""" % {'name' : param['name'], 'type': param['ctype']}
+
+        # Variables also declare record stuff 
+        for param in self.desc['variables']:
             if param['name'] == 'r': # the vector is already declared
                 members += """
     // r_ : local
@@ -95,7 +116,15 @@ class PopulationGenerator(object):
         Depend only on locality. 
         """
         members = ""
-        for param in self.desc['parameters'] + self.desc['variables']:
+        for param in self.desc['parameters']:
+            if param['name'] in self.desc['local']: # local attribute
+                members += local_parameter_access % {'name' : param['name'], 
+                                                    'type': param['ctype']}
+
+            elif param['name'] in self.desc['global']: # global attribute
+                members += global_parameter_access % {'name' : param['name'], 
+                                                     'type': param['ctype']}
+        for param in self.desc['variables']:
             if param['name'] in self.desc['local']: # local attribute
                 members += local_variable_access % {'name' : param['name'], 
                                                     'type': param['ctype']}
@@ -150,23 +179,39 @@ class PopulationGenerator(object):
     
     def generate_constructor(self):
         """ Content of the Population constructor and resetToInit."""
-        constructor = ""
-        # Attributes
-        for param in self.desc['parameters'] + self.desc['variables']:  
+        inits = {'bool' : 'false', 'int': '0', 'DATA_TYPE': '0.0' }
 
+        constructor = ""
+
+        # Parameters
+        for param in self.desc['parameters']:  
             # Determine the initial value
-            ctype = param['ctype']
-            if ctype == 'bool':
-                cinit = 'false'
-            elif ctype == 'int':
-                cinit = '0'
-            elif ctype == 'DATA_TYPE':
-                cinit = 0.0         
+            cinit = inits[param['ctype']]     
 
             if param['name'] in self.desc['local']: # local attribute                    
                 # Initialize the attribute
                 constructor += """
-    // %(name)s_ : local
+    // %(name)s_ : local parameter
+    %(name)s_ = std::vector<%(type)s> (nbNeurons_, %(init)s);   
+""" % {'name' : param['name'], 'type': param['ctype'], 'init' : str(cinit)}
+
+            elif param['name'] in self.desc['global']: # global attribute
+                # Initialize the attribute
+                constructor += """
+    // %(name)s_ : global parameter
+    %(name)s_ = %(init)s;   
+""" % {'name' : param['name'], 'init': str(cinit)} 
+
+        # Variables
+        for param in self.desc['variables']:  
+
+            # Determine the initial value
+            cinit = inits[param['ctype']]     
+
+            if param['name'] in self.desc['local']: # local attribute                    
+                # Initialize the attribute
+                constructor += """
+    // %(name)s_ : local variable
     %(name)s_ = std::vector<%(type)s> (nbNeurons_, %(init)s);
     record_%(name)s_ = false; 
     recorded_%(name)s_ = std::vector< std::vector< %(type)s > >();    
@@ -175,8 +220,10 @@ class PopulationGenerator(object):
             elif param['name'] in self.desc['global']: # global attribute
                 # Initialize the attribute
                 constructor += """
-    // %(name)s_ : global
+    // %(name)s_ : global variable
     %(name)s_ = %(init)s;   
+    record_%(name)s_ = false; 
+    recorded_%(name)s_ = std::vector< %(type)s >(); 
 """ % {'name' : param['name'], 'init': str(cinit)} 
 
         # Global operations
@@ -271,9 +318,8 @@ void %(class)s::compute_sum_%(var)s() {
         " Code for recording."
         code = ""
         # Attributes
-        for param in self.desc['parameters'] + self.desc['variables']:            
-            if param['name'] in self.desc['local']: # local attribute
-                code += """
+        for param in self.desc['variables']:
+            code += """
     if(record_%(var)s_)
         recorded_%(var)s_.push_back(%(var)s_);
 """ % { 'var': param['name'] }
@@ -306,29 +352,50 @@ void %(class)s::compute_sum_%(var)s() {
         "Parts of the C++ header which should be accessible to Cython"
         code = ""
         
-        for param in self.desc['parameters'] + self.desc['variables']:
+        for param in self.desc['parameters']:
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_wrapper_pyx % {   'name': param['name'], 
+                code += local_parameter_wrapper % {   'name': param['name'], 
                                                 'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         
                 
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_wrapper_pyx % {  'name': param['name'], 
+                code += global_parameter_wrapper % {  'name': param['name'], 
+                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
+
+        for param in self.desc['variables']:
+            
+            if param['name'] in self.desc['local']: # local attribute
+                code += local_variable_wrapper % {   'name': param['name'], 
+                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
+        
+                
+            elif param['name'] in self.desc['global']: # global attribute
+                code += global_variable_wrapper % {  'name': param['name'], 
                                                 'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         return code
     
     def generate_pyfunctions(self):
         "Python functions accessing the Cython wrapper"
         code = ""        
-        for param in self.desc['parameters'] + self.desc['variables']:
+        for param in self.desc['parameters']:
             
             if param['name'] in self.desc['local']: # local attribute
-                code += local_property_pyx % { 'name': param['name'], 
+                code += local_parameter_pyx % { 'name': param['name'], 
                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
                 
             elif param['name'] in self.desc['global']: # global attribute
-                code += global_property_pyx % { 'name': param['name'], 
+                code += global_parameter_pyx % { 'name': param['name'], 
+                                                'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
+
+        for param in self.desc['variables']:
+            
+            if param['name'] in self.desc['local']: # local attribute
+                code += local_variable_pyx % { 'name': param['name'], 
+                                               'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
+                
+            elif param['name'] in self.desc['global']: # global attribute
+                code += global_variable_pyx % { 'name': param['name'], 
                                                 'type': param['ctype'] if param['ctype'] != 'DATA_TYPE' else 'float'}
         return code
                 
