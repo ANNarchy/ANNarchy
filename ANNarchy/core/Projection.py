@@ -182,7 +182,7 @@ class Projection(object):
         # Sort the dendrites to be created based on _synapses
         import ANNarchy.core.cython_ext.Connector as Connector
         self.cyInstance.createFromCSR(self._synapses)
-        self._post_ranks = self._synapses.keys()
+        self._post_ranks = self._synapses.post_ranks
 
         # Update maximum delay in presynaptic population
         if isinstance(self.pre, PopulationView):

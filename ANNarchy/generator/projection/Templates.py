@@ -394,7 +394,8 @@ global_idx_variable_access_body = \
 # 
 rate_projection_pyx = \
 """from libcpp.vector cimport vector
-from libcpp.string cimport string
+from libcpp.map cimport map
+from libcpp.pair cimport pair
 from libcpp cimport bool
 
 import numpy as np
@@ -483,6 +484,7 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_delay(self, int post_rank):
         return np.array(self.cInstance.get_delay(post_rank))
 
+    # Create the connections
     cpdef createFromCSR( self, dendrites ):
         self.cInstance.createDendrites(dendrites.ranks, dendrite.weights, dendrite.delays)
 
@@ -492,6 +494,7 @@ cdef class py%(name)s:
     cpdef int _nb_synapses(self, int post_rank):
         return self.cInstance.nbSynapses(post_rank)
 
+    # Learning parameters
     cpdef bool _get_learning(self):
         return self.cInstance.isLearning()
         
@@ -614,6 +617,7 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_delay(self, int post_rank):
         return np.array(self.cInstance.get_delay(post_rank))
 
+    # Create the connections
     cpdef createFromCSR( self, dendrites ):
         self.cInstance.createDendrites(dendrites.ranks, dendrite.weights, dendrite.delays)    
 
@@ -623,6 +627,7 @@ cdef class py%(name)s:
     cpdef int _nb_synapses(self, int post_rank):
         return self.cInstance.nbSynapses(post_rank)
         
+    # Learning parameters
     cpdef bool _get_learning(self):
         return self.cInstance.isLearning()
         

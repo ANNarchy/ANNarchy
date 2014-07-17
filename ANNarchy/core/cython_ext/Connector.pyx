@@ -46,7 +46,7 @@ cdef class CSR:
 
     cdef push_back (self, int rk, vector[int] r, vector[double] w, vector[int] d):
 
-
+        self.post_ranks.append(rk)
         self.ranks.insert(pair[int, vector[int]](rk, r))
         self.weights.insert(pair[int, vector[double]](rk, w))
         
@@ -62,13 +62,6 @@ cdef class CSR:
 
         self.size += 1
         self.nb_synapses += len(r)
-
-    def keys(self):
-        cdef list k = []
-        for i in xrange(self.ranks.size()):
-            k.append(self.ranks.at(i))
-
-        return k
 
     # cpdef set_delay(self, int rk, vector[int] d):
     #     self.delay[rk] = d

@@ -8,6 +8,7 @@ cdef class CSR:
     Container for the ranks, weights and values of a projection.
     """
     # Data
+    cpdef list post_ranks
     cdef map[int, vector[int]] ranks
     cdef map[int, vector[double]] weights
     cdef map[int, vector[int]] delay
