@@ -156,7 +156,7 @@ protected:
 	std::vector<int> refractory_times_;
 	std::vector<int> refractory_counter_;
 
-	std::vector< bool > spiked_;
+    // Spikes
 	std::vector< std::vector<int> > spike_timings_;
     bool record_spike_;
     std::vector<int> lastSpike_;

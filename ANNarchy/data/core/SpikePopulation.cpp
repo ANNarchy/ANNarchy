@@ -25,7 +25,6 @@
 
 SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, false)
 {
-	spiked_ = std::vector< bool >(nbNeurons_, false);
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
 
 	spikeTargets_ = std::vector<std::vector<Dendrite*> >(nbNeurons_, std::vector<Dendrite*>());
@@ -64,7 +63,11 @@ int SpikePopulation::getLastSpikeTime(int rank)
 bool SpikePopulation::hasSpiked(int rank, int t) 
 { 
     if (t==-1){ // asking for the current step
-        return spiked_[rank]; 
+        for(int i=0; i<propagate_.size(); i++){
+            if(rank==propagate_[i]) 
+                return true;
+        }
+        return false;
     }
     else{
         for(int i=spike_timings_[rank].size()-1; i>0; i--){
@@ -91,7 +94,6 @@ void SpikePopulation::emit_spike(int i)
             if(record_spike_){
                 spike_timings_[i].push_back(ANNarchy_Global::time);
             }
-            spiked_[i] = true;
         }
     }
 }

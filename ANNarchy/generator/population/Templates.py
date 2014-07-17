@@ -354,8 +354,6 @@ spike_population_body = """#include "%(class)s.h"
 #endif
 
 %(constructor)s
-
-    spiked_ = std::vector<bool>(nbNeurons_, false);
     
     try
     {
@@ -383,8 +381,6 @@ void %(class)s::localMetaStep(int i)
 
 void %(class)s::globalMetaStep() 
 {
-    spiked_ = std::vector<bool>(nbNeurons_, false);
-
 %(globalMetaStep)s    
 }
 

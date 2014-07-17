@@ -21,7 +21,7 @@ EIF = Neuron(
     equations="""    
     I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
     
-    tau_m * dv/dt = (v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + tau_m/cm*I : init=-70.0
+    cm * dv/dt = cm/tau_m*(v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + I/1000.0 : init=-70.0
     
     tau_syn_E * dg_exc/dt = - g_exc 
     tau_syn_I * dg_inh/dt = - g_inh 
@@ -36,13 +36,6 @@ EIF = Neuron(
 
 )
 
-ExcSynapse = Synapse(
-    pre_spike="g_target += 1.5"
-)
-InhSynapse = Synapse(
-    pre_spike="g_target += 3.75"
-)
-
 # Global population
 P = Population(geometry=4000, neuron=EIF)
 
@@ -53,10 +46,10 @@ Pe_input = P[:200]
 Pi_input = P[3800:]
 
 # Projections
-we = 1.5 / 1000.0 # excitatory synaptic weight
-wi = 2.5 * we # inhibitory synaptic weight
-Ce = Projection(Pe, P, 'exc', ExcSynapse).connect_fixed_probability(weights=we, probability=0.05)
-Ci = Projection(Pi, P, 'inh', InhSynapse).connect_fixed_probability(weights=wi, probability=0.05)
+we = 0.0#1.5 / 1000.0 # excitatory synaptic weight
+wi = 0.0#2.5 * we # inhibitory synaptic weight
+Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
+Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
 # Initialization
 P.v = -70.0 + 10.0 * np.random.rand(P.size)
@@ -66,8 +59,8 @@ P.g_inh = (np.random.randn(P.size) * 2 + 5) * wi
 # Poisson inputs
 i_exc = PoissonPopulation(geometry=200, rates="if t < 200.0 : 2000.0 else : 0.0")
 i_inh = PoissonPopulation(geometry=200, rates="if t < 100.0 : 2000.0 else : 0.0")
-Ie = Projection(i_exc, Pe_input, 'exc', ExcSynapse).connect_one_to_one(weights=we)
-Ii = Projection(i_inh, Pi_input, 'exc', ExcSynapse).connect_one_to_one(weights=we)
+Ie = Projection(i_exc, Pe_input, 'exc').connect_one_to_one(weights=we)
+Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
 
 # Compile the Network
 compile()
@@ -76,7 +69,8 @@ compile()
 P.start_record(['spike', 'I'])
 
 print 'Start simulation'
-simulate(250.0, measure_time=True)
+#simulate(250.0, measure_time=True)
+simulate(0.4, measure_time=True)
 
 # Retrieve recordings
 data = P.get_record()

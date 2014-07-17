@@ -1,6 +1,9 @@
 # distutils: language = c++
 
 from libcpp.vector cimport vector
+from libcpp.map cimport map
+from libcpp.pair cimport pair
+
 import numpy as np
 cimport numpy as np
 
@@ -15,62 +18,66 @@ cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 cdef class CSR:
 
     def __init__(self):
-        self.data = {}
-        self.delay = {}
+
         self.max_delay = Global.config['dt']
         self.dt = Global.config['dt']
         self.size = 0
         self.nb_synapses = 0
 
     def add (self, int rk, list r, list w, list d):
-        cdef list val
-        val = []
-        val.append(r)
-        val.append(w)
-        self.data[rk] = val
+        print 'Temporarily disabled'
+        # cdef list val
+        # val = []
+        # val.append(r)
+        # val.append(w)
+        # self.data[rk] = val
         
+        # max_d = np.max(d)
+        # if max_d*self.dt > self.dt:
+        #     self.delay[rk] = d
+
+        #     if max_d > self.max_delay:
+        #         self.max_delay = max_d
+        # else:
+        #     self.delay[rk] = []
+
+        # self.size += 1
+        # self.nb_synapses += len(r)
+
+    cdef push_back (self, int rk, vector[int] r, vector[double] w, vector[int] d):
+
+
+        self.ranks.insert(pair[int, vector[int]](rk, r))
+        self.weights.insert(pair[int, vector[double]](rk, w))
+        
+        # Treat delays separately
         max_d = np.max(d)
-        if max_d*self.dt > self.dt:
-            self.delay[rk] = d
+        if max_d*self.dt > self.dt: # A non-zero delay is specified
+            self.delays.insert(pair[int, vector[int]](rk, d))
 
             if max_d > self.max_delay:
                 self.max_delay = max_d
-        else:
-            self.delay[rk] = []
-
-        self.size += 1
-        self.nb_synapses += len(r)
-
-    cdef push_back (self, int rk, vector[int] r, vector[float] w, vector[int] d):
-        cdef list val
-        val = []
-        val.append(r)
-        val.append(w)
-        self.data[rk] = val
-
-        max_d = np.max(d)
-        if max_d*self.dt > self.dt:
-            self.delay[rk] = d
-
-            if max_d > self.max_delay:
-                self.max_delay = max_d
-        else:
-            self.delay[rk] = []
+        else: # Default delay
+            self.delays.insert(pair[int, vector[int]](rk, vector[int](0, 0)))
 
         self.size += 1
         self.nb_synapses += len(r)
 
     def keys(self):
-        return self.data.keys()
+        cdef list k = []
+        for i in xrange(self.ranks.size()):
+            k.append(self.ranks.at(i))
 
-    cpdef set_delay(self, int rk, vector[int] d):
-        self.delay[rk] = d
+        return k
 
-    cpdef get_data(self):
-        return self.data
+    # cpdef set_delay(self, int rk, vector[int] d):
+    #     self.delay[rk] = d
 
-    cpdef get_delay(self):
-        return self.delay
+    # cpdef get_data(self):
+    #     return self.data
+
+    # cpdef get_delay(self):
+    #     return self.delay
 
     cpdef get_max_delay(self):
         return self.max_delay
@@ -83,7 +90,7 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     cdef int r_post, size_pre, i
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -113,7 +120,7 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
         size_pre = len(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](size_pre, float(weights))
+            w = vector[double](size_pre, weights)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
@@ -134,7 +141,7 @@ def one_to_one(pre, post, weights, delays, shift):
     cdef int r_post, offset
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -165,7 +172,7 @@ def one_to_one(pre, post, weights, delays, shift):
         r = tmp
         # Weights
         if isinstance(weights, (int, float)):
-            tmp = [float(weights)]
+            w = np.zeros(1, dtype=np.float64) #weights*np.ones(1, dtype=np.float64)
         elif isinstance(weights, RandomDistribution):
             tmp = weights.get_list_values(1)
         w = tmp
@@ -190,7 +197,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     cdef int r_post, r_pre, size_pre
     cdef list tmp, pre_ranks, post_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -220,7 +227,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
         size_pre = len(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](size_pre, float(weights))
+            w = weights*np.ones(size_pre, dtype=np.float64)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
@@ -242,7 +249,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -273,7 +280,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
         r = list(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](number, float(weights))
+            w = vector[double](number, weights)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(number)
         # Delays
@@ -296,7 +303,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     cdef list pre_ranks, post_ranks
     cdef list rk_mat, pre_r
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -335,7 +342,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         size_pre = len(rk_mat[r_post])
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](size_pre, float(weights))
+            w = vector[double](size_pre, float(weights))
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
@@ -358,7 +365,7 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
     cdef list ranks, values
 
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
 
     # Retrieve simulation time step
@@ -436,7 +443,7 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
     cdef list ranks, values
 
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
 
     # Retrieve simulation time step

@@ -170,6 +170,8 @@ void %(class)s::globalLearn() {
 void %(class)s::computePsp() 
 {
     pre_spikes_ = pre_population_->getPropagate();
+
+    // TODO: delays!!!
     
     DATA_TYPE sum = 0.0;
     
@@ -177,7 +179,7 @@ void %(class)s::computePsp()
     {
         int i = pre_spikes_[inv_rank_[n]];
         
-        sum += %(rside)s       
+        sum += %(rside)s
     }
     
     %(lside)s += sum;
