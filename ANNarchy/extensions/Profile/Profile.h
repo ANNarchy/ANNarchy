@@ -195,11 +195,33 @@ public:
     /*
      * exported to python
      */
-    double getAvgTimeStep(std::string name, int begin, int end)
+    double getAvgTimeStep(std::string name, int begin, int end, bool remove_outliers = false)
     {
         if (timesStep_.count(name) > 0)
         {
-        	return mean(timesStep_[name], begin, end, name);
+        	if ( remove_outliers )
+        		return mean_without_outlier(timesStep_[name], begin, end, name);
+        	else
+        		return mean(timesStep_[name], begin, end, name);
+        }
+        else
+        {
+        	std::cout << name << " is not registered."<< std::endl;
+        	return 0.0;
+        }
+    }
+
+    /*
+     * exported to python
+     */
+    double getStdDevTimeStep(std::string name, int begin, int end, bool remove_outliers = false)
+    {
+        if (timesStep_.count(name) > 0)
+        {
+        	if ( remove_outliers )
+        		return standard_deviation_without_outlier(timesStep_[name], begin, end, name);
+        	else
+        		return standard_deviation(timesStep_[name], begin, end, name);
         }
         else
         {
@@ -559,9 +581,15 @@ public:
         return 0.0;
     }
 
+    void set_std_dev_scale(double scale_factor)
+    {
+    	std_dev_scale_ = scale_factor;
+    }
 protected:
     Profile()
 	{
+    	std_dev_scale_ = 3.0;
+
     	timesNetwork_ = std::vector<double> ();
 
     	// rate coded variables
@@ -599,9 +627,116 @@ protected:
 			return mean/(double)(end-begin);
         }
     }
+
+    inline double variance(std::vector<double> data, int begin, int end, std::string name)
+    {
+        if(data.size()==0)
+        {
+        	std::cout << name << ":"<< std::endl;
+        	std::cout << "   No recorded data ..." << std::endl;
+        	return 0.0;
+        }
+        else
+        {
+        	double mean_value = mean(data, begin, end, name);
+        	double tmp = 0.0;
+        	for(auto it=data.begin()+begin; it!= data.begin()+end;it++)
+        		tmp += ( (*it) - mean_value ) * ( (*it) - mean_value );
+
+        	return tmp / (double)(end - begin -1);
+        }
+    }
+
+    inline double standard_deviation(std::vector<double> data, int begin, int end, std::string name)
+    {
+        if(data.size()==0)
+        {
+        	std::cout << name << ":"<< std::endl;
+        	std::cout << "   No recorded data ..." << std::endl;
+        	return 0.0;
+        }
+        else
+        {
+        	return std::sqrt(variance(data, begin, end, name));
+        }
+    }
+
+    inline std::vector<double> remove_outlier(std::vector<double> data, int begin, int end, std::string name)
+    {
+    	auto cp_data = std::vector<double>(data.begin()+begin, data.begin()+end);
+
+    	double std_dev = standard_deviation(data, 0, cp_data.size(), name);
+    	double mean_value = mean(data, 0, cp_data.size(), name);
+
+    	auto it = cp_data.begin();
+    	while ( it != cp_data.end() )
+    	{
+    		if ( (*it) > (mean_value + std_dev_scale_ * std_dev) || (*it) < (mean_value - std_dev_scale_ * std_dev) )
+    		{
+    			it = cp_data.erase(it);
+    		}
+    		else
+    		{
+    			it++;
+    		}
+    	}
+
+    	return cp_data;
+    }
+
+    inline double mean_without_outlier(std::vector<double> data, int begin, int end, std::string name)
+    {
+    	if(data.size()==0)
+		{
+			std::cout << name << ":"<< std::endl;
+			std::cout << "   No recorded data ..." << std::endl;
+			return 0.0;
+		}
+		else
+		{
+			auto cleaned_data = remove_outlier(data, begin, end, name);
+
+			if ( cleaned_data.size() > 0 )
+			{
+				std::cout << "Removed " << (end-begin) - cleaned_data.size() << " items from data (" << ( 1 - cleaned_data.size()/(double)(end-begin)) * 100.0 << " % )." << std::endl;
+				return mean(cleaned_data, 0, cleaned_data.size(), name);
+			}
+			else
+			{
+				std::cout << "NOTICE: bad relation between mean and standard deviation." << std::endl;
+				return mean(data, begin, end, name);
+			}
+		}
+    }
+
+    inline double standard_deviation_without_outlier(std::vector<double> data, int begin, int end, std::string name)
+    {
+    	if(data.size()==0)
+		{
+			std::cout << name << ":"<< std::endl;
+			std::cout << "   No recorded data ..." << std::endl;
+			return 0.0;
+		}
+		else
+		{
+	    	auto cleaned_data = remove_outlier(data, begin, end, name);
+
+			if ( cleaned_data.size() > 0 )
+			{
+				//std::cout << "Removed " << (end-begin) - cleaned_data.size() << " items from data (" << ( 1 - cleaned_data.size() / (double)(end-begin)) * 100.0 << " % )." << std::endl;
+				return std::sqrt(variance(cleaned_data, 0, cleaned_data.size(), name));
+			}
+			else
+			{
+				//std::cout << "bad relation between mean and standard deviation." << std::endl;
+				return std::sqrt(variance(data, begin, end, name));
+			}
+		}
+    }
 private:
     static Profile* instance_;
     std::vector < double > timesNetwork_;
+    double std_dev_scale_;
 
     // rate coded measurements
     std::map< std::string, std::vector<double> > timesSum_; 	/// [ pop_name, [times] ]
