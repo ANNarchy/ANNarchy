@@ -141,33 +141,6 @@ DATA_TYPE RateProjection::getSum(int neuron)
 	}
 }
 
-void RateProjection::addDendrite(int postNeuronRank, class Dendrite *dendrite)
-{
-	if ( postNeuronRank < nbDendrites_ )
-	{
-	#ifdef _DEBUG_PARALLELISM
-		log_->resize(nbDendrites_);
-	#endif
-	#ifdef _DEBUG
-		std::cout << "Projection ( ptr = " << this << " ): added dendrite ( ptr = " << dendrite << " ) to neuron " << postNeuronRank << std::endl;
-	#endif
-		if ( dendrites_[postNeuronRank] == NULL)
-		{
-			dendrites_[postNeuronRank] = static_cast<RateDendrite*>(dendrite);
-		}
-		else
-		{
-		#ifdef _DEBUG
-			std::cout << "Warning: already attached a dendrite ( ptr = " << dendrites_[postNeuronRank] << " ) to neuron " << postNeuronRank << std::endl;
-		#endif
-		}
-	}
-	else
-	{
-		std::cout << "Error on attaching dendrite to neuron " << postNeuronRank << ", expected a rank < " << dendrites_.size() << std::endl;
-	}
-}
-
 Dendrite *RateProjection::getDendrite(int postNeuronRank)
 {
 	return dendrites_[postNeuronRank];

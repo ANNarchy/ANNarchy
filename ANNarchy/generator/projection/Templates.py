@@ -40,8 +40,6 @@ public:
     std::vector<int> get_delay(int post_rank);
     
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
-    
-    void addDendrite(int, std::vector<int>, std::vector<DATA_TYPE>, std::vector<int>);
 
     void createDendrites(std::vector<int> post_ranks,
                          std::map<int, std::vector<int> > ranks, 
@@ -141,15 +139,6 @@ std::vector<int> %(class)s::get_delay(int post_rank)
 
 %(access)s
 
-void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
-{
-    dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
-    
-    dendrites_[post_rank]->set_rank(rank);
-    dendrites_[post_rank]->set_w(w);
-    dendrites_[post_rank]->set_delay(delay);    
-}
-
 
 void %(class)s::createDendrites(
     std::vector<int> post_ranks,
@@ -225,8 +214,6 @@ public:
     std::vector<int> get_delay(int post_rank);
     
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
-    
-    virtual void addDendrite(int, std::vector<int>, std::vector<DATA_TYPE>, std::vector<int>);
 
     void createDendrites(std::vector<int> post_ranks,
                          std::map<int, std::vector<int> > ranks, 
@@ -321,15 +308,6 @@ std::vector<int> %(class)s::get_delay(int post_rank)
 }
 
 %(access)s
-
-void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
-{
-    dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
-    
-    dendrites_[post_rank]->set_rank(rank);
-    dendrites_[post_rank]->set_w(w);
-    dendrites_[post_rank]->set_delay(delay);    
-}
 
 void %(class)s::createDendrites(
     std::vector<int> post_ranks,
