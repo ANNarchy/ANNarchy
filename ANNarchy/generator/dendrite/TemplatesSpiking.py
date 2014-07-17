@@ -169,8 +169,7 @@ void %(class)s::globalLearn() {
 
 void %(class)s::computePsp() 
 {
-    pre_spikes_ = pre_population_->getPropagate();
-    
+    // pre_spikes are correctly updated by evaluate pre event, even in delayed case
     DATA_TYPE sum = 0.0;
     
     for ( int n = 0; n < pre_spikes_.size(); n++)
@@ -181,7 +180,6 @@ void %(class)s::computePsp()
     }
     
     %(lside)s += sum;
-
     pre_spikes_.clear();
 }
 
@@ -210,38 +208,47 @@ void %(class)s::evaluatePreEvent()
 #endif
 
     pre_spikes_ = pre_population_->getPropagate();
-        
+    
+    // sort in achieved spikes and set the delayed spikes
     if ( maxDelay_ > 0 )
     {
         if ( constDelay_ )
         {
-            delayed_pre_spikes_[maxDelay_] = pre_spikes_; // store current values at correct position
-            pre_spikes_ = delayed_pre_spikes_[0];
+            if (!pre_spikes_.empty())
+            {
+            #ifdef _DEBUG_SPIKE_DELAY
+                std::cout << "t = "<< ANNarchy_Global::time << " received spikes and delay them " << maxDelay_ << std::endl;
+            #endif
+                delayed_pre_spikes_[maxDelay_-1] = pre_spikes_; // a current values at correct position
+            }
         } 
         else
-            std::cout << "Not implemented yet.";    
+            std::cout << "Not implemented yet.";
+            
+        pre_spikes_ = delayed_pre_spikes_[0];    
     }
 
-    if ( pre_spikes_.size() > 0 )
+#ifdef _DEBUG
+    #pragma omp master
     {
-    #ifdef _DEBUG
-        #pragma omp master
-        {
-            std::cout << "t = " << ANNarchy_Global::time << ", n = "<< post_neuron_rank_ << ": " << pre_spikes_.size() << " presynaptic event(s)." << std::endl;
-            std::cout << "[";
-            for (auto it = pre_spikes_.begin(); it != pre_spikes_.end(); it++)
-                std::cout << *it << ", ";
-            std::cout << "]"<< std::endl;
-        }
-    #endif
+        std::cout << "t = " << ANNarchy_Global::time << ", n = "<< post_neuron_rank_ << ": " << pre_spikes_.size() << " presynaptic event(s)." << std::endl;
+        std::cout << "[";
+        for (auto it = pre_spikes_.begin(); it != pre_spikes_.end(); it++)
+            std::cout << *it << ", ";
+        std::cout << "]"<< std::endl;
+    }
+#endif
         
-        if ( isLearning() && !post_population_->hasSpiked(post_neuron_rank_) )
+    if ( isLearning() && !post_population_->hasSpiked(post_neuron_rank_) )
+    {
+    #ifdef _DEBUG_SPIKE_DELAY
+        if (!pre_spikes_.empty())
+            std::cout << "t = "<< ANNarchy_Global::time << " evaluated spikes" << std::endl;
+    #endif
+        for ( int n = 0; n < pre_spikes_.size(); n++)
         {
-            for ( int n = 0; n < pre_spikes_.size(); n++)
-            {
-                int i = pre_spikes_[inv_rank_[n]];
-                %(pre_event_learn)s
-            }
+            int i = pre_spikes_[inv_rank_[n]];
+            %(pre_event_learn)s
         }
     }
 
