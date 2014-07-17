@@ -1,8 +1,9 @@
 # distutils: language = c++
 
 from libcpp.vector cimport vector
-from libcpp.map cimport map
 from libcpp.pair cimport pair
+from libcpp.map cimport map
+from libcpp cimport bool
 
 import numpy as np
 cimport numpy as np
@@ -44,9 +45,9 @@ cdef class CSR:
         # self.size += 1
         # self.nb_synapses += len(r)
 
-    cdef push_back (self, int rk, vector[int] r, vector[double] w, vector[int] d):
+    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[int] d):
 
-        self.post_ranks.append(rk)
+        self.post_ranks.push_back(rk)
         self.ranks.insert(pair[int, vector[int]](rk, r))
         self.weights.insert(pair[int, vector[double]](rk, w))
         
@@ -63,6 +64,8 @@ cdef class CSR:
         self.size += 1
         self.nb_synapses += len(r)
 
+
+
     # cpdef set_delay(self, int rk, vector[int] d):
     #     self.delay[rk] = d
 
@@ -72,14 +75,22 @@ cdef class CSR:
     # cpdef get_delay(self):
     #     return self.delay
 
-    cpdef get_max_delay(self):
+    cpdef int get_max_delay(self):
         return self.max_delay
+
+    cpdef list get_post_ranks(self):
+        return list(self.post_ranks)
+
+    cpdef bool uniform_delay(self):
+        cdef list delay = self.delays[self.post_ranks[0]]
+        return len(list(set(delay))) == 1
 
 def all_to_all(pre, post, weights, delays, allow_self_connections):
     """ Cython implementation of the all-to-all pattern."""
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, size_pre, i
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
@@ -113,7 +124,8 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
         size_pre = len(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[double](size_pre, weights)
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
@@ -131,6 +143,7 @@ def one_to_one(pre, post, weights, delays, shift):
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, offset
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
@@ -165,10 +178,11 @@ def one_to_one(pre, post, weights, delays, shift):
         r = tmp
         # Weights
         if isinstance(weights, (int, float)):
-            w = np.zeros(1, dtype=np.float64) #weights*np.ones(1, dtype=np.float64)
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             tmp = weights.get_list_values(1)
-        w = tmp
+            w = tmp
         # Delays
         if isinstance(delays, (float, int)):
             tmp = [int(delays/dt)]
@@ -187,6 +201,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef list tmp, pre_ranks, post_ranks
     cdef vector[int] r, d
@@ -220,7 +235,8 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
         size_pre = len(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = weights*np.ones(size_pre, dtype=np.float64)
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
@@ -238,6 +254,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
@@ -273,7 +290,8 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
         r = list(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[double](number, weights)
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(number)
         # Delays
@@ -291,6 +309,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
@@ -335,7 +354,8 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         size_pre = len(rk_mat[r_post])
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[double](size_pre, float(weights))
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays

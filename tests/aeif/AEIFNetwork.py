@@ -21,7 +21,7 @@ EIF = Neuron(
     equations="""    
     I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
     
-    cm * dv/dt = cm/tau_m*(v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + I/1000.0 : init=-70.0
+    cm * dv/dt = cm/tau_m*(v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + I : init=-70.0
     
     tau_syn_E * dg_exc/dt = - g_exc 
     tau_syn_I * dg_inh/dt = - g_inh 
@@ -46,15 +46,15 @@ Pe_input = P[:200]
 Pi_input = P[3800:]
 
 # Projections
-we = 0.0#1.5 / 1000.0 # excitatory synaptic weight
-wi = 0.0#2.5 * we # inhibitory synaptic weight
+we = 0.0015 # excitatory synaptic weight
+wi = 0.00375 # inhibitory synaptic weight
 Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
 Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
 # Initialization
 P.v = -70.0 + 10.0 * np.random.rand(P.size)
-P.g_exc = (np.random.randn(P.size) * 2 + 5) * we
-P.g_inh = (np.random.randn(P.size) * 2 + 5) * wi
+P.g_exc = (np.random.randn(P.size) * 2.0 + 5.0) * we
+P.g_inh = (np.random.randn(P.size) * 2.0 + 5.0) * wi
 
 # Poisson inputs
 i_exc = PoissonPopulation(geometry=200, rates="if t < 200.0 : 2000.0 else : 0.0")
@@ -69,8 +69,8 @@ compile()
 P.start_record(['spike', 'I'])
 
 print 'Start simulation'
-#simulate(250.0, measure_time=True)
-simulate(0.4, measure_time=True)
+simulate(250.0, measure_time=True)
+#simulate(100.0, measure_time=True)
 
 # Retrieve recordings
 data = P.get_record()

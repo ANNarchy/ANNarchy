@@ -1,17 +1,18 @@
 # distutils: language = c++
 from libcpp.vector cimport vector
-from libcpp.map cimport map
 from libcpp.pair cimport pair
+from libcpp.map cimport map
+from libcpp cimport bool
 
 cdef class CSR:
     """
     Container for the ranks, weights and values of a projection.
     """
     # Data
-    cpdef list post_ranks
+    cdef vector[int] post_ranks
     cdef map[int, vector[int]] ranks
     cdef map[int, vector[double]] weights
-    cdef map[int, vector[int]] delay
+    cdef map[int, vector[int]] delays
 
     # Attributes
     cpdef int max_delay
@@ -22,7 +23,6 @@ cdef class CSR:
     cdef push_back (self, int rk, vector[int] r, vector[double] w, vector[int] d)
 
     # Access methods
-    cpdef set_delay(self, int rk, vector[int] d)
-    cpdef get_delay(self)
-    cpdef get_data(self)
-    cpdef get_max_delay(self)
+    cpdef int get_max_delay(self)
+    cpdef list get_post_ranks(self)
+    cpdef bool uniform_delay(self)
