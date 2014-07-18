@@ -12,16 +12,14 @@ EIF = Neuron(
     tau_syn_I = 10.0 : population
     e_rev_E = 0.0 : population
     e_rev_I = -80.0 : population
-    i_offset = 0.0
     delta_T = 3.0 : population
     v_thresh = -55.0 : population
     v_reset = -70.0 : population
     v_spike = -20.0 : population
 """,
-    equations="""    
-    I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+    equations="""
     
-    cm * dv/dt = cm/tau_m*(v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + I : init=-70.0
+    cm * dv/dt = cm/tau_m*(v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v)  : init=-70.0
     
     tau_syn_E * dg_exc/dt = - g_exc 
     tau_syn_I * dg_inh/dt = - g_inh 
@@ -66,7 +64,7 @@ Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
 compile()
 
 # Simulate
-P.start_record(['spike', 'I', 'g_exc', 'g_inh'])
+P.start_record(['spike', 'g_exc', 'g_inh'])
 
 print 'Start simulation'
 simulate(250.0, measure_time=True)
@@ -78,7 +76,6 @@ spikes = raster_plot(data['spike'])
 if len(spikes) == 0 : # Nothing to plot
     exit()
 
-I = data['I']['data'][500, :]
 gexc = data['g_exc']['data'][500, :]
 ginh = data['g_inh']['data'][500, :]
 
@@ -87,8 +84,7 @@ from pylab import *
 subplot(1,2,1)
 plot(dt*spikes[:, 0], spikes[:, 1], '.')
 subplot(1,2,2)
-plot(dt*np.arange(len(I)), I, label='I')
-plot(dt*np.arange(len(I)), gexc, label='g_exc')
-plot(dt*np.arange(len(I)), ginh, label = 'g_inh')
+plot(dt*np.arange(len(gexc)), gexc, label='g_exc')
+plot(dt*np.arange(len(ginh)), ginh, label = 'g_inh')
 legend()
 show()

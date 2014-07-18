@@ -8,7 +8,7 @@ from libcpp cimport bool
 import numpy as np
 cimport numpy as np
 
-from libc.math cimport exp, fabs
+from libc.math cimport exp, fabs, ceil
 
 import ANNarchy
 from ANNarchy.core import Global
@@ -49,8 +49,6 @@ cdef class CSR:
 
         self.size += 1
         self.nb_synapses += len(r)
-
-
 
     # cpdef set_delay(self, int rk, vector[int] d):
     #     self.delay[rk] = d
@@ -116,9 +114,9 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -171,10 +169,9 @@ def one_to_one(pre, post, weights, delays, shift):
             w = tmp
         # Delays
         if isinstance(delays, (float, int)):
-            tmp = [int(delays/dt)]
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            tmp = [int(a/dt) for a in delays.get_list_values(1) ]
-        d=tmp
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(1) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -227,9 +224,9 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -282,9 +279,9 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
             w = weights.get_list_values(number)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(number) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(number) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -346,9 +343,9 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -424,9 +421,9 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
         r = ranks
         w = values
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite
         projection.push_back(post, r, w, d)
 
@@ -502,9 +499,9 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
         r = ranks
         w = values
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite
         projection.push_back(post, r, w, d)
 

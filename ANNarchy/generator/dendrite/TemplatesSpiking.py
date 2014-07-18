@@ -110,7 +110,7 @@ using namespace ANNarchy_Global;
     post_neuron_rank_ = postRank;
     
     //post_population_->getProjection(pre, target)->addDendrite(postRank, this);
-    pre_population_->addSpikeTarget(this);
+    //pre_population_->addSpikeTarget(this);
 
     // Recording of weights disabled by default
     record_w_ = false;
@@ -127,7 +127,7 @@ using namespace ANNarchy_Global;
     post_neuron_rank_ = postRank;
     
     //post_population_->getProjection(pre_population_, target)->addDendrite(postRank, this);
-    pre_population_->addSpikeTarget(this);
+    //pre_population_->addSpikeTarget(this);
     
     // Recording of weights disabled by default
     record_w_ = false;
