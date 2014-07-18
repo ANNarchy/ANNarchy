@@ -32,6 +32,7 @@ SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(n
     record_spike_ = false;
 
     lastSpike_ = std::vector<int>(nbNeurons_, -10000);
+    spiked = std::vector<bool>(nbNeurons_, false);
 
     has_refractory_ = false;
     refractory_counter_ = std::vector<int>(nbNeurons_,  0);
@@ -63,11 +64,7 @@ int SpikePopulation::getLastSpikeTime(int rank)
 bool SpikePopulation::hasSpiked(int rank, int t) 
 { 
     if (t==-1){ // asking for the current step
-        for(int i=0; i<propagate_.size(); i++){
-            if(rank==propagate_[i]) 
-                return true;
-        }
-        return false;
+        return spiked[rank];
     }
     else{
         for(int i=spike_timings_[rank].size()-1; i>0; i--){
@@ -90,6 +87,7 @@ void SpikePopulation::emit_spike(int i)
             //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
             this->propagate_.push_back(i);
             
+            spiked[i] = true;
             lastSpike_[i] = ANNarchy_Global::time;
             if(record_spike_){
                 spike_timings_[i].push_back(ANNarchy_Global::time);
@@ -142,6 +140,7 @@ void SpikePopulation::setMaxDelay(int delay)
 void SpikePopulation::metaStep()
 {
 	propagate_.clear();
+    std::fill(spiked.begin(), spiked.end(), false);
 
     // Random generators
     #pragma omp master

@@ -128,6 +128,8 @@ public:
      * Tells if the neuron has spikes at time t (default: current step) 
     */
 	bool hasSpiked(int rank, int t=-1);
+    std::vector<bool> spiked;
+    
     /**
      * Returns the number of spikes in the last t steps
     */
@@ -147,6 +149,7 @@ public:
 	virtual void reset(int rank) {}
 
 	std::vector<int> getPropagate() { return propagate_; }
+
 protected:
 
 	std::vector< std::vector<class Dendrite*> > spikeTargets_; // first dimension, neuron wise

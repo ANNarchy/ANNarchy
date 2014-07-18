@@ -43,11 +43,11 @@ P = Population(geometry=4000, neuron=EIF)
 Pe = P[:3200]
 Pi = P[3200:]
 Pe_input = P[:200]
-Pi_input = P[3800:]
+Pi_input = P[3200:3400]
 
 # Projections
 we = 0.0015 # excitatory synaptic weight
-wi = 0.0#0.00375 # inhibitory synaptic weight
+wi = 0.00375 # inhibitory synaptic weight
 Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
 Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
@@ -66,11 +66,11 @@ Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
 compile()
 
 # Simulate
-P.start_record(['spike', 'I'])
+P.start_record(['spike', 'I', 'g_exc', 'g_inh'])
 
 print 'Start simulation'
-#simulate(250.0, measure_time=True)
-simulate(1.0, measure_time=True)
+simulate(250.0, measure_time=True)
+#simulate(50.0, measure_time=True)
 
 # Retrieve recordings
 data = P.get_record()
@@ -79,11 +79,16 @@ if len(spikes) == 0 : # Nothing to plot
     exit()
 
 I = data['I']['data'][500, :]
+gexc = data['g_exc']['data'][500, :]
+ginh = data['g_inh']['data'][500, :]
 
 # Plot
 from pylab import *
 subplot(1,2,1)
 plot(dt*spikes[:, 0], spikes[:, 1], '.')
 subplot(1,2,2)
-plot(I)
+plot(dt*np.arange(len(I)), I, label='I')
+plot(dt*np.arange(len(I)), gexc, label='g_exc')
+plot(dt*np.arange(len(I)), ginh, label = 'g_inh')
+legend()
 show()

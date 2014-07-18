@@ -171,14 +171,12 @@ void %(class)s::computePsp()
 {
     // pre_spikes are correctly updated by evaluate pre event, even in delayed case
     DATA_TYPE sum = 0.0;
-    
-    for ( int n = 0; n < pre_spikes_.size(); n++)
-    {
-        int i = inv_rank_[pre_spikes_[n]];
-        
-        sum += %(rside)s
+    int i = 0;
 
-        std::cout << w_[i] << std::endl;
+    for ( int n = 0; n < pre_spikes_.size(); n++)
+    {        
+        i = pre_spikes_[n];
+        sum += %(rside)s
     }
     
     %(lside)s += sum;
@@ -208,7 +206,11 @@ void %(class)s::evaluatePreEvent()
     }
 #endif
 
-    pre_spikes_ = pre_population_->getPropagate();
+    // Gather all spikes from connected neurons
+    for(int i=0; i < rank_.size(); i++){
+        if(pre_population_->spiked[rank_[i]])
+            pre_spikes_.push_back(i);
+    }
     
     // sort in achieved spikes and set the delayed spikes
     if ( maxDelay_ > 0 )
@@ -246,9 +248,10 @@ void %(class)s::evaluatePreEvent()
         if (!pre_spikes_.empty())
             std::cout << "t = "<< ANNarchy_Global::time << " evaluated spikes" << std::endl;
     #endif
+        int i = 0;
         for ( int n = 0; n < pre_spikes_.size(); n++)
         {
-            int i = inv_rank_[pre_spikes_[n]];
+            i = pre_spikes_[n];
             %(pre_event_learn)s
         }
     }
