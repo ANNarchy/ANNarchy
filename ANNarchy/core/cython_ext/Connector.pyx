@@ -20,7 +20,7 @@ cdef class CSR:
 
     def __init__(self):
 
-        self.max_delay = Global.config['dt']
+        self.max_delay = 1
         self.dt = Global.config['dt']
         self.size = 0
         self.nb_synapses = 0
@@ -39,7 +39,7 @@ cdef class CSR:
         
         # Treat delays separately
         max_d = np.max(d)
-        if max_d*self.dt > self.dt: # A non-zero delay is specified
+        if max_d > 1: # A non-zero delay is specified
             self.delays.insert(pair[int, vector[int]](rk, d))
 
             if max_d > self.max_delay:

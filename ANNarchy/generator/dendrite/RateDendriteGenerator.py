@@ -120,7 +120,7 @@ class RateDendriteGenerator(DendriteGenerator):
         # Select the template according delay and paradigm
         #
         # Assumption: all dendrites have similar structure
-        if self.desc['csr'] and self.desc['csr'].get_max_delay() > Global.config['dt']:
+        if self.desc['csr'] and self.desc['csr'].get_max_delay() > 1:
             if self.desc['csr'].uniform_delay():        
                 template = psp_code_const_delay_omp if (self.paradigm == "openmp") else psp_code_body_cuda
             else:
