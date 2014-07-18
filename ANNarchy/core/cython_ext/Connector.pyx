@@ -1,10 +1,14 @@
 # distutils: language = c++
 
 from libcpp.vector cimport vector
+from libcpp.pair cimport pair
+from libcpp.map cimport map
+from libcpp cimport bool
+
 import numpy as np
 cimport numpy as np
 
-from libc.math cimport exp, fabs
+from libc.math cimport exp, fabs, ceil
 
 import ANNarchy
 from ANNarchy.core import Global
@@ -15,75 +19,66 @@ cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 cdef class CSR:
 
     def __init__(self):
-        self.data = {}
-        self.delay = {}
+
         self.max_delay = Global.config['dt']
         self.dt = Global.config['dt']
         self.size = 0
         self.nb_synapses = 0
 
     def add (self, int rk, list r, list w, list d):
-        cdef list val
-        val = []
-        val.append(r)
-        val.append(w)
-        self.data[rk] = val
+        cdef vector[int] ranks = r
+        cdef vector[double] weights = w
+        cdef vector[int] delays = d
+        self.push_back(rk, ranks, weights, delays)
+
+    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[int] d):
+
+        self.post_ranks.push_back(rk)
+        self.ranks.insert(pair[int, vector[int]](rk, r))
+        self.weights.insert(pair[int, vector[double]](rk, w))
         
+        # Treat delays separately
         max_d = np.max(d)
-        if max_d*self.dt > self.dt:
-            self.delay[rk] = d
+        if max_d*self.dt > self.dt: # A non-zero delay is specified
+            self.delays.insert(pair[int, vector[int]](rk, d))
 
             if max_d > self.max_delay:
                 self.max_delay = max_d
-        else:
-            self.delay[rk] = []
+        else: # Default delay
+            self.delays.insert(pair[int, vector[int]](rk, vector[int](0, 0)))
 
         self.size += 1
         self.nb_synapses += len(r)
 
-    cdef push_back (self, int rk, vector[int] r, vector[float] w, vector[int] d):
-        cdef list val
-        val = []
-        val.append(r)
-        val.append(w)
-        self.data[rk] = val
+    # cpdef set_delay(self, int rk, vector[int] d):
+    #     self.delay[rk] = d
 
-        max_d = np.max(d)
-        if max_d*self.dt > self.dt:
-            self.delay[rk] = d
+    # cpdef get_data(self):
+    #     return self.data
 
-            if max_d > self.max_delay:
-                self.max_delay = max_d
-        else:
-            self.delay[rk] = []
+    # cpdef get_delay(self):
+    #     return self.delay
 
-        self.size += 1
-        self.nb_synapses += len(r)
-
-    def keys(self):
-        return self.data.keys()
-
-    cpdef set_delay(self, int rk, vector[int] d):
-        self.delay[rk] = d
-
-    cpdef get_data(self):
-        return self.data
-
-    cpdef get_delay(self):
-        return self.delay
-
-    cpdef get_max_delay(self):
+    cpdef int get_max_delay(self):
         return self.max_delay
+
+    cpdef list get_post_ranks(self):
+        return list(self.post_ranks)
+
+    cpdef bool uniform_delay(self):
+        cdef list delay = self.delays[self.post_ranks[0]]
+        return len(list(set(delay))) == 1
 
 def all_to_all(pre, post, weights, delays, allow_self_connections):
     """ Cython implementation of the all-to-all pattern."""
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, size_pre, i
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -113,14 +108,15 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
         size_pre = len(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](size_pre, float(weights))
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -131,10 +127,11 @@ def one_to_one(pre, post, weights, delays, shift):
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, offset
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -165,16 +162,16 @@ def one_to_one(pre, post, weights, delays, shift):
         r = tmp
         # Weights
         if isinstance(weights, (int, float)):
-            tmp = [float(weights)]
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             tmp = weights.get_list_values(1)
-        w = tmp
+            w = tmp
         # Delays
         if isinstance(delays, (float, int)):
-            tmp = [int(delays/dt)]
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            tmp = [int(a/dt) for a in delays.get_list_values(1) ]
-        d=tmp
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(1) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -187,10 +184,11 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef list tmp, pre_ranks, post_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -215,19 +213,20 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
             if not allow_self_connections and (r_pre==r_post):
                 continue
             if np.random.random() < probability:
-                tmp .append(r_pre) 
+                tmp.append(r_pre)
         r = tmp
         size_pre = len(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](size_pre, float(weights))
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -238,11 +237,12 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -273,14 +273,15 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
         r = list(tmp)
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](number, float(weights))
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(number)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(number) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(number) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -291,12 +292,13 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
 
     cdef CSR projection
     cdef float dt
+    cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
     cdef list rk_mat, pre_r
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
     # Retrieve simulation time step
     dt = Global.config['dt']
@@ -335,14 +337,15 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         size_pre = len(rk_mat[r_post])
         # Weights
         if isinstance(weights, (int, float)):
-            w = vector[float](size_pre, float(weights))
+            weight = weights
+            w = vector[double](1, weight)
         elif isinstance(weights, RandomDistribution):
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(size_pre) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -358,7 +361,7 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
     cdef list ranks, values
 
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
 
     # Retrieve simulation time step
@@ -418,9 +421,9 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
         r = ranks
         w = values
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite
         projection.push_back(post, r, w, d)
 
@@ -436,7 +439,7 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
     cdef list ranks, values
 
     cdef vector[int] r, d
-    cdef vector[float] w
+    cdef vector[double] w
 
 
     # Retrieve simulation time step
@@ -496,9 +499,9 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
         r = ranks
         w = values
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(delays/dt))
+            d = vector[int](1, int(ceil(delays/dt)))
         elif isinstance(delays, RandomDistribution):
-            d = [int(a/dt) for a in delays.get_list_values(nb_synapses) ]
+            d = [int(ceil(a/dt)) for a in delays.get_list_values(nb_synapses) ]
         # Create the dendrite
         projection.push_back(post, r, w, d)
 

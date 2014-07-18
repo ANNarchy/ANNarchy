@@ -279,8 +279,6 @@ private:
         if(spike_times_[i].size() > 0)
            next_spikes_[i] = spike_times_[i][0];
     }
-
-    spiked_ = std::vector<bool>(nbNeurons_, false);
     
     try
     {
@@ -314,7 +312,6 @@ void %(class)s::localMetaStep(int i)
 
 void %(class)s::globalMetaStep() 
 {
-    spiked_ = std::vector<bool>(nbNeurons_, false); 
 }
 
 void %(class)s::globalOperations() 

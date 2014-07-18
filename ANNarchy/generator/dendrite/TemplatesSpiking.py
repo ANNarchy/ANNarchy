@@ -109,8 +109,8 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->getProjection(pre, target)->addDendrite(postRank, this);
-    pre_population_->addSpikeTarget(this);
+    //post_population_->getProjection(pre, target)->addDendrite(postRank, this);
+    //pre_population_->addSpikeTarget(this);
 
     // Recording of weights disabled by default
     record_w_ = false;
@@ -126,8 +126,8 @@ using namespace ANNarchy_Global;
     target_ = target;
     post_neuron_rank_ = postRank;
     
-    post_population_->getProjection(pre_population_, target)->addDendrite(postRank, this);
-    pre_population_->addSpikeTarget(this);
+    //post_population_->getProjection(pre_population_, target)->addDendrite(postRank, this);
+    //pre_population_->addSpikeTarget(this);
     
     // Recording of weights disabled by default
     record_w_ = false;
@@ -169,17 +169,17 @@ void %(class)s::globalLearn() {
 
 void %(class)s::computePsp() 
 {
+    // pre_spikes are correctly updated by evaluate pre event, even in delayed case
     DATA_TYPE sum = 0.0;
-    
+    int i = 0;
+
     for ( int n = 0; n < pre_spikes_.size(); n++)
-    {
-        int i = pre_spikes_[n];
-        
-        sum += %(rside)s       
+    {        
+        i = pre_spikes_[n];
+        sum += %(rside)s
     }
     
     %(lside)s += sum;
-
     pre_spikes_.clear();
 }
 
@@ -193,7 +193,6 @@ void %(class)s::postEvent()
 %(post_event)s
 }
 
-
 void %(class)s::evaluatePreEvent()
 {
 #if defined(_DEBUG) && defined (_DBEUG_SPIKE_DELAY)
@@ -206,37 +205,58 @@ void %(class)s::evaluatePreEvent()
         std::cout << "]" << std::endl;
     }
 #endif
+
+    // Gather all spikes from connected neurons
+    for(int i=0; i < rank_.size(); i++){
+        if(pre_population_->spiked[rank_[i]])
+            pre_spikes_.push_back(i);
+    }
     
-    if ( maxDelay_ > 0 )
-        if ( constDelay_ )
-            pre_spikes_ = delayed_pre_spikes_[0]; 
-        else
-            std::cout << "Not implemented yet.";    
-    
-    if ( pre_spikes_.size() > 0 )
+    // sort in achieved spikes and set the delayed spikes
+    if ( maxDelay_ > 1 )
     {
-    #ifdef _DEBUG
-        #pragma omp master
+        if ( constDelay_ )
         {
-            std::cout << "t = " << ANNarchy_Global::time << ", n = "<< post_neuron_rank_ << ": " << pre_spikes_.size() << " presynaptic event(s)." << std::endl;
-            std::cout << "[";
-            for (auto it = pre_spikes_.begin(); it != pre_spikes_.end(); it++)
-                std::cout << *it << ", ";
-            std::cout << "]"<< std::endl;
-        }
-    #endif
-        
-        if ( isLearning() && !post_population_->hasSpiked(post_neuron_rank_) )
-        {
-            for ( int n = 0; n < pre_spikes_.size(); n++)
+            if (!pre_spikes_.empty())
             {
-                int i = pre_spikes_[n];
-                %(pre_event_learn)s
+            #ifdef _DEBUG_SPIKE_DELAY
+                std::cout << "t = "<< ANNarchy_Global::time << " received spikes and delay them " << maxDelay_ << std::endl;
+            #endif
+                delayed_pre_spikes_[maxDelay_-1] = pre_spikes_; // a current values at correct position
             }
+        } 
+        else
+            std::cout << "Not implemented yet.";
+            
+        pre_spikes_ = delayed_pre_spikes_[0];    
+    }
+
+#ifdef _DEBUG
+    #pragma omp master
+    {
+        std::cout << "t = " << ANNarchy_Global::time << ", n = "<< post_neuron_rank_ << ": " << pre_spikes_.size() << " presynaptic event(s)." << std::endl;
+        std::cout << "[";
+        for (auto it = pre_spikes_.begin(); it != pre_spikes_.end(); it++)
+            std::cout << *it << ", ";
+        std::cout << "]"<< std::endl;
+    }
+#endif
+        
+    if ( isLearning() && !post_population_->hasSpiked(post_neuron_rank_) )
+    {
+    #ifdef _DEBUG_SPIKE_DELAY
+        if (!pre_spikes_.empty())
+            std::cout << "t = "<< ANNarchy_Global::time << " evaluated spikes" << std::endl;
+    #endif
+        int i = 0;
+        for ( int n = 0; n < pre_spikes_.size(); n++)
+        {
+            i = pre_spikes_[n];
+            %(pre_event_learn)s
         }
     }
 
-    if ( maxDelay_ > 0 )
+    if ( maxDelay_ > 1 )
     {
         delayed_pre_spikes_.push_back( std::vector<int>() );
         delayed_pre_spikes_.pop_front();

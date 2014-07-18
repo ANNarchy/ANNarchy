@@ -60,8 +60,6 @@ public:
 
     virtual void evaluatePreEvent() = 0;
 
-    void preEvent(int rank);
-
 protected:
     std::vector<int> pre_spikes_;
     std::deque<std::vector<int> > delayed_pre_spikes_;

@@ -40,8 +40,11 @@ public:
     std::vector<int> get_delay(int post_rank);
     
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
-    
-    void addDendrite(int, std::vector<int>, std::vector<DATA_TYPE>, std::vector<int>);
+
+    void createDendrites(std::vector<int> post_ranks,
+                         std::map<int, std::vector<int> > ranks, 
+                         std::map<int, std::vector<DATA_TYPE> > weights, 
+                         std::map<int, std::vector<int> > delays);
         
 %(access)s
 
@@ -136,14 +139,37 @@ std::vector<int> %(class)s::get_delay(int post_rank)
 
 %(access)s
 
-void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
+
+void %(class)s::createDendrites(
+    std::vector<int> post_ranks,
+    std::map<int, std::vector<int> > ranks, 
+    std::map<int, std::vector<DATA_TYPE> > weights, 
+    std::map<int, std::vector<int> > delays)
 {
-    dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
-    
-    dendrites_[post_rank]->set_rank(rank);
-    dendrites_[post_rank]->set_w(w);
-    dendrites_[post_rank]->set_delay(delay);    
+
+    if( (ranks.size() != weights.size()) || (ranks.size() != delays.size()) ){
+        std::cout << "ERROR: unable to create the synapses of %(class)s: the CSR object is not valid" << std::endl;
+        return;
+    }
+
+    int post_rank = 0;
+    for (int i = 0; i < post_ranks.size(); i++){
+        post_rank = post_ranks[i];
+        dendrites_[post_rank] = static_cast<RateDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
+        dendrites_[post_rank]->set_rank(ranks[post_rank]);
+        if(weights[post_rank].size() == 1){ // A single value is provided
+            int nbsyn = ranks[post_rank].size();
+            dendrites_[post_rank]->set_w(std::vector<DATA_TYPE>(nbsyn, weights[post_rank][0]));
+        }
+        else{
+            dendrites_[post_rank]->set_w(weights[post_rank]);
+        }
+        
+        dendrites_[post_rank]->set_delay(delays[post_rank]); 
+
+    } 
 }
+
 """
 
 # Header for a spike dendrite.
@@ -188,8 +214,11 @@ public:
     std::vector<int> get_delay(int post_rank);
     
     Population* getPrePopulation() { return static_cast<Population*>(pre_population_); }
-    
-    void addDendrite(int, std::vector<int>, std::vector<DATA_TYPE>, std::vector<int>);
+
+    void createDendrites(std::vector<int> post_ranks,
+                         std::map<int, std::vector<int> > ranks, 
+                         std::map<int, std::vector<DATA_TYPE> > weights, 
+                         std::map<int, std::vector<int> > delays);
     
 %(access)s
 
@@ -280,14 +309,36 @@ std::vector<int> %(class)s::get_delay(int post_rank)
 
 %(access)s
 
-void %(class)s::addDendrite(int post_rank, std::vector<int> rank, std::vector<DATA_TYPE> w, std::vector<int> delay)
+void %(class)s::createDendrites(
+    std::vector<int> post_ranks,
+    std::map<int, std::vector<int> > ranks, 
+    std::map<int, std::vector<DATA_TYPE> > weights, 
+    std::map<int, std::vector<int> > delays)
 {
-    dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
-    
-    dendrites_[post_rank]->set_rank(rank);
-    dendrites_[post_rank]->set_w(w);
-    dendrites_[post_rank]->set_delay(delay);    
+
+    if( (ranks.size() != weights.size()) || (ranks.size() != delays.size()) ){
+        std::cout << "ERROR: unable to create the synapses of %(class)s: the CSR object is not valid" << std::endl;
+        return;
+    }
+
+    int post_rank = 0;
+    for (int i = 0; i < post_ranks.size(); i++){
+        post_rank = post_ranks[i];
+        dendrites_[post_rank] = static_cast<SpikeDendrite*>(new %(dend_class)s(pre_population_, post_population_, post_rank, target_, this));
+        dendrites_[post_rank]->set_rank(ranks[post_rank]);
+        if(weights[post_rank].size() == 1){ // A single value is provided
+            int nbsyn = ranks[post_rank].size();
+            dendrites_[post_rank]->set_w(std::vector<DATA_TYPE>(nbsyn, weights[post_rank][0]));
+        }
+        else{
+            dendrites_[post_rank]->set_w(weights[post_rank]);
+        }
+        
+        dendrites_[post_rank]->set_delay(delays[post_rank]); 
+
+    } 
 }
+
 """
 
 # Template for a local variable
@@ -394,20 +445,21 @@ global_idx_variable_access_body = \
 # 
 rate_projection_pyx = \
 """from libcpp.vector cimport vector
-from libcpp.string cimport string
+from libcpp.pair cimport pair
+from libcpp.map cimport map
 from libcpp cimport bool
 
 import numpy as np
 cimport numpy as np
 
 import ANNarchy
-from ANNarchy.core.cython_ext.Connector import CSR as CSR
+from ANNarchy.core.cython_ext.Connector cimport CSR as CSR
 
 cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(int preLayer, int postLayer, int target)
 
-        void addDendrite(int, vector[int], vector[float], vector[int])
+        void createDendrites(vector[int] post_ranks, map[int, vector[int]] ranks, map[int, vector[DATA_TYPE]] weights, map[int, vector[int]] delays)
 
         void addSynapse(int, int, float, int)
 
@@ -483,15 +535,14 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_delay(self, int post_rank):
         return np.array(self.cInstance.get_delay(post_rank))
 
+    # Create the connections
     cpdef createFromCSR( self, dendrites ):
-        cdef int rank
-        cdef list data
-        cdef dict delays 
-
-        delays = dendrites.get_delay()
-        for rank, data in dendrites.get_data().iteritems():
-            # create dendrite instance
-            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])
+        cdef CSR dend = dendrites
+        cdef vector[int] post_ranks = dend.post_ranks
+        cdef map[int, vector[int]] ranks = dend.ranks
+        cdef map[int, vector[double]] weights = dend.weights
+        cdef map[int, vector[int]] delays = dend.delays
+        self.cInstance.createDendrites(post_ranks, ranks, weights, delays)  
 
     cpdef int _nb_dendrites(self):
         return self.cInstance.nbDendrites()
@@ -499,6 +550,7 @@ cdef class py%(name)s:
     cpdef int _nb_synapses(self, int post_rank):
         return self.cInstance.nbSynapses(post_rank)
 
+    # Learning parameters
     cpdef bool _get_learning(self):
         return self.cInstance.isLearning()
         
@@ -532,20 +584,21 @@ cdef class py%(name)s:
 # 
 spike_projection_pyx = \
 """from libcpp.vector cimport vector
-from libcpp.string cimport string
+from libcpp.pair cimport pair
+from libcpp.map cimport map
 from libcpp cimport bool
 
 import numpy as np
 cimport numpy as np
 
 import ANNarchy
-from ANNarchy.core.cython_ext.Connector import CSR as CSR
+from ANNarchy.core.cython_ext.Connector cimport CSR as CSR
 
 cdef extern from "../build/%(name)s.h":
     cdef cppclass %(name)s:
         %(name)s(int preLayer, int postLayer, int target)
 
-        void addDendrite(int, vector[int], vector[float], vector[int])
+        void createDendrites(vector[int] post_ranks, map[int, vector[int]] ranks, map[int, vector[DATA_TYPE]] weights, map[int, vector[int]] delays)
 
         void addSynapse(int, int, float, int)
 
@@ -621,22 +674,14 @@ cdef class py%(name)s:
     cpdef np.ndarray _get_delay(self, int post_rank):
         return np.array(self.cInstance.get_delay(post_rank))
 
-    cpdef createFromDict( self, dict dendrites ):
-        cdef int rank
-        cdef dict data        
-        for rank, data in dendrites.iteritems():
-            # create dendrite instance
-            self.cInstance.addDendrite(rank, data['rank'], data['weight'], data['delay'])
-
+    # Create the connections
     cpdef createFromCSR( self, dendrites ):
-        cdef int rank
-        cdef list data
-        cdef dict delays 
-
-        delays = dendrites.get_delay()
-        for rank, data in dendrites.get_data().iteritems():
-            # create dendrite instance
-            self.cInstance.addDendrite(rank, data[0], data[1], delays[rank])     
+        cdef CSR dend = dendrites
+        cdef vector[int] post_ranks = dend.post_ranks
+        cdef map[int, vector[int]] ranks = dend.ranks
+        cdef map[int, vector[double]] weights = dend.weights
+        cdef map[int, vector[int]] delays = dend.delays
+        self.cInstance.createDendrites(post_ranks, ranks, weights, delays)    
 
     cpdef int _nb_dendrites(self):
         return self.cInstance.nbDendrites()
@@ -644,6 +689,7 @@ cdef class py%(name)s:
     cpdef int _nb_synapses(self, int post_rank):
         return self.cInstance.nbSynapses(post_rank)
         
+    # Learning parameters
     cpdef bool _get_learning(self):
         return self.cInstance.isLearning()
         

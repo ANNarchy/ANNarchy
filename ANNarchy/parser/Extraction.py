@@ -408,11 +408,11 @@ def extract_targets(variables):
         # Rate-coded neurons
         code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])sum\(([^()]+)\)', var['eq'])
         for l, t in code:
-            targets.append(t)
+            targets.append(t.strip())
         # Spiking neurons
         code = re.findall('([^\_a-zA-Z0-9.])g_([\w]+)', var['eq'])
         for l, t in code:
-            targets.append(t)
+            targets.append(t.strip())
     return list(set(targets))
 
 def extract_spike_variable(pop_desc):

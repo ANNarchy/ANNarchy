@@ -37,10 +37,6 @@ public:
 
     virtual Population* getPrePopulation() = 0;
 
-    virtual void addDendrite(int postNeuronRank, class Dendrite *dendrite) = 0;
-
-    virtual void addDendrite(int postNeuronRank, std::vector<int> ranks, std::vector<DATA_TYPE> ws, std::vector<int> delays) = 0;
-
     virtual class Dendrite* getDendrite(int postNeuronRank) = 0;
 
     virtual void removeDendrite(int postNeuronRank, class Population *pre) = 0;

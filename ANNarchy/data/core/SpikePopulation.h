@@ -128,6 +128,8 @@ public:
      * Tells if the neuron has spikes at time t (default: current step) 
     */
 	bool hasSpiked(int rank, int t=-1);
+    std::vector<bool> spiked;
+    
     /**
      * Returns the number of spikes in the last t steps
     */
@@ -146,6 +148,7 @@ public:
 	virtual void globalOperations() {}
 	virtual void reset(int rank) {}
 
+	std::vector<int> getPropagate() { return propagate_; }
 
 protected:
 
@@ -156,14 +159,12 @@ protected:
 	std::vector<int> refractory_times_;
 	std::vector<int> refractory_counter_;
 
-	std::vector< bool > spiked_;
+    // Spikes
 	std::vector< std::vector<int> > spike_timings_;
     bool record_spike_;
     std::vector<int> lastSpike_;
 
-    
     std::vector<int> propagate_;    ///< neurons which will propagate their spike
-    std::vector<int> reset_;    ///< neurons which will reset after current eval
 };
 
 

@@ -25,7 +25,6 @@
 
 SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(name, nbNeurons, false)
 {
-	spiked_ = std::vector< bool >(nbNeurons_, false);
 	spike_timings_ = std::vector< std::vector<int> >(nbNeurons_, std::vector<int>() );
 
 	spikeTargets_ = std::vector<std::vector<Dendrite*> >(nbNeurons_, std::vector<Dendrite*>());
@@ -33,6 +32,7 @@ SpikePopulation::SpikePopulation(std::string name, int nbNeurons) : Population(n
     record_spike_ = false;
 
     lastSpike_ = std::vector<int>(nbNeurons_, -10000);
+    spiked = std::vector<bool>(nbNeurons_, false);
 
     has_refractory_ = false;
     refractory_counter_ = std::vector<int>(nbNeurons_,  0);
@@ -64,7 +64,7 @@ int SpikePopulation::getLastSpikeTime(int rank)
 bool SpikePopulation::hasSpiked(int rank, int t) 
 { 
     if (t==-1){ // asking for the current step
-        return spiked_[rank]; 
+        return spiked[rank];
     }
     else{
         for(int i=spike_timings_[rank].size()-1; i>0; i--){
@@ -86,13 +86,12 @@ void SpikePopulation::emit_spike(int i)
         {
             //std::cout << "emit spike (pop " << name_ <<")["<<i<<"] ( time="<< ANNarchy_Global::time<< ")" << std::endl;
             this->propagate_.push_back(i);
-            this->reset_.push_back(i);
             
+            spiked[i] = true;
             lastSpike_[i] = ANNarchy_Global::time;
             if(record_spike_){
                 spike_timings_[i].push_back(ANNarchy_Global::time);
             }
-            spiked_[i] = true;
         }
     }
 }
@@ -140,6 +139,9 @@ void SpikePopulation::setMaxDelay(int delay)
 
 void SpikePopulation::metaStep()
 {
+	propagate_.clear();
+    std::fill(spiked.begin(), spiked.end(), false);
+
     // Random generators
     #pragma omp master
     {
@@ -282,6 +284,7 @@ void SpikePopulation::propagateSpikes()
                 static_cast<SpikeProjection*>(*p_it)->postEvent(propagate_);
         }
 
+        /*
         for(auto n_it= propagate_.begin(); n_it!= propagate_.end(); n_it++)
         {
             // emit a presynaptic spike on outgoing projections
@@ -293,6 +296,7 @@ void SpikePopulation::propagateSpikes()
     
         // spike handling is completed
         propagate_.erase(propagate_.begin(), propagate_.end());
+        */
     }
 #ifdef ANNAR_PROFILE
     stop = omp_get_wtime();

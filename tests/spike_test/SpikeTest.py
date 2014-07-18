@@ -72,7 +72,7 @@ testAll2AllSpike = Projection(
     post = Middle, 
     target = 'exc',
     synapse = SimpleLearn
-).connect_all_to_all(weights=Uniform(0.0, 1.0), delays=100.0)
+).connect_all_to_all(weights=Uniform(0.0, 1.0), delays=50.0)
 
 compile()
 

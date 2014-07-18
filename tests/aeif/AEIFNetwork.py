@@ -12,14 +12,14 @@ EIF = Neuron(
     tau_syn_I = 10.0 : population
     e_rev_E = 0.0 : population
     e_rev_I = -80.0 : population
-    i_offset = 0.0
     delta_T = 3.0 : population
     v_thresh = -55.0 : population
     v_reset = -70.0 : population
     v_spike = -20.0 : population
 """,
-    equations="""    
-    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + tau_m/cm*i_offset : init=-70.0
+    equations="""
+    
+    cm * dv/dt = cm/tau_m*(v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) ) + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v)  : init=-70.0
     
     tau_syn_E * dg_exc/dt = - g_exc 
     tau_syn_I * dg_inh/dt = - g_inh 
@@ -41,18 +41,18 @@ P = Population(geometry=4000, neuron=EIF)
 Pe = P[:3200]
 Pi = P[3200:]
 Pe_input = P[:200]
-Pi_input = P[3800:]
+Pi_input = P[3200:3400]
 
 # Projections
-we = 1.5 # excitatory synaptic weight
-wi = 2.5 # inhibitory synaptic weight
+we = 0.0015 # excitatory synaptic weight
+wi = 0.00375 # inhibitory synaptic weight
 Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
 Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
 # Initialization
 P.v = -70.0 + 10.0 * np.random.rand(P.size)
-P.g_exc = (np.random.randn(P.size) * 2 + 5) * we
-P.g_inh = (np.random.randn(P.size) * 2 + 5) * wi
+P.g_exc = (np.random.randn(P.size) * 2.0 + 5.0) * we
+P.g_inh = (np.random.randn(P.size) * 2.0 + 5.0) * wi
 
 # Poisson inputs
 i_exc = PoissonPopulation(geometry=200, rates="if t < 200.0 : 2000.0 else : 0.0")
@@ -64,10 +64,11 @@ Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
 compile()
 
 # Simulate
-P.start_record(['spike'])
+P.start_record(['spike', 'g_exc', 'g_inh'])
 
 print 'Start simulation'
 simulate(250.0, measure_time=True)
+#simulate(50.0, measure_time=True)
 
 # Retrieve recordings
 data = P.get_record()
@@ -75,7 +76,15 @@ spikes = raster_plot(data['spike'])
 if len(spikes) == 0 : # Nothing to plot
     exit()
 
+gexc = data['g_exc']['data'][500, :]
+ginh = data['g_inh']['data'][500, :]
+
 # Plot
 from pylab import *
+subplot(1,2,1)
 plot(dt*spikes[:, 0], spikes[:, 1], '.')
+subplot(1,2,2)
+plot(dt*np.arange(len(gexc)), gexc, label='g_exc')
+plot(dt*np.arange(len(ginh)), ginh, label = 'g_inh')
+legend()
 show()

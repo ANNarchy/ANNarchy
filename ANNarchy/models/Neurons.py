@@ -171,7 +171,7 @@ class IF_curr_expClass(Neuron):
 """ 
 
         spike = """
-    v >= v_thresh
+    v > v_thresh
 """
         reset = """
     v = v_reset
@@ -249,7 +249,7 @@ class IF_cond_expClass(Neuron):
 """
 
         spike = """
-    v >= v_thresh
+    v > v_thresh
 """
         reset = """
     v = v_reset
@@ -338,7 +338,7 @@ class IF_curr_alphaClass(Neuron):
 """ 
 
         spike = """
-    v >= v_thresh
+    v > v_thresh
 """
         reset = """
     v = v_reset
@@ -428,7 +428,7 @@ class IF_cond_alphaClass(Neuron):
 """
 
         spike = """
-    v >= v_thresh
+    v > v_thresh
 """
         reset = """
     v = v_reset
@@ -537,7 +537,7 @@ class EIF_cond_exp_isfa_istaClass(Neuron):
 """
 
         spike = """
-    v >= v_spike
+    v > v_spike
 """
         reset = """
     v = v_reset
@@ -600,7 +600,7 @@ class EIF_cond_alpha_isfa_istaClass(Neuron):
 
     Spike emission:
 
-        v > v_thresh
+        v > v_spike
 
     Reset:
 
@@ -648,7 +648,7 @@ class EIF_cond_alpha_isfa_istaClass(Neuron):
 """
 
         spike = """
-    v >= v_spike
+    v > v_spike
 """
         reset = """
     v = v_reset
