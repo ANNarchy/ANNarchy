@@ -213,7 +213,7 @@ void %(class)s::evaluatePreEvent()
     }
     
     // sort in achieved spikes and set the delayed spikes
-    if ( maxDelay_ > 0 )
+    if ( maxDelay_ > 1 )
     {
         if ( constDelay_ )
         {
@@ -256,7 +256,7 @@ void %(class)s::evaluatePreEvent()
         }
     }
 
-    if ( maxDelay_ > 0 )
+    if ( maxDelay_ > 1 )
     {
         delayed_pre_spikes_.push_back( std::vector<int>() );
         delayed_pre_spikes_.pop_front();
