@@ -24,6 +24,7 @@
 
 """
 from libcpp.string cimport string
+from libcpp cimport bool
 
 cdef extern from "../build/Profile.h":
     cdef cppclass Profile:
@@ -35,19 +36,19 @@ cdef extern from "../build/Profile.h":
         
         float lastRecordedTimeNet()
 
-        float getAvgTimeSum(string name, int begin, int end)
+        float getAvgTimeSum(string name, int begin, int end, bool)
         
         float lastRecordedTimeSum(string name)
 
-        float getAvgTimeStep(string name, int begin, int end)
+        float getAvgTimeStep(string name, int begin, int end, bool)
         
         float lastRecordedTimeStep(string name)
 
-        float getAvgTimeLocal(string name, int begin, int end)
+        float getAvgTimeLocal(string name, int begin, int end, bool)
         
         float lastRecordedTimeLocal(string name)
 
-        float getAvgTimeGlobal(string name, int begin, int end)
+        float getAvgTimeGlobal(string name, int begin, int end, bool)
         
         float lastRecordedTimeGlobal(string name)
 
@@ -92,26 +93,26 @@ cdef class pyProfile:
     def lastTimeSum(self, name):
         return self.cInstance.lastRecordedTimeSum(name)
     
-    def avgTimeSum(self, name, begin, end):
-        return self.cInstance.getAvgTimeSum(name, begin, end)
+    def avgTimeSum(self, name, begin, end, remove_outlier):
+        return self.cInstance.getAvgTimeSum(name, begin, end, remove_outlier)
 
     def lastTimeStep(self, name):
         return self.cInstance.lastRecordedTimeStep(name)
     
-    def avgTimeStep(self, name, begin, end):
-        return self.cInstance.getAvgTimeStep(name, begin, end)
+    def avgTimeStep(self, name, begin, end, remove_outlier):
+        return self.cInstance.getAvgTimeStep(name, begin, end, remove_outlier)
 
     def lastTimeLocal(self, name):
         return self.cInstance.lastRecordedTimeLocal(name)
     
-    def avgTimeLocal(self, name, begin, end):
-        return self.cInstance.getAvgTimeLocal(name, begin, end)
+    def avgTimeLocal(self, name, begin, end, remove_outlier):
+        return self.cInstance.getAvgTimeLocal(name, begin, end, remove_outlier)
 
     def lastTimeGlobal(self, name):
         return self.cInstance.lastRecordedTimeGlobal(name)
     
-    def avgTimeGlobal(self, name, begin, end):
-        return self.cInstance.getAvgTimeGlobal(name, begin, end)
+    def avgTimeGlobal(self, name, begin, end, remove_outlier):
+        return self.cInstance.getAvgTimeGlobal(name, begin, end, remove_outlier)
     
     def lastTimeConductance(self, name):
         return self.cInstance.lastRecordedTimeConductance(name)

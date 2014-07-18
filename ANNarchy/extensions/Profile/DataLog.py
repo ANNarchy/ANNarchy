@@ -89,6 +89,24 @@ class DataLog(object):
         
         return mean
 
+    def variance(self):
+        """
+        implementation of the corrected variance
+        """
+        variance = np.zeros(len(self._data_pts))
+        
+        i = 0
+        for t in self._data_pts.keys(): # assume here, that threads are stored ascending in the key value pair
+            var = 0.0;
+            x_mean = self.mean(self._data_pts[t])
+            for x in self._data_pts[t]:
+                var += (x - x_mean) ** 2
+            
+            variance[i] = var / (len(self._data_pts[t]) - 1 )
+            i+=1
+        
+        return variance
+
     def min(self):
         """
         """

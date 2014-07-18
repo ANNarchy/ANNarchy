@@ -37,7 +37,7 @@ class RateProfile(Profile):
     """
     Measuring and analyzing of rate-coded populations.
     """                
-    def measure(self, thread, trial, begin, end):
+    def measure(self, thread, trial, begin, end, remove_outlier=True):
         """
         Retrieve measure data.
         
@@ -57,10 +57,10 @@ class RateProfile(Profile):
             self._net_data[thread, trial] = self._average_net( begin, end )
         
         for name, data in self._pop_data.iteritems():
-            data['sum'][thread, trial] = self._average_sum(name, begin, end)
-            data['step'][thread, trial] = self._average_step(name, begin, end)
-            data['local'][thread, trial] = self._average_local(name, begin, end)
-            data['global'][thread, trial] = self._average_global(name, begin, end)
+            data['sum'][thread, trial] = self._average_sum(name, begin, end, remove_outlier)
+            data['step'][thread, trial] = self._average_step(name, begin, end, remove_outlier)
+            data['local'][thread, trial] = self._average_local(name, begin, end, remove_outlier)
+            data['global'][thread, trial] = self._average_global(name, begin, end, remove_outlier)
     
     def measure_func(self, func, steps):
         """
@@ -123,11 +123,8 @@ class RateProfile(Profile):
                 
         p1 = self._net_win.addPlot(title = "")
         p1.setLabel('left', "computation time", units='ms')
-        p1.setLabel('bottom', "number of trials",)
+        p1.setLabel('bottom', "number of cores",)
         p1.plot(x_scale, self._net_data._mean)
-        # additional customizations        
-        #p1.getAxis('bottom').setPen('r')
-
 
         col_iter = iter(col_array)
 
@@ -336,37 +333,37 @@ class RateProfile(Profile):
             pop = get_population(name)
             return self._profile_instance.lastTimeSum(pop.class_name)
         
-    def _average_sum(self, name, begin, end):
+    def _average_sum(self, name, begin, end, remove_outlier):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeSum(pop.class_name, begin, end)
+            return self._profile_instance.avgTimeSum(pop.class_name, begin, end, remove_outlier)
 
     def _last_step_step(self, name):
         if isinstance(name, str):
             pop = get_population(name)
             return self._profile_instance.lastTimeStep(pop.class_name)
         
-    def _average_step(self, name, begin, end):
+    def _average_step(self, name, begin, end, remove_outlier):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeStep(pop.class_name, begin, end)
+            return self._profile_instance.avgTimeStep(pop.class_name, begin, end, remove_outlier)
 
     def _last_step_local(self, name):
         if isinstance(name, str):
             pop = get_population(name)
             return self._profile_instance.lastTimeLocal(pop.class_name)
         
-    def _average_local(self, name, begin, end):
+    def _average_local(self, name, begin, end, remove_outlier):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeLocal(pop.class_name, begin, end)
+            return self._profile_instance.avgTimeLocal(pop.class_name, begin, end, remove_outlier)
 
     def _last_step_global(self, name):
         if isinstance(name, str):
             pop = get_population(name)
             return self._profile_instance.lastTimeGlobal(pop.class_name)
         
-    def _average_global(self, name, begin, end):
+    def _average_global(self, name, begin, end, remove_outlier):
         if isinstance(name, str):
             pop = get_population(name)
-            return self._profile_instance.avgTimeGlobal(pop.class_name, begin, end)
+            return self._profile_instance.avgTimeGlobal(pop.class_name, begin, end, remove_outlier)

@@ -141,11 +141,14 @@ public:
     /*
      * exported to python
      */
-    double getAvgTimeSum(std::string name, int begin, int end)
+    double getAvgTimeSum(std::string name, int begin, int end, bool remove_outlier)
     {
         if (timesSum_.count(name) > 0)
         {
-        	return mean(timesSum_[name], begin, end, name);
+            if (remove_outlier)
+                return mean_without_outlier(timesSum_[name], begin, end, name);
+            else
+                return mean(timesSum_[name], begin, end, name);
         }
         else
         {
@@ -195,7 +198,7 @@ public:
     /*
      * exported to python
      */
-    double getAvgTimeStep(std::string name, int begin, int end, bool remove_outliers = false)
+    double getAvgTimeStep(std::string name, int begin, int end, bool remove_outliers)
     {
         if (timesStep_.count(name) > 0)
         {
@@ -270,11 +273,14 @@ public:
     /*
      * exported to python
      */
-    double getAvgTimeLocal(std::string name, int begin, int end)
+    double getAvgTimeLocal(std::string name, int begin, int end, bool remove_outlier)
     {
         if (timesLocal_.count(name) > 0)
         {
-        	return mean(timesLocal_[name], begin, end, name);
+            if(remove_outlier)
+                return mean_without_outlier(timesLocal_[name], begin, end, name);
+            else
+                return mean(timesLocal_[name], begin, end, name);
         }
         else
         {
@@ -324,11 +330,14 @@ public:
     /*
      * exported to python
      */
-    double getAvgTimeGlobal(std::string name, int begin, int end)
+    double getAvgTimeGlobal(std::string name, int begin, int end, bool remove_outlier)
     {
     	if (timesGlobal_.count(name) > 0)
     	{
-    		return mean(timesGlobal_[name], begin, end, name);
+    	    if( remove_outlier )
+    	        return mean_without_outlier(timesGlobal_[name], begin, end, name);
+    	    else
+    	        return mean(timesGlobal_[name], begin, end, name);
     	}
     	else
     	{
@@ -698,7 +707,7 @@ protected:
 
 			if ( cleaned_data.size() > 0 )
 			{
-				std::cout << "Removed " << (end-begin) - cleaned_data.size() << " items from data (" << ( 1 - cleaned_data.size()/(double)(end-begin)) * 100.0 << " % )." << std::endl;
+				//std::cout << "Removed " << (end-begin) - cleaned_data.size() << " items from data (" << ( 1 - cleaned_data.size()/(double)(end-begin)) * 100.0 << " % )." << std::endl;
 				return mean(cleaned_data, 0, cleaned_data.size(), name);
 			}
 			else
