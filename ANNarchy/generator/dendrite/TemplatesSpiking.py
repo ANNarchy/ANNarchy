@@ -177,6 +177,8 @@ void %(class)s::computePsp()
         int i = inv_rank_[pre_spikes_[n]];
         
         sum += %(rside)s
+
+        std::cout << w_[i] << std::endl;
     }
     
     %(lside)s += sum;

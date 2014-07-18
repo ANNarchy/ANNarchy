@@ -47,7 +47,7 @@ Pi_input = P[3800:]
 
 # Projections
 we = 0.0015 # excitatory synaptic weight
-wi = 0.00375 # inhibitory synaptic weight
+wi = 0.0#0.00375 # inhibitory synaptic weight
 Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
 Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
@@ -69,8 +69,8 @@ compile()
 P.start_record(['spike', 'I'])
 
 print 'Start simulation'
-simulate(250.0, measure_time=True)
-#simulate(100.0, measure_time=True)
+#simulate(250.0, measure_time=True)
+simulate(1.0, measure_time=True)
 
 # Retrieve recordings
 data = P.get_record()

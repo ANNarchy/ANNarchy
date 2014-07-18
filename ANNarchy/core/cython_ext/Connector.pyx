@@ -26,24 +26,10 @@ cdef class CSR:
         self.nb_synapses = 0
 
     def add (self, int rk, list r, list w, list d):
-        print 'Temporarily disabled'
-        # cdef list val
-        # val = []
-        # val.append(r)
-        # val.append(w)
-        # self.data[rk] = val
-        
-        # max_d = np.max(d)
-        # if max_d*self.dt > self.dt:
-        #     self.delay[rk] = d
-
-        #     if max_d > self.max_delay:
-        #         self.max_delay = max_d
-        # else:
-        #     self.delay[rk] = []
-
-        # self.size += 1
-        # self.nb_synapses += len(r)
+        cdef vector[int] ranks = r
+        cdef vector[double] weights = w
+        cdef vector[int] delays = d
+        self.push_back(rk, ranks, weights, delays)
 
     cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[int] d):
 
