@@ -826,11 +826,11 @@ add_synapse_body = """
         }
     }
 
-    if ( !isRateCoded_ )
-    {
-        auto tmp = std::pair<int,int>(rank, rank_.size()-1);
-        inv_rank_.insert( tmp );
-    }
+    // if ( !isRateCoded_ )
+    // {
+    //     auto tmp = std::pair<int,int>(rank, rank_.size()-1);
+    //     inv_rank_.insert( tmp );
+    // }
     
     %(add_synapse)s
 
@@ -881,6 +881,6 @@ rem_all_synapse_body = """
     
     %(rem_all_synapse)s
     
-    if( !isRateCoded_ )
-        inv_rank_.clear();
+    // if( !isRateCoded_ )
+    //     inv_rank_.clear();
 """

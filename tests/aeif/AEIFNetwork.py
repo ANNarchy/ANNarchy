@@ -64,7 +64,7 @@ Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
 compile()
 
 # Simulate
-P.start_record(['spike', 'g_exc', 'g_inh'])
+P.start_record(['spike'])
 
 print 'Start simulation'
 simulate(250.0, measure_time=True)
@@ -76,15 +76,7 @@ spikes = raster_plot(data['spike'])
 if len(spikes) == 0 : # Nothing to plot
     exit()
 
-gexc = data['g_exc']['data'][500, :]
-ginh = data['g_inh']['data'][500, :]
-
 # Plot
 from pylab import *
-subplot(1,2,1)
 plot(dt*spikes[:, 0], spikes[:, 1], '.')
-subplot(1,2,2)
-plot(dt*np.arange(len(gexc)), gexc, label='g_exc')
-plot(dt*np.arange(len(ginh)), ginh, label = 'g_inh')
-legend()
 show()

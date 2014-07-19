@@ -84,15 +84,15 @@ void Dendrite::set_rank(std::vector<int> rank)
 	rank_ = rank;
 	nbSynapses_ = rank.size();
 
-	if ( !isRateCoded_ )
-	{
-		inv_rank_.clear();
-		for(int i = 0; i < rank_.size(); i++)
-		{
-		    auto tmp = std::pair<int,int>(rank_[i], i);
-		    inv_rank_.insert( tmp );
-		}
-	}
+	// if ( !isRateCoded_ )
+	// {
+	// 	inv_rank_.clear();
+	// 	for(int i = 0; i < rank_.size(); i++)
+	// 	{
+	// 	    auto tmp = std::pair<int,int>(rank_[i], i);
+	// 	    inv_rank_.insert( tmp );
+	// 	}
+	// }
 }
 
 std::vector<DATA_TYPE> Dendrite::get_w()
