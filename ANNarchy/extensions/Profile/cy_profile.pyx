@@ -32,41 +32,45 @@ cdef extern from "../build/Profile.h":
 
         void resetTimer()
 
-        float getAvgTimeNet(int begin, int end)
+        double getAvgTimeNet(int begin, int end)
         
-        float lastRecordedTimeNet()
+        double lastRecordedTimeNet()
 
-        float getAvgTimeSum(string name, int begin, int end, bool)
+        double getAvgTimeSum(string name, int begin, int end, bool)
         
-        float lastRecordedTimeSum(string name)
+        double getStdDevSum(string name, int begin, int end, bool)
+        
+        double lastRecordedTimeSum(string name)
 
-        float getAvgTimeStep(string name, int begin, int end, bool)
+        double getAvgTimeStep(string name, int begin, int end, bool)
         
-        float lastRecordedTimeStep(string name)
+        double getStdDevStep(string name, int begin, int end, bool)
+        
+        double lastRecordedTimeStep(string name)
 
-        float getAvgTimeLocal(string name, int begin, int end, bool)
+        double getAvgTimeLocal(string name, int begin, int end, bool)
         
-        float lastRecordedTimeLocal(string name)
+        double lastRecordedTimeLocal(string name)
 
-        float getAvgTimeGlobal(string name, int begin, int end, bool)
+        double getAvgTimeGlobal(string name, int begin, int end, bool)
         
-        float lastRecordedTimeGlobal(string name)
+        double lastRecordedTimeGlobal(string name)
 
-        float getAvgTimeConductance(string name, int begin, int end)
+        double getAvgTimeConductance(string name, int begin, int end)
         
-        float lastRecordedTimeConductance(string name)
+        double lastRecordedTimeConductance(string name)
 
-        float getAvgTimeSpikeDelivery(string name, int begin, int end)
+        double getAvgTimeSpikeDelivery(string name, int begin, int end)
         
-        float lastRecordedTimeSpikeDelivery(string name)
+        double lastRecordedTimeSpikeDelivery(string name)
 
-        float getAvgTimePreEvent(string name, int begin, int end)
+        double getAvgTimePreEvent(string name, int begin, int end)
         
-        float lastRecordedTimePreEvent(string name)
+        double lastRecordedTimePreEvent(string name)
 
-        float getAvgTimePostEvent(string name, int begin, int end)
+        double getAvgTimePostEvent(string name, int begin, int end)
         
-        float lastRecordedTimePostEvent(string name)
+        double lastRecordedTimePostEvent(string name)
         
 cdef extern from "../build/Profile.h" namespace "Profile":
     cdef Profile* profileInstance()
@@ -96,11 +100,17 @@ cdef class pyProfile:
     def avgTimeSum(self, name, begin, end, remove_outlier):
         return self.cInstance.getAvgTimeSum(name, begin, end, remove_outlier)
 
+    def stdDevSum(self, name, begin, end, remove_outlier):
+        return self.cInstance.getStdDevSum(name, begin, end, remove_outlier)
+
     def lastTimeStep(self, name):
         return self.cInstance.lastRecordedTimeStep(name)
     
     def avgTimeStep(self, name, begin, end, remove_outlier):
         return self.cInstance.getAvgTimeStep(name, begin, end, remove_outlier)
+
+    def stdDevStep(self, name, begin, end, remove_outlier):
+        return self.cInstance.getStdDevStep(name, begin, end, remove_outlier)
 
     def lastTimeLocal(self, name):
         return self.cInstance.lastRecordedTimeLocal(name)

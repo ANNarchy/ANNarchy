@@ -143,7 +143,12 @@ public:
      */
     double getAvgTimeSum(std::string name, int begin, int end, bool remove_outlier)
     {
-        if (timesSum_.count(name) > 0)
+    	if (begin == 0 && end == 0)
+    	{
+    		end = timesSum_[name].size();
+    	}
+
+    	if (timesSum_.count(name) > 0)
         {
             if (remove_outlier)
                 return mean_without_outlier(timesSum_[name], begin, end, name);
@@ -157,6 +162,27 @@ public:
         }
     }
 
+    double getStdDevSum(std::string name, int begin, int end, bool remove_outlier)
+    {
+    	if (begin == 0 && end == 0)
+    	{
+    		end = timesSum_[name].size();
+    	}
+
+    	if (timesSum_.count(name) > 0)
+        {
+            if (remove_outlier)
+                return standard_deviation_without_outlier(timesSum_[name], begin, end, name);
+            else
+                return standard_deviation(timesSum_[name], begin, end, name);
+        }
+        else
+        {
+        	std::cout << name << " is not registered."<< std::endl;
+        	return 0.0;
+        }
+
+    }
     /*
      * exported to python
      */
@@ -200,6 +226,11 @@ public:
      */
     double getAvgTimeStep(std::string name, int begin, int end, bool remove_outliers)
     {
+    	if (begin == 0 && end == 0)
+    	{
+    		end = timesSum_[name].size();
+    	}
+
         if (timesStep_.count(name) > 0)
         {
         	if ( remove_outliers )
@@ -217,8 +248,13 @@ public:
     /*
      * exported to python
      */
-    double getStdDevTimeStep(std::string name, int begin, int end, bool remove_outliers = false)
+    double getStdDevStep(std::string name, int begin, int end, bool remove_outliers = false)
     {
+    	if (begin == 0 && end == 0)
+    	{
+    		end = timesSum_[name].size();
+    	}
+
         if (timesStep_.count(name) > 0)
         {
         	if ( remove_outliers )
@@ -628,11 +664,6 @@ protected:
 			for(auto it=data.begin()+begin; it!= data.begin()+end;it++)
 				mean += *it;
 
-		#ifdef _DEBUG_PROFILER
-			std::cout << name << ":"<< std::endl;
-			std::cout << "   time_diff, mean:" << end - begin << ", " << mean << std::endl;
-			std::cout << "   computed mean  : " << mean/(double)(end-begin) << std::endl;
-		#endif
 			return mean/(double)(end-begin);
         }
     }

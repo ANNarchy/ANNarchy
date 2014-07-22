@@ -139,6 +139,13 @@ void SpikePopulation::setMaxDelay(int delay)
 
 void SpikePopulation::metaStep()
 {
+#ifdef ANNAR_PROFILE
+	double start, stop;
+	#pragma omp master
+	{
+		start = omp_get_wtime();
+	}
+#endif
 	propagate_.clear();
     std::fill(spiked.begin(), spiked.end(), false);
 
@@ -165,6 +172,14 @@ void SpikePopulation::metaStep()
     		reset(n);
     }
     #pragma omp barrier
+#ifdef ANNAR_PROFILE
+    #pragma omp master
+    {
+        stop = omp_get_wtime();
+
+        Profile::profileInstance()->appendTimeStep(name_, (stop-start)*1000.0);
+    }
+#endif
 
 #if defined(_DEBUG) && defined(_DEBUG_SIMULATION_CONTROL)
     #pragma omp master

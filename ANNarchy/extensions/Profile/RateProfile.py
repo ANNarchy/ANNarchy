@@ -76,7 +76,7 @@ class RateProfile(Profile):
                 self.measure(thread, trial, trial*steps, (trial+1)*steps)
                 
             self.reset_timer()
-               
+
     def analyse_data(self):
         """
         Iterate over all data fields and create evaluation data.
