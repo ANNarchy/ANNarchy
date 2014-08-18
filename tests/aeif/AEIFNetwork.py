@@ -67,8 +67,7 @@ compile()
 P.start_record(['spike'])
 
 print 'Start simulation'
-simulate(250.0, measure_time=True)
-#simulate(50.0, measure_time=True)
+simulate(500.0, measure_time=True)
 
 # Retrieve recordings
 data = P.get_record()

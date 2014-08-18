@@ -1,67 +1,86 @@
 #   ANNarchy - EIF_cond_exp
 #
-#   Adaptive exponential integrate-and-fire model. 
-#
-#   http://www.scholarpedia.org/article/Adaptive_exponential_integrate-and-fire_model
-#
-# Introduced in 
-#
-# Brette R. and Gerstner W. (2005), Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity, J. Neurophysiol. 94: 3637 - 3642.
+#   Network of EIF neurons with exponentially decreasing conductance-based synapses.
 # 
 #   This is a reimplementation of the Brian example:
 #
-#   http://briansimulator.org/docs/examples-frompapers_Brette_Gerstner_2005.html
+#   http://brian.readthedocs.org/en/1.4.1/examples-misc_expIF_network.html
 #
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 
 from ANNarchy import *
 
-# Set the discretization step
 dt = 0.1
 setup(dt=dt)
 
-# Create a population with one AdEx neuron
-pop = Population(geometry=1, neuron=EIF_cond_exp_isfa_ista)
+EIF = Neuron(
+    parameters = """
+    v_rest = -70.0 : population
+    cm = 0.2 : population
+    tau_m = 10.0 : population
+    tau_syn_E = 5.0 : population
+    tau_syn_I = 10.0 : population
+    e_rev_E = 0.0 : population
+    e_rev_I = -80.0 : population
+    delta_T = 3.0 : population
+    v_thresh = -55.0 : population
+    v_reset = -70.0 : population
+    v_spike = -20.0 : population
+""",
+    equations="""    
+    dv/dt = (v_rest - v +  delta_T * exp( (v-v_thresh)/delta_T) )/tau_m + ( g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) )/cm
+    
+    tau_syn_E * dg_exc/dt = - g_exc 
+    tau_syn_I * dg_inh/dt = - g_inh 
+""",
+    spike = """
+    v > v_spike
+""",
+    reset = """
+    v = v_reset
+""",
+    refractory = 2.0
 
-# Regular spiking (paper)
-pop.tau_w, pop.a, pop.b, pop.v_reset = 144.0,  4.0, 0.0805, -70.6
+)
 
-# Bursting 
-#pop.tau_w, pop.a, pop.b, pop.v_reset = 20.0, 4.0, 0.5, pop.v_thresh + 5.0
+# Global population
+P = Population(geometry=4000, neuron=EIF)
 
-# Fast spiking
-#pop.tau_w, pop.a, pop.b, pop.v_reset = 144.0, 2000.0*pop.cm/144.0, 0.0, -70.6 
+# Subpopulations
+Pe = P[:3200]
+Pi = P[3200:]
+Pe_input = P[:200]
+Pi_input = P[3200:3400]
 
+# Projections
+we = 1.5 / 1000.0 # excitatory synaptic weight
+wi = 2.5 * we # inhibitory synaptic weight
+Ce = Projection(Pe, P, 'exc').connect_fixed_probability(weights=we, probability=0.05)
+Ci = Projection(Pi, P, 'inh').connect_fixed_probability(weights=wi, probability=0.05)
 
-# Compile the network
+# Initialization of variables
+P.v = -70.0 + 10.0 * np.random.rand(P.size)
+P.g_exc = (np.random.randn(P.size) * 2.0 + 5.0) * we
+P.g_inh = (np.random.randn(P.size) * 2.0 + 5.0) * wi
+
+# Poisson inputs
+i_exc = PoissonPopulation(geometry=200, rates="if t < 200.0 : 2000.0 else : 0.0")
+i_inh = PoissonPopulation(geometry=200, rates="if t < 100.0 : 2000.0 else : 0.0")
+Ie = Projection(i_exc, Pe_input, 'exc').connect_one_to_one(weights=we)
+Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
+
+# Compile the Network
 compile()
 
-# Start recording
-pop.start_record(['spike', 'v', 'w'])
+# Simulate
+P.start_record(['spike'])
+simulate(500.0, measure_time=True)
 
-# Add current of 1 nA and simulate
-simulate(20.0)
-pop.i_offset = 1.0
-simulate(100.0)
-pop.i_offset = 0.0
-simulate(20.0)
+# Retrieve recordings
+data = P.get_record()
+spikes = raster_plot(data['spike'])
 
-# Retrieve the results
-data = pop.get_record()
-spikes = data['spike']['data'][0]
-v = data['v']['data'][0]
-w = data['w']['data'][0]
-if spikes.any():
-    v[spikes] = 20.0
-
-# Plot the activity
+# Plot
 from pylab import *
-subplot(2,1,1)
-plot(dt*np.arange(140.0/dt), v)
-ylabel('v')
-title('Adaptive exponential integrate-and-fire')
-subplot(2,1,2)
-plot(dt*np.arange(140.0/dt), w)
-xlabel('Time (ms)')
-ylabel('w')
+plot(dt*spikes[:, 0], spikes[:, 1], '.')
 show()
