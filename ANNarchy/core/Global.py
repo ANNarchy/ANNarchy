@@ -1,0 +1,330 @@
+"""
+
+    Global.py
+    
+    This file is part of ANNarchy.
+    
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""    
+from __future__ import print_function
+
+import sys, os
+import time
+from math import ceil
+
+# Dictionaries of  instances
+_populations = {}       # created populations
+_projections = {}       # created projections
+_functions = []         # created functions
+
+# Cython instances
+_network = None
+
+# Path to the annarchy working directory
+annarchy_dir = os.getcwd() + '/annarchy'
+
+# Flag to tell if the network has already been compiled
+_compiled = False   # I know it's evil
+
+# Configuration
+config = dict(
+   { 
+    'dt' : 1.0,
+    'verbose': False,
+    'show_time': False,
+    'suppress_warnings': False,
+    'float_prec': 'double',
+    'num_threads': 1,
+    'paradigm': "openmp",
+    'method': "explicit",
+    'seed': -1
+   }
+)
+
+# Authorized keywork for attributes
+authorized_keywords = [
+    # Init
+    'init',      
+    # Bounds             
+    'min',
+    'max',
+    # Locality
+    'population',
+    'postsynaptic',
+    # Numerical methods
+    'explicit',
+    'implicit',
+    'semiimplicit',
+    'exponential',
+    'midpoint',
+    # Refractory
+    'unless_refractory',
+    # Type
+    'int',
+    'bool',
+    'float'
+]
+
+# Dictionary of population variables being currently recorded
+_recorded_populations = {}
+
+def setup(**keyValueArgs):
+    """
+    The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments: 
+
+    *Parameters*:
+    
+    * **dt**: discretization time step (default: 1.0 ms).
+
+    * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+    
+    * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+    
+    * **float_prec**: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses double floating point precision. 
+
+    * **seed**: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)). 
+    
+    The following parameters are mainly for debugging and profiling, and should be ignored by most users:
+    
+    * **verbose**: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    
+    * **suppress_warnings**: if True, warnings (e. g. from the mathematical parser) are suppressed.
+    
+    * **show_time**: if True, initialization times are shown. Attention: verbose should be set to True additionally.
+    
+    
+    .. note::
+
+        This function should be used before any other functions of ANNarchy, right after ``from ANNarchy import *``::
+
+            from ANNarchy import *
+            setup(dt=1.0, method='midpoint', num_threads=2)
+            ...
+    """
+    for key in keyValueArgs:
+
+        if key in config.keys():
+            config[key] = keyValueArgs[key]
+        else:
+            _print('Unknown key:', key)
+    
+def reset(populations=True, projections=False, synapses = False):
+    """
+    Reinitialises the network to its state before the call to compile.
+
+    *Parameters*:
+
+    * **populations**: if True (default), the neural parameters and variables will be reset to their initial value.
+    * **projections**: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
+    * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
+    """
+    if populations:
+        for pop in _populations:
+            pop.reset()
+            
+    if projections:
+        for proj in _projections:
+            pop.reset(synapses)
+
+    _network.set_time(0)
+        
+def get_population(name):
+    """
+    Returns the population with the given *name*.
+    
+    *Parameter*:
+    
+    * **name**: name of the population
+
+    Returns:
+    
+    * The requested ``Population`` object if existing, ``None`` otherwise.
+    """
+    for pop in _populations:
+        if pop.name == name:
+            return pop
+        
+    print("Error: no population",name,"found.")
+    return None
+    
+def add_function(function):
+    """
+    Defines a global function which can be used by all neurons and synapses.
+    
+    The function must have only one return value and use only the passed arguments.
+    
+    Examples of valid functions:
+    
+        logistic(x) = 1 / (1 + exp(-x))
+        
+        piecewise(x, a, b) =    if x < a:
+                                    a
+                                else:
+                                    if x > b :
+                                        b
+                                    else:
+                                        x
+    
+    Please refer to the manual to know the allowed mathematical functions.
+    """  
+    _functions.append(function)
+    
+def simulate(duration, measure_time = False):
+    """
+    Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
+
+        simulate(1000.0)
+
+    *Parameters*:
+
+    * **duration**: the duration in milliseconds.
+    * **measure_time**: defines whether the simulation time should be printed (default=False).
+    """
+    nb_steps = ceil(float(duration) / config['dt'])
+
+    if _network:      
+        if measure_time:
+            tstart = time.time() 
+        _network.pyx_run(nb_steps)
+        if measure_time:
+            print('Simulating', duration, 'milliseconds took', time.time() - tstart, 'seconds.')
+    else:
+        _error('simulate(): the network is not compiled yet.')
+        return
+    
+def simulate_until(max_duration, population, operator='and', measure_time = False):
+    """
+    Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
+
+    One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
+
+    Example::
+
+        pop1 = Population( ..., stop_condition = "r > 1.0 : any")
+        compile()
+        simulate_until(max_duration=1000.0. population=pop1)
+
+    *Parameters*:
+
+    * **duration**: the maximum duration of the simulation in milliseconds.
+    * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+    * **operator**: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
+    * **measure_time**: defines whether the simulation time should be printed (default=False).
+
+    *Returns*:
+
+    * the actual duration of the simulation in milliseconds.
+    """
+    nb_steps = ceil(float(max_duration) / config['dt'])
+    if not isinstance(population, list):
+        population = [population]
+    if _network:      
+        if measure_time:
+            tstart = time.time() 
+        nb = _network.pyx_run_until(nb_steps, [pop._id for pop in population], True if operator=='and' else False)
+        sim_time = float(nb) / config['dt']
+        if measure_time:
+            print('Simulating', nb/config['dt'], 'milliseconds took', time.time() - tstart, 'seconds.')
+        return sim_time
+    else:
+        _error('simulate(): the network is not compiled yet.')
+        return 0.0
+
+def step():
+    """
+    Performs a single simulation step (duration = ``dt``). 
+
+    """
+    if _network:      
+        _network.pyx_step()
+
+################################
+## Learning flags
+################################
+
+    
+################################
+## Time
+################################
+
+
+
+
+################################
+## Printing
+################################
+
+def _print(*var_text):
+    """
+    Prints a message to standard out.
+    """    
+    text = ''
+    for var in var_text:
+        text += str(var) + ' '
+        
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
+
+def _debug(*var_text):
+    """
+    Prints a message to standard out, if verbose mode set True.
+    """    
+    if not config['verbose']:
+        return
+    
+    text = ''
+    for var in var_text:
+        text += str(var) + ' '
+        
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
+        
+def _warning(*var_text):
+    """
+    Prints a warning message to standard out.
+    """
+    text = 'WARNING: '
+    for var in var_text:
+        text += str(var) + ' '
+    if not config['suppress_warnings']:
+        if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+            p = print        
+            p(text)
+        else:
+            print(text)
+        
+def _error(*var_text):
+    """
+    Prints an error message to standard out.
+    """
+    text = 'ERROR: '
+    for var in var_text:
+        text += str(var) + ' '
+    
+    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
+        p = print        
+        p(text)
+    else:
+        print(text)
+
