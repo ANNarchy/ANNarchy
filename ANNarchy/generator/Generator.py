@@ -150,25 +150,42 @@ class Generator(object):
         # Generate the code
         self.code_generation(self.cpp_stand_alone, self.profile_enabled, 
                                                         self.clean)
-        # Copy the files
-        for file in os.listdir(Global.annarchy_dir+'/generate'):
-            shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
-                        Global.annarchy_dir+'/build/'+file # dest
-            )
+        # Copy the files if needed
+        changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
-        self.compilation(True)
+        if changed:
+            self.compilation()
                 
         # Create the Python objects                
         self.instantiate()    
 
+    def copy_files(self, clean):
+        " Copy the generated files in the build/ folder if needed."
+        changed = False
+        if clean:
+            for file in os.listdir(Global.annarchy_dir+'/generate'):
+                shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
+                            Global.annarchy_dir+'/build/'+file # dest
+                )
+            changed = True
+        else: # only the ones which have changed
+            import filecmp
+            for file in os.listdir(Global.annarchy_dir+'/generate'):
+                if not filecmp.cmp( Global.annarchy_dir+'/generate/'+file, 
+                                    Global.annarchy_dir+'/build/'+file) :
+                    shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
+                                Global.annarchy_dir+'/build/'+file # dest
+                    )
+                    changed = True
+        return changed
 
-    def compilation(self, changed):
+    def compilation(self):
         """ Create ANNarchyCore.so and py extensions if something has changed."""
-        if changed:   
-            Global._print('Compiling ... ')
-            if Global.config['show_time']:
-                t0 = time.time()
+ 
+        Global._print('Compiling ... ')
+        if Global.config['show_time']:
+            t0 = time.time()
                                 
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
@@ -219,11 +236,10 @@ clean:
             pass
         
         Global._compiled = True
-    
-        if changed:   
-            Global._print('OK')
-            if Global.config['show_time']:
-                Global._print('Compilation took', time.time() - t0, 'seconds.')
+
+        Global._print('OK')
+        if Global.config['show_time']:
+            Global._print('Compilation took', time.time() - t0, 'seconds.')
                 
     def instantiate(self):
         """ After every is compiled, actually create the Cython objects and 
@@ -239,9 +255,6 @@ clean:
         cython_module = __import__('ANNarchyCore')
         global _network
         Global._network = cython_module
-
-        # Initialize the network
-        cython_module.pyx_create(Global.config['dt'])
 
         # Bind the py extensions to the corresponding python objects
         for name, pop in self.populations.iteritems():
@@ -269,6 +282,10 @@ clean:
             if Global.config['show_time']:
                 Global._print('    took', (time.time()-t0)*1000, 'milliseconds')
     
+
+        # Finish to initialize the network, especially the rng
+        # Must be called after the pops and projs are created!
+        cython_module.pyx_create(Global.config['dt'])
 
         # Sets the desired number of threads
         cython_module.set_number_threads(Global.config['num_threads'])

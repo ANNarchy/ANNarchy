@@ -33,6 +33,9 @@ def generate_equation_code(id, desc, locality='local'):
     # Separate ODEs from the pre- and post- equations
     pre_odes, odes, post_odes = sort_odes(desc, locality)
     
+    if (pre_odes, odes, post_odes) == ([], [], []): # No equations
+        return ""
+
     # Generate code
     code = ""  
 

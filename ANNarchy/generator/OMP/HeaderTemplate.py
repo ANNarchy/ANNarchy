@@ -7,10 +7,10 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <sstream>
 #include <fstream>
 #include <omp.h>
-#include <random>
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
+#include <random>
 
 /*
  * Built-in functions
@@ -29,18 +29,6 @@ header_template = """#ifndef __ANNARCHY_H__
  * Structures for the projections
  *
  */
-struct BaseProjection{    
-	std::vector<int> post_rank ;
-    std::vector<int> pre_rank ;
-    std::vector<int> delay ;
-    std::vector<double> w ;	
-};
-BaseProjection flattenConnectivityMatrix(
-    int size,
-    std::vector<int> post, 
-    std::vector< std::vector <int> > pre, 
-    std::vector< std::vector <double> > w, 
-    std::vector< std::vector <int> > delay );
 %(proj_struct)s
 
 
@@ -50,11 +38,7 @@ BaseProjection flattenConnectivityMatrix(
 */
 extern double dt;
 extern long int t;
-
-// Random number generators
 extern std::vector< std::mt19937 >  rng;
-extern std::uniform_real_distribution<double> uniform;
-extern std::normal_distribution<double> normal;
 
 
 /*

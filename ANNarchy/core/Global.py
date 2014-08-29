@@ -32,7 +32,7 @@ _populations = {}       # created populations
 _projections = {}       # created projections
 _functions = []         # created functions
 
-# Cython instances
+# Global Cython instance
 _network = None
 
 # Path to the annarchy working directory

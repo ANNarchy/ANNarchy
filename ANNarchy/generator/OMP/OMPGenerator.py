@@ -71,6 +71,10 @@ ProjStruct%(id)s proj%(id)s;
         # Compute presynaptic sums
         compute_sums = self.body_computesum_proj()
 
+        # Initialize random distributions
+        rd_init_code = self.body_init_randomdistributions()
+        rd_update_code = self.body_update_randomdistributions()
+
 
         # Equations for the neural variables
         update_neuron = self.body_update_neuron()
@@ -80,7 +84,9 @@ ProjStruct%(id)s proj%(id)s;
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
             'compute_sums' : compute_sums,
-            'update_neuron' : update_neuron
+            'update_neuron' : update_neuron,
+            'random_dist_init' : rd_init_code,
+            'random_dist_update' : rd_update_code
         }
 
     def generate_pyx(self):
@@ -156,6 +162,15 @@ struct PopStruct%(id)s{
                 code += """    std::vector<double> sum_%(target)s;
 """ % {'target' : target}
 
+            # Arrays for the random numbers
+            code += """
+    // Random numbers
+"""
+            for rd in pop.neuron.description['random_distributions']:
+                code += """    std::vector<double> %(rd_name)s;
+    std::uniform_real_distribution<double> dist_%(rd_name)s;
+""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+
 
             code += """
 };    
@@ -179,15 +194,15 @@ extern PopStruct%(id)s pop%(id)s;
 struct ProjStruct%(id)s{
     int size;
     std::vector<int> post_rank ;
-    std::vector<int> pre_rank ;
-    std::vector<int> delay ;
+    std::vector< std::vector< int > > pre_rank ;
+    std::vector< std::vector< int > > delay ;
 """
             # Parameters
             for var in proj.synapse.description['parameters']:
                 if var['name'] in proj.synapse.description['local']:
                     code += """
     // Local parameter %(name)s
-    std::vector< %(type)s > %(name)s ;
+    std::vector< std::vector< %(type)s > > %(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
@@ -200,33 +215,19 @@ struct ProjStruct%(id)s{
                 if var['name'] in proj.synapse.description['local']:
                     code += """
     // Local variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    bool record_%(name)s ;
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
+    //bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
     // Global variable %(name)s
     %(type)s  %(name)s ;
-    std::vector< %(type)s > recorded_%(name)s ;
-    bool record_%(name)s ;
+    //std::vector< %(type)s > recorded_%(name)s ;
+    //bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             code += """
-    void init(int size, std::vector<int> _post, std::vector< std::vector<int> > _pre, std::vector< std::vector<double> > _w, std::vector< std::vector<int> > _delay)
-    {
-        BaseProjection proj = flattenConnectivityMatrix(size, _post, _pre, _w, _delay);
-        // Create empty vectors
-        post_rank = std::vector<int>(0,0);
-        pre_rank = std::vector<int>(0,0);
-        w = std::vector<double>(0,0.0);
-        delay = std::vector<int>(0,0);
-        // Swap the vectors
-        post_rank.swap(proj.post_rank);
-        pre_rank.swap(proj.pre_rank);
-        w.swap(proj.w);
-        delay.swap(proj.delay);
-    }
 };    
 """ 
             proj_struct += code % {'id': proj.id}
@@ -257,12 +258,12 @@ extern ProjStruct%(id)s proj%(id)s;
             eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
             update_neuron += """
     // Updating the local variables of population %(id)s
-    start = omp_get_wtime();
+    //start = omp_get_wtime();
     #pragma omp for
     for(int i = 0; i < pop%(id)s.size; i++){
 %(eqs)s
     }
-    std::cout << "Updating pop%(id)s took " << (omp_get_wtime() - start) << std::endl;
+    //std::cout << "Updating pop%(id)s took " << (omp_get_wtime() - start) << std::endl;
 """ % {'id': pop.id, 'eqs': eqs}
         return update_neuron
 
@@ -274,25 +275,59 @@ extern ProjStruct%(id)s proj%(id)s;
             if pop.neuron.type=='rate':
                 for target in pop.targets:
                     code += """    
-    memset( pop%(id)s.sum_%(target)s.data(), 0, pop%(id)s.sum_%(target)s.size() * sizeof(double));
+    //memset( pop%(id)s.sum_%(target)s.data(), 0, pop%(id)s.sum_%(target)s.size() * sizeof(double));
 """ %{'id' : pop.id, 'target': target}
 
         # Sum over all synapses 
         for name, proj in self.projections.iteritems():
             code+= """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
-    start = omp_get_wtime();
-    #pragma omp parallel for private(pre_rank, post_rank)
-    for(int i = 0; i < proj%(id_proj)s.size; i++){
-        pre_rank = proj%(id_proj)s.pre_rank[i];
-        post_rank = proj%(id_proj)s.post_rank[i];
-        pop%(id_post)s.sum_%(target)s[post_rank] += proj%(id_proj)s.w[i] * pop%(id_pre)s.r[pre_rank];
+    //start = omp_get_wtime();
+    #pragma omp parallel for private(sum)
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        sum = 0.0;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            sum += proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];
+        }
+        pop%(id_post)s.sum_%(target)s[proj%(id_proj)s.post_rank[i]] = sum;
     }
-    std::cout << "Compute_sum of proj %(id_proj)s took " << (omp_get_wtime() - start) << std::endl;
+    //std::cout << "Compute_sum of proj %(id_proj)s took " << (omp_get_wtime() - start) << std::endl;
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
         return code
 
+    def body_init_randomdistributions(self):
+        code = """
+    // Initialize random distribution objects
+"""
+        for name, pop in self.populations.iteritems():
+            for rd in pop.neuron.description['random_distributions']:
+                code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
+    pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
+""" % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']}
+
+        return code
+
+    def body_update_randomdistributions(self):
+        code = """
+    // Compute random distributions""" 
+        for name, pop in self.populations.iteritems():
+            if len(pop.neuron.description['random_distributions']) > 0:
+                code += """
+    // RD of pop%(id)s
+    #pragma omp parallel for
+    for(int i = 0; i < pop%(id)s.size; i++)
+    {
+"""% {'id': pop.id}
+                for rd in pop.neuron.description['random_distributions']:
+                    code += """
+        pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng[omp_get_thread_num()]);
+""" % {'id': pop.id, 'rd_name': rd['name']}
+
+                code += """
+    }
+"""
+        return code
 
 
 #######################################################################
@@ -361,17 +396,16 @@ extern ProjStruct%(id)s proj%(id)s;
             code = """
     cdef struct ProjStruct%(id)s :
         int size
-        void init(int, vector[int], vector[vector[int]], vector[vector[double]], vector[vector[int]])
         vector[int] post_rank
-        vector[int] pre_rank
-        vector[int] delay
+        vector[vector[int]] pre_rank
+        vector[vector[int]] delay
 """
             # Parameters
             for var in proj.synapse.description['parameters']:
                 if var['name'] in proj.synapse.description['local']:
                     code += """
         # Local parameter %(name)s
-        vector[%(type)s] %(name)s 
+        vector[vector[%(type)s]] %(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
@@ -384,16 +418,16 @@ extern ProjStruct%(id)s proj%(id)s;
                 if var['name'] in proj.synapse.description['local']:
                     code += """
         # Local variable %(name)s
-        vector[%(type)s] %(name)s 
-        vector[vector[%(type)s]] recorded_%(name)s 
-        bool record_%(name)s 
+        vector[vector[%(type)s]] %(name)s 
+        #vector[vector[%(type)s]] recorded_%(name)s 
+        #bool record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
         # Global variable %(name)s
         %(type)s  %(name)s 
-        vector[%(type)s] recorded_%(name)s
-        bool record_%(name)s 
+        #vector[%(type)s] recorded_%(name)s
+        #bool record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
 
@@ -511,7 +545,10 @@ cdef class proj%(id)s_wrapper :
         cdef int size = syn.size
         
         proj%(id)s.size = size
-        proj%(id)s.init(size, syn.post_rank, syn.pre_rank, syn.w, syn.delay)
+        proj%(id)s.post_rank = syn.post_rank
+        proj%(id)s.pre_rank = syn.pre_rank
+        proj%(id)s.w = syn.w
+        proj%(id)s.delay = syn.delay
 """% {'id': proj.id}
 
             for var in proj.synapse.description['parameters']:
@@ -555,7 +592,7 @@ cdef class proj%(id)s_wrapper :
             proj%(id)s.%(name)s = value
     def get_%(name)s(self, int rank):
         return proj%(id)s.%(name)s[rank]
-    def set_%(name)s(self, int rank, %(type)s value):
+    def set_%(name)s(self, int rank, vector[%(type)s] value):
         proj%(id)s.%(name)s[rank] = value
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
                 elif var['name'] in pop.neuron.description['global']:
@@ -580,7 +617,7 @@ cdef class proj%(id)s_wrapper :
             proj%(id)s.%(name)s = value
     def get_%(name)s(self, int rank):
         return proj%(id)s.%(name)s[rank]
-    def set_%(name)s(self, int rank, %(type)s value):
+    def set_%(name)s(self, int rank, vector[%(type)s] value):
         proj%(id)s.%(name)s[rank] = value
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
                 elif var['name'] in proj.synapse.description['global']:

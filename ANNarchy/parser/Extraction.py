@@ -22,7 +22,7 @@
 
 """
 from ANNarchy.core.Global import _error, _warning, config
-from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_templates
+from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_templates, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -48,11 +48,7 @@ def extract_randomdist(description):
                 if len(arguments) < distributions_arguments[dist]:
                     _error(eq)
                     _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
-                elif len(arguments) == distributions_arguments[dist]:
-                    arguments.append(str(int(config['seed'])))
-                elif len(arguments) == distributions_arguments[dist] +1 :
-                    _warning('The seed is set in the distribution ' + dist)
-                else:
+                elif len(arguments) > distributions_arguments[dist]:
                     _error(eq)
                     _error('Too many parameters provided to the distribution ' + dist)
                 # Process the arguments
@@ -70,7 +66,7 @@ def extract_randomdist(description):
                     processed_arguments += str(arg)
                     if idx != len(arguments)-1: # not the last one
                         processed_arguments += ', '
-                definition = dist + '(' + processed_arguments + ')'
+                definition = distributions_equivalents[dist] + '(' + processed_arguments + ')'
                 # Store its definition
                 desc = {'name': 'rand_' + str(rk_rand) ,
                         'dist': dist,
