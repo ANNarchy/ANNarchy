@@ -34,6 +34,11 @@ class OMPGenerator(object):
             for op in  proj.synapse.description['post_global_operations']:
                 proj.post.global_operations.append(op)
 
+
+
+#######################################################################
+############## HEADER #################################################
+#######################################################################
     def generate_header(self):
 
         # struct declaration for each population
@@ -49,72 +54,6 @@ class OMPGenerator(object):
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr
         }
-
-    def generate_body(self):
-
-        # struct declaration for each population
-        pop_ptr = ""
-        for name, pop in self.populations.iteritems():
-            # Declaration of the structure
-            pop_ptr += """
-PopStruct%(id)s pop%(id)s;
-"""% {'id': pop.id}
-
-        # struct declaration for each projection
-        proj_ptr = ""
-        for name, proj in self.projections.iteritems():
-            # Declaration of the structure
-            proj_ptr += """
-ProjStruct%(id)s proj%(id)s;
-"""% {'id': proj.id}
-
-        # Compute presynaptic sums
-        compute_sums = self.body_computesum_proj()
-
-        # Initialize random distributions
-        rd_init_code = self.body_init_randomdistributions()
-        rd_update_code = self.body_update_randomdistributions()
-
-
-        # Equations for the neural variables
-        update_neuron = self.body_update_neuron()
-
-        from .BodyTemplate import body_template
-        return body_template % {
-            'pop_ptr': pop_ptr,
-            'proj_ptr': proj_ptr,
-            'compute_sums' : compute_sums,
-            'update_neuron' : update_neuron,
-            'random_dist_init' : rd_init_code,
-            'random_dist_update' : rd_update_code
-        }
-
-    def generate_pyx(self):
-        # struct declaration for each population
-        pop_struct, pop_ptr = self.pyx_struct_pop()
-
-        # struct declaration for each projection
-        proj_struct, proj_ptr = self.pyx_struct_proj()
-
-        # Cython wrappers for the populations
-        pop_class = self.pyx_wrapper_pop()
-
-        # Cython wrappers for the projections
-        proj_class = self.pyx_wrapper_proj()
-
-
-        from .PyxTemplate import pyx_template
-        return pyx_template % {
-            'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
-            'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
-            'pop_class' : pop_class, 'proj_class': proj_class
-        }
-
-
-#######################################################################
-############## HEADER #################################################
-#######################################################################
-
     def header_struct_pop(self):
         # struct declaration for each population
         pop_struct = ""
@@ -172,9 +111,16 @@ struct PopStruct%(id)s{
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
 
+            # Delays (TODO: more variables could be delayed)
+            if pop.max_delay > 1:
+                code += """
+    // Delays
+    std::deque< std::vector<double> > _delayed_r;
+"""
+            # Finish the structure
             code += """
 };    
-""" 
+"""           
             pop_struct += code % {'id': pop.id}
 
             pop_ptr += """
@@ -195,6 +141,10 @@ struct ProjStruct%(id)s{
     int size;
     std::vector<int> post_rank ;
     std::vector< std::vector< int > > pre_rank ;
+"""
+            # Delays
+            if proj.max_delay > 1:
+                code +="""
     std::vector< std::vector< int > > delay ;
 """
             # Parameters
@@ -244,6 +194,52 @@ extern ProjStruct%(id)s proj%(id)s;
 #######################################################################
 ############## BODY ###################################################
 #######################################################################
+    def generate_body(self):
+
+        # struct declaration for each population
+        pop_ptr = ""
+        for name, pop in self.populations.iteritems():
+            # Declaration of the structure
+            pop_ptr += """
+PopStruct%(id)s pop%(id)s;
+"""% {'id': pop.id}
+
+        # struct declaration for each projection
+        proj_ptr = ""
+        for name, proj in self.projections.iteritems():
+            # Declaration of the structure
+            proj_ptr += """
+ProjStruct%(id)s proj%(id)s;
+"""% {'id': proj.id}
+
+        # Compute presynaptic sums
+        compute_sums = self.body_computesum_proj()
+
+        # Initialize random distributions
+        rd_init_code = self.body_init_randomdistributions()
+        rd_update_code = self.body_update_randomdistributions()
+
+        # Initialize delayed arrays
+        delay_init = self.body_init_delay()
+
+        # Enque delayed outputs
+        delay_code = self.body_delay_neuron()
+
+
+        # Equations for the neural variables
+        update_neuron = self.body_update_neuron()
+
+        from .BodyTemplate import body_template
+        return body_template % {
+            'pop_ptr': pop_ptr,
+            'proj_ptr': proj_ptr,
+            'compute_sums' : compute_sums,
+            'update_neuron' : update_neuron,
+            'random_dist_init' : rd_init_code,
+            'random_dist_update' : rd_update_code,
+            'delay_init' : delay_init,
+            'delay_code' : delay_code
+        }
 
     def body_update_neuron(self):
         update_neuron = ""
@@ -267,19 +263,43 @@ extern ProjStruct%(id)s proj%(id)s;
 """ % {'id': pop.id, 'eqs': eqs}
         return update_neuron
 
+    def body_delay_neuron(self):
+        code = ""
+        for name, pop in self.populations.iteritems():
+            if pop.max_delay <= 1:
+                continue
+            code += """
+    // Enqueuing outputs of pop%(id)s
+    pop%(id)s._delayed_r.push_front(pop%(id)s.r);
+    pop%(id)s._delayed_r.pop_back();
+""" % {'id': pop.id }
+
+        return code
+
     def body_computesum_proj(self):
         # Reset code
-        code = """
-    // Rate-coded: reset the sum arrays to 0.0"""
-        for name, pop in self.populations.iteritems():
-            if pop.neuron.type=='rate':
-                for target in pop.targets:
-                    code += """    
-    //memset( pop%(id)s.sum_%(target)s.data(), 0, pop%(id)s.sum_%(target)s.size() * sizeof(double));
-""" %{'id' : pop.id, 'target': target}
+        code = ""
 
         # Sum over all synapses 
         for name, proj in self.projections.iteritems():
+            # Retrieve the psp code
+            if not 'psp' in  proj.synapse.description.keys(): # default
+                psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+            else: # custom psp
+                psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                    psp = psp.replace(
+                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
+                    )
+                else: # Uniform delays
+                    psp = psp.replace(
+                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                    )
+
             code+= """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
     //start = omp_get_wtime();
@@ -287,12 +307,12 @@ extern ProjStruct%(id)s proj%(id)s;
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            sum += proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];
+            sum += %(psp)s
         }
         pop%(id_post)s.sum_%(target)s[proj%(id_proj)s.post_rank[i]] = sum;
     }
     //std::cout << "Compute_sum of proj %(id_proj)s took " << (omp_get_wtime() - start) << std::endl;
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'psp': psp}
 
         return code
 
@@ -305,6 +325,17 @@ extern ProjStruct%(id)s proj%(id)s;
                 code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
     pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
 """ % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']}
+
+        return code
+
+    def body_init_delay(self):
+        code = """
+    // Initialize delayed firing rates
+"""
+        for name, pop in self.populations.iteritems():
+            if pop.max_delay > 1:
+                code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
+""" % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 
@@ -333,6 +364,27 @@ extern ProjStruct%(id)s proj%(id)s;
 #######################################################################
 ############## PYX ####################################################
 #######################################################################
+    def generate_pyx(self):
+        # struct declaration for each population
+        pop_struct, pop_ptr = self.pyx_struct_pop()
+
+        # struct declaration for each projection
+        proj_struct, proj_ptr = self.pyx_struct_proj()
+
+        # Cython wrappers for the populations
+        pop_class = self.pyx_wrapper_pop()
+
+        # Cython wrappers for the projections
+        proj_class = self.pyx_wrapper_proj()
+
+
+        from .PyxTemplate import pyx_template
+        return pyx_template % {
+            'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
+            'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
+            'pop_class' : pop_class, 'proj_class': proj_class
+        }
+
     def pyx_struct_pop(self):
         pop_struct = ""
         pop_ptr = ""
@@ -398,6 +450,10 @@ extern ProjStruct%(id)s proj%(id)s;
         int size
         vector[int] post_rank
         vector[vector[int]] pre_rank
+"""         
+            # Delays
+            if proj.max_delay > 1:
+                code +="""
         vector[vector[int]] delay
 """
             # Parameters
@@ -548,9 +604,15 @@ cdef class proj%(id)s_wrapper :
         proj%(id)s.post_rank = syn.post_rank
         proj%(id)s.pre_rank = syn.pre_rank
         proj%(id)s.w = syn.w
+"""% {'id': proj.id}
+
+            # Delays
+            if proj.max_delay > 1:
+                proj_class +="""
         proj%(id)s.delay = syn.delay
 """% {'id': proj.id}
 
+            # Initialize parameters
             for var in proj.synapse.description['parameters']:
                 if var['name'] == 'w':
                     continue
@@ -561,6 +623,8 @@ cdef class proj%(id)s_wrapper :
                         init = var['init']
                     proj_class += """
         proj%(id)s.%(name)s = vector[%(type)s](size, %(init)s)""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+            # Initialize variables
             for var in proj.synapse.description['variables']:
                 if var['name'] == 'w':
                     continue

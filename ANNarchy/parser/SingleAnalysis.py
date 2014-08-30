@@ -106,7 +106,8 @@ def analyse_neuron(neuron):
                                       description['local'], 
                                       description['global'], 
                                       type = 'return',
-                                      untouched = untouched.keys())
+                                      untouched = untouched.keys(),
+                                      index="[i]", prefix='%(pop)s')
                 variable['bounds']['min'] = translator.parse().replace(';', '')
 
         if 'max' in variable['bounds'].keys():
@@ -116,7 +117,8 @@ def analyse_neuron(neuron):
                                       description['local'], 
                                       description['global'], 
                                       type = 'return',
-                                      untouched = untouched.keys())
+                                      untouched = untouched.keys(),
+                                      index="[i]", prefix='%(pop)s')
                 variable['bounds']['max'] = translator.parse().replace(';', '')
         
         # Analyse the equation
@@ -126,10 +128,11 @@ def analyse_neuron(neuron):
                                   description['local'], 
                                   description['global'], 
                                   method = method,
-                                  untouched = untouched.keys())
+                                  untouched = untouched.keys(),
+                                  index="[i]", prefix='%(pop)s')
             code = translator.parse()
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, pop, untouched)
+            code = translate_ITE(variable['name'], eq, condition, description, untouched, prefix='%(pop)s', index='[i]')
 
         
         if isinstance(code, str):
@@ -255,7 +258,8 @@ def analyse_synapse(synapse):
                                       description['global'], 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      prefix='%(proj)s')
+                                      prefix='proj%(id_proj)s',
+                                      index="[i][j]")
                 variable['bounds']['min'] = translator.parse().replace(';', '')
 
         if 'max' in variable['bounds'].keys():
@@ -266,7 +270,8 @@ def analyse_synapse(synapse):
                                       description['global'], 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      prefix='%(proj)s')
+                                      prefix='proj%(id_proj)s',
+                                      index="[i][j]")
                 variable['bounds']['max'] = translator.parse().replace(';', '')
             
         # Analyse the equation
@@ -277,11 +282,14 @@ def analyse_synapse(synapse):
                                   description['global'], 
                                   method = method, 
                                   untouched = untouched.keys(),
-                                  prefix='%(proj)s')
+                                  prefix='proj%(id_proj)s',
+                                  index="[i][j]")
             code = translator.parse()
                 
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, synapse, untouched)
+            code = translate_ITE(variable['name'], eq, condition, synapse, untouched,
+                                  prefix='proj%(id_proj)s',
+                                  index="[i][j]")
 
         if isinstance(code, str):
             cpp_eq = code
@@ -305,9 +313,9 @@ def analyse_synapse(synapse):
         psp = {'eq' : description['raw_psp'].strip() }
         # Replace pre- and post_synaptic variables
         eq = psp['eq']
-        eq, untouched = extract_prepost(variable['name'], eq, synapse)
+        eq, untouched = extract_prepost('psp', eq, synapse)
         # Extract if-then-else statements
-        eq, condition = extract_ite(variable['name'], eq, synapse, split=False)
+        eq, condition = extract_ite('psp', eq, synapse, split=False)
         # Analyse the equation
         if condition == []:
             translator = Equation('psp', eq, 
@@ -317,10 +325,13 @@ def analyse_synapse(synapse):
                                   method = 'explicit', 
                                   untouched = untouched.keys(),
                                   type='return',
-                                  prefix='%(proj)s')
+                                  prefix='proj%(id_proj)s',
+                                  index='[i][j]')
             code = translator.parse()
         else:
-            code = translate_ITE('psp', eq, condition, synapse, untouched, split=False)
+            code = translate_ITE('psp', eq, condition, synapse, untouched,
+                                  prefix='proj%(id_proj)s',
+                                  index="[i][j]", split=False)
 
         # Replace untouched variables with their original name
         for prev, new in untouched.iteritems():
@@ -328,6 +339,6 @@ def analyse_synapse(synapse):
 
         # Store the result
         psp['cpp'] = code
-        proj.description['psp'] = psp               
+        description['psp'] = psp               
     
     return description     

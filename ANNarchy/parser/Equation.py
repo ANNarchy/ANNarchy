@@ -73,7 +73,7 @@ class Equation(object):
         self.local_dict = {
             'dt' : Symbol('dt'),
             't' : Symbol('double(t)*dt'),
-            'w' : Symbol('w'+index), 
+            'w' : Symbol('proj%(id_proj)s.w'+index), 
             't_pre': Symbol('(double)(%(pre_pop)s_last_spike[rk_pre])*dt'),
             't_post': Symbol('(double)(%(post_pop)s_last_spike[rk_post])*dt'),
             'pos': Function('positive'),

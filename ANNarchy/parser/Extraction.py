@@ -149,26 +149,26 @@ def extract_prepost(name, eq, description):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
                 rep = '_pre_sum_' + val
-                untouched[rep] = ' $(pre_pop)s.sum_'+val+'[rk_pre] '
+                untouched[rep] = ' pop%(id_pre)s.sum_'+val+'[proj%(id_proj)s.pre_rank[i][j]] '
                 return rep
             eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var)
-            untouched['_pre_'+var] = ' $(pre_pop)s.' + var + '[rk_pre]'
+            untouched['_pre_'+var] = ' pop%(id_pre)s.' + var + '[proj%(id_proj)s.pre_rank[i][j]]'
 
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
                 rep = '_post_sum_' + val
-                untouched[rep] = ' $(post_pop)s.sum_'+val+'[rk_post] '
+                untouched[rep] = ' pop%(id_post)s.sum_'+val+'[i] '
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var)
-            untouched['_post_'+var] = ' $(post_pop)s.' + var + '[rk_post]'
+            untouched['_post_'+var] = ' pop%(id_post)s.' + var + '[i]'
 
     return eq, untouched
                    

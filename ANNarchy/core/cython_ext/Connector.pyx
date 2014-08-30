@@ -24,6 +24,7 @@ cdef class CSR:
 
         self.max_delay = 0
         self.size = 0
+        self.uniform_delay = -1
 
     def add (self, int rk, list r, list w, list d):
         self.push_back(rk, r, w, d)
@@ -33,12 +34,17 @@ cdef class CSR:
         self.post_rank.push_back(rk)
         self.pre_rank.push_back(r)
         self.w.push_back(w)
-        self.delay.push_back(d)
-        
-        # Analyse delays
-        max_d = np.max(d)
-        if max_d > self.max_delay:
-            self.max_delay = max_d
+
+        # Are the delays uniform?
+        if d.size() > 1 or r.size() == 1:
+            self.delay.push_back(d)
+            max_d = np.max(d)
+            if max_d > self.max_delay:
+                self.max_delay = max_d
+        else:
+            self.uniform_delay = d[0]        
+            if d[0] > self.max_delay:
+                self.max_delay = d[0]
 
         # Increase the size
         self.size += r.size()
@@ -46,8 +52,6 @@ cdef class CSR:
     cpdef int get_max_delay(self):
         return self.max_delay
 
-    cpdef bool uniform_delay(self):
-        return True # TODO
 
 #################################
 #### Connector methods ##########

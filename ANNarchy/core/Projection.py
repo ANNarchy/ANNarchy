@@ -162,9 +162,6 @@ class Projection(object):
         # Access the list of postsynaptic neurons
         self.post_ranks = []#self._synapses.get_post_ranks()
 
-        # Retrieve The maximal delay in the connections
-        self.max_delay = self._synapses.get_max_delay()
-
         # Delete the _synapses array, not needed anymore
         del self._synapses
         self._synapses = None
@@ -466,6 +463,8 @@ class Projection(object):
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays, shift)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
@@ -483,6 +482,8 @@ class Projection(object):
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.all_to_all(self.pre, self.post, weights, delays, allow_self_connections)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
 
@@ -510,6 +511,8 @@ class Projection(object):
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
     
@@ -539,6 +542,8 @@ class Projection(object):
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
 
         return self
@@ -564,6 +569,8 @@ class Projection(object):
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_probability(self.pre, self.post, probability, weights, delays, allow_self_connections)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
 
@@ -588,6 +595,8 @@ class Projection(object):
         
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_number_pre(self.pre, self.post, number, weights, delays, allow_self_connections)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
             
@@ -613,6 +622,8 @@ class Projection(object):
         
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_number_post(self.pre, self.post, number, weights, delays, allow_self_connections)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
 
@@ -649,6 +660,8 @@ class Projection(object):
         self._connector = method
         self._connector_params = args
         self._synapses = self._connector(self.pre, self.post, **args)
+        self.max_delay = self._synapses.get_max_delay()
+        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
 
@@ -686,39 +699,6 @@ class Projection(object):
 
         return res
       
-    def _build_pattern_from_dict(self):
-        """
-        build up the dendrites from the dictionary of synapses
-        """
-        #
-        # the synapse objects are stored as pre-post pairs.
-        dendrites = {} 
-        
-        for conn, data in self._synapses.iteritems():
-            try:
-                dendrites[conn[1]]['rank'].append(conn[0])
-                dendrites[conn[1]]['weight'].append(data['w'])
-                dendrites[conn[1]]['delay'].append(data['d'])
-            except KeyError:
-                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [data['w']], 'delay': [data['d']] }
-        
-        return dendrites
-    
-    def _build_pattern_from_list(self):
-        """
-        build up the dendrites from the list of synapses
-        """
-        dendrites = {} 
-        
-        for conn in self._synapses:
-            try:
-                dendrites[conn[1]]['rank'].append(conn[0])
-                dendrites[conn[1]]['weight'].append(conn[2])
-                dendrites[conn[1]]['delay'].append(conn[3])
-            except KeyError:
-                dendrites[conn[1]] = { 'rank': [conn[0]], 'weight': [conn[2]], 'delay': [conn[3]] }
-
-        return dendrites
 
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
         """ 

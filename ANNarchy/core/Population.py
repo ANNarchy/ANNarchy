@@ -115,7 +115,8 @@ class Population(object):
         # List of global operations needed by connected projections
         self.global_operations = []
                 
-        # Allow recording of variables
+        # Maximum delay of connected projections
+        self.max_delay = 0
 
         # Finalize initialization
         self.initialized = False

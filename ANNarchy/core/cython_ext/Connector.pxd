@@ -13,7 +13,8 @@ cdef class CSR:
     cdef public vector[vector[int]] delay
 
     # Attributes
-    cpdef int max_delay
+    cpdef public int max_delay
+    cpdef public int uniform_delay
     cdef public int size
 
     # Insert methods
@@ -21,4 +22,3 @@ cdef class CSR:
 
     # Access methods
     cpdef int get_max_delay(self)
-    cpdef bool uniform_delay(self)
