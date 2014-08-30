@@ -143,7 +143,7 @@ struct ProjStruct%(id)s{
     std::vector< std::vector< int > > pre_rank ;
 """
             # Delays
-            if proj.max_delay > 1:
+            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
                 code +="""
     std::vector< std::vector< int > > delay ;
 """
