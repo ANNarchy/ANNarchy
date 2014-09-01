@@ -160,7 +160,7 @@ class Projection(object):
         self.cyInstance = proj(self._synapses)
 
         # Access the list of postsynaptic neurons
-        self.post_ranks = []#self._synapses.get_post_ranks()
+        self.post_ranks = self._synapses.post_rank
 
         # Delete the _synapses array, not needed anymore
         del self._synapses
@@ -273,7 +273,11 @@ class Projection(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        return np.array(getattr(self.cyInstance, attribute))
+        if attribute in self.synapse.description['local']:
+            return list(getattr(self.cyInstance, 'get_'+attribute)())
+        else:
+            return getattr(self.cyInstance, 'get_'+attribute)()
+
         
     def _set_cython_attribute(self, attribute, value):
         """
@@ -285,27 +289,21 @@ class Projection(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
-        return
-        if isinstance(value, np.ndarray):
-            if value.dim == 1:
-                if value.shape == (self.size, ):
-                    for n in self._post_ranks:
-                        getattr(self.cyInstance, '_set_'+attribute)(n, value[n])
-                else:
-                    Global._error('The projection has '+self.size+ ' dendrites.')
-        elif isinstance(value, list):
-            if len(value) == self.size:
-                for n in self._post_ranks:
-                    getattr(self.cyInstance, '_set_'+attribute)(n, value[n])
+        if isinstance(value, list):
+            if len(value) == len(self.post_ranks):
+                for n in self.post_ranks:
+                    if not len(value[n]) == self.cyInstance.nb_synapses(n):
+                        Global._error('The postynaptic neuron ' + n + ' receives '+self.cyInstance.nb_synapses(n)+ ' synapses.')
+                        exit(0)
+                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value[n])
             else:
-                Global._error('The projection has '+self.size+ ' dendrites.')
+                Global._error('The projection has ' + self.size + ' post-synaptic neurons.')
         else: # a single value
             if attribute in self.synapse.description['local']:
-                for n in self._post_ranks:
-                    getattr(self.cyInstance, '_set_'+attribute)(n, value*np.ones(self.cyInstance._nb_synapses(n)))
+                for n in self.post_ranks:
+                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value*np.ones(self.cyInstance.nb_synapses(n)))
             else:
-                for n in self._post_ranks:
-                    getattr(self.cyInstance, '_set_'+attribute)(n, value)
+                getattr(self.cyInstance, 'set_'+attribute)(value)
 
  
     ################################
@@ -464,7 +462,10 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays, shift)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
@@ -483,7 +484,10 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.all_to_all(self.pre, self.post, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
 
@@ -512,8 +516,10 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
-
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
     
     def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -543,7 +549,10 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
 
         return self
@@ -570,8 +579,10 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_probability(self.pre, self.post, probability, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
-
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
 
     def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False):
@@ -596,7 +607,10 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_number_pre(self.pre, self.post, number, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
             
@@ -623,8 +637,10 @@ class Projection(object):
         import ANNarchy.core.cython_ext.Connector as Connector
         self._synapses = Connector.fixed_number_post(self.pre, self.post, number, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
-
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
 
     # def connect_from_list(self, connection_list):
@@ -661,7 +677,10 @@ class Projection(object):
         self._connector_params = args
         self._synapses = self._connector(self.pre, self.post, **args)
         self.max_delay = self._synapses.get_max_delay()
-        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
         return self
 
@@ -718,11 +737,15 @@ class Projection(object):
         
 
 
-        def get_rf(rank):
-            if rank in self._post_ranks:
-                return self.dendrite(rank).receptive_field(variable)
-            else:
-                return np.zeros( self.pre.geometry )
+        def get_rf(rank): # TODO: IMPROVE
+            res = np.zeros( self.pre.size )
+            for n in xrange(len(self.post_ranks)):
+                if self.post_ranks[n] == n:
+                    pre_ranks = self.cyInstance.pre_rank(n)
+                    data = getattr(self.cyInstance, 'get_dendrite_'+variable)(rank)
+                    for j in xrange(len(pre_ranks)):
+                        res[pre_ranks[j]] = data[j]  
+            return res.reshape(self.pre.geometry)
 
         res = np.zeros((1, x_size*self.pre.geometry[1]))
         for y in xrange ( y_size ):

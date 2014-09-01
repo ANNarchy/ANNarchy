@@ -116,3 +116,71 @@ class SpikeNeuron(Neuron):
         """
         Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, extra_values=extra_values) 
 
+class IndividualNeuron(object):
+    """
+    Neuron object returned by the Population.neuron(rank) method.
+    
+    This only a wrapper around the Population data. It has the same attributes (parameter and variable) as the original population.
+    """
+    def __init__(self, population, rank):
+        self.population  = population
+        self.rank  = rank
+        
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+        if name == 'population':
+            return object.__getattribute__(self, name)
+        elif hasattr(self.population, 'attributes'):
+            if name in self.population.attributes:
+                val = (self.population.get(name))
+                if isinstance(val, np.ndarray):
+                    return val[self.population.coordinates_from_rank(self.rank)]
+                else:
+                    return val
+            else:
+                return object.__getattribute__(self, name)
+        else:
+            return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if name == 'population':
+            object.__setattr__(self, name, value)
+        elif name == 'rank':
+            object.__setattr__(self, name, value)
+        elif hasattr(self.population, 'attributes'):
+            if name in self.population.attributes:
+                if name in self.population.description['local']:
+                    if not self.population.initialized: # Store it in the temporary array
+                        newval = self.population.get(name)
+                        newval[self.population.coordinates_from_rank(self.rank)] = value
+                        self.population.__setattr__(name, newval)
+                    else: # Access the C++ data 
+                        eval('self.population.cyInstance._set_single_'+name+'('+str(self.rank)+', '+str(value)+')')
+                else:
+                    self.population.__setattr__(name, value)
+            else:
+                object.__setattr__(self, name, value)
+        else:
+            object.__setattr__(self, name, value) 
+            
+    def __repr__(self):
+        desc = 'Neuron of the population ' + self.population.name + ' with rank ' + str(self.rank) + ' (coordinates ' + str(self.population.coordinates_from_rank(self.rank)) + ').\n'
+        desc += 'Parameters:\n'
+        for param in self.population.parameters:
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + '\n'
+        desc += '\nVariables:\n'
+        for param in self.population.variables:
+            desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + '\n'
+        return desc
+    
+    def __add__(self, other):
+        """Allows to join two neurons if they have the same population."""
+        if other.population == self.population:
+            if isinstance(other, IndividualNeuron):
+                return PopulationView(self.population, list(set([self.rank, other.rank])))
+            elif isinstance(other, PopulationView):
+                return PopulationView(self.population, list(set([self.rank] + other.ranks)))
+        else:
+            _error("can only add two PopulationViews of the same population.")
+            return None

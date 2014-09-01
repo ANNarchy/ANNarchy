@@ -17,7 +17,7 @@ def raster_plot(data, compact=False):
 
     * **data**: the dictionary returned by the get_record() method for the population. 
     """
-    return np.array([ [t, neuron] for neuron in range(len(data['data'])) for t in data['data'][neuron] ] )
+    return np.array([ [t, neuron] for t in range(len(data['data'])) for neuron in data['data'][t] ] )
 
 def histogram(data):
     """
@@ -27,17 +27,8 @@ def histogram(data):
 
     * **data**: the dictionary returned by the get_record() method for the population. 
     """
-    if isinstance(data['start'], int): # only one recording
-        duration = data['stop'] - data['start']
-    else:
-        duration = 0
-        for t in range(len(data['start'])):
-            duration += data['stop'][t] - data['start'][t]
-    nb_neurons = len(data['data'])
-    spikes = [0 for t in xrange(duration)]
-    for neuron in range(nb_neurons):
-        for t in data['data'][neuron]:
-            spikes[t] += 1
+    duration = len(data['data'])
+    spikes = [len(data['data'][t]) for t in xrange(duration)]
     return np.array(spikes)
 
 def smoothed_rate(data, smooth=0.0):

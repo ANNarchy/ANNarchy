@@ -172,7 +172,8 @@ class Generator(object):
         else: # only the ones which have changed
             import filecmp
             for file in os.listdir(Global.annarchy_dir+'/generate'):
-                if not filecmp.cmp( Global.annarchy_dir+'/generate/'+file, 
+                if  not os.path.isfile(Global.annarchy_dir+'/build/'+file) or \
+                    not filecmp.cmp( Global.annarchy_dir+'/generate/'+file, 
                                     Global.annarchy_dir+'/build/'+file) :
                     shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
                                 Global.annarchy_dir+'/build/'+file # dest

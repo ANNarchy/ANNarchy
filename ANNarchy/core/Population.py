@@ -23,6 +23,7 @@
 """
 import ANNarchy.core.Global as Global
 
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
 
 import numpy as np
@@ -143,6 +144,9 @@ class Population(object):
             2: Coordinates.get_normalized_2d_coord,
             3: Coordinates.get_normalized_3d_coord
         }
+
+        # Recorded variables
+        self.recorded_variables = {}
         
     def _instantiate(self, module):
         # Create the Cython instance 
@@ -151,17 +155,17 @@ class Population(object):
         # Create the attributes and actualize the initial values
         self._init_attributes()
 
-        # If the spike population has a refractory period:        
-        if self.neuron.type == 'spike' and self.neuron.description['refractory']:
-            if isinstance(self.description['refractory'], str): # a global variable
-                try:
-                    self.refractory = eval('self.'+self.description['refractory'])
-                except:
-                    Global._print(self.description['refractory'])
-                    Global._error('The initialization for the refractory period is not valid.')
-                    exit(0)
-            else: # a value
-                self.refractory = self.neuron.description['refractory']
+        # # If the spike population has a refractory period:        
+        # if self.neuron.type == 'spike' and self.neuron.description['refractory']:
+        #     if isinstance(self.neuron.description['refractory'], str): # a global variable
+        #         try:
+        #             self.refractory = eval('self.'+self.neuron.description['refractory'])
+        #         except Exception, e:
+        #             Global._print(e, self.neuron.description['refractory'])
+        #             Global._error('The initialization for the refractory period is not valid.')
+        #             exit(0)
+        #     else: # a value
+        #         self.refractory = self.neuron.description['refractory']
 
 
     def _init_attributes(self):
@@ -225,9 +229,9 @@ class Population(object):
         """
         try:
             if attribute in self.neuron.description['local']:
-                return np.array(getattr(self.cyInstance, attribute)).reshape(self.geometry)
+                return getattr(self.cyInstance, 'get_'+attribute)().reshape(self.geometry)
             else:
-                return getattr(self.cyInstance, attribute)
+                return getattr(self.cyInstance, 'get_'+attribute)()
         except Exception, e:
             print e
             Global._error('Error: the variable ' +  attribute +  ' does not exist in this population.')
@@ -246,13 +250,13 @@ class Population(object):
         try:
             if attribute in self.neuron.description['local']:
                 if isinstance(value, np.ndarray):
-                    setattr(self.cyInstance, attribute, value.reshape(self.size))
+                    getattr(self.cyInstance, 'set_'+attribute)(value.reshape(self.size))
                 elif isinstance(value, list):
-                    setattr(self.cyInstance, attribute, np.array(value).reshape(self.size))
+                    getattr(self.cyInstance, 'set_'+attribute)(np.array(value).reshape(self.size))
                 else:
-                    setattr(self.cyInstance, attribute, np.array( [value]*self.size ))
+                    getattr(self.cyInstance, 'set_'+attribute)(value * np.ones( self.size ))
             else:
-                setattr(self.cyInstance, attribute, value)
+                getattr(self.cyInstance, 'set_'+attribute)(value)
         except Exception, e:
             print e
             Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have the right size.')
@@ -296,18 +300,18 @@ class Population(object):
     ################################
     @property
     def refractory(self):
-        if self.description['type'] == 'spike':
+        if self.neuron.description['type'] == 'spike':
             if self.initialized:
-                return self.cyInstance._get_refractory()
+                return Global.config['dt']*self.cyInstance.get_refractory()
             else :
-                return self.description['refractory']
+                return self.neuron.description['refractory']
         else:
             Global._error('rate-coded neurons do not have refractory periods...')
             return None
 
     @refractory.setter
     def refractory(self, value):
-        if self.description['type'] == 'spike':
+        if self.neuron.description['type'] == 'spike':
             if self.initialized:
                 if isinstance(value, RandomDistribution):
                     refs = (value.get_values(self.size)/Global.config['dt']).astype(int)
@@ -316,9 +320,287 @@ class Population(object):
                 else:
                     refs = (value/ Global.config['dt']*np.ones(self.size)).astype(int)
                 # TODO cast into int
-                self.cyInstance._set_refractory(refs)
+                self.cyInstance.set_refractory(refs)
             else: # not initialized yet, saving for later
-                self.description['refractory'] = value
+                self.neuron.description['refractory'] = value
         else:
             Global._error('rate-coded neurons do not have refractory periods...')
 
+    ################################
+    ## Access to individual neurons
+    ################################
+    def neuron(self, *coord):  
+        """
+        Returns an ``IndividualNeuron`` object wrapping the neuron with the provided rank or coordinates.
+        """  
+        # Transform arguments
+        if len(coord) == 1:
+            if isinstance(coord[0], int):
+                rank = coord[0]
+                if not rank < self.size:
+                    Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+                    return None
+            else:
+                rank = self.rank_from_coordinates( coord[0] )
+                if rank == None:
+                    return None
+        else: # a tuple
+            rank = self.rank_from_coordinates( coord )
+            if rank == None:
+                return None
+        # Return corresponding neuron
+        return IndividualNeuron(self, rank)
+        
+    @property   
+    def neurons(self):
+        """ Returns iteratively each neuron in the population.
+        
+        For instance, if you want to iterate over all neurons of a population:
+        
+        >>> for neur in pop.neurons:
+        ...     print neur.r
+            
+        Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:
+        
+        >>> for neur in pop:
+        ...     print neur.r               
+        """
+        for neur_rank in range(self.size):
+            yield self.neuron(neur_rank)
+            
+    # Iterators
+    def __getitem__(self, *args, **kwds):
+        """ Returns neuron of coordinates (width, height, depth) in the population. 
+        
+        If only one argument is given, it is a rank. 
+        
+        If slices are given, it returns a PopulationView object.
+        """
+        indices =  args[0]
+        if isinstance(indices, int): # a single neuron
+            return IndividualNeuron(self, indices)
+        elif isinstance(indices, slice): # a slice of ranks
+            start, stop, step = indices.start, indices.stop, indices.step
+            if indices.start is None:
+                start = 0
+            if indices.stop is None:
+                stop = self.size
+            if indices.step is None:
+                step = 1
+            rk_range = list(range(start, stop, step))
+            return PopulationView(self, rk_range)
+        elif isinstance(indices, tuple): # a tuple
+            slices = False
+            for idx in indices: # check if there are slices in the coordinates
+                if isinstance(idx, slice): # there is at least one
+                    slices = True
+            if not slices: # return one neuron
+                return self.neuron(indices)
+            else: # Compute a list of ranks from the slices 
+                coords = []
+                # Expand the slices
+                for rank in range(len(indices)):
+                    idx = indices[rank]
+                    if isinstance(idx, int): # no slice
+                        coords.append([idx])
+                    elif isinstance(idx, slice): # slice
+                        start, stop, step = idx.start, idx.stop, idx.step
+                        if idx.start is None:
+                            start = 0
+                        if idx.stop is None:
+                            stop = self.geometry[rank]
+                        if idx.step is None:
+                            step = 1
+                        rk_range = list(range(start, stop, step))
+                        coords.append(rk_range)
+                # Generate all ranks from the indices
+                if self.dimension == 2:
+                    ranks = [self.rank_from_coordinates((x, y)) for x in coords[0] for y in coords[1]]
+                elif self.dimension == 3:
+                    ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for z in coords[2]]
+                if not max(ranks) < self.size:
+                    Global._error("Indices do not match the geometry of the population", self.geometry)
+                    return 
+                return PopulationView(self, ranks)
+                
+    def __iter__(self):
+        " Returns iteratively each neuron in the population in ascending rank order."
+        for neur_rank in range(self.size):
+            yield self.neuron(neur_rank) 
+
+    ################################
+    ## Coordinate transformations
+    ################################
+    def rank_from_coordinates(self, coord):
+        """
+        Returns the rank of a neuron based on coordinates.
+        
+        *Parameter*:
+        
+            * **coord**: coordinate tuple, can be multidimensional.
+        """
+        rank = self._rank_from_coord( coord, self.geometry )
+        
+        if rank > self.size:
+            Global._warning('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+            return None
+        else:
+            return rank
+
+    def coordinates_from_rank(self, rank):
+        """
+        Returns the coordinates of a neuron based on its rank.
+
+        *Parameter*:
+                
+            * **rank**: rank of the neuron.
+        """
+        # Check the rank
+        if not rank < self.size:
+            Global._warning('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
+            return None
+        
+        return self._coord_from_rank( rank, self.geometry )
+
+    def normalized_coordinates_from_rank(self, rank, norm=1.):
+        """
+        Returns normalized coordinates of a neuron based on its rank. The geometry of the population is mapped to the hypercube [0, 1]^d. 
+        
+        *Parameters*:
+        
+        * **rank**: rank of the neuron
+        * **norm**: norm of the cube (default = 1.0)
+        
+        """
+        try:
+            normal = self._norm_coord_dict[self.dimension](rank, self.geometry)
+        except KeyError:
+            coord = self.coordinates_from_rank(rank)
+                
+            normal = tuple()
+            for dim in range(self.dimension):
+                if self._geometry[dim] > 1:
+                    normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
+                else:
+                    normal += (float(rank)/(float(self.size)-1.0),) # default?
+     
+        return normal
+
+
+    ################################
+    ## Recording
+    ################################
+    def start_record(self, variable):
+        """
+        Start recording neural variables.
+        
+        Parameter:
+            
+            * **variable**: single variable name or list of variable names.  
+
+        Example::
+
+            pop1.start_record('r')
+            pop2.start_record(['mp', 'r'])      
+        """
+        _variable = []
+        
+        if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        for var in _variable:
+            if not var in self.variables + ['spike']:
+                Global._warning(var, 'is not a recordable variable of the population.')
+                continue
+            if var in self.recorded_variables.keys():
+                Global._warning(var, 'is already recording.')
+                continue
+            self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1]}
+            getattr(self.cyInstance, 'start_record_'+var)()
+
+    def stop_record(self, variable=None):
+        """
+        Stops recording the previously defined variables.
+
+        Parameter:
+            
+        * **variable**: single variable name or list of variable names. If no argument is provided, all recordings will stop.
+
+        Example::
+
+            pop1.stop_record('r')
+            pop2.stop_record(['mp', 'r'])  
+        """
+        _variable = []
+        if variable == None:
+            _variable = self.recorded_variables.keys()
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')       
+        
+        for var in _variable:
+            if not var in self.variables + ['spike']:
+                Global._warning(var, 'is not a recordable variable of the population.')
+                continue
+            if not var in self.recorded_variables.keys():
+                Global._warning(var, 'was not recording.')
+                continue
+            getattr(self.cyInstance, 'stop_record_'+var)()
+            del self.recorded_variables[var]
+
+    def get_record(self, variable=None, reshape=False):
+        """
+        Returns the recorded data as a nested dictionary. The first key corresponds to the variable name if several were recorded.
+
+        The second keys correspond to:
+
+        * ``start`` simulations step(s) were recording started.
+        * ``stop`` simulations step(s) were recording stopped or paused.
+        * ``data`` the recorded data as a numpy array. The last index represents the time, the remaining dimensions are the population size or geometry, depending on the value of ``reshape``.
+
+        .. warning::
+
+            Once get_record is called, the recorded data is internally erased.
+        
+        *Parameters*:
+            
+        * **variable**: single variable name or list of variable names. If no argument provided, all currently recorded data are returned.  
+        * **reshape**: by default this functions returns the data as a 2D matrix (number of neurons * time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
+        """
+        
+        _variable = []
+        if variable == None:
+            _variable = self.recorded_variables.keys()
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+
+        data = {}
+
+        for var in _variable:
+            if not var in self.variables + ['spike']:
+                Global._warning(var, 'is not a recordable variable of the population.')
+                continue
+            if not var in self.recorded_variables.keys():
+                Global._warning(var, 'was not recording.')
+                continue
+        
+            var_data = getattr(self.cyInstance, 'get_record_'+var)()
+            self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+            data[var] = {
+                'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
+                'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
+                'data' : np.array(var_data).T
+            }
+
+        return data

@@ -72,7 +72,7 @@ def extract_randomdist(description):
                         'dist': dist,
                         'definition': definition,
                         'args' : processed_arguments,
-                        'template': distributions_templates[dist]}
+                        'template': distributions_equivalents[dist]}
                 rk_rand += 1
                 random_objects.append(desc)
                 # Replace its definition by its temporary name
@@ -387,7 +387,9 @@ def extract_spike_variable(pop_desc):
                           pop_desc['attributes'], 
                           pop_desc['local'], 
                           pop_desc['global'], 
-                          type = 'cond')
+                          type = 'cond',
+                          prefix = '%(pop)s',
+                          index = '[i]')
     raw_spike_code = translator.parse()
     
     reset_desc = []
@@ -398,40 +400,32 @@ def extract_spike_variable(pop_desc):
                                   pop_desc['attributes'], 
                                   pop_desc['local'], 
                                   pop_desc['global'],
-                                  index = '[(*it)]')
+                                  prefix = '%(pop)s',
+                                  index = '[i]')
             var['cpp'] = translator.parse() 
     
     return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
 
-def extract_pre_spike_variable(proj):
+def extract_pre_spike_variable(description):
     pre_spike_var = []
     # For all variables influenced by a presynaptic spike
-    for var in prepare_string(proj.description['raw_pre_spike']):
+    for var in prepare_string(description['raw_pre_spike']):
         # Get its name
         name = extract_name(var)
         raw_eq = var
-        # Replace target by its value
-        post_target = False
-        if name == "g_target":
-            name = name.replace("target", proj.description['target'])
-            post_target = True
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, proj)
+        eq, condition = extract_ite(name, var, description)
             
         if condition == []:
             translator = Equation(name, var, 
-                                  proj.description['attributes'] + [name], 
-                                  proj.description['local'] + [name], 
-                                  proj.description['global'],
+                                  description['attributes'] + [name], 
+                                  description['local'] + [name], 
+                                  description['global'],
                                   index = '[i]')
             eq = translator.parse()
         else: 
-            eq = translate_ITE(name, eq, condition, proj, {})
-        
-        if post_target: # the left side has to be modified
-            eq = eq.replace( "g_" + proj.description['target'] + "_[i]",
-                        "post_population_->g_"+proj.description['target']+"_[post_neuron_rank_]")
+            eq = translate_ITE(name, eq, condition, description, {})
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )

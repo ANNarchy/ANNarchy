@@ -25,8 +25,8 @@ cdef extern from "ANNarchy.h":
     void step()
     
     # Time
-    int getTime()
-    void setTime(int)
+    long getTime()
+    void setTime(long)
 
     # dt
     double getDt()
@@ -56,7 +56,7 @@ def pyx_step():
     step()
 
 # Access time
-def set_time(int t):
+def set_time(t):
     setTime(t)
 def get_time():
     return getTime()

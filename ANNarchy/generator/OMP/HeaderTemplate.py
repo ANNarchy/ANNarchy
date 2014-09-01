@@ -70,8 +70,8 @@ void step();
  * Time export
  *
 */
-int getTime() ;
-void setTime(int t_) ;
+long int getTime() ;
+void setTime(long int t_) ;
 
 double getDt() ;
 void setDt(double dt_);

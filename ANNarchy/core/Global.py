@@ -261,7 +261,14 @@ def step():
 ################################
 ## Time
 ################################
-
+def get_time():
+    return _network.get_time()/config['dt']
+def set_time(t):
+    return _network.set_time(int(t*config['dt']))
+def get_current_step():
+    return _network.get_time()
+def set_current_step(t):
+    return _network.set_time(int(t))
 
 
 

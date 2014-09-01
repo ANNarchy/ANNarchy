@@ -212,10 +212,10 @@ def analyse_synapse(synapse):
     # Extract event-driven info TODO: check
     if description['type'] == 'spike': 
         if description['raw_pre_spike']:          
-            description['pre_spike'] = extract_pre_spike_variable(synapse)
+            description['pre_spike'] = extract_pre_spike_variable(description)
         
         if description['raw_post_spike']:
-            description['post_spike'] = extract_post_spike_variable(synapse)
+            description['post_spike'] = extract_post_spike_variable(description)
 
     # Variables names for the parser which should be left untouched
     untouched = {}   
