@@ -55,7 +55,12 @@ class Neuron(object):
         self.type = 'spike' if self.spike else 'rate'
 
         # Analyse the neuron type
-        self.description = analyse_neuron(self)
+        self.description = None
+
+    def _analyse(self):
+        # Analyse the neuron type
+        if not self.description:
+            self.description = analyse_neuron(self)
 
     def __repr__(self):
         if self.type == 'rate':

@@ -33,7 +33,12 @@ cdef class CSR:
 
         self.post_rank.push_back(rk)
         self.pre_rank.push_back(r)
-        self.w.push_back(w)
+
+        # Are the weights uniform?
+        if w.size() > 1 or r.size() == 1:
+            self.w.push_back(w)
+        else:
+            self.w.push_back(vector[double](r.size(), w[0]))
 
         # Are the delays uniform?
         if d.size() > 1 or r.size() == 1:

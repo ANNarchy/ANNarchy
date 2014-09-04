@@ -10,7 +10,7 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
 
     Parameters:
 
-    * *data* the dictionary returned by ``get_record()[Pop]['spike']``
+    * *data* the dictionary returned by ``Pop.get_record()['spike']``
 
     * *smooth* the smoothing time constant (default: 0 ms)
     """

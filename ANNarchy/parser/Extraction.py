@@ -57,8 +57,8 @@ def extract_randomdist(description):
                     try:
                         arg = float(arguments[idx])
                     except: # A global parameter
-                        if arguments[idx].strip() in pop.description['global']:
-                            arg = arguments[idx] + '_'
+                        if arguments[idx].strip() in description['global']:
+                            arg = 'pop%(id)s.'+arguments[idx].strip() 
                         else:
                             _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
                             exit(0)
@@ -162,13 +162,13 @@ def extract_prepost(name, eq, description):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
                 rep = '_post_sum_' + val
-                untouched[rep] = ' pop%(id_post)s.sum_'+val+'[i] '
+                untouched[rep] = ' pop%(id_post)s.sum_'+val+'[proj%(id_proj)s.post_rank[i]] '
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var)
-            untouched['_post_'+var] = ' pop%(id_post)s.' + var + '[i]'
+            untouched['_post_'+var] = ' pop%(id_post)s.' + var + '[proj%(id_proj)s.post_rank[i]]'
 
     return eq, untouched
                    
@@ -432,23 +432,23 @@ def extract_pre_spike_variable(description):
 
     return pre_spike_var 
 
-def extract_post_spike_variable(proj):
+def extract_post_spike_variable(description):
     post_spike_var = []
     
-    for var in prepare_string(proj.description['raw_post_spike']):
+    for var in prepare_string(description['raw_post_spike']):
         name = extract_name(var)
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, proj)
+        eq, condition = extract_ite(name, var, description)
 
         if condition == []:
             translator = Equation(name, var, 
-                                  proj.description['attributes'], 
-                                  proj.description['local'], 
-                                  proj.description['global'])
+                                  description['attributes'], 
+                                  description['local'], 
+                                  description['global'])
             eq = translator.parse()     
         else: 
-            eq = translate_ITE(name, eq, condition, proj, {}) 
+            eq = translate_ITE(name, eq, condition, description, {}) 
 
         post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
 

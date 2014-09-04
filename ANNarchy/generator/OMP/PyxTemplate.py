@@ -21,7 +21,7 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(double)
-    void run(int nbSteps) nogil
+    void run(int nbSteps) 
     void step()
     
     # Time
@@ -48,8 +48,7 @@ def pyx_create(double dt):
 
 # Simulation for the given numer of steps
 def pyx_run(int nb_steps):
-    with nogil:
-        run(nb_steps)
+    run(nb_steps)
 
 # Simulate for one step
 def pyx_step():

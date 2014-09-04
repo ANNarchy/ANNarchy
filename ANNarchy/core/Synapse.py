@@ -55,7 +55,12 @@ class Synapse(object):
         self.type = 'spike' if pre_spike else 'rate'
 
         # Description
-        self.description = analyse_synapse(self)
+        self.description = None
+
+    def _analyse(self):
+        # Analyse the synapse type
+        if not self.description:
+            self.description = analyse_synapse(self)
 
 
     def __add__(self, synapse):        

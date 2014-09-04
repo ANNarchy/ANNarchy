@@ -81,6 +81,7 @@ class Population(object):
         
         # Store the neuron type
         self.neuron = neuron
+        self.neuron._analyse()
         
         # Attribute a name if not provided
         self.id = len(Global._populations)
@@ -155,17 +156,17 @@ class Population(object):
         # Create the attributes and actualize the initial values
         self._init_attributes()
 
-        # # If the spike population has a refractory period:        
-        # if self.neuron.type == 'spike' and self.neuron.description['refractory']:
-        #     if isinstance(self.neuron.description['refractory'], str): # a global variable
-        #         try:
-        #             self.refractory = eval('self.'+self.neuron.description['refractory'])
-        #         except Exception, e:
-        #             Global._print(e, self.neuron.description['refractory'])
-        #             Global._error('The initialization for the refractory period is not valid.')
-        #             exit(0)
-        #     else: # a value
-        #         self.refractory = self.neuron.description['refractory']
+        # If the spike population has a refractory period:        
+        if self.neuron.type == 'spike' and self.neuron.description['refractory']:
+            if isinstance(self.neuron.description['refractory'], str): # a global variable
+                try:
+                    self.refractory = eval('self.'+self.neuron.description['refractory'])
+                except Exception, e:
+                    Global._print(e, self.neuron.description['refractory'])
+                    Global._error('The initialization for the refractory period is not valid.')
+                    exit(0)
+            else: # a value
+                self.refractory = self.neuron.description['refractory']
 
 
     def _init_attributes(self):

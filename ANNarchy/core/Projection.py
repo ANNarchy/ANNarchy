@@ -83,6 +83,7 @@ class Projection(object):
         else:
             self.synapse = synapse
 
+        self.synapse._analyse()
 
         # Create a default name
         self.id = len(Global._projections)
@@ -103,6 +104,10 @@ class Projection(object):
             self.init[var['name']] = var['init']
 
         self.attributes = self.parameters + self.variables 
+        if not 'w' in self.attributes:
+            self.attributes.append('w')
+            self.variables.append('w')
+            self.synapse.description['local'].append('w')
         
         # Add the population to the global variable
         Global._projections[self.name] = self

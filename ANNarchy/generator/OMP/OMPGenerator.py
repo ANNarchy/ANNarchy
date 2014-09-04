@@ -157,6 +157,16 @@ struct ProjStruct%(id)s{
     std::vector<int> post_rank ;
     std::vector< std::vector< int > > pre_rank ;
 """
+
+            # Do not omit w
+            if not 'w' in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                code += """
+    // Local variable w
+    std::vector< std::vector< double> > w ;
+    //std::vector< std::vector< double > > recorded_w ;
+    //bool record_w ;
+
+"""
             # Delays
             if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
                 code +="""
@@ -398,6 +408,22 @@ ProjStruct%(id)s proj%(id)s;
             return code
 
         def spiking(proj):
+
+            psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
+            pre_event_list = []
+
+            for eq in proj.synapse.description['pre_spike']:
+                if eq['name'] == 'g_target':
+                    psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
+
+            pre_event = ""
+            if len(pre_event_list) > 0: # There are other variables to update than g_target
+                pre_event = """
+                if(!pop%(id_pre)s.spike[proj%(id_proj)s.post_rank[i]]){
+
+                }
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+
             code = """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
     std::vector<bool> proj%(id_proj)s_pre_spike = pop%(id_pre)s.spike;
@@ -406,12 +432,14 @@ ProjStruct%(id)s proj%(id)s;
         sum = 0.0;
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
             if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += proj%(id_proj)s.w[i][j];
+                sum += %(psp)s
+%(pre_event)s
             }
         }
-        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] = sum;
+        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
+    'pre_event': pre_event, 'psp': psp}
 
             return code
 
@@ -459,7 +487,7 @@ ProjStruct%(id)s proj%(id)s;
             for rd in pop.neuron.description['random_distributions']:
                 code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
     pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
-""" % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']}
+""" % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
 
         return code
 
@@ -624,6 +652,12 @@ ProjStruct%(id)s proj%(id)s;
         vector[int] post_rank
         vector[vector[int]] pre_rank
 """         
+            # Do not omit w
+            if not 'w' in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                code += """
+        # Local variable w
+        vector[vector[double]] w 
+"""
             # Delays
             if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
                 code +="""
@@ -761,7 +795,7 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.%(name)s = value
     cpdef %(type)s get_single_%(name)s(self, int rank):
         return pop%(id)s.%(name)s[rank]
-    cpdef set_single_%(name)s(self, int rank, %(type)s value):
+    cpdef set_single_%(name)s(self, int rank, value):
         pop%(id)s.%(name)s[rank] = value
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
                 elif var['name'] in pop.neuron.description['global']:
@@ -784,7 +818,7 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.%(name)s = value
     cpdef %(type)s get_single_%(name)s(self, int rank):
         return pop%(id)s.%(name)s[rank]
-    cpdef set_single_%(name)s(self, int rank, %(type)s value):
+    cpdef set_single_%(name)s(self, int rank, value):
         pop%(id)s.%(name)s[rank] = value
     def start_record_%(name)s(self):
         pop%(id)s.record_%(name)s = True
@@ -820,6 +854,7 @@ cdef class proj%(id)s_wrapper :
 
         cdef CSR syn = synapses
         cdef int size = syn.size
+        cdef int nb_post = syn.post_rank.size()
         
         proj%(id)s.size = size
         proj%(id)s.post_rank = syn.post_rank
@@ -840,7 +875,8 @@ cdef class proj%(id)s_wrapper :
                 if var['name'] in proj.synapse.description['local']:
                     init = 0.0 if var['ctype'] == 'double' else 0
                     proj_class += """
-        proj%(id)s.%(name)s = vector[%(type)s](size, %(init)s)""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+        proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Initialize variables
             for var in proj.synapse.description['variables']:
@@ -849,7 +885,8 @@ cdef class proj%(id)s_wrapper :
                 if var['name'] in proj.synapse.description['local']:
                     init = 0.0 if var['ctype'] == 'double' else 0
                     proj_class += """
-        proj%(id)s.%(name)s = vector[%(type)s](size, %(init)s)""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+        proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Size property
             proj_class += """
@@ -866,6 +903,26 @@ cdef class proj%(id)s_wrapper :
     def pre_rank(self, int n):
         return proj%(id)s.pre_rank[n]
 """ % {'id': proj.id}
+
+
+
+            # Do not omit w
+            if not 'w' in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                proj_class += """
+    # Local parameter w
+    cpdef get_w(self):
+        return proj%(id)s.w
+    cpdef set_w(self, value):
+        proj%(id)s.w = value
+    cpdef vector[double] get_dendrite_w(self, int rank):
+        return proj%(id)s.w[rank]
+    cpdef set_dendrite_w(self, int rank, vector[double] value):
+        proj%(id)s.w[rank] = value    
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return proj%(id)s.w[rank_post][rank_pre]
+    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+        proj%(id)s.w[rank_post][rank_pre] = value
+""" % {'id' : proj.id}
 
             # Parameters
             for var in proj.synapse.description['parameters']:
@@ -900,10 +957,10 @@ cdef class proj%(id)s_wrapper :
                 if var['name'] in proj.synapse.description['local']:
                     proj_class += """
     # Local variable %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
+    # def get_%(name)s(self):
+    #     return proj%(id)s.%(name)s
+    # def set_%(name)s(self, value):
+    #     proj%(id)s.%(name)s = value
     def get_dendrite_%(name)s(self, int rank):
         return proj%(id)s.%(name)s[rank]
     def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
