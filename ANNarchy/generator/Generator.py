@@ -299,7 +299,12 @@ clean:
         if Global.config['verbose']:
             print('\nGenerate code ...')
         
-        # Select paradigm here....
-        from .OMP.OMPGenerator import OMPGenerator
-        generator = OMPGenerator(self.populations, self.projections)
-        generator.generate()
+        if Global.config['paradigm'] == "openmp":
+            # Select paradigm here....
+            from .OMP.OMPGenerator import OMPGenerator
+            generator = OMPGenerator(self.populations, self.projections)
+            generator.generate()
+        else:
+            from .CUDA.CUDAGenerator import CUDAGenerator
+            generator = CUDAGenerator(self.populations, self.projections)
+            generator.generate()
