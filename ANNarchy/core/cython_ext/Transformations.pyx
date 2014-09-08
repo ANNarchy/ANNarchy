@@ -31,7 +31,7 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
 
     # Compute instantaneous firing rate
     for n in xrange(N):
-        last_spike = data['start'] - 100
+        last_spike = data['start'] - int(100.0/dt)
         for timing in data['data'][n]:
             if last_spike>data['start']:
                 rates[n, last_spike:timing] = 1000.0/dt/float(timing - last_spike)  

@@ -429,8 +429,8 @@ class Projection(object):
         The default behaviour is that the learning methods are called at each time step.
         """
         self.cyInstance._set_learning(True)
-        self.cyInstance._set_learn_frequency(params['freq'])
-        self.cyInstance._set_learn_offset(params['offset'])
+        # self.cyInstance._set_learn_frequency(params['freq'])
+        # self.cyInstance._set_learn_offset(params['offset'])
             
     def disable_learning(self):
         """
@@ -468,7 +468,7 @@ class Projection(object):
         self._synapses = Connector.one_to_one(self.pre, self.post, weights, delays, shift)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
@@ -490,7 +490,7 @@ class Projection(object):
         self._synapses = Connector.all_to_all(self.pre, self.post, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
@@ -522,7 +522,7 @@ class Projection(object):
         self._synapses = Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
@@ -555,7 +555,7 @@ class Projection(object):
         self._synapses = Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
@@ -585,7 +585,7 @@ class Projection(object):
         self._synapses = Connector.fixed_probability(self.pre, self.post, probability, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
@@ -613,7 +613,7 @@ class Projection(object):
         self._synapses = Connector.fixed_number_pre(self.pre, self.post, number, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
@@ -643,7 +643,7 @@ class Projection(object):
         self._synapses = Connector.fixed_number_post(self.pre, self.post, number, weights, delays, allow_self_connections)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
         return self
@@ -683,7 +683,7 @@ class Projection(object):
         self._synapses = self._connector(self.pre, self.post, **args)
         self.max_delay = self._synapses.get_max_delay()
         if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.max_delay)
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 

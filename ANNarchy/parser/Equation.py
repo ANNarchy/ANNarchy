@@ -218,7 +218,7 @@ class Equation(object):
 
         equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
 
-        explicit_code =  'DATA_TYPE _k_' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
+        explicit_code =  'double _k_' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
 
         # Midpoint method:
         # Replace the variable x by x+_x/2
@@ -229,7 +229,7 @@ class Equation(object):
         )
         tmp_equation = solve(tmp_analysed, new_var)[0]
 
-        explicit_code += '\n    DATA_TYPE _' + self.name + '_new = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n    double _' + self.name + '_new = ' + self.c_code(tmp_equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt_*_' + self.name + '_new ;'
 
@@ -268,7 +268,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' = '\
+        explicit_code = 'double _' + self.name + ' = '\
                         +  self.c_code(equation) + ';'
         switch = variable_name + ' = _' + self.name + ' ;'
 
@@ -288,7 +288,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' = ('\
+        explicit_code = 'double _' + self.name + ' = ('\
                         +  self.c_code(instepsize) + ')*(' \
                         + self.c_code(steadystate)+ ' - ' + variable_name +');'
         switch = variable_name + ' += _' + self.name + ' ;'
@@ -306,7 +306,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' =  (1.0 - exp('\
+        explicit_code = 'double _' + self.name + ' =  (1.0 - exp('\
                         + self.c_code(-stepsize) + '))*(' \
                         + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
         switch = variable_name + ' += _' + self.name + ' ;'
