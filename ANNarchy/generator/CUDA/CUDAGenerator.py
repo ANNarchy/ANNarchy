@@ -89,7 +89,8 @@ struct PopStruct%(id)s{
                 if var['name'] in pop.neuron.description['local']:
                     code += """
     // Local parameter %(name)s
-    std::vector< %(type)s > %(name)s ;
+    std::vector< %(type)s > %(name)s;    // host
+    %(type)s *gpu_%(name)s;    // device
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in pop.neuron.description['global']:
                     code += """
@@ -261,6 +262,15 @@ ProjStruct%(id)s proj%(id)s;
         rd_init_code = self.body_init_randomdistributions()
         rd_update_code = self.body_update_randomdistributions()
 
+        # Initialize device ptr
+        device_init = self.body_init_device()
+
+        # host to device transfer
+        host_device_transfer = self.body_host_device_transfer()
+
+        # host to device transfer
+        device_host_transfer = self.body_device_host_transfer()
+        
         # Initialize delayed arrays
         delay_init = self.body_init_delay()
 
@@ -270,8 +280,8 @@ ProjStruct%(id)s proj%(id)s;
         # Initialize projections
         projection_init = self.body_init_projection()
 
-        # Equations for the neural variables
-        update_neuron = self.body_update_neuron()
+        # call cuda-kernel for updating the neural variables
+        update_neuron = self.body_neuron_func_call()
 
         # Enque delayed outputs
         delay_code = self.body_delay_neuron()
@@ -293,6 +303,9 @@ ProjStruct%(id)s proj%(id)s;
             'compute_sums' : compute_sums,
             'update_neuron' : update_neuron,
             'update_synapse' : update_synapse,
+            'host_device_transfer': host_device_transfer,
+            'device_host_transfer': device_host_transfer,
+            'device_init': device_init,
             'random_dist_init' : rd_init_code,
             'random_dist_update' : rd_update_code,
             'delay_init' : delay_init,
@@ -303,89 +316,38 @@ ProjStruct%(id)s proj%(id)s;
             'record' : record
         }
 
-    def body_update_neuron(self):
+    def body_neuron_func_call(self):
         code = ""
-        for name, pop in self.populations.iteritems():
-            if len(pop.neuron.description['variables']) == 0: # no variable
-                continue
-
-            # Neural update
-            from ..Utils import generate_equation_code
-
-            # Global variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'pop': 'pop' + str(pop.id)}
-            if eqs.strip() != "":
-                code += """
-    // Updating the global variables of population %(id)s
-%(eqs)s
-""" % {'id': pop.id, 'eqs': eqs}
-
-            # Local variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
-            code += """
-    // Updating the local variables of population %(id)s
-    #pragma omp parallel for
-    for(int i = 0; i < pop%(id)s.size; i++){
-%(eqs)s
-""" % {'id': pop.id, 'eqs': eqs}
-
-            # Spike emission
-            if pop.neuron.type == 'spike':
-                cond =  pop.neuron.description['spike']['spike_cond'] % {'pop': 'pop'+str(pop.id)}
-                reset = ""; refrac = ""
-                for eq in pop.neuron.description['spike']['spike_reset']:
-                    reset += """
-            %(reset)s
-""" % {'reset': eq['cpp'] % {'pop': 'pop'+str(pop.id)}}
-                    if not 'unless_refractory' in eq['constraint']:
-                        refrac += """
-            %(refrac)s
-""" % {'refrac': eq['cpp'] % {'pop': 'pop'+str(pop.id)} }
-
-                # Main code
-                code += """
-        // Emit spike depending on refractory period            
-        if(%(pop)s.refractory_remaining[i] >0){ // Refractory period
-%(refrac)s
-            %(pop)s.refractory_remaining[i]--;
-            %(pop)s.spike[i] = false;
-        }
-        else if(%(condition)s){
-%(reset)s        
-
-            %(pop)s.spike[i] = true;
-            %(pop)s.last_spike[i] = t;
-            %(pop)s.refractory_remaining[i] = %(pop)s.refractory[i];
-        }
-        else{
-            %(pop)s.spike[i] = false;
-        }
-
-""" % {'condition' : cond, 'reset': reset, 'refrac': refrac, 'pop': 'pop'+str(pop.id) }
-
-                # Finish parallel loop for the population
-                code += """
-    }
-    // Gather spikes
-    pop%(id)s.spiked.clear();
-    for(int i=0; i< (int)pop%(id)s.size; i++){
-        if(pop%(id)s.spike[i]){
-            pop%(id)s.spiked.push_back(i);
-            if(pop%(id)s.record_spike){
-                pop%(id)s.recorded_spike[i].push_back(t);
-            }
-
-        }
-"""% {'id': pop.id} 
-
-                # End spike region
-
-
-            # Finish parallel loop for the population
-            code += """
-    }
-"""
+        
+        for pop in self.populations.itervalues():
+            var = ""
+            par = ""
+            tar = ""
             
+            # targets
+            for target in pop.neuron.description['targets']:
+                tar += """, pop%(id)s.gpu_sum_%(target)s""" % { 'id': pop.id, 'target' : target}
+            
+            for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
+                if attr['name'] in pop.neuron.description['local']:
+                    var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] } 
+                else:
+                    par += """, pop%(id)s.%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+                    
+            code += """
+    // Updating the global variables of population %(id)s
+    numThreads = 32;
+    numBlocks = ceil ( ((double)pop0.size) / ((double)numThreads) );
+
+    Pop%(id)s_step(/* kernel config */
+              numBlocks, numThreads, pop%(id)s.size
+              /* population targets */
+              %(tar)s
+              /* kernel gpu arrays */
+              %(var)s
+              /* kernel constants */
+              %(par)s, dt);
+""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
 
         return code
 
@@ -560,6 +522,42 @@ ProjStruct%(id)s proj%(id)s;
 
         return code
 
+    def body_host_device_transfer(self):
+        code = ""
+        for pop in self.populations.itervalues():
+            code += """\n\t// host to device transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
+                if attr['name'] in pop.neuron.description['local']:
+                    code += """\tcudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+
+        return code
+
+    def body_device_host_transfer(self):
+        code = ""
+        for pop in self.populations.itervalues():
+            code += """\n\t// device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
+                if attr['name'] in pop.neuron.description['local']:
+                    code += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+
+        return code
+
+    def body_init_device(self):
+        code = ""
+        
+        for pop in self.populations.itervalues():
+            code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
+                if attr['name'] in pop.neuron.description['local']:
+                    code += """\tcudaMalloc((void**)&pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s));
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+            for target in pop.neuron.description['targets']:
+                code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
+""" % { 'id': pop.id, 'target': target }
+
+        return code
 
     def body_init_randomdistributions(self):
         code = """
@@ -646,6 +644,26 @@ ProjStruct%(id)s proj%(id)s;
 ############## CUDA-HEADER ############################################
 #######################################################################
     def generate_cuda_header(self):
+        def generate_step_call(pop):
+            var = ""
+            par = ""
+            tar = ""
+            
+            # targets
+            for target in pop.neuron.description['targets']:
+                tar += """, double* sum_%(target)s""" % {'target' : target}
+            
+            for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
+                if attr['name'] in pop.neuron.description['local']:
+                    var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] } 
+                else:
+                    par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+            return """void Pop%(id)s_step( int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt);\n""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }            
+        
+        func_prototypes = ""
+        for pop in self.populations.itervalues():
+            func_prototypes += generate_step_call(pop)
+            
         template=\
 """
 #ifndef __CUDA_KERNEL__
@@ -655,21 +673,94 @@ ProjStruct%(id)s proj%(id)s;
 
 #endif
 """
-        return template % { 'function': ''}
+        return template % { 'function': func_prototypes}
 
 #######################################################################
 ############## CUDA-BODY ##############################################
 #######################################################################
     def generate_cuda_body(self):
 
+        pop_kernel = self.body_update_neuron()
+
         from .cuBodyTemplate import cu_body_template
         return cu_body_template % {
             'kernel_config': '',
-            'pop_kernel': '',
+            'pop_kernel': pop_kernel,
             'psp_kernel': '',
             'syn_kernel': '',
             'call_kernel': ''
         }
+
+    def body_update_neuron(self):
+        code = ""
+        for pop in self.populations.itervalues():
+            if len(pop.neuron.description['variables']) == 0: # no variable
+                continue
+
+            # Neural update
+            from ..Utils import generate_equation_code
+
+            var = ""
+            par = ""
+            tar = ""
+            # variables and attributes
+            for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
+                if attr['name'] in pop.neuron.description['local']:
+                    var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] } 
+                else:
+                    par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+
+            # targets
+            for target in pop.neuron.description['targets']:
+                tar += """, double* sum_%(target)s""" % {'target' : target}
+
+            #Global variables 
+            glob_eqs = ""
+            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'pop': 'pop' + str(pop.id)}
+            if eqs.strip() != "":
+                glob_eqs = """
+    if ( threadIdx.x == 0)
+    {
+%(eqs)s
+    }
+""" % {'id': pop.id, 'eqs': eqs }
+
+            # Local variables
+            loc_eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
+            loc_eqs = loc_eqs.replace("pop"+str(pop.id)+".", "")
+            code += """// gpu device kernel for population %(id)s
+__global__ void cuPop%(id)s_step(int N%(tar)s%(var)s%(par)s, double dt)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    // Updating global variables of population %(id)s
+%(global_eqs)s    
+    
+    // Updating local variables of population %(id)s
+    if ( i < N )
+    {
+%(local_eqs)s
+    }
+}
+
+// host calls device kernel for population %(id)s
+void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt)
+{
+    cuPop%(id)s_step<<<numBlocks, numThreads>>>(size%(tar2)s%(var2)s%(par2)s, dt);
+}
+
+""" % { 'id': pop.id, 
+        'local_eqs': loc_eqs,
+        'global_eqs': glob_eqs,
+        'tar': tar, 
+        'tar2': tar.replace("double*","").replace("int*",""),
+        'var': var, 
+        'var2': var.replace("double*","").replace("int*",""),
+        'par': par,
+        'par2': par.replace("double","").replace("int","")
+     }
+
+        return code
 
 #######################################################################
 ############## PYX ####################################################

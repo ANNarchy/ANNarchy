@@ -5,7 +5,12 @@ cu_body_template=\
 %(kernel_config)s
 
 /****************************************
- * population function kernels          *
+ * inline functions                     *
+ ****************************************/
+__device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
+
+/****************************************
+ * updating neural variables            *
  ****************************************/
 %(pop_kernel)s
  

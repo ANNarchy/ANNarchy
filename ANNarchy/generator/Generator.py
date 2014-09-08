@@ -218,13 +218,13 @@ openmp:
 cuda_20:
 \tcython build/ANNarchyCore.pyx --cplus
 \tnvcc -gencode arch=compute_20,code=compute_20 -c build/cuANNarchy.cu -o build/cuANNarchy.o
-\tg++ -march=native -O2 -shared -fPIC -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp -o ANNarchyCore.so
+\tg++ -march=native -O2 -shared -fPIC -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp -lcudart -o ANNarchyCore.so
 
 # CC 3.5 (Keplar)
 cuda_35:
 \tcython build/ANNarchyCore.pyx --cplus
-\tnvcc -gencode arch=compute_35,code=compute_35 -c build/cuANNarchy.cu -o build/cuANNarchy.o
-\tg++ -march=native -O2 -shared -fPIC -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp -o ANNarchyCore.so
+\tnvcc -g -gencode arch=compute_35,code=compute_35 -c build/cuANNarchy.cu -Xcompiler -fPIC -o build/cuANNarchy.o
+\tg++ -fPIC -g -march=native -O2 -shared -fPIC -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp build/cuANNarchy.o -lcudart -o ANNarchyCore.so
 
 clean:
 \trm -rf build/*.o
