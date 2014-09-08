@@ -422,7 +422,8 @@ def extract_pre_spike_variable(description):
                                   description['attributes'] + [name], 
                                   description['local'] + [name], 
                                   description['global'],
-                                  index = '[i]')
+                                  prefix = 'proj%(id_proj)s',
+                                  index = '[i][j]')
             eq = translator.parse()
         else: 
             eq = translate_ITE(name, eq, condition, description, {})
@@ -445,7 +446,9 @@ def extract_post_spike_variable(description):
             translator = Equation(name, var, 
                                   description['attributes'], 
                                   description['local'], 
-                                  description['global'])
+                                  description['global'],
+                                  prefix = 'proj%(id_proj)s',
+                                  index = '[i][j]')
             eq = translator.parse()     
         else: 
             eq = translate_ITE(name, eq, condition, description, {}) 
