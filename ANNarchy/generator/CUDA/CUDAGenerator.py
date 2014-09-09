@@ -169,7 +169,9 @@ struct ProjStruct%(id)s{
     std::vector<int> post_rank ;
     int* gpu_post_rank;
     std::vector< std::vector< int > > pre_rank ;
-    int** gpu_pre_rank;
+    int* gpu_pre_rank;
+    int* gpu_nb_synapses;    // number of synapses per dendrite
+    int* gpu_off_synapses;    // rank of first synapse per dendrite
 """
 
             # Delays
@@ -184,7 +186,7 @@ struct ProjStruct%(id)s{
                     code += """
     // Local parameter %(name)s
     std::vector< std::vector< %(type)s > > %(name)s;    // host
-    %(type)s** gpu_%(name)s;    // device
+    %(type)s* gpu_%(name)s;    // device
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
@@ -197,7 +199,8 @@ struct ProjStruct%(id)s{
                 if var['name'] in proj.synapse.description['local']:
                     code += """
     // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
+    std::vector< std::vector< %(type)s > > %(name)s ;    // host
+    %(type)s* gpu_%(name)s;    // device
     //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     //bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -256,7 +259,7 @@ ProjStruct%(id)s proj%(id)s;
 """% {'id': proj.id}
 
         # Compute presynaptic sums
-        compute_sums = self.body_computesum_proj()
+        compute_sums = self.body_psp_func_call()
 
         # Initialize random distributions
         rd_init_code = self.body_init_randomdistributions()
@@ -320,6 +323,9 @@ ProjStruct%(id)s proj%(id)s;
         code = ""
         
         for pop in self.populations.itervalues():
+            if len(pop.neuron.description['variables']) == 0: # no variable
+                continue
+            
             var = ""
             par = ""
             tar = ""
@@ -351,6 +357,31 @@ ProjStruct%(id)s proj%(id)s;
 
         return code
 
+    def body_psp_func_call(self):
+        code = ""
+        
+        for proj in self.projections.itervalues():
+            if proj.synapse.type == "rate":
+                code += """
+    // proj%(id)s: pop%(pre)s -> pop%(post)s
+    Pop%(pre)s_Pop%(post)s_%(target)s_psp( pop%(post)s.size, 
+                       /* ranks and offsets */
+                       proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses, 
+                       /* computation data */
+                       pop%(pre)s.gpu_r, proj%(id)s.gpu_w, 
+                       /* result */
+                       pop%(post)s.gpu_sum_%(target)s );
+""" % { 'id': proj.id,
+        'pre': proj.pre.id,
+        'post': proj.post.id,
+        'target': proj.target,
+      }
+
+            else:
+                Global._error("Spike synapses are not supported yet by CUDA")
+
+        return code
+
     def body_delay_neuron(self):
         code = ""
         for name, pop in self.populations.iteritems():
@@ -361,103 +392,6 @@ ProjStruct%(id)s proj%(id)s;
     pop%(id)s._delayed_r.push_front(pop%(id)s.r);
     pop%(id)s._delayed_r.pop_back();
 """ % {'id': pop.id }
-
-        return code
-
-    def body_computesum_proj(self):
-
-        def rate_coded(proj):
-            code = ""            
-            # Retrieve the psp code
-            if not 'psp' in  proj.synapse.description.keys(): # default
-                psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-            else: # custom psp
-                psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-            # Take delays into account if any
-            if proj.max_delay > 1:
-                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
-                    psp = psp.replace(
-                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
-                    )
-                else: # Uniform delays
-                    psp = psp.replace(
-                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
-                    )
-            # No need for openmp if less than 10 neurons
-            omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > 10 else ''
-
-            code+= """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            sum += %(psp)s
-        }
-        pop%(id_post)s.sum_%(target)s[proj%(id_proj)s.post_rank[i]] = sum;
-    }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'psp': psp, 'omp_code': omp_code}
-
-            return code
-
-        def spiking(proj):
-
-            psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
-            pre_event_list = []
-
-            for eq in proj.synapse.description['pre_spike']:
-                if eq['name'] == 'g_target':
-                    psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
-                else: 
-                    pre_event_list.append(eq['eq'])
-
-            pre_event = ""
-            if len(pre_event_list) > 0: # There are other variables to update than g_target
-                code = ""
-                for eq in pre_event_list:
-                    code += ' ' * 16 + eq % {'id_proj' : proj.id} + '\n'
-                pre_event = """
-                if(!pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
-%(pre_event)s
-                }
-"""%{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
-
-            # No need for openmp if less than 10 neurons
-            omp_code = '#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)' if proj.post.size > 10 else ''
-
-            code = """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
-    std::vector<bool> proj%(id_proj)s_pre_spike = pop%(id_pre)s.spike;
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += %(psp)s
-                if(proj%(id_proj)s._learning){
-%(pre_event)s
-                }
-            }
-        }
-        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
-    }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
-    'pre_event': pre_event, 'psp': psp, 'omp_code': omp_code}
-
-            return code
-
-        # Reset code
-        code = ""
-
-        # Sum over all synapses 
-        for name, proj in self.projections.iteritems():
-            if proj.synapse.type == 'rate':
-                code += rate_coded(proj)
-            else:
-                code += spiking(proj)
 
         return code
 
@@ -489,7 +423,6 @@ ProjStruct%(id)s proj%(id)s;
     'post_event': post_code, 'omp_code': omp_code}
 
         return code
-
 
     def body_update_synapse(self):
         # Reset code
@@ -556,6 +489,36 @@ ProjStruct%(id)s proj%(id)s;
             for target in pop.neuron.description['targets']:
                 code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
 """ % { 'id': pop.id, 'target': target }
+
+        for proj in self.projections.itervalues():
+            code += """
+    // Initialize device memory for proj%(id)s
+    
+        // nb_synapses
+        auto flat_proj%(id)s_idx = flattenIdx<int>(proj%(id)s.pre_rank);
+        cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.data(), flat_proj%(id)s_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_idx.clear();
+
+        // off_synapses
+        auto flat_proj%(id)s_off = flattenOff<int>(proj%(id)s.pre_rank);
+        cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, flat_proj%(id)s_off.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_off_synapses, flat_proj%(id)s_off.data(), flat_proj%(id)s_off.size() * sizeof(int), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_off.clear();
+    
+        // pre_rank
+        auto flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
+        cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_pre_rank.clear();
+
+        // w
+        auto flat_proj%(id)s_w = flattenArray<double>(proj%(id)s.w);
+        cudaMalloc((void**)&proj%(id)s.gpu_w, flat_proj%(id)s_w.size() * sizeof(double));
+        cudaMemcpy(proj%(id)s.gpu_w, flat_proj%(id)s_w.data(), flat_proj%(id)s_w.size() * sizeof(double), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_w.clear();
+
+""" % { 'id': proj.id }
 
         return code
 
@@ -644,7 +607,10 @@ ProjStruct%(id)s proj%(id)s;
 ############## CUDA-HEADER ############################################
 #######################################################################
     def generate_cuda_header(self):
-        def generate_step_call(pop):
+        def generate_neuron_step_call(pop):
+            if len(pop.neuron.description['variables']) == 0: # no variable
+                return ""
+            
             var = ""
             par = ""
             tar = ""
@@ -658,11 +624,28 @@ ProjStruct%(id)s proj%(id)s;
                     var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] } 
                 else:
                     par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
-            return """void Pop%(id)s_step( int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt);\n""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }            
+            return """void Pop%(id)s_step( int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt);
+""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }            
         
-        func_prototypes = ""
+        def generate_psp_call(proj):
+            if proj.synapse.type == "rate":
+                return """void Pop%(pre)s_Pop%(post)s_%(target)s_psp( int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s );
+""" % { 'id': proj.id,
+        'pre': proj.pre.id,
+        'post': proj.post.id,
+        'target': proj.target,
+      }
+            else:
+                Global._error("Spike synapses are not supported yet by CUDA")
+                return ""
+            
+        func_prototypes = "// population prototypes\n"
         for pop in self.populations.itervalues():
-            func_prototypes += generate_step_call(pop)
+            func_prototypes += generate_neuron_step_call(pop)
+
+        func_prototypes += "\n// projection prototypes\n"
+        for proj in self.projections.itervalues():
+            func_prototypes += generate_psp_call(proj)
             
         template=\
 """
@@ -680,17 +663,27 @@ ProjStruct%(id)s proj%(id)s;
 #######################################################################
     def generate_cuda_body(self):
 
+        kernel_config = self.body_kernel_config()
+
         pop_kernel = self.body_update_neuron()
+
+        psp_kernel = self.body_computesum_proj()
 
         from .cuBodyTemplate import cu_body_template
         return cu_body_template % {
-            'kernel_config': '',
+            'kernel_config': kernel_config,
             'pop_kernel': pop_kernel,
-            'psp_kernel': '',
+            'psp_kernel': psp_kernel,
             'syn_kernel': '',
             'call_kernel': ''
         }
 
+    def body_kernel_config(self):
+        code = ""
+        for proj in self.projections.itervalues():
+            code+= """#define pop%(pre)s_pop%(post)s_%(target)s 192\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target }
+        return code
+    
     def body_update_neuron(self):
         code = ""
         for pop in self.populations.itervalues():
@@ -762,6 +755,97 @@ void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s
 
         return code
 
+    def body_computesum_proj(self):
+
+        def rate_coded(proj):
+            # Retrieve the psp code
+            if not 'psp' in  proj.synapse.description.keys(): # default
+                psp = "r[pre_rank[i]] * w[i];"
+            else: # custom psp
+                psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                Global._error("synaptic delays are currently not supported.")
+                #===============================================================
+                # if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                #     psp = psp.replace(
+                #         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                #         'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
+                #     )
+                # else: # Uniform delays
+                #     psp = psp.replace(
+                #         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                #         'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                #     )
+                #===============================================================
+
+            from .cuBodyTemplate import psp_kernel
+            code = psp_kernel % { 'id': proj.id,
+        'pre': proj.pre.id,
+        'post': proj.post.id,
+        'target': proj.target,
+        'psp': psp
+      }
+            return code
+        
+        def spiking(proj):
+
+            psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
+            pre_event_list = []
+
+            for eq in proj.synapse.description['pre_spike']:
+                if eq['name'] == 'g_target':
+                    psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
+                else: 
+                    pre_event_list.append(eq['eq'])
+
+            pre_event = ""
+            if len(pre_event_list) > 0: # There are other variables to update than g_target
+                code = ""
+                for eq in pre_event_list:
+                    code += ' ' * 16 + eq % {'id_proj' : proj.id} + '\n'
+                pre_event = """
+                if(!pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
+%(pre_event)s
+                }
+"""%{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
+
+            # No need for openmp if less than 10 neurons
+            omp_code = '#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)' if proj.post.size > 10 else ''
+
+            code = """
+    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
+    std::vector<bool> proj%(id_proj)s_pre_spike = pop%(id_pre)s.spike;
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        sum = 0.0;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
+                sum += %(psp)s
+                if(proj%(id_proj)s._learning){
+%(pre_event)s
+                }
+            }
+        }
+        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+    }
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
+    'pre_event': pre_event, 'psp': psp, 'omp_code': omp_code}
+
+            return code
+
+        # Reset code
+        code = ""
+
+        # Sum over all synapses 
+        for name, proj in self.projections.iteritems():
+            if proj.synapse.type == 'rate':
+                code += rate_coded(proj)
+            else:
+                code += spiking(proj)
+
+        return code
 #######################################################################
 ############## PYX ####################################################
 #######################################################################

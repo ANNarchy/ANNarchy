@@ -19,6 +19,47 @@ std::vector< std::mt19937 >  rng;
 // Projections
 %(proj_ptr)s
 
+template<typename T>
+std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
+{
+    std::vector<T> flatIdx = std::vector<T>();
+    
+    for ( auto it = in.begin(); it != in.end(); it++)
+    {
+        flatIdx.push_back(it->size());
+    }
+    
+    return flatIdx;
+}
+
+template<typename T>
+std::vector<int> flattenOff(std::vector<std::vector<T> > in)
+{
+    std::vector<T> flatOff = std::vector<T>();
+
+    int t = 0;
+    for ( auto it = in.begin(); it != in.end(); it++)
+    {
+        flatOff.push_back(t);
+        t+= it->size();
+    }
+
+    return flatOff;
+}
+
+template<typename T> 
+std::vector<T> flattenArray(std::vector<std::vector<T> > in) 
+{
+    std::vector<T> flatVec = std::vector<T>();
+
+    for ( auto it = in.begin(); it != in.end(); it++)
+    {
+        flatVec.insert(flatVec.end(), it->begin(), it->end());
+    }
+
+    return flatVec;
+}
+
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
     %(host_device_transfer)s
