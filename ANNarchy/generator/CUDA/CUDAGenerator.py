@@ -163,6 +163,8 @@ extern PopStruct%(id)s pop%(id)s;
             code = """
 struct ProjStruct%(id)s{
     int size;
+    int overallSynapses;
+    
     // Learning flag
     bool _learning;
     // Connectivity
@@ -471,32 +473,6 @@ ProjStruct%(id)s proj%(id)s;
                     code += """\tcudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
-        return code
-
-    def body_device_host_transfer(self):
-        code = ""
-        for pop in self.populations.itervalues():
-            code += """\n\t// device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
-            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
-                if attr['name'] in pop.neuron.description['local']:
-                    code += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
-
-        return code
-
-    def body_init_device(self):
-        code = ""
-        
-        for pop in self.populations.itervalues():
-            code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
-            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
-                if attr['name'] in pop.neuron.description['local']:
-                    code += """\tcudaMalloc((void**)&pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s));
-""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
-            for target in pop.neuron.description['targets']:
-                code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
-""" % { 'id': pop.id, 'target': target }
-
         for proj in self.projections.itervalues():
             code += """
     // Initialize device memory for proj%(id)s
@@ -509,7 +485,9 @@ ProjStruct%(id)s proj%(id)s;
         auto flat_proj%(id)s_idx = flattenIdx<int>(proj%(id)s.pre_rank);
         cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.size() * sizeof(int));
         cudaMemcpy(proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.data(), flat_proj%(id)s_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_idx.clear();
+        proj%(id)s.overallSynapses = 0;
+        for ( auto it = flat_proj%(id)s_idx.begin(); it != flat_proj%(id)s_idx.end(); it++)
+            proj%(id)s.overallSynapses += *it;
 
         // off_synapses
         auto flat_proj%(id)s_off = flattenOff<int>(proj%(id)s.pre_rank);
@@ -530,6 +508,42 @@ ProjStruct%(id)s proj%(id)s;
         flat_proj%(id)s_w.clear();
 
 """ % { 'id': proj.id }
+
+        return code
+
+    def body_device_host_transfer(self):
+        code = ""
+        for pop in self.populations.itervalues():
+            code += """\n\t// device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
+                if attr['name'] in pop.neuron.description['local']:
+                    code += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+
+        for proj in self.projections.itervalues():
+            code += """
+            // w
+            flat_proj%(id)s_w = std::vector<double>(proj%(id)s.overallSynapses, 0);
+            cudaMemcpy(flat_proj%(id)s_w.data(), proj%(id)s.gpu_w, flat_proj%(id)s_w.size() * sizeof(double), cudaMemcpyDeviceToHost);
+            proj%(id)s.w = deFlattenArray(flat_proj%(id)s_w, flat_proj%(id)s_idx);
+""" % { 'id': proj.id }
+            
+        return code
+
+    def body_init_device(self):
+        code = ""
+        
+        for pop in self.populations.itervalues():
+            code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
+                if attr['name'] in pop.neuron.description['local']:
+                    code += """\tcudaMalloc((void**)&pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s));
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+            for target in pop.neuron.description['targets']:
+                code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
+""" % { 'id': pop.id, 'target': target }
+
+
 
         return code
 
