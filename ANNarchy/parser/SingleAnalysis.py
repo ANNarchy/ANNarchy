@@ -216,6 +216,7 @@ def analyse_synapse(synapse):
 
     # Variables names for the parser which should be left untouched
     untouched = {}   
+    description['dependencies'] = {'pre': [], 'post': []}
                    
     # Iterate over all variables
     for variable in description['variables']:
@@ -227,7 +228,10 @@ def analyse_synapse(synapse):
         description['post_global_operations'] += global_ops['post']
         
         # Extract pre- and post_synaptic variables
-        eq, untouched_var = extract_prepost(variable['name'], eq, synapse)
+        eq, untouched_var, dependencies = extract_prepost(variable['name'], eq, synapse)
+
+        description['dependencies']['pre'] += dependencies['pre']
+        description['dependencies']['post'] += dependencies['post']
         
         # Extract if-then-else statements
         eq, condition = extract_ite(variable['name'], eq, synapse)
@@ -337,5 +341,5 @@ def analyse_synapse(synapse):
         # Store the result
         psp['cpp'] = code
         description['psp'] = psp               
-    
+
     return description     
