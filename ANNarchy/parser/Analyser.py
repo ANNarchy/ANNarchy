@@ -235,10 +235,6 @@ class Analyser(object):
         # Iterate over all variables
         for variable in proj.description['variables']:
             eq = variable['transformed_eq']
-
-            # TODO: don't know why it was there...                
-            # # Replace %(target) by its actual value
-            # eq = eq.replace('%(target)', proj.target)
             
             # Extract global operations
             eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, proj)

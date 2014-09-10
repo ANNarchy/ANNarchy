@@ -194,7 +194,7 @@ class Equation(object):
 
         variable_name = self.local_dict[self.name]
 
-        equation = simplify(collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt']))
+        equation = simplify(collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt']), ratio=1.0)
 
         explicit_code = 'double _' + self.name + ' = ' + self.c_code(equation) + ';'
 
@@ -229,9 +229,9 @@ class Equation(object):
         )
         tmp_equation = solve(tmp_analysed, new_var)[0]
 
-        explicit_code += '\n    double _' + self.name + '_new = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n    double _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
-        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + '_new ;'
+        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]
@@ -430,7 +430,7 @@ class Equation(object):
         )
     
         # Obtain C code
-        code = self.c_code(self.local_dict[self.name]) + ope + self.c_code(simplify(analysed)) +';'
+        code = self.c_code(self.local_dict[self.name]) + ope + self.c_code(simplify(analysed, ratio=1.0)) +';'
     
         # Return result
         return code

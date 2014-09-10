@@ -102,7 +102,7 @@ def extract_globalops_neuron(name, eq, description):
             if var in description['local']:
                 globs.append({'function': op, 'variable': var})
                 oldname = op + '(' + var + ')'
-                newname = '$(pop)s.' + op + '_' + var 
+                newname = 'pop%(id)s._' + op + '_' + var 
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = newname
             else:
@@ -128,13 +128,13 @@ def extract_globalops_synapse(name, eq, desc):
             oldname = op + '(pre.' + var + ')'
             newname =  ' _pre_' + op + '_' + var
             eq = eq.replace(oldname, newname)
-            untouched[newname] = '$(pre_pop)s.' + op + '_' + var
+            untouched[newname] = 'pop%(id_pre)s._' + op + '_' + var
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var})
             oldname = op + '(post.' + var + ')'
             newname = ' _post_' + op + '_' + var
             eq = eq.replace(oldname, newname)
-            untouched[newname] = '$(post_pop)s.' + op + '_' + var 
+            untouched[newname] = 'pop%(id_post)s._' + op + '_' + var 
 
     return eq, untouched, globs
     

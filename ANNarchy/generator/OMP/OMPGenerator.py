@@ -109,12 +109,21 @@ struct PopStruct%(id)s{
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Arrays for the presynaptic sums
-            code += """
+            if pop.neuron.type == 'rate':
+                code += """
     // Targets
 """
-            for target in pop.neuron.description['targets']:
-                code += """    std::vector<double> sum_%(target)s;
+                for target in pop.neuron.description['targets']:
+                    code += """    std::vector<double> sum_%(target)s;
 """ % {'target' : target}
+
+            # Global operations
+            code += """
+    // Global operations
+"""
+            for op in pop.global_operations:
+                code += """    double _%(op)s_%(var)s;
+""" % {'op': op['function'], 'var': op['variable']}
 
             # Arrays for the random numbers
             code += """
@@ -258,11 +267,17 @@ ProjStruct%(id)s proj%(id)s;
         # Initialize projections
         projection_init = self.body_init_projection()
 
+        # Initialize global operations
+        globalops_init = self.body_init_globalops()
+
         # Equations for the neural variables
         update_neuron = self.body_update_neuron()
 
         # Enque delayed outputs
         delay_code = self.body_delay_neuron()
+
+        # Global operations
+        update_globalops = self.body_update_globalops()
 
         # Equations for the synaptic variables
         update_synapse = self.body_update_synapse()
@@ -280,6 +295,7 @@ ProjStruct%(id)s proj%(id)s;
             'proj_ptr': proj_ptr,
             'compute_sums' : compute_sums,
             'update_neuron' : update_neuron,
+            'update_globalops' : update_globalops,
             'update_synapse' : update_synapse,
             'random_dist_init' : rd_init_code,
             'random_dist_update' : rd_update_code,
@@ -287,6 +303,7 @@ ProjStruct%(id)s proj%(id)s;
             'delay_code' : delay_code,
             'spike_init' : spike_init,
             'projection_init' : projection_init,
+            'globalops_init' : globalops_init,
             'post_event' : post_event,
             'record' : record
         }
@@ -561,6 +578,18 @@ ProjStruct%(id)s proj%(id)s;
 
         return code
 
+
+    def body_init_globalops(self):
+        code = """
+    // Initialize global operations
+"""
+        for name, pop in self.populations.iteritems():
+            for op in pop.global_operations:
+                code += """    pop%(id)s._%(op)s_%(var)s = 0.0;
+""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+
+        return code
+
     def body_init_delay(self):
         code = """
     // Initialize delayed firing rates
@@ -618,6 +647,14 @@ ProjStruct%(id)s proj%(id)s;
                 code += """
     }
 """
+        return code
+
+    def body_update_globalops(self):
+        code = ""
+        for name, pop in self.populations.iteritems():
+            for op in pop.global_operations:
+                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s);
+""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         return code
 
     def body_record(self):
