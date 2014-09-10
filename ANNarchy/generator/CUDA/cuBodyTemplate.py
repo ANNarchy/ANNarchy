@@ -138,3 +138,33 @@ void Pop%(pre)s_Pop%(post)s_%(target)s_psp( int size, int* pre_rank, int* nb_syn
     cuPop%(pre)s_Pop%(post)s_%(target)s_psp<pop%(pre)s_pop%(post)s_%(target)s><<<size, pop%(pre)s_pop%(post)s_%(target)s, sharedMemSize >>>( pre_rank, nb_synapses, offsets, r, w, sum_%(target)s );
 }
 """
+
+proj_basic_data =\
+"""
+    // Initialize device memory for proj%(id)s
+
+        // post_rank
+        cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+        // nb_synapses
+        auto flat_proj%(id)s_idx = flattenIdx<int>(proj%(id)s.pre_rank);
+        cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.data(), flat_proj%(id)s_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
+        proj%(id)s.overallSynapses = 0;
+        for ( auto it = flat_proj%(id)s_idx.begin(); it != flat_proj%(id)s_idx.end(); it++)
+            proj%(id)s.overallSynapses += *it;
+
+        // off_synapses
+        auto flat_proj%(id)s_off = flattenOff<int>(proj%(id)s.pre_rank);
+        cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, flat_proj%(id)s_off.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_off_synapses, flat_proj%(id)s_off.data(), flat_proj%(id)s_off.size() * sizeof(int), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_off.clear();
+
+        // pre_rank
+        auto flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
+        cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_pre_rank.clear();
+
+"""

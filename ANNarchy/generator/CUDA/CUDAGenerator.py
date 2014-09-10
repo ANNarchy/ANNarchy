@@ -159,7 +159,7 @@ extern PopStruct%(id)s pop%(id)s;
         # struct declaration for each projection
         proj_struct = ""
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections.itervalues():
             code = """
 struct ProjStruct%(id)s{
     int size;
@@ -172,15 +172,15 @@ struct ProjStruct%(id)s{
     int* gpu_post_rank;
     std::vector< std::vector< int > > pre_rank ;
     int* gpu_pre_rank;
-    int* gpu_nb_synapses;    // number of synapses per dendrite
-    int* gpu_off_synapses;    // rank of first synapse per dendrite
+    int* gpu_nb_synapses;
+    int* gpu_off_synapses;
 """
 
             # Delays
             if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
                 code +="""
     std::vector< std::vector< int > > delay ;
-    int** gpu_delay;
+    int* gpu_delay;
 """
             # Parameters
             for var in proj.synapse.description['parameters']:
@@ -243,10 +243,12 @@ extern ProjStruct%(id)s proj%(id)s;
 ############## BODY ###################################################
 #######################################################################
     def generate_body(self):
-
+        """
+        generate the ANNarchy.cpp file containing initialization codes, host_to_device- and device_to_host transfers and kernel call entities.
+        """
         # struct declaration for each population
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             # Declaration of the structure
             pop_ptr += """
 PopStruct%(id)s pop%(id)s;
@@ -254,7 +256,7 @@ PopStruct%(id)s pop%(id)s;
 
         # struct declaration for each projection
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections.itervalues():
             # Declaration of the structure
             proj_ptr += """
 ProjStruct%(id)s proj%(id)s;
@@ -322,16 +324,19 @@ ProjStruct%(id)s proj%(id)s;
         }
 
     def body_neuron_func_call(self):
+        """
+        generate kernel calls for population update neural variables
+        """
         code = ""
         
         for pop in self.populations.itervalues():
             if len(pop.neuron.description['variables']) == 0: # no variable
                 continue
-            
+
             var = ""
             par = ""
             tar = ""
-            
+
             # targets
             for target in pop.neuron.description['targets']:
                 tar += """, pop%(id)s.gpu_sum_%(target)s""" % { 'id': pop.id, 'target' : target}
@@ -341,11 +346,11 @@ ProjStruct%(id)s proj%(id)s;
                     var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] } 
                 else:
                     par += """, pop%(id)s.%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
-                    
+
             code += """
-    // Updating the global variables of population %(id)s
+    // Updating the local and global variables of population %(id)s
     numThreads = 32;
-    numBlocks = ceil ( ((double)pop0.size) / ((double)numThreads) );
+    numBlocks = ceil ( ((double)pop%(id)s.size) / ((double)numThreads) );
 
     Pop%(id)s_step(/* kernel config */
               numBlocks, numThreads, pop%(id)s.size
@@ -360,8 +365,11 @@ ProjStruct%(id)s proj%(id)s;
         return code
 
     def body_psp_func_call(self):
+        """
+        generate kernel calls for projection compute popstsynaptic potential
+        """
         code = ""
-        
+
         for proj in self.projections.itervalues():
             if proj.synapse.type == "rate":
                 code += """
@@ -407,7 +415,7 @@ ProjStruct%(id)s proj%(id)s;
     Proj%(id)s_step(/* kernel config */
               numBlocks, numThreads, proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
               /* kernel gpu arrays */
-              , pop%(post)s.gpu_r, pop%(pre)s.gpu_r%(local)s
+              , pop%(pre)s.gpu_r, pop%(post)s.gpu_r%(local)s
               /* kernel constants */
               %(glob)s);
 """ % { 'id': proj.id,
@@ -424,7 +432,7 @@ ProjStruct%(id)s proj%(id)s;
 
     def body_delay_neuron(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             if pop.max_delay <= 1:
                 continue
             code += """
@@ -437,7 +445,7 @@ ProjStruct%(id)s proj%(id)s;
 
     def body_postevent_proj(self):
         code = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections.itervalues():
             if proj.synapse.type == 'spike':
                 # Gather the equations
                 post_code = ""
@@ -467,47 +475,27 @@ ProjStruct%(id)s proj%(id)s;
     def body_host_device_transfer(self):
         code = ""
         for pop in self.populations.itervalues():
-            code += """\n\t// host to device transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            code += """
+    // host to device transfers for %(pop_name)s""" % { 'pop_name': pop.name }
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
                 if attr['name'] in pop.neuron.description['local']:
-                    code += """\tcudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+                    code += """
+    cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         for proj in self.projections.itervalues():
-            code += """
-    // Initialize device memory for proj%(id)s
+            from .cuBodyTemplate import proj_basic_data
+            code += proj_basic_data % { 'id': proj.id }
 
-        // post_rank
-        cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
-    
-        // nb_synapses
-        auto flat_proj%(id)s_idx = flattenIdx<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_nb_synapses, flat_proj%(id)s_idx.data(), flat_proj%(id)s_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
-        proj%(id)s.overallSynapses = 0;
-        for ( auto it = flat_proj%(id)s_idx.begin(); it != flat_proj%(id)s_idx.end(); it++)
-            proj%(id)s.overallSynapses += *it;
-
-        // off_synapses
-        auto flat_proj%(id)s_off = flattenOff<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, flat_proj%(id)s_off.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_off_synapses, flat_proj%(id)s_off.data(), flat_proj%(id)s_off.size() * sizeof(int), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_off.clear();
-    
-        // pre_rank
-        auto flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_pre_rank.clear();
-
-        // w
-        auto flat_proj%(id)s_w = flattenArray<double>(proj%(id)s.w);
-        cudaMalloc((void**)&proj%(id)s.gpu_w, flat_proj%(id)s_w.size() * sizeof(double));
-        cudaMemcpy(proj%(id)s.gpu_w, flat_proj%(id)s_w.data(), flat_proj%(id)s_w.size() * sizeof(double), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_w.clear();
-
-""" % { 'id': proj.id }
+            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
+                if attr['name'] in proj.synapse.description['local']:
+                    code += """
+        // %(name)s
+        auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+        cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s));
+        cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_%(name)s.clear();
+""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
 
         return code
 
@@ -521,18 +509,21 @@ ProjStruct%(id)s proj%(id)s;
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         for proj in self.projections.itervalues():
-            code += """
-            // w
-            flat_proj%(id)s_w = std::vector<double>(proj%(id)s.overallSynapses, 0);
-            cudaMemcpy(flat_proj%(id)s_w.data(), proj%(id)s.gpu_w, flat_proj%(id)s_w.size() * sizeof(double), cudaMemcpyDeviceToHost);
-            proj%(id)s.w = deFlattenArray(flat_proj%(id)s_w, flat_proj%(id)s_idx);
-""" % { 'id': proj.id }
-            
+            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
+                if attr['name'] in proj.synapse.description['local']:
+                    code += """
+            // %(name)s
+            flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
+            cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, flat_proj%(id)s_idx);
+            cudaFree(proj%(id)s.gpu_%(name)s);
+""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
+
         return code
 
     def body_init_device(self):
         code = ""
-        
+
         for pop in self.populations.itervalues():
             code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
@@ -543,15 +534,13 @@ ProjStruct%(id)s proj%(id)s;
                 code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
 """ % { 'id': pop.id, 'target': target }
 
-
-
         return code
 
     def body_init_randomdistributions(self):
         code = """
     // Initialize random distribution objects
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             for rd in pop.neuron.description['random_distributions']:
                 code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
     pop%(id)s.dist_%(rd_name)s = %(rd_init)s;

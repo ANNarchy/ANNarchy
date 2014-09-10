@@ -23,12 +23,12 @@ template<typename T>
 std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
 {
     std::vector<T> flatIdx = std::vector<T>();
-    
+
     for ( auto it = in.begin(); it != in.end(); it++)
     {
         flatIdx.push_back(it->size());
     }
-    
+
     return flatIdx;
 }
 
@@ -79,7 +79,7 @@ std::vector<std::vector<T> > deFlattenArray(std::vector<T> in, std::vector<int> 
 
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
-    %(host_device_transfer)s
+%(host_device_transfer)s
 
     // simulation loop
     for(int i=0; i<nbSteps; i++)
@@ -87,7 +87,7 @@ void run(int nbSteps) {
         step();
     }
 
-    %(device_host_transfer)s
+%(device_host_transfer)s
 }
 
 // Initialize the internal data and random numbers generators
@@ -111,7 +111,7 @@ void initialize(double _dt) {
 void step()
 {
     int numThreads=0, numBlocks=0;
-    
+
     ////////////////////////////////
     // Presynaptic events
     ////////////////////////////////
@@ -147,7 +147,6 @@ void step()
     // Update synaptic variables
     ////////////////////////////////
 %(update_synapse)s    
-
 
     ////////////////////////////////
     // Postsynaptic events
