@@ -23,17 +23,70 @@ __device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
  * update synapses kernel               *
  ****************************************/
 %(syn_kernel)s
+"""
 
-/****************************************
- * call kernels                         *
- ****************************************/
-%(call_kernel)s
+pop_kernel=\
+"""
+// gpu device kernel for population %(id)s
+__global__ void cuPop%(id)s_step(int N%(tar)s%(var)s%(par)s, double dt)
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Updating global variables of population %(id)s
+%(global_eqs)s
+
+    // Updating local variables of population %(id)s
+    if ( i < N )
+    {
+%(local_eqs)s
+    }
+}
+
+// host calls device kernel for population %(id)s
+void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt)
+{
+    cuPop%(id)s_step<<<numBlocks, numThreads>>>(size%(tar2)s%(var2)s%(par2)s, dt);
+}
+"""
+
+syn_kernel=\
+"""
+// gpu device kernel for projection %(id)s
+__global__ void cuProj%(id)s_step( /* default params */
+                              int *post_rank, int *pre_rank, int* nb_synapses, int* offsets, double dt
+                              /* additional params */
+                              %(var)s%(par)s )
+{
+    int i = blockIdx.x;
+    int j = offsets[i] + threadIdx.x;
+    int C = offsets[i]+ nb_synapses[i];
+
+    // Updating global variables of projection %(id)s
+    if ( threadIdx.x == 0)
+    {
+%(global_eqs)s
+    }
+
+    // Updating local variables of projection %(id)s
+    while ( j < C )
+    {
+%(local_eqs)s
+
+        j += blockDim.x;
+    }
+}
+
+// host calls device kernel for population %(id)s
+void Proj%(id)s_step(int numBlocks, int numThreads, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s)
+{
+    cuProj%(id)s_step<<<numBlocks, numThreads>>>(post_rank, pre_rank, nb_synapses, offsets, dt%(var2)s%(par2)s);
+}
 """
 
 psp_kernel=\
 """
 template<unsigned int blockSize>
-__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int size, int* pre_rank, int *nb_synapses, int* offsets, double *r, double* w, double *sum_%(target)s ) {
+__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* pre_rank, int *nb_synapses, int* offsets, double *r, double* w, double *sum_%(target)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int i = tid+offsets[blockIdx.x];
 
@@ -82,6 +135,6 @@ __global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int size, int* pre_rank
 void Pop%(pre)s_Pop%(post)s_%(target)s_psp( int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s ) {
     int sharedMemSize = pop%(pre)s_pop%(post)s_%(target)s * 64;
 
-    cuPop%(pre)s_Pop%(post)s_%(target)s_psp<pop%(pre)s_pop%(post)s_%(target)s><<<size, pop%(pre)s_pop%(post)s_%(target)s, sharedMemSize >>>( size, pre_rank, nb_synapses, offsets, r, w, sum_%(target)s );
+    cuPop%(pre)s_Pop%(post)s_%(target)s_psp<pop%(pre)s_pop%(post)s_%(target)s><<<size, pop%(pre)s_pop%(post)s_%(target)s, sharedMemSize >>>( pre_rank, nb_synapses, offsets, r, w, sum_%(target)s );
 }
 """

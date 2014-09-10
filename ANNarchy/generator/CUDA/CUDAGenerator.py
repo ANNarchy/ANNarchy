@@ -290,7 +290,7 @@ ProjStruct%(id)s proj%(id)s;
         delay_code = self.body_delay_neuron()
 
         # Equations for the synaptic variables
-        update_synapse = self.body_update_synapse()
+        update_synapse = self.body_synapse_func_call()
 
         # Equations for the synaptic variables
         post_event = self.body_postevent_proj()
@@ -382,6 +382,44 @@ ProjStruct%(id)s proj%(id)s;
 
         return code
 
+    def body_synapse_func_call(self):
+        code = ""
+
+        for proj in self.projections.itervalues():
+            if proj.synapse.type == "rate":
+                # gather all variables and parameters
+                local = ""
+                glob = ""
+                for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+                    if attr['name'] in proj.synapse.description['local']:
+                        local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
+                    else:
+                        glob += """, proj%(id)s.%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
+
+                # generate code
+                code += """
+    // Updating the variables of projection %(id)s
+    numThreads = 32;
+    numBlocks = pop%(post)s.size;
+
+    Proj%(id)s_step(/* kernel config */
+              numBlocks, numThreads, proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
+              /* kernel gpu arrays */
+              , pop%(post)s.gpu_r, pop%(pre)s.gpu_r%(local)s
+              /* kernel constants */
+              %(glob)s);
+""" % { 'id': proj.id,
+        'post': proj.post.id,
+        'pre': proj.pre.id,
+        'local': local,
+        'glob': glob
+      }
+
+            else:
+                Global._error("Spike synapses are not supported yet by CUDA")
+
+        return code
+
     def body_delay_neuron(self):
         code = ""
         for name, pop in self.populations.iteritems():
@@ -424,37 +462,6 @@ ProjStruct%(id)s proj%(id)s;
 
         return code
 
-    def body_update_synapse(self):
-        # Reset code
-        code = ""
-        # Sum over all synapses 
-        for name, proj in self.projections.iteritems():
-            from ..Utils import generate_equation_code
-            # Global variables
-            global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-            code+= """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
-    if(proj%(id_proj)s._learning){
-%(global)s
-"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-
-            # Local variables
-            local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}  
-            if local_eq.strip() != "": 
-                code+= """
-        #pragma omp parallel for 
-        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-                %(local)s
-            }
-        }
-"""%{'id_proj' : proj.id, 'local': local_eq}
-
-            code += """
-    }"""
-
-        return code
-
     def body_host_device_transfer(self):
         code = ""
         for pop in self.populations.itervalues():
@@ -493,6 +500,10 @@ ProjStruct%(id)s proj%(id)s;
         for proj in self.projections.itervalues():
             code += """
     // Initialize device memory for proj%(id)s
+
+        // post_rank
+        cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
+        cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
     
         // nb_synapses
         auto flat_proj%(id)s_idx = flattenIdx<int>(proj%(id)s.pre_rank);
@@ -639,14 +650,33 @@ ProjStruct%(id)s proj%(id)s;
                 Global._error("Spike synapses are not supported yet by CUDA")
                 return ""
             
+        def generate_syn_call(proj):
+            var = ", double* pre_r, double* post_r"
+            par = ""
+            for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+                if attr['name'] in proj.synapse.description['local']:
+                    var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+                else:
+                    par += """, %(type)s %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+
+            return """void Proj%(id)s_step(int numBlocks, int numThreads, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
+""" % { 'id': proj.id,
+        'var': var,
+        'par': par
+      }
+
         func_prototypes = "// population prototypes\n"
         for pop in self.populations.itervalues():
             func_prototypes += generate_neuron_step_call(pop)
 
-        func_prototypes += "\n// projection prototypes\n"
+        func_prototypes += "\n// projection prototypes - compute psp \n"
         for proj in self.projections.itervalues():
             func_prototypes += generate_psp_call(proj)
             
+        func_prototypes += "\n// projection prototypes - update synaptic variables\n"
+        for proj in self.projections.itervalues():
+            func_prototypes += generate_syn_call(proj)
+
         template=\
 """
 #ifndef __CUDA_KERNEL__
@@ -669,13 +699,14 @@ ProjStruct%(id)s proj%(id)s;
 
         psp_kernel = self.body_computesum_proj()
 
+        syn_kernel = self.body_update_synapse()
+
         from .cuBodyTemplate import cu_body_template
         return cu_body_template % {
             'kernel_config': kernel_config,
             'pop_kernel': pop_kernel,
             'psp_kernel': psp_kernel,
-            'syn_kernel': '',
-            'call_kernel': ''
+            'syn_kernel': syn_kernel
         }
 
     def body_kernel_config(self):
@@ -721,37 +752,17 @@ ProjStruct%(id)s proj%(id)s;
             # Local variables
             loc_eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
             loc_eqs = loc_eqs.replace("pop"+str(pop.id)+".", "")
-            code += """// gpu device kernel for population %(id)s
-__global__ void cuPop%(id)s_step(int N%(tar)s%(var)s%(par)s, double dt)
-{
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Updating global variables of population %(id)s
-%(global_eqs)s    
-    
-    // Updating local variables of population %(id)s
-    if ( i < N )
-    {
-%(local_eqs)s
-    }
-}
-
-// host calls device kernel for population %(id)s
-void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt)
-{
-    cuPop%(id)s_step<<<numBlocks, numThreads>>>(size%(tar2)s%(var2)s%(par2)s, dt);
-}
-
-""" % { 'id': pop.id, 
-        'local_eqs': loc_eqs,
-        'global_eqs': glob_eqs,
-        'tar': tar, 
-        'tar2': tar.replace("double*","").replace("int*",""),
-        'var': var, 
-        'var2': var.replace("double*","").replace("int*",""),
-        'par': par,
-        'par2': par.replace("double","").replace("int","")
-     }
+            from .cuBodyTemplate import pop_kernel
+            code += pop_kernel % {  'id': pop.id,
+                                    'local_eqs': loc_eqs,
+                                    'global_eqs': glob_eqs,
+                                    'tar': tar,
+                                    'tar2': tar.replace("double*","").replace("int*",""),
+                                    'var': var,
+                                    'var2': var.replace("double*","").replace("int*",""),
+                                    'par': par,
+                                    'par2': par.replace("double","").replace("int","")
+                                 }
 
         return code
 
@@ -767,18 +778,6 @@ void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s
             # Take delays into account if any
             if proj.max_delay > 1:
                 Global._error("synaptic delays are currently not supported.")
-                #===============================================================
-                # if proj._synapses.uniform_delay == -1 : # Non-uniform delays
-                #     psp = psp.replace(
-                #         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                #         'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
-                #     )
-                # else: # Uniform delays
-                #     psp = psp.replace(
-                #         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                #         'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
-                #     )
-                #===============================================================
 
             from .cuBodyTemplate import psp_kernel
             code = psp_kernel % { 'id': proj.id,
@@ -790,50 +789,8 @@ void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s
             return code
         
         def spiking(proj):
-
-            psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
-            pre_event_list = []
-
-            for eq in proj.synapse.description['pre_spike']:
-                if eq['name'] == 'g_target':
-                    psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
-                else: 
-                    pre_event_list.append(eq['eq'])
-
-            pre_event = ""
-            if len(pre_event_list) > 0: # There are other variables to update than g_target
-                code = ""
-                for eq in pre_event_list:
-                    code += ' ' * 16 + eq % {'id_proj' : proj.id} + '\n'
-                pre_event = """
-                if(!pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
-%(pre_event)s
-                }
-"""%{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
-
-            # No need for openmp if less than 10 neurons
-            omp_code = '#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)' if proj.post.size > 10 else ''
-
-            code = """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
-    std::vector<bool> proj%(id_proj)s_pre_spike = pop%(id_pre)s.spike;
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += %(psp)s
-                if(proj%(id_proj)s._learning){
-%(pre_event)s
-                }
-            }
-        }
-        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
-    }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
-    'pre_event': pre_event, 'psp': psp, 'omp_code': omp_code}
-
-            return code
+            Global._error("Spiking models are not supported currently on CUDA devices.")
+            return ""
 
         # Reset code
         code = ""
@@ -846,6 +803,50 @@ void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s
                 code += spiking(proj)
 
         return code
+
+    def body_update_synapse(self):
+        # Reset code
+        code = ""
+
+        # Sum over all synapses
+        for proj in self.projections.itervalues():
+
+            from ..Utils import generate_equation_code
+
+            # Global variables
+            global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+
+            # Local variables
+            local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}  
+
+            # remove unnecessary stuff, transfrom OMP to CUDA
+            local_eq = local_eq.replace("proj"+str(proj.id)+".","")
+            local_eq = local_eq.replace("[i][j]","[j]")
+
+            # UGLYHACK!!!!!!!!!!!!!!
+            local_eq = local_eq.replace("pop1.r","post_r")
+            local_eq = local_eq.replace("pop0.r","pre_r")
+
+            var = ", double* pre_r, double* post_r"
+            par = ""
+            for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+                if attr['name'] in proj.synapse.description['local']:
+                    var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+                else:
+                    par += """, %(type)s %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+
+            from .cuBodyTemplate import syn_kernel
+            code += syn_kernel % { 'id': proj.id,
+                                   'par': par,
+                                   'par2': par.replace("double",""),
+                                   'var': var,
+                                   'var2': var.replace("double*",""),
+                                   'global_eqs': global_eq,
+                                   'local_eqs': local_eq
+                                 }
+
+        return code
+
 #######################################################################
 ############## PYX ####################################################
 #######################################################################
