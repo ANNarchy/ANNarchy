@@ -407,7 +407,7 @@ ProjStruct%(id)s proj%(id)s;
     Proj%(id)s_step(/* kernel config */
               numBlocks, numThreads, proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
               /* kernel gpu arrays */
-              , pop%(post)s.gpu_r, pop%(pre)s.gpu_r%(local)s
+              , pop%(pre)s.gpu_r, pop%(post)s.gpu_r%(local)s
               /* kernel constants */
               %(glob)s);
 """ % { 'id': proj.id,
