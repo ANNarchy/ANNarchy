@@ -349,11 +349,8 @@ ProjStruct%(id)s proj%(id)s;
 
             code += """
     // Updating the local and global variables of population %(id)s
-    numThreads = 32;
-    numBlocks = ceil ( ((double)pop%(id)s.size) / ((double)numThreads) );
-
     Pop%(id)s_step(/* kernel config */
-              numBlocks, numThreads, pop%(id)s.size
+              pop%(id)s.size
               /* population targets */
               %(tar)s
               /* kernel gpu arrays */
@@ -409,11 +406,8 @@ ProjStruct%(id)s proj%(id)s;
                 # generate code
                 code += """
     // Updating the variables of projection %(id)s
-    numThreads = 32;
-    numBlocks = pop%(post)s.size;
-
     Proj%(id)s_step(/* kernel config */
-              numBlocks, numThreads, proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
+              proj%(id)s.post_rank.size(), proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
               /* kernel gpu arrays */
               , pop%(pre)s.gpu_r, pop%(post)s.gpu_r%(local)s
               /* kernel constants */
@@ -524,6 +518,17 @@ ProjStruct%(id)s proj%(id)s;
     def body_init_device(self):
         code = ""
 
+        dev_id = 0 # default cuda device
+        if 'device' in Global.cuda_config.keys():
+            dev_id = Global.cuda_config['device']
+
+        code += """
+    // set active cuda device
+    auto status = cudaSetDevice(%(id)s);
+    if ( status != cudaSuccess )
+        std::cerr << "Error on setting cuda device ... " << std::endl;
+""" % { 'id': dev_id }
+
         for pop in self.populations.itervalues():
             code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
@@ -621,27 +626,40 @@ ProjStruct%(id)s proj%(id)s;
 ############## CUDA-HEADER ############################################
 #######################################################################
     def generate_cuda_header(self):
+        """
+        File: cuANNarchy.h
+        """
         def generate_neuron_step_call(pop):
+            """
+            call of cuda update_neural_variables kernels.
+            """
             if len(pop.neuron.description['variables']) == 0: # no variable
                 return ""
-            
-            var = ""
-            par = ""
-            tar = ""
-            
-            # targets
-            for target in pop.neuron.description['targets']:
-                tar += """, double* sum_%(target)s""" % {'target' : target}
-            
-            for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
-                if attr['name'] in pop.neuron.description['local']:
-                    var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] } 
-                else:
-                    par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
-            return """void Pop%(id)s_step( int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt);
-""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }            
-        
+
+            if pop.neuron.type == "rate":
+                var = ""
+                par = ""
+                tar = ""
+
+                # targets
+                for target in pop.neuron.description['targets']:
+                    tar += """, double* sum_%(target)s""" % {'target' : target}
+
+                for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
+                    if attr['name'] in pop.neuron.description['local']:
+                        var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+                    else:
+                        par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+                return """void Pop%(id)s_step( int size%(tar)s%(var)s%(par)s, double dt);
+    """ % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
+            else:
+                Global._error("Spike synapses are not supported yet by CUDA")
+                return ""
+
         def generate_psp_call(proj):
+            """
+            call of cuda compute_psp kernels.
+            """
             if proj.synapse.type == "rate":
                 return """void Pop%(pre)s_Pop%(post)s_%(target)s_psp( int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s );
 """ % { 'id': proj.id,
@@ -652,22 +670,30 @@ ProjStruct%(id)s proj%(id)s;
             else:
                 Global._error("Spike synapses are not supported yet by CUDA")
                 return ""
-            
-        def generate_syn_call(proj):
-            var = ", double* pre_r, double* post_r"
-            par = ""
-            for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
-                if attr['name'] in proj.synapse.description['local']:
-                    var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
-                else:
-                    par += """, %(type)s %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
 
-            return """void Proj%(id)s_step(int numBlocks, int numThreads, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
+        def generate_syn_call(proj):
+            """
+            call of cuda update_synaptic_variable kernels.
+            """
+            if proj.synapse.type == "rate":
+                var = ", double* pre_r, double* post_r"
+                par = ""
+                for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+                    if attr['name'] in proj.synapse.description['local']:
+                        var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+                    else:
+                        par += """, %(type)s %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+    
+                return """void Proj%(id)s_step(int size, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
 """ % { 'id': proj.id,
         'var': var,
         'par': par
       }
+            else:
+                Global._error("Spike synapses are not supported yet by CUDA")
+                return ""
 
+        # create the function prototypes for each operation solely 
         func_prototypes = "// population prototypes\n"
         for pop in self.populations.itervalues():
             func_prototypes += generate_neuron_step_call(pop)
@@ -675,7 +701,7 @@ ProjStruct%(id)s proj%(id)s;
         func_prototypes += "\n// projection prototypes - compute psp \n"
         for proj in self.projections.itervalues():
             func_prototypes += generate_psp_call(proj)
-            
+
         func_prototypes += "\n// projection prototypes - update synaptic variables\n"
         for proj in self.projections.itervalues():
             func_prototypes += generate_syn_call(proj)
@@ -713,9 +739,24 @@ ProjStruct%(id)s proj%(id)s;
         }
 
     def body_kernel_config(self):
-        code = ""
+        cu_config = Global.cuda_config
+
+        code = "// Population config\n"
+        for pop in self.populations.itervalues():
+            num_threads = 32
+            if pop in cu_config.keys():
+                num_threads = cu_config[pop]
+
+            code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
+
+        code += "\n// Population config\n"
         for proj in self.projections.itervalues():
-            code+= """#define pop%(pre)s_pop%(post)s_%(target)s 192\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target }
+            num_threads = 192
+            if proj in cu_config.keys():
+                num_threads = cu_config[proj]
+
+            code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
+
         return code
     
     def body_update_neuron(self):
@@ -845,7 +886,10 @@ ProjStruct%(id)s proj%(id)s;
                                    'var': var,
                                    'var2': var.replace("double*",""),
                                    'global_eqs': global_eq,
-                                   'local_eqs': local_eq
+                                   'local_eqs': local_eq,
+                                   'target': proj.target,
+                                   'pre': proj.pre.id,
+                                   'post': proj.post.id,
                                  }
 
         return code

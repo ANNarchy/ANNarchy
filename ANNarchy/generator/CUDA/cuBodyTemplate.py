@@ -43,9 +43,11 @@ __global__ void cuPop%(id)s_step(int N%(tar)s%(var)s%(par)s, double dt)
 }
 
 // host calls device kernel for population %(id)s
-void Pop%(id)s_step(int numBlocks, int numThreads, int size%(tar)s%(var)s%(par)s, double dt)
+void Pop%(id)s_step(int size%(tar)s%(var)s%(par)s, double dt)
 {
-    cuPop%(id)s_step<<<numBlocks, numThreads>>>(size%(tar2)s%(var2)s%(par2)s, dt);
+    int numBlocks = (int)ceil( (double)size / (double) pop%(id)s);
+    
+    cuPop%(id)s_step<<<numBlocks, pop%(id)s>>>(size%(tar2)s%(var2)s%(par2)s, dt);
 }
 """
 
@@ -77,9 +79,10 @@ __global__ void cuProj%(id)s_step( /* default params */
 }
 
 // host calls device kernel for population %(id)s
-void Proj%(id)s_step(int numBlocks, int numThreads, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s)
+void Proj%(id)s_step(int size, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s)
 {
-    cuProj%(id)s_step<<<numBlocks, numThreads>>>(post_rank, pre_rank, nb_synapses, offsets, dt%(var2)s%(par2)s);
+
+    cuProj%(id)s_step<<<size, pop%(pre)s_pop%(post)s_%(target)s>>>(post_rank, pre_rank, nb_synapses, offsets, dt%(var2)s%(par2)s);
 }
 """
 
