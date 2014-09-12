@@ -163,7 +163,6 @@ extern PopStruct%(id)s pop%(id)s;
             code = """
 struct ProjStruct%(id)s{
     int size;
-    int overallSynapses;
     
     // Learning flag
     bool _learning;
@@ -174,6 +173,11 @@ struct ProjStruct%(id)s{
     int* gpu_pre_rank;
     int* gpu_nb_synapses;
     int* gpu_off_synapses;
+    
+    // flat connectivity parameters 
+    int overallSynapses;
+    std::vector<int> flat_idx;
+    std::vector<int> flat_off;
 """
 
             # Delays
@@ -474,13 +478,14 @@ ProjStruct%(id)s proj%(id)s;
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
                 if attr['name'] in pop.neuron.description['local']:
                     code += """
-    cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        // %(attr_name)s
+        cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         for proj in self.projections.itervalues():
-            from .cuBodyTemplate import proj_basic_data
-            code += proj_basic_data % { 'id': proj.id }
-
+            #from .cuBodyTemplate import proj_basic_data
+            #code += proj_basic_data % { 'id': proj.id }
+            code += """\n\t// host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
             for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
                 if attr['name'] in proj.synapse.description['local']:
                     code += """
@@ -503,13 +508,14 @@ ProjStruct%(id)s proj%(id)s;
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         for proj in self.projections.itervalues():
+            code += """\n\t// device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
             for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
                 if attr['name'] in proj.synapse.description['local']:
                     code += """
             // %(name)s
             flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
             cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, flat_proj%(id)s_idx);
+            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, proj%(id)s.flat_idx);
             cudaFree(proj%(id)s.gpu_%(name)s);
 """ % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
 
@@ -527,6 +533,9 @@ ProjStruct%(id)s proj%(id)s;
     auto status = cudaSetDevice(%(id)s);
     if ( status != cudaSuccess )
         std::cerr << "Error on setting cuda device ... " << std::endl;
+        
+    // initialize cuda-api
+    cudaFree(0);
 """ % { 'id': dev_id }
 
         for pop in self.populations.itervalues():
@@ -538,6 +547,10 @@ ProjStruct%(id)s proj%(id)s;
             for target in pop.neuron.description['targets']:
                 code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
 """ % { 'id': pop.id, 'target': target }
+
+        for proj in self.projections.itervalues():
+            from .cuBodyTemplate import proj_basic_data
+            code += proj_basic_data % { 'id': proj.id }
 
         return code
 
