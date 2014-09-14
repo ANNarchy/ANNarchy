@@ -154,6 +154,10 @@ def analyse_neuron(neuron):
                 if switch:
                     switch = re.sub(prev, new, switch)
 
+        # Replace local functions
+        for f in description['functions']:
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+'%(pop)s.'+ f['name'] + '(', ' ' + cpp_eq).strip()
+
         # Store the result
         variable['cpp'] = cpp_eq # the C++ equation
         variable['switch'] = switch # switch value of ODE

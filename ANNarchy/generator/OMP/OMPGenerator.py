@@ -1,4 +1,5 @@
 import ANNarchy.core.Global as Global
+from ANNarchy.core.PopulationView import PopulationView
 
 import numpy as np
 
@@ -28,11 +29,23 @@ class OMPGenerator(object):
 
     def propagate_global_ops(self):
 
+        # Propagate the operations to the populations
         for name, proj in self.projections.iteritems():
             for op in proj.synapse.description['pre_global_operations']:
-                proj.pre.global_operations.append(op)
+                if isinstance(proj.pre, PopulationView):
+                    if not op in proj.pre.population.global_operations:
+                        proj.pre.population.global_operations.append(op)
+                else:
+                    if not op in proj.pre.global_operations:
+                        proj.pre.global_operations.append(op)
             for op in  proj.synapse.description['post_global_operations']:
-                proj.post.global_operations.append(op)
+                if isinstance(proj.post, PopulationView):
+                    if not op in proj.post.population.global_operations:
+                        proj.post.population.global_operations.append(op)
+                else:
+                    if not op in proj.post.global_operations:
+                        proj.post.global_operations.append(op)
+
 
 
 
@@ -47,12 +60,16 @@ class OMPGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.header_struct_proj()
 
+        # Custom functions
+        custom_func = self.header_custom_functions()
+
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
-            'proj_ptr': proj_ptr
+            'proj_ptr': proj_ptr,
+            'custom_func': custom_func
         }
 
     def header_struct_pop(self):
@@ -141,14 +158,22 @@ struct PopStruct%(id)s{
     // Delays for rate-coded population
     std::deque< std::vector<double> > _delayed_r;
 """
+
+            # Local functions
+            if len(pop.neuron.description['functions'])>0:
+                code += """
+    // Local functions
+"""
+                for func in pop.neuron.description['functions']:
+                    code += ' '*4 + func['cpp'] + '\n'
+
             # Finish the structure
             code += """
 };    
 """           
             pop_struct += code % {'id': pop.id}
 
-            pop_ptr += """
-extern PopStruct%(id)s pop%(id)s;
+            pop_ptr += """extern PopStruct%(id)s pop%(id)s;
 """% {
     'id': pop.id,
 }
@@ -221,14 +246,24 @@ struct ProjStruct%(id)s{
 """ 
             proj_struct += code % {'id': proj.id}
 
-            proj_ptr += """
-extern ProjStruct%(id)s proj%(id)s;
+            proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
 """% {
     'id': proj.id,
 }
 
         return proj_struct, proj_ptr
 
+    def header_custom_functions(self):
+
+        if len(Global._functions) == 0:
+            return ""
+
+        code = ""
+        from ANNarchy.parser.Extraction import extract_functions
+        for func in Global._functions:
+            code +=  extract_functions(func, local_global=True)[0]['cpp'] + '\n'
+
+        return code
 
 #######################################################################
 ############## BODY ###################################################
@@ -239,17 +274,18 @@ extern ProjStruct%(id)s proj%(id)s;
         pop_ptr = ""
         for name, pop in self.populations.iteritems():
             # Declaration of the structure
-            pop_ptr += """
-PopStruct%(id)s pop%(id)s;
+            pop_ptr += """PopStruct%(id)s pop%(id)s;
 """% {'id': pop.id}
 
         # struct declaration for each projection
         proj_ptr = ""
         for name, proj in self.projections.iteritems():
             # Declaration of the structure
-            proj_ptr += """
-ProjStruct%(id)s proj%(id)s;
+            proj_ptr += """ProjStruct%(id)s proj%(id)s;
 """% {'id': proj.id}
+
+        # Code for the global operations
+        glop_definition = self.body_def_glops()
 
         # Compute presynaptic sums
         compute_sums = self.body_computesum_proj()
@@ -293,6 +329,7 @@ ProjStruct%(id)s proj%(id)s;
         return body_template % {
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
+            'glops_def': glop_definition,
             'compute_sums' : compute_sums,
             'update_neuron' : update_neuron,
             'update_globalops' : update_globalops,
@@ -563,6 +600,19 @@ ProjStruct%(id)s proj%(id)s;
             code += """
     }"""
 
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                    code = code.replace(
+                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
+                    )
+                else: # Uniform delays
+                    code = code.replace(
+                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                    )
+
         return code
 
 
@@ -588,6 +638,30 @@ ProjStruct%(id)s proj%(id)s;
                 code += """    pop%(id)s._%(op)s_%(var)s = 0.0;
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
 
+        return code
+
+    def body_def_glops(self):
+        ops = []
+        for name, pop in self.populations.iteritems():
+            for op in pop.global_operations:
+                ops.append( op['function'] )
+
+        if ops == []:
+            return ""
+
+        from .GlobalOperationTemplate import min_template, max_template, mean_template, norm1_template, norm2_template
+        code = ""
+        for op in list(set(ops)):
+            if op == 'min':
+                code += min_template
+            elif op == 'max':
+                code += max_template
+            elif op == 'mean':
+                code += mean_template
+            elif op == 'norm1':
+                code += norm1_template
+            elif op == 'norm2':
+                code += norm2_template
         return code
 
     def body_init_delay(self):

@@ -117,7 +117,7 @@ def extract_globalops_synapse(name, eq, desc):
     untouched = {}    
     globs = {'pre' : [],
              'post' : [] }   
-    glop_names = ['min', 'max', 'mean']
+    glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
         pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*pre\.([a-zA-Z0-9]+)\s*\)', eq)
@@ -126,13 +126,13 @@ def extract_globalops_synapse(name, eq, desc):
         for pre, var in pre_matches:
             globs['pre'].append({'function': op, 'variable': var})
             oldname = op + '(pre.' + var + ')'
-            newname =  ' _pre_' + op + '_' + var
+            newname =  '_pre_' + op + '_' + var
             eq = eq.replace(oldname, newname)
             untouched[newname] = 'pop%(id_pre)s._' + op + '_' + var
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var})
             oldname = op + '(post.' + var + ')'
-            newname = ' _post_' + op + '_' + var
+            newname = '_post_' + op + '_' + var
             eq = eq.replace(oldname, newname)
             untouched[newname] = 'pop%(id_post)s._' + op + '_' + var 
 

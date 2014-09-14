@@ -16,39 +16,7 @@ std::vector< std::mt19937 >  rng;
 %(proj_ptr)s
 
 // Global operations
-double max_value(std::vector<double> &array)
-{
-    double max = array[0];
-    for(int i=0; i<array.size(); i++)
-    {
-        if(array[i] > max)
-            max = array[i];
-    }
-
-    return max;
-}
-double min_value(std::vector<double> &array)
-{
-    double min = array[0];
-    for(int i=0; i<array.size(); i++)
-    {
-        if(array[i] < min)
-            min = array[i];
-    }
-
-    return min;
-}
-double mean_value(std::vector<double> &array)
-{
-    double sum = 0.0;
-    #pragma omp parallel reduction(+:sum)
-    for(int i=0; i<array.size(); i++)
-    {
-        sum += array[i];
-    }
-
-    return sum/(double)(array.size());
-}
+%(glops_def)s
 
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
