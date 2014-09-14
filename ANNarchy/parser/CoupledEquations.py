@@ -190,12 +190,12 @@ class CoupledEquations(object):
                 transformations = (standard_transformations + (convert_xor,))
             )
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            news[name] = 'double _' + name + '_new = ' + ccode(solved[0]) + ';'
+            news[name] = 'double _' + name + ' = ' + ccode(solved[0]) + ';'
 
         # Compute the switches
         switches = {}
         for name, expression in expressions.iteritems():
-            switches[name] = ccode(self.local_dict[name]) + ' += dt_ * _' + name + '_new ;'
+            switches[name] = ccode(self.local_dict[name]) + ' += dt_ * _' + name + ' ;'
 
         # Store the generated code in the variables
         for name in self.names:
@@ -242,9 +242,9 @@ class CoupledEquations(object):
         )
         tmp_equation = solve(tmp_analysed, new_var)[0]
 
-        explicit_code += '\n    double _' + self.name + '_new = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n    double _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
-        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + '_new ;'
+        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]
