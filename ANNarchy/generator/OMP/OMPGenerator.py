@@ -348,7 +348,13 @@ struct ProjStruct%(id)s{
     def body_update_neuron(self):
         code = ""
         for name, pop in self.populations.iteritems():
+            # Is there any variable?
             if len(pop.neuron.description['variables']) == 0: # no variable
+                continue
+
+            # Is it a specific population?
+            if pop.generator['omp']['body_update_neuron']:
+                code += pop.generator['omp']['body_update_neuron'] %{'id': pop.id}
                 continue
 
             # Neural update
@@ -434,8 +440,11 @@ struct ProjStruct%(id)s{
     def body_delay_neuron(self):
         code = ""
         for name, pop in self.populations.iteritems():
+
+            # No delay
             if pop.max_delay <= 1:
                 continue
+
             code += """
     // Enqueuing outputs of pop%(id)s
     pop%(id)s._delayed_r.push_front(pop%(id)s.r);
@@ -684,7 +693,8 @@ struct ProjStruct%(id)s{
 """
         for name, pop in self.populations.iteritems():
             if pop.neuron.type == 'spike':
-                code += """    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
+                code += """    
+    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);

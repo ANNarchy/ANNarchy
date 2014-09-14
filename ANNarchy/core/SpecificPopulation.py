@@ -1,7 +1,8 @@
-from ANNarchy.core.Population import Population
+from ANNarchy.core.Population import Population, pop_generator_template
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 import numpy as np
+
 
 class PoissonPopulation(Population):
     """ 
@@ -66,52 +67,48 @@ class PoissonPopulation(Population):
 
             * *parameters*: additional parameters which can be used in the *rates* equation.
         """  
-        if isinstance(rates, str):
-            poisson_neuron = Neuron(
-                parameters = """
-                %(params)s
-                """ % {'params': parameters if parameters else ''},
-                equations = """
-                rates = %(rates)s
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
-                """ % {'rates': rates},
-                spike = """
-                p < rates
-                """,
-                reset=""
-            )
-
-        elif isinstance(rates, np.ndarray):
-            poisson_neuron = Neuron(
-                parameters = """
-                rates = 10.0
-                """,
-                equations = """
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
-                """,
-                spike = """
-                p <= rates
-                """,
-                reset=""
-            )
-        else:
-            poisson_neuron = Neuron(
-                parameters = """
-                rates = %(rates)s
-                """ % {'rates': rates},
-                equations = """
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
-                """,
-                spike = """
-                p <= rates
-                """,
-                reset=""
-            )
+        poisson_neuron = Neuron(
+            parameters = """
+            rates = 0.0
+            """ ,
+            equations = """
+            p = Uniform(0.0, 1.0)
+            """,
+            spike = """
+            p <= rates
+            """,
+            reset=""
+        )
             
         Population.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
         
         if isinstance(rates, np.ndarray):
             self.rates = rates
+
+
+        # Code generation
+        self.generator['omp']['body_update_neuron'] = """
+    // Updating the Poisson population %(id)s
+    #pragma omp parallel for
+    for(int i = 0; i < pop%(id)s.size; i++){           
+        if(1000.0*pop%(id)s.rand_0[i] <= dt*pop%(id)s.rates[i]){
+            pop%(id)s.spike[i] = true;
+            pop%(id)s.last_spike[i] = t;
+        }
+        else{
+            pop%(id)s.spike[i] = false;
+        }
+    }
+    pop%(id)s.spiked.clear();
+    for(int i=0; i< (int)pop%(id)s.size; i++){
+        if(pop%(id)s.spike[i]){
+            pop%(id)s.spiked.push_back(i);
+            if(pop%(id)s.record_spike){
+                pop%(id)s.recorded_spike[i].push_back(t);
+            }
+        }
+    }
+"""
 
 
 class SpikeSourceArray(Population):

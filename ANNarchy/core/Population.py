@@ -27,8 +27,25 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
 
 import numpy as np
+import copy
 
-
+pop_generator_template = {
+    'omp': {
+        'header_pop_struct' : None,
+        'body_random_dist_init': None,
+        'body_delay_init': None,
+        'body_spike_init': None,
+        'body_globalops_init': None,
+        'body_random_dist_update': None,
+        'body_update_neuron': None,
+        'body_delay_code': None,
+        'body_update_globalops': None,
+        'body_record': None,
+        'pyx_pop_struct': None,
+        'pyx_pop_ptr': None,
+        'pyx_pop_class': None,
+    }
+}
 
 class Population(object):
     """
@@ -82,6 +99,7 @@ class Population(object):
         # Store the neuron type
         self.neuron = neuron
         self.neuron._analyse()
+        self.generator = copy.deepcopy(pop_generator_template)
         
         # Attribute a name if not provided
         self.id = len(Global._populations)
