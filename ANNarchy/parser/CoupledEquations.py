@@ -179,7 +179,7 @@ class CoupledEquations(object):
         for name, val in self.local_dict.iteritems():
             tmp_dict[name] = val
         for name, evaluation in evaluations.iteritems():
-            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt_*_k_' + name + ' )')
+            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k_' + name + ' )')
 
 
         # Compute the new values _x_new = f(x + dt/2*_k)
@@ -195,7 +195,7 @@ class CoupledEquations(object):
         # Compute the switches
         switches = {}
         for name, expression in expressions.iteritems():
-            switches[name] = ccode(self.local_dict[name]) + ' += dt_ * _' + name + ' ;'
+            switches[name] = ccode(self.local_dict[name]) + ' += dt * _' + name + ' ;'
 
         # Store the generated code in the variables
         for name in self.names:
@@ -231,7 +231,7 @@ class CoupledEquations(object):
 
         equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
 
-        explicit_code =  'double _k_' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
+        explicit_code =  'double _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
 
         # Midpoint method:
         # Replace the variable x by x+_x/2
@@ -244,7 +244,7 @@ class CoupledEquations(object):
 
         explicit_code += '\n    double _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
-        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + ' ;'
+        switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]

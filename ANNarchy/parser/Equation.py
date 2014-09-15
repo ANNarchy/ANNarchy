@@ -218,7 +218,7 @@ class Equation(object):
 
         equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
 
-        explicit_code =  'double _k_' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
+        explicit_code =  'double _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
 
         # Midpoint method:
         # Replace the variable x by x+_x/2
@@ -231,7 +231,7 @@ class Equation(object):
 
         explicit_code += '\n    double _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
-        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + ' ;'
+        switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]
