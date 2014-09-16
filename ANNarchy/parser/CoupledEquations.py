@@ -179,7 +179,7 @@ class CoupledEquations(object):
         for name, val in self.local_dict.iteritems():
             tmp_dict[name] = val
         for name, evaluation in evaluations.iteritems():
-            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt_*_k_' + name + ' )')
+            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k_' + name + ' )')
 
 
         # Compute the new values _x_new = f(x + dt/2*_k)
@@ -190,12 +190,12 @@ class CoupledEquations(object):
                 transformations = (standard_transformations + (convert_xor,))
             )
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            news[name] = 'double _' + name + '_new = ' + ccode(solved[0]) + ';'
+            news[name] = 'double _' + name + ' = ' + ccode(solved[0]) + ';'
 
         # Compute the switches
         switches = {}
         for name, expression in expressions.iteritems():
-            switches[name] = ccode(self.local_dict[name]) + ' += dt_ * _' + name + '_new ;'
+            switches[name] = ccode(self.local_dict[name]) + ' += dt * _' + name + ' ;'
 
         # Store the generated code in the variables
         for name in self.names:
@@ -231,7 +231,7 @@ class CoupledEquations(object):
 
         equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
 
-        explicit_code =  'double _k_' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
+        explicit_code =  'double _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
 
         # Midpoint method:
         # Replace the variable x by x+_x/2
@@ -242,9 +242,9 @@ class CoupledEquations(object):
         )
         tmp_equation = solve(tmp_analysed, new_var)[0]
 
-        explicit_code += '\n    double _' + self.name + '_new = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n    double _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
-        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + '_new ;'
+        switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]

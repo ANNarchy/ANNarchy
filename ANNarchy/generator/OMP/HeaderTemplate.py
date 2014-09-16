@@ -22,6 +22,12 @@ header_template = """#ifndef __ANNARCHY_H__
 #define clip(x, a, b) (x<a? a : (x>b? b :x))
 
 /*
+ * Custom functions
+ *
+ */
+%(custom_func)s
+
+/*
  * Structures for the populations
  *
  */

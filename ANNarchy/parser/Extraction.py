@@ -102,7 +102,7 @@ def extract_globalops_neuron(name, eq, description):
             if var in description['local']:
                 globs.append({'function': op, 'variable': var})
                 oldname = op + '(' + var + ')'
-                newname = '$(pop)s.' + op + '_' + var 
+                newname = 'pop%(id)s._' + op + '_' + var 
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = newname
             else:
@@ -117,7 +117,7 @@ def extract_globalops_synapse(name, eq, desc):
     untouched = {}    
     globs = {'pre' : [],
              'post' : [] }   
-    glop_names = ['min', 'max', 'mean']
+    glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
         pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*pre\.([a-zA-Z0-9]+)\s*\)', eq)
@@ -126,20 +126,23 @@ def extract_globalops_synapse(name, eq, desc):
         for pre, var in pre_matches:
             globs['pre'].append({'function': op, 'variable': var})
             oldname = op + '(pre.' + var + ')'
-            newname =  ' _pre_' + op + '_' + var
+            newname =  '_pre_' + op + '_' + var
             eq = eq.replace(oldname, newname)
-            untouched[newname] = '$(pre_pop)s.' + op + '_' + var
+            untouched[newname] = 'pop%(id_pre)s._' + op + '_' + var
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var})
             oldname = op + '(post.' + var + ')'
-            newname = ' _post_' + op + '_' + var
+            newname = '_post_' + op + '_' + var
             eq = eq.replace(oldname, newname)
-            untouched[newname] = '$(post_pop)s.' + op + '_' + var 
+            untouched[newname] = 'pop%(id_post)s._' + op + '_' + var 
 
     return eq, untouched, globs
     
 def extract_prepost(name, eq, description):
-    " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."           
+    " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."  
+
+    dependencies = {'pre': [], 'post': []}
+
     pre_matches = re.findall(r'pre\.([a-zA-Z0-9_]+)', eq)
     post_matches = re.findall(r'post\.([a-zA-Z0-9_]+)', eq)
 
@@ -153,6 +156,7 @@ def extract_prepost(name, eq, description):
                 return rep
             eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
+            dependencies['pre'].append(var)
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var)
             untouched['_pre_'+var] = ' pop%(id_pre)s.' + var + '[proj%(id_proj)s.pre_rank[i][j]]'
@@ -166,11 +170,12 @@ def extract_prepost(name, eq, description):
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
+            dependencies['post'].append(var)
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var)
             untouched['_post_'+var] = ' pop%(id_post)s.' + var + '[proj%(id_proj)s.post_rank[i]]'
 
-    return eq, untouched
+    return eq, untouched, dependencies
                    
 
 def extract_parameters(description, extra_values):

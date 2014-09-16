@@ -1,4 +1,5 @@
 import ANNarchy.core.Global as Global
+from ANNarchy.core.PopulationView import PopulationView
 
 import numpy as np
 
@@ -28,11 +29,23 @@ class OMPGenerator(object):
 
     def propagate_global_ops(self):
 
+        # Propagate the operations to the populations
         for name, proj in self.projections.iteritems():
             for op in proj.synapse.description['pre_global_operations']:
-                proj.pre.global_operations.append(op)
+                if isinstance(proj.pre, PopulationView):
+                    if not op in proj.pre.population.global_operations:
+                        proj.pre.population.global_operations.append(op)
+                else:
+                    if not op in proj.pre.global_operations:
+                        proj.pre.global_operations.append(op)
             for op in  proj.synapse.description['post_global_operations']:
-                proj.post.global_operations.append(op)
+                if isinstance(proj.post, PopulationView):
+                    if not op in proj.post.population.global_operations:
+                        proj.post.population.global_operations.append(op)
+                else:
+                    if not op in proj.post.global_operations:
+                        proj.post.global_operations.append(op)
+
 
 
 
@@ -47,12 +60,16 @@ class OMPGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.header_struct_proj()
 
+        # Custom functions
+        custom_func = self.header_custom_functions()
+
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
-            'proj_ptr': proj_ptr
+            'proj_ptr': proj_ptr,
+            'custom_func': custom_func
         }
 
     def header_struct_pop(self):
@@ -60,6 +77,15 @@ class OMPGenerator(object):
         pop_struct = ""
         pop_ptr = ""
         for name, pop in self.populations.iteritems():
+
+            # Is it a specific population?
+            if pop.generator['omp']['header_pop_struct']:
+                pop_struct += pop.generator['omp']['header_pop_struct'] % {'id': pop.id}
+                pop_ptr += """extern PopStruct%(id)s pop%(id)s;
+"""% {'id': pop.id}
+                continue
+
+            # Generate the structure for the population.
             code = """
 struct PopStruct%(id)s{
     // Number of neurons
@@ -109,12 +135,21 @@ struct PopStruct%(id)s{
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Arrays for the presynaptic sums
-            code += """
+            if pop.neuron.type == 'rate':
+                code += """
     // Targets
 """
-            for target in pop.neuron.description['targets']:
-                code += """    std::vector<double> sum_%(target)s;
+                for target in pop.neuron.description['targets']:
+                    code += """    std::vector<double> sum_%(target)s;
 """ % {'target' : target}
+
+            # Global operations
+            code += """
+    // Global operations
+"""
+            for op in pop.global_operations:
+                code += """    double _%(op)s_%(var)s;
+""" % {'op': op['function'], 'var': op['variable']}
 
             # Arrays for the random numbers
             code += """
@@ -132,17 +167,23 @@ struct PopStruct%(id)s{
     // Delays for rate-coded population
     std::deque< std::vector<double> > _delayed_r;
 """
+
+            # Local functions
+            if len(pop.neuron.description['functions'])>0:
+                code += """
+    // Local functions
+"""
+                for func in pop.neuron.description['functions']:
+                    code += ' '*4 + func['cpp'] + '\n'
+
             # Finish the structure
             code += """
 };    
 """           
+            # Add the code to the file
             pop_struct += code % {'id': pop.id}
-
-            pop_ptr += """
-extern PopStruct%(id)s pop%(id)s;
-"""% {
-    'id': pop.id,
-}
+            pop_ptr += """extern PopStruct%(id)s pop%(id)s;
+"""% {'id': pop.id}
 
         return pop_struct, pop_ptr
 
@@ -212,14 +253,24 @@ struct ProjStruct%(id)s{
 """ 
             proj_struct += code % {'id': proj.id}
 
-            proj_ptr += """
-extern ProjStruct%(id)s proj%(id)s;
+            proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
 """% {
     'id': proj.id,
 }
 
         return proj_struct, proj_ptr
 
+    def header_custom_functions(self):
+
+        if len(Global._functions) == 0:
+            return ""
+
+        code = ""
+        from ANNarchy.parser.Extraction import extract_functions
+        for func in Global._functions:
+            code +=  extract_functions(func, local_global=True)[0]['cpp'] + '\n'
+
+        return code
 
 #######################################################################
 ############## BODY ###################################################
@@ -230,17 +281,18 @@ extern ProjStruct%(id)s proj%(id)s;
         pop_ptr = ""
         for name, pop in self.populations.iteritems():
             # Declaration of the structure
-            pop_ptr += """
-PopStruct%(id)s pop%(id)s;
+            pop_ptr += """PopStruct%(id)s pop%(id)s;
 """% {'id': pop.id}
 
         # struct declaration for each projection
         proj_ptr = ""
         for name, proj in self.projections.iteritems():
             # Declaration of the structure
-            proj_ptr += """
-ProjStruct%(id)s proj%(id)s;
+            proj_ptr += """ProjStruct%(id)s proj%(id)s;
 """% {'id': proj.id}
+
+        # Code for the global operations
+        glop_definition = self.body_def_glops()
 
         # Compute presynaptic sums
         compute_sums = self.body_computesum_proj()
@@ -258,11 +310,17 @@ ProjStruct%(id)s proj%(id)s;
         # Initialize projections
         projection_init = self.body_init_projection()
 
+        # Initialize global operations
+        globalops_init = self.body_init_globalops()
+
         # Equations for the neural variables
         update_neuron = self.body_update_neuron()
 
         # Enque delayed outputs
         delay_code = self.body_delay_neuron()
+
+        # Global operations
+        update_globalops = self.body_update_globalops()
 
         # Equations for the synaptic variables
         update_synapse = self.body_update_synapse()
@@ -278,8 +336,10 @@ ProjStruct%(id)s proj%(id)s;
         return body_template % {
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
+            'glops_def': glop_definition,
             'compute_sums' : compute_sums,
             'update_neuron' : update_neuron,
+            'update_globalops' : update_globalops,
             'update_synapse' : update_synapse,
             'random_dist_init' : rd_init_code,
             'random_dist_update' : rd_update_code,
@@ -287,6 +347,7 @@ ProjStruct%(id)s proj%(id)s;
             'delay_code' : delay_code,
             'spike_init' : spike_init,
             'projection_init' : projection_init,
+            'globalops_init' : globalops_init,
             'post_event' : post_event,
             'record' : record
         }
@@ -294,6 +355,13 @@ ProjStruct%(id)s proj%(id)s;
     def body_update_neuron(self):
         code = ""
         for name, pop in self.populations.iteritems():
+
+            # Is it a specific population?
+            if pop.generator['omp']['body_update_neuron']:
+                code += pop.generator['omp']['body_update_neuron'] %{'id': pop.id}
+                continue
+
+            # Is there any variable?
             if len(pop.neuron.description['variables']) == 0: # no variable
                 continue
 
@@ -356,7 +424,7 @@ ProjStruct%(id)s proj%(id)s;
     }
     // Gather spikes
     pop%(id)s.spiked.clear();
-    for(int i=0; i< (int)pop%(id)s.size; i++){
+    for(int i=0; i< pop%(id)s.size; i++){
         if(pop%(id)s.spike[i]){
             pop%(id)s.spiked.push_back(i);
             if(pop%(id)s.record_spike){
@@ -380,9 +448,18 @@ ProjStruct%(id)s proj%(id)s;
     def body_delay_neuron(self):
         code = ""
         for name, pop in self.populations.iteritems():
+
+            # No delay
             if pop.max_delay <= 1:
                 continue
-            code += """
+
+            # Is it a specific population?
+            if pop.generator['omp']['body_delay_code']:
+                code += pop.generator['omp']['body_delay_code'] %{'id': pop.id}
+                continue
+
+            if pop.neuron.type == 'rate':
+                code += """
     // Enqueuing outputs of pop%(id)s
     pop%(id)s._delayed_r.push_front(pop%(id)s.r);
     pop%(id)s._delayed_r.pop_back();
@@ -452,7 +529,7 @@ ProjStruct%(id)s proj%(id)s;
 """%{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
 
             # No need for openmp if less than 10 neurons
-            omp_code = '#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)' if proj.post.size > 10 else ''
+            omp_code = """#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)"""%{'id_proj' : proj.id} if proj.post.size > 10 else ''
 
             code = """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
@@ -546,6 +623,19 @@ ProjStruct%(id)s proj%(id)s;
             code += """
     }"""
 
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                    code = code.replace(
+                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
+                    )
+                else: # Uniform delays
+                    code = code.replace(
+                        'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                    )
+
         return code
 
 
@@ -554,6 +644,11 @@ ProjStruct%(id)s proj%(id)s;
     // Initialize random distribution objects
 """
         for name, pop in self.populations.iteritems():
+            # Is it a specific population?
+            if pop.generator['omp']['body_random_dist_init']:
+                code += pop.generator['omp']['body_random_dist_init'] %{'id': pop.id}
+                continue
+
             for rd in pop.neuron.description['random_distributions']:
                 code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
     pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
@@ -561,12 +656,59 @@ ProjStruct%(id)s proj%(id)s;
 
         return code
 
+
+    def body_init_globalops(self):
+        code = """
+    // Initialize global operations
+"""
+        for name, pop in self.populations.iteritems():
+            # Is it a specific population?
+            if pop.generator['omp']['body_globalops_init']:
+                code += pop.generator['omp']['body_globalops_init'] %{'id': pop.id}
+                continue
+
+            for op in pop.global_operations:
+                code += """    pop%(id)s._%(op)s_%(var)s = 0.0;
+""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+
+        return code
+
+    def body_def_glops(self):
+        ops = []
+        for name, pop in self.populations.iteritems():
+            for op in pop.global_operations:
+                ops.append( op['function'] )
+
+        if ops == []:
+            return ""
+
+        from .GlobalOperationTemplate import min_template, max_template, mean_template, norm1_template, norm2_template
+        code = ""
+        for op in list(set(ops)):
+            if op == 'min':
+                code += min_template
+            elif op == 'max':
+                code += max_template
+            elif op == 'mean':
+                code += mean_template
+            elif op == 'norm1':
+                code += norm1_template
+            elif op == 'norm2':
+                code += norm2_template
+        return code
+
     def body_init_delay(self):
         code = """
     // Initialize delayed firing rates
 """
         for name, pop in self.populations.iteritems():
-            if pop.max_delay > 1:
+            if pop.max_delay > 1: # no need to generate the code otherwise
+
+                # Is it a specific population?
+                if pop.generator['omp']['body_delay_init']:
+                    code += pop.generator['omp']['body_delay_init'] %{'id': pop.id, 'delay': pop.max_delay}
+                    continue
+
                 if pop.neuron.type == 'rate':
                     code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
 """ % {'id': pop.id, 'delay': pop.max_delay}
@@ -580,8 +722,15 @@ ProjStruct%(id)s proj%(id)s;
     // Initialize spike arrays
 """
         for name, pop in self.populations.iteritems():
+
+            # Is it a specific population?
+            if pop.generator['omp']['body_spike_init']:
+                code += pop.generator['omp']['body_spike_init'] %{'id': pop.id}
+                continue
+
             if pop.neuron.type == 'spike':
-                code += """    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
+                code += """    
+    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
@@ -590,19 +739,25 @@ ProjStruct%(id)s proj%(id)s;
         return code
 
     def body_init_projection(self):
-        code = """
-    // Initialize projections
-"""
+        # Not needed yet
+#         code = """
+#     // Initialize projections
+# """
 #         for name, proj in self.projections.iteritems():
 #                 code += """    proj%(id)s._learning = true;
 # """ % {'id': proj.id}
 
-        return code
+        return ""
 
     def body_update_randomdistributions(self):
         code = """
     // Compute random distributions""" 
         for name, pop in self.populations.iteritems():
+            # Is it a specific population?
+            if pop.generator['omp']['body_random_dist_update']:
+                code += pop.generator['omp']['body_random_dist_update'] %{'id': pop.id}
+                continue
+
             if len(pop.neuron.description['random_distributions']) > 0:
                 code += """
     // RD of pop%(id)s
@@ -620,9 +775,27 @@ ProjStruct%(id)s proj%(id)s;
 """
         return code
 
+    def body_update_globalops(self):
+        code = ""
+        for name, pop in self.populations.iteritems():
+            # Is it a specific population?
+            if pop.generator['omp']['body_update_globalops']:
+                code += pop.generator['omp']['body_update_globalops'] %{'id': pop.id}
+                continue
+
+            for op in pop.global_operations:
+                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s);
+""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+        return code
+
     def body_record(self):
         code = ""
         for name, pop in self.populations.iteritems():
+            # Is it a specific population?
+            if pop.generator['omp']['body_record']:
+                code += pop.generator['omp']['body_record'] %{'id': pop.id}
+                continue
+
             for var in pop.neuron.description['variables']:
                 code += """
     if(pop%(id)s.record_%(name)s)
@@ -659,6 +832,13 @@ ProjStruct%(id)s proj%(id)s;
         pop_struct = ""
         pop_ptr = ""
         for name, pop in self.populations.iteritems():
+            # Is it a specific population?
+            if pop.generator['omp']['pyx_pop_struct']:
+                pop_struct += pop.generator['omp']['pyx_pop_struct'] %{'id': pop.id}
+                pop_ptr += """
+    PopStruct%(id)s pop%(id)s"""% {'id': pop.id}
+                continue
+
             code = """
     cdef struct PopStruct%(id)s :
         int size
@@ -791,6 +971,11 @@ ProjStruct%(id)s proj%(id)s;
         # Cython wrappers for the populations
         code = ""
         for name, pop in self.populations.iteritems():
+            # Is it a specific population?
+            if pop.generator['omp']['pyx_pop_class']:
+                code += pop.generator['omp']['pyx_pop_class'] %{'id': pop.id}
+                continue
+
             # Init
             code += """
 cdef class pop%(id)s_wrapper :
