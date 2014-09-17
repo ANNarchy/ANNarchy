@@ -87,6 +87,7 @@ void step()
     ////////////////////////////////
     // Update synaptic variables
     ////////////////////////////////
+    int rk_pre, rk_post;
 %(update_synapse)s    
 
 

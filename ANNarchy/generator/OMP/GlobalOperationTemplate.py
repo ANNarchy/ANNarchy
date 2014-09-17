@@ -31,7 +31,6 @@ mean_template = """
 double mean_value(std::vector<double> &array)
 {
     double sum = 0.0;
-    #pragma omp parallel reduction(+:sum)
     for(int i=0; i<array.size(); i++)
     {
         sum += array[i];

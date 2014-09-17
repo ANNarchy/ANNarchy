@@ -38,7 +38,7 @@ class Equation(object):
     def __init__(self, name, expression, variables, 
                  local_variables, global_variables, 
                  untouched = [], 
-                 method='explicit', type=None, prefix='%(pop)s', index='[i]'):
+                 method='explicit', type=None, prefix='%(pop)s', index='[i]', global_index=''):
         '''
         Parameters:
         
@@ -74,8 +74,8 @@ class Equation(object):
             'dt' : Symbol('dt'),
             't' : Symbol('double(t)*dt'),
             'w' : Symbol('proj%(id_proj)s.w'+index), 
-            't_pre': Symbol('(double)(%(pre_pop)s_last_spike[rk_pre])*dt'),
-            't_post': Symbol('(double)(%(post_pop)s_last_spike[rk_post])*dt'),
+            't_pre': Symbol('(double)(%(pre_pop)s_last_spike[j])*dt'),
+            't_post': Symbol('(double)(%(post_pop)s_last_spike[i])*dt'),
             'pos': Function('positive'),
             'positive': Function('positive'), 
             'neg': Function('negative'), 
@@ -83,13 +83,15 @@ class Equation(object):
             'True': Symbol('true'), 
             'False': Symbol('false'), 
         }
+
         for var in self.variables: # Add each variable of the neuron
             if var in self.local_variables:
                 self.local_dict[var] = Symbol(prefix + '.' + var + index)
             elif var in self.global_variables:
                 if var in _predefined:
                     continue
-                self.local_dict[var] = Symbol(prefix + '.' + var)
+                self.local_dict[var] = Symbol(prefix + '.' + var + global_index)
+                
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)
             

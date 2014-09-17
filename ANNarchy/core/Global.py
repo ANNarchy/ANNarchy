@@ -134,11 +134,11 @@ def reset(populations=True, projections=False, synapses = False):
     * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
-        for pop in _populations:
+        for n, pop in _populations.iteritems():
             pop.reset()
             
     if projections:
-        for proj in _projections:
+        for n, proj in _projections.iteritems():
             pop.reset(synapses)
 
     _network.set_time(0)
@@ -155,7 +155,7 @@ def get_population(name):
     
     * The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for pop in _populations:
+    for n, pop in _populations.iteritems():
         if pop.name == name:
             return pop
         
@@ -256,7 +256,31 @@ def step():
 ################################
 ## Learning flags
 ################################
-
+def enable_learning(projections=None):
+    """
+    Enables learning for all projections.
+    
+    *Parameter*:
+    
+    * **projections**: the projections whose learning should be enabled. By default, all the existing projections are enabled.
+    """
+    if not projections:
+        projections = _projections
+    for proj in projections:
+        proj.enable_learning()
+        
+def disable_learning(projections=None):
+    """
+    Disables learning for all projections.
+    
+    *Parameter*:
+    
+    * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
+    """
+    if not projections:
+        projections = _projections
+    for proj in projections:
+        proj.disable_learning()
     
 ################################
 ## Time
@@ -270,7 +294,123 @@ def get_current_step():
 def set_current_step(t):
     return _network.set_time(int(t))
 
+################################
+## Recording
+################################
+def start_record(to_record):
+    """
+    Starts recording of variables in different populations. 
+    
+    *Parameter*:
+    
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). 
+    
+    Example::
+    
+        to_record = { 
+            pop1 : ['mp', 'r'], 
+            pop2 : 'mp'    
+        }
+        start_record(to_record)
+    """
+    global _recorded_populations
+    _recorded_populations = to_record
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.start_record(variables)
+        else:
+            get_population(pop).start_record(variables)
 
+def get_record(to_record=None, reshape=False):
+    """
+    Retrieves the recorded variables of one or more populations since the last call. 
+  
+    *Parameter*:
+    
+    * **to_record**: a dictionary containing population objects (or names) as keys and variable names as values. For more details check Population.start_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+
+    * **reshape**: defines if the recorded variables should be reshaped to match the population geometry (default: False).
+    
+    Returns:
+    
+    * A dictionary containing all recorded values. The dictionary is empty if no recorded data is available.
+    
+    Example::
+    
+        to_record = { 
+            pop1 : ['mp', 'r'], 
+            pop2: 'mp'    
+        }
+        start_record(to_record)
+        simulate(1000.0)
+        data = get_record()
+        
+    """   
+    if not to_record:
+        to_record = _recorded_populations
+
+    data = {}
+    
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop_object = pop
+        else:
+            pop_object = get_population(pop)
+
+        data[pop] = pop_object.get_record(variables, reshape)
+    
+    return data  
+
+        
+def stop_record(to_record=None):
+    """
+    Stops the recording of variables in different populations. 
+    
+    *Parameter*:
+    
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.stop_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    """
+    if not to_record:
+        to_record = _recorded_populations
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.stop_record(variables)
+        else:
+            get_population(pop).stop_record(variables)
+
+        
+def pause_record(to_record=None):
+    """
+    Pauses the recording of variables in different populations. 
+    
+    *Parameter*:
+    
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.pause_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    """
+    if not to_record:
+        to_record = _recorded_populations
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.pause_record(variables)
+        else:
+            get_population(pop).pause_record(variables)
+
+        
+def resume_record(to_record=None):
+    """
+    Resumes the recording of variables in different populations. 
+    
+    *Parameter*:
+    
+    * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.resume_record(). When omitted, the dictionary provided in the last call to start_record() is used.
+    """
+    if not to_record:
+        to_record = _recorded_populations
+    for pop, variables in to_record.iteritems():
+        if not isinstance(pop, str):
+            pop.resume_record(variables)
+        else:
+            get_population(pop).resume_record(variables)
 
 ################################
 ## Printing
