@@ -42,6 +42,7 @@ class PopulationView(object):
         self.size = len(self.ranks)
         self.neuron = self.population.neuron
         self.id = self.population.id
+        self.name = population.name
 
     # targets must match the population, both in read and write
     @property
