@@ -120,6 +120,7 @@ struct PopStruct%(id)s{
     // Local parameter %(name)s
     std::vector< %(type)s > %(name)s;    // host
     %(type)s *gpu_%(name)s;    // device
+    bool %(name)s_dirty;
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in pop.neuron.description['global']:
                     code += """
@@ -134,6 +135,7 @@ struct PopStruct%(id)s{
     // Local variable %(name)s
     std::vector< %(type)s > %(name)s ;    // host
     %(type)s *gpu_%(name)s;    // device
+    bool %(name)s_dirty;
     std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -242,12 +244,14 @@ struct ProjStruct%(id)s{
     // Local parameter %(name)s
     std::vector< std::vector< %(type)s > > %(name)s;    // host
     %(type)s* gpu_%(name)s;    // device
+    bool %(name)s_dirty;    
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
     // Global parameter %(name)s
     std::vector<%(type)s>  %(name)s;
     %(type)s* gpu_%(name)s;    // device
+    bool %(name)s_dirty;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Variables
@@ -257,6 +261,7 @@ struct ProjStruct%(id)s{
     // Local variable %(name)s
     std::vector< std::vector< %(type)s > > %(name)s ;    // host
     %(type)s* gpu_%(name)s;    // device
+    bool %(name)s_dirty;
     //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     //bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -265,6 +270,7 @@ struct ProjStruct%(id)s{
     // Global variable %(name)s
     std::vector<%(type)s>  %(name)s;    // host
     %(type)s* gpu_%(name)s;    // device
+    bool %(name)s_dirty;
     //std::vector< %(type)s > recorded_%(name)s ;
     //bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -581,8 +587,9 @@ ProjStruct%(id)s proj%(id)s;
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
                 if attr['name'] in pop.neuron.description['local']:
                     code += """
-        // %(attr_name)s
-        cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        // %(attr_name)s: local
+        if( pop%(id)s.%(attr_name)s_dirty )
+            cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         for proj in self.projections.itervalues():
@@ -593,14 +600,20 @@ ProjStruct%(id)s proj%(id)s;
                 if attr['name'] in proj.synapse.description['local']:
                     code += """
         // %(name)s: local
-        auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
-        cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_%(name)s.clear();
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+            auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            flat_proj%(id)s_%(name)s.clear();
+        }
 """ % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
                 else:
                     code += """
         // %(name)s: global
-        cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        }
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
 
         return code
@@ -620,7 +633,7 @@ ProjStruct%(id)s proj%(id)s;
                 if attr['name'] in proj.synapse.description['local']:
                     code += """
             // %(name)s: local
-            flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
+            std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
             cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
             proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, proj%(id)s.flat_idx);
             flat_proj%(id)s_%(name)s.clear();
@@ -628,7 +641,7 @@ ProjStruct%(id)s proj%(id)s;
                 else:
                     code += """
             // %(name)s: global
-            cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
                     
 
@@ -656,6 +669,7 @@ ProjStruct%(id)s proj%(id)s;
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
                 if attr['name'] in pop.neuron.description['local']:
                     code += """\tcudaMalloc((void**)&pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s));
+        pop%(id)s.%(attr_name)s_dirty = false;
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
             for target in pop.neuron.description['targets']:
                 code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
@@ -677,12 +691,14 @@ ProjStruct%(id)s proj%(id)s;
         cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s));
         cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
         flat_proj%(id)s_%(name)s.clear();
+        proj%(id)s.%(name)s_dirty = false;
 """ % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
                 else:
                     code += """
         // %(name)s
         cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s));
         cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        proj%(id)s.%(name)s_dirty = false;
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
                     
                     
@@ -1140,6 +1156,7 @@ ProjStruct%(id)s proj%(id)s;
                     code += """
         # Local parameter %(name)s
         vector[%(type)s] %(name)s 
+        bool %(name)s_dirty
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in pop.neuron.description['global']:
                     code += """
@@ -1153,6 +1170,7 @@ ProjStruct%(id)s proj%(id)s;
                     code += """
         # Local variable %(name)s
         vector[%(type)s] %(name)s 
+        bool %(name)s_dirty
         vector[vector[%(type)s]] recorded_%(name)s 
         bool record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -1204,12 +1222,14 @@ ProjStruct%(id)s proj%(id)s;
                 if var['name'] in proj.synapse.description['local']:
                     code += """
         # Local parameter %(name)s
-        vector[vector[%(type)s]] %(name)s 
+        vector[vector[%(type)s]] %(name)s
+        bool %(name)s_dirty
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
         # Global parameter %(name)s
-        vector[%(type)s]  %(name)s 
+        vector[%(type)s]  %(name)s
+        bool %(name)s_dirty 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Variables
@@ -1278,7 +1298,9 @@ cdef class pop%(id)s_wrapper :
                 init = 0.0 if var['ctype'] == 'double' else 0
                 if var['name'] in pop.neuron.description['local']:                    
                     code += """
-        pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+        pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)
+        pop%(id)s.%(name)s_dirty = True""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+        
                 else: # global
                     code += """
         pop%(id)s.%(name)s = %(init)s""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
@@ -1294,6 +1316,7 @@ cdef class pop%(id)s_wrapper :
                 else: # global
                     code += """
         pop%(id)s.%(name)s = %(init)s
+        pop%(id)s.%(name)s_dirty = True
         pop%(id)s.recorded_%(name)s = vector[%(type)s](0, %(init)s)
         pop%(id)s.record_%(name)s = False""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
@@ -1340,6 +1363,7 @@ cdef class pop%(id)s_wrapper :
     cpdef np.ndarray get_%(name)s(self):
         return np.array(pop%(id)s.%(name)s)
     cpdef set_%(name)s(self, np.ndarray value):
+        pop%(id)s.%(name)s_dirty = True
         pop%(id)s.%(name)s = value
     cpdef %(type)s get_single_%(name)s(self, int rank):
         return pop%(id)s.%(name)s[rank]
@@ -1364,10 +1388,12 @@ cdef class pop%(id)s_wrapper :
     cpdef np.ndarray get_%(name)s(self):
         return np.array(pop%(id)s.%(name)s)
     cpdef set_%(name)s(self, np.ndarray value):
+        pop%(id)s.%(name)s_dirty = True
         pop%(id)s.%(name)s = value
     cpdef %(type)s get_single_%(name)s(self, int rank):
         return pop%(id)s.%(name)s[rank]
     cpdef set_single_%(name)s(self, int rank, value):
+        pop%(id)s.%(name)s_dirty = True
         pop%(id)s.%(name)s[rank] = value
     def start_record_%(name)s(self):
         pop%(id)s.record_%(name)s = True
@@ -1486,14 +1512,17 @@ cdef class proj%(id)s_wrapper :
     def get_%(name)s(self):
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
+        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s = value
     def get_dendrite_%(name)s(self, int rank):
         return proj%(id)s.%(name)s[rank]
     def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
+        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s[rank] = value
     def get_synapse_%(name)s(self, int rank_post, int rank_pre):
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
+        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
