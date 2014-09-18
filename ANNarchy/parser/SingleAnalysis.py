@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from .Analyser import *
 from ANNarchy.core.Global import _error, _warning
+from .Extraction import *
 
 def analyse_neuron(neuron):
     """ Performs the initial analysis for a single neuron type."""
