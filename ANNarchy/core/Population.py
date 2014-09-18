@@ -154,7 +154,20 @@ pop_generator_template = {
         #         pop%(id)s.r[rank] = value
         'pyx_pop_class': None,
     },
-    'cuda': {} # TODO
+    'cuda': {   # TODO
+        'header_pop_struct' : None,
+        'body_random_dist_init': None,
+        'body_delay_init': None,
+        'body_spike_init': None,
+        'body_globalops_init': None,
+        'body_random_dist_update': None,
+        'body_update_neuron': None,
+        'body_delay_code': None,
+        'body_update_globalops': None,
+        'body_record': None,
+        'pyx_pop_struct': None,
+        'pyx_pop_class': None,             
+    } 
 }
 
 class Population(object):
@@ -207,7 +220,7 @@ class Population(object):
         self.size = size
         
         # Store the neuron type
-        self.neuron = neuron
+        self.neuron = copy.deepcopy(neuron)
         self.neuron._analyse()
         self.generator = copy.deepcopy(pop_generator_template)
         
@@ -646,7 +659,7 @@ class Population(object):
                 Global._warning(var, 'is not a recordable variable of the population.')
                 continue
             if var in self.recorded_variables.keys():
-                Global._warning(var, 'is already recording.')
+                #Global._warning(var, 'is already recording.')
                 continue
             self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1]}
             getattr(self.cyInstance, 'start_record_'+var)()
@@ -733,3 +746,86 @@ class Population(object):
             }
 
         return data
+
+    ################################
+    ## MOdification of the variables
+    ################################
+    def set_variable_flags(self, name, value):
+        """ Sets the flags of a variable for the population.
+        
+        If the variable ``r`` is defined in the Neuron description through::
+        
+            r = sum(exc) : max=1.0  
+            
+        one can change its maximum value with::
+        
+            pop.set_variable_flags('r', {'max': 2.0})
+            
+        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
+        
+        For positional flags (population, implicit), the value in the dictionary must be set to the empty string ''::
+        
+            pop.set_variable_flags('r', {'implicit': ''})
+        
+        A None value in the dictionary deletes the corresponding flag::
+        
+            pop.set_variable_flags('r', {'max': None})
+            
+        """
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The population '+self.name+' has no variable called ' + name)
+            return
+            
+        for key, val in value.iteritems():
+            if val == '': # a flag
+                try:
+                    self.neuron.description['variables'][rk_var]['flags'].index(key)
+                except: # the flag does not exist yet, we can add it
+                    self.neuron.description['variables'][rk_var]['flags'].append(key)
+            elif val == None: # delete the flag
+                try:
+                    self.neuron.description['variables'][rk_var]['flags'].remove(key)
+                except: # the flag did not exist, check if it is a bound
+                    if has_key(self.neuron.description['variables'][rk_var]['bounds'], key):
+                        self.neuron.description['variables'][rk_var]['bounds'].pop(key)
+            else: # new value for init, min, max...
+                if key == 'init':
+                    self.neuron.description['variables'][rk_var]['init'] = val 
+                    self.init[name] = val              
+                else:
+                    self.neuron.description['variables'][rk_var]['bounds'][key] = val
+                
+       
+            
+    def set_variable_equation(self, name, equation):
+        """ Changes the equation of a variable for the population.
+        
+        If the variable ``r`` is defined in the Neuron description through::
+        
+            tau * dr/dt + r  = sum(exc) : max=1.0  
+            
+        one can change the equation with::
+        
+            pop.set_variable_equation('r', 'r = sum(exc)')
+            
+        Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
+        
+        .. warning::
+            
+            This method should be used with great care, it is advised to define another Neuron object instead. 
+            
+        """         
+        rk_var = self._find_variable_index(name)
+        if rk_var == -1:
+            Global._error('The population '+self.name+' has no variable called ' + name)
+            return               
+        self.neuron.description['variables'][rk_var]['eq'] = equation    
+            
+            
+    def _find_variable_index(self, name):
+        " Returns the index of the variable name in self.description['variables']"
+        for idx in range(len(self.neuron.description['variables'])):
+            if self.neuron.description['variables'][idx]['name'] == name:
+                return idx
+        return -1

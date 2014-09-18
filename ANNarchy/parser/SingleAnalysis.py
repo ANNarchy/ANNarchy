@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from .Analyser import *
 from ANNarchy.core.Global import _error, _warning
+from .Extraction import *
 
 def analyse_neuron(neuron):
     """ Performs the initial analysis for a single neuron type."""
@@ -238,7 +238,7 @@ def analyse_synapse(synapse):
         description['dependencies']['post'] += dependencies['post']
         
         # Extract if-then-else statements
-        eq, condition = extract_ite(variable['name'], eq, synapse)
+        eq, condition = extract_ite(variable['name'], eq, description)
         
         # Add the untouched variables to the global list
         for name, val in untouched_globs.iteritems():
@@ -264,7 +264,8 @@ def analyse_synapse(synapse):
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix='proj%(id_proj)s',
-                                      index="[i][j]")
+                                      index="[i][j]",
+                                      global_index="[i]")
                 variable['bounds']['min'] = translator.parse().replace(';', '')
 
         if 'max' in variable['bounds'].keys():
@@ -276,7 +277,8 @@ def analyse_synapse(synapse):
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix='proj%(id_proj)s',
-                                      index="[i][j]")
+                                      index="[i][j]",
+                                      global_index="[i]")
                 variable['bounds']['max'] = translator.parse().replace(';', '')
             
         # Analyse the equation
@@ -288,13 +290,15 @@ def analyse_synapse(synapse):
                                   method = method, 
                                   untouched = untouched.keys(),
                                   prefix='proj%(id_proj)s',
-                                  index="[i][j]")
+                                  index="[i][j]",
+                                  global_index="[i]")
             code = translator.parse()
                 
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, synapse, untouched,
+            code = translate_ITE(variable['name'], eq, condition, description, untouched,
                                   prefix='proj%(id_proj)s',
-                                  index="[i][j]")
+                                  index="[i][j]",
+                                  global_index="[i]")
 
         if isinstance(code, str):
             cpp_eq = code
@@ -331,12 +335,15 @@ def analyse_synapse(synapse):
                                   untouched = untouched.keys(),
                                   type='return',
                                   prefix='proj%(id_proj)s',
-                                  index='[i][j]')
+                                  index='[i][j]',
+                                  global_index="[i]")
             code = translator.parse()
         else:
             code = translate_ITE('psp', eq, condition, synapse, untouched,
                                   prefix='proj%(id_proj)s',
-                                  index="[i][j]", split=False)
+                                  index="[i][j]",
+                                  global_index="[i]", 
+                                  split=False)
 
         # Replace untouched variables with their original name
         for prev, new in untouched.iteritems():

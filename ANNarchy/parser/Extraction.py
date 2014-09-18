@@ -152,28 +152,28 @@ def extract_prepost(name, eq, description):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
                 rep = '_pre_sum_' + val
-                untouched[rep] = ' pop%(id_pre)s.sum_'+val+'[proj%(id_proj)s.pre_rank[i][j]] '
+                untouched[rep] = ' pop%(id_pre)s.sum_'+val+'[rk_pre] '
                 return rep
             eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
             dependencies['pre'].append(var)
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var)
-            untouched['_pre_'+var] = ' pop%(id_pre)s.' + var + '[proj%(id_proj)s.pre_rank[i][j]]'
+            untouched['_pre_'+var] = ' pop%(id_pre)s.' + var + '[rk_pre]'
 
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
                 rep = '_post_sum_' + val
-                untouched[rep] = ' pop%(id_post)s.sum_'+val+'[proj%(id_proj)s.post_rank[i]] '
+                untouched[rep] = ' pop%(id_post)s.sum_'+val+'[rk_post] '
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var)
-            untouched['_post_'+var] = ' pop%(id_post)s.' + var + '[proj%(id_proj)s.post_rank[i]]'
+            untouched['_post_'+var] = ' pop%(id_post)s.' + var + '[rk_post]'
 
     return eq, untouched, dependencies
                    
@@ -428,7 +428,8 @@ def extract_pre_spike_variable(description):
                                   description['local'] + [name], 
                                   description['global'],
                                   prefix = 'proj%(id_proj)s',
-                                  index = '[i][j]')
+                                  index = '[i][j]',
+                                  global_index="[i]")
             eq = translator.parse()
         else: 
             eq = translate_ITE(name, eq, condition, description, {})
@@ -453,7 +454,8 @@ def extract_post_spike_variable(description):
                                   description['local'], 
                                   description['global'],
                                   prefix = 'proj%(id_proj)s',
-                                  index = '[i][j]')
+                                  index = '[i][j]',
+                                  global_index="[i]")
             eq = translator.parse()     
         else: 
             eq = translate_ITE(name, eq, condition, description, {}) 

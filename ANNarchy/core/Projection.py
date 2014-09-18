@@ -23,6 +23,7 @@
 """
 import numpy as np
 import math
+import copy
 
 from ANNarchy.core import Global
 from ANNarchy.core.Synapse import Synapse
@@ -81,7 +82,7 @@ class Projection(object):
             else:
                 self.synapse = Synapse(parameters = "w=0.0", equations = "", pre_spike="g_target += w", post_spike="")
         else:
-            self.synapse = synapse
+            self.synapse = copy.deepcopy(synapse)
 
         self.synapse._analyse()
 
@@ -236,15 +237,10 @@ class Projection(object):
         " Method called when accessing an attribute."
         if not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
-        elif name == 'attributes':
-            return object.__getattribute__(self, 'attributes')
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
                 if not self.initialized:
-                    if name in self.synapse.description['local']:
-                        return self.init[name] # Dendrites are not initialized
-                    else:
-                        return self.init[name]
+                    return self.init[name]
                 else:
                     return self._get_cython_attribute( name )
             else:
@@ -254,8 +250,6 @@ class Projection(object):
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
         if not hasattr(self, 'initialized'): # Before the end of the constructor
-            object.__setattr__(self, name, value)
-        elif name == 'attributes':
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
@@ -271,17 +265,14 @@ class Projection(object):
     def _get_cython_attribute(self, attribute):
         """
         Returns the value of the given attribute for all neurons in the population, 
-        as a NumPy array having the same geometry as the population if it is local.
+        as a list of lists having the same geometry as the population if it is local.
         
         Parameter:
         
         * *attribute*: should be a string representing the variables's name.
         
         """
-        if attribute in self.synapse.description['local']:
-            return list(getattr(self.cyInstance, 'get_'+attribute)())
-        else:
-            return getattr(self.cyInstance, 'get_'+attribute)()
+        return getattr(self.cyInstance, 'get_'+attribute)()
 
         
     def _set_cython_attribute(self, attribute, value):
@@ -294,6 +285,8 @@ class Projection(object):
         * *attribute*: should be a string representing the variables's name.
         
         """
+        if isinstance(value, np.ndarray):
+            value = list(value)
         if isinstance(value, list):
             if len(value) == len(self.post_ranks):
                 for n in self.post_ranks:
@@ -308,7 +301,7 @@ class Projection(object):
                 for n in self.post_ranks:
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value*np.ones(self.cyInstance.nb_synapses(n)))
             else:
-                getattr(self.cyInstance, 'set_'+attribute)(value)
+                getattr(self.cyInstance, 'set_'+attribute)(value*np.ones(len(self.post_ranks)))
 
  
     ################################
@@ -411,7 +404,7 @@ class Projection(object):
     ################################
     def enable_learning(self, params={ 'freq': 1, 'offset': 0} ):
         """
-        Enables learning for all the attached dendrites.
+        Enables learning for all the synapses of this projection.
         
         *Parameter*:
         
@@ -429,12 +422,13 @@ class Projection(object):
         The default behaviour is that the learning methods are called at each time step.
         """
         self.cyInstance._set_learning(True)
+        # TODO
         # self.cyInstance._set_learn_frequency(params['freq'])
         # self.cyInstance._set_learn_offset(params['offset'])
             
     def disable_learning(self):
         """
-        Disables the learning methods for all attached dendrites.
+        Disables learning for all synapses of this projection.
 
         When this method is called, synaptic plasticity is disabled (i.e the updating of any synaptic variable except g_target and psp) until the next call to ``enable_learning``.
 

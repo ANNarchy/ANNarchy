@@ -217,7 +217,7 @@ struct ProjStruct%(id)s{
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
     // Global parameter %(name)s
-    %(type)s  %(name)s ;
+    std::vector<%(type)s>  %(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Variables
@@ -232,7 +232,7 @@ struct ProjStruct%(id)s{
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
     // Global variable %(name)s
-    %(type)s  %(name)s ;
+    std::vector<%(type)s>  %(name)s ;
     //std::vector< %(type)s > recorded_%(name)s ;
     //bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -294,6 +294,9 @@ struct ProjStruct%(id)s{
         # Code for the global operations
         glop_definition = self.body_def_glops()
 
+        # Reset presynaptic sums
+        reset_sums = self.body_resetcomputesum_pop()
+
         # Compute presynaptic sums
         compute_sums = self.body_computesum_proj()
 
@@ -338,6 +341,7 @@ struct ProjStruct%(id)s{
             'proj_ptr': proj_ptr,
             'glops_def': glop_definition,
             'compute_sums' : compute_sums,
+            'reset_sums' : reset_sums,
             'update_neuron' : update_neuron,
             'update_globalops' : update_globalops,
             'update_synapse' : update_synapse,
@@ -372,18 +376,26 @@ struct ProjStruct%(id)s{
             eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'pop': 'pop' + str(pop.id)}
             if eqs.strip() != "":
                 code += """
-    // Updating the global variables of population %(id)s
+    // Updating the global variables of population %(id)s (%(name)s)
 %(eqs)s
-""" % {'id': pop.id, 'eqs': eqs}
+""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
             # Local variables
             eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
             code += """
-    // Updating the local variables of population %(id)s
+    // Updating the local variables of population %(id)s (%(name)s)
     #pragma omp parallel for
     for(int i = 0; i < pop%(id)s.size; i++){
 %(eqs)s
-""" % {'id': pop.id, 'eqs': eqs}
+""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
+
+#             # Reset weighted sums
+#             if pop.neuron.type == 'rate':
+#                 for target in pop.neuron.description['targets']:
+#                     code += """
+#         pop%(id)s.sum_%(target)s[i] = 0.0;
+# """ % {'id': pop.id, 'name' : pop.name, 'target': target}
+
 
             # Spike emission
             if pop.neuron.type == 'spike':
@@ -401,23 +413,23 @@ struct ProjStruct%(id)s{
                 # Main code
                 code += """
         // Emit spike depending on refractory period            
-        if(%(pop)s.refractory_remaining[i] >0){ // Refractory period
+        if(pop%(id)s.refractory_remaining[i] >0){ // Refractory period
 %(refrac)s
-            %(pop)s.refractory_remaining[i]--;
-            %(pop)s.spike[i] = false;
+            pop%(id)s.refractory_remaining[i]--;
+            pop%(id)s.spike[i] = false;
         }
         else if(%(condition)s){
 %(reset)s        
 
-            %(pop)s.spike[i] = true;
-            %(pop)s.last_spike[i] = t;
-            %(pop)s.refractory_remaining[i] = %(pop)s.refractory[i];
+            pop%(id)s.spike[i] = true;
+            pop%(id)s.last_spike[i] = t;
+            pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
         }
         else{
-            %(pop)s.spike[i] = false;
+            pop%(id)s.spike[i] = false;
         }
 
-""" % {'condition' : cond, 'reset': reset, 'refrac': refrac, 'pop': 'pop'+str(pop.id) }
+""" % {'condition' : cond, 'reset': reset, 'refrac': refrac, 'id': pop.id }
 
                 # Finish parallel loop for the population
                 code += """
@@ -460,10 +472,10 @@ struct ProjStruct%(id)s{
 
             if pop.neuron.type == 'rate':
                 code += """
-    // Enqueuing outputs of pop%(id)s
+    // Enqueuing outputs of pop%(id)s (%(name)s)
     pop%(id)s._delayed_r.push_front(pop%(id)s.r);
     pop%(id)s._delayed_r.pop_back();
-""" % {'id': pop.id }
+""" % {'id': pop.id, 'name' : pop.name }
 
         return code
 
@@ -489,19 +501,19 @@ struct ProjStruct%(id)s{
                         'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
                     )
             # No need for openmp if less than 10 neurons
-            omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > 10 else ''
+            omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code+= """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
             sum += %(psp)s
         }
-        pop%(id_post)s.sum_%(target)s[proj%(id_proj)s.post_rank[i]] = sum;
+        pop%(id_post)s.sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 
     'psp': psp, 'omp_code': omp_code}
 
             return code
@@ -529,10 +541,10 @@ struct ProjStruct%(id)s{
 """%{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
 
             # No need for openmp if less than 10 neurons
-            omp_code = """#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)"""%{'id_proj' : proj.id} if proj.post.size > 10 else ''
+            omp_code = """#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code = """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     std::vector<bool> proj%(id_proj)s_pre_spike = pop%(id_pre)s.spike;
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
@@ -547,7 +559,7 @@ struct ProjStruct%(id)s{
         }
         pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name,
     'pre_event': pre_event, 'psp': psp, 'omp_code': omp_code}
 
             return code
@@ -564,6 +576,17 @@ struct ProjStruct%(id)s{
 
         return code
 
+    def body_resetcomputesum_pop(self):
+        code = "    // Reset presynaptic sums\n"
+        for name, pop in self.populations.iteritems():
+            if pop.neuron.type == 'rate':
+                for target in pop.targets:
+                    code += """
+    memset( pop%(id)s.sum_%(target)s.data(), 0.0, pop%(id)s.sum_%(target)s.size() * sizeof(double));
+""" % {'id': pop.id, 'target': target}
+
+        return code
+
     def body_postevent_proj(self):
         code = ""
         for name, proj in self.projections.iteritems():
@@ -575,9 +598,9 @@ struct ProjStruct%(id)s{
 
                 # Generate the code
                 if post_code != "":
-                    omp_code = '#pragma omp parallel for' if proj.post.size > 10 else ''
+                    omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
                     code += """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning){
         %(omp_code)s 
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
@@ -588,7 +611,8 @@ struct ProjStruct%(id)s{
             }
         }
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name,
     'post_event': post_code, 'omp_code': omp_code}
 
         return code
@@ -602,26 +626,33 @@ struct ProjStruct%(id)s{
             from ..Utils import generate_equation_code
             # Global variables
             global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-            code+= """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
-    if(proj%(id_proj)s._learning){
-%(global)s
-"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
             # Local variables
-            local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}  
-            if local_eq.strip() != "": 
+            local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
+
+            # Generate the code
+            if local_eq.strip() != '' or global_eq.strip() != '' :
                 code+= """
-        #pragma omp parallel for 
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    if(proj%(id_proj)s._learning){
+        #pragma omp parallel for private(rk_pre, rk_post)
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+            rk_post = proj%(id_proj)s.post_rank[i];
+%(global)s
+"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name}
+ 
+                if local_eq.strip() != "": 
+                    code+= """
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                rk_pre = proj%(id_proj)s.pre_rank[i][j];
                 %(local)s
             }
-        }
 """%{'id_proj' : proj.id, 'local': local_eq}
 
-            code += """
-    }"""
+                code += """
+        }
+    }
+"""
 
             # Take delays into account if any
             if proj.max_delay > 1:
@@ -739,15 +770,14 @@ struct ProjStruct%(id)s{
         return code
 
     def body_init_projection(self):
-        # Not needed yet
-#         code = """
-#     // Initialize projections
-# """
-#         for name, proj in self.projections.iteritems():
-#                 code += """    proj%(id)s._learning = true;
-# """ % {'id': proj.id}
+        code = """
+    // Initialize projections
+"""
+        for name, proj in self.projections.iteritems():
+                code += """    proj%(id)s._learning = true;
+""" % {'id': proj.id}
 
-        return ""
+        return code
 
     def body_update_randomdistributions(self):
         code = """
@@ -840,6 +870,7 @@ struct ProjStruct%(id)s{
                 continue
 
             code = """
+    # Population %(id)s (%(name)s)
     cdef struct PopStruct%(id)s :
         int size
 """            
@@ -890,7 +921,7 @@ struct ProjStruct%(id)s{
 """ % {'target' : target}
 
             # Finalize the code
-            pop_struct += code % {'id': pop.id}
+            pop_struct += code % {'id': pop.id, 'name': pop.name}
 
             # Population instance
             pop_ptr += """
@@ -925,7 +956,7 @@ struct ProjStruct%(id)s{
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
         # Global parameter %(name)s
-        %(type)s  %(name)s 
+        vector[%(type)s]  %(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Variables
@@ -940,7 +971,7 @@ struct ProjStruct%(id)s{
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
         # Global variable %(name)s
-        %(type)s  %(name)s 
+        vector[%(type)s]  %(name)s 
         #vector[%(type)s] recorded_%(name)s
         #bool record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -978,10 +1009,11 @@ struct ProjStruct%(id)s{
 
             # Init
             code += """
+# Population %(id)s (%(name)s)
 cdef class pop%(id)s_wrapper :
 
     def __cinit__(self, size):
-        pop%(id)s.size = size"""% {'id': pop.id}
+        pop%(id)s.size = size"""% {'id': pop.id, 'name': pop.name}
 
             # Spiking neurons have aditional data
             if pop.neuron.type == 'spike':
@@ -1128,7 +1160,6 @@ cdef class proj%(id)s_wrapper :
         cdef int nb_post = syn.post_rank.size()
         
         proj%(id)s.size = size
-        proj%(id)s._learning = True
         proj%(id)s.post_rank = syn.post_rank
         proj%(id)s.pre_rank = syn.pre_rank
         proj%(id)s.w = syn.w
@@ -1149,6 +1180,11 @@ cdef class proj%(id)s_wrapper :
                     code += """
         proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                else:
+                    init = 0.0 if var['ctype'] == 'double' else 0
+                    code += """
+        proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Initialize variables
             for var in proj.synapse.description['variables']:
@@ -1158,6 +1194,11 @@ cdef class proj%(id)s_wrapper :
                     init = 0.0 if var['ctype'] == 'double' else 0
                     code += """
         proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                else:
+                    init = 0.0 if var['ctype'] == 'double' else 0
+                    code += """
+        proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Size property
