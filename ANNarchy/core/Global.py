@@ -56,6 +56,10 @@ config = dict(
    }
 )
 
+# Minimum number of neurons to apply OMP parallel regions
+OMP_MIN_NB_NEURONS = 10
+
+
 # Authorized keywork for attributes
 authorized_keywords = [
     # Init

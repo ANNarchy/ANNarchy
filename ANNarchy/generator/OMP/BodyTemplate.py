@@ -56,6 +56,7 @@ void step()
     // Presynaptic events
     ////////////////////////////////
     double sum;
+%(reset_sums)s
 %(compute_sums)s
 
     ////////////////////////////////

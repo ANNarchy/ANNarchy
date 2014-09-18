@@ -294,6 +294,9 @@ struct ProjStruct%(id)s{
         # Code for the global operations
         glop_definition = self.body_def_glops()
 
+        # Reset presynaptic sums
+        reset_sums = self.body_resetcomputesum_pop()
+
         # Compute presynaptic sums
         compute_sums = self.body_computesum_proj()
 
@@ -338,6 +341,7 @@ struct ProjStruct%(id)s{
             'proj_ptr': proj_ptr,
             'glops_def': glop_definition,
             'compute_sums' : compute_sums,
+            'reset_sums' : reset_sums,
             'update_neuron' : update_neuron,
             'update_globalops' : update_globalops,
             'update_synapse' : update_synapse,
@@ -385,12 +389,12 @@ struct ProjStruct%(id)s{
 %(eqs)s
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
-            # Reset weighted sums
-            if pop.neuron.type == 'rate':
-                for target in pop.neuron.description['targets']:
-                    code += """
-        pop%(id)s.sum_%(target)s[i] = 0.0;
-""" % {'id': pop.id, 'name' : pop.name, 'target': target}
+#             # Reset weighted sums
+#             if pop.neuron.type == 'rate':
+#                 for target in pop.neuron.description['targets']:
+#                     code += """
+#         pop%(id)s.sum_%(target)s[i] = 0.0;
+# """ % {'id': pop.id, 'name' : pop.name, 'target': target}
 
 
             # Spike emission
@@ -497,7 +501,7 @@ struct ProjStruct%(id)s{
                         'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
                     )
             # No need for openmp if less than 10 neurons
-            omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > 10 else ''
+            omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
@@ -537,7 +541,7 @@ struct ProjStruct%(id)s{
 """%{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
 
             # No need for openmp if less than 10 neurons
-            omp_code = """#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)"""%{'id_proj' : proj.id} if proj.post.size > 10 else ''
+            omp_code = """#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
@@ -572,6 +576,17 @@ struct ProjStruct%(id)s{
 
         return code
 
+    def body_resetcomputesum_pop(self):
+        code = "    // Reset presynaptic sums\n"
+        for name, pop in self.populations.iteritems():
+            if pop.neuron.type == 'rate':
+                for target in pop.targets:
+                    code += """
+    memset( pop%(id)s.sum_%(target)s.data(), 0.0, pop%(id)s.sum_%(target)s.size() * sizeof(double));
+""" % {'id': pop.id, 'target': target}
+
+        return code
+
     def body_postevent_proj(self):
         code = ""
         for name, proj in self.projections.iteritems():
@@ -583,7 +598,7 @@ struct ProjStruct%(id)s{
 
                 # Generate the code
                 if post_code != "":
-                    omp_code = '#pragma omp parallel for' if proj.post.size > 10 else ''
+                    omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
                     code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning){
