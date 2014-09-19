@@ -334,12 +334,16 @@ struct ProjStruct%(id)s{
         # Record
         record = self.body_record()
 
+        # Early stopping
+        run_until = self.body_run_until()
+
 
         from .BodyTemplate import body_template
         return body_template % {
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
             'glops_def': glop_definition,
+            'run_until': run_until,
             'compute_sums' : compute_sums,
             'reset_sums' : reset_sums,
             'update_neuron' : update_neuron,
@@ -831,6 +835,45 @@ struct ProjStruct%(id)s{
     if(pop%(id)s.record_%(name)s)
         pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
 """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
+        return code
+
+    def body_run_until(self):
+        code = ""
+        for name, pop in self.populations.iteritems():
+            if not pop.stop_condition: # no stop condition has been defined
+                code += """
+                case %(id)s: 
+                    pop_stop = false;
+                    break;
+""" % {'id': pop.id}
+            else:
+                pop.neuron.description['stop_condition'] = {'eq': pop.stop_condition}
+                from ANNarchy.parser.Extraction import extract_stop_condition
+                extract_stop_condition(pop.neuron.description)
+                if pop.neuron.description['stop_condition']['type'] == 'any':
+                    stop_code = """
+                    pop_stop = false;
+                    for(int i=0; i<pop%(id)s.size; i++)
+                    {
+                        if(%(condition)s)
+                            pop_stop = true;
+                    }
+    """ % {'id': pop.id, 'condition': pop.neuron.description['stop_condition']['cpp']% {'id': pop.id}}
+                else:
+                    stop_code = """
+                    pop_stop = true;
+                    for(int i=0; i<pop%(id)s.size; i++)
+                    {
+                        if(!(%(condition)s))
+                            pop_stop = false;
+                    }
+    """ % {'id': pop.id, 'condition': pop.neuron.description['stop_condition']['cpp']% {'id': pop.id}}
+
+                code += """
+                case %(id)s: 
+%(stop_code)s
+                    break;
+""" % {'id': pop.id, 'stop_code': stop_code}
         return code
 
 

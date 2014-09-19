@@ -28,6 +28,35 @@ void run(int nbSteps) {
 
 }
 
+int run_until(int steps, std::vector<int> populations, bool or_and)
+{
+    bool stop = false;
+    bool pop_stop = false;
+    int nb = 0;
+    for(int n = 0; n < steps; n++)
+    {
+        step();
+        nb++;
+        stop = or_and;
+        for(int i=0; i<populations.size();i++)
+        {
+            // Check all populations
+            switch(populations[i]){
+%(run_until)s
+            }
+
+            // Accumulate the results
+            if(or_and)
+                stop = stop && pop_stop;
+            else
+                stop = stop || pop_stop;
+        }
+        if(stop)
+            break;
+    }
+    return nb;
+}
+
 // Initialize the internal data and random numbers generators
 void initialize(double _dt) {
 

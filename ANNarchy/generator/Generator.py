@@ -30,7 +30,6 @@ import numpy as np
 # ANNarchy core informations
 import ANNarchy
 import ANNarchy.core.Global as Global
-from ANNarchy.parser.Analyser import Analyser
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']

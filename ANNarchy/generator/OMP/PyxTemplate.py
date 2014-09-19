@@ -22,6 +22,7 @@ cdef extern from "ANNarchy.h":
     # Methods
     void initialize(double)
     void run(int nbSteps)
+    int run_until(int steps, vector[int] populations, bool or_and)
     void step()
     
     # Time
@@ -49,6 +50,12 @@ def pyx_create(double dt):
 # Simulation for the given numer of steps
 def pyx_run(int nb_steps):
     run(nb_steps)
+
+# Simulation for the given number of steps except if a criterion is reached
+def pyx_run_until(int nb_steps, list populations, bool mode):
+    cdef int nb
+    nb = run_until(nb_steps, populations, mode)
+    return nb
 
 # Simulate for one step
 def pyx_step():

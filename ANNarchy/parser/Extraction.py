@@ -481,6 +481,7 @@ def extract_stop_condition(pop):
                           pop['attributes'], 
                           pop['local'], 
                           pop['global'], 
+                          prefix = 'pop%(id)s',
                           type = 'cond')
     code = translator.parse()
     pop['stop_condition']['cpp'] = '(' + code + ')'

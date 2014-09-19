@@ -25,6 +25,7 @@ import ANNarchy.core.Global as Global
 
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Neuron import IndividualNeuron
 
 import numpy as np
 import copy
@@ -211,6 +212,9 @@ class Population(object):
         self.neuron._analyse()
         self.generator = copy.deepcopy(pop_generator_template)
         
+        # Store the stop condition
+        self.stop_condition = stop_condition
+
         # Attribute a name if not provided
         self.id = len(Global._populations)
         self.class_name = 'pop'+str(self.id)
