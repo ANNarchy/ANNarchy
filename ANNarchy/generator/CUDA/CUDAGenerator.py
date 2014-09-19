@@ -1,8 +1,6 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 
-import numpy as np
-
 class CUDAGenerator(object):
 
     def __init__(self, populations, projections):
@@ -15,23 +13,15 @@ class CUDAGenerator(object):
         # Propagte the global operations needed by the projections to the corresponding populations.
         self.propagate_global_ops()
 
-        # Generate header code for the analysed pops and projs  
+        # Generate header code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self.generate_header())
             
-        # Generate cpp code for the analysed pops and projs  
+        # Generate cpp and cuda code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
             ofile.write(self.generate_body())
 
-        # Generate cuda header code for the analysed pops and projs  
-        with open(Global.annarchy_dir+'/generate/cuANNarchy.h', 'w') as ofile:
-            ofile.write(self.generate_cuda_header())
-
-        # Generate cuda code for the analysed pops and projs  
-        with open(Global.annarchy_dir+'/generate/cuANNarchy.cu', 'w') as ofile:
-            ofile.write(self.generate_cuda_body())
-
-        # Generate cython code for the analysed pops and projs  
+        # Generate cython code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchyCore.pyx', 'w') as ofile:
             ofile.write(self.generate_pyx())
 
@@ -311,12 +301,17 @@ extern ProjStruct%(id)s proj%(id)s;
 
         return code
 
+
+
+
 #######################################################################
 ############## BODY ###################################################
 #######################################################################
     def generate_body(self):
         """
-        generate the ANNarchy.cpp file containing initialization codes, host_to_device- and device_to_host transfers and kernel call entities.
+        generate the ANNarchy.cpp file containing initialization codes, host_to_device- and device_to_host
+        transfers and kernel call entities next to the files: cuANNarchy.cu (kernel implementation) and
+        cuANNarchy.h (kernel prototypes).
         """
         # struct declaration for each population
         pop_ptr = ""
@@ -335,10 +330,10 @@ ProjStruct%(id)s proj%(id)s;
 """% {'id': proj.id}
 
         # Code for the global operations
-        glop_definition = self.body_def_glops()
+        glop_definition = "" #TODO: self.body_def_glops()
 
         # Compute presynaptic sums
-        compute_sums = self.body_psp_func_call()
+        compute_sums_body, compute_sums_header, compute_sums_call = self.body_computesum_proj()
 
         # Initialize random distributions
         rd_init_code = self.body_init_randomdistributions()
@@ -347,55 +342,75 @@ ProjStruct%(id)s proj%(id)s;
         # Initialize device ptr
         device_init = self.body_init_device()
 
-        # host to device transfer
-        host_device_transfer = self.body_host_device_transfer()
+        # host to device and device to host transfers
+        host_device_transfer, device_host_transfer = self.body_memory_transfers()
 
-        # host to device transfer
-        device_host_transfer = self.body_device_host_transfer()
-        
         # Initialize delayed arrays
-        delay_init = self.body_init_delay()
+        delay_init = "" #TODO: self.body_init_delay()
 
         # Initialize spike arrays
-        spike_init = self.body_init_spike()
+        spike_init = "" #TODO: self.body_init_spike()
 
         # Initialize projections
         projection_init = self.body_init_projection()
 
-         # Initialize global operations
-        globalops_init = self.body_init_globalops()
+        # Initialize global operations
+        globalops_init = "" #TODO: self.body_init_globalops()
         
         # call cuda-kernel for updating the neural variables
-        update_neuron = self.body_neuron_func_call()
+        update_neuron_body, update_neuron_header, update_neuron_call = self.body_update_neuron()
 
         # Enque delayed outputs
-        delay_code = self.body_delay_neuron()
+        delay_code = "" #TODO: self.body_delay_neuron()
 
         # Global operations
-        update_globalops = self.body_update_globalops()
+        update_globalops = "" #TODO: self.body_update_globalops()
 
         # Equations for the synaptic variables
-        update_synapse = self.body_synapse_func_call()
+        update_synapse_body, update_synapse_header, update_synapse_call = self.body_update_synapse()
 
         # Equations for the synaptic variables
-        post_event = self.body_postevent_proj()
+        post_event = ""#TODO: self.body_postevent_proj()
 
         # Record
-        record = self.body_record()
+        record = "" #TODO: self.body_record()
 
-        # Concurrent kernel execution
-        stream_setup = self.body_stream_setup()
+        # determine number of threads per kernel
+        # and concurrent kernel execution
+        threads_per_kernel, stream_setup = self.body_kernel_config()
 
+        # Generate cuda header code for the analysed pops and projs
+        from .cuBodyTemplate import cu_header_template
+        cuda_header = cu_header_template % {
+            'neuron': update_neuron_header,
+            'compute_sum': compute_sums_header,
+            'synapse': update_synapse_header,
+        }
+        with open(Global.annarchy_dir+'/generate/cuANNarchy.h', 'w') as ofile:
+            ofile.write(cuda_header)
+
+        # Generate cuda code for the analysed pops and projs
+        from .cuBodyTemplate import cu_body_template
+        cuda_body = cu_body_template % {
+            'kernel_config': threads_per_kernel,
+            'pop_kernel': update_neuron_body,
+            'psp_kernel': compute_sums_body,
+            'syn_kernel': update_synapse_body
+        }
+        with open(Global.annarchy_dir+'/generate/cuANNarchy.cu', 'w') as ofile:
+            ofile.write(cuda_body)
+
+        # Generate cpp code for the analysed pops and projs
         from .BodyTemplate import body_template
         return body_template % {
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
             'glops_def': glop_definition,
             'stream_setup': stream_setup,
-            'compute_sums' : compute_sums,
-            'update_neuron' : update_neuron,
+            'compute_sums' : compute_sums_call,
+            'update_neuron' : update_neuron_call,
             'update_globalops' : update_globalops,
-            'update_synapse' : update_synapse,
+            'update_synapse' : update_synapse_call,
             'host_device_transfer': host_device_transfer,
             'device_host_transfer': device_host_transfer,
             'device_init': device_init,
@@ -410,8 +425,24 @@ ProjStruct%(id)s proj%(id)s;
             'record' : record
         }
 
-    def body_stream_setup(self):
-        from .cuBodyTemplate import stream_setup
+    def body_kernel_config(self):
+        cu_config = Global.cuda_config
+
+        code = "// Population config\n"
+        for pop in self.populations.itervalues():
+            num_threads = 32
+            if pop in cu_config.keys():
+                num_threads = cu_config[pop]['num_threads']
+
+            code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
+
+        code += "\n// Population config\n"
+        for proj in self.projections.itervalues():
+            num_threads = 192
+            if proj in cu_config.keys():
+                num_threads = cu_config[proj]['num_threads']
+
+            code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
 
         pop_assign = "    // populations\n"
         for pop in self.populations.itervalues():
@@ -433,117 +464,245 @@ ProjStruct%(id)s proj%(id)s;
                 proj_assign += """    proj%(pid)s.stream = 0;
 """ % {'pid': proj.id }
 
-        return stream_setup % {
+        from .cuBodyTemplate import stream_setup
+        stream_config = stream_setup % {
             'nbStreams': 2,
             'pop_assign': pop_assign,
             'proj_assign': proj_assign
         }
 
-    def body_neuron_func_call(self):
+        return code, stream_config
+
+    def body_update_neuron(self):
         """
-        generate kernel calls for population update neural variables
+        returns all data needed for population step kernels:
+
+        header:  kernel prototypes
+        body:    kernel implementation
+        call:    kernel call
         """
-        code = ""
+        header = ""
+        body = ""
+        call = ""
         
         for pop in self.populations.itervalues():
             if len(pop.neuron.description['variables']) == 0: # no variable
                 continue
 
+            # Neural update
+            from ..Utils import generate_equation_code
+
+            # determine variables and attributes
             var = ""
             par = ""
             tar = ""
+            for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
+                if attr['name'] in pop.neuron.description['local']:
+                    var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+                else:
+                    par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
 
             # targets
             for target in pop.neuron.description['targets']:
-                tar += """, pop%(id)s.gpu_sum_%(target)s""" % { 'id': pop.id, 'target' : target}
+                tar += """, double* sum_%(target)s""" % {'target' : target}
+
+            #Global variables
+            glob_eqs = ""
+            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'pop': 'pop' + str(pop.id)}
+            if eqs.strip() != "":
+                glob_eqs = """
+    if ( threadIdx.x == 0)
+    {
+%(eqs)s
+    }
+""" % {'id': pop.id, 'eqs': eqs }
+                glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
             
+            # Local variables
+            loc_eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
+            loc_eqs = loc_eqs.replace("pop"+str(pop.id)+".", "")
+
+            #
+            # create kernel prototypes
+            from .cuBodyTemplate import pop_kernel
+            body += pop_kernel % {  'id': pop.id,
+                                    'local_eqs': loc_eqs,
+                                    'global_eqs': glob_eqs,
+                                    'pop_size': str(pop.size),
+                                    'tar': tar,
+                                    'tar2': tar.replace("double*","").replace("int*",""),
+                                    'var': var,
+                                    'var2': var.replace("double*","").replace("int*",""),
+                                    'par': par,
+                                    'par2': par.replace("double","").replace("int","")
+                                 }
+
+            #
+            # create kernel prototypes
+            header += """
+void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
+""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
+
+            #
+            #    for calling entites we need to determine again all members
+            var = ""
+            par = ""
+            tar = ""
             for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
                 if attr['name'] in pop.neuron.description['local']:
                     var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] } 
                 else:
                     par += """, pop%(id)s.%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
 
-            code += """
-    // Updating the local and global variables of population %(id)s
-    Pop%(id)s_step(/* default arguments */
-              pop%(id)s.stream, dt
-              /* population targets */
-              %(tar)s
-              /* kernel gpu arrays */
-              %(var)s
-              /* kernel constants */
-              %(par)s );
-""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
+            # targets
+            for target in pop.neuron.description['targets']:
+                tar += """, pop%(id)s.gpu_sum_%(target)s""" % { 'id': pop.id, 'target' : target}
 
-        return code
+            from .cuBodyTemplate import pop_kernel_call
+            call += pop_kernel_call % { 'id': pop.id,
+                                        'tar': tar.replace("double*","").replace("int*",""),
+                                        'var': var.replace("double*","").replace("int*",""),
+                                        'par': par.replace("double","").replace("int","")
+                                      }
 
-    def body_psp_func_call(self):
-        """
-        generate kernel calls for projection compute popstsynaptic potential
-        """
-        code = ""
+        return body, header, call
 
-        for proj in self.projections.itervalues():
-            if proj.synapse.type == "rate":
-                code += """
-    // proj%(id)s: pop%(pre)s -> pop%(post)s
-    Pop%(pre)s_Pop%(post)s_%(target)s_psp( proj%(id)s.stream, pop%(post)s.size,
-                       /* ranks and offsets */
-                       proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses, 
-                       /* computation data */
-                       pop%(pre)s.gpu_r, proj%(id)s.gpu_w, 
-                       /* result */
-                       pop%(post)s.gpu_sum_%(target)s );
+    def body_computesum_proj(self):
+        header = ""
+        body = ""
+        call = ""
+
+        def rate_coded(proj):
+            # Retrieve the psp code
+            if not 'psp' in  proj.synapse.description.keys(): # default
+                psp = "r[pre_rank[i]] * w[i];"
+            else: # custom psp
+                psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                Global._error("synaptic delays are currently not supported.")
+
+            from .cuBodyTemplate import psp_kernel
+            body_code = psp_kernel % { 'id': proj.id,
+                                       'pre': proj.pre.id,
+                                       'post': proj.post.id,
+                                       'target': proj.target,
+                                       'psp': psp
+                                      }
+
+            header_code = """void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s );
 """ % { 'id': proj.id,
         'pre': proj.pre.id,
         'post': proj.post.id,
         'target': proj.target,
       }
 
+            from .cuBodyTemplate import psp_kernel_call
+            call_code = psp_kernel_call % { 'id': proj.id,
+                                            'pre': proj.pre.id,
+                                            'post': proj.post.id,
+                                            'target': proj.target,
+                                          }
+
+            return body_code, header_code, call_code
+
+        def spiking(proj):
+            Global._error("Spiking models are not supported currently on CUDA devices.")
+            return "", "", ""
+
+        # Sum over all synapses 
+        for proj in self.projections.itervalues():
+            if proj.synapse.type == 'rate':
+                b, h, c = rate_coded(proj)
             else:
-                Global._error("Spike synapses are not supported yet by CUDA")
+                b, h, c = spiking(proj)
 
-        return code
+            header += h
+            body += b
+            call += c
 
-    def body_synapse_func_call(self):
-        code = ""
+        return body, header, call
+
+    def body_update_synapse(self):
+        header = ""
+        body = ""
+        call = ""
 
         for proj in self.projections.itervalues():
-            if proj.synapse.type == "rate":
-                # gather all variables and parameters
-                local = ""
-                for pre_var in proj.synapse.description['dependencies']['pre']:
-                    #TODO: correct type
-                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
 
-                for post_var in proj.synapse.description['dependencies']['post']:
-                    #TODO: correct type
-                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+            from ..Utils import generate_equation_code
 
-                glob = ""
-                for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
-                    local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
+            # Global variables
+            global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
-                # generate code
-                code += """
-    // Updating the variables of projection %(id)s
-    Proj%(id)s_step(/* kernel config */
-              proj%(id)s.stream, proj%(id)s.post_rank.size(), proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
-              /* kernel gpu arrays */
-              %(local)s
-              /* kernel constants */
-              %(glob)s);
+            # Local variables
+            local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}  
+
+            # remove unnecessary stuff, transfrom OMP to CUDA
+            local_eq = local_eq.replace("proj"+str(proj.id)+".","")
+            local_eq = local_eq.replace("[i][j]","[j]")
+
+            var = ""
+            for pre_var in proj.synapse.description['dependencies']['pre']:
+                old = """pop%(id)s.%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
+                new = """pre_%(name)s""" % { 'name': pre_var}
+
+                var += ", double* " + new
+                local_eq = local_eq.replace(old, new)
+
+            for post_var in proj.synapse.description['dependencies']['post']:
+                old = """pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': post_var}
+                new = """post_%(name)s""" % { 'name': post_var}
+
+                var += ", double* " + new
+                local_eq = local_eq.replace(old, new)
+
+            for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+                var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+
+            from .cuBodyTemplate import syn_kernel
+            body += syn_kernel % { 'id': proj.id,
+                                   'par': "",
+                                   'par2': "",
+                                   'var': var,
+                                   'var2': var.replace("double*",""),
+                                   'global_eqs': global_eq,
+                                   'local_eqs': local_eq,
+                                   'target': proj.target,
+                                   'pre': proj.pre.id,
+                                   'post': proj.post.id,
+                                 }
+
+            header += """void Proj%(id)s_step(cudaStream_t stream, int size, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
 """ % { 'id': proj.id,
-        'post': proj.post.id,
-        'pre': proj.pre.id,
-        'local': local,
-        'glob': glob
+        'var': var,
+        'par': ""
       }
 
-            else:
-                Global._error("Spike synapses are not supported yet by CUDA")
+            #
+            # calling entity
+            local = ""
+            for pre_var in proj.synapse.description['dependencies']['pre']:
+                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
 
-        return code
+            for post_var in proj.synapse.description['dependencies']['post']:
+                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+
+            glob = ""
+            for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+                local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
+
+            # generate code
+            from .cuBodyTemplate import syn_kernel_call
+            call += syn_kernel_call % { 'id': proj.id,
+                                        'post': proj.post.id,
+                                        'pre': proj.pre.id,
+                                        'local': local,
+                                        'glob': glob
+                                      }
+
+        return body, header, call
 
     def body_delay_neuron(self):
         code = ""
@@ -587,14 +746,17 @@ ProjStruct%(id)s proj%(id)s;
 
         return code
 
-    def body_host_device_transfer(self):
-        code = ""
+    def body_memory_transfers(self):
+        host_device_transfer = ""
+        device_host_transfer = ""
+
+        # transfers for populations
         for pop in self.populations.itervalues():
-            code += """
+            host_device_transfer += """
     // host to device transfers for %(pop_name)s""" % { 'pop_name': pop.name }
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
                 if attr['name'] in pop.neuron.description['local']:
-                    code += """
+                    host_device_transfer += """
         // %(attr_name)s: local
         if( pop%(id)s.%(attr_name)s_dirty )
         {
@@ -604,13 +766,19 @@ ProjStruct%(id)s proj%(id)s;
         }
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
+            device_host_transfer += """
+    // device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
+                if attr['name'] in pop.neuron.description['local']:
+                    device_host_transfer += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+
+        # transfers for projections
         for proj in self.projections.itervalues():
-            #from .cuBodyTemplate import proj_basic_data
-            #code += proj_basic_data % { 'id': proj.id }
-            code += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
+            host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
             for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
                 if attr['name'] in proj.synapse.description['local']:
-                    code += """
+                    host_device_transfer += """
         // %(name)s: local
         if ( proj%(id)s.%(name)s_dirty )
         {
@@ -620,7 +788,7 @@ ProjStruct%(id)s proj%(id)s;
         }
 """ % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
                 else:
-                    code += """
+                    host_device_transfer += """
         // %(name)s: global
         if ( proj%(id)s.%(name)s_dirty )
         {
@@ -628,22 +796,11 @@ ProjStruct%(id)s proj%(id)s;
         }
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
 
-        return code
-
-    def body_device_host_transfer(self):
-        code = ""
-        for pop in self.populations.itervalues():
-            code += """\n\t// device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
-            for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
-                if attr['name'] in pop.neuron.description['local']:
-                    code += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
-
-        for proj in self.projections.itervalues():
-            code += """\n\t// device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
+            device_host_transfer += """
+    // device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
             for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
                 if attr['name'] in proj.synapse.description['local']:
-                    code += """
+                    device_host_transfer += """
             // %(name)s: local
             std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
             cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
@@ -651,13 +808,12 @@ ProjStruct%(id)s proj%(id)s;
             flat_proj%(id)s_%(name)s.clear();
 """ % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
                 else:
-                    code += """
+                    device_host_transfer += """
             // %(name)s: global
             cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
-                    
 
-        return code
+        return host_device_transfer, device_host_transfer
 
     def body_init_device(self):
         code = ""
@@ -733,7 +889,7 @@ ProjStruct%(id)s proj%(id)s;
         code = """
     // Initialize global operations
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             # Is it a specific population?
             if pop.generator['omp']['body_globalops_init']:
                 code += pop.generator['omp']['body_globalops_init'] %{'id': pop.id}
@@ -747,7 +903,7 @@ ProjStruct%(id)s proj%(id)s;
 
     def body_def_glops(self):
         ops = []
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             for op in pop.global_operations:
                 ops.append( op['function'] )
 
@@ -773,7 +929,7 @@ ProjStruct%(id)s proj%(id)s;
         code = """
     // Initialize delayed firing rates
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             if pop.max_delay > 1:
                 if pop.neuron.type == 'rate':
                     code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
@@ -787,7 +943,7 @@ ProjStruct%(id)s proj%(id)s;
         code = """
     // Initialize spike arrays
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             if pop.neuron.type == 'spike':
                 code += """    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
@@ -810,7 +966,7 @@ ProjStruct%(id)s proj%(id)s;
     def body_update_randomdistributions(self):
         code = """
     // Compute random distributions""" 
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             if len(pop.neuron.description['random_distributions']) > 0:
                 code += """
     // RD of pop%(id)s
@@ -830,7 +986,7 @@ ProjStruct%(id)s proj%(id)s;
 
     def body_update_globalops(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             # Is it a specific population?
             if pop.generator['omp']['body_update_globalops']:
                 code += pop.generator['omp']['body_update_globalops'] %{'id': pop.id}
@@ -843,296 +999,12 @@ ProjStruct%(id)s proj%(id)s;
 
     def body_record(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             for var in pop.neuron.description['variables']:
                 code += """
     if(pop%(id)s.record_%(name)s)
         pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
 """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
-        return code
-
-#######################################################################
-############## CUDA-HEADER ############################################
-#######################################################################
-    def generate_cuda_header(self):
-        """
-        File: cuANNarchy.h
-        """
-        def generate_neuron_step_call(pop):
-            """
-            call of cuda update_neural_variables kernels.
-            """
-            if len(pop.neuron.description['variables']) == 0: # no variable
-                return ""
-
-            if pop.neuron.type == "rate":
-                var = ""
-                par = ""
-                tar = ""
-
-                # targets
-                for target in pop.neuron.description['targets']:
-                    tar += """, double* sum_%(target)s""" % {'target' : target}
-
-                for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
-                    if attr['name'] in pop.neuron.description['local']:
-                        var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
-                    else:
-                        par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
-                return """void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
-    """ % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
-            else:
-                Global._error("Spike synapses are not supported yet by CUDA")
-                return ""
-
-        def generate_psp_call(proj):
-            """
-            call of cuda compute_psp kernels.
-            """
-            if proj.synapse.type == "rate":
-                return """void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s );
-""" % { 'id': proj.id,
-        'pre': proj.pre.id,
-        'post': proj.post.id,
-        'target': proj.target,
-      }
-            else:
-                Global._error("Spike synapses are not supported yet by CUDA")
-                return ""
-
-        def generate_syn_call(proj):
-            """
-            call of cuda update_synaptic_variable kernels.
-            """
-            if proj.synapse.type == "rate":
-                var = ""
-                for pre_var in proj.synapse.description['dependencies']['pre']:
-                    #TODO: correct type
-                    var += """, double* pre_%(name)s""" % { 'name': pre_var}
-
-                for post_var in proj.synapse.description['dependencies']['post']:
-                    #TODO: correct type
-                    var += """, double* post_%(name)s""" % { 'name': post_var}
-
-                par = ""
-                for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
-                    var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
-    
-                return """void Proj%(id)s_step(cudaStream_t stream, int size, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
-""" % { 'id': proj.id,
-        'var': var,
-        'par': par
-      }
-            else:
-                Global._error("Spike synapses are not supported yet by CUDA")
-                return ""
-
-        # create the function prototypes for each operation solely 
-        func_prototypes = "// population prototypes\n"
-        for pop in self.populations.itervalues():
-            func_prototypes += generate_neuron_step_call(pop)
-
-        func_prototypes += "\n// projection prototypes - compute psp \n"
-        for proj in self.projections.itervalues():
-            func_prototypes += generate_psp_call(proj)
-
-        func_prototypes += "\n// projection prototypes - update synaptic variables\n"
-        for proj in self.projections.itervalues():
-            func_prototypes += generate_syn_call(proj)
-
-        template=\
-"""
-#ifndef __CUDA_KERNEL__
-#define __CUDA_KERNEL__
-
-%(function)s
-
-#endif
-"""
-        return template % { 'function': func_prototypes}
-
-#######################################################################
-############## CUDA-BODY ##############################################
-#######################################################################
-    def generate_cuda_body(self):
-
-        kernel_config = self.body_kernel_config()
-
-        pop_kernel = self.body_update_neuron()
-
-        psp_kernel = self.body_computesum_proj()
-
-        syn_kernel = self.body_update_synapse()
-
-        from .cuBodyTemplate import cu_body_template
-        return cu_body_template % {
-            'kernel_config': kernel_config,
-            'pop_kernel': pop_kernel,
-            'psp_kernel': psp_kernel,
-            'syn_kernel': syn_kernel
-        }
-
-    def body_kernel_config(self):
-        cu_config = Global.cuda_config
-
-        code = "// Population config\n"
-        for pop in self.populations.itervalues():
-            num_threads = 32
-            if pop in cu_config.keys():
-                num_threads = cu_config[pop]['num_threads']
-
-            code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
-
-        code += "\n// Population config\n"
-        for proj in self.projections.itervalues():
-            num_threads = 192
-            if proj in cu_config.keys():
-                num_threads = cu_config[proj]['num_threads']
-
-            code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
-
-        return code
-    
-    def body_update_neuron(self):
-        code = ""
-        for pop in self.populations.itervalues():
-            if len(pop.neuron.description['variables']) == 0: # no variable
-                continue
-
-            # Neural update
-            from ..Utils import generate_equation_code
-
-            var = ""
-            par = ""
-            tar = ""
-            # variables and attributes
-            for attr in pop.neuron.description['variables'] + pop.neuron.description['parameters']:
-                if attr['name'] in pop.neuron.description['local']:
-                    var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] } 
-                else:
-                    par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
-
-            # targets
-            for target in pop.neuron.description['targets']:
-                tar += """, double* sum_%(target)s""" % {'target' : target}
-
-            #Global variables 
-            glob_eqs = ""
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'pop': 'pop' + str(pop.id)}
-            if eqs.strip() != "":
-                glob_eqs = """
-    if ( threadIdx.x == 0)
-    {
-%(eqs)s
-    }
-""" % {'id': pop.id, 'eqs': eqs }
-
-            # Local variables
-            loc_eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
-            loc_eqs = loc_eqs.replace("pop"+str(pop.id)+".", "")
-            from .cuBodyTemplate import pop_kernel
-            code += pop_kernel % {  'id': pop.id,
-                                    'local_eqs': loc_eqs,
-                                    'global_eqs': glob_eqs,
-                                    'pop_size': str(pop.size),
-                                    'tar': tar,
-                                    'tar2': tar.replace("double*","").replace("int*",""),
-                                    'var': var,
-                                    'var2': var.replace("double*","").replace("int*",""),
-                                    'par': par,
-                                    'par2': par.replace("double","").replace("int","")
-                                 }
-
-        return code
-
-    def body_computesum_proj(self):
-
-        def rate_coded(proj):
-            # Retrieve the psp code
-            if not 'psp' in  proj.synapse.description.keys(): # default
-                psp = "r[pre_rank[i]] * w[i];"
-            else: # custom psp
-                psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-
-            # Take delays into account if any
-            if proj.max_delay > 1:
-                Global._error("synaptic delays are currently not supported.")
-
-            from .cuBodyTemplate import psp_kernel
-            code = psp_kernel % { 'id': proj.id,
-        'pre': proj.pre.id,
-        'post': proj.post.id,
-        'target': proj.target,
-        'psp': psp
-      }
-            return code
-        
-        def spiking(proj):
-            Global._error("Spiking models are not supported currently on CUDA devices.")
-            return ""
-
-        # Reset code
-        code = ""
-
-        # Sum over all synapses 
-        for name, proj in self.projections.iteritems():
-            if proj.synapse.type == 'rate':
-                code += rate_coded(proj)
-            else:
-                code += spiking(proj)
-
-        return code
-
-    def body_update_synapse(self):
-        # Reset code
-        code = ""
-
-        # Sum over all synapses
-        for proj in self.projections.itervalues():
-
-            from ..Utils import generate_equation_code
-
-            # Global variables
-            global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-
-            # Local variables
-            local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}  
-
-            # remove unnecessary stuff, transfrom OMP to CUDA
-            local_eq = local_eq.replace("proj"+str(proj.id)+".","")
-            local_eq = local_eq.replace("[i][j]","[j]")
-
-            var = ""
-            for pre_var in proj.synapse.description['dependencies']['pre']:
-                old = """pop%(id)s.%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
-                new = """pre_%(name)s""" % { 'name': pre_var}
-
-                var += ", double* " + new
-                local_eq = local_eq.replace(old, new)
-
-            for post_var in proj.synapse.description['dependencies']['post']:
-                old = """pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': post_var}
-                new = """post_%(name)s""" % { 'name': post_var}
-
-                var += ", double* " + new
-                local_eq = local_eq.replace(old, new)
-
-            for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
-                var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
-
-            from .cuBodyTemplate import syn_kernel
-            code += syn_kernel % { 'id': proj.id,
-                                   'par': "",
-                                   'par2': "",
-                                   'var': var,
-                                   'var2': var.replace("double*",""),
-                                   'global_eqs': global_eq,
-                                   'local_eqs': local_eq,
-                                   'target': proj.target,
-                                   'pre': proj.pre.id,
-                                   'post': proj.post.id,
-                                 }
-
         return code
 
 #######################################################################
@@ -1162,7 +1034,7 @@ ProjStruct%(id)s proj%(id)s;
     def pyx_struct_pop(self):
         pop_struct = ""
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             # Is it a specific population?
             if pop.generator['cuda']['pyx_pop_struct']:
                 Global._error("No self-defined populations / projections available on CUDA yet.")
@@ -1233,7 +1105,7 @@ ProjStruct%(id)s proj%(id)s;
     def pyx_struct_proj(self):
         proj_struct = ""
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections.itervalues():
             code = """
     cdef struct ProjStruct%(id)s :
         int size
@@ -1303,7 +1175,7 @@ ProjStruct%(id)s proj%(id)s;
     def pyx_wrapper_pop(self):
         # Cython wrappers for the populations
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations.itervalues():
             # Init
             code += """
 cdef class pop%(id)s_wrapper :
@@ -1450,7 +1322,7 @@ cdef class pop%(id)s_wrapper :
     def pyx_wrapper_proj(self):
         # Cython wrappers for the projections
         code = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections.itervalues():
             # Init
             code += """
 cdef class proj%(id)s_wrapper :

@@ -25,6 +25,22 @@ __device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
 %(syn_kernel)s
 """
 
+cu_header_template=\
+"""#ifndef __CUDA_KERNEL__
+#define __CUDA_KERNEL__
+
+// population step prototypes
+%(neuron)s
+
+// compute_psp prototypes
+%(compute_sum)s
+
+// projection step prototypes
+%(synapse)s
+
+#endif
+"""
+
 pop_kernel=\
 """
 // gpu device kernel for population %(id)s
@@ -49,6 +65,19 @@ void Pop%(id)s_step(cudaStream_t stream, double dt%(tar)s%(var)s%(par)s)
 
     cuPop%(id)s_step<<<nb, pop%(id)s, 0, stream>>>(dt%(tar2)s%(var2)s%(par2)s);
 }
+"""
+
+pop_kernel_call =\
+"""
+    // Updating the local and global variables of population %(id)s
+    Pop%(id)s_step(/* default arguments */
+              pop%(id)s.stream, dt
+              /* population targets */
+              %(tar)s
+              /* kernel gpu arrays */
+              %(var)s
+              /* kernel constants */
+              %(par)s );
 """
 
 syn_kernel=\
@@ -87,6 +116,20 @@ void Proj%(id)s_step(cudaStream_t stream, int size, int* post_rank, int *pre_ran
 
     cuProj%(id)s_step<<<size, pop%(pre)s_pop%(post)s_%(target)s, 0, stream>>>(post_rank, pre_rank, nb_synapses, offsets, dt%(var2)s%(par2)s);
 }
+"""
+
+syn_kernel_call =\
+"""
+    // Updating the variables of projection %(id)s
+    if ( proj%(id)s._learning )
+    {
+        Proj%(id)s_step(/* kernel config */
+                  proj%(id)s.stream, proj%(id)s.post_rank.size(), proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
+                  /* kernel gpu arrays */
+                  %(local)s
+                  /* kernel constants */
+                  %(glob)s);
+    }
 """
 
 psp_kernel=\
@@ -142,6 +185,18 @@ void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* 
 
     cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<size, pop%(pre)s_pop%(post)s_%(target)s, sharedMemSize, stream >>>( pre_rank, nb_synapses, offsets, r, w, sum_%(target)s );
 }
+"""
+
+psp_kernel_call =\
+"""
+    // proj%(id)s: pop%(pre)s -> pop%(post)s
+    Pop%(pre)s_Pop%(post)s_%(target)s_psp( proj%(id)s.stream, pop%(post)s.size,
+                       /* ranks and offsets */
+                       proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
+                       /* computation data */
+                       pop%(pre)s.gpu_r, proj%(id)s.gpu_w,
+                       /* result */
+                       pop%(post)s.gpu_sum_%(target)s );
 """
 
 proj_basic_data =\
