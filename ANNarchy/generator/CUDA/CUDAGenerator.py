@@ -512,6 +512,14 @@ ProjStruct%(id)s proj%(id)s;
             if proj.synapse.type == "rate":
                 # gather all variables and parameters
                 local = ""
+                for pre_var in proj.synapse.description['dependencies']['pre']:
+                    #TODO: correct type
+                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
+
+                for post_var in proj.synapse.description['dependencies']['post']:
+                    #TODO: correct type
+                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+
                 glob = ""
                 for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
                     local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
@@ -522,7 +530,7 @@ ProjStruct%(id)s proj%(id)s;
     Proj%(id)s_step(/* kernel config */
               proj%(id)s.stream, proj%(id)s.post_rank.size(), proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
               /* kernel gpu arrays */
-              , pop%(pre)s.gpu_r, pop%(post)s.gpu_r%(local)s
+              %(local)s
               /* kernel constants */
               %(glob)s);
 """ % { 'id': proj.id,
@@ -589,7 +597,11 @@ ProjStruct%(id)s proj%(id)s;
                     code += """
         // %(attr_name)s: local
         if( pop%(id)s.%(attr_name)s_dirty )
+        {
+            //std::cout << "Transfer pop%(id)s.%(attr_name)s" << std::endl;
             cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            pop%(id)s.%(attr_name)s_dirty = false;
+        }
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         for proj in self.projections.itervalues():
@@ -669,7 +681,7 @@ ProjStruct%(id)s proj%(id)s;
             for attr in pop.neuron.description['parameters']+pop.neuron.description['variables']:
                 if attr['name'] in pop.neuron.description['local']:
                     code += """\tcudaMalloc((void**)&pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s));
-        pop%(id)s.%(attr_name)s_dirty = false;
+        pop%(id)s.%(attr_name)s_dirty = true;
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
             for target in pop.neuron.description['targets']:
                 code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
@@ -893,7 +905,15 @@ ProjStruct%(id)s proj%(id)s;
             call of cuda update_synaptic_variable kernels.
             """
             if proj.synapse.type == "rate":
-                var = ", double* pre_r, double* post_r"
+                var = ""
+                for pre_var in proj.synapse.description['dependencies']['pre']:
+                    #TODO: correct type
+                    var += """, double* pre_%(name)s""" % { 'name': pre_var}
+
+                for post_var in proj.synapse.description['dependencies']['post']:
+                    #TODO: correct type
+                    var += """, double* post_%(name)s""" % { 'name': post_var}
+
                 par = ""
                 for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
                     var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
@@ -1082,19 +1102,28 @@ ProjStruct%(id)s proj%(id)s;
             local_eq = local_eq.replace("proj"+str(proj.id)+".","")
             local_eq = local_eq.replace("[i][j]","[j]")
 
-            # UGLYHACK!!!!!!!!!!!!!!
-            local_eq = local_eq.replace("pop1.r","post_r")
-            local_eq = local_eq.replace("pop0.r","pre_r")
+            var = ""
+            for pre_var in proj.synapse.description['dependencies']['pre']:
+                old = """pop%(id)s.%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
+                new = """pre_%(name)s""" % { 'name': pre_var}
 
-            var = ", double* pre_r, double* post_r"
-            par = ""
+                var += ", double* " + new
+                local_eq = local_eq.replace(old, new)
+
+            for post_var in proj.synapse.description['dependencies']['post']:
+                old = """pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': post_var}
+                new = """post_%(name)s""" % { 'name': post_var}
+
+                var += ", double* " + new
+                local_eq = local_eq.replace(old, new)
+
             for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
                 var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
 
             from .cuBodyTemplate import syn_kernel
             code += syn_kernel % { 'id': proj.id,
-                                   'par': par,
-                                   'par2': par.replace("double",""),
+                                   'par': "",
+                                   'par2': "",
                                    'var': var,
                                    'var2': var.replace("double*",""),
                                    'global_eqs': global_eq,
