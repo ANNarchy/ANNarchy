@@ -309,7 +309,12 @@ def analyse_synapse(synapse):
 
         # Replace untouched variables with their original name
         for prev, new in untouched.iteritems():
-            cpp_eq = cpp_eq.replace(prev, new)     
+            cpp_eq = cpp_eq.replace(prev, new)
+
+
+        # Replace local functions
+        for f in description['functions']:
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+'proj%(id_proj)s.'+ f['name'] + '(', ' ' + cpp_eq).strip()     
         
         # Store the result
         variable['cpp'] = cpp_eq # the C++ equation
@@ -351,6 +356,8 @@ def analyse_synapse(synapse):
 
         # Store the result
         psp['cpp'] = code
-        description['psp'] = psp               
+        description['psp'] = psp   
+
+
 
     return description     

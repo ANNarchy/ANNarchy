@@ -151,9 +151,10 @@ def extract_prepost(name, eq, description):
     for var in list(set(pre_matches)):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
-                rep = '_pre_sum_' + val
-                untouched[rep] = ' pop%(id_pre)s.sum_'+val+'[rk_pre] '
+                rep = '_pre_sum_' + val.group(1)
+                untouched[rep] = ' pop%(id_pre)s.sum_'+val.group(1)+'[rk_pre] '
                 return rep
+
             eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
             dependencies['pre'].append(var)
@@ -165,8 +166,8 @@ def extract_prepost(name, eq, description):
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
-                rep = '_post_sum_' + val
-                untouched[rep] = ' pop%(id_post)s.sum_'+val+'[rk_post] '
+                rep = '_post_sum_' + val.group(1)
+                untouched[rep] = ' pop%(id_post)s.sum_'+val.group(1) +'[rk_post] '
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
@@ -441,6 +442,8 @@ def extract_pre_spike_variable(description):
 
 def extract_post_spike_variable(description):
     post_spike_var = []
+    if not description['raw_post_spike']:
+        return post_spike_var
     
     for var in prepare_string(description['raw_post_spike']):
         name = extract_name(var)

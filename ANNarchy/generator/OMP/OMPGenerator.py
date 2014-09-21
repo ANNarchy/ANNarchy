@@ -38,6 +38,7 @@ class OMPGenerator(object):
                 else:
                     if not op in proj.pre.global_operations:
                         proj.pre.global_operations.append(op)
+
             for op in  proj.synapse.description['post_global_operations']:
                 if isinstance(proj.post, PopulationView):
                     if not op in proj.post.population.global_operations:
@@ -247,6 +248,14 @@ struct ProjStruct%(id)s{
     //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     //bool record_%(name)s ;
 """ % {'type' : 'double', 'name': var['name']}
+
+            # Local functions
+            if len(proj.synapse.description['functions'])>0:
+                code += """
+    // Local functions
+"""
+                for func in proj.synapse.description['functions']:
+                    code += ' '*4 + func['cpp'] + '\n'
 
             code += """
 };    
@@ -1263,6 +1272,15 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.pre_rank[n]
 """ % {'id': proj.id}
 
+            # Delays
+            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+                code +="""
+    def get_delay(self):
+        return proj%(id)s.delay
+    def set_delay(self, value):
+        proj%(id)s.delay = value
+"""% {'id': proj.id}
+
             # Pre- or post_spike variables (including w)
             if proj.synapse.description['type'] == 'spike':
                 for var in proj.synapse.description['pre_spike']:
@@ -1309,7 +1327,11 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
         proj%(id)s.%(name)s = value
-""" % {'id' : proj.id, 'name': var['name']}
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, %(type)s value):
+        proj%(id)s.%(name)s[rank] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
             # Variables
             for var in proj.synapse.description['variables']:
@@ -1337,6 +1359,10 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
         proj%(id)s.%(name)s = value
-""" % {'id' : proj.id, 'name': var['name']}
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, %(type)s value):
+        proj%(id)s.%(name)s[rank] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
         return code

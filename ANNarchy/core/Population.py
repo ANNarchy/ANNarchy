@@ -820,3 +820,69 @@ class Population(object):
             if self.neuron.description['variables'][idx]['name'] == name:
                 return idx
         return -1
+
+    ################################
+    ## Save/load methods
+    ################################
+    def _data(self):
+        "Returns a dictionary containing all information about the population. Used for saving."
+        desc = {}
+        desc['name'] = self.name
+        desc['geometry'] = self.geometry
+        desc['size'] = self.size
+        # Attributes
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+        # Save all attributes           
+        for var in self.attributes:
+            try:
+                desc[var] = getattr(self.cyInstance, 'get_'+var)()
+            except:
+                Global._error('Can not save the attribute ' + var + 'in the population ' + self.name + '.')              
+        return desc 
+
+    def save(self, filename):
+        """
+        Saves all information about the population (structure, current value of parameters and variables) into a file.
+
+        * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+
+        * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+
+        * Otherwise, the data will be pickled into a simple binary text file using cPickle.
+        
+        *Parameter*:
+        
+        * **filename**: filename, may contain relative or absolute path.
+        
+            .. warning:: 
+
+                The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+
+        Example::
+        
+            pop.save('pop1.txt')
+
+        """
+        from ANNarchy.core.IO import _save_data
+        _save_data(filename, self._data())
+
+
+    def load(self, filename):
+        """
+        Load the saved state of the population.
+
+        Warning: Matlab data can not be loaded.
+        
+        *Parameters*:
+        
+        * **filename**: the filename with relative or absolute path.
+        
+        Example::
+        
+            pop.load('pop1.txt')
+
+        """
+        from ANNarchy.core.IO import _load_data, _load_pop_data
+        _load_pop_data(self, _load_data(filename))

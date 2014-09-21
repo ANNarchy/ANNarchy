@@ -27,6 +27,7 @@ import copy
 
 from ANNarchy.core import Global
 from ANNarchy.core.Synapse import Synapse
+from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 
 class Projection(object):
@@ -185,6 +186,48 @@ class Projection(object):
     def __len__(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
         return self.size
+
+    @property
+    def dendrites(self):
+        """
+        Iteratively returns the dendrites corresponding to this projection.
+        """
+        for n in self.post_ranks:
+            yield Dendrite(self, n)
+    
+    def dendrite(self, pos):
+        """
+        Returns the dendrite of a postsynaptic neuron according to its rank.
+
+        *Parameters*:
+
+            * **pos**: can be either the rank or the coordinates of the postsynaptic neuron
+        """
+        if isinstance(pos, int):
+            rank = pos
+        else:
+            rank = self.post.rank_from_coordinates(pos)
+        if rank in self.post_ranks:
+            return Dendrite(self, rank)
+        else:
+            Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
+            return None
+    
+
+    # Iterators
+    def __getitem__(self, *args, **kwds):
+        """ Returns dendrite of the given position in the postsynaptic population. 
+        
+        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        """
+        if len(args) == 1:
+            return self.dendrite(args[0])
+        return self.dendrite(args)
+        
+    def __iter__(self):
+        " Returns iteratively each dendrite in the population in ascending postsynaptic rank order."
+        for n in self.post_ranks:
+            yield Dendrite(self, n)
 
     ################################
     ## Access to attributes
@@ -759,7 +802,7 @@ class Projection(object):
 
     def _data(self):
         desc = {}
-        desc['post_ranks'] = self._post_ranks
+        desc['post_ranks'] = self.post_ranks
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
@@ -773,20 +816,23 @@ class Projection(object):
             synapse_count.append(self.dendrite(d).size)
             # Postsynaptic rank
             dendrite_desc['post_rank'] = d
+            # Number of synapses
+            dendrite_desc['size'] = self.cyInstance.nb_synapses(d)
             # Attributes
             attributes = self.attributes
             if not 'w' in self.attributes:
                 attributes.append('w')
-            if not 'rank' in self.attributes:
-                attributes.append('rank')
-            if not 'delay' in self.attributes:
-                attributes.append('delay')
             # Save all attributes           
             for var in attributes:
                 try:
-                    dendrite_desc[var] = getattr(self.cyInstance, '_get_'+var)(d) 
-                except:
-                    Global._error('Can not save the attribute ' + var + 'in the projection.')               
+                    dendrite_desc[var] = getattr(self.cyInstance, 'get_dendrite_'+var)(d) 
+                except Exception, e:
+                    Global._error('Can not save the attribute ' + var + ' in the projection.')    
+            # Add pre-synaptic ranks and delays
+            dendrite_desc['rank'] = self.cyInstance.pre_rank(d)
+            if hasattr(self.cyInstance, 'get_delay'):
+                dendrite_desc['delay'] = self.cyInstance.get_delay()
+            # Finish
             dendrites.append(dendrite_desc)
         
         desc['dendrites'] = dendrites
