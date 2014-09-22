@@ -30,7 +30,7 @@ from ANNarchy.parser.ITE import *
 
 import re
 
-def extract_randomdist(description):
+def extract_randomdist(description, pattern):
     " Extracts RandomDistribution objects from all variables"
     rk_rand = 0
     random_objects = []
@@ -58,7 +58,10 @@ def extract_randomdist(description):
                         arg = float(arguments[idx])
                     except: # A global parameter
                         if arguments[idx].strip() in description['global']:
-                            arg = 'pop%(id)s.'+arguments[idx].strip() 
+                            if description['object'] == 'neuron':
+                                arg = pattern['pop_prefix'] + pattern['pop_sep'] + arguments[idx].strip() 
+                            else:
+                                arg = pattern['proj_prefix'] + pattern['proj_sep'] + arguments[idx].strip() 
                         else:
                             _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
                             exit(0)
@@ -88,7 +91,7 @@ def extract_randomdist(description):
         
     return random_objects
     
-def extract_globalops_neuron(name, eq, description):
+def extract_globalops_neuron(name, eq, description, pattern):
     """ Replaces global operations (mean(r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
@@ -104,13 +107,13 @@ def extract_globalops_neuron(name, eq, description):
                 oldname = op + '(' + var + ')'
                 newname = '_' + op + '_' + var 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = 'pop%(id)s._' + op + '_' + var 
+                untouched[newname] = pattern['pop_prefix'] + pattern['pop_sep'] + '_' + op + '_' + var 
             else:
                 _error(eq+'\nThere is no local attribute '+var+'.')
                 exit(0)
     return eq, untouched, globs
     
-def extract_globalops_synapse(name, eq, desc):
+def extract_globalops_synapse(name, eq, desc, pattern):
     """ Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
@@ -128,17 +131,17 @@ def extract_globalops_synapse(name, eq, desc):
             oldname = op + '(pre.' + var + ')'
             newname =  '_pre_' + op + '_' + var
             eq = eq.replace(oldname, newname)
-            untouched[newname] = 'pop%(id_pre)s._' + op + '_' + var
+            untouched[newname] = pattern['proj_preprefix'] + pattern['proj_sep'] + '_' + op + '_' + var
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var})
             oldname = op + '(post.' + var + ')'
             newname = '_post_' + op + '_' + var
             eq = eq.replace(oldname, newname)
-            untouched[newname] = 'pop%(id_post)s._' + op + '_' + var 
+            untouched[newname] = pattern['proj_postprefix'] + pattern['proj_sep'] + '_' + op + '_' + var 
 
     return eq, untouched, globs
     
-def extract_prepost(name, eq, description):
+def extract_prepost(name, eq, description, pattern):
     " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."  
 
     dependencies = {'pre': [], 'post': []}
@@ -152,7 +155,7 @@ def extract_prepost(name, eq, description):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
                 rep = '_pre_sum_' + val.group(1)
-                untouched[rep] = ' pop%(id_pre)s.sum_'+val.group(1)+'[rk_pre] '
+                untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +val.group(1)+'[rk_pre] '
                 return rep
 
             eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
@@ -160,21 +163,21 @@ def extract_prepost(name, eq, description):
             dependencies['pre'].append(var)
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var)
-            untouched['_pre_'+var] = ' pop%(id_pre)s.' + var + '[rk_pre]'
+            untouched['_pre_'+var] = pattern['proj_preprefix'] + pattern['proj_sep'] + var + '[rk_pre]'
 
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
                 rep = '_post_sum_' + val.group(1)
-                untouched[rep] = ' pop%(id_post)s.sum_'+val.group(1) +'[rk_post] '
+                untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+val.group(1) +'[rk_post] '
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var)
-            untouched['_post_'+var] = ' pop%(id_post)s.' + var + '[rk_post]'
+            untouched['_post_'+var] = pattern['proj_postprefix'] + pattern['proj_sep'] + var + '[rk_post]'
 
     return eq, untouched, dependencies
                    
@@ -381,38 +384,41 @@ def extract_targets(variables):
             targets.append(t.strip())
     return list(set(targets))
 
-def extract_spike_variable(pop_desc):
+def extract_spike_variable(description, pattern):
 
-    cond = prepare_string(pop_desc['raw_spike'])
+    cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
         _error('The spike condition must be a single expression')
-        _print(pop_desc['raw_spike'])
+        _print(description['raw_spike'])
         exit(0)
         
     translator = Equation('raw_spike_cond', cond[0].strip(), 
-                          pop_desc['attributes'], 
-                          pop_desc['local'], 
-                          pop_desc['global'], 
-                          type = 'cond',
-                          prefix = 'pop%(id)s',
-                          index = '[i]')
+                          description['attributes'], 
+                          description['local'], 
+                          description['global'], 
+                          prefix=pattern['pop_prefix'],
+                          sep=pattern['pop_sep'],
+                          index=pattern['pop_index'],
+                          global_index=pattern['pop_globalindex'])
     raw_spike_code = translator.parse()
     
     reset_desc = []
-    if pop_desc.has_key('raw_reset') and pop_desc['raw_reset']:
-        reset_desc = process_equations(pop_desc['raw_reset'])
+    if description.has_key('raw_reset') and description['raw_reset']:
+        reset_desc = process_equations(description['raw_reset'])
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'], 
-                                  pop_desc['attributes'], 
-                                  pop_desc['local'], 
-                                  pop_desc['global'],
-                                  prefix = 'pop%(id)s',
-                                  index = '[i]')
+                                  description['attributes'], 
+                                  description['local'], 
+                                  description['global'],
+                                  prefix=pattern['pop_prefix'],
+                                  sep=pattern['pop_sep'],
+                                  index=pattern['pop_index'],
+                                  global_index=pattern['pop_globalindex'])
             var['cpp'] = translator.parse() 
     
     return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
 
-def extract_pre_spike_variable(description):
+def extract_pre_spike_variable(description, pattern):
     pre_spike_var = []
     # For all variables influenced by a presynaptic spike
     for var in prepare_string(description['raw_pre_spike']):
@@ -428,19 +434,20 @@ def extract_pre_spike_variable(description):
                                   description['attributes'] + [name], 
                                   description['local'] + [name], 
                                   description['global'],
-                                  prefix = 'proj%(id_proj)s',
-                                  index = '[i][j]',
-                                  global_index="[i]")
+                                  prefix=pattern['proj_prefix'],
+                                  sep=pattern['proj_sep'],
+                                  index=pattern['proj_index'],
+                                  global_index=pattern['proj_globalindex'])
             eq = translator.parse()
         else: 
-            eq = translate_ITE(name, eq, condition, description, {})
+            eq = translate_ITE(name, eq, condition, description, {}, prefix=prefix, sep=sep, index=index, global_index=global_index)
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )
 
     return pre_spike_var 
 
-def extract_post_spike_variable(description):
+def extract_post_spike_variable(description, pattern):
     post_spike_var = []
     if not description['raw_post_spike']:
         return post_spike_var
@@ -456,18 +463,19 @@ def extract_post_spike_variable(description):
                                   description['attributes'], 
                                   description['local'], 
                                   description['global'],
-                                  prefix = 'proj%(id_proj)s',
-                                  index = '[i][j]',
-                                  global_index="[i]")
+                                  prefix=pattern['proj_prefix'],
+                                  sep=pattern['proj_sep'],
+                                  index=pattern['proj_index'],
+                                  global_index=pattern['proj_globalindex'])
             eq = translator.parse()     
         else: 
-            eq = translate_ITE(name, eq, condition, description, {}) 
+            eq = translate_ITE(name, eq, condition, description, {}, prefix=prefix, sep=sep, index=index, global_index=global_index) 
 
         post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
 
     return post_spike_var  
 
-def extract_stop_condition(pop):
+def extract_stop_condition(pop, pattern):
     eq = pop['stop_condition']['eq']
     pop['stop_condition']['type'] = 'any'
     # Check the flags
@@ -484,8 +492,11 @@ def extract_stop_condition(pop):
                           pop['attributes'], 
                           pop['local'], 
                           pop['global'], 
-                          prefix = 'pop%(id)s',
-                          type = 'cond')
+                          type = 'cond',
+                          prefix=pattern['pop_prefix'],
+                          sep=pattern['pop_sep'],
+                          index=pattern['pop_index'],
+                          global_index=pattern['pop_globalindex'])
     code = translator.parse()
     pop['stop_condition']['cpp'] = '(' + code + ')'
 

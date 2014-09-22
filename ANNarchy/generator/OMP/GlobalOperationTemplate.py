@@ -1,9 +1,9 @@
 max_template = """
 // Computes the maximum value of an array
-double max_value(const std::vector<double> &array)
+double max_value(const double* array, int n)
 {
     double max = array[0];
-    for(int i=0; i<array.size(); i++)
+    for(int i=0; i<n; i++)
     {
         if(array[i] > max)
             max = array[i];
@@ -14,10 +14,10 @@ double max_value(const std::vector<double> &array)
 """
 min_template = """
 // Computes the minimum value of an array
-double min_value(const std::vector<double> &array)
+double min_value(const double* array, int n)
 {
     double min = array[0];
-    for(int i=0; i<array.size(); i++)
+    for(int i=0; i<n; i++)
     {
         if(array[i] < min)
             min = array[i];
@@ -28,25 +28,24 @@ double min_value(const std::vector<double> &array)
 """
 mean_template = """
 // Computes the mean value of an array
-double mean_value(const std::vector<double> &array)
+double mean_value(const double* array, int n)
 {
     double sum = 0.0;
-    #pragma omp parallel reduction(+:sum)
-    for(int i=0; i<array.size(); i++)
+    #pragma omp parallel for reduction(+:sum)
+    for(int i=0; i<n; i++)
     {
         sum += array[i];
     }
-
-    return sum/(double)(array.size());
+    return sum/(double)n;
 }
 """
 norm1_template = """
 // Computes the L1-norm of an array
-double norm1_value(const std::vector<double> &array)
+double norm1_value(const double* array, int n)
 {
     double sum = 0.0;
-    #pragma omp parallel reduction(+:sum)
-    for(int i=0; i<array.size(); i++)
+    #pragma omp parallel for reduction(+:sum)
+    for(int i=0; i<n; i++)
     {
         sum += fabs(array[i]);
     }
@@ -56,11 +55,11 @@ double norm1_value(const std::vector<double> &array)
 """
 norm2_template = """
 // Computes the L2-norm (Euclidian) of an array
-double norm2_value(const std::vector<double> &array)
+double norm2_value(const double* array, int n)
 {
     double sum = 0.0;
-    #pragma omp parallel reduction(+:sum)
-    for(int i=0; i<array.size(); i++)
+    #pragma omp parallel for reduction(+:sum)
+    for(int i=0; i<n; i++)
     {
         sum += pow(array[i], 2.0);
     }

@@ -150,7 +150,7 @@ struct PopStruct%(id)s{
     // Targets
 """
                 for target in pop.neuron.description['targets']:
-                    code += """    std::vector<double> sum_%(target)s;
+                    code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
 
             # Global operations
@@ -396,7 +396,7 @@ struct ProjStruct%(id)s{
             from ..Utils import generate_equation_code
 
             # Global variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'id': pop.id, 'pop': 'pop' + str(pop.id)}
+            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'id': pop.id}
             if eqs.strip() != "":
                 code += """
     // Updating the global variables of population %(id)s (%(name)s)
@@ -404,7 +404,7 @@ struct ProjStruct%(id)s{
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
             # Local variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'id': pop.id, 'pop': 'pop' + str(pop.id)}
+            eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'id': pop.id}
             code += """
     // Updating the local variables of population %(id)s (%(name)s)
     #pragma omp parallel for
@@ -416,22 +416,22 @@ struct ProjStruct%(id)s{
 #             if pop.neuron.type == 'rate':
 #                 for target in pop.neuron.description['targets']:
 #                     code += """
-#         pop%(id)s.sum_%(target)s[i] = 0.0;
+#         pop%(id)s._sum_%(target)s[i] = 0.0;
 # """ % {'id': pop.id, 'name' : pop.name, 'target': target}
 
 
             # Spike emission
             if pop.neuron.type == 'spike':
-                cond =  pop.neuron.description['spike']['spike_cond'] % {'id': pop.id, 'pop': 'pop'+str(pop.id)}
+                cond =  pop.neuron.description['spike']['spike_cond'] % {'id': pop.id}
                 reset = ""; refrac = ""
                 for eq in pop.neuron.description['spike']['spike_reset']:
                     reset += """
             %(reset)s
-""" % {'reset': eq['cpp'] % {'pop': 'pop'+str(pop.id)}}
+""" % {'reset': eq['cpp'] % {'id': pop.id}}
                     if not 'unless_refractory' in eq['constraint']:
                         refrac += """
             %(refrac)s
-""" % {'refrac': eq['cpp'] % {'pop': 'pop'+str(pop.id)} }
+""" % {'refrac': eq['cpp'] % {'id': pop.id} }
 
                 # Main code
                 code += """
@@ -534,7 +534,7 @@ struct ProjStruct%(id)s{
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
             sum += %(psp)s
         }
-        pop%(id_post)s.sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 
     'psp': psp, 'omp_code': omp_code}
@@ -605,7 +605,7 @@ struct ProjStruct%(id)s{
             if pop.neuron.type == 'rate':
                 for target in pop.targets:
                     code += """
-    memset( pop%(id)s.sum_%(target)s.data(), 0.0, pop%(id)s.sum_%(target)s.size() * sizeof(double));
+    memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
 """ % {'id': pop.id, 'target': target}
 
         return code
@@ -846,7 +846,7 @@ struct ProjStruct%(id)s{
                 continue
 
             for op in pop.global_operations:
-                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s);
+                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s.data(), pop%(id)s.size);
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         return code
 
@@ -888,7 +888,14 @@ struct ProjStruct%(id)s{
             else:
                 pop.neuron.description['stop_condition'] = {'eq': pop.stop_condition}
                 from ANNarchy.parser.Extraction import extract_stop_condition
-                extract_stop_condition(pop.neuron.description)
+                from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
+                # Find the paradigm OMP or CUDA
+                if config['paradigm'] == 'cuda':
+                    pattern = pattern_cuda
+                else:
+                    pattern = pattern_omp
+                extract_stop_condition(pop.neuron.description, pattern)
+
                 if pop.neuron.description['stop_condition']['type'] == 'any':
                     stop_code = """
                     pop_stop = false;
@@ -999,7 +1006,7 @@ struct ProjStruct%(id)s{
         # Targets
 """
                 for target in pop.neuron.description['targets']:
-                    code += """        vector[double] sum_%(target)s
+                    code += """        vector[double] _sum_%(target)s
 """ % {'target' : target}
 
             # Finalize the code
@@ -1136,7 +1143,7 @@ cdef class pop%(id)s_wrapper :
             if pop.neuron.type == 'rate':
                 for target in pop.neuron.description['targets']:
                     code += """
-        pop%(id)s.sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
+        pop%(id)s._sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
 
             # Size property
             code += """
