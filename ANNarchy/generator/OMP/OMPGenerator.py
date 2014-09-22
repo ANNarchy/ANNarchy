@@ -680,6 +680,7 @@ struct ProjStruct%(id)s{
                 # Generate the code
                 if post_code != "":
                     omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+
                     code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning){
@@ -713,14 +714,15 @@ struct ProjStruct%(id)s{
 
             # Generate the code
             if local_eq.strip() != '' or global_eq.strip() != '' :
+                omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
                 code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning){
-        #pragma omp parallel for private(rk_pre, rk_post)
+        %(omp)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
 %(global)s
-"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name}
+"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'omp': omp_code}
  
                 if local_eq.strip() != "": 
                     code+= """
