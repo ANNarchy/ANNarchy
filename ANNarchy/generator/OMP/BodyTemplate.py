@@ -81,10 +81,12 @@ void initialize(double _dt) {
 void step()
 {
 
+    double sum;
+    int rk_pre, rk_post;
+    
     ////////////////////////////////
     // Presynaptic events
     ////////////////////////////////
-    double sum;
 %(reset_sums)s
 %(compute_sums)s
 
@@ -117,7 +119,6 @@ void step()
     ////////////////////////////////
     // Update synaptic variables
     ////////////////////////////////
-    int rk_pre, rk_post;
 %(update_synapse)s    
 
 

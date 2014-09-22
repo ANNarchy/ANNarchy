@@ -510,7 +510,7 @@ struct ProjStruct%(id)s{
             if not 'psp' in  proj.synapse.description.keys(): # default
                 psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
             else: # custom psp
-                psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+                psp = (proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% {'id_proj' : proj.id})
             # Take delays into account if any
             if proj.max_delay > 1:
                 if proj._synapses.uniform_delay == -1 : # Non-uniform delays
@@ -526,8 +526,10 @@ struct ProjStruct%(id)s{
             # No need for openmp if less than 10 neurons
             omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
-            code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+            # Generate the code depending on the operation
+            if proj.synapse.operation == 'sum': # normal summation
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
@@ -536,8 +538,64 @@ struct ProjStruct%(id)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
     'psp': psp, 'omp_code': omp_code}
+
+            elif proj.synapse.operation == 'max': # max pooling
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = max
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        int j= 0;
+        sum = %(psp)s ;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            if(%(psp)s > sum){
+                sum = %(psp)s ;
+            }
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+    }
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+
+            elif proj.synapse.operation == 'min': # max pooling
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = min
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        int j= 0;
+        sum = %(psp)s ;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            if(%(psp)s < sum){
+                sum = %(psp)s ;
+            }
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+    }
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+
+            elif proj.synapse.operation == 'mean': # max pooling
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        sum = 0.0 ;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            sum += %(psp)s ;
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum / (double)(proj%(id_proj)s.pre_rank[i].size());
+    }
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+    'psp': psp.replace(';', ''), 'omp_code': omp_code}
 
             return code
 

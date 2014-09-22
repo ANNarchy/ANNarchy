@@ -40,6 +40,8 @@ pattern_omp = {
     'proj_globalindex': '[i]',
     'proj_preprefix': 'pop%(id_pre)s',
     'proj_postprefix': 'pop%(id_post)s',
+    'proj_preindex': '[rk_pre]',
+    'proj_postindex': '[rk_post]',
 }
 pattern_cuda = {
     # Populations
@@ -394,9 +396,9 @@ def analyse_synapse(synapse):
         psp = {'eq' : description['raw_psp'].strip() }
         # Replace pre- and post_synaptic variables
         eq = psp['eq']
-        eq, untouched = extract_prepost('psp', eq, synapse)
+        eq, untouched, dependencies = extract_prepost('psp', eq, description, pattern)
         # Extract if-then-else statements
-        eq, condition = extract_ite('psp', eq, synapse, split=False)
+        eq, condition = extract_ite('psp', eq, description, split=False)
         # Analyse the equation
         if condition == []:
             translator = Equation('psp', eq, 
