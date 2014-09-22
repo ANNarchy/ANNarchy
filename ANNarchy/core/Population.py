@@ -649,9 +649,6 @@ class Population(object):
             if not var in self.variables + ['spike']:
                 Global._warning(var, 'is not a recordable variable of the population.')
                 continue
-            if var in self.recorded_variables.keys():
-                #Global._warning(var, 'is already recording.')
-                continue
             self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1]}
             getattr(self.cyInstance, 'start_record_'+var)()
 
@@ -687,6 +684,86 @@ class Population(object):
                 continue
             getattr(self.cyInstance, 'stop_record_'+var)()
             del self.recorded_variables[var]
+
+    def pause_record(self, variable=None):
+        """
+        Pauses the recording of variables (can be resumed later with resume_record()).
+
+        *Parameter*:
+            
+        * **variable**: single variable name or list of variable names. If no argument is provided all recordings will pause.
+
+        Example::
+
+            pop1.pause_record('r')
+            pop2.pause_record(['mp', 'r'])  
+        """
+        _variable = []
+        if variable == None:
+            _variable = self.recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')       
+        
+        for var in _variable:
+            
+            if not var in self.recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.name)
+                continue
+            
+            try:
+                getattr(self.cyInstance, 'stop_record_'+var)()
+                self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+
+                if Global.config['verbose']:
+                    print('pause record of', var, '(', self.name, ')')
+
+            except:
+                print("Error (pause_record): only possible after compilation.")
+
+    def resume_record(self, variable=None):
+        """
+        Resume recording the previous defined variables.
+        
+        *Parameter*:
+            
+            * **variable**: single variable name or list of variable names.  
+
+        Example::
+
+            pop1.resume_record('r')
+            pop2.resume_record(['mp', 'r'])        
+        """
+        _variable = []
+        
+        if variable == None:
+            _variable = self.recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        for var in _variable:
+            
+            if not var in var in self.recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.name)
+                continue
+            
+            try:
+                getattr(self.cyInstance, 'start_record_'+var)()
+                self.recorded_variables[var]['start'].append(Global.get_current_step())
+                self.recorded_variables[var]['stop'].append(-1)
+                
+                if Global.config['verbose']:
+                    Global._print('resume record of', var, '(' , self.name, ')')
+
+            except:
+                Global._error("Error: only possible after compilation.")
 
     def get_record(self, variable=None, reshape=False):
         """
@@ -729,7 +806,8 @@ class Population(object):
                 continue
         
             var_data = getattr(self.cyInstance, 'get_record_'+var)()
-            self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+            if self.recorded_variables[var]['stop'][-1] == -1:
+                self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
             data[var] = {
                 'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
                 'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,

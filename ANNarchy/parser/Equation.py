@@ -38,7 +38,7 @@ class Equation(object):
     def __init__(self, name, expression, variables, 
                  local_variables, global_variables, 
                  untouched = [], 
-                 method='explicit', type=None, prefix='%(pop)s', index='[i]', global_index=''):
+                 method='explicit', type=None, prefix='pop%(id)s', index='[i]', global_index=''):
         '''
         Parameters:
         

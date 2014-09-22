@@ -1,6 +1,6 @@
 max_template = """
 // Computes the maximum value of an array
-double max_value(std::vector<double> &array)
+double max_value(const std::vector<double> &array)
 {
     double max = array[0];
     for(int i=0; i<array.size(); i++)
@@ -14,7 +14,7 @@ double max_value(std::vector<double> &array)
 """
 min_template = """
 // Computes the minimum value of an array
-double min_value(std::vector<double> &array)
+double min_value(const std::vector<double> &array)
 {
     double min = array[0];
     for(int i=0; i<array.size(); i++)
@@ -28,9 +28,10 @@ double min_value(std::vector<double> &array)
 """
 mean_template = """
 // Computes the mean value of an array
-double mean_value(std::vector<double> &array)
+double mean_value(const std::vector<double> &array)
 {
     double sum = 0.0;
+    #pragma omp parallel reduction(+:sum)
     for(int i=0; i<array.size(); i++)
     {
         sum += array[i];
@@ -41,7 +42,7 @@ double mean_value(std::vector<double> &array)
 """
 norm1_template = """
 // Computes the L1-norm of an array
-double norm1_value(std::vector<double> &array)
+double norm1_value(const std::vector<double> &array)
 {
     double sum = 0.0;
     #pragma omp parallel reduction(+:sum)
@@ -55,7 +56,7 @@ double norm1_value(std::vector<double> &array)
 """
 norm2_template = """
 // Computes the L2-norm (Euclidian) of an array
-double norm2_value(std::vector<double> &array)
+double norm2_value(const std::vector<double> &array)
 {
     double sum = 0.0;
     #pragma omp parallel reduction(+:sum)

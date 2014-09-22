@@ -50,6 +50,7 @@ def analyse_neuron(neuron):
 
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = get_attributes(parameters, variables)
+
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
         _error('Attributes must be declared only once.', attributes)
@@ -81,7 +82,7 @@ def analyse_neuron(neuron):
         # Replace sum(target) with sum(i, rk_target)
         for target in description['targets']:
             eq = eq.replace('sum('+target+')', 'sum_'+target )  
-            untouched['sum_'+target] = '%(pop)s.sum_'+target+'[i]'
+            untouched['sum_'+target] = 'pop%(id)s.sum_'+target+'[i]'
         
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description)
@@ -107,7 +108,7 @@ def analyse_neuron(neuron):
                                       description['global'], 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      index="[i]", prefix='%(pop)s')
+                                      index="[i]", prefix='pop%(id)s')
                 variable['bounds']['min'] = translator.parse().replace(';', '')
 
         if 'max' in variable['bounds'].keys():
@@ -118,7 +119,7 @@ def analyse_neuron(neuron):
                                       description['global'], 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      index="[i]", prefix='%(pop)s')
+                                      index="[i]", prefix='pop%(id)s')
                 variable['bounds']['max'] = translator.parse().replace(';', '')
         
         # Analyse the equation
@@ -129,10 +130,10 @@ def analyse_neuron(neuron):
                                   description['global'], 
                                   method = method,
                                   untouched = untouched.keys(),
-                                  index="[i]", prefix='%(pop)s')
+                                  index="[i]", prefix='pop%(id)s')
             code = translator.parse()
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, description, untouched, prefix='%(pop)s', index='[i]')
+            code = translate_ITE(variable['name'], eq, condition, description, untouched, prefix='pop%(id)s', index='[i]')
 
         
         if isinstance(code, str):
@@ -156,7 +157,7 @@ def analyse_neuron(neuron):
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+'%(pop)s.'+ f['name'] + '(', ' ' + cpp_eq).strip()
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+'pop%(id)s.'+ f['name'] + '(', ' ' + cpp_eq).strip()
 
         # Store the result
         variable['cpp'] = cpp_eq # the C++ equation

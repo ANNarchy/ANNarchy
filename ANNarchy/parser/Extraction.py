@@ -102,9 +102,9 @@ def extract_globalops_neuron(name, eq, description):
             if var in description['local']:
                 globs.append({'function': op, 'variable': var})
                 oldname = op + '(' + var + ')'
-                newname = 'pop%(id)s._' + op + '_' + var 
+                newname = '_' + op + '_' + var 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = newname
+                untouched[newname] = 'pop%(id)s._' + op + '_' + var 
             else:
                 _error(eq+'\nThere is no local attribute '+var+'.')
                 exit(0)
@@ -394,7 +394,7 @@ def extract_spike_variable(pop_desc):
                           pop_desc['local'], 
                           pop_desc['global'], 
                           type = 'cond',
-                          prefix = '%(pop)s',
+                          prefix = 'pop%(id)s',
                           index = '[i]')
     raw_spike_code = translator.parse()
     
@@ -406,7 +406,7 @@ def extract_spike_variable(pop_desc):
                                   pop_desc['attributes'], 
                                   pop_desc['local'], 
                                   pop_desc['global'],
-                                  prefix = '%(pop)s',
+                                  prefix = 'pop%(id)s',
                                   index = '[i]')
             var['cpp'] = translator.parse() 
     

@@ -123,6 +123,9 @@ class Projection(object):
         # CSR object
         self._synapses = None
 
+        # Recorded variables
+        self.recorded_variables = []
+
     def _instantiate(self, module):
 
         self._connect(module)

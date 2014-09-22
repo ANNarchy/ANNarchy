@@ -152,3 +152,200 @@ class Dendrite(object):
         m[ranks] = values
 
         return m.reshape(self.pre.geometry)
+
+
+    #########################
+    ### Recording
+    #########################   
+    def start_record(self, variable):
+        """
+        Starts recording the given variables.
+        
+        **Parameter**:
+            
+        * **variable**: single variable name or list of variable names.        
+        """
+        _variable = []
+        
+        if isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        for var in _variable:
+            
+            try:
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank)
+                if not var in self.proj.recorded_variables:
+                    self.proj.recorded_variables.append(var)
+    
+                if Global.config['verbose']:
+                    print('start recording of', var, '(', self.proj.name, ')')
+                    
+            except:
+                print 'dendrite.start_record_'+var
+                print "Error (start_record): only possible after compilation."
+                pass
+
+    # def stop_record(self, variable=None):
+    #     """
+    #     Stops recording the defined variables.
+
+    #     *Parameter*:
+            
+    #     * **variable**: single variable name or list of variable names. If no argument is provided all recordings will stop.
+    #     """
+    #     _variable = []
+    #     if variable == None:
+    #         _variable = self.proj._recorded_variables[self.post_rank].keys() # TODO: what is it?
+    #     elif isinstance(variable, str):
+    #         _variable.append(variable)
+    #     elif isinstance(variable, list):
+    #         _variable = variable
+    #     else:
+    #         print 'Error: variable must be either a string or list of strings.'       
+        
+    #     for var in _variable:
+            
+    #         if not var in self.proj._recordable_variables:
+    #             print var, 'is not a recordable variable of', self.proj.name
+    #             continue
+
+    #         if not self.post_rank in self.proj._recorded_variables.keys() or \
+    #            not var in self.proj._recorded_variables[self.post_rank].keys() or \
+    #            not self.proj._recorded_variables[self.post_rank][var].is_running :
+    #             print 'The recording of', var, 'was not running on projection', self.proj.name
+    #             continue
+            
+    #         try:
+    #             getattr(self.proj.cyInstance, '_stop_record_'+var)(self.post_rank)
+
+    #             if Global.config['verbose']:
+    #                 print('stop record of', var, '(', self.name, ')')
+    #             self.proj._recorded_variables[self.post_rank][var].pause()
+    #         except:
+    #             Global._error('(pause_record): only possible after compilation.')
+
+    # def pause_record(self, variable=None):
+    #     """
+    #     Pause in recording the defined variables.
+
+    #     *Parameter*:
+            
+    #     * **variable**: single variable name or list of variable names. If no argument is provided all records will stop.
+    #     """
+    #     _variable = []
+    #     if variable == None:
+    #         _variable = self.proj._recorded_variables[self.post_rank].keys() # TODO: what is it?
+    #     elif isinstance(variable, str):
+    #         _variable.append(variable)
+    #     elif isinstance(variable, list):
+    #         _variable = variable
+    #     else:
+    #         print('Error: variable must be either a string or list of strings.')       
+        
+    #     for var in _variable:
+            
+    #         if not var in self.proj._recordable_variables:
+    #             print(var, 'is not a recordable variable of', self.proj.name)
+    #             continue
+
+    #         if not self.post_rank in self.proj._recorded_variables.keys() or \
+    #            not var in self.proj._recorded_variables[self.post_rank].keys() or \
+    #            not self.proj._recorded_variables[self.post_rank][var].is_running :
+    #             print('The recording of', var, 'was not running on projection', self.proj.name)
+    #             continue
+            
+    #         try:
+    #             getattr(self.proj.cyInstance, '_stop_record_'+var)(self.post_rank)
+
+    #             if Global.config['verbose']:
+    #                 print('pause record of', var, '(', self.name, ')')
+    #             self.proj._recorded_variables[self.post_rank][var].pause()
+    #         except:
+    #             print("Error (pause_record): only possible after compilation.")
+
+    # def resume_record(self, variable):
+    #     """
+    #     Resume recording the previous defined variables.
+        
+    #     *Parameter*:
+            
+    #     * **variable**: single variable name or list of variable names.        
+    #     """
+    #     _variable = []
+        
+    #     if isinstance(variable, str):
+    #         _variable.append(variable)
+    #     elif isinstance(variable, list):
+    #         _variable = variable
+    #     else:
+    #         print('Error: variable must be either a string or list of strings.')
+        
+    #     for var in _variable:
+            
+    #         if not var in var in self.proj._recordable_variables:
+    #             print(var, 'is not a recordable variable of', self.proj.name)
+    #             continue
+            
+    #         if not self.post_rank in self.proj._recorded_variables.keys() or \
+    #            not var in self.proj._recorded_variables[self.post_rank].keys() :
+    #             print('The recording of', var, 'was not running on projection', self.proj.name)
+    #             continue
+
+
+    #         if not self.proj._recorded_variables[self.post_rank][var].is_running:
+    #             print('Recording of', var, 'is already running on projection', self.proj.name)
+    #             continue
+            
+    #         try:
+    #             getattr(self.proj.cyInstance, '_start_record_'+var)(self.post_rank)
+                
+    #             if Global.config['verbose']:
+    #                 print('resume record of', var, '(' , self.proj.name, ')')
+
+    #             self.proj._recorded_variables[self.post_rank][var].start()
+    #         except:
+    #             print("Error: only possible after compilation.")
+                
+    def get_record(self, variable=None):
+        """
+        Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
+        The first dimension is the neuron index, the last dimension represents the number of simulation steps.
+        
+        *Parameter*:
+            
+        * **variable**: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
+        """        
+        _variable = []
+        if variable == None:
+            _variable = self.proj.recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        data_dict = {}
+        
+        for var in _variable:
+            try:
+                if Global.config['verbose']:
+                    Global._print('get record of '+var+' ('+self.proj.name+')')
+                    
+                data = getattr(self.proj.cyInstance, 'get_recorded_'+var)(self.post_rank)
+                
+                data_dict[var] = { 
+                    'data': data,
+                    # TODO: time
+                }
+
+            except:
+                print("Error: only possible after compilation.")
+
+        return data_dict          
+    
+
