@@ -152,7 +152,7 @@ void setDt(double dt_) { dt=dt_;}
  * Number of threads
  *
 */
-void setNumThreads(int threads)
+void setNumberThreads(int threads)
 {
     omp_set_num_threads(threads);
 }

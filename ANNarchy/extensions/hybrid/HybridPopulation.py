@@ -16,6 +16,8 @@ class Spike2RatePopulation(Population):
 
     .. code-block:: python
 
+        from ANNarchy.extensions.hybrid import Spike2RatePopulation
+
         pop2 = Spike2RatePopulation(
             population=pop1, 
             name='rate-coded', 
@@ -115,6 +117,8 @@ class Rate2SpikePopulation(Population):
     The firing rate ``r`` of the rate-coded population represents by default the desired firing rate in Hz. This value can be scaled with the parameter ``scaling``. For example, if you want that ``r=1.0`` represents a firing rate of 100Hz, you can set ``scaling`` to 100.0.
 
     .. code-block:: python
+
+        from ANNarchy.extensions.hybrid import Rate2SpikePopulation
 
         pop2 = Rate2SpikePopulation(
             population=pop1, 

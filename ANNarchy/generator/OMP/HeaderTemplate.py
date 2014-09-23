@@ -88,7 +88,7 @@ void setDt(double dt_);
  * Number of threads
  *
 */
-void setNumThreads(int threads);
+void setNumberThreads(int threads);
 
 #endif
 """

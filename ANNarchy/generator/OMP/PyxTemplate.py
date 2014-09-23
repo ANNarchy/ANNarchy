@@ -34,7 +34,7 @@ cdef extern from "ANNarchy.h":
     void setDt(double dt_)
 
     # Number of threads
-    void setNumThreads(int)
+    void setNumberThreads(int)
 
 
 # Population wrappers
@@ -75,5 +75,5 @@ def get_dt():
 
 # Set number of threads
 def set_number_threads(int n):
-    setNumThreads(n)
+    setNumberThreads(n)
 '''
