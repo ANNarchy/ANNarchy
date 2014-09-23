@@ -263,7 +263,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
         if not allow_self_connections:
             if (tmp == r_post).any(): # the post index is in the list
                 tmp[tmp==r_post] = indices[number]
-        r = list(tmp)
+        r = list(np.sort(tmp))
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
@@ -326,7 +326,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     # Create the dendrites
     for r_post in post_ranks:
         # List of pre ranks
-        r = rk_mat[r_post]
+        r = sorted(rk_mat[r_post])
         size_pre = len(rk_mat[r_post])
         # Weights
         if isinstance(weights, (int, float)):

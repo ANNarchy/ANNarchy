@@ -105,6 +105,20 @@ def analyse_neuron(neuron):
     # Extract all targets
     targets = extract_targets(variables)
     description['targets'] = targets
+    if neuron.type == 'spike': # Add a default reset behaviour for conductances
+        for target in targets:
+            found = False
+            for var in description['variables']:
+                if var['name'] == 'g_' + target:
+                    found = True
+                    break
+            if not found:
+                description['variables'].append(
+                    {'name': 'g_'+target, 'bounds': {}, 'ctype': 'double', 
+                        'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'}
+                )
+                description['attributes'].append('g_'+target)
+                description['local'].append('g_'+target)
 
     # Extract RandomDistribution objects
     random_distributions = extract_randomdist(description, pattern)

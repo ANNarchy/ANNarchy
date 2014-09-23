@@ -133,7 +133,10 @@ class Dendrite(object):
         else:
             Global._error("Dendrite has no parameter/variable called", name)     
     
-    
+
+    #########################
+    ### Formatting
+    #########################     
     def receptive_field(self, variable = 'w', fill = 0.0):
         """
         Returns the given variable as a receptive field.
@@ -153,6 +156,56 @@ class Dendrite(object):
 
         return m.reshape(self.pre.geometry)
 
+    #########################
+    ### Structural plasticity
+    ######################### 
+    def add_synapse(self, rank, w, delay=0):
+        """
+        Adds a synapse to the dendrite.
+        
+        *Parameters*:
+        
+        * **rank**: rank of the pre-synaptic neuron
+        * **w**: synaptic weight
+        * **delay**: synaptic delay (default = dt)
+        """
+        if not Global.config['structural_plasticity']:
+            Global._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
+            return 
+
+        if rank in self.rank:
+            Global._error('the synapse of rank ' + str(rank) + ' already exists.')
+            return             
+
+        # Set default values for the additional variables
+        extra_attributes = {}
+        for var in self.proj.synapse.description['parameters'] + self.proj.synapse.description['variables']:
+            if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse.description['local']:
+                if not isinstance(self.proj.init[var['name']], (int, float, bool)):
+                    init = var['init']
+                else:
+                    init = self.proj.init[var['name']]
+                extra_attributes[var['name']] = init
+
+        self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
+    
+    def remove_synapse(self, rank):
+        """
+        Removes the synapse from the dendrite.
+        
+        *Parameters*:
+        
+        * **rank**: rank of the pre-synaptic neuron
+        """
+        if not Global.config['structural_plasticity']:
+            Global._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
+            return 
+
+        if not rank in self.rank:
+            Global._error('the synapse of rank ' + str(rank) + ' did not already exist.')
+            return   
+
+        self.proj.cyInstance.remove_synapse(self.post_rank, rank)
 
     #########################
     ### Recording

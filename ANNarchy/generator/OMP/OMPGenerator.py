@@ -145,13 +145,14 @@ struct PopStruct%(id)s{
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Arrays for the presynaptic sums
-            if pop.neuron.type == 'rate':
-                code += """
+            code += """
     // Targets
 """
+            if pop.neuron.type == 'rate':
                 for target in pop.neuron.description['targets']:
                     code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
+
 
             # Global operations
             code += """
@@ -267,6 +268,52 @@ struct ProjStruct%(id)s{
                 for func in proj.synapse.description['functions']:
                     code += ' '*4 + func['cpp'] + '\n'
 
+            # Structural plasticity
+            if Global.config['structural_plasticity']:
+                # Retrieve the names of extra attributes   
+                extra_args = ""
+                add_code = ""
+                remove_code = ""
+                for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                    if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+                        extra_args += ', ' + var['ctype'] + ' _' +  var['name'] 
+                        add_code += ' '*8 + var['name'] + '[post].insert('+var['name']+'[post].begin() + idx, _' + var['name'] + ');\n'
+                        remove_code += ' '*8 + var['name'] + '[post].erase(' + var['name'] + '[post].begin() + idx);\n'
+                # Delays
+                delay_code = ""
+                if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+                    delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
+                # Generate the code
+                code += """
+    // Structural plasticity
+    void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s){
+        int idx = 0;
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] > pre){
+                idx = i;
+                break;
+            }
+        }
+        pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
+        w[post].insert(w[post].begin() + idx, weight);
+        %(delay_code)s
+%(add_code)s
+    };
+    void removeSynapse(int post, int pre){
+        int idx = 0;
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] == pre){
+                idx = i;
+                break;
+            }
+        }
+        pre_rank[post].erase(pre_rank[post].begin() + idx);
+        w[post].erase(w[post].begin() + idx);
+%(remove_code)s  
+    };
+""" % {'extra_args': extra_args, 'delay_code': delay_code, 'add_code': add_code, 'remove_code': remove_code}
+
+            # Finish the structure
             code += """
 };    
 """ 
@@ -411,13 +458,6 @@ struct ProjStruct%(id)s{
     for(int i = 0; i < pop%(id)s.size; i++){
 %(eqs)s
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
-
-#             # Reset weighted sums
-#             if pop.neuron.type == 'rate':
-#                 for target in pop.neuron.description['targets']:
-#                     code += """
-#         pop%(id)s._sum_%(target)s[i] = 0.0;
-# """ % {'id': pop.id, 'name' : pop.name, 'target': target}
 
 
             # Spike emission
@@ -1137,6 +1177,20 @@ struct ProjStruct%(id)s{
         vector[int] record_%(name)s 
 """ % {'type' : 'double', 'name': var['name']}
 
+            # Structural plasticity
+            if Global.config['structural_plasticity']:
+                # Retrieve the names of extra attributes   
+                extra_args = ""
+                for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                    if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+                        extra_args += ', ' + var['ctype'] + ' ' +  var['name'] 
+                # Generate the code
+                code += """
+        # Structural plasticity
+        void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s)
+        void removeSynapse(int post, int pre)
+""" % {'extra_args': extra_args}
+
             # Finalize the code
             proj_struct += code % {'id': proj.id}
 
@@ -1470,5 +1524,25 @@ cdef class proj%(id)s_wrapper :
     def set_dendrite_%(name)s(self, int rank, %(type)s value):
         proj%(id)s.%(name)s[rank] = value
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+
+             # Structural plasticity
+            if Global.config['structural_plasticity']:
+                # Retrieve the names of extra attributes   
+                extra_args = ""
+                extra_values = ""
+                for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                    if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+                        extra_args += ', ' + var['ctype'] + ' ' +  var['name']   
+                        extra_values += ', ' +  var['name']       
+
+                # Generate the code        
+                code += """
+    # Structural plasticity
+    def add_synapse(self, int post_rank, int pre_rank, double weight, int delay%(extra_args)s):
+        proj%(id)s.addSynapse(post_rank, pre_rank, weight, delay%(extra_values)s)
+    def remove_synapse(self, int post_rank, int pre_rank):
+        proj%(id)s.removeSynapse(post_rank, pre_rank)
+"""% {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
+
 
         return code

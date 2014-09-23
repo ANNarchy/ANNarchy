@@ -337,7 +337,7 @@ class Projection(object):
             if len(value) == len(self.post_ranks):
                 for n in self.post_ranks:
                     if not len(value[n]) == self.cyInstance.nb_synapses(n):
-                        Global._error('The postynaptic neuron ' + n + ' receives '+self.cyInstance.nb_synapses(n)+ ' synapses.')
+                        Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(n))+ ' synapses.')
                         exit(0)
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value[n])
             else:
