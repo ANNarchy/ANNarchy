@@ -716,7 +716,10 @@ class Population(object):
             
             try:
                 getattr(self.cyInstance, 'stop_record_'+var)()
+
                 self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+                self.recorded_variables[var]['start'].append(-1)
+                self.recorded_variables[var]['stop'].append(-1)
 
                 if Global.config['verbose']:
                     print('pause record of', var, '(', self.name, ')')
@@ -756,8 +759,8 @@ class Population(object):
             
             try:
                 getattr(self.cyInstance, 'start_record_'+var)()
-                self.recorded_variables[var]['start'].append(Global.get_current_step())
-                self.recorded_variables[var]['stop'].append(-1)
+
+                self.recorded_variables[var]['start'][-1] = Global.get_current_step()
                 
                 if Global.config['verbose']:
                     Global._print('resume record of', var, '(' , self.name, ')')
@@ -806,13 +809,18 @@ class Population(object):
                 continue
         
             var_data = getattr(self.cyInstance, 'get_record_'+var)()
+
             if self.recorded_variables[var]['stop'][-1] == -1:
                 self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+
             data[var] = {
                 'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
                 'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
                 'data' : np.array(var_data).T if not var == 'spike' else np.array(var_data)
             }
+
+            self.recorded_variables[var]['start'] = [Global.get_current_step()]
+            self.recorded_variables[var]['stop'] = [-1]
 
         return data
 

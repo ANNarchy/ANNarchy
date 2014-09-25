@@ -35,7 +35,7 @@ Oja = Synapse(
 
 # Creating the populations
 Input = Population(geometry=(8, 8), neuron=InputNeuron)
-Feature = Population(geometry=(4, 4), neuron=LeakyNeuron)
+Feature = Population(geometry=(8, 4), neuron=LeakyNeuron)
 
 # Creating the projections
 Input_Feature = Projection(
