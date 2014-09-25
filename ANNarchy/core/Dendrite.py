@@ -271,10 +271,8 @@ class Dendrite(object):
             try:
                 getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank)
                     
-            except Exception, e:
-                print e
-                print "Error (start_record): only possible after compilation."
-                return
+            except :
+                Global._error('start: '+ var + ' is not a recordable variable.')
 
 
             if not self.post_rank in self.proj.recorded_variables.keys():
@@ -303,95 +301,71 @@ class Dendrite(object):
         else:
             print 'Error: variable must be either a string or list of strings.'       
         
-        for var in _variable:
-            
+        for var in _variable:            
             try:
                 getattr(self.proj.cyInstance, 'stop_record_'+var)(self.post_rank)
 
             except:
-                Global._error('(stop_record): only possible after compilation.')
+                Global._error('stop: ' + var + ' is not a recordable variable.')
 
-    # def pause_record(self, variable=None):
-    #     """
-    #     Pause in recording the defined variables.
+            del self.proj.recorded_variables[self.post_rank][var]
 
-    #     *Parameter*:
+    def pause_record(self, variable=None):
+        """
+        Pause in recording the defined variables.
+
+        *Parameter*:
             
-    #     * **variable**: single variable name or list of variable names. If no argument is provided all records will stop.
-    #     """
-    #     _variable = []
-    #     if variable == None:
-    #         _variable = self.proj._recorded_variables[self.post_rank].keys() # TODO: what is it?
-    #     elif isinstance(variable, str):
-    #         _variable.append(variable)
-    #     elif isinstance(variable, list):
-    #         _variable = variable
-    #     else:
-    #         print('Error: variable must be either a string or list of strings.')       
+        * **variable**: single variable name or list of variable names. If no argument is provided all records will stop.
+        """
+        _variable = []
+        if variable == None:
+            _variable = self.proj.recorded_variables[self.post_rank].keys() 
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')       
         
-    #     for var in _variable:
-            
-    #         if not var in self.proj._recordable_variables:
-    #             print(var, 'is not a recordable variable of', self.proj.name)
-    #             continue
+        for var in _variable:
+            try:
+                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.post_rank)
+            except:
+                Global._error('pause: ' + var + ' is not a recordable variable.')
+                return
 
-    #         if not self.post_rank in self.proj._recorded_variables.keys() or \
-    #            not var in self.proj._recorded_variables[self.post_rank].keys() or \
-    #            not self.proj._recorded_variables[self.post_rank][var].is_running :
-    #             print('The recording of', var, 'was not running on projection', self.proj.name)
-    #             continue
-            
-    #         try:
-    #             getattr(self.proj.cyInstance, '_stop_record_'+var)(self.post_rank)
+            self.proj.recorded_variables[self.post_rank][var]['stop'][-1] = Global.get_current_step()
+            self.proj.recorded_variables[self.post_rank][var]['start'].append(-1)
+            self.proj.recorded_variables[self.post_rank][var]['stop'].append(-1)
 
-    #             if Global.config['verbose']:
-    #                 print('pause record of', var, '(', self.name, ')')
-    #             self.proj._recorded_variables[self.post_rank][var].pause()
-    #         except:
-    #             print("Error (pause_record): only possible after compilation.")
-
-    # def resume_record(self, variable):
-    #     """
-    #     Resume recording the previous defined variables.
+    def resume_record(self, variable=None):
+        """
+        Resume recording the previous defined variables.
         
-    #     *Parameter*:
+        *Parameter*:
             
-    #     * **variable**: single variable name or list of variable names.        
-    #     """
-    #     _variable = []
+        * **variable**: single variable name or list of variable names.        
+        """
+        _variable = []
         
-    #     if isinstance(variable, str):
-    #         _variable.append(variable)
-    #     elif isinstance(variable, list):
-    #         _variable = variable
-    #     else:
-    #         print('Error: variable must be either a string or list of strings.')
+        if variable == None:
+            _variable = self.proj.recorded_variables[self.post_rank].keys() 
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
         
-    #     for var in _variable:
-            
-    #         if not var in var in self.proj._recordable_variables:
-    #             print(var, 'is not a recordable variable of', self.proj.name)
-    #             continue
-            
-    #         if not self.post_rank in self.proj._recorded_variables.keys() or \
-    #            not var in self.proj._recorded_variables[self.post_rank].keys() :
-    #             print('The recording of', var, 'was not running on projection', self.proj.name)
-    #             continue
+        for var in _variable:            
+            try:
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank)
+            except:
+                Global._error('resume:: ' + var + ' is not a recordable variable.')
+                return
 
-
-    #         if not self.proj._recorded_variables[self.post_rank][var].is_running:
-    #             print('Recording of', var, 'is already running on projection', self.proj.name)
-    #             continue
-            
-    #         try:
-    #             getattr(self.proj.cyInstance, '_start_record_'+var)(self.post_rank)
-                
-    #             if Global.config['verbose']:
-    #                 print('resume record of', var, '(' , self.proj.name, ')')
-
-    #             self.proj._recorded_variables[self.post_rank][var].start()
-    #         except:
-    #             print("Error: only possible after compilation.")
+            self.proj.recorded_variables[self.post_rank][var]['start'][-1] = Global.get_current_step()
                 
     def get_record(self, variable=None):
         """
@@ -415,18 +389,24 @@ class Dendrite(object):
         data_dict = {}
         
         for var in _variable:
+
+            if not var in self.proj.recorded_variables[self.post_rank]:
+                Global._warning(var, 'was not recording.')
+                continue
+
             try:                    
                 data = getattr(self.proj.cyInstance, 'get_recorded_'+var)(self.post_rank)
             except Exception, e:
-                print e
-                print "Error: only possible after compilation."
+                Global._error('get: ' + var + ' is not a recordable variable.')
                 return
 
-            self.proj.recorded_variables[self.post_rank][var]['stop'][-1] = Global.get_current_step()
+            if self.proj.recorded_variables[self.post_rank][var]['stop'][-1] == -1:
+                self.proj.recorded_variables[self.post_rank][var]['stop'][-1] = Global.get_current_step()
 
-            data_dict[var] = {
+
+            data_dict[var] = {  
                 'start': self.proj.recorded_variables[self.post_rank][var]['start'] \
-                        if len(self.proj.recorded_variables[self.post_rank][var]['start']) > 2 \
+                        if len(self.proj.recorded_variables[self.post_rank][var]['start']) > 1 \
                         else self.proj.recorded_variables[self.post_rank][var]['start'][0],
                 'stop' : self.proj.recorded_variables[self.post_rank][var]['stop'] \
                         if len(self.proj.recorded_variables[self.post_rank][var]['stop']) > 1 \
@@ -434,7 +414,8 @@ class Dendrite(object):
                 'data' : data
             }
 
-            self.proj.recorded_variables[self.post_rank][var]['start'][-1] = Global.get_current_step()
+            self.proj.recorded_variables[self.post_rank][var]['start'] = [Global.get_current_step()]
+            self.proj.recorded_variables[self.post_rank][var]['stop'] = [-1]
             
         return data_dict          
     

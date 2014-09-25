@@ -1541,6 +1541,10 @@ cdef class proj%(id)s_wrapper :
     def start_record_%(name)s(self, int rank):
         if not rank in list(proj%(id)s.record_%(name)s):
             proj%(id)s.record_%(name)s.push_back(rank)
+    def stop_record_%(name)s(self, int rank):
+        cdef list tmp = list(proj%(id)s.record_%(name)s)
+        tmp.remove(rank)
+        proj%(id)s.record_%(name)s = tmp
     def get_recorded_%(name)s(self, int rank):
         cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
         proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()

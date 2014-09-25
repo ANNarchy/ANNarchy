@@ -647,10 +647,16 @@ class Population(object):
         
         for var in _variable:
             if not var in self.variables + ['spike']:
-                Global._warning(var, 'is not a recordable variable of the population.')
-                continue
+                Global._error('start: ' + var, 'is not a recordable variable of the population.')
+                return
+
             self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1]}
-            getattr(self.cyInstance, 'start_record_'+var)()
+            
+            try:
+                getattr(self.cyInstance, 'start_record_'+var)()
+            except:
+                Global._error(var + 'is not a recordable variable.')
+                return
 
     def stop_record(self, variable=None):
         """
@@ -676,13 +682,15 @@ class Population(object):
             print('Error: variable must be either a string or list of strings.')       
         
         for var in _variable:
-            if not var in self.variables + ['spike']:
-                Global._warning(var, 'is not a recordable variable of the population.')
-                continue
             if not var in self.recorded_variables.keys():
                 Global._warning(var, 'was not recording.')
                 continue
-            getattr(self.cyInstance, 'stop_record_'+var)()
+            try:
+                getattr(self.cyInstance, 'stop_record_'+var)()
+            except:
+                Global._error('stop: ' + var + 'is not a recordable variable.')
+                return
+
             del self.recorded_variables[var]
 
     def pause_record(self, variable=None):
@@ -717,15 +725,16 @@ class Population(object):
             try:
                 getattr(self.cyInstance, 'stop_record_'+var)()
 
-                self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
-                self.recorded_variables[var]['start'].append(-1)
-                self.recorded_variables[var]['stop'].append(-1)
-
-                if Global.config['verbose']:
-                    print('pause record of', var, '(', self.name, ')')
-
             except:
-                print("Error (pause_record): only possible after compilation.")
+                Global._error('pause: ' + var + 'is not a recordable variable.')
+                return
+
+            self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+            self.recorded_variables[var]['start'].append(-1)
+            self.recorded_variables[var]['stop'].append(-1)
+
+            if Global.config['verbose']:
+                print('pause record of', var, '(', self.name, ')')
 
     def resume_record(self, variable=None):
         """
@@ -753,20 +762,21 @@ class Population(object):
         
         for var in _variable:
             
-            if not var in var in self.recorded_variables.keys():
+            if not var in self.recorded_variables.keys():
                 print(var, 'is not a recordable variable of', self.name)
                 continue
             
             try:
                 getattr(self.cyInstance, 'start_record_'+var)()
 
-                self.recorded_variables[var]['start'][-1] = Global.get_current_step()
-                
-                if Global.config['verbose']:
-                    Global._print('resume record of', var, '(' , self.name, ')')
-
             except:
-                Global._error("Error: only possible after compilation.")
+                Global._error('resume: ' + var + 'is not a recordable variable.')
+                return
+
+            self.recorded_variables[var]['start'][-1] = Global.get_current_step()
+            
+            if Global.config['verbose']:
+                Global._print('resume record of', var, '(' , self.name, ')')
 
     def get_record(self, variable=None, reshape=False):
         """
@@ -808,7 +818,11 @@ class Population(object):
                 Global._warning(var, 'was not recording.')
                 continue
         
-            var_data = getattr(self.cyInstance, 'get_record_'+var)()
+            try:
+                var_data = getattr(self.cyInstance, 'get_record_'+var)()
+            except:
+                Global._error('get: ' + var + 'is not a recordable variable.')
+                return {}
 
             if self.recorded_variables[var]['stop'][-1] == -1:
                 self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
