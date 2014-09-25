@@ -909,6 +909,12 @@ struct ProjStruct%(id)s{
                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< double > > (proj%(id)s.post_rank.size(), std::vector< double >());
 """% {'id': proj.id, 'name': var['name']}
 
+            if proj.synapse.description['type'] == 'spike':
+                for var in proj.synapse.description['pre_spike']:
+                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
+                        code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< double > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< double > >());
+"""% {'id': proj.id, 'name': var['name']}
+
         return code
 
     def body_update_randomdistributions(self):
@@ -969,6 +975,15 @@ struct ProjStruct%(id)s{
         for name, proj in self.projections.iteritems():
             for var in proj.synapse.description['variables']:
                     code += """
+    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
+        proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
+    }
+""" % {'id': proj.id, 'name': var['name']}
+
+            if proj.synapse.description['type'] == 'spike':
+                for var in proj.synapse.description['pre_spike']:
+                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
+                        code += """
     for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
         proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
     }
@@ -1344,7 +1359,15 @@ cdef class pop%(id)s_wrapper :
         return pop%(id)s.%(name)s
     cpdef set_%(name)s(self, %(type)s value):
         pop%(id)s.%(name)s = value
-""" % {'id' : pop.id, 'name': var['name']}
+    def start_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = True
+    def stop_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = False
+    def get_record_%(name)s(self):
+        cdef vector[%(type)s] tmp = pop%(id)s.recorded_%(name)s
+        pop%(id)s.recorded_%(name)s.clear()
+        return tmp
+""" % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
         return code
 
@@ -1439,7 +1462,7 @@ cdef class proj%(id)s_wrapper :
                 for var in proj.synapse.description['pre_spike']:
                     if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
                         code += """
-    # Local variable %(name)s
+    # Local variable %(name)s defined in pre_spike
     def get_%(name)s(self):
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
@@ -1452,6 +1475,18 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
+    def start_record_%(name)s(self, int rank):
+        if not rank in list(proj%(id)s.record_%(name)s):
+            proj%(id)s.record_%(name)s.push_back(rank)
+    def stop_record_%(name)s(self, int rank):
+        cdef list tmp = list(proj%(id)s.record_%(name)s)
+        tmp.remove(rank)
+        proj%(id)s.record_%(name)s = tmp
+    def get_recorded_%(name)s(self, int rank):
+        cdef vector[vector[%(type)s]] data 
+        data = proj%(id)s.recorded_%(name)s[rank]
+        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
+        return data
 """ % {'id' : proj.id, 'name': var['name'], 'type': 'double'}
 
             # Parameters

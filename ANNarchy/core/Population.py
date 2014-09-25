@@ -817,7 +817,7 @@ class Population(object):
         return data
 
     ################################
-    ## MOdification of the variables
+    ## Modification of the variables
     ################################
     def set_variable_flags(self, name, value):
         """ Sets the flags of a variable for the population.

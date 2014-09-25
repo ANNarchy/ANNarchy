@@ -25,12 +25,17 @@ cdef class CSR:
         self.max_delay = 0
         self.size = 0
         self.uniform_delay = -1
+        self.dt = Global.config['dt']
 
-    def add (self, int rk, list r, list w, list d):
+    def add(self, int rk, list r, list w, list d):
         self.push_back(rk, r, w, d)
 
-    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[int] d):
+    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d):
 
+        cdef vector[int] int_delays
+        cdef int max_d, unif_d
+
+        # Store the connectivity
         self.post_rank.push_back(rk)
         self.pre_rank.push_back(r)
 
@@ -42,20 +47,26 @@ cdef class CSR:
 
         # Are the delays uniform?
         if d.size() > 1 or r.size() == 1:
-            self.delay.push_back(d)
-            max_d = np.max(d)
+            for i in range(d.size()):
+                int_delays.push_back(int(d[i]/self.dt))
+            self.delay.push_back(int_delays)
+            max_d = int(np.max(d)/self.dt)
             if max_d > self.max_delay:
                 self.max_delay = max_d
         else:
-            self.uniform_delay = d[0]        
-            if d[0] > self.max_delay:
-                self.max_delay = d[0]
+            unif_d = int(d[0]/self.dt)
+            self.uniform_delay = unif_d       
+            if unif_d > self.max_delay:
+                self.max_delay = unif_d
 
         # Increase the size
         self.size += r.size()
 
     cpdef int get_max_delay(self):
         return self.max_delay
+
+    cpdef int get_uniform_delay(self):
+        return self.uniform_delay
 
 
 #################################
@@ -66,15 +77,11 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     """ Cython implementation of the all-to-all pattern."""
 
     cdef CSR projection
-    cdef float dt
     cdef double weight
     cdef int r_post, size_pre, i
     cdef list tmp, post_ranks, pre_ranks
-    cdef vector[int] r, d
-    cdef vector[double] w
-
-    # Retrieve simulation time step
-    dt = Global.config['dt']
+    cdef vector[int] r
+    cdef vector[double] w, d
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -107,9 +114,9 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(ceil(delays/dt)))
+            d = vector[double](1, delays)
         elif isinstance(delays, RandomDistribution):
-            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
+            d = delays.get_list_values(size_pre)
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -119,15 +126,11 @@ def one_to_one(pre, post, weights, delays, shift):
     """ Cython implementation of the one-to-one pattern."""
 
     cdef CSR projection
-    cdef float dt
     cdef double weight
     cdef int r_post, offset
     cdef list tmp, post_ranks, pre_ranks
-    cdef vector[int] r, d
-    cdef vector[double] w
-
-    # Retrieve simulation time step
-    dt = Global.config['dt']
+    cdef vector[int] r
+    cdef vector[double] w, d
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -162,9 +165,9 @@ def one_to_one(pre, post, weights, delays, shift):
             w = tmp
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(ceil(delays/dt)))
+            d = vector[double](1, delays)
         elif isinstance(delays, RandomDistribution):
-            d = [int(ceil(a/dt)) for a in delays.get_list_values(1) ]
+            d = delays.get_list_values(1) 
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -176,15 +179,11 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     """ Cython implementation of the fixed_probability pattern."""
 
     cdef CSR projection
-    cdef float dt
     cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef list tmp, pre_ranks, post_ranks
-    cdef vector[int] r, d
-    cdef vector[double] w
-
-    # Retrieve simulation time step
-    dt = Global.config['dt']
+    cdef vector[int] r
+    cdef vector[double] w, d
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -217,9 +216,9 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(ceil(delays/dt)))
+            d = vector[double](1, delays)
         elif isinstance(delays, RandomDistribution):
-            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
+            d = delays.get_list_values(size_pre)
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -229,16 +228,12 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     """ Cython implementation of the fixed_number_pre pattern."""
 
     cdef CSR projection
-    cdef float dt
     cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
-    cdef vector[int] r, d
-    cdef vector[double] w
-
-    # Retrieve simulation time step
-    dt = Global.config['dt']
+    cdef vector[int] r
+    cdef vector[double] w, d
     
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -272,9 +267,9 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
             w = weights.get_list_values(number)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(ceil(delays/dt)))
+            d = vector[double](1, delays)
         elif isinstance(delays, RandomDistribution):
-            d = [int(ceil(a/dt)) for a in delays.get_list_values(number) ]
+            d = delays.get_list_values(number)
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -284,17 +279,13 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     """ Cython implementation of the fixed_number_post pattern."""
 
     cdef CSR projection
-    cdef float dt
     cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
     cdef list rk_mat, pre_r
-    cdef vector[int] r, d
-    cdef vector[double] w
-
-    # Retrieve simulation time step
-    dt = Global.config['dt']
+    cdef vector[int] r
+    cdef vector[double] w, d
     
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -336,9 +327,9 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
             w = weights.get_list_values(size_pre)
         # Delays
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(ceil(delays/dt)))
+            d = vector[double](1, delays)
         elif isinstance(delays, RandomDistribution):
-            d = [int(ceil(a/dt)) for a in delays.get_list_values(size_pre) ]
+            d = delays.get_list_values(size_pre)
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
 
@@ -348,13 +339,13 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
     """ Cython implementation of the fixed_number_post pattern."""
 
     cdef CSR projection
-    cdef float dt, distance, value
+    cdef float distance, value
     cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
     cdef tuple pre_coord, post_coord
     cdef list ranks, values
 
-    cdef vector[int] r, d
-    cdef vector[double] w
+    cdef vector[int] r
+    cdef vector[double] w, d
 
 
     # Retrieve simulation time step
@@ -414,9 +405,9 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
         r = ranks
         w = values
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(ceil(delays/dt)))
+            d = vector[double](1, delays)
         elif isinstance(delays, RandomDistribution):
-            d = [int(ceil(a/dt)) for a in delays.get_list_values(nb_synapses) ]
+            d = delays.get_list_values(nb_synapses)
         # Create the dendrite
         projection.push_back(post, r, w, d)
 
@@ -426,17 +417,13 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
     """ Cython implementation of the fixed_number_post pattern."""
 
     cdef CSR projection
-    cdef float dt, distance, value
+    cdef float distance, value
     cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
     cdef tuple pre_coord, post_coord
     cdef list ranks, values
 
-    cdef vector[int] r, d
-    cdef vector[double] w
-
-
-    # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    cdef vector[int] r
+    cdef vector[double] w, d
 
     # Population sizes
     if isinstance(pre_geometry, int):
@@ -492,9 +479,10 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
         r = ranks
         w = values
         if isinstance(delays, (float, int)):
-            d = vector[int](1, int(ceil(delays/dt)))
+            d = vector[double](1, delays)
         elif isinstance(delays, RandomDistribution):
-            d = [int(ceil(a/dt)) for a in delays.get_list_values(nb_synapses) ]
+            d = delays.get_list_values(nb_synapses)
+
         # Create the dendrite
         projection.push_back(post, r, w, d)
 

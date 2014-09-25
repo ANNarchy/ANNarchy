@@ -124,7 +124,7 @@ class Projection(object):
         self._synapses = None
 
         # Recorded variables
-        self.recorded_variables = []
+        self.recorded_variables = {}
 
     def _instantiate(self, module):
 
@@ -210,6 +210,7 @@ class Projection(object):
             rank = pos
         else:
             rank = self.post.rank_from_coordinates(pos)
+
         if rank in self.post_ranks:
             return Dendrite(self, rank)
         else:
