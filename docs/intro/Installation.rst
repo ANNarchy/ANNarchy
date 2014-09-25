@@ -49,7 +49,7 @@ The version requirement on Sympy is rather new (as of May 2014) and may not be a
 
      On fresh installs of Ubuntu 14.04 and **Linux Mint Debian Edition** 64 bits, the following commands successfully install everything you need::
      
-        sudo apt-get install g++ gfortran git python-dev python-setuptools python-numpy python-scipy python-matplotlib cython python-opengl python-qt4-gl python-lxml python-pip
+        sudo apt-get install g++ gfortran git python-dev python-setuptools python-numpy python-scipy python-matplotlib cython python-opengl python-qt4-gl python-lxml python-pip python-tk
 
         sudo pip install sympy
         
