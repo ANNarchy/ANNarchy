@@ -730,5 +730,5 @@ global_variable_wrapper = """
         void start_record_%(name)s()
         void stop_record_%(name)s()
         void clear_recorded_%(name)s()
-        vector[vector[%(type)s]] get_recorded_%(name)s()              
+        vector[%(type)s] get_recorded_%(name)s()              
 """

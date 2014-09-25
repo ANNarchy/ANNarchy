@@ -106,6 +106,8 @@ class PopulationGenerator(object):
                 members += """
     // %(name)s_ : global
     %(type)s %(name)s_;   
+    bool record_%(name)s_; 
+    std::vector<%(type)s> recorded_%(name)s_;   
 """ % {'name' : param['name'], 'type': param['ctype']}
 
         return members
@@ -224,7 +226,7 @@ class PopulationGenerator(object):
     %(name)s_ = %(init)s;   
     record_%(name)s_ = false; 
     recorded_%(name)s_ = std::vector< %(type)s >(); 
-""" % {'name' : param['name'], 'init': str(cinit)} 
+""" % {'name' : param['name'], 'type': param['ctype'], 'init': str(cinit)} 
 
         # Global operations
         for var in self.desc['global_operations']:
