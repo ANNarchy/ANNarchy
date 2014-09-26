@@ -25,7 +25,6 @@ import numpy as np
 from ANNarchy.core import Global
 
 distributions_arguments = {
-    'Constant' : 0,
     'Uniform' : 2,
     'DiscreteUniform': 2,
     'Normal' : 2,
@@ -34,10 +33,17 @@ distributions_arguments = {
     'Gamma': 2
 }
 distributions_templates = {
-    'Constant' : '<DATA_TYPE>',
-    'Uniform' : '<DATA_TYPE>',
+    'Uniform' : '<double>',
     'DiscreteUniform': '<>',
-    'Normal' : '<DATA_TYPE>',
+    'Normal' : '<double>',
+    'LogNormal': '',
+    'Exponential': '',
+    'Gamma': ''
+}
+distributions_equivalents = {
+    'Uniform' : 'std::uniform_real_distribution<double>',
+    'DiscreteUniform': 'TODO',
+    'Normal' : 'std::normal_distribution<double>',
     'LogNormal': '',
     'Exponential': '',
     'Gamma': ''
@@ -73,27 +79,6 @@ class RandomDistribution(object):
     def keywords(self):
         return available_distributions
 
-class Constant(RandomDistribution):
-    """
-    Random distribution instance returning a constant value.
-    """
-    def __init__(self, value):
-        """        
-        Parameter:
-        
-        * *value*: the constant value
-        """
-        self.value = value
-        
-    def get_values(self, shape):
-        """
-        Returns a np.ndarray with the given shape
-        """
-        return self.value * np.ones(shape)
-
-    def _gen_cpp(self):
-        return 'Constant<DATA_TYPE>('+str(self.value)+')'
-
 class Uniform(RandomDistribution):
     """
     Random distribution object using the uniform distribution between ``min`` and ``max``.
@@ -125,7 +110,7 @@ class Uniform(RandomDistribution):
         return np.random.uniform(self.min, self.max, shape)
 
     def _gen_cpp(self):
-        return 'UniformDistribution<DATA_TYPE>('+str(self.min)+','+str(self.max)+', '+str(self._cpp_seed)+')'
+        return 'UniformDistribution<double>('+str(self.min)+','+str(self.max)+', '+str(self._cpp_seed)+')'
 
 class DiscreteUniform(RandomDistribution):
     """
@@ -188,8 +173,8 @@ class Normal(RandomDistribution):
             np.random.seed(self._cpp_seed)
         return np.random.normal(self.mu, self.sigma, shape)
     
-    def _gen_cpp(self):
-        return 'NormalDistribution<DATA_TYPE>('+str(self.mu)+','+str(self.sigma)+', '+str(self._cpp_seed)+')'
+    def _gen_cpp(self):        
+        return 'NormalDistribution<double>('+str(self.mu)+','+str(self.sigma)+', '+str(self._cpp_seed)+')'
 
 class LogNormal(RandomDistribution):
     """

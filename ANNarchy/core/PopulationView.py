@@ -40,11 +40,9 @@ class PopulationView(object):
         self.population = population
         self.ranks = ranks
         self.size = len(self.ranks)
-        self.neuron_type = self.population.neuron_type
-        self.description = self.population.description
-        self.name = self.population.name
-        self.class_name = self.population.class_name
-        self._id = self.population._id
+        self.neuron = self.population.neuron
+        self.id = self.population.id
+        self.name = population.name
 
     # targets must match the population, both in read and write
     @property
@@ -88,7 +86,7 @@ class PopulationView(object):
             * *name*: name of the parameter/variable.
         """
         if name in self.population.attributes:
-            all_val = getattr(self.population, name).reshape(self.population.size)
+            all_val = getattr(self.population.cyInstance, 'get_'+name).reshape(self.population.size)
             return all_val[self.ranks] 
         else:
             Global._error("Population does not have a parameter/variable called " + name + ".")
@@ -121,7 +119,7 @@ class PopulationView(object):
                         return None
                     # Assign the value
                     for rk in self.ranks:
-                        setattr(self.population.neuron(rk), val_key, value[val_key][rk])
+                        getattr(self.population.cyInstance, 'set_single_'+val_key)(rk, value[val_key][rk])
                 elif isinstance(value[val_key], list): # list
                     if len(value[val_key]) != self.size:
                         Global._error("You can only provide a list of the same size as the PopulationView", self.size)
@@ -131,10 +129,10 @@ class PopulationView(object):
                         return None                    
                     # Assign the value
                     for rk in range(self.size):
-                        setattr(self.population.neuron(self.ranks[rk]), val_key, value[val_key][rk])   
+                        getattr(self.population.cyInstance, 'set_single_'+val_key)(rk, value[val_key][rk]) 
                 else: # single value
                     for rk in self.ranks:
-                        setattr(self.population.neuron(rk), val_key, value[val_key])
+                        getattr(self.population.cyInstance, 'set_single_'+val_key)(rk, value[val_key])
             else:
                 Global._error("population does not contain value: ", val_key)
                 return None

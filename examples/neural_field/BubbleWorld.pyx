@@ -1,6 +1,6 @@
 import numpy as np
 cimport numpy as np
-from NeuralField import step
+from ANNarchy import step
     
 cdef class World:
     " Environment class allowing to clamp a rotating bubble into the baseline of a population."

@@ -16,7 +16,7 @@ class IzhikevichClass(Neuron):
 
         neuron = Izhikevich.conductance('g_ampa * (1 + g_nmda) - g_gaba')
 
-    The synapses are instantaneous, i.e the corresponding conductance is increased from the synaptic effeciency w at the time step when a spike is received.
+    The synapses are instantaneous, i.e the corresponding conductance is increased from the synaptic efficiency w at the time step when a spike is received.
 
     Parameters:
 

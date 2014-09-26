@@ -22,7 +22,7 @@
 
 """
 from ANNarchy.core.Global import _error, _warning, config
-from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_templates
+from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_templates, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -30,11 +30,11 @@ from ANNarchy.parser.ITE import *
 
 import re
 
-def extract_randomdist(pop):
+def extract_randomdist(description, pattern):
     " Extracts RandomDistribution objects from all variables"
     rk_rand = 0
     random_objects = []
-    for variable in pop.description['variables']:
+    for variable in description['variables']:
         eq = variable['eq']
         # Search for all distributions
         for dist in available_distributions:
@@ -48,11 +48,7 @@ def extract_randomdist(pop):
                 if len(arguments) < distributions_arguments[dist]:
                     _error(eq)
                     _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
-                elif len(arguments) == distributions_arguments[dist]:
-                    arguments.append(str(config['seed']))
-                elif len(arguments) == distributions_arguments[dist] +1 :
-                    _warning('The seed is set in the distribution ' + dist)
-                else:
+                elif len(arguments) > distributions_arguments[dist]:
                     _error(eq)
                     _error('Too many parameters provided to the distribution ' + dist)
                 # Process the arguments
@@ -61,8 +57,11 @@ def extract_randomdist(pop):
                     try:
                         arg = float(arguments[idx])
                     except: # A global parameter
-                        if arguments[idx].strip() in pop.description['global']:
-                            arg = arguments[idx] + '_'
+                        if arguments[idx].strip() in description['global']:
+                            if description['object'] == 'neuron':
+                                arg = pattern['pop_prefix'] + pattern['pop_sep'] + arguments[idx].strip() 
+                            else:
+                                arg = pattern['proj_prefix'] + pattern['proj_sep'] + arguments[idx].strip() 
                         else:
                             _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
                             exit(0)
@@ -70,29 +69,29 @@ def extract_randomdist(pop):
                     processed_arguments += str(arg)
                     if idx != len(arguments)-1: # not the last one
                         processed_arguments += ', '
-                definition = dist + '(' + processed_arguments + ')'
+                definition = distributions_equivalents[dist] + '(' + processed_arguments + ')'
                 # Store its definition
-                desc = {'name': '__rand_' + str(rk_rand) + '_',
+                desc = {'name': 'rand_' + str(rk_rand) ,
                         'dist': dist,
                         'definition': definition,
                         'args' : processed_arguments,
-                        'template': distributions_templates[dist]}
+                        'template': distributions_equivalents[dist]}
                 rk_rand += 1
                 random_objects.append(desc)
                 # Replace its definition by its temporary name
                 # Problem: when one uses twice the same RD in a single equation (perverse...)
                 eq = eq.replace(dist+'('+v+')', desc['name'])
                 # Add the new variable to the vocabulary
-                pop.description['attributes'].append(desc['name'])
-                if variable['name'] in pop.description['local']:
-                    pop.description['local'].append(desc['name'])
+                description['attributes'].append(desc['name'])
+                if variable['name'] in description['local']:
+                    description['local'].append(desc['name'])
                 else: # Why not on a population-wide variable?
-                    pop.description['global'].append(desc['name'])
+                    description['global'].append(desc['name'])
         variable['transformed_eq'] = eq
         
     return random_objects
     
-def extract_globalops_neuron(name, eq, pop):
+def extract_globalops_neuron(name, eq, description, pattern):
     """ Replaces global operations (mean(r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
@@ -103,112 +102,84 @@ def extract_globalops_neuron(name, eq, pop):
     for op in glop_names:
         matches = re.findall('([^\w]*)'+op+'\(([\w]*)\)', eq)
         for pre, var in matches:
-            if var in pop.description['local']:
+            if var in description['local']:
                 globs.append({'function': op, 'variable': var})
                 oldname = op + '(' + var + ')'
-                newname = '__' + op + '_' + var 
+                newname = '_' + op + '_' + var 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = ' this->get'+op.capitalize()+var.capitalize()+'() '
+                untouched[newname] = pattern['pop_prefix'] + pattern['pop_sep'] + '_' + op + '_' + var 
             else:
-                _error(eq+'\nPopulation '+pop.name+' has no local attribute '+var+'.')
+                _error(eq+'\nThere is no local attribute '+var+'.')
                 exit(0)
     return eq, untouched, globs
     
-def extract_globalops_synapse(name, eq, proj):
+def extract_globalops_synapse(name, eq, desc, pattern):
     """ Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
     untouched = {}    
     globs = {'pre' : [],
              'post' : [] }   
-    glop_names = ['min', 'max', 'mean']
+    glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
         pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*pre\.([a-zA-Z0-9]+)\s*\)', eq)
         post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*post\.([a-zA-Z0-9]+)\s*\)', eq)
-        # Check if a global variable depends on pre
-        # if len(pre_matches) > 0 and name in proj.description['global']:
-        #     _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
-        #     exit(0)
+
         for pre, var in pre_matches:
-            if var in proj.pre.attributes:
-                globs['pre'].append({'function': op, 'variable': var})
-                oldname = op + '(pre.' + var + ')'
-                newname = '__pre_' + op + '_' + var 
-                eq = eq.replace(oldname, newname)
-                untouched[newname] = ' pre_population_->get'+op.capitalize()+var.capitalize()+'() '
-            else:
-                _error(eq+'\nPopulation '+proj.name+' has no attribute '+var+'.')
-                exit(0)
+            globs['pre'].append({'function': op, 'variable': var})
+            oldname = op + '(pre.' + var + ')'
+            newname =  '_pre_' + op + '_' + var
+            eq = eq.replace(oldname, newname)
+            untouched[newname] = pattern['proj_preprefix'] + pattern['proj_sep'] + '_' + op + '_' + var
         for pre, var in post_matches:
-            if var in proj.pre.attributes:
-                globs['post'].append({'function': op, 'variable': var})
-                oldname = op + '(post.' + var + ')'
-                newname = '__post_' + op + '_' + var 
-                eq = eq.replace(oldname, newname)
-                untouched[newname] = ' post_population_->get'+op.capitalize()+var.capitalize()+'() '
-            else:
-                _error(eq+'\nPopulation '+proj.pre.name+' has no attribute '+var+'.')
-                exit(0)
+            globs['post'].append({'function': op, 'variable': var})
+            oldname = op + '(post.' + var + ')'
+            newname = '_post_' + op + '_' + var
+            eq = eq.replace(oldname, newname)
+            untouched[newname] = pattern['proj_postprefix'] + pattern['proj_sep'] + '_' + op + '_' + var 
+
     return eq, untouched, globs
     
-def extract_prepost(name, eq, proj):
-    " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."
-    untouched = {}                
+def extract_prepost(name, eq, description, pattern):
+    " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."  
+
+    dependencies = {'pre': [], 'post': []}
+
     pre_matches = re.findall(r'pre\.([a-zA-Z0-9_]+)', eq)
     post_matches = re.findall(r'post\.([a-zA-Z0-9_]+)', eq)
-    # Check if a global variable depends on pre
-    if len(pre_matches) > 0 and name in proj.description['global']:
-        _error(eq + '\nA postsynaptic variable can not depend on pre.' + pre_matches[0])
-        exit(0)
+
+    untouched = {}
     # Replace all pre.* occurences with a temporary variable
     for var in list(set(pre_matches)):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
-                try:
-                    idx = proj.pre.targets.index(val.group(1))
-                except:
-                    _warning('The target ' + val.group(1) + ' does not exist in the population ' + proj.pre.name)
-                    return '0.0'
-                rep = '_pre_sum_' + str(idx)
-                untouched[rep] = ' pre_population_->sum(i, '+str(idx)+' ) '
+                rep = '_pre_sum_' + val.group(1)
+                untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +val.group(1)+ pattern['proj_preindex']
                 return rep
+
             eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
-        elif var in proj.pre.attributes:
-            target = 'pre.' + var
-            eq = eq.replace(target, ' _pre_'+var+'_ ')
-            if var=='r':
-                untouched['_pre_r_'] = ' (*pre_rates_)[ rank_[i] ] '
-            else:
-                untouched['_pre_'+var+'_'] = ' pre_population_->get_single_'+var+'( rank_[i] ) '
         else:
-            _error(eq+'\nPopulation '+proj.pre.description['name']+' has no attribute '+var+'.')
-            exit(0)
+            dependencies['pre'].append(var)
+            target = 'pre.' + var
+            eq = eq.replace(target, ' _pre_'+var)
+            untouched['_pre_'+var] = pattern['proj_preprefix'] + pattern['proj_sep'] + var + pattern['proj_preindex']
+
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
-                try:
-                    idx = proj.post.targets.index(val.group(1))
-                except:
-                    _warning('The target ' + val.group(1) + ' does not exist in the population ' + proj.post.name)
-                    return '0.0'
-                rep = '_post_sum_' + str(idx)
-                untouched[rep] = ' post_population_->sum(post_neuron_rank_, '+str(idx)+' ) '
+                rep = '_post_sum_' + val.group(1)
+                untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+val.group(1) + pattern['proj_postindex']
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
-        elif var in proj.post.attributes:
-            target = 'post.' + var
-            eq = eq.replace(target, ' _post_'+var+'_ ')
-            if var.strip() == 'r':
-                #the firing rates are solved in a slightly different way
-                untouched['_post_r_'] = ' post_r_ '
-            else:
-                untouched['_post_'+var+'_'] = ' post_population_->get_single_'+var+'(  post_neuron_rank_ ) '
         else:
-            _error(eq+'\nPopulation '+proj.post.description['name']+' has no attribute '+var+'.')
-            exit(0)
-    return eq, untouched
+            dependencies['post'].append(var)
+            target = 'post.' + var
+            eq = eq.replace(target, ' _post_'+var)
+            untouched['_post_'+var] = pattern['proj_postprefix'] + pattern['proj_sep'] + var + pattern['proj_postindex']
+
+    return eq, untouched, dependencies
                    
 
 def extract_parameters(description, extra_values):
@@ -234,7 +205,7 @@ def extract_parameters(description, extra_values):
         elif 'bool' in flags:
             ctype = 'bool'
         else:
-            ctype = 'DATA_TYPE'
+            ctype = 'double'
         # For parameters, the initial value can be given in the equation
         if 'init' in bounds.keys(): # if init is provided, it wins
             init = bounds['init']
@@ -258,7 +229,7 @@ def extract_parameters(description, extra_values):
                 ctype = 'bool'
             else:
                 try:
-                    init = eval(ctype.replace('DATA_TYPE', 'float') + '(' + init + ')')
+                    init = eval('float(' + init + ')')
                 except:
                     try:
                         init = eval('int(' + init + ')')
@@ -271,7 +242,7 @@ def extract_parameters(description, extra_values):
                 init = False
             elif ctype == 'int':
                 init = 0
-            elif ctype == 'DATA_TYPE':
+            elif ctype == 'double':
                 init = 0.0
             
         # Store the result
@@ -305,7 +276,7 @@ def extract_variables(description):
         elif 'bool' in flags:
             ctype = 'bool'
         else:
-            ctype = 'DATA_TYPE'
+            ctype = 'double'
         # Get the init value if declared
         if 'init' in bounds.keys():
             init = bounds['init']
@@ -323,7 +294,7 @@ def extract_variables(description):
                 init = False
             elif ctype == 'int':
                 init = 0
-            elif ctype == 'DATA_TYPE':
+            elif ctype == 'double':
                 init = 0.0
         # Store the result
         desc = {'name': name,
@@ -354,14 +325,12 @@ def extract_functions(description, local_global=False):
         # Extract their types
         types = f['constraint']
         if types == '':
-            return_type = 'DATA_TYPE'
-            arg_types = ['DATA_TYPE' for a in arguments]
+            return_type = 'double'
+            arg_types = ['double' for a in arguments]
         else:
             types = types.split(',')
             return_type = types[0].strip()
-            if return_type == 'float':
-                return_type = 'DATA_TYPE'
-            arg_types = ['DATA_TYPE' if arg.strip() == 'float' else arg.strip() for arg in types[1:]]
+            arg_types = [arg.strip() for arg in types[1:]]
         if not len(arg_types) == len(arguments):
             _error('You must specify exactly the types of return value and arguments in ' + eq)
             exit(0)
@@ -415,91 +384,98 @@ def extract_targets(variables):
             targets.append(t.strip())
     return list(set(targets))
 
-def extract_spike_variable(pop_desc):
-    cond = prepare_string(pop_desc['raw_spike'])
+def extract_spike_variable(description, pattern):
+
+    cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
         _error('The spike condition must be a single expression')
-        _print(pop_desc['raw_spike'])
+        _print(description['raw_spike'])
         exit(0)
         
     translator = Equation('raw_spike_cond', cond[0].strip(), 
-                          pop_desc['attributes'], 
-                          pop_desc['local'], 
-                          pop_desc['global'], 
-                          type = 'cond')
+                          description['attributes'], 
+                          description['local'], 
+                          description['global'], 
+                          prefix=pattern['pop_prefix'],
+                          sep=pattern['pop_sep'],
+                          index=pattern['pop_index'],
+                          global_index=pattern['pop_globalindex'])
     raw_spike_code = translator.parse()
     
     reset_desc = []
-    if pop_desc.has_key('raw_reset') and pop_desc['raw_reset']:
-        reset_desc = process_equations(pop_desc['raw_reset'])
+    if description.has_key('raw_reset') and description['raw_reset']:
+        reset_desc = process_equations(description['raw_reset'])
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'], 
-                                  pop_desc['attributes'], 
-                                  pop_desc['local'], 
-                                  pop_desc['global'],
-                                  index = '[(*it)]')
+                                  description['attributes'], 
+                                  description['local'], 
+                                  description['global'],
+                                  prefix=pattern['pop_prefix'],
+                                  sep=pattern['pop_sep'],
+                                  index=pattern['pop_index'],
+                                  global_index=pattern['pop_globalindex'])
             var['cpp'] = translator.parse() 
     
     return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
 
-def extract_pre_spike_variable(proj):
+def extract_pre_spike_variable(description, pattern):
     pre_spike_var = []
     # For all variables influenced by a presynaptic spike
-    for var in prepare_string(proj.description['raw_pre_spike']):
+    for var in prepare_string(description['raw_pre_spike']):
         # Get its name
         name = extract_name(var)
         raw_eq = var
-        # Replace target by its value
-        post_target = False
-        if name == "g_target":
-            name = name.replace("target", proj.description['target'])
-            post_target = True
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, proj)
+        eq, condition = extract_ite(name, var, description)
             
         if condition == []:
             translator = Equation(name, var, 
-                                  proj.description['attributes'] + [name], 
-                                  proj.description['local'] + [name], 
-                                  proj.description['global'],
-                                  index = '[i]')
+                                  description['attributes'] + [name], 
+                                  description['local'] + [name], 
+                                  description['global'],
+                                  prefix=pattern['proj_prefix'],
+                                  sep=pattern['proj_sep'],
+                                  index=pattern['proj_index'],
+                                  global_index=pattern['proj_globalindex'])
             eq = translator.parse()
         else: 
-            eq = translate_ITE(name, eq, condition, proj, {})
-        
-        if post_target: # the left side has to be modified
-            eq = eq.replace( "g_" + proj.description['target'] + "_[i]",
-                        "post_population_->g_"+proj.description['target']+"_[post_neuron_rank_]")
+            eq = translate_ITE(name, eq, condition, description, {}, prefix=prefix, sep=sep, index=index, global_index=global_index)
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )
 
     return pre_spike_var 
 
-def extract_post_spike_variable(proj):
+def extract_post_spike_variable(description, pattern):
     post_spike_var = []
+    if not description['raw_post_spike']:
+        return post_spike_var
     
-    for var in prepare_string(proj.description['raw_post_spike']):
+    for var in prepare_string(description['raw_post_spike']):
         name = extract_name(var)
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, proj)
+        eq, condition = extract_ite(name, var, description)
 
         if condition == []:
             translator = Equation(name, var, 
-                                  proj.description['attributes'], 
-                                  proj.description['local'], 
-                                  proj.description['global'])
+                                  description['attributes'], 
+                                  description['local'], 
+                                  description['global'],
+                                  prefix=pattern['proj_prefix'],
+                                  sep=pattern['proj_sep'],
+                                  index=pattern['proj_index'],
+                                  global_index=pattern['proj_globalindex'])
             eq = translator.parse()     
         else: 
-            eq = translate_ITE(name, eq, condition, proj, {}) 
+            eq = translate_ITE(name, eq, condition, description, {}, prefix=prefix, sep=sep, index=index, global_index=global_index) 
 
         post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
 
     return post_spike_var  
 
-def extract_stop_condition(pop):
+def extract_stop_condition(pop, pattern):
     eq = pop['stop_condition']['eq']
     pop['stop_condition']['type'] = 'any'
     # Check the flags
@@ -516,6 +492,28 @@ def extract_stop_condition(pop):
                           pop['attributes'], 
                           pop['local'], 
                           pop['global'], 
-                          type = 'cond')
+                          type = 'cond',
+                          prefix=pattern['pop_prefix'],
+                          sep=pattern['pop_sep'],
+                          index=pattern['pop_index'],
+                          global_index=pattern['pop_globalindex'])
     code = translator.parse()
     pop['stop_condition']['cpp'] = '(' + code + ')'
+
+
+def find_method(variable):
+
+    if 'implicit' in variable['flags']:
+        method = 'implicit'
+    elif 'semiimplicit' in variable['flags']:
+        method = 'semiimplicit'
+    elif 'exponential' in variable['flags']:
+        method = 'exponential'
+    elif 'midpoint' in variable['flags']:
+        method = 'midpoint'
+    elif 'explicit' in variable['flags']:
+        method = 'explicit'
+    else:
+        method= config['method']
+
+    return method

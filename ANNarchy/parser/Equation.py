@@ -38,7 +38,9 @@ class Equation(object):
     def __init__(self, name, expression, variables, 
                  local_variables, global_variables, 
                  untouched = [], 
-                 method='explicit', type=None, index='[i]'):
+                 method='explicit', type=None, 
+                 prefix='pop%(id)s', sep = '.',
+                 index='[i]', global_index=''):
         '''
         Parameters:
         
@@ -49,6 +51,7 @@ class Equation(object):
         * global_variables: a list of the global variables
         * method: the numerical method to use for ODEs
         * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
+        * prefix: term to prepend to the attibutes names (default: $(pop)s)
         * index: index to be used for variables (default: [i])
         * untouched: list of terms which should not be modified
         '''
@@ -60,6 +63,7 @@ class Equation(object):
         self.global_variables = global_variables
         self.untouched = untouched
         self.method = method
+        self.prefix = prefix 
         
         # Determine the type of the equation
         if not type:
@@ -69,11 +73,11 @@ class Equation(object):
         
         # Build the default dictionary of built-in symbols or functions
         self.local_dict = {
-            'dt' : Symbol('dt_'),
-            't' : Symbol('DATA_TYPE(ANNarchy_Global::time)*dt_'),
-            'w' : Symbol('w_'+index), 
-            't_pre': Symbol('DATA_TYPE(pre_population_->getLastSpikeTime(rank_'+index+'))*dt_'),
-            't_post': Symbol('DATA_TYPE(post_population_->getLastSpikeTime(post_neuron_rank_))*dt_'),
+            'dt' : Symbol('dt'),
+            't' : Symbol('double(t)*dt'),
+            'w' : Symbol('proj%(id_proj)s.w'+index), 
+            't_pre': Symbol('(double)(%(pre_pop)s_last_spike[j])*dt'),
+            't_post': Symbol('(double)(%(post_pop)s_last_spike[i])*dt'),
             'pos': Function('positive'),
             'positive': Function('positive'), 
             'neg': Function('negative'), 
@@ -81,13 +85,15 @@ class Equation(object):
             'True': Symbol('true'), 
             'False': Symbol('false'), 
         }
+
         for var in self.variables: # Add each variable of the neuron
             if var in self.local_variables:
-                self.local_dict[var] = Symbol(var+'_' + index)
+                self.local_dict[var] = Symbol(prefix + sep + var + index)
             elif var in self.global_variables:
                 if var in _predefined:
                     continue
-                self.local_dict[var] = Symbol(var+'_')
+                self.local_dict[var] = Symbol(prefix + sep + var + global_index)
+                
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)
             
@@ -192,9 +198,9 @@ class Equation(object):
 
         variable_name = self.local_dict[self.name]
 
-        equation = simplify(collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt']))
+        equation = simplify(collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt']), ratio=1.0)
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' = ' + self.c_code(equation) + ';'
+        explicit_code = 'double _' + self.name + ' = ' + self.c_code(equation) + ';'
 
         switch = self.c_code(variable_name) + ' += _' + self.name + ' ;'
 
@@ -216,8 +222,7 @@ class Equation(object):
 
         equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
 
-        explicit_code =  'DATA_TYPE _k_' + self.name + ' = dt_*(' + self.c_code(equation) + ');'
-
+        explicit_code =  'double _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
         tmp_dict = self.local_dict
@@ -227,9 +232,9 @@ class Equation(object):
         )
         tmp_equation = solve(tmp_analysed, new_var)[0]
 
-        explicit_code += '\n    DATA_TYPE _' + self.name + '_new = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n    double _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
-        switch = self.c_code(variable_name) + ' += dt_*_' + self.name + '_new ;'
+        switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
         return [explicit_code, switch]
@@ -266,7 +271,8 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' = '\
+
+        explicit_code = 'double _' + self.name + ' = '\
                         +  self.c_code(equation) + ';'
         switch = variable_name + ' = _' + self.name + ' ;'
 
@@ -286,7 +292,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' = ('\
+        explicit_code = 'double _' + self.name + ' = ('\
                         +  self.c_code(instepsize) + ')*(' \
                         + self.c_code(steadystate)+ ' - ' + variable_name +');'
         switch = variable_name + ' += _' + self.name + ' ;'
@@ -304,7 +310,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'DATA_TYPE _' + self.name + ' =  (1.0 - exp('\
+        explicit_code = 'double _' + self.name + ' =  (1.0 - exp('\
                         + self.c_code(-stepsize) + '))*(' \
                         + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
         switch = variable_name + ' += _' + self.name + ' ;'
@@ -428,7 +434,7 @@ class Equation(object):
         )
     
         # Obtain C code
-        code = self.c_code(self.local_dict[self.name]) + ope + self.c_code(simplify(analysed)) +';'
+        code = self.c_code(self.local_dict[self.name]) + ope + self.c_code(simplify(analysed, ratio=1.0)) +';'
     
         # Return result
         return code

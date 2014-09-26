@@ -28,34 +28,63 @@ def sort_odes(desc, locality='local'):
 
     return pre_odes, odes, post_odes
 
-def generate_equation_code(desc, locality='local'):
+def generate_equation_code(id, desc, locality='local', obj='pop'):
+    
     # Separate ODEs from the pre- and post- equations
     pre_odes, odes, post_odes = sort_odes(desc, locality)
+    
+    if (pre_odes, odes, post_odes) == ([], [], []): # No equations
+        return ""
+
     # Generate code
     code = ""  
+
     #########################       
     # Pre-ODE equations
     #########################
-    for param in pre_odes: 
+    if len(pre_odes) > 0:
         code += """
-    %(comment)s
-    %(cpp)s
+        /////////////////////////
+        // Before the ODES
+        /////////////////////////
+"""
+        for param in pre_odes: 
+            code += """
+        %(comment)s
+        %(cpp)s
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
-        # Min-Max bounds
-        for bound, val in param['bounds'].iteritems():
-            # Bound min
-            if bound == 'min':
-                code += """
-    if(%(var)s_[i] < %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
-            # Bound max 
-            if bound == 'max':
-                code += """
-    if(%(var)s_[i] > %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+            # Min-Max bounds
+            for bound, val in param['bounds'].iteritems():
+                # Bound min
+                if bound == 'min':
+                    if obj == 'pop':
+                        code += """
+        if(pop%(id)s.%(var)s[i] < %(val)s)
+            pop%(id)s.%(var)s[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                    else:
+                        code += """
+        if(proj%(id)s.%(var)s[i][j] < %(val)s)
+            proj%(id)s.%(var)s[i][j] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+
+                # Bound max 
+                if bound == 'max':
+                    if obj == 'pop':
+                        code += """
+        if(pop%(id)s.%(var)s[i] > %(val)s)
+            pop%(id)s.%(var)s[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                    else:
+                        code += """
+        if(proj%(id)s.%(var)s[i][j] > %(val)s)
+            proj%(id)s.%(var)s[i][j] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
 
     #################
     # ODE equations
@@ -69,75 +98,118 @@ def generate_equation_code(desc, locality='local'):
             nb_step = max(1, nb_step)
 
     # Iterate over all steps
-    for step in range(nb_step):
+    if len(odes) > 0:
         code += """
-    // Step %(step)s
-        """ % {'step' : str(step+1)}
-        for param in odes:
-            if isinstance(param['cpp'], list) and step < len(param['cpp']):
-                eq = param['cpp'][step]
-            elif isinstance(param['cpp'], str) and step == 0: 
-                eq = param['cpp']
-            else:
-                eq = ''
+        /////////////////////////
+        // ODES
+        /////////////////////////
+"""
+        for step in range(nb_step):
             code += """
-    %(comment)s
-    %(cpp)s
-    """ % { 'comment': '// '+param['eq'],
-            'cpp': eq }
+        // Step %(step)s
+        """ % {'step' : str(step+1)}
+            for param in odes:
+                if isinstance(param['cpp'], list) and step < len(param['cpp']):
+                    eq = param['cpp'][step]
+                elif isinstance(param['cpp'], str) and step == 0: 
+                    eq = param['cpp']
+                else:
+                    eq = ''
+                code += """
+        %(comment)s
+        %(cpp)s
+""" % { 'comment': '// '+param['eq'],
+                'cpp': eq }
 
-    # Generate the switch code
-    if len(odes)>0:
-        code += """
-    // Switch values
-    """
-    for param in odes: 
-        code += """
-    %(comment)s
-    %(switch)s 
+        # Generate the switch code
+        code += """    
+        /////////////////////
+        // Switch values
+        /////////////////////
+"""
+        for param in odes: 
+            code += """
+        %(comment)s
+        %(switch)s 
 """ % { 'comment': '// '+param['eq'],
         'switch' : param['switch']}
     
-    # Min-Max bounds
-    for param in odes: 
-        for bound, val in param['bounds'].iteritems():
-            # Bound min
-            if bound == 'min':
-                code += """
-    %(comment)s
-    if(%(var)s_[i] < %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'comment': '// '+param['eq'], 'var' : param['name'], 'val' : val}
-            # Bound max 
-            if bound == 'max':
-                code += """
-    %(comment)s
-    if(%(var)s_[i] > %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'comment': '// '+param['eq'],'var' : param['name'], 'val' : val}
+        # Min-Max bounds
+        for param in odes: 
+            for bound, val in param['bounds'].iteritems():
+                # Bound min
+                if bound == 'min':
+                    if obj == 'pop':
+                        code += """
+        if(pop%(id)s.%(var)s[i] < %(val)s)
+            pop%(id)s.%(var)s[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                    else:
+                        code += """
+        if(proj%(id)s.%(var)s[i][j] < %(val)s)
+            proj%(id)s.%(var)s[i][j] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                # Bound max 
+                if bound == 'max':
+                    if obj == 'pop':
+                        code += """
+        if(pop%(id)s.%(var)s[i] > %(val)s)
+            pop%(id)s.%(var)s[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                    else:
+                        code += """
+        if(proj%(id)s.%(var)s[i][j] > %(val)s)
+            proj%(id)s.%(var)s[i][j] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
 
     #######################
     # Post-ODE equations
     #######################
-    for param in post_odes: 
+    if len(post_odes) > 0:
         code += """
-    %(comment)s
-    %(cpp)s
+        /////////////////////////
+        // After the ODES
+        /////////////////////////
+"""
+        for param in post_odes: 
+            code += """
+        %(comment)s
+        %(cpp)s
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
-        # Min-Max bounds
-        for bound, val in param['bounds'].iteritems():
-            # Bound min
-            if bound == 'min':
-                code += """
-    if(%(var)s_[i] < %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
-            # Bound max 
-            if bound == 'max':
-                code += """
-    if(%(var)s_[i] > %(val)s)
-        %(var)s_[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val}
+            # Min-Max bounds
+            for bound, val in param['bounds'].iteritems():
+                # Bound min
+                if bound == 'min':
+                    if obj == 'pop':
+                        code += """
+        if(pop%(id)s.%(var)s[i] < %(val)s)
+            pop%(id)s.%(var)s[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                    else:
+                        code += """
+        if(proj%(id)s.%(var)s[i][j] < %(val)s)
+            proj%(id)s.%(var)s[i][j] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                # Bound max 
+                if bound == 'max':
+                    if obj == 'pop':
+                        code += """
+        if(pop%(id)s.%(var)s[i] > %(val)s)
+            pop%(id)s.%(var)s[i] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
+                    else:
+                        code += """
+        if(proj%(id)s.%(var)s[i][j] > %(val)s)
+            proj%(id)s.%(var)s[i][j] = %(val)s;
+""" % {'var' : param['name'], 'val' : val,
+        'id': id}
 
     return code

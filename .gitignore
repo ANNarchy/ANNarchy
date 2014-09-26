@@ -4,4 +4,8 @@
 *.data
 *.csv
 *.tar.gz
-tests/*
+examples/*/annarchy
+build/
+dist/
+ANNarchy.egg-info/
+docs/_build

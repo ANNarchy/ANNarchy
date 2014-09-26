@@ -29,39 +29,40 @@ from ANNarchy.parser.StringManipulation import *
 from pprint import pprint
 import re
 
-def translate_ITE(name, eq, condition, proj, untouched, split=True):
+def translate_ITE(name, eq, condition, description, untouched, prefix, sep, index, global_index='', split=True):
     " Recursively processes the different parts of an ITE statement"
     def process_ITE(condition):
         if_statement = condition[0]
         then_statement = condition[1]
         else_statement = condition[2]
-        if_code = Equation(name, if_statement, proj.description['attributes'], 
-                          proj.description['local'], proj.description['global'], 
+
+        if_code = Equation(name, if_statement, description['attributes'], 
+                          description['local'], description['global'], 
                           untouched = untouched.keys(),
-                          type='cond').parse()
+                          type='cond', prefix=prefix, sep=sep, index=index, global_index=global_index).parse()
         if isinstance(then_statement, list): # nested conditional
             then_code =  process_ITE(then_statement)
         else:
-            then_code = Equation(name, then_statement, proj.description['attributes'], 
-                          proj.description['local'], proj.description['global'], 
+            then_code = Equation(name, then_statement, description['attributes'], 
+                          description['local'], description['global'], 
                           untouched = untouched.keys(),
-                          type='return').parse().split(';')[0]
+                          type='return', prefix=prefix, sep=sep, index=index, global_index=global_index).parse().split(';')[0]
         if isinstance(else_statement, list): # nested conditional
             else_code =  process_ITE(else_statement)
         else:
-            else_code = Equation(name, else_statement, proj.description['attributes'], 
-                          proj.description['local'], proj.description['global'], 
+            else_code = Equation(name, else_statement, description['attributes'], 
+                          description['local'], description['global'], 
                           untouched = untouched.keys(),
-                          type='return').parse().split(';')[0]
+                          type='return', prefix=prefix, sep=sep, index=index, global_index=global_index).parse().split(';')[0]
                           
         code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
         return code
           
     if split:
         # Main equation, where the right part is __conditional__
-        translator = Equation(name, eq, proj.description['attributes'], 
-                              proj.description['local'], proj.description['global'], 
-                              untouched = untouched.keys())
+        translator = Equation(name, eq, description['attributes'], 
+                              description['local'], description['global'], 
+                              untouched = untouched.keys(), prefix=prefix, sep=sep, index=index, global_index=global_index)
         code = translator.parse() 
     else:
         code = '__conditional__'
@@ -75,7 +76,8 @@ def translate_ITE(name, eq, condition, proj, untouched, split=True):
 
     return code
 
-def extract_ite(name, eq, proj, split=True):
+
+def extract_ite(name, eq, description, split=True):
     """ Extracts if-then-else statements and processes them.
     
     If-then-else statements must be of the form:
@@ -122,6 +124,7 @@ def extract_ite(name, eq, proj, split=True):
             else:
                 break
         return result[0]
+
     # If no if, no need to go further
     if not 'if ' in eq:
         return eq, []
@@ -150,4 +153,5 @@ def extract_ite(name, eq, proj, split=True):
         right = ' __conditional__ '
         if split:
             eq = left + '=' + right
+
     return eq, condition

@@ -1,7 +1,6 @@
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
-from .Templates import *
 
 class Spike2RatePopulation(Population):
     """
@@ -16,6 +15,8 @@ class Spike2RatePopulation(Population):
     By definition, the firing rate varies abruptly each time a new spike is perceived. The output can be smoothed with a low-pass filter of time constant ``smooth``.
 
     .. code-block:: python
+
+        from ANNarchy.extensions.hybrid import Spike2RatePopulation
 
         pop2 = Spike2RatePopulation(
             population=pop1, 
@@ -36,7 +37,7 @@ class Spike2RatePopulation(Population):
         * **smooth**: time constant (in ms) of the low-pass filter used to smooth the firing rate (default: 1 ms, i.e no smoothing)
         """
         self.population = population
-        if not self.population.description['type'] == 'spike':
+        if not self.population.neuron.description['type'] == 'spike':
             Global._error('the population ' + self.population.name + ' must contain spiking neurons.')
             exit(0)
 
@@ -54,14 +55,58 @@ class Spike2RatePopulation(Population):
                 equations="r = 0.0"
             ) 
         )
-        self.generator = Spike2RatePopulationGenerator(self)
 
-    def _instantiate(self, module):
-        # Create the Cython instance 
-        self.cyInstance = getattr(module, 'py'+ self.class_name)(self.size, self.population._id)
-        
-        # Create the local attributes and actualize the initial values
-        self._init_attributes()
+        # Generate specific code
+
+        self.generator['omp']['header_pop_struct'] = """ 
+struct PopStruct%(id)s{
+    // Number of neurons
+    int size;
+
+    // Global parameter window
+    double  window ;
+
+    // Global parameter scaling
+    double  scaling ;
+
+    // Global parameter smooth
+    double  smooth ;
+
+    // Local variable r
+    std::vector< double > r ;
+    std::vector< std::vector< double > > recorded_r ;
+    bool record_r ;
+
+    // Store the last spikes
+    std::vector< std::deque<long int> > last_spikes;
+}; 
+""" % {'id' : self.id}
+
+
+        self.generator['omp']['body_spike_init'] = """ 
+    pop%(id)s.last_spikes = std::vector< std::deque<long int> >(pop%(id)s.size, std::deque<long int>());
+"""
+        self.generator['omp']['body_update_neuron'] = """ 
+    // Updating the local variables of Spike2Rate population %(id)s
+    #pragma omp parallel for
+    for(int i = 0; i < pop%(id)s.size; i++){
+        // Increase when spiking
+        if (pop%(id_pre)s.last_spike[i] == t-1){
+           pop%(id)s.last_spikes[i].push_front(t-1);
+        }
+        int nb = 0;
+        for(int j=0; j < pop%(id)s.last_spikes[i].size(); j++){
+            if(pop%(id)s.last_spikes[i][j] > t - int(pop%(id)s.window*dt) ){
+                nb++;
+            }
+            else{
+                pop%(id)s.last_spikes[i].erase(pop%(id)s.last_spikes[i].begin()+j);
+            }
+        }
+        pop%(id)s.r[i] += dt*(pop%(id)s.scaling*1000.0 / pop%(id)s.window * nb - pop%(id)s.r[i] ) / pop%(id)s.smooth;
+    }
+"""  % {'id' : self.id, 'id_pre': self.population.id}
+
 
 class Rate2SpikePopulation(Population):
     """
@@ -73,6 +118,11 @@ class Rate2SpikePopulation(Population):
 
     .. code-block:: python
 
+<<<<<<< HEAD
+=======
+        from ANNarchy.extensions.hybrid import Rate2SpikePopulation
+
+>>>>>>> v43/master
         pop2 = Rate2SpikePopulation(
             population=pop1, 
             name='spiking', 
@@ -88,7 +138,8 @@ class Rate2SpikePopulation(Population):
         * **scaling**: the scaling of the firing rate. Defines what a rate ``r`` of 1.0 means in Hz (default: 1.0).
         """
         self.population = population
-        if not self.population.description['type'] == 'rate':
+
+        if not self.population.neuron.description['type'] == 'rate':
             Global._error('the population ' + self.population.name + ' must contain rate-coded neurons.')
             exit(0)
 
@@ -108,80 +159,32 @@ class Rate2SpikePopulation(Population):
                 spike="rates>p"
             ) 
         )
-        self.generator = Rate2SpikePopulationGenerator(self)
 
-    def _instantiate(self, module):
-        # Create the Cython instance 
-        self.cyInstance = getattr(module, 'py'+ self.class_name)(self.size, self.population._id)
-        
-        # Create the local attributes and actualize the initial values
-        self._init_attributes()
+        # Generate the code
+        self.generator['omp']['body_update_neuron'] = """ 
+    // Updating the local variables of population %(id)s (Rate2SpikePopulation)
+    #pragma omp parallel for
+    for(int i = 0; i < pop%(id)s.size; i++){
 
+        pop%(id)s.rates[i] = pop%(id_pre)s.r[i] * pop%(id)s.scaling;
 
-class Spike2RatePopulationGenerator(object):
-    """ Base class for generating C++ code from a population description. """
+        if(pop%(id)s.rates[i] > pop%(id)s.rand_0[i]*1000.0/dt){
+            pop%(id)s.spike[i] = true;
+            pop%(id)s.last_spike[i] = t;
+        }
+        else{
+            pop1.spike[i] = false;
+        }
+    }
+    // Gather spikes
+    pop%(id)s.spiked.clear();
+    for(int i=0; i< pop%(id)s.size; i++){
+        if(pop%(id)s.spike[i]){
+            pop%(id)s.spiked.push_back(i);
+            if(pop%(id)s.record_spike){
+                pop%(id)s.recorded_spike[i].push_back(t);
+            }
+        }
+    }
+""" % {'id' : self.id, 'id_pre': self.population.id}
 
-    def __init__(self, pop):
-        self.pop = pop
-        self.class_name = pop.class_name
-        self.name = pop.name
-        self.id = pop._id
-        
-        # Names of the files to be generated
-        self.header = Global.annarchy_dir+'/generate/build/'+self.class_name+'.h'
-        self.body = Global.annarchy_dir+'/generate/build/'+self.class_name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.class_name+'.pyx'
-        
-        
-    def generate(self, verbose):
-        #   generate files
-        with open(self.header, mode = 'w') as w_file:
-            w_file.write(
-                s2r_header_template % { 'class_name':self.class_name,
-                                    'pre_population': self.pop.population.class_name
-                                }
-                )
-        with open(self.body, mode = 'w') as w_file:
-            w_file.write(
-                s2r_body_template%{'class_name':self.class_name, 'id': self.id,
-                                'pre_population': self.pop.population.class_name}
-                )
-        with open(self.pyx, mode = 'w') as w_file:
-            w_file.write(
-                s2r_pyx_template%{'class_name':self.class_name, 'name':self.name,
-                                'pre_population': self.pop.population.class_name}
-                ) 
-
-class Rate2SpikePopulationGenerator(object):
-    """ Base class for generating C++ code from a population description. """
-
-    def __init__(self, pop):
-        self.pop = pop
-        self.class_name = pop.class_name
-        self.name = pop.name
-        self.id = pop._id
-        
-        # Names of the files to be generated
-        self.header = Global.annarchy_dir+'/generate/build/'+self.class_name+'.h'
-        self.body = Global.annarchy_dir+'/generate/build/'+self.class_name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.class_name+'.pyx'
-        
-        
-    def generate(self, verbose):
-        #   generate files
-        with open(self.header, mode = 'w') as w_file:
-            w_file.write(
-                r2s_header_template % { 'class_name':self.class_name,
-                                    'pre_population': self.pop.population.class_name
-                                }
-                )
-        with open(self.body, mode = 'w') as w_file:
-            w_file.write(
-                r2s_body_template%{'class_name':self.class_name, 'id': self.id,
-                                'pre_population': self.pop.population.class_name}
-                )
-        with open(self.pyx, mode = 'w') as w_file:
-            w_file.write(
-                r2s_pyx_template%{'class_name':self.class_name, 'name':self.name,
-                                'pre_population': self.pop.population.class_name}
-                ) 

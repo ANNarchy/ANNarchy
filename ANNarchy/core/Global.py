@@ -27,21 +27,19 @@ import sys, os
 import time
 from math import ceil
 
-# Global instances
-_network = None         # created network
-_populations = []       # created populations
-_projections = []       # created projections
+# Dictionaries of  instances
+_populations = {}       # created populations
+_projections = {}       # created projections
 _functions = []         # created functions
 
-# Additional instances
-_cy_instance = None
-_visualizer = None
+# Global Cython instance
+_network = None
 
 # Path to the annarchy working directory
 annarchy_dir = os.getcwd() + '/annarchy'
 
 # Flag to tell if the network has already been compiled
-_compiled = False   #I know it's evil
+_compiled = False   # I know it's evil
 
 # Configuration
 config = dict(
@@ -50,13 +48,17 @@ config = dict(
     'verbose': False,
     'show_time': False,
     'suppress_warnings': False,
-    'float_prec': 'double',
     'num_threads': 1,
     'paradigm': "openmp",
     'method': "explicit",
-    'seed': -1
+    'seed': -1,
+    'structural_plasticity': False
    }
 )
+
+# Minimum number of neurons to apply OMP parallel regions
+OMP_MIN_NB_NEURONS = 10
+
 
 # Authorized keywork for attributes
 authorized_keywords = [
@@ -81,6 +83,7 @@ authorized_keywords = [
     'bool',
     'float'
 ]
+
 # Dictionary of population variables being currently recorded
 _recorded_populations = {}
 
@@ -95,8 +98,8 @@ def setup(**keyValueArgs):
     * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     
     * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
-    
-    * **float_prec**: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses double floating point precision. 
+
+    * **structural_plasticity**: allows synapses to be dynamically added/removed during the simulation (default: False).
 
     * **seed**: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)). 
     
@@ -135,11 +138,11 @@ def reset(populations=True, projections=False, synapses = False):
     * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
-        for pop in _populations:
+        for n, pop in _populations.iteritems():
             pop.reset()
             
     if projections:
-        for proj in _projections:
+        for n, proj in _projections.iteritems():
             pop.reset(synapses)
 
     _network.set_time(0)
@@ -156,7 +159,7 @@ def get_population(name):
     
     * The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for pop in _populations:
+    for n, pop in _populations.iteritems():
         if pop.name == name:
             return pop
         
@@ -201,7 +204,7 @@ def simulate(duration, measure_time = False):
     if _network:      
         if measure_time:
             tstart = time.time() 
-        _network.run(nb_steps)
+        _network.pyx_run(nb_steps)
         if measure_time:
             print('Simulating', duration, 'milliseconds took', time.time() - tstart, 'seconds.')
     else:
@@ -212,7 +215,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     """
     Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
 
-    One can specify several populations. f the stop condition is true for any of the populations, the simulation will stop ('or' function).
+    One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
 
     Example::
 
@@ -237,7 +240,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     if _network:      
         if measure_time:
             tstart = time.time() 
-        nb = _network.run_until(nb_steps, [pop._id for pop in population], True if operator=='and' else False)
+        nb = _network.pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
             print('Simulating', nb/config['dt'], 'milliseconds took', time.time() - tstart, 'seconds.')
@@ -252,7 +255,7 @@ def step():
 
     """
     if _network:      
-        _network.run(1)
+        _network.pyx_step()
 
 ################################
 ## Learning flags
@@ -286,46 +289,15 @@ def disable_learning(projections=None):
 ################################
 ## Time
 ################################
-def current_time():
-    """
-    Returns current simulation time in ms.
-    
-    **Note**: computed as number of simulation steps times dt
-    """
-    try:
-        return _network.get_time() * config['dt']
-    except:
-        return 0.0
+def get_time():
+    return _network.get_time()/config['dt']
+def set_time(t):
+    return _network.set_time(int(t*config['dt']))
+def get_current_step():
+    return _network.get_time()
+def set_current_step(t):
+    return _network.set_time(int(t))
 
-def current_step():
-    """
-    Returns current simulation step.
-    """
-    try:
-        return _network.get_time()
-    except:
-        return 0
-
-def set_current_time(time):
-    """
-    Set current simulation time in ms.
-    
-    **Note**: computed as number of simulation steps times dt
-    """
-    try:
-        _network.set_time(int( time / config['dt']))
-    except:
-        _warning('the network is not compiled yet')
-    
-def set_current_step(time):
-    """
-    set current simulation step.
-    """
-    try:
-        _network.set_time( time )
-    except:
-        _warning('the network is not compiled yet')
-        
 ################################
 ## Recording
 ################################
@@ -388,11 +360,8 @@ def get_record(to_record=None, reshape=False):
             pop_object = pop
         else:
             pop_object = get_population(pop)
-        if isinstance(variables, list):
-            data[pop] = pop_object.get_record(variables, reshape)
-        else:
-            data[pop] = {}
-            data[pop][variables] = pop_object.get_record(variables, reshape)
+
+        data[pop] = pop_object.get_record(variables, reshape)
     
     return data  
 
@@ -446,7 +415,6 @@ def resume_record(to_record=None):
             pop.resume_record(variables)
         else:
             get_population(pop).resume_record(variables)
-
 
 ################################
 ## Printing

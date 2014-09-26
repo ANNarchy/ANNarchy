@@ -21,11 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-import numpy as np
 from ANNarchy.core.Global import _error
-from ANNarchy.core.PopulationView import PopulationView
-
-import pprint
+from ANNarchy.parser.SingleAnalysis import analyse_neuron
 
 
 class Neuron(object):
@@ -56,9 +53,14 @@ class Neuron(object):
 
         # Find the type of the neuron
         self.type = 'spike' if self.spike else 'rate'
-        
-    # def __add__(self, neuron):    
-    #     self._variables.update(neuron.variables) 
+
+        # Analyse the neuron type
+        self.description = None
+
+    def _analyse(self):
+        # Analyse the neuron type
+        if not self.description:
+            self.description = analyse_neuron(self)
 
     def __repr__(self):
         if self.type == 'rate':
@@ -119,7 +121,7 @@ class SpikeNeuron(Neuron):
         """
         Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, extra_values=extra_values) 
 
-        
+
 class IndividualNeuron(object):
     """
     Neuron object returned by the Population.neuron(rank) method.
@@ -136,11 +138,14 @@ class IndividualNeuron(object):
             return object.__getattribute__(self, name)
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
-                val = (self.population.get(name))
-                if isinstance(val, np.ndarray):
-                    return val[self.population.coordinates_from_rank(self.rank)]
+                if not self.population.initialized: # Store it in the temporary array
+                    val = (self.population.get(name))
+                    if isinstance(val, np.ndarray):
+                        return val[self.population.coordinates_from_rank(self.rank)]
+                    else:
+                        return val
                 else:
-                    return val
+                    return getattr(self.population.cyInstance, 'get_single_'+name)(self.rank)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -154,13 +159,13 @@ class IndividualNeuron(object):
             object.__setattr__(self, name, value)
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
-                if name in self.population.description['local']:
+                if name in self.population.neuron.description['local']:
                     if not self.population.initialized: # Store it in the temporary array
                         newval = self.population.get(name)
                         newval[self.population.coordinates_from_rank(self.rank)] = value
                         self.population.__setattr__(name, newval)
                     else: # Access the C++ data 
-                        eval('self.population.cyInstance._set_single_'+name+'('+str(self.rank)+', '+str(value)+')')
+                        getattr(self.population.cyInstance, 'set_single_'+name)(self.rank, value)
                 else:
                     self.population.__setattr__(name, value)
             else:

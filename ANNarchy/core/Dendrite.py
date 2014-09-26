@@ -21,12 +21,8 @@
     
 """
 import ANNarchy.core.Global as Global
-from ANNarchy.core.Random import RandomDistribution
-from ANNarchy.core.Record import Record
 
 import numpy as np
-import traceback
-
 
 class Dendrite(object):
     """    
@@ -53,7 +49,7 @@ class Dendrite(object):
         Number of synapses.
         """
         if self.proj.cyInstance:
-            return self.proj.cyInstance._nb_synapses(self.post_rank)
+            return self.proj.cyInstance.nb_synapses(self.post_rank)
         return 0
 
     def __len__(self):
@@ -62,6 +58,49 @@ class Dendrite(object):
         """
         return self.size
 
+    @property
+    def synapses(self):
+        """
+        Iteratively returns the synapses corresponding to this dendrite.
+        """
+        for n in self.rank:
+            yield Synapse(self, n)
+    
+    def synapse(self, pos):
+        """
+        Returns the synapse coming from the corresponding presynaptic neuron.
+
+        *Parameters*:
+
+            * **pos**: can be either the rank or the coordinates of the presynaptic neuron
+        """
+        if isinstance(pos, int):
+            rank = pos
+        else:
+            rank = self.proj.pre.rank_from_coordinates(pos)
+            
+        if rank in self.rank:
+            return IndividualSynapse(self, rank)
+        else:
+            Global._error(" The neuron of rank "+ str(rank) + " has no synapse in this dendrite.")
+            return None
+    
+
+    # Iterators
+    def __getitem__(self, *args, **kwds):
+        """ Returns the synapse of the given position in the presynaptic population. 
+        
+        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        """
+        if len(args) == 1:
+            return self.synapse(args[0])
+        return self.synapse(args)
+        
+    def __iter__(self):
+        " Returns iteratively each synapse in the dendrite in ascending presynaptic rank order."
+        for n in self.rank:
+            yield IndividualSynapse(self, n)
+
     #########################
     ### Access to attributes
     #########################
@@ -69,11 +108,11 @@ class Dendrite(object):
         " Method called when accessing an attribute."
         if name == 'proj':
             return object.__getattribute__(self, name)
-        elif name == 'attributes':
-            return object.__getattribute__(self, name)
         elif hasattr(self, 'proj'):
-            if name in self.proj.attributes+['rank', 'delay']:
-                return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
+            if name == 'rank':
+                return self.proj.cyInstance.pre_rank(self.post_rank)
+            elif name in self.proj.attributes:
+                return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.post_rank)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -87,12 +126,10 @@ class Dendrite(object):
             object.__setattr__(self, 'attributes', value)
         elif hasattr(self, 'proj'):
             if name in self.proj.attributes:
-                if isinstance(value, np.ndarray):
-                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value)
-                elif isinstance(value, list):
-                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, np.ndarray(value))
+                if isinstance(value, (np.ndarray, list)):
+                    getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.post_rank, value)
                 else :
-                    getattr(self.proj.cyInstance, '_set_'+name)(self.post_rank, value * np.ones(self.size))
+                    getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.post_rank, value * np.ones(self.size))
             else:
                 object.__setattr__(self, name, value)
         else:
@@ -116,7 +153,7 @@ class Dendrite(object):
                 else: 
                     val = value[val_key]           
                 # Set the value
-                getattr(self.proj.cyInstance, '_set_'+val_key)(self.post_rank, val)
+                getattr(self.proj.cyInstance, 'set_dendrite_'+val_key)(self.post_rank, val)
             else:
                 Global._error("Dendrite has no parameter/variable called", val_key)
                 
@@ -130,12 +167,17 @@ class Dendrite(object):
 
                 dendrite.get('w')
         """
-        if name in self.attributes:
-            return getattr(self.proj.cyInstance, '_get_'+name)(self.post_rank)
+        if name == 'rank':
+            return self.proj.cyInstance.pre_rank(self.post_rank)
+        elif name in self.attributes:
+            return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.post_rank)
         else:
             Global._error("Dendrite has no parameter/variable called", name)     
     
-    
+
+    #########################
+    ### Formatting
+    #########################     
     def receptive_field(self, variable = 'w', fill = 0.0):
         """
         Returns the given variable as a receptive field.
@@ -147,40 +189,14 @@ class Dendrite(object):
         * **variable**: name of the variable (default = 'w')
         * **fill**: value to use when a synapse does not exist.
         """
-        values = getattr(self.proj.cyInstance, '_get_'+variable)(self.post_rank)
+        values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.post_rank)
         ranks = self.proj.cyInstance._get_rank( self.post_rank )
              
         m = fill * np.ones( self.pre.size )
         m[ranks] = values
 
         return m.reshape(self.pre.geometry)
-        
-    # @property 
-    # def learnable(self):
-    #     return False
-    
-    # @learnable.setter
-    # def learnable(self, value):
-    #     pass
-    #     #self.cy_instance.learnable = value
 
-    # @property 
-    # def learn_offset(self):
-    #     return self.cy_instance.learn_offset
-    
-    # @learn_offset.setter
-    # def learn_offset(self, value):
-    #     self.cy_instance.learn_offset = value
-
-    # @property 
-    # def learn_frequency(self):
-    #     return self.cy_instance.learn_frequency
-    
-    # @learn_frequency.setter
-    # def learn_frequency(self, value):
-    #     self.cy_instance.learn_frequency = value
-        
-        
 
     #########################
     ### Structural plasticity
@@ -195,7 +211,25 @@ class Dendrite(object):
         * **w**: synaptic weight
         * **delay**: synaptic delay (default = dt)
         """
-        self.proj.cyInstance.add_synapse(self.post_rank, rank, w, delay)
+        if not Global.config['structural_plasticity']:
+            Global._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
+            return 
+
+        if rank in self.rank:
+            Global._error('the synapse of rank ' + str(rank) + ' already exists.')
+            return             
+
+        # Set default values for the additional variables
+        extra_attributes = {}
+        for var in self.proj.synapse.description['parameters'] + self.proj.synapse.description['variables']:
+            if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse.description['local']:
+                if not isinstance(self.proj.init[var['name']], (int, float, bool)):
+                    init = var['init']
+                else:
+                    init = self.proj.init[var['name']]
+                extra_attributes[var['name']] = init
+
+        self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
     
     def remove_synapse(self, rank):
         """
@@ -205,6 +239,14 @@ class Dendrite(object):
         
         * **rank**: rank of the pre-synaptic neuron
         """
+        if not Global.config['structural_plasticity']:
+            Global._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
+            return 
+
+        if not rank in self.rank:
+            Global._error('the synapse of rank ' + str(rank) + ' did not already exist.')
+            return   
+
         self.proj.cyInstance.remove_synapse(self.post_rank, rank)
 
     #########################
@@ -227,33 +269,21 @@ class Dendrite(object):
         else:
             print('Error: variable must be either a string or list of strings.')
         
-        for var in _variable:
-            
-            if not var in self.proj._recordable_variables:
-                print(var, 'is not a recordable variable of', self.proj.name)
-                continue
-
-            if not self.post_rank in self.proj._recorded_variables.keys(): # dendrite not recorded yet
-                self.proj._recorded_variables[self.post_rank] = {var: Record(var)}
-            elif not var in self.proj._recorded_variables[self.post_rank].keys(): 
-                self.proj._recorded_variables[self.post_rank][var] = Record(var)
-                
-            self.proj._recorded_variables[self.post_rank][var].start()
-
-            # if not self.proj._recorded_variables[var].is_inited:
-            #     print('variable',var,'is not initialized.')
-            #     continue
-            
+        for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, '_start_record_'+var)(self.post_rank)
-    
-                if Global.config['verbose']:
-                    print('start recording of', var, '(', self.proj.name, ')')
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank)
                     
-            except:
-                print '_start_record_'+var
-                print "Error (start_record): only possible after compilation."
-                pass
+            except :
+                Global._error('start: '+ var + ' is not a recordable variable.')
+
+
+            if not self.post_rank in self.proj.recorded_variables.keys():
+                self.proj.recorded_variables[self.post_rank] = {}
+            
+            self.proj.recorded_variables[self.post_rank][var]= {'start': [Global.get_current_step()], 'stop': [-1]}
+
+            if Global.config['verbose']:
+                print('start recording of', var, '(', self.proj.name, ')')
 
     def stop_record(self, variable=None):
         """
@@ -265,7 +295,7 @@ class Dendrite(object):
         """
         _variable = []
         if variable == None:
-            _variable = self.proj._recorded_variables[self.post_rank].keys() # TODO: what is it?
+            _variable = self.proj.recorded_variables[self.post_rank].keys() 
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -273,26 +303,14 @@ class Dendrite(object):
         else:
             print 'Error: variable must be either a string or list of strings.'       
         
-        for var in _variable:
-            
-            if not var in self.proj._recordable_variables:
-                print var, 'is not a recordable variable of', self.proj.name
-                continue
-
-            if not self.post_rank in self.proj._recorded_variables.keys() or \
-               not var in self.proj._recorded_variables[self.post_rank].keys() or \
-               not self.proj._recorded_variables[self.post_rank][var].is_running :
-                print 'The recording of', var, 'was not running on projection', self.proj.name
-                continue
-            
+        for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, '_stop_record_'+var)(self.post_rank)
+                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.post_rank)
 
-                if Global.config['verbose']:
-                    print('stop record of', var, '(', self.name, ')')
-                self.proj._recorded_variables[self.post_rank][var].pause()
             except:
-                Global._error('(pause_record): only possible after compilation.')
+                Global._error('stop: ' + var + ' is not a recordable variable.')
+
+            del self.proj.recorded_variables[self.post_rank][var]
 
     def pause_record(self, variable=None):
         """
@@ -304,7 +322,7 @@ class Dendrite(object):
         """
         _variable = []
         if variable == None:
-            _variable = self.proj._recorded_variables[self.post_rank].keys() # TODO: what is it?
+            _variable = self.proj.recorded_variables[self.post_rank].keys() 
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -313,27 +331,17 @@ class Dendrite(object):
             print('Error: variable must be either a string or list of strings.')       
         
         for var in _variable:
-            
-            if not var in self.proj._recordable_variables:
-                print(var, 'is not a recordable variable of', self.proj.name)
-                continue
-
-            if not self.post_rank in self.proj._recorded_variables.keys() or \
-               not var in self.proj._recorded_variables[self.post_rank].keys() or \
-               not self.proj._recorded_variables[self.post_rank][var].is_running :
-                print('The recording of', var, 'was not running on projection', self.proj.name)
-                continue
-            
             try:
-                getattr(self.proj.cyInstance, '_stop_record_'+var)(self.post_rank)
-
-                if Global.config['verbose']:
-                    print('pause record of', var, '(', self.name, ')')
-                self.proj._recorded_variables[self.post_rank][var].pause()
+                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.post_rank)
             except:
-                print("Error (pause_record): only possible after compilation.")
+                Global._error('pause: ' + var + ' is not a recordable variable.')
+                return
 
-    def resume_record(self, variable):
+            self.proj.recorded_variables[self.post_rank][var]['stop'][-1] = Global.get_current_step()
+            self.proj.recorded_variables[self.post_rank][var]['start'].append(-1)
+            self.proj.recorded_variables[self.post_rank][var]['stop'].append(-1)
+
+    def resume_record(self, variable=None):
         """
         Resume recording the previous defined variables.
         
@@ -343,38 +351,23 @@ class Dendrite(object):
         """
         _variable = []
         
-        if isinstance(variable, str):
+        if variable == None:
+            _variable = self.proj.recorded_variables[self.post_rank].keys() 
+        elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
             _variable = variable
         else:
             print('Error: variable must be either a string or list of strings.')
         
-        for var in _variable:
-            
-            if not var in var in self.proj._recordable_variables:
-                print(var, 'is not a recordable variable of', self.proj.name)
-                continue
-            
-            if not self.post_rank in self.proj._recorded_variables.keys() or \
-               not var in self.proj._recorded_variables[self.post_rank].keys() :
-                print('The recording of', var, 'was not running on projection', self.proj.name)
-                continue
-
-
-            if not self.proj._recorded_variables[self.post_rank][var].is_running:
-                print('Recording of', var, 'is already running on projection', self.proj.name)
-                continue
-            
+        for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, '_start_record_'+var)(self.post_rank)
-                
-                if Global.config['verbose']:
-                    print('resume record of', var, '(' , self.proj.name, ')')
-
-                self.proj._recorded_variables[self.post_rank][var].start()
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank)
             except:
-                print("Error: only possible after compilation.")
+                Global._error('resume:: ' + var + ' is not a recordable variable.')
+                return
+
+            self.proj.recorded_variables[self.post_rank][var]['start'][-1] = Global.get_current_step()
                 
     def get_record(self, variable=None):
         """
@@ -387,7 +380,7 @@ class Dendrite(object):
         """        
         _variable = []
         if variable == None:
-            _variable = self.proj._recorded_variables[self.post_rank].keys()
+            _variable = self.proj.recorded_variables[self.post_rank].keys() 
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -398,40 +391,59 @@ class Dendrite(object):
         data_dict = {}
         
         for var in _variable:
-
-            if not var in self.proj._recordable_variables:
-                Global._print(var, 'is not a recordable variable of', self.proj.name)
-                data_dict[var] = { 'start': -1, 'stop': -1, 'data': None }
-                continue
-            
-            if not self.post_rank in self.proj._recorded_variables.keys() or \
-               not var in self.proj._recorded_variables[self.post_rank].keys() :
-                print('The recording of', var, 'was not running on projection', self.proj.name)
+            if not var in self.proj.recorded_variables[self.post_rank]:
+                Global._warning(var, 'was not recording.')
                 continue
 
-            if self.proj._recorded_variables[self.post_rank][var].is_running:
-                self.pause_record(var)
-            
-            try:
-                if Global.config['verbose']:
-                    Global._print('get record of '+var+' ('+self.proj.name+')')
-                    
-                data = getattr(self.proj.cyInstance, '_get_recorded_'+var)(self.post_rank)
-                
-                data_dict[var] = { 
-                    'data': data.T,
-                    'start': self.proj._recorded_variables[self.post_rank][var].start_time,
-                    'stop': self.proj._recorded_variables[self.post_rank][var].stop_time
-                }
-                                
-                self.proj._recorded_variables[self.post_rank][var].reset()
-            except:
-                print("Error: only possible after compilation.")
+            try:                    
+                data = getattr(self.proj.cyInstance, 'get_recorded_'+var)(self.post_rank)
+            except Exception, e:
+                Global._error('get: ' + var + ' is not a recordable variable.')
+                return
 
-        if( len(_variable)==1 and variable!=None):
-            return data_dict[_variable[0]]
-        else:
-            return data_dict          
+            if self.proj.recorded_variables[self.post_rank][var]['stop'][-1] == -1:
+                self.proj.recorded_variables[self.post_rank][var]['stop'][-1] = Global.get_current_step()
+
+
+            data_dict[var] = {  
+                'start': self.proj.recorded_variables[self.post_rank][var]['start'] \
+                        if len(self.proj.recorded_variables[self.post_rank][var]['start']) > 1 \
+                        else self.proj.recorded_variables[self.post_rank][var]['start'][0],
+                'stop' : self.proj.recorded_variables[self.post_rank][var]['stop'] \
+                        if len(self.proj.recorded_variables[self.post_rank][var]['stop']) > 1 \
+                        else self.proj.recorded_variables[self.post_rank][var]['stop'][0] ,
+                'data' : data
+            }
+
+            self.proj.recorded_variables[self.post_rank][var]['start'] = [Global.get_current_step()]
+            self.proj.recorded_variables[self.post_rank][var]['stop'] = [-1]
+            
+        return data_dict          
     
 
+class IndividualSynapse(object):
+
+    def __init__(self, dendrite, rank):
+        self.dendrite = dendrite
+        self.rank = rank
+        self.idx = self.dendrite.rank.index(rank)
+        self.attributes = self.dendrite.proj.synapse.description['local']
+
+    def __getattr__(self, name):
+        " Method called when accessing an attribute."
+
+        if name in ['dendrite', 'attributes', 'rank', 'idx']:
+            return object.__getattribute__(self, name)
+        if name in self.attributes:
+            return getattr(self.dendrite.proj.cyInstance, 'get_synapse_'+name)(self.dendrite.post_rank, self.idx)
+        return object.__getattribute__(self, name)
+        
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        if name in ['dendrite', 'attributes', 'rank', 'idx']:
+            object.__setattr__(self, name, value)
+        elif name in self.attributes:
+                getattr(self.dendrite.proj.cyInstance, 'set_synapse_'+name)(self.dendrite.post_rank, self.idx, value)
+        else:
+            object.__setattr__(self, name, value)
 

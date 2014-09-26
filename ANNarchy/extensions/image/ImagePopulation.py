@@ -1,6 +1,7 @@
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
+from ANNarchy.generator.Generator import extra_libs 
 
 try:
     from PIL import Image
@@ -81,8 +82,7 @@ class ImagePopulation(Population):
         if not Global._compiled:
             self.r = (np.array(im))/255.
         else:
-            self.cyInstance._set_r(np.array(im).reshape(self.size)/255.)
-
+            self.cyInstance.set_r(np.array(im).reshape(self.size)/255.)
 
 
 class VideoPopulation(ImagePopulation):
@@ -125,9 +125,122 @@ class VideoPopulation(ImagePopulation):
         # Create the population     
         ImagePopulation.__init__(self, geometry = geometry, name=name )
 
-        # Code generator
-        from .VideoPopulationGenerator import VideoPopulationGenerator
-        self.generator = VideoPopulationGenerator(self)
+        # Code generator        
+        extra_libs.append('-lopencv_core')
+        extra_libs.append('-lopencv_imgproc')
+        extra_libs.append('-lopencv_highgui')
+        extra_libs.append('-lopencv_objdetect')
+        extra_libs.append('-lopencv_video')
+
+                # Generate the code
+        self.generator['omp']['header_pop_struct'] = """ 
+#include <opencv2/opencv.hpp>
+using namespace cv;
+// VideoPopulation
+class CameraDeviceCPP : public cv::VideoCapture {
+public:
+    CameraDeviceCPP (int id, int width, int height, int depth) : cv::VideoCapture(id){
+        width_ = width;
+        height_ = height;
+        depth_ = depth;      
+        img_ = vector<double>(width*height*depth, 0.0);
+    }
+    vector<double> GrabImage(){
+        if(isOpened()){
+            // Read a new frame from the video
+            Mat frame;
+            read(frame); 
+            // Resize the image
+            Mat resized_frame;
+            resize(frame, resized_frame, Size(width_, height_) );
+            // If depth=1, only luminance
+            if(depth_==1){
+                // Convert to luminance
+                cvtColor(resized_frame, resized_frame, CV_BGR2GRAY);
+                for(int i = 0; i < resized_frame.rows; i++){
+                    for(int j = 0; j < resized_frame.cols; j++){
+                        this->img_[j+width_*i] = float(resized_frame.at<uchar>(i, j))/255.0;
+                    }
+                }
+            }
+            else{ //BGR
+                for(int i = 0; i < resized_frame.rows; i++){
+                    for(int j = 0; j < resized_frame.cols; j++){
+                        Vec3b intensity = resized_frame.at<Vec3b>(i, j);
+                        this->img_[(j+width_*i)*3 + 0] = double(intensity.val[2])/255.0;
+                        this->img_[(j+width_*i)*3 + 1] = double(intensity.val[1])/255.0;
+                        this->img_[(j+width_*i)*3 + 2] = double(intensity.val[0])/255.0;
+                    }
+                }
+            }            
+        }
+        return this->img_;
+    };
+
+protected:
+    // Width and height of the image, depth_ is 1 (grayscale) or 3 (RGB)
+    int width_, height_, depth_;
+    // Vector of floats for the returned image
+    vector<double> img_;
+};
+
+struct PopStruct%(id)s{
+    int size;
+    std::vector< double > r ;
+    CameraDeviceCPP* camera_;
+    void StartCamera(int id, int width, int height, int depth){
+        camera_ = new CameraDeviceCPP(id, width, height, depth);
+        if(!camera_->isOpened()){
+            std::cout << "Error: could not open the camera." << std::endl;   
+        }
+    };
+    void GrabImage(){
+        if(camera_->isOpened()){
+            r = camera_->GrabImage();   
+        }
+    };
+}; 
+""" % {'id': self.id}
+
+        self.generator['omp']['pyx_pop_struct'] = """
+    # Population %(id)s (VideoPopulation)
+    cdef struct PopStruct%(id)s  :
+        int size
+        vector[double] r
+        void StartCamera(int id, int width, int height, int depth)
+        void GrabImage()
+""" % {'id': self.id}
+
+        self.generator['omp']['pyx_pop_class'] = """
+# Population %(id)s (VideoPopulation)
+cdef class pop%(id)s_wrapper :
+
+    def __cinit__(self, size):
+        pop%(id)s.size = size
+        pop%(id)s.r = vector[double](size, 0.0)
+
+    property size:
+        def __get__(self):
+            return pop%(id)s.size
+
+    # Local parameter r
+    cpdef np.ndarray get_r(self):
+        return np.array(pop%(id)s.r)
+    cpdef set_r(self, np.ndarray value):
+        pop%(id)s.r = value
+    cpdef double get_single_r(self, int rank):
+        return pop%(id)s.r[rank]
+    cpdef set_single_r(self, int rank, value):
+        pop%(id)s.r[rank] = value
+
+    # CameraDevice
+    def start_camera(self, int id, int width, int height, int depth):
+        pop%(id)s.StartCamera(id, width, height, depth)
+
+    def grab_image(self):
+        pop%(id)s.GrabImage()
+""" % {'id': self.id}
+
             
     def start_camera(self, camera_port=0):
         """
@@ -135,7 +248,8 @@ class VideoPopulation(ImagePopulation):
         
         On linux, the camera port corresponds to the number in /dev/video0, /dev/video1, etc.
         """
-        self.cyInstance.start_camera(camera_port, self.geometry[1], self.geometry[0], 3 if self._dimension==3 else 1)
+
+        self.cyInstance.start_camera(camera_port, self.geometry[1], self.geometry[0], 3 if self.dimension==3 else 1)
         
     def grab_image(self):
         """

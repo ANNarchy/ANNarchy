@@ -246,12 +246,12 @@ def load(filename, populations=True, projections=True):#, pure_data=True): TODO
         return
     if populations:
         # Over all populations
-        for pop in Global._populations:        
+        for name, pop in Global._populations.iteritems() :  
             # check if the population is contained in save file
             if pop.name in desc.keys():
                 _load_pop_data(pop, desc[pop.name])  
     if projections:    
-        for proj in Global._projections:
+        for name, proj in Global._projections.iteritems() : 
             if proj.name in desc.keys():            
                 _load_proj_data(proj, desc[proj.name])
 
@@ -268,11 +268,11 @@ def _net_description(populations, projections):
     network_desc = {}   
     
     if populations:
-        for pop in Global._populations:             
+        for name, pop in Global._populations.iteritems():             
             network_desc[pop.name] = pop._data() 
 
     if projections:
-        for proj in Global._projections:  
+        for name, proj in Global._projections.iteritems():  
             network_desc[proj.name] = proj._data() 
 
 
@@ -287,7 +287,7 @@ def _load_pop_data(pop, desc):
         return
     for var in desc['attributes']:
         try:
-            getattr(pop.cyInstance, '_set_'+var)(desc[var]) 
+            getattr(pop.cyInstance, 'set_'+var)(desc[var]) 
         except:
             Global._error('Can not load the variable ' + var + ' in the population ' + pop.name)
             return
@@ -296,8 +296,8 @@ def _load_pop_data(pop, desc):
 def _load_proj_data(proj, desc):
     """
     Update a projection with the stored data set. 
-    """          
-    if not desc['post_ranks'] == proj._post_ranks:
+    """       
+    if not desc['post_ranks'] == proj.post_ranks:
         Global._error('The current projection has not the same number of postsynaptic neurons as in the saved file.')
         return
     if not 'attributes' in desc.keys():
@@ -309,11 +309,9 @@ def _load_proj_data(proj, desc):
             if var in ['rank', 'delay']:
                 continue
             try:
-                getattr(proj.cyInstance, '_set_' + var)(rk, dendrite[var])
+                getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
             except Exception, e:
                 print e
                 Global._error('Can not set attribute ' + var + ' in the projection.')
                 return
 
-
-                    

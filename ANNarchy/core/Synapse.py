@@ -21,21 +21,26 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-import pprint
+import ANNarchy.core.Global as Global
+from ANNarchy.parser.SingleAnalysis import analyse_synapse
 
         
 class Synapse(object):
     """
     Base class to define a synapse.
     """
-
-    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None, extra_values=None ):
+    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, extra_values=None ):
         """ 
         *Parameters*:
         
             * **parameters**: parameters of the neuron and their initial value.
             * **equations**: equations defining the temporal evolution of variables.
+<<<<<<< HEAD
             * **psp**: post-synaptic potential summed by the post-synaptic neuron (rate-coded only).
+=======
+            * **psp**: influence of a single synapse on the post-synaptic neuron (rate-coded only, default: w*pre.r).
+            * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
+>>>>>>> v43/master
             * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
             * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
             * **functions**: additional functions used in the equations.
@@ -49,12 +54,33 @@ class Synapse(object):
         self.pre_spike = pre_spike
         self.post_spike = post_spike
         self.psp = psp
+        self.operation = operation
         self.extra_values = extra_values
+
+        # Type of the synapse
+        self.type = 'spike' if pre_spike else 'rate'
+
+        # Check the operation
+        if self.type == 'spike' and self.operation != 'sum':
+            Global._error('spiking synapses can only perform a sum of presynaptic potentials.')
+            exit(0)
+        if not self.operation in ['sum', 'min', 'max', 'mean']:
+            Global._error('the only operations permitted are: sum (default), min, max, mean.')
+            exit(0)
+
+        # Description
+        self.description = None
+
+    def _analyse(self):
+        # Analyse the synapse type
+        if not self.description:
+            self.description = analyse_synapse(self)
 
     def __add__(self, synapse):        
         self._variables.update(synapse.variables) 
 
     def __str__(self):
+        import pprint
         return pprint.pformat( self, depth=4 ) #TODO
 
 

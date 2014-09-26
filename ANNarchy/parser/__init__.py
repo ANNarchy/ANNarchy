@@ -1,2 +1,1 @@
-import Analyser
-from SingleAnalysis import analyse_population, analyse_projection
+from SingleAnalysis import analyse_neuron, analyse_synapse

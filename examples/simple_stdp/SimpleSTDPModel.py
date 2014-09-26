@@ -85,17 +85,16 @@ if __name__ == '__main__':
     compile()
 
     # Start recording
-    start_record ({ Input:  'spike', 
-                    Output: 'spike' } )
+    Input.start_record ('spike') 
+    Output.start_record ('spike')
 
     # Start the simulation
     print 'Start the simulation'
     simulate(duration, measure_time=True)
 
     # Retrieve the recordings
-    data = get_record()
-    input_spikes = data[Input]['spike']
-    output_spikes = data[Output]['spike']
+    input_spikes = Input.get_record()['spike']
+    output_spikes = Output.get_record()['spike']
 
     # Compute the mean firing rates during the simulation
     print 'Mean firing rate in the input population: ', np.mean([len(neur) *1000.0/duration for neur in input_spikes['data']])
@@ -105,7 +104,7 @@ if __name__ == '__main__':
     output_rate = smoothed_rate(output_spikes, 100.0)
 
     # Receptive field after simulation
-    weights = proj.dendrite(0).w
+    weights = proj.w[0]
 
     from pylab import *
     subplot(3,1,1)

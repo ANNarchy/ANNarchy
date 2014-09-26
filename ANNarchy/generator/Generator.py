@@ -31,14 +31,6 @@ import numpy as np
 import ANNarchy
 import ANNarchy.core.Global as Global
 
-from ANNarchy.parser.Analyser import Analyser, extract_functions
-
-from ANNarchy.generator.population import RatePopulationGenerator, SpikePopulationGenerator  
-from ANNarchy.generator.projection import RateProjectionGenerator, SpikeProjectionGenerator
-from ANNarchy.generator.dendrite import RateDendriteGenerator, SpikeDendriteGenerator
-  
-from network import *
-
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
 extra_libs = []
@@ -56,83 +48,23 @@ def _folder_management(profile_enabled, clean):
     # Verbose
     if Global.config['verbose']:
         Global._print("Create 'annarchy' subdirectory.")
-        
-    # Directory where the source files reside
-    sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
 
     if clean or profile_enabled:
         shutil.rmtree(Global.annarchy_dir, True)
 
     if not os.path.exists(Global.annarchy_dir):    
         os.mkdir(Global.annarchy_dir)
-        os.mkdir(Global.annarchy_dir+'/pyx')
         os.mkdir(Global.annarchy_dir+'/build')
         
     # Create the generate subfolder
     shutil.rmtree(Global.annarchy_dir+'/generate', True)
     os.mkdir(Global.annarchy_dir+'/generate')
-    os.mkdir(Global.annarchy_dir+'/generate/pyx')
-    os.mkdir(Global.annarchy_dir+'/generate/build')
 
-    # core cpp / h files
-    for cfile in os.listdir(sources_dir+'/core'):
-        shutil.copy(sources_dir+'/core/'+cfile, # src
-                    Global.annarchy_dir+'/generate/build/'+cfile # dest
-                    )
-    
-    if Global.config['paradigm'] == "openmp":
-        #
-        # currently we dont have openmp specific files
-        #=======================================================================
-        # # openmp .cpp / .h files
-        # for cfile in os.listdir(sources_dir+'/openmp'):
-        #     shutil.copy(sources_dir+'/openmp/'+cfile, # src
-        #                 Global.annarchy_dir+'/generate/build/'+cfile # dest
-        #                 )
-        #=======================================================================
-        pass
-    elif Global.config['paradigm'] == "cuda":
-        for cfile in os.listdir(sources_dir+'/cuda'):
-            shutil.copy(sources_dir+'/cuda/'+cfile, # src
-                        Global.annarchy_dir+'/generate/build/'+cfile # dest
-                        )        
-    else:
-        Global._print("unknown paradigm ... abort compilation ...")
-        exit(0)
-            
-    # pyx files
-    for pfile in os.listdir(sources_dir+'/pyx'):
-        shutil.copy(sources_dir+'/pyx/'+pfile, #src
-                    Global.annarchy_dir+'/generate/pyx/'+pfile #dest
-                    )
     # Save current ANNarchy version
     with open(Global.annarchy_dir+'/release', 'w') as f:
         f.write(ANNarchy.__release__)
 
-    # profile files
-    if profile_enabled:
-        profile_sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../extensions/Profile')    
-        shutil.copy(profile_sources_dir+'/Profile.cpp', Global.annarchy_dir+'/generate/build')
-        shutil.copy(profile_sources_dir+'/Profile.h', Global.annarchy_dir+'/generate/build')
-        shutil.copy(profile_sources_dir+'/cy_profile.pyx', Global.annarchy_dir+'/generate/pyx')
-
     sys.path.append(Global.annarchy_dir)
-
-def _update_float_prec(filename):
-    """
-    all code generated files will be updated
-    """
-    code = ''
-    with open(filename, mode = 'r') as r_file:
-        for a_line in r_file:
-            if Global.config['float_prec']=='single':
-                code += a_line.replace("DATA_TYPE","float")
-            else:
-                code += a_line.replace("float","double").replace("DATA_TYPE","double")
-
-    with open(filename, mode='w') as w_file:
-        w_file.write(code)
-
             
     
 def compile(clean=False, populations=None, projections=None, cpp_stand_alone=False, debug_build=False, profile_enabled = False):
@@ -188,25 +120,6 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
                 clean = True
     else:
         clean = True
-            
-    # TODO: remove when parallel spikes work!!!!
-    #===========================================================================
-    # has_spike = False
-    # for pop in populations:
-    #     if pop.description['type'] == 'spike':
-    #         has_spike = True
-    # if has_spike:
-    #     Global.config['num_threads'] = 1
-    #===========================================================================
-
-
-    # Test if profiling is enabled
-    if profile_enabled:
-        try:
-            from ANNarchy.extensions import Profile
-        except ImportError:
-            Global._error( 'Profile extension was not found.' )
-            profile_enabled = False
 
     # Manage the compilation subfolder
     _folder_management(profile_enabled, clean)
@@ -232,198 +145,47 @@ class Generator(object):
         
     def generate(self):
         " Method to generate the C++ code."
-        # Call the analyser to parse all equations
-        self.analyser = Analyser(self.populations, self.projections)
-        success = self.analyser.analyse()
-        if not success:
-            Global._error('The network can not be generated.')
-            exit(0)
-        
+
         # Generate the code
         self.code_generation(self.cpp_stand_alone, self.profile_enabled, 
                                                         self.clean)
-        
-        # Test if the code has changed last compilation
-        changed_cpp, changed_pyx = self.test_changed()
-
-        # if changed_pyx: # delete all the .o
-        #     for file in os.listdir(Global.annarchy_dir+'/build'):
-        #         if file.endswith('.o'):
-        #             os.remove(Global.annarchy_dir+'/build/'+file)
-
-
+        # Copy the files if needed
+        changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
-        self.partial_compilation(changed_cpp, changed_pyx)
+        if changed:
+            self.compilation()
                 
-        # Create the Python objects
-        if not self.cpp_stand_alone:        
-            if Global.config['verbose']:
-                Global._print('Building network ...')
-            self.instantiate()    
-        else:
-            #abort the application after compiling ANNarchyCPP
-            Global._print('\nCompilation process of ANNarchyCPP completed successful.\n')
-            exit(0)
-            
-    def code_generation(self, cpp_stand_alone, profile_enabled, clean):
-        """
-        Code generation for each population respectively projection object the user defined. 
-        
-        After this the ANNarchy main header is expanded by the corresponding headers.
-        """
-        if Global.config['verbose']:
-            print('\nGenerate code ...')
-            
-        # Generate code for the analysed pops and projs    
-        
-        # create population cpp class for each neuron
-        for name, desc in self.analyser.analysed_populations.iteritems():
-            if hasattr(desc['pop'], 'generator'): # extension
-                pop_generator = desc['pop'].generator
-            elif desc['type'] == 'rate':
-                pop_generator = RatePopulationGenerator(name, desc)
-            elif desc['type'] == 'spike':
-                pop_generator = SpikePopulationGenerator(name, desc)
-            pop_generator.generate(Global.config['verbose'])
-        
-        # create projections cpp class for each synapse
-        for name, desc in self.analyser.analysed_projections.iteritems():
+        # Create the Python objects                
+        self.instantiate()    
 
-            paradigm = Global.config['paradigm'] if Global.config.has_key('paradigm') else "openmp"
-            
-            if desc['type'] == 'rate':
-                proj_generator = RateProjectionGenerator(name, desc)
-                dend_generator = RateDendriteGenerator(name.replace('Projection','Dendrite'), desc, paradigm)
-            else:
-                proj_generator = SpikeProjectionGenerator(name, desc)
-                dend_generator = SpikeDendriteGenerator(name.replace('Projection','Dendrite'), desc, paradigm)
-            
-            proj_generator.generate(Global.config['verbose'])
-            dend_generator.generate(Global.config['verbose'])
-            
-        # Create default files mainly based on the number of populations and projections
-        if Global.config['verbose']:
-            print('\nCreate Includes.h ...')
-        self.create_includes()
-    
-        if Global.config['verbose']:
-            print('\nUpdate ANNarchy.h ...')
-        self.update_annarchy_header()
-     
-        if Global.config['verbose']:
-            print('\nUpdate global header ...')
-        self.update_global_header()
-     
-        if Global.config['verbose']:
-            print('\nGenerate py extensions ...')
-        self.generate_py_extension()
-         
-        # Change the float precision in every file
-        os.chdir(Global.annarchy_dir+'/generate/build')
-        cpp_src = filter(os.path.isfile, os.listdir('.'))
-        for file in cpp_src:
-            _update_float_prec(file)
-                 
-        os.chdir(Global.annarchy_dir+'/generate/pyx')
-        pyx_src = filter(os.path.isfile, os.listdir('.'))
-        for file in pyx_src:
-            _update_float_prec(file)
-        os.chdir(Global.annarchy_dir)  
-        
-    def test_changed(self):  
-        " Test if the code generation has changed since last time."
-        def copy_changed(folder):
-            changed = False
-            # Copy the files which have changed 
-            for file in os.listdir(Global.annarchy_dir+'/generate/' + folder):
-                # If the file does not exist in build/ or pyx/, 
-                # or if the newly generated file is different, copy the new file
-                if not os.path.isfile(Global.annarchy_dir+'/'+folder+'/'+file) or \
-                   not filecmp.cmp(Global.annarchy_dir+'/generate/'+folder+'/'+file, 
-                                   Global.annarchy_dir+'/'+folder+'/'+file):
-                    shutil.copy(Global.annarchy_dir+'/generate/'+folder+'/'+file, # src
-                                Global.annarchy_dir+'/'+folder+'/'+file # dest
-                    )
-                    changed = True
-                    if Global.config['verbose']:
-                        Global._print(file, 'has changed since last compilation.')                        
-            return changed
-        
-        def test_deleted(folder):
-            changed = False
-            # Copy the files which have changed 
-            for file in os.listdir(Global.annarchy_dir+'/' + folder):
-                # If the file does not exist in generate/build/ or generate/pyx/
-                if not os.path.isfile(Global.annarchy_dir+'/generate/'+folder+'/'+file):
-                    if not file.endswith('.o') and not file == 'ANNarchyCython.cpp': # skip generated files
-                        os.remove(Global.annarchy_dir+'/'+folder+'/'+file)
-                        if file.endswith('.cpp') : # suppress a population or projection
-                            os.remove(Global.annarchy_dir+'/'+folder+'/'+file.replace('.cpp', '.o'))                            
-                        changed = True
-                        if Global.config['verbose']:
-                            Global._print(file, 'has been deleted.') 
-            return changed
-        
-        changed_cpp = False
-        changed_pyx = False
-        if not self.clean:
-            import filecmp
-            # Copy the files which have changed 
-            changed_cpp = copy_changed('build')
-            changed_pyx = copy_changed('pyx')
-            # Test if some files have disappeared in generate
-            changed_cpp = changed_cpp or test_deleted('build')
-            changed_pyx = changed_pyx or test_deleted('pyx')
-    
-        else: # Copy everything
-            for file in os.listdir(Global.annarchy_dir+'/generate/build'):
-                shutil.copy(Global.annarchy_dir+'/generate/build/'+file, # src
+    def copy_files(self, clean):
+        " Copy the generated files in the build/ folder if needed."
+        changed = False
+        if clean:
+            for file in os.listdir(Global.annarchy_dir+'/generate'):
+                shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
                             Global.annarchy_dir+'/build/'+file # dest
                 )
-            for file in os.listdir(Global.annarchy_dir+'/generate/pyx'):
-                shutil.copy(Global.annarchy_dir+'/generate/pyx/'+file, # src
-                            Global.annarchy_dir+'/pyx/'+file # dest
-                )
-            changed_cpp = True
-            changed_pyx = True
-            
-        return changed_cpp, changed_pyx
-    
-    def check_output(*popenargs, **kwargs):
-        """Run command with arguments and return its output as a byte string.
-         
-        Backported from Python 2.7 as it's implemented as pure python on stdlib.
-         
-        >>> check_output(['/usr/bin/python', '--version'])
-        Python 2.6.2
+            changed = True
+        else: # only the ones which have changed
+            import filecmp
+            for file in os.listdir(Global.annarchy_dir+'/generate'):
+                if  not os.path.isfile(Global.annarchy_dir+'/build/'+file) or \
+                    not filecmp.cmp( Global.annarchy_dir+'/generate/'+file, 
+                                    Global.annarchy_dir+'/build/'+file) :
+                    shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
+                                Global.annarchy_dir+'/build/'+file # dest
+                    )
+                    changed = True
+        return changed
 
-        adapted from: https://gist.github.com/edufelipe/1027906
-
-        Modifications: Popen(cmd, stdout=...)
-        """
-        cmd = popenargs[1]
-
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, **kwargs)
-        output, unused_err = process.communicate()
-        retcode = process.poll()
-
-        if retcode:
-            cmd = kwargs.get("args")
-
-        if cmd is None:
-            cmd = popenargs[0]
-            error = subprocess.CalledProcessError(retcode, cmd)
-            error.output = output
-            raise error
-        return output
-
-    def partial_compilation(self, changed_cpp, changed_pyx):
+    def compilation(self):
         """ Create ANNarchyCore.so and py extensions if something has changed."""
-        if changed_cpp or changed_pyx:   
-            Global._print('Compiling ... ')
-            if Global.config['show_time']:
-                t0 = time.time()
+ 
+        Global._print('Compiling ... ')
+        if Global.config['show_time']:
+            t0 = time.time()
                                 
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
@@ -441,36 +203,23 @@ class Generator(object):
     
             py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
                                                    'minor': sys.version_info[1] }
+
+            numpy_include = np.get_include()
     
             # generate Makefile
-            if Global.config.has_key('paradigm'):
-                if Global.config['paradigm'] == "openmp":
-                    src = omp_makefile % { 'src_type': '%.cpp',
-                                           'obj_type': '%.o',
-                                           'py_version': py_version, 
-                                           'flag': flags,
-                                           'extra_libs': libs,
-                                           'numpy_include': np.get_include() }
-                else: 
-                    src = cuda_makefile % { 'src_type': '%.cpp',
-                                            'src_gpu': '%.cu',
-                                            'obj_type': '%.o',
-                                            'py_version': py_version,
-                                            'flag': flags }
-            else:
-                src = omp_makefile % { 'src_type': '%.cpp',
-                                       'obj_type': '%.o',
-                                       'py_version': py_version, 
-                                       'flag': flags,
-                                       'extra_libs': libs,
-                                       'numpy_include': np.get_include() }
+            src = """# Makefile generated by ANNarchy
+all:
+\tcython build/ANNarchyCore.pyx --cplus
+\tg++ -march=native %(flags)s -shared -fPIC -fpermissive -std=c++0x -I. -I/usr/include/python%(py_version)s -I %(numpy_include)s -fopenmp %(libs)s build/*.cpp -o ANNarchyCore.so
+
+clean:
+\trm -rf build/*.o
+\trm -rf build/*.so
+""" % {'flags': flags, 'libs': libs, 'py_version': py_version, 'numpy_include': numpy_include}
 
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)
-            # Force recompilation of the Cython wrappers
-            if changed_pyx: 
-                os.system('touch pyx/ANNarchyCython.pyx')
             
             if Global.config['verbose'] == False:
                 pipe_to_cmd_line = "> compile_stdout.log 2> compile_stderr.log"
@@ -479,213 +228,80 @@ class Generator(object):
                 
             # Start the compilation
             try:
-                if self.cpp_stand_alone:
-                    subprocess.check_output("make ANNarchyCPP -j4 "+ pipe_to_cmd_line, 
+                subprocess.check_output("make -j4 "+ pipe_to_cmd_line, 
                                             shell=True)
-                elif sys.version_info[:2] == (2, 6):
-                    self.check_output("make ANNarchyCython_2.6 -j4 "+ pipe_to_cmd_line, 
-                                            shell=True)
-                elif sys.version_info[:2] == (2, 7):
-                    subprocess.check_output("make ANNarchyCython_2.7 -j4 "+ pipe_to_cmd_line, 
-                                            shell=True)
-                elif sys.version_info[:2] == (3, 2):
-                    subprocess.check_output("make ANNarchyCython_3.x -j4 "+ pipe_to_cmd_line, 
-                                            shell=True)
-                else:
-                    Global._error('No correct setup could be found. Do you have Python installed?')
-                    exit(0)
             except subprocess.CalledProcessError:
                 Global._error('Compilation failed.\nCheck the compilation logs in annarchy/compile_stderr.log')
                 exit(0)
     
         else: # Windows: to test....
-            sources_dir = os.path.abspath(os.path.dirname(__file__)+'/../data')
-            shutil.copy(sources_dir+'/compile.bat', Global.annarchy_dir)
-            proc = subprocess.Popen(['compile.bat'], shell=True)
-            proc.wait()
+            pass
         
         Global._compiled = True
-    
-        if changed_cpp or changed_pyx:   
-            Global._print('OK')
-            if Global.config['show_time']:
-                Global._print('Compilation took', time.time() - t0, 'seconds.')
+
+        Global._print('OK')
+        if Global.config['show_time']:
+            Global._print('Compilation took', time.time() - t0, 'seconds.')
+
                 
     def instantiate(self):
         """ After every is compiled, actually create the Cython objects and 
             bind them to the Python ones."""
+
+        if Global.config['verbose']:
+            Global._print('Building network ...')
+
         # Return to the current directory
         os.chdir('..')
 
         # Import the Cython library
-        self.cython_module = __import__('ANNarchyCython')
-         
+        cython_module = __import__('ANNarchyCore')
+        global _network
+        Global._network = cython_module
+
         # Bind the py extensions to the corresponding python objects
-        for pop in self.populations:
+        for name, pop in self.populations.iteritems():
             if Global.config['verbose']:
-                Global._print('    Create population', pop.name)
+                Global._print('Create population', pop.name)
             if Global.config['show_time']:
                 t0 = time.time()
             
             # Instantiate the population
-            pop._instantiate(self.cython_module)
+            pop._instantiate(cython_module)
 
             if Global.config['show_time']:
                 Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds') 
                             
         # Instantiate projections
-        for proj in self.projections:
+        for name, proj in self.projections.iteritems():
             if Global.config['verbose']:
                 Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')        
             if Global.config['show_time']:
                 t0 = time.time()
             
             # Create the projection
-            proj._instantiate(self.cython_module)
+            proj._instantiate(cython_module)
             
             if Global.config['show_time']:
-                Global._print('        took', (time.time()-t0)*1000, 'milliseconds')
-        
-        # Instantiate the network
-        global _network
-        Global._network = self.cython_module.pyNetwork()
+                Global._print('    took', (time.time()-t0)*1000, 'milliseconds')
+    
 
-        # check if user defined a certain number of threads.
-        Global._network.set_num_threads(Global.config['num_threads'])
-            
-                
-    def create_includes(self):
-        """ Generates 'Includes.h' containing all generated headers.
-        """
-        populations = self.analyser.analysed_populations.keys()
-        projections = self.analyser.analysed_projections.keys()
-        pop_header  = ''
-        for pop in populations:
-            pop_header += '#include "'+pop+'.h"\n'
-    
-        proj_header = ''
-        for proj in projections:
-            proj_header += '#include "'+ proj +'.h"\n'
-    
-        header = """#ifndef __ANNARCHY_INCLUDES_H__
-#define __ANNARCHY_INCLUDES_H__
-  
-// population files
-%(pop_header)s
-// projection files
-%(proj_header)s
-#endif
-""" % { 'pop_header': pop_header, 'proj_header': proj_header}
-    
-        with open(Global.annarchy_dir + '/generate/build/Includes.h', mode = 'w') as w_file:
-            w_file.write(header)
-            
-    def update_annarchy_header(self):
-        """ Updates ANNarchy.h depending on compilation modes:
-        
-        *Available modes*:
-         
-            * cpp_stand_alone::
-            
-                True: instantiation of population, projection classes and projection instantiation.
-                False: only projection instantiation.
-    
-            * profile_enabled::
-            
-                True: enabled profile
-                False: disabled profile
-        """
-        code = ''
-        with open(Global.annarchy_dir+'/generate/build/ANNarchy.h', mode = 'r') as r_file:
-            for a_line in r_file:
-                if a_line.find('//AddProjection') != -1:
-                    code += a_line
-                    if(self.cpp_stand_alone):
-                        
-                        template = """
-        auto proj_%(preID)s_%(postID)s = new %(name)s ( %(preID)s, %(postID)s, %(target)s ); \n
-        net_->connect(%(preID)i, %(postID)i, %(target)i, "%(filename)s");\n
-""" 
-                        
-                        for proj in self.projections:
-                            dictionary = { 'preID' : proj.pre._id,
-                                           'postID' : proj.post._id,
-                                           'target' : proj.post.targets.index(proj.target),
-                                           'name': proj.name,
-                                           'filename' : proj.pre.name+'_'+proj.post.name+'_'+proj.target+'.csv'
-                                          } 
-                            
-                            code += template % dictionary
+        # Finish to initialize the network, especially the rng
+        # Must be called after the pops and projs are created!
+        cython_module.pyx_create(Global.config['dt'])
 
-                elif a_line.find('//AddPopulation') != -1:
-                    code += a_line 
-                    if(self.cpp_stand_alone):
-                        #
-                        # populations register themselves on the network object, so only create the objects
-                        template = """new %(class)s("%(name)s", %(size)s);\n"""
-                        for pop in self.populations:
-                            code += template % { 'name': pop.name,
-                                                 'class': pop.class_name,
-                                                 'size': pop.size }
-                                                         
-                else:
-                    code += a_line
-    
-        with open(Global.annarchy_dir+'/generate/build/ANNarchy.h', mode='w') as w_file:
-            w_file.write(code)
+        # Sets the desired number of threads
+        cython_module.set_number_threads(Global.config['num_threads'])
             
-
-    def update_global_header(self):
-        """
-        update Global.h dependent on compilation modes:
-        
-        *available modes*:
-    
-            * profile_enabled::
             
-                True: enabled profile
-                False: disabled profile
+    def code_generation(self, cpp_stand_alone, profile_enabled, clean):
         """
-        code = ''
+        Code generation.
+        """
+        if Global.config['verbose']:
+            print('\nGenerate code ...')
         
-        with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'r') as r_file:
-            for a_line in r_file:
-                if (a_line.find('ANNAR_PROFILE') != -1 and 
-                    a_line.find('define') != -1):
-                    if self.profile_enabled:
-                        code += '#define ANNAR_PROFILE\n'
-                elif a_line.find('//FUNCTIONS') != -1: # Put the global functions here
-                    code += a_line
-                    for func in Global._functions:
-                        code += "    " +  extract_functions(func, local_global=True)[0]['cpp']
-                else:
-                    code += a_line
-    
-        with open(Global.annarchy_dir+'/generate/build/Global.h', mode = 'w') as w_file:
-            w_file.write(code)
-                
-    def generate_py_extension(self):
-        """
-        Because the amount of code is higher, we decide to split up the code. Nevertheless cython generates 
-        one shared library per .pyx file. To retrieve only one library we need to compile only one .pyx file
-        which includes all the others. 
-        """
-        populations = self.analyser.analysed_populations.keys()
-        projections = self.analyser.analysed_projections.keys()
-           
-        pop_include = ''
-        for pop in populations:
-            pop_include += 'include \"'+pop+'.pyx\"\n'
-    
-        proj_include = ''
-        for proj in projections:
-            proj_include += 'include \"'+proj+'.pyx\"\n'
-    
-        code = py_extension % { 'pop_inc': pop_include,
-                                'proj_inc': proj_include,
-                                'profile': 'include "cy_profile.pyx"' if self.profile_enabled else '' 
-                              }
-    
-        with open(Global.annarchy_dir+'/generate/pyx/ANNarchyCython.pyx', mode='w') as w_file:
-            w_file.write(code)
-        
+        # Select paradigm here....
+        from .OMP.OMPGenerator import OMPGenerator
+        generator = OMPGenerator(self.populations, self.projections)
+        generator.generate()

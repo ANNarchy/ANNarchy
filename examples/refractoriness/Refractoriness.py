@@ -27,7 +27,7 @@ spike = """
 reset = """
     x = 0
 """,
-refractory = Uniform(1,5)
+refractory = Uniform(1.0, 5.0)
 )
 
 pop = Population( geometry=25, neuron = Neuron )

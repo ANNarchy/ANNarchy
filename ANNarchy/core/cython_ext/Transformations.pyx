@@ -10,7 +10,7 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
 
     Parameters:
 
-    * *data* the dictionary returned by ``get_record()[Pop]['spike']``
+    * *data* the dictionary returned by ``Pop.get_record()['spike']``
 
     * *smooth* the smoothing time constant (default: 0 ms)
     """
@@ -31,7 +31,7 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
 
     # Compute instantaneous firing rate
     for n in xrange(N):
-        last_spike = data['start'] - 100
+        last_spike = data['start'] - int(100.0/dt)
         for timing in data['data'][n]:
             if last_spike>data['start']:
                 rates[n, last_spike:timing] = 1000.0/dt/float(timing - last_spike)  

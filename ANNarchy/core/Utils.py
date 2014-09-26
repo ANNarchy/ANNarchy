@@ -33,6 +33,7 @@ def histogram(data):
         duration = 0
         for t in range(len(data['start'])):
             duration += data['stop'][t] - data['start'][t]
+            
     nb_neurons = len(data['data'])
     spikes = [0 for t in xrange(duration)]
     for neuron in range(nb_neurons):

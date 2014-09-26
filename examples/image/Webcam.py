@@ -31,9 +31,6 @@ class Viewer(object):
         self.pop.grab_image()
         # Refresh the GUI
         self.vis.setImage(np.swapaxes(self.pop.r,0,1))
-        #self.vis.setImage(self.pop.r)
-        #self.vis.setImage(np.ones((640, 480, 3)))
-        #a = self.pop.r
         # Listen to mouse/keyboard events
         QtGui.QApplication.processEvents()
         # FPS

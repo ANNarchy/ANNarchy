@@ -1,4 +1,4 @@
-from ANNarchy.core.Population import Population
+from ANNarchy.core.Population import Population, pop_generator_template
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 import numpy as np
@@ -117,7 +117,11 @@ class SpikeSourceArray(Population):
 
     *Parameters*:
 
+<<<<<<< HEAD
     * **spike_times** : a list of times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise.
+=======
+    * **spike_times** : a list of times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+>>>>>>> v43/master
 
     * **name**: optional name for the population.
     """
@@ -139,26 +143,124 @@ class SpikeSourceArray(Population):
                 spike_times = 0.0
             """,
             equations="",
-            spike="(t - spike_times < dt) and (t >= spike_times)"
+            spike=" t == spike_times",
+            reset=""
         )
 
         Population.__init__(self, geometry=nb_neurons, neuron=neuron, name=name)
-
-        self.generator = SpikeSourceArrayGenerator(self)
 
         # Do some sorting to save C++ complexity
         times = []
         for neur_times in spike_times:
             times.append(sorted(list(set(neur_times))) ) # suppress doublons and sort
 
-        self.description['parameters'][0]['init'] = times # for instantiate...
-        self._times = times
+        self.init['spike_times'] = times
+
+        # Generate the Code
+        self.generator['omp']['header_pop_struct'] = """
+// Spike array
+struct PopStruct%(id)s{
+    // Number of neurons
+    int size;
+    // Spiking population
+    std::vector<bool> spike;
+    std::vector<long int> last_spike;
+    std::vector<int> spiked;
+    bool record_spike;
+    std::vector<std::vector<long> > recorded_spike;
+    // Local parameter spike_times
+    std::vector< std::vector< double > > spike_times ;
+    std::vector< double >  next_spike ;
+    std::vector< int > idx_next_spike;
+}; 
+"""
+        self.generator['omp']['body_spike_init'] = """    
+    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
+    pop%(id)s.spiked = std::vector<int>(0, 0);
+    pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
+    pop%(id)s.next_spike = std::vector<double>(pop%(id)s.size, -10000L);
+    for(int i=0; i<pop%(id)s.size; i++){
+        pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][0];  
+    }
+    pop%(id)s.idx_next_spike = std::vector<int>(pop%(id)s.size, 0);
+"""
+        self.generator['omp']['body_update_neuron'] = """ 
+    // Updating the local variables of SpikeArray population %(id)s
+    #pragma omp parallel for
+    for(int i = 0; i < pop%(id)s.size; i++){
+        // Emit spike 
+        if( (t >= (long int)(pop%(id)s.next_spike[i]/dt)) && (t < (long int)(pop%(id)s.next_spike[i]/dt) +1 ) ){
+            pop%(id)s.spike[i] = true;
+            pop%(id)s.last_spike[i] = t;
+            pop%(id)s.idx_next_spike[i]++ ;
+            if(pop%(id)s.idx_next_spike[i] < pop%(id)s.spike_times[i].size())
+                pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][pop%(id)s.idx_next_spike[i]];
+        }
+        else{
+            pop%(id)s.spike[i] = false;
+        }
+    }
+    // Gather spikes
+    pop%(id)s.spiked.clear();
+    for(int i=0; i< pop%(id)s.size; i++){
+        if(pop%(id)s.spike[i]){
+            pop%(id)s.spiked.push_back(i);
+            if(pop%(id)s.record_spike){
+                pop%(id)s.recorded_spike[i].push_back(t);
+            }
+        }
+    }
+"""   
+        self.generator['omp']['pyx_pop_struct'] = """
+    cdef struct PopStruct%(id)s :
+        int size
+
+        bool record_spike
+        vector[vector[long]] recorded_spike
+
+        # Local parameter spike_times
+        vector[vector[double]] spike_times 
+"""
+        self.generator['omp']['pyx_pop_class'] = """
+cdef class pop%(id)s_wrapper :
+    def __cinit__(self, size):
+        pop%(id)s.size = size
+        # Spiking neuron
+        pop%(id)s.record_spike = False
+        pop%(id)s.recorded_spike = vector[vector[long]]()
+        for i in xrange(pop%(id)s.size):
+            pop%(id)s.recorded_spike.push_back(vector[long]())
+
+        pop%(id)s.spike_times = vector[vector[double]](size, vector[double]())
+
+    property size:
+        def __get__(self):
+            return pop%(id)s.size
+
+    # Spiking neuron
+    def start_record_spike(self):
+        pop%(id)s.record_spike = True
+    def stop_record_spike(self):
+        pop%(id)s.record_spike = False
+    def get_record_spike(self):
+        cdef vector[vector[long]] tmp = pop%(id)s.recorded_spike
+        for i in xrange(self.size):
+            pop%(id)s.recorded_spike[i].clear()
+        return tmp
+
+
+    # Local parameter spike_times
+    cpdef get_spike_times(self):
+        return pop%(id)s.spike_times
+    cpdef set_spike_times(self, value):
+        pop%(id)s.spike_times = value
+"""
 
 
     def __setattr__(self, name, value):
         if name == 'spike_times':
             if self.initialized:
-                self.cyInstance._set_custom_spike_timings(self._times)
+                self.cyInstance.set_spike_times(value)
             else:
                 object.__setattr__(self, name, value)
         else:
@@ -167,254 +269,9 @@ class SpikeSourceArray(Population):
     def __getattr__(self, name):
         if name == 'spike_times':
             if self.initialized:
-                return self.cyInstance._get_custom_spike_timings()
+                return self.cyInstance.get_spike_times()
             else:
                 return object.__getattribute__(self, name)
         else:
             return Population.__getattribute__(self, name)
-
-    def _instantiate(self, module):
-        # Create the Cython instance 
-        self.cyInstance = getattr(module, 'py'+ self.class_name)(self.size, self._times)
-
-        # Create the local attributes and actualize the initial values
-        self._init_attributes()
-
-from ANNarchy.generator.population.SpikePopulationGenerator import SpikePopulationGenerator
-from ANNarchy.generator.population.Templates import *
-
-class SpikeSourceArrayGenerator(object):
-
-    def __init__(self, pop):
-        self.pop = pop
-
-        # Names of the files to be generated
-        self.header = Global.annarchy_dir+'/generate/build/'+self.pop.class_name+'.h'
-        self.body = Global.annarchy_dir+'/generate/build/'+self.pop.class_name+'.cpp'
-        self.pyx = Global.annarchy_dir+'/generate/pyx/'+self.pop.class_name+'.pyx'
-        
-        
-    def generate(self, verbose):
-        #   generate files
-        with open(self.header, mode = 'w') as w_file:
-            w_file.write(self.generate_header())
-        with open(self.body, mode = 'w') as w_file:
-            w_file.write(self.generate_body())
-        with open(self.pyx, mode = 'w') as w_file:
-            w_file.write(self.generate_pyx()) 
-
-
-    def generate_header(self):
-        template = \
-"""#ifndef __ANNarchy_%(class)s_H__
-#define __ANNarchy_%(class)s_H__
-
-#include "Global.h"
-#include "SpikePopulation.h"
-using namespace ANNarchy_Global;
-
-class %(class)s: public SpikePopulation
-{
-public:
-    %(class)s(std::string name, int nbNeurons, std::vector< std::vector < DATA_TYPE > > spike_times);
-    
-    ~%(class)s();
-    
-    int getNeuronCount() { return nbNeurons_; }
-    
-    void localMetaStep(int neur_rank);
-    
-    void globalMetaStep();
-    
-    void globalOperations();
-    
-    void record();
-    
-    void reset();    // called by global_operations
-
-    void reset(int rank);    // called by metaStep during refractoring phase
-
-    // Access methods for the local variable spike_times
-    std::vector< std::vector< DATA_TYPE > > get_spike_times() { return this->spike_times_; }
-    void set_spike_times(std::vector< std::vector< DATA_TYPE> > spike_times) { this->spike_times_ = spike_times; }
-    
-    std::vector< DATA_TYPE > get_single_spike_times(int rank) { return this->spike_times_[rank]; }
-    void set_single_spike_times(int rank, std::vector< DATA_TYPE > spike_times) { this->spike_times_[rank] = spike_times; }
-
-private:
-    
-    // Generated by SpikeSourceArrayGenerator
-    std::vector< std::vector< DATA_TYPE > > spike_times_;
-    std::vector< DATA_TYPE > next_spikes_;
-    std::vector< int> idx_next_spikes_;
-};
-#endif
-""" % {'class' : self.pop.class_name}
-    
-        return template
-
-    def generate_body(self):
-
-        template = """#include "%(class)s.h"
-#include "Global.h"
-#include "SpikeDendrite.h"
-#include "SpikeProjection.h"
-
-%(class)s::%(class)s(std::string name, int nbNeurons, std::vector< std::vector < DATA_TYPE > > spike_times): SpikePopulation(name, nbNeurons)
-{
-    rank_ = %(pop_id)s;
-    
-#ifdef _DEBUG
-    std::cout << name << ": %(class)s::%(class)s called (using rank " << rank_ << ")" << std::endl;
-#endif
-
-    // dt : integration step
-    dt_ = %(dt)s;
-
-    // Generated by SpikeSourceArrayGenerator
-    spike_times_ = spike_times;
-    idx_next_spikes_ = std::vector< int >(nbNeurons_, 0);
-    next_spikes_ = std::vector< DATA_TYPE >(nbNeurons_, -100.0);
-    for(int i = 0; i< nbNeurons_; i++){
-        if(spike_times_[i].size() > 0)
-           next_spikes_[i] = spike_times_[i][0];
-    }
-    
-    try
-    {
-        Network::instance()->addPopulation(this);
-    }
-    catch(std::exception e)
-    {
-        std::cout << "Failed to attach population"<< std::endl;
-        std::cout << e.what() << std::endl;
-    }
-}
-
-%(class)s::~%(class)s() 
-{
-#ifdef _DEBUG
-    std::cout << "%(class)s::Destructor" << std::endl;
-#endif
-}
-
-void %(class)s::localMetaStep(int i) 
-{
-    // Generated from SpikeSourceArrayGenerator
-    if( DATA_TYPE(ANNarchy_Global::time)*dt_ >= next_spikes_[i] && DATA_TYPE(ANNarchy_Global::time)*dt_ - next_spikes_[i] < dt_ )
-    {
-        emit_spike(i);
-        idx_next_spikes_[i]++;
-        if(idx_next_spikes_[i] < spike_times_[i].size())
-            next_spikes_[i] = spike_times_[i][idx_next_spikes_[i]];
-    }    
-}
-
-void %(class)s::globalMetaStep() 
-{
-}
-
-void %(class)s::globalOperations() 
-{
-}
-
-void %(class)s::record() 
-{
-}
-
-void %(class)s::reset() 
-{    
-}
-
-void %(class)s::reset(int rank)
-{
-}
-
-""" % {'class' : self.pop.class_name, 'pop_id': self.pop._id, 'dt': Global.config['dt']}
-    
-        return template
-
-
-    def generate_pyx(self):
-        template = \
-"""from libcpp cimport bool
-from libcpp.vector cimport vector
-from libcpp.string cimport string
-import numpy as np
-cimport numpy as np
-
-cdef extern from "../build/%(class_name)s.h":
-    cdef cppclass %(class_name)s:
-        %(class_name)s(string name, int N, vector[ vector[double] ] spike_timings)
-
-        int getNeuronCount()
-        
-        string getName()
-        
-        vector[ vector[int] ] get_spike_timings()        
-        void reset_spike_timings()
-        void start_record_spike()
-        void stop_record_spike()
-        
-        void setMaxDelay(int)
-        
-        # Refractory times
-        void setRefractoryTimes(vector[int])        
-        vector[int] getRefractoryTimes()
-
-        # Generated by SpikeSourceArrayGenerator
-        vector[ vector[double] ] get_spike_times()  
-        void set_spike_times(vector[ vector[double] ] )  
-
-cdef class py%(class_name)s:
-
-    cdef %(class_name)s* cInstance
-
-    def __cinit__(self, int size, spike_timings):
-        self.cInstance = new %(class_name)s('%(name)s', size, spike_timings)
-
-    def name(self):
-        return self.cInstance.getName()
-
-    cpdef np.ndarray _get_recorded_spike(self):
-        cdef np.ndarray tmp
-        tmp = np.array( self.cInstance.get_spike_timings() )
-        self.cInstance.reset_spike_timings()
-        return tmp
-
-    def _start_record_spike(self):
-        self.cInstance.start_record_spike()
-
-    def _stop_record_spike(self):
-        self.cInstance.stop_record_spike()
-
-    def set_max_delay(self, delay):
-        self.cInstance.setMaxDelay(delay)
-
-    property size:
-        def __get__(self):
-            return self.cInstance.getNeuronCount()
-        def __set__(self, value):
-            print "py%(name)s.size is a read-only attribute."
-
-    cpdef np.ndarray _get_refractory(self):
-        return np.array(self.cInstance.getRefractoryTimes())
-        
-    cpdef _set_refractory(self, np.ndarray value):
-        self.cInstance.setRefractoryTimes(value)
-
-    cpdef _set_custom_spike_timings(self, value):
-        cdef vector[vector[double]] timings
-        cdef vector[double] tmp
-        for val in value:
-            tmp = val
-            timings.push_back(tmp)
-        self.cInstance.set_spike_times(timings)
-
-    cpdef _get_custom_spike_timings(self):
-        return self.cInstance.get_spike_times()
             
-"""% {'class_name' : self.pop.class_name, 'name' : self.pop.name}
-    
-        return template
-
