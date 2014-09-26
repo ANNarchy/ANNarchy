@@ -8,3 +8,4 @@ examples/*/annarchy
 build/
 dist/
 ANNarchy.egg-info/
+docs/_build

@@ -8,7 +8,6 @@ This chapter provides documentation for the different methods and classes define
     :maxdepth: 3
 
     API/ANNarchy.rst
-    API/Network.rst
     API/Neuron.rst
     API/Synapse.rst
     API/Population.rst
