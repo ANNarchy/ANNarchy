@@ -118,11 +118,7 @@ class Rate2SpikePopulation(Population):
 
     .. code-block:: python
 
-<<<<<<< HEAD
-=======
         from ANNarchy.extensions.hybrid import Rate2SpikePopulation
-
->>>>>>> v43/master
         pop2 = Rate2SpikePopulation(
             population=pop1, 
             name='spiking', 
