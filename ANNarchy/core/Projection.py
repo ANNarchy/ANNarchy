@@ -390,21 +390,6 @@ class Projection(object):
         for key, val in value.iteritems():
             if val == '': # a flag
                 try:
-                    self.description['variables'][rk_var]['flags'].index(key)
-                except: # the flag does not exist yet, we can add it
-                    self.description['variables'][rk_var]['flags'].append(key)
-            elif val == None: # delete the flag
-                try:
-                    self.description['variables'][rk_var]['flags'].remove(key)
-                except: # the flag did not exist, check if it is a bound
-                    if has_key(self.description['variables'][rk_var]['bounds'], key):
-                        self.description['variables'][rk_var]['bounds'].pop(key)
-            else: # new value for init, min, max...
-                if key == 'init':
-                    self.description['variables'][rk_var]['init'] = val 
-                    self.init[name] = val              
-                else:
-                    self.description['variables'][rk_var]['bounds'][key] = val
                     self.synapse.description['variables'][rk_var]['flags'].index(key)
                 except: # the flag does not exist yet, we can add it
                     self.synapse.description['variables'][rk_var]['flags'].append(key)
