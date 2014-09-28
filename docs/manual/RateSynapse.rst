@@ -19,7 +19,7 @@ The ODEs for synaptic variables follow the same syntax as for neurons. As for ne
 Synaptic plasticity
 --------------------------
 
-Learning is possible by modifying the  variable ``w`` of a single synapse. 
+Learning is possible by modifying the  variable ``w`` of a single synapse during the simulation. 
 
 For example, the Oja learning rule (see the example :doc:`../example/BarLearning`):
 
@@ -106,7 +106,7 @@ Using the global operations, such a learning rule is trivial to implement:
 
 .. code-block:: python 
 
-    Covariance = RateSynapse(
+    Covariance = Synapse(
         parameters="""
             tau = 5000.0
         """,
@@ -119,6 +119,7 @@ Using the global operations, such a learning rule is trivial to implement:
 
     * Such global operations can become expensive to compute if the populations are too big.
     * The global operations are performed over the whole population, not only the synapses which actually reach the post-synaptic neuron.
+
 
 Defining the postsynaptic potential (psp)
 -----------------------------------------
@@ -153,7 +154,36 @@ No further modification has to be done in the postsynaptic neuron, this value wi
 
 
 
+Defining the post-synaptic operation
+--------------------------------------
 
+By default, a post-synaptic neuron calling ``sum(target)`` will compute the sum over all incoming synapses of their defined ``psp``:
+
+.. math::
+
+    \text{sum(exc)} = \sum_{i \in \text{exc}} \text{psp}(i) = \sum_{i \in \text{exc}} w_i * \text{pre}.r_i 
+
+It is possible to define a different operation performed on the connected synapses, using the ``operation`` argument of the synapse:
+
+.. code-block:: python 
+
+    MaxPooling = Synapse(
+        psp = "w * pre.r",
+        operation = "max"
+    )
+
+In this case, ``sum(target)`` will represent the maximum value of ``w * pre.r`` over all incoming synapses, not their sum. It can be useful when defining pooling operations in a convolutional network, for example.
+
+The available operations are:
+
+* "sum" (default): sum of all incoming psps.
+* "max": maximum of all incoming psps.
+* "min": minimum of all incoming psps.
+* "mean": mean of all incoming psps.
+
+.. warning::
+
+    These operations are only possible for rate-coded synapses.
 
 
     
