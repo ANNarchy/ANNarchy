@@ -4,13 +4,29 @@ Spiking neurons
 
 Contrary to rate-coded neurons, the use of spiking neurons requires the additional definition of a spike condition (the criteria defining the emission of a spike, typically when the membrane potential exceeds a threshold) and reset equations, governing the evolution of all variables after a spike is emitted. 
 
-Let's consider a simple leaky integrate-and-fire spiking neuron model (LIF):
+
+Built-in neurons
+================
+
+ANNarchy provides standard spiking neuron models, similar to the ones defined in PyNN (`http://neuralensemble.org/docs/PyNN/reference/neuronmodels.html <http://neuralensemble.org/docs/PyNN/reference/neuronmodels.html>`_).
+
+Their definition (parameters, equations) are described in :doc:`../API/SpecificNeuron`. The classes can be used directly when creating the populations (no need to instantiate them). Ex:
+
+.. code-block:: python
+
+    pop = Population(geometry = 1000, neuron = Izhikevich)
+
+
+User-defined neurons
+====================
+
+Let's consider a simple leaky integrate-and-fire spiking neuron model (LIF) using a voltage-gated excitatory conductance:
 
 .. math::
 
     \tau \cdot  \frac{ d v(t) }{ dt } = (E_r - v(t) ) + g_\text{exc}(t) \cdot (E_e -  v(t) )
 
-where :math:`v(t)` is the membrane potential, :math:`\tau` is the membrane time constant (in milliseconds), :math:`E_r` the resting potential, :math:`E_e` the target potential for excitatory synapses and :math:`g_\text{exc}(t)` the total condutance of excitatory synapses.
+where :math:`v(t)` is the membrane potential, :math:`\tau` is the membrane time constant (in milliseconds), :math:`E_r` the resting potential, :math:`E_e` the target potential for excitatory synapses and :math:`g_\text{exc}(t)` the total current induced by excitatory synapses.
 
 This neural model can be defined in ANNarchy by:
 

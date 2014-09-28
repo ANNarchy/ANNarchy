@@ -27,38 +27,11 @@ The current major release 4.x subdivides in the current versions.
     
     * 4.1.alpha   New parser based on the sympy framework
     * 4.1.beta    Improved setup for spike coding, in the sense of supporting spike events. Connection patterns are now a part of Projection class.
+    * 4.2         Improved representation of connectivity matrices. Standard neurons.
+    * 4.3         Simplified internal structure for the generated code. Major speed-up for compilation and execution times.
 
-New / updated features in current revision
-==============================================
 
-Added
-----------------------------------------------
-
-    - new connection patterns - fixed_number_pre, fixed_number_post, connection_from_list
-    - new random distributions - Lognormal, Gamma, Exponential
-    - learning of projections can be disabled / enabled during simulation
-    - structural plasticity for spiking neurons
-
-Changed
-----------------------------------------------
-
-    - interface for connection patterns
-    - calling of connection patterns
-    - structure of matlab files
-
-Removed
-----------------------------------------------
-
-    - visualization prototype based on matplotlib
-
-Bugfix
-----------------------------------------------
-
-    - structural plasticity for mean rate coded neurons
-    - storage as matlab files
-    - rank, value, delay are now accessible by their dendrite
-
-Features coming soon (version 4.2)
+Planned features (version 4.4)
 ====================================
 
     - GPGPU implementation

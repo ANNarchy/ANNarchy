@@ -5,6 +5,7 @@
 *.csv
 *.tar.gz
 examples/*/annarchy
+tests/
 build/
 dist/
 ANNarchy.egg-info/

@@ -8,6 +8,15 @@ ANNarchy supports the dynamic addition/suppression of synapses during the simula
 
 * ``remove_synapse()``   
 
+Because structural plasticity adds some complexity to the generated code, it has to be enabled before compilation by setting the ``structural_plasticity`` flag to ``True`` in the call to ``setup()``:
+
+.. code-block:: python
+
+    setup(structural_plasticity=True)
+
+If the flag is not set, the methods will do nothing.
+
+
 Creating synapses
 ==================
 

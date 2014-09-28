@@ -1,10 +1,14 @@
 from ANNarchy.core.Neuron import Neuron
 
+def list_standard_models():
+    "Returns a list of standard neuron models available."
+    return [Izhikevich, IF_curr_exp, IF_cond_exp, IF_curr_alpha, IF_cond_alpha, HH_cond_exp, EIF_cond_alpha_isfa_ista, EIF_cond_exp_isfa_ista]
+
 
 ##################
 ### Izhikevich
 ##################
-class IzhikevichClass(Neuron):
+class Izhikevich(Neuron):
     """ 
     Izhikevich neuron.
 
@@ -98,16 +102,11 @@ class IzhikevichClass(Neuron):
         """
         return IzhikevichClass(conductance=conductance)
 
-    def __repr__(self):
-        return self.__doc__
-
-
-
 
 ##################
 ### IF neurons
 ##################
-class IF_curr_expClass(Neuron):
+class IF_curr_exp(Neuron):
     """ 
     IF_curr_exp neuron.
 
@@ -178,10 +177,8 @@ class IF_curr_expClass(Neuron):
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
 
-    def __repr__(self):
-        return self.__doc__
 
-class IF_cond_expClass(Neuron):
+class IF_cond_exp(Neuron):
     """ 
     IF_cond_exp neuron.
 
@@ -256,11 +253,9 @@ class IF_cond_expClass(Neuron):
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
 
-    def __repr__(self):
-        return self.__doc__
 
 # Alpha conductances
-class IF_curr_alphaClass(Neuron):
+class IF_curr_alpha(Neuron):
     """ 
     IF_curr_alpha neuron.
 
@@ -345,10 +340,7 @@ class IF_curr_alphaClass(Neuron):
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
 
-    def __repr__(self):
-        return self.__doc__
-
-class IF_cond_alphaClass(Neuron):
+class IF_cond_alpha(Neuron):
     """ 
     IF_cond_exp neuron.
 
@@ -435,15 +427,12 @@ class IF_cond_alphaClass(Neuron):
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
 
-    def __repr__(self):
-        return self.__doc__
-
 
 ##################
 ### EIF neurons
 ##################
 
-class EIF_cond_exp_isfa_istaClass(Neuron):
+class EIF_cond_exp_isfa_ista(Neuron):
     """ 
     EIF_cond_exp neuron.
 
@@ -545,10 +534,8 @@ class EIF_cond_exp_isfa_istaClass(Neuron):
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
 
-    def __repr__(self):
-        return self.__doc__
 
-class EIF_cond_alpha_isfa_istaClass(Neuron):
+class EIF_cond_alpha_isfa_ista(Neuron):
     """ 
     EIF_cond_alpha neuron.
 
@@ -656,14 +643,11 @@ class EIF_cond_alpha_isfa_istaClass(Neuron):
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
 
-    def __repr__(self):
-        return self.__doc__
-
 
 ##################
 ### HH
 ##################
-class HH_cond_expClass(Neuron):
+class HH_cond_exp(Neuron):
     """ 
     HH_cond_exp neuron.
 
@@ -782,19 +766,3 @@ class HH_cond_expClass(Neuron):
 
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset)
 
-    def __repr__(self):
-        return self.__doc__
-
-
-
-##################
-### Neuron instances
-##################
-Izhikevich = IzhikevichClass()
-IF_curr_exp = IF_curr_expClass()
-IF_cond_exp = IF_cond_expClass()
-IF_curr_alpha = IF_curr_alphaClass()
-IF_cond_alpha = IF_cond_alphaClass()
-HH_cond_exp = HH_cond_expClass()
-EIF_cond_exp_isfa_ista = EIF_cond_exp_isfa_istaClass()
-EIF_cond_alpha_isfa_ista = EIF_cond_alpha_isfa_istaClass()

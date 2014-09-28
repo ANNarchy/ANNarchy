@@ -1,5 +1,5 @@
 **********************************
-RateNeuron and SpikeNeuron
+Neuron
 **********************************
 
 Neurons are container objects for all information corresponding to a special neuron type. This encapsulation allows a higher readability of the code. Through derivation of ``ANNarchy.Neuron``, the user can define the neuron types he needs in his model. 

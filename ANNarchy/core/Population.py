@@ -28,7 +28,7 @@ from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Neuron import IndividualNeuron
 
 import numpy as np
-import copy
+import copy, inspect
 
 # Template for specific population bypassing code generation.
 # The id of the population should be let free with %(id)s
@@ -208,7 +208,10 @@ class Population(object):
         self.size = size
         
         # Store the neuron type
-        self.neuron = copy.deepcopy(neuron)
+        if inspect.isclass(neuron):
+            self.neuron = neuron()
+        else:
+            self.neuron = copy.deepcopy(neuron)
         self.neuron._analyse()
         self.generator = copy.deepcopy(pop_generator_template)
         

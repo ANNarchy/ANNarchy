@@ -9,6 +9,7 @@ This chapter provides documentation for the different methods and classes define
 
     API/ANNarchy.rst
     API/Neuron.rst
+    API/SpecificNeuron.rst
     API/Synapse.rst
     API/Population.rst
     API/SpecificPopulation.rst

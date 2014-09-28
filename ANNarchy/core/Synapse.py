@@ -35,12 +35,8 @@ class Synapse(object):
         
             * **parameters**: parameters of the neuron and their initial value.
             * **equations**: equations defining the temporal evolution of variables.
-<<<<<<< HEAD
-            * **psp**: post-synaptic potential summed by the post-synaptic neuron (rate-coded only).
-=======
             * **psp**: influence of a single synapse on the post-synaptic neuron (rate-coded only, default: w*pre.r).
             * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
->>>>>>> v43/master
             * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
             * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
             * **functions**: additional functions used in the equations.
