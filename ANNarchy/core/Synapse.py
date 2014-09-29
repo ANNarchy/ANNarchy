@@ -35,7 +35,7 @@ class Synapse(object):
         
             * **parameters**: parameters of the neuron and their initial value.
             * **equations**: equations defining the temporal evolution of variables.
-            * **psp**: influence of a single synapse on the post-synaptic neuron (rate-coded only, default: w*pre.r).
+            * **psp**: influence of a single synapse on the post-synaptic neuron (default for rate-coded: w*pre.r).
             * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
             * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
             * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
@@ -102,16 +102,17 @@ class SpikeSynapse(Synapse):
     Bae class to define a spiking synapse.
     """
 
-    def __init__(self, parameters="", equations="", pre_spike=None, post_spike=None, functions=None, extra_values=None ):
+    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None, extra_values=None ):
         """ 
         *Parameters*:
         
             * **parameters**: parameters of the neuron and their initial value.
             * **equations**: equations defining the temporal evolution of variables.
+            * **psp**: post-synaptic potential summed by the post-synaptic neuron.
             * **pre_spike**: updating of variables when a pre-synaptic spike is received.
             * **post_spike**: updating of variables when a post-synaptic spike is emitted.
             * **functions**: additional functions used in the variables' equations.
             
         """  
-        Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike, post_spike=post_spike, functions=functions, extra_values=extra_values)
+        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, pre_spike=pre_spike, post_spike=post_spike, functions=functions, extra_values=extra_values)
 

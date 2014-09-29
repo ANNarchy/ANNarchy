@@ -32,21 +32,14 @@ distributions_arguments = {
     'Exponential': 1,
     'Gamma': 2
 }
-distributions_templates = {
-    'Uniform' : '<double>',
-    'DiscreteUniform': '<>',
-    'Normal' : '<double>',
-    'LogNormal': '',
-    'Exponential': '',
-    'Gamma': ''
-}
+
 distributions_equivalents = {
     'Uniform' : 'std::uniform_real_distribution<double>',
-    'DiscreteUniform': 'TODO',
+    'DiscreteUniform': 'std::uniform_int_distribution<int>',
     'Normal' : 'std::normal_distribution<double>',
-    'LogNormal': '',
-    'Exponential': '',
-    'Gamma': ''
+    'LogNormal': 'std::lognormal_distribution<double>',
+    'Exponential': 'std::exponential_distribution<double>',
+    'Gamma': 'std::gamma_distribution<double>'
 }
 
 # List of available distributions
@@ -109,8 +102,6 @@ class Uniform(RandomDistribution):
             np.random.seed(self._cpp_seed)
         return np.random.uniform(self.min, self.max, shape)
 
-    def _gen_cpp(self):
-        return 'UniformDistribution<double>('+str(self.min)+','+str(self.max)+', '+str(self._cpp_seed)+')'
 
 class DiscreteUniform(RandomDistribution):
     """
@@ -142,14 +133,12 @@ class DiscreteUniform(RandomDistribution):
             np.random.seed(self._cpp_seed)
         return np.random.random_integers(self.min, self.max, shape)
     
-    def _gen_cpp(self):
-        return 'UniformDistribution<int>('+str(self.min)+','+str(self.max)+', '+str(self._cpp_seed)+')'
     
 class Normal(RandomDistribution):
     """
     Random distribution instance returning a random value based on a normal (Gaussian) distribution.
     """   
-    def __init__(self, mu, sigma, seed=-1):
+    def __init__(self, mu, sigma, min=None, max=None, seed=-1):
         """        
         *Parameters*:
         
@@ -163,6 +152,8 @@ class Normal(RandomDistribution):
         self.sigma = sigma
         if seed == -1:
             seed = Global.config['seed']
+        self.min = min
+        self.max = max
         self._cpp_seed = seed
         
     def get_values(self, shape):
@@ -171,10 +162,12 @@ class Normal(RandomDistribution):
         """
         if self._cpp_seed != -1:
             np.random.seed(self._cpp_seed)
-        return np.random.normal(self.mu, self.sigma, shape)
-    
-    def _gen_cpp(self):        
-        return 'NormalDistribution<double>('+str(self.mu)+','+str(self.sigma)+', '+str(self._cpp_seed)+')'
+        data = np.random.normal(self.mu, self.sigma, shape)
+        if self.min:
+            data[data<self.min] = self.min
+        if self.max:
+            data[data>self.max] = self.max
+        return data
 
 class LogNormal(RandomDistribution):
     """
@@ -203,9 +196,6 @@ class LogNormal(RandomDistribution):
         if self._cpp_seed != -1:
             np.random.seed(self._cpp_seed)
         return np.random.lognormal(self.mu, self.sigma, shape)
-
-    def _gen_cpp(self):
-        return 'LogNormalDistribution('+str(self.mu)+','+str(self.sigma)+', '+str(self._cpp_seed)+')'
 
 class Exponential(RandomDistribution):
     """
@@ -242,8 +232,6 @@ class Exponential(RandomDistribution):
             np.random.seed(self._cpp_seed)
         return np.random.exponential(self.Lambda, shape)
 
-    def _gen_cpp(self):
-        return 'ExponentialDistribution('+str(self.Lambda)+')'
 
 class Gamma(RandomDistribution):
     """
@@ -272,6 +260,3 @@ class Gamma(RandomDistribution):
         if self._cpp_seed != -1:
             np.random.seed(self._cpp_seed)
         return np.random.gamma(self.alpha, self.beta, shape)
-
-    def _gen_cpp(self):
-        return 'GammaDistribution('+str(self.alpha)+','+str(self.beta)+', '+str(self._cpp_seed)+')'

@@ -75,6 +75,7 @@ def analyse_neuron(neuron):
         'raw_equations': neuron.equations,
         'raw_functions': neuron.functions,
     }
+
     if neuron.type == 'spike': # Additionally store reset and spike
         description['raw_reset'] = neuron.reset
         description['raw_spike'] = neuron.spike
@@ -255,12 +256,12 @@ def analyse_synapse(synapse):
         'raw_functions': synapse.functions
     }
 
+    if synapse.psp:
+        description['raw_psp'] = synapse.psp
+
     if synapse.type == 'spike': # Additionally store pre_spike and post_spike
         description['raw_pre_spike'] = synapse.pre_spike
         description['raw_post_spike'] = synapse.post_spike
-    else:
-        if synapse.psp:
-            description['raw_psp'] = synapse.psp
 
     # Extract parameters and variables names
     parameters = extract_parameters(synapse.parameters, synapse.extra_values)

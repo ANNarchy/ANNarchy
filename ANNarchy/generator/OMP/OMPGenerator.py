@@ -172,11 +172,17 @@ struct PopStruct%(id)s{
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
 
-            # Delays (TODO: more variables could be delayed)
-            if pop.max_delay > 1:
-                code += """
+            # Delays
+            if pop.max_delay > 1 :
+                if pop.neuron.type == 'rate':
+                    code += """
     // Delays for rate-coded population
     std::deque< std::vector<double> > _delayed_r;
+"""
+                else:
+                    code += """
+    // Delays for spike population
+    std::deque< std::vector<bool> > _delayed_spike;
 """
 
             # Local functions
@@ -523,7 +529,6 @@ struct ProjStruct%(id)s{
     def body_delay_neuron(self):
         code = ""
         for name, pop in self.populations.iteritems():
-
             # No delay
             if pop.max_delay <= 1:
                 continue
@@ -538,6 +543,12 @@ struct ProjStruct%(id)s{
     // Enqueuing outputs of pop%(id)s (%(name)s)
     pop%(id)s._delayed_r.push_front(pop%(id)s.r);
     pop%(id)s._delayed_r.pop_back();
+""" % {'id': pop.id, 'name' : pop.name }
+            else:
+                code += """
+    // Enqueuing outputs of pop%(id)s (%(name)s)
+    pop%(id)s._delayed_spike.push_front(pop%(id)s.spike);
+    pop%(id)s._delayed_spike.pop_back();
 """ % {'id': pop.id, 'name' : pop.name }
 
         return code
@@ -641,47 +652,94 @@ struct ProjStruct%(id)s{
 
         def spiking(proj):
 
-            psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
-            pre_event_list = []
+            ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
 
+            # Analyse all elements of pre_spike
+            pre_event = ""
+            pre_event_list = []
+            learning = ""
+            psp = ""
             for eq in proj.synapse.description['pre_spike']:
-                if eq['name'] == 'g_target':
-                    psp = """proj%(id_proj)s.w[i][j];"""%{'id_proj' : proj.id}
-                else: 
+                if eq['name'] == 'w':
+                    learning = """
+                    if(proj0._learning){
+                        %(eq)s
+                    }
+""" % {'eq': eq['eq'] % ids}
+                elif eq['name'] == 'g_target':
+                    psp = eq['eq'].split('=')[1]
+                else:
                     pre_event_list.append(eq['eq'])
 
-            pre_event = ""
+            # Is the summation event-based or psp-based?
+            event_based = True
+            if 'psp' in  proj.synapse.description.keys(): # event-based
+                event_based = False
+                psp_code = """
+            }
+            sum += %(psp)s
+""" % {'psp': proj.synapse.description['psp']['cpp'] % ids}
+            else:
+                if psp == "": # default g_target += w
+                    psp_code = """
+                sum += proj%(id_proj)s.w[i][j]
+            }
+""" % ids
+                else:
+                    psp_code = """
+                sum += %(psp)s
+            }
+""" % {'psp': psp % ids}
+            
+            # Other event-driven variables
             if len(pre_event_list) > 0: # There are other variables to update than g_target
                 code = ""
                 for eq in pre_event_list:
-                    code += ' ' * 16 + eq % {'id_proj' : proj.id} + '\n'
-                pre_event = """
+                    code += ' ' * 20 + eq % {'id_proj' : proj.id} + '\n'
+
+                if event_based:
+                    pre_event += """
+                // Event-based variables should not be updated when the postsynaptic neuron fires.
                 if(!pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
 %(pre_event)s
+%(learning)s
                 }
-"""%{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
+"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
+                else:
+                    pre_event += """
+%(pre_event)s
+%(learning)s
+"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
+
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                    Global._error('Non-uniform delays are not yet possible for spiking networks.')
+                    exit()
+                else: # Uniform delays
+                    pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+            else:
+                pre_array = "pop%(id_pre)s.spike" % ids
 
             # No need for openmp if less than 10 neurons
             omp_code = """#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    std::vector<bool> proj%(id_proj)s_pre_spike = pop%(id_pre)s.spike;
+    std::vector<bool> proj%(id_proj)s_pre_spike = %(pre_array)s;
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            // Event-driven variables
             if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += %(psp)s
-                if(proj%(id_proj)s._learning){
 %(pre_event)s
-                }
-            }
+%(psp)s
         }
         pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name,
-    'pre_event': pre_event, 'psp': psp, 'omp_code': omp_code}
+"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
+    'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code}
 
             return code
 
@@ -784,10 +842,18 @@ struct ProjStruct%(id)s{
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
                         'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
                     )
+                    code = code.replace(
+                        'pop%(id_pre)s.spike['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_spike[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
+                    )
                 else: # Uniform delays
                     code = code.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
                         'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                    )
+                    code = code.replace(
+                        'pop%(id_pre)s.spike['%{'id_pre': proj.pre.id}, 
+                        'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
                     )
 
         return code
@@ -866,8 +932,9 @@ struct ProjStruct%(id)s{
                 if pop.neuron.type == 'rate':
                     code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
 """ % {'id': pop.id, 'delay': pop.max_delay}
-                else: # TODO SPIKE
-                    pass
+                else: # SPIKE
+                    code += """    pop%(id)s._delayed_spike = std::deque< std::vector<bool> >(%(delay)s, std::vector<bool>(pop%(id)s.size, false));
+""" % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 

@@ -26,6 +26,7 @@ import math
 import copy
 
 from ANNarchy.core import Global
+from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
@@ -342,6 +343,9 @@ class Projection(object):
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value[n])
             else:
                 Global._error('The projection has ' + self.size + ' post-synaptic neurons.')
+        elif isinstance(value, RandomDistribution):
+            for n in self.post_ranks:
+                getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value.get_values(self.cyInstance.nb_synapses(n)))
         else: # a single value
             if attribute in self.synapse.description['local']:
                 for n in self.post_ranks:

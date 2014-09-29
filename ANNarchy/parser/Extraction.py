@@ -22,7 +22,7 @@
 
 """
 from ANNarchy.core.Global import _error, _warning, config
-from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_templates, distributions_equivalents
+from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -440,7 +440,14 @@ def extract_pre_spike_variable(description, pattern):
                                   global_index=pattern['proj_globalindex'])
             eq = translator.parse()
         else: 
-            eq = translate_ITE(name, eq, condition, description, {}, prefix=prefix, sep=sep, index=index, global_index=global_index)
+            eq = translate_ITE( name, 
+                                eq, 
+                                condition, 
+                                description, {}, 
+                                prefix=pattern['proj_prefix'],
+                                sep=pattern['proj_sep'],
+                                index=pattern['proj_index'],
+                                global_index=pattern['proj_globalindex'])
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )
@@ -469,7 +476,11 @@ def extract_post_spike_variable(description, pattern):
                                   global_index=pattern['proj_globalindex'])
             eq = translator.parse()     
         else: 
-            eq = translate_ITE(name, eq, condition, description, {}, prefix=prefix, sep=sep, index=index, global_index=global_index) 
+            eq = translate_ITE( name, eq, condition, description, {},
+                                prefix=pattern['proj_prefix'],
+                                sep=pattern['proj_sep'],
+                                index=pattern['proj_index'],
+                                global_index=pattern['proj_globalindex']) 
 
         post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
 

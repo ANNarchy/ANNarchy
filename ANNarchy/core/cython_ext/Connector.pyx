@@ -53,6 +53,8 @@ cdef class CSR:
             max_d = int(np.max(d)/self.dt)
             if max_d > self.max_delay:
                 self.max_delay = max_d
+            if r.size() == 1: # delays can be uniform
+                self.uniform_delay = max_d 
         else:
             unif_d = int(d[0]/self.dt)
             self.uniform_delay = unif_d       

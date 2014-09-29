@@ -164,6 +164,7 @@ struct PopStruct%(id)s{
     int size;
     // Spiking population
     std::vector<bool> spike;
+    std::deque< std::vector<bool> > _delayed_spike;
     std::vector<long int> last_spike;
     std::vector<int> spiked;
     bool record_spike;
