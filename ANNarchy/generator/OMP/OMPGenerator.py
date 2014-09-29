@@ -676,20 +676,23 @@ struct ProjStruct%(id)s{
             if 'psp' in  proj.synapse.description.keys(): # event-based
                 event_based = False
                 psp_code = """
-            }
-            sum += %(psp)s
-""" % {'psp': proj.synapse.description['psp']['cpp'] % ids}
+            // Event-driven variables
+            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
+                sum += %(psp)s
+""" % {'id_proj' : proj.id, 'psp': proj.synapse.description['psp']['cpp'] % ids}
             else:
                 if psp == "": # default g_target += w
                     psp_code = """
+            // Event-driven variables
+            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
                 sum += proj%(id_proj)s.w[i][j]
-            }
 """ % ids
                 else:
                     psp_code = """
+            // Event-driven variables
+            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
                 sum += %(psp)s
-            }
-""" % {'psp': psp % ids}
+""" % {'id_proj' : proj.id, 'psp': psp % ids}
             
             # Other event-driven variables
             if len(pre_event_list) > 0: # There are other variables to update than g_target
@@ -731,10 +734,9 @@ struct ProjStruct%(id)s{
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            // Event-driven variables
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-%(pre_event)s
 %(psp)s
+%(pre_event)s
+            }
         }
         pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }

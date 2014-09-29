@@ -10,6 +10,8 @@ LIF = Neuron(
     I = 15.0
     """,
     equations = """
+    e = g_exc
+    i = g_inh
     tau * dv/dt = -v + g_exc - g_inh + I : init=13.5
     """,
     spike = "v > 15.0",
@@ -26,10 +28,10 @@ TsodyksMarkram = Synapse(
     U = 0.5 
     """,
     equations = """
-    dx/dt = z/tau_rec : min=0.0, max=1.0
-    dy/dt = -y/tau_I : min=0.0, max=1.0
-    dz/dt = y/tau_I - z/tau_rec : init=1.0, min=0.0, max=1.0
-    u = if tau_facil > 0.0 : u - dt * u / tau_facil else: U : min=0.0, max=1.0
+    dx/dt = z/tau_rec : init = 0.0
+    dy/dt = -y/tau_I : init = 0.0
+    dz/dt = y/tau_I - z/tau_rec : init=1.0
+    u = if tau_facil > 0.0 : u - dt * u / tau_facil else: U 
     """,
     psp = "w * y",
     pre_spike="""
@@ -99,27 +101,36 @@ compile()
 
 
 # Record
-Exc.start_record('spike')
+Exc.start_record(['spike', 'e', 'i'])
 Inh.start_record('spike')
 
 # Simulate
 duration = 10000.0
 simulate(duration, measure_time=True)
 
+
+print proj_ee.dendrite(300).w
+print proj_ee.dendrite(300).x
+print proj_ee.dendrite(300).y
+print proj_ee.dendrite(300).z
+
 # Retrieve recording
-data_exc = Exc.get_record()['spike']
-data_inh = Inh.get_record()['spike']
-spikes_exc = raster_plot(data_exc)
-spikes_inh = raster_plot(data_inh)
+data_exc = Exc.get_record()
+data_inh = Inh.get_record()
+spikes_exc = raster_plot(data_exc['spike'])
+spikes_inh = raster_plot(data_inh['spike'])
 spikes = np.concatenate((spikes_exc, spikes_inh + [0, 400]), axis=0)
 
-h = histogram(data_exc)
+h = histogram(data_exc['spike'])
 
 # Plot
 from pylab import *
-subplot(1,2,1)
+subplot(1,3,1)
 plot(dt*spikes[:, 0], spikes[:, 1], '.', markersize=2.0)
 xlim((0, duration)); ylim((0,500))
-subplot(1,2,2)
+subplot(1,3,2)
 plot(dt*np.arange(h.shape[0]), h/400.0, '-')
+subplot(1,3,3)
+plot(dt*np.arange(h.shape[0]), data_exc['e']['data'][300, :], '-')
+plot(dt*np.arange(h.shape[0]), data_exc['i']['data'][300, :], '-')
 show()
