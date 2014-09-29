@@ -1,4 +1,5 @@
 import numpy as np
+import ANNarchy.core.Global as Global
 
 def raster_plot(data, compact=False):
     """ Transforms recorded spikes to display easily a raster plot for a spiking population.
@@ -19,13 +20,14 @@ def raster_plot(data, compact=False):
     """
     return np.array([ [t, neuron] for neuron in range(len(data['data'])) for t in data['data'][neuron] ] )
 
-def histogram(data):
+def histogram(data, binsize=Global.config['dt']):
     """
     Returns for each recorded simulation step the number of spikes occuring in the population.
 
     *Parameters*:
 
     * **data**: the dictionary returned by the get_record() method for the population. 
+    * **binsize**: the duration in milliseconds where spikes are averaged (default: dt). 
     """
     if isinstance(data['start'], int): # only one recording
         duration = data['stop'] - data['start']
@@ -35,10 +37,11 @@ def histogram(data):
             duration += data['stop'][t] - data['start'][t]
             
     nb_neurons = len(data['data'])
-    spikes = [0 for t in xrange(duration)]
+    nb_bins = int(duration*Global.config['dt']/binsize)
+    spikes = [0 for t in xrange(nb_bins)]
     for neuron in range(nb_neurons):
         for t in data['data'][neuron]:
-            spikes[t] += 1
+            spikes[int(t/float(binsize/Global.config['dt']))] += 1
     return np.array(spikes)
 
 def smoothed_rate(data, smooth=0.0):

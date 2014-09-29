@@ -23,9 +23,9 @@ neuron = NeuronGroup(N, model=eqs_neuron)
 taud=1*ms
 tauf=100*ms
 U=.1
-#taud=100*ms
-#tauf=10*ms
-#U=.6
+taud=100*ms
+tauf=10*ms
+U=.6
 S=Synapses(input,neuron,
            model='''w : 1
                     dx/dt=(1-x)/taud : 1 (event-driven)

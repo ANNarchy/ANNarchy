@@ -1,7 +1,7 @@
 from ANNarchy import *
 
 
-dt=1.0
+dt=0.25
 setup(dt=dt)
 
 
@@ -21,11 +21,11 @@ LIF = Neuron(
     tau * dv/dt = -v + g_exc 
     tau_e * dg_exc/dt = -g_exc
     """,
-    spike = "v > 150.0",
+    spike = "v > 15.0",
     reset = "v = 0.0",
 )
 
-TsodyksMarkram = Synapse(
+STP = Synapse(
     parameters = """
     w=0.0
     tau_d = 1.0
@@ -36,8 +36,8 @@ TsodyksMarkram = Synapse(
     dx/dt = (1 - x)/tau_d : init = 1.0
     du/dt = (U - u)/tau_f : init = 0.1
     """,
-    psp = "w * u * x",
     pre_spike="""
+    g_target += w * u * x
     x *= (1 - u)
     u += U * (1 - u)
     """
@@ -48,7 +48,17 @@ Input.rate = np.linspace(5.0, 30.0, 10)
 
 Output = Population(geometry=10, neuron=LIF)
 
-proj = Projection(pre=Input, post=Output, target= 'exc', synapse=TsodyksMarkram).connect_one_to_one(weights=0.1)
+proj = Projection(pre=Input, post=Output, target= 'exc', synapse=STP).connect_one_to_one(weights=25.0)
+
+# Facilitating
+proj.tau_d = 1.0
+proj.tau_f = 100.0
+proj.U = 0.1
+
+# Depressing
+proj.tau_d = 100.0
+proj.tau_f = 10.0
+proj.U = 0.6
 
 compile()
 

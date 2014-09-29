@@ -206,7 +206,7 @@ def simulate(duration, measure_time = False):
             tstart = time.time() 
         _network.pyx_run(nb_steps)
         if measure_time:
-            print('Simulating', duration, 'milliseconds took', time.time() - tstart, 'seconds.')
+            print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     else:
         _error('simulate(): the network is not compiled yet.')
         return
@@ -243,7 +243,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
         nb = _network.pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
-            print('Simulating', nb/config['dt'], 'milliseconds took', time.time() - tstart, 'seconds.')
+            print('Simulating', nb/config['dt']/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
         return sim_time
     else:
         _error('simulate(): the network is not compiled yet.')
