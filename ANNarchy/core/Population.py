@@ -155,7 +155,20 @@ pop_generator_template = {
         #         pop%(id)s.r[rank] = value
         'pyx_pop_class': None,
     },
-    'cuda': {} # TODO
+    'cuda': {   # TODO
+        'header_pop_struct' : None,
+        'body_random_dist_init': None,
+        'body_delay_init': None,
+        'body_spike_init': None,
+        'body_globalops_init': None,
+        'body_random_dist_update': None,
+        'body_update_neuron': None,
+        'body_delay_code': None,
+        'body_update_globalops': None,
+        'body_record': None,
+        'pyx_pop_struct': None,
+        'pyx_pop_class': None,             
+    } 
 }
 
 class Population(object):
@@ -986,5 +999,4 @@ class Population(object):
 
         """
         from ANNarchy.core.IO import _load_data, _load_pop_data
-
         _load_pop_data(self, _load_data(filename))
