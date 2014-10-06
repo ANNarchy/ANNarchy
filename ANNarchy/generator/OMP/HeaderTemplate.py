@@ -69,6 +69,8 @@ void initialize(double _dt) ;
 
 void run(int nbSteps);
 
+int run_until(int steps, std::vector<int> populations, bool or_and);
+
 void step();
 
 
@@ -86,7 +88,7 @@ void setDt(double dt_);
  * Number of threads
  *
 */
-void setNumThreads(int threads);
+void setNumberThreads(int threads);
 
 #endif
 """

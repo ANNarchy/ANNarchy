@@ -38,7 +38,9 @@ class Equation(object):
     def __init__(self, name, expression, variables, 
                  local_variables, global_variables, 
                  untouched = [], 
-                 method='explicit', type=None, prefix='%(pop)s', index='[i]', global_index=''):
+                 method='explicit', type=None, 
+                 prefix='pop%(id)s', sep = '.',
+                 index='[i]', global_index=''):
         '''
         Parameters:
         
@@ -86,11 +88,11 @@ class Equation(object):
 
         for var in self.variables: # Add each variable of the neuron
             if var in self.local_variables:
-                self.local_dict[var] = Symbol(prefix + '.' + var + index)
+                self.local_dict[var] = Symbol(prefix + sep + var + index)
             elif var in self.global_variables:
                 if var in _predefined:
                     continue
-                self.local_dict[var] = Symbol(prefix + '.' + var + global_index)
+                self.local_dict[var] = Symbol(prefix + sep + var + global_index)
                 
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)

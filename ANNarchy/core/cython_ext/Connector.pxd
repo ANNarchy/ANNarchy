@@ -16,9 +16,11 @@ cdef class CSR:
     cpdef public int max_delay
     cpdef public int uniform_delay
     cdef public int size
+    cdef public double dt
 
     # Insert methods
-    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[int] d)
+    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d)
 
     # Access methods
     cpdef int get_max_delay(self)
+    cpdef int get_uniform_delay(self)

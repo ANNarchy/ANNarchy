@@ -48,11 +48,11 @@ config = dict(
     'verbose': False,
     'show_time': False,
     'suppress_warnings': False,
-    'float_prec': 'double',
     'num_threads': 1,
     'paradigm': "openmp",
     'method': "explicit",
-    'seed': -1
+    'seed': -1,
+    'structural_plasticity': False
    }
 )
 
@@ -103,8 +103,8 @@ def setup(**keyValueArgs):
     * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     
     * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
-    
-    * **float_prec**: determines the floating point precision to be used ('single' or 'double'). By default ANNarchy uses double floating point precision. 
+
+    * **structural_plasticity**: allows synapses to be dynamically added/removed during the simulation (default: False).
 
     * **seed**: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)). 
     
@@ -264,7 +264,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     if _network:      
         if measure_time:
             tstart = time.time() 
-        nb = _network.pyx_run_until(nb_steps, [pop._id for pop in population], True if operator=='and' else False)
+        nb = _network.pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
             print('Simulating', nb/config['dt'], 'milliseconds took', time.time() - tstart, 'seconds.')

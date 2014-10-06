@@ -29,7 +29,11 @@ class OMPGenerator(object):
 
     def propagate_global_ops(self):
 
-        # Propagate the operations to the populations
+        # Analyse the populations
+        for name, pop in self.populations.iteritems():
+            pop.global_operations = pop.neuron.description['global_operations']
+
+        # Propagate the global operations from the projections to the populations
         for name, proj in self.projections.iteritems():
             for op in proj.synapse.description['pre_global_operations']:
                 if isinstance(proj.pre, PopulationView):
@@ -38,6 +42,7 @@ class OMPGenerator(object):
                 else:
                     if not op in proj.pre.global_operations:
                         proj.pre.global_operations.append(op)
+
             for op in  proj.synapse.description['post_global_operations']:
                 if isinstance(proj.post, PopulationView):
                     if not op in proj.post.population.global_operations:
@@ -45,6 +50,11 @@ class OMPGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
+
+        # Make sure the operations are declared only once
+        for name, pop in self.populations.iteritems():
+            pop.global_operations = list(np.unique(np.array(pop.global_operations)))
+
 
 
 
@@ -135,13 +145,14 @@ struct PopStruct%(id)s{
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Arrays for the presynaptic sums
-            if pop.neuron.type == 'rate':
-                code += """
+            code += """
     // Targets
 """
+            if pop.neuron.type == 'rate':
                 for target in pop.neuron.description['targets']:
-                    code += """    std::vector<double> sum_%(target)s;
+                    code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
+
 
             # Global operations
             code += """
@@ -226,28 +237,83 @@ struct ProjStruct%(id)s{
                     code += """
     // Local variable %(name)s
     std::vector< std::vector< %(type)s > > %(name)s ;
-    //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    //bool record_%(name)s ;
+    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s ;
+    std::vector< int > record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
     // Global variable %(name)s
     std::vector<%(type)s>  %(name)s ;
-    //std::vector< %(type)s > recorded_%(name)s ;
-    //bool record_%(name)s ;
+    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
+    std::vector< int > record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Pre- or post_spike variables (including w)
             if proj.synapse.description['type'] == 'spike':
-                for var in proj.synapse.description['pre_spike']:
-                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
+                extra_var = [var['name'] for var in proj.synapse.description['pre_spike'] + proj.synapse.description['post_spike'] ]
+                for var in list(set(extra_var)):
+                    if not var in proj.synapse.description['attributes'] + ['g_target']:
                         code += """
     // Local variable %(name)s added by default
     std::vector< std::vector< %(type)s > > %(name)s ;
-    //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    //bool record_%(name)s ;
-""" % {'type' : 'double', 'name': var['name']}
+    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s ;
+    std::vector< int > record_%(name)s ;
+""" % {'type' : 'double', 'name': var}
 
+            # Local functions
+            if len(proj.synapse.description['functions'])>0:
+                code += """
+    // Local functions
+"""
+                for func in proj.synapse.description['functions']:
+                    code += ' '*4 + func['cpp'] + '\n'
+
+            # Structural plasticity
+            if Global.config['structural_plasticity']:
+                # Retrieve the names of extra attributes   
+                extra_args = ""
+                add_code = ""
+                remove_code = ""
+                for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                    if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+                        extra_args += ', ' + var['ctype'] + ' _' +  var['name'] 
+                        add_code += ' '*8 + var['name'] + '[post].insert('+var['name']+'[post].begin() + idx, _' + var['name'] + ');\n'
+                        remove_code += ' '*8 + var['name'] + '[post].erase(' + var['name'] + '[post].begin() + idx);\n'
+                # Delays
+                delay_code = ""
+                if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+                    delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
+                # Generate the code
+                code += """
+    // Structural plasticity
+    void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s){
+        int idx = 0;
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] > pre){
+                idx = i;
+                break;
+            }
+        }
+        pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
+        w[post].insert(w[post].begin() + idx, weight);
+        %(delay_code)s
+%(add_code)s
+    };
+    void removeSynapse(int post, int pre){
+        int idx = 0;
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] == pre){
+                idx = i;
+                break;
+            }
+        }
+        pre_rank[post].erase(pre_rank[post].begin() + idx);
+        w[post].erase(w[post].begin() + idx);
+%(remove_code)s  
+    };
+""" % {'extra_args': extra_args, 'delay_code': delay_code, 'add_code': add_code, 'remove_code': remove_code}
+
+            # Finish the structure
             code += """
 };    
 """ 
@@ -334,12 +400,16 @@ struct ProjStruct%(id)s{
         # Record
         record = self.body_record()
 
+        # Early stopping
+        run_until = self.body_run_until()
+
 
         from .BodyTemplate import body_template
         return body_template % {
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
             'glops_def': glop_definition,
+            'run_until': run_until,
             'compute_sums' : compute_sums,
             'reset_sums' : reset_sums,
             'update_neuron' : update_neuron,
@@ -373,7 +443,7 @@ struct ProjStruct%(id)s{
             from ..Utils import generate_equation_code
 
             # Global variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'pop': 'pop' + str(pop.id)}
+            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'id': pop.id}
             if eqs.strip() != "":
                 code += """
     // Updating the global variables of population %(id)s (%(name)s)
@@ -381,7 +451,7 @@ struct ProjStruct%(id)s{
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
             # Local variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'pop': 'pop' + str(pop.id)}
+            eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'id': pop.id}
             code += """
     // Updating the local variables of population %(id)s (%(name)s)
     #pragma omp parallel for
@@ -389,26 +459,19 @@ struct ProjStruct%(id)s{
 %(eqs)s
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
-#             # Reset weighted sums
-#             if pop.neuron.type == 'rate':
-#                 for target in pop.neuron.description['targets']:
-#                     code += """
-#         pop%(id)s.sum_%(target)s[i] = 0.0;
-# """ % {'id': pop.id, 'name' : pop.name, 'target': target}
-
 
             # Spike emission
             if pop.neuron.type == 'spike':
-                cond =  pop.neuron.description['spike']['spike_cond'] % {'pop': 'pop'+str(pop.id)}
+                cond =  pop.neuron.description['spike']['spike_cond'] % {'id': pop.id}
                 reset = ""; refrac = ""
                 for eq in pop.neuron.description['spike']['spike_reset']:
                     reset += """
             %(reset)s
-""" % {'reset': eq['cpp'] % {'pop': 'pop'+str(pop.id)}}
+""" % {'reset': eq['cpp'] % {'id': pop.id}}
                     if not 'unless_refractory' in eq['constraint']:
                         refrac += """
             %(refrac)s
-""" % {'refrac': eq['cpp'] % {'pop': 'pop'+str(pop.id)} }
+""" % {'refrac': eq['cpp'] % {'id': pop.id} }
 
                 # Main code
                 code += """
@@ -487,7 +550,7 @@ struct ProjStruct%(id)s{
             if not 'psp' in  proj.synapse.description.keys(): # default
                 psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
             else: # custom psp
-                psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+                psp = (proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% {'id_proj' : proj.id})
             # Take delays into account if any
             if proj.max_delay > 1:
                 if proj._synapses.uniform_delay == -1 : # Non-uniform delays
@@ -503,18 +566,76 @@ struct ProjStruct%(id)s{
             # No need for openmp if less than 10 neurons
             omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
-            code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+            # Generate the code depending on the operation
+            if proj.synapse.operation == 'sum': # normal summation
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
             sum += %(psp)s
         }
-        pop%(id_post)s.sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
     'psp': psp, 'omp_code': omp_code}
+
+            elif proj.synapse.operation == 'max': # max pooling
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = max
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        int j= 0;
+        sum = %(psp)s ;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            if(%(psp)s > sum){
+                sum = %(psp)s ;
+            }
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+    }
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+
+            elif proj.synapse.operation == 'min': # max pooling
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = min
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        int j= 0;
+        sum = %(psp)s ;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            if(%(psp)s < sum){
+                sum = %(psp)s ;
+            }
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+    }
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+
+            elif proj.synapse.operation == 'mean': # max pooling
+                code+= """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        sum = 0.0 ;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            sum += %(psp)s ;
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum / (double)(proj%(id_proj)s.pre_rank[i].size());
+    }
+"""%{'id_proj' : proj.id, 'target': proj.target, 
+    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+    'psp': psp.replace(';', ''), 'omp_code': omp_code}
 
             return code
 
@@ -582,7 +703,7 @@ struct ProjStruct%(id)s{
             if pop.neuron.type == 'rate':
                 for target in pop.targets:
                     code += """
-    memset( pop%(id)s.sum_%(target)s.data(), 0.0, pop%(id)s.sum_%(target)s.size() * sizeof(double));
+    memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
 """ % {'id': pop.id, 'target': target}
 
         return code
@@ -599,6 +720,7 @@ struct ProjStruct%(id)s{
                 # Generate the code
                 if post_code != "":
                     omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+
                     code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning){
@@ -632,14 +754,15 @@ struct ProjStruct%(id)s{
 
             # Generate the code
             if local_eq.strip() != '' or global_eq.strip() != '' :
+                omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
                 code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning){
-        #pragma omp parallel for private(rk_pre, rk_post)
+        %(omp)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
 %(global)s
-"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name}
+"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'omp': omp_code}
  
                 if local_eq.strip() != "": 
                     code+= """
@@ -774,8 +897,23 @@ struct ProjStruct%(id)s{
     // Initialize projections
 """
         for name, proj in self.projections.iteritems():
-                code += """    proj%(id)s._learning = true;
+            # Learning by default
+            code += """    proj%(id)s._learning = true;
 """ % {'id': proj.id}
+            # Recording
+            for var in proj.synapse.description['variables']:
+                if var['name'] in proj.synapse.description['local']:
+                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< double > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< double > >());
+"""% {'id': proj.id, 'name': var['name']}
+                else:
+                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< double > > (proj%(id)s.post_rank.size(), std::vector< double >());
+"""% {'id': proj.id, 'name': var['name']}
+
+            if proj.synapse.description['type'] == 'spike':
+                for var in proj.synapse.description['pre_spike']:
+                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
+                        code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< double > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< double > >());
+"""% {'id': proj.id, 'name': var['name']}
 
         return code
 
@@ -814,12 +952,13 @@ struct ProjStruct%(id)s{
                 continue
 
             for op in pop.global_operations:
-                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s);
+                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s.data(), pop%(id)s.size);
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         return code
 
     def body_record(self):
         code = ""
+        # Populations
         for name, pop in self.populations.iteritems():
             # Is it a specific population?
             if pop.generator['omp']['body_record']:
@@ -831,6 +970,71 @@ struct ProjStruct%(id)s{
     if(pop%(id)s.record_%(name)s)
         pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
 """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
+
+        # Projections
+        for name, proj in self.projections.iteritems():
+            for var in proj.synapse.description['variables']:
+                    code += """
+    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
+        proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
+    }
+""" % {'id': proj.id, 'name': var['name']}
+
+            if proj.synapse.description['type'] == 'spike':
+                for var in proj.synapse.description['pre_spike']:
+                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
+                        code += """
+    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
+        proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
+    }
+""" % {'id': proj.id, 'name': var['name']}
+
+        return code
+
+    def body_run_until(self):
+        code = ""
+        for name, pop in self.populations.iteritems():
+            if not pop.stop_condition: # no stop condition has been defined
+                code += """
+                case %(id)s: 
+                    pop_stop = false;
+                    break;
+""" % {'id': pop.id}
+            else:
+                pop.neuron.description['stop_condition'] = {'eq': pop.stop_condition}
+                from ANNarchy.parser.Extraction import extract_stop_condition
+                from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
+                # Find the paradigm OMP or CUDA
+                if config['paradigm'] == 'cuda':
+                    pattern = pattern_cuda
+                else:
+                    pattern = pattern_omp
+                extract_stop_condition(pop.neuron.description, pattern)
+
+                if pop.neuron.description['stop_condition']['type'] == 'any':
+                    stop_code = """
+                    pop_stop = false;
+                    for(int i=0; i<pop%(id)s.size; i++)
+                    {
+                        if(%(condition)s)
+                            pop_stop = true;
+                    }
+    """ % {'id': pop.id, 'condition': pop.neuron.description['stop_condition']['cpp']% {'id': pop.id}}
+                else:
+                    stop_code = """
+                    pop_stop = true;
+                    for(int i=0; i<pop%(id)s.size; i++)
+                    {
+                        if(!(%(condition)s))
+                            pop_stop = false;
+                    }
+    """ % {'id': pop.id, 'condition': pop.neuron.description['stop_condition']['cpp']% {'id': pop.id}}
+
+                code += """
+                case %(id)s: 
+%(stop_code)s
+                    break;
+""" % {'id': pop.id, 'stop_code': stop_code}
         return code
 
 
@@ -917,7 +1121,7 @@ struct ProjStruct%(id)s{
         # Targets
 """
                 for target in pop.neuron.description['targets']:
-                    code += """        vector[double] sum_%(target)s
+                    code += """        vector[double] _sum_%(target)s
 """ % {'target' : target}
 
             # Finalize the code
@@ -965,15 +1169,15 @@ struct ProjStruct%(id)s{
                     code += """
         # Local variable %(name)s
         vector[vector[%(type)s]] %(name)s 
-        #vector[vector[%(type)s]] recorded_%(name)s 
-        #bool record_%(name)s 
+        vector[vector[vector[%(type)s]]] recorded_%(name)s 
+        vector[int] record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
         # Global variable %(name)s
         vector[%(type)s]  %(name)s 
-        #vector[%(type)s] recorded_%(name)s
-        #bool record_%(name)s 
+        vector[vector[%(type)s]] recorded_%(name)s
+        vector[int] record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
 
@@ -984,9 +1188,23 @@ struct ProjStruct%(id)s{
                         code += """
         # Local variable %(name)s
         vector[vector[%(type)s]] %(name)s 
-        #vector[vector[%(type)s]] recorded_%(name)s 
-        #bool record_%(name)s 
+        vector[vector[vector[%(type)s]]] recorded_%(name)s 
+        vector[int] record_%(name)s 
 """ % {'type' : 'double', 'name': var['name']}
+
+            # Structural plasticity
+            if Global.config['structural_plasticity']:
+                # Retrieve the names of extra attributes   
+                extra_args = ""
+                for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                    if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+                        extra_args += ', ' + var['ctype'] + ' ' +  var['name'] 
+                # Generate the code
+                code += """
+        # Structural plasticity
+        void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s)
+        void removeSynapse(int post, int pre)
+""" % {'extra_args': extra_args}
 
             # Finalize the code
             proj_struct += code % {'id': proj.id}
@@ -1054,7 +1272,7 @@ cdef class pop%(id)s_wrapper :
             if pop.neuron.type == 'rate':
                 for target in pop.neuron.description['targets']:
                     code += """
-        pop%(id)s.sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
+        pop%(id)s._sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
 
             # Size property
             code += """
@@ -1141,7 +1359,15 @@ cdef class pop%(id)s_wrapper :
         return pop%(id)s.%(name)s
     cpdef set_%(name)s(self, %(type)s value):
         pop%(id)s.%(name)s = value
-""" % {'id' : pop.id, 'name': var['name']}
+    def start_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = True
+    def stop_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = False
+    def get_record_%(name)s(self):
+        cdef vector[%(type)s] tmp = pop%(id)s.recorded_%(name)s
+        pop%(id)s.recorded_%(name)s.clear()
+        return tmp
+""" % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
         return code
 
@@ -1194,11 +1420,13 @@ cdef class proj%(id)s_wrapper :
                     init = 0.0 if var['ctype'] == 'double' else 0
                     code += """
         proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
+        proj%(id)s.record_%(name)s = vector[int]()
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
                 else:
                     init = 0.0 if var['ctype'] == 'double' else 0
                     code += """
         proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
+        proj%(id)s.record_%(name)s = vector[int]()
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Size property
@@ -1220,12 +1448,21 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.pre_rank[n]
 """ % {'id': proj.id}
 
+            # Delays
+            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+                code +="""
+    def get_delay(self):
+        return proj%(id)s.delay
+    def set_delay(self, value):
+        proj%(id)s.delay = value
+"""% {'id': proj.id}
+
             # Pre- or post_spike variables (including w)
             if proj.synapse.description['type'] == 'spike':
                 for var in proj.synapse.description['pre_spike']:
                     if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
                         code += """
-    # Local variable %(name)s
+    # Local variable %(name)s defined in pre_spike
     def get_%(name)s(self):
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
@@ -1238,6 +1475,18 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
+    def start_record_%(name)s(self, int rank):
+        if not rank in list(proj%(id)s.record_%(name)s):
+            proj%(id)s.record_%(name)s.push_back(rank)
+    def stop_record_%(name)s(self, int rank):
+        cdef list tmp = list(proj%(id)s.record_%(name)s)
+        tmp.remove(rank)
+        proj%(id)s.record_%(name)s = tmp
+    def get_recorded_%(name)s(self, int rank):
+        cdef vector[vector[%(type)s]] data 
+        data = proj%(id)s.recorded_%(name)s[rank]
+        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
+        return data
 """ % {'id' : proj.id, 'name': var['name'], 'type': 'double'}
 
             # Parameters
@@ -1266,7 +1515,11 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
         proj%(id)s.%(name)s = value
-""" % {'id' : proj.id, 'name': var['name']}
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, %(type)s value):
+        proj%(id)s.%(name)s[rank] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
             # Variables
             for var in proj.synapse.description['variables']:
@@ -1285,6 +1538,17 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
+    def start_record_%(name)s(self, int rank):
+        if not rank in list(proj%(id)s.record_%(name)s):
+            proj%(id)s.record_%(name)s.push_back(rank)
+    def stop_record_%(name)s(self, int rank):
+        cdef list tmp = list(proj%(id)s.record_%(name)s)
+        tmp.remove(rank)
+        proj%(id)s.record_%(name)s = tmp
+    def get_recorded_%(name)s(self, int rank):
+        cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
+        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
+        return data
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
                 elif var['name'] in proj.synapse.description['global']:
@@ -1294,6 +1558,30 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
         proj%(id)s.%(name)s = value
-""" % {'id' : proj.id, 'name': var['name']}
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, %(type)s value):
+        proj%(id)s.%(name)s[rank] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+
+             # Structural plasticity
+            if Global.config['structural_plasticity']:
+                # Retrieve the names of extra attributes   
+                extra_args = ""
+                extra_values = ""
+                for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
+                    if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+                        extra_args += ', ' + var['ctype'] + ' ' +  var['name']   
+                        extra_values += ', ' +  var['name']       
+
+                # Generate the code        
+                code += """
+    # Structural plasticity
+    def add_synapse(self, int post_rank, int pre_rank, double weight, int delay%(extra_args)s):
+        proj%(id)s.addSynapse(post_rank, pre_rank, weight, delay%(extra_values)s)
+    def remove_synapse(self, int post_rank, int pre_rank):
+        proj%(id)s.removeSynapse(post_rank, pre_rank)
+"""% {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
+
 
         return code

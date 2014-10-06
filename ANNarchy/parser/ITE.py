@@ -29,7 +29,7 @@ from ANNarchy.parser.StringManipulation import *
 from pprint import pprint
 import re
 
-def translate_ITE(name, eq, condition, description, untouched, prefix, index, global_index='', split=True):
+def translate_ITE(name, eq, condition, description, untouched, prefix, sep, index, global_index='', split=True):
     " Recursively processes the different parts of an ITE statement"
     def process_ITE(condition):
         if_statement = condition[0]
@@ -38,21 +38,21 @@ def translate_ITE(name, eq, condition, description, untouched, prefix, index, gl
         if_code = Equation(name, if_statement, description['attributes'], 
                           description['local'], description['global'], 
                           untouched = untouched.keys(),
-                          type='cond', prefix=prefix, index=index, global_index=global_index).parse()
+                          type='cond', prefix=prefix, sep=sep, index=index, global_index=global_index).parse()
         if isinstance(then_statement, list): # nested conditional
             then_code =  process_ITE(then_statement)
         else:
             then_code = Equation(name, then_statement, description['attributes'], 
                           description['local'], description['global'], 
                           untouched = untouched.keys(),
-                          type='return', prefix=prefix, index=index, global_index=global_index).parse().split(';')[0]
+                          type='return', prefix=prefix, sep=sep, index=index, global_index=global_index).parse().split(';')[0]
         if isinstance(else_statement, list): # nested conditional
             else_code =  process_ITE(else_statement)
         else:
             else_code = Equation(name, else_statement, description['attributes'], 
                           description['local'], description['global'], 
                           untouched = untouched.keys(),
-                          type='return', prefix=prefix, index=index, global_index=global_index).parse().split(';')[0]
+                          type='return', prefix=prefix, sep=sep, index=index, global_index=global_index).parse().split(';')[0]
                           
         code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
         return code
@@ -61,7 +61,7 @@ def translate_ITE(name, eq, condition, description, untouched, prefix, index, gl
         # Main equation, where the right part is __conditional__
         translator = Equation(name, eq, description['attributes'], 
                               description['local'], description['global'], 
-                              untouched = untouched.keys(), prefix=prefix, index=index, global_index=global_index)
+                              untouched = untouched.keys(), prefix=prefix, sep=sep, index=index, global_index=global_index)
         code = translator.parse() 
     else:
         code = '__conditional__'

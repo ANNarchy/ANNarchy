@@ -5,9 +5,12 @@ from .core.Synapse import Synapse, RateSynapse, SpikeSynapse
 from .core.Population import Population
 from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray
 from .core.Projection import Projection
+from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
+from .core.IO import save, load
 from .core.Utils import raster_plot, smoothed_rate, histogram
 from .models import *
+
 try:
     from .core.cython_ext.Connector import CSR
 except:

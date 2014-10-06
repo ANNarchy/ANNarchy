@@ -137,11 +137,14 @@ class IndividualNeuron(object):
             return object.__getattribute__(self, name)
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
-                val = (self.population.get(name))
-                if isinstance(val, np.ndarray):
-                    return val[self.population.coordinates_from_rank(self.rank)]
+                if not self.population.initialized: # Store it in the temporary array
+                    val = (self.population.get(name))
+                    if isinstance(val, np.ndarray):
+                        return val[self.population.coordinates_from_rank(self.rank)]
+                    else:
+                        return val
                 else:
-                    return val
+                    return getattr(self.population.cyInstance, 'get_single_'+name)(self.rank)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -155,13 +158,13 @@ class IndividualNeuron(object):
             object.__setattr__(self, name, value)
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
-                if name in self.population.description['local']:
+                if name in self.population.neuron.description['local']:
                     if not self.population.initialized: # Store it in the temporary array
                         newval = self.population.get(name)
                         newval[self.population.coordinates_from_rank(self.rank)] = value
                         self.population.__setattr__(name, newval)
                     else: # Access the C++ data 
-                        eval('self.population.cyInstance._set_single_'+name+'('+str(self.rank)+', '+str(value)+')')
+                        getattr(self.population.cyInstance, 'set_single_'+name)(self.rank, value)
                 else:
                     self.population.__setattr__(name, value)
             else:

@@ -1,4 +1,3 @@
-from .Analyser import Analyser
 
 class Report(object):
     """ Generates automatically a report in the desired format"""

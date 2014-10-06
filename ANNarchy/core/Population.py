@@ -25,6 +25,7 @@ import ANNarchy.core.Global as Global
 
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Neuron import IndividualNeuron
 
 import numpy as np
 import copy
@@ -224,6 +225,9 @@ class Population(object):
         self.neuron._analyse()
         self.generator = copy.deepcopy(pop_generator_template)
         
+        # Store the stop condition
+        self.stop_condition = stop_condition
+
         # Attribute a name if not provided
         self.id = len(Global._populations)
         self.class_name = 'pop'+str(self.id)
@@ -656,13 +660,16 @@ class Population(object):
         
         for var in _variable:
             if not var in self.variables + ['spike']:
-                Global._warning(var, 'is not a recordable variable of the population.')
-                continue
-            if var in self.recorded_variables.keys():
-                #Global._warning(var, 'is already recording.')
-                continue
+                Global._error('start: ' + var, 'is not a recordable variable of the population.')
+                return
+
             self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1]}
-            getattr(self.cyInstance, 'start_record_'+var)()
+            
+            try:
+                getattr(self.cyInstance, 'start_record_'+var)()
+            except:
+                Global._error(var + 'is not a recordable variable.')
+                return
 
     def stop_record(self, variable=None):
         """
@@ -688,14 +695,101 @@ class Population(object):
             print('Error: variable must be either a string or list of strings.')       
         
         for var in _variable:
-            if not var in self.variables + ['spike']:
-                Global._warning(var, 'is not a recordable variable of the population.')
-                continue
             if not var in self.recorded_variables.keys():
                 Global._warning(var, 'was not recording.')
                 continue
-            getattr(self.cyInstance, 'stop_record_'+var)()
+            try:
+                getattr(self.cyInstance, 'stop_record_'+var)()
+            except:
+                Global._error('stop: ' + var + 'is not a recordable variable.')
+                return
+
             del self.recorded_variables[var]
+
+    def pause_record(self, variable=None):
+        """
+        Pauses the recording of variables (can be resumed later with resume_record()).
+
+        *Parameter*:
+            
+        * **variable**: single variable name or list of variable names. If no argument is provided all recordings will pause.
+
+        Example::
+
+            pop1.pause_record('r')
+            pop2.pause_record(['mp', 'r'])  
+        """
+        _variable = []
+        if variable == None:
+            _variable = self.recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')       
+        
+        for var in _variable:
+            
+            if not var in self.recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.name)
+                continue
+            
+            try:
+                getattr(self.cyInstance, 'stop_record_'+var)()
+
+            except:
+                Global._error('pause: ' + var + 'is not a recordable variable.')
+                return
+
+            self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+            self.recorded_variables[var]['start'].append(-1)
+            self.recorded_variables[var]['stop'].append(-1)
+
+            if Global.config['verbose']:
+                print('pause record of', var, '(', self.name, ')')
+
+    def resume_record(self, variable=None):
+        """
+        Resume recording the previous defined variables.
+        
+        *Parameter*:
+            
+            * **variable**: single variable name or list of variable names.  
+
+        Example::
+
+            pop1.resume_record('r')
+            pop2.resume_record(['mp', 'r'])        
+        """
+        _variable = []
+        
+        if variable == None:
+            _variable = self.recorded_variables
+        elif isinstance(variable, str):
+            _variable.append(variable)
+        elif isinstance(variable, list):
+            _variable = variable
+        else:
+            print('Error: variable must be either a string or list of strings.')
+        
+        for var in _variable:
+            
+            if not var in self.recorded_variables.keys():
+                print(var, 'is not a recordable variable of', self.name)
+                continue
+            
+            try:
+                getattr(self.cyInstance, 'start_record_'+var)()
+
+            except:
+                Global._error('resume: ' + var + 'is not a recordable variable.')
+                return
+
+            self.recorded_variables[var]['start'][-1] = Global.get_current_step()
+            
+            if Global.config['verbose']:
+                Global._print('resume record of', var, '(' , self.name, ')')
 
     def get_record(self, variable=None, reshape=False):
         """
@@ -737,18 +831,28 @@ class Population(object):
                 Global._warning(var, 'was not recording.')
                 continue
         
-            var_data = getattr(self.cyInstance, 'get_record_'+var)()
-            self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+            try:
+                var_data = getattr(self.cyInstance, 'get_record_'+var)()
+            except:
+                Global._error('get: ' + var + 'is not a recordable variable.')
+                return {}
+
+            if self.recorded_variables[var]['stop'][-1] == -1:
+                self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
+
             data[var] = {
                 'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
                 'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
                 'data' : np.array(var_data).T if not var == 'spike' else np.array(var_data)
             }
 
+            self.recorded_variables[var]['start'] = [Global.get_current_step()]
+            self.recorded_variables[var]['stop'] = [-1]
+
         return data
 
     ################################
-    ## MOdification of the variables
+    ## Modification of the variables
     ################################
     def set_variable_flags(self, name, value):
         """ Sets the flags of a variable for the population.
@@ -829,3 +933,69 @@ class Population(object):
             if self.neuron.description['variables'][idx]['name'] == name:
                 return idx
         return -1
+
+    ################################
+    ## Save/load methods
+    ################################
+    def _data(self):
+        "Returns a dictionary containing all information about the population. Used for saving."
+        desc = {}
+        desc['name'] = self.name
+        desc['geometry'] = self.geometry
+        desc['size'] = self.size
+        # Attributes
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+        # Save all attributes           
+        for var in self.attributes:
+            try:
+                desc[var] = getattr(self.cyInstance, 'get_'+var)()
+            except:
+                Global._error('Can not save the attribute ' + var + 'in the population ' + self.name + '.')              
+        return desc 
+
+    def save(self, filename):
+        """
+        Saves all information about the population (structure, current value of parameters and variables) into a file.
+
+        * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+
+        * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+
+        * Otherwise, the data will be pickled into a simple binary text file using cPickle.
+        
+        *Parameter*:
+        
+        * **filename**: filename, may contain relative or absolute path.
+        
+            .. warning:: 
+
+                The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+
+        Example::
+        
+            pop.save('pop1.txt')
+
+        """
+        from ANNarchy.core.IO import _save_data
+        _save_data(filename, self._data())
+
+
+    def load(self, filename):
+        """
+        Load the saved state of the population.
+
+        Warning: Matlab data can not be loaded.
+        
+        *Parameters*:
+        
+        * **filename**: the filename with relative or absolute path.
+        
+        Example::
+        
+            pop.load('pop1.txt')
+
+        """
+        from ANNarchy.core.IO import _load_data, _load_pop_data
+        _load_pop_data(self, _load_data(filename))
