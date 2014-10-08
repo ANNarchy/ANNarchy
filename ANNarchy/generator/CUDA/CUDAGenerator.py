@@ -1,6 +1,8 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 
+import numpy as np
+
 class CUDAGenerator(object):
 
     def __init__(self, populations, projections):
@@ -27,7 +29,12 @@ class CUDAGenerator(object):
 
     def propagate_global_ops(self):
 
-        for proj in self.projections.itervalues():
+        # Analyse the populations
+        for name, pop in self.populations.iteritems():
+            pop.global_operations = pop.neuron.description['global_operations']
+
+        # Propagate the global operations from the projections to the populations
+        for name, proj in self.projections.iteritems():
             for op in proj.synapse.description['pre_global_operations']:
                 if isinstance(proj.pre, PopulationView):
                     if not op in proj.pre.population.global_operations:
@@ -35,6 +42,7 @@ class CUDAGenerator(object):
                 else:
                     if not op in proj.pre.global_operations:
                         proj.pre.global_operations.append(op)
+
             for op in  proj.synapse.description['post_global_operations']:
                 if isinstance(proj.post, PopulationView):
                     if not op in proj.post.population.global_operations:
@@ -43,6 +51,9 @@ class CUDAGenerator(object):
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
 
+        # Make sure the operations are declared only once
+        for name, pop in self.populations.iteritems():
+            pop.global_operations = list(np.unique(np.array(pop.global_operations)))
 
 
 
@@ -330,7 +341,7 @@ ProjStruct%(id)s proj%(id)s;
 """% {'id': proj.id}
 
         # Code for the global operations
-        glop_definition = "" #TODO: self.body_def_glops()
+        glob_ops_header, glob_ops_body = self.body_def_glops()
 
         # Compute presynaptic sums
         compute_sums_body, compute_sums_header, compute_sums_call = self.body_computesum_proj()
@@ -355,7 +366,7 @@ ProjStruct%(id)s proj%(id)s;
         projection_init = self.body_init_projection()
 
         # Initialize global operations
-        globalops_init = "" #TODO: self.body_init_globalops()
+        globalops_init = self.body_init_globalops()
         
         # call cuda-kernel for updating the neural variables
         update_neuron_body, update_neuron_header, update_neuron_call = self.body_update_neuron()
@@ -364,7 +375,7 @@ ProjStruct%(id)s proj%(id)s;
         delay_code = "" #TODO: self.body_delay_neuron()
 
         # Global operations
-        update_globalops = "" #TODO: self.body_update_globalops()
+        update_globalops = self.body_update_globalops()
 
         # Equations for the synaptic variables
         update_synapse_body, update_synapse_header, update_synapse_call = self.body_update_synapse()
@@ -385,6 +396,7 @@ ProjStruct%(id)s proj%(id)s;
             'neuron': update_neuron_header,
             'compute_sum': compute_sums_header,
             'synapse': update_synapse_header,
+            'glob_ops': glob_ops_header
         }
         with open(Global.annarchy_dir+'/generate/cuANNarchy.h', 'w') as ofile:
             ofile.write(cuda_header)
@@ -395,7 +407,8 @@ ProjStruct%(id)s proj%(id)s;
             'kernel_config': threads_per_kernel,
             'pop_kernel': update_neuron_body,
             'psp_kernel': compute_sums_body,
-            'syn_kernel': update_synapse_body
+            'syn_kernel': update_synapse_body,
+            'glob_ops_kernel': glob_ops_body
         }
         with open(Global.annarchy_dir+'/generate/cuANNarchy.cu', 'w') as ofile:
             ofile.write(cuda_body)
@@ -405,7 +418,6 @@ ProjStruct%(id)s proj%(id)s;
         return body_template % {
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
-            'glops_def': glop_definition,
             'stream_setup': stream_setup,
             'compute_sums' : compute_sums_call,
             'update_neuron' : update_neuron_call,
@@ -502,6 +514,10 @@ ProjStruct%(id)s proj%(id)s;
                 else:
                     par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
 
+            # global operations
+            for op in pop.global_operations:
+                par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
+
             # targets
             for target in pop.neuron.description['targets']:
                 tar += """, double* _sum_%(target)s""" % {'target' : target}
@@ -557,6 +573,10 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
             # targets
             for target in pop.neuron.description['targets']:
                 tar += """, pop%(id)s.gpu_sum_%(target)s""" % { 'id': pop.id, 'target' : target}
+
+            # global operations
+            for op in pop.global_operations:
+                par += """, pop%(id)s._%(op)s_%(var)s""" % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
 
             from .cuBodyTemplate import pop_kernel_call
             call += pop_kernel_call % { 'id': pop.id,
@@ -866,7 +886,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     auto status = cudaSetDevice(%(id)s);
     if ( status != cudaSuccess )
         std::cerr << "Error on setting cuda device ... " << std::endl;
-        
+
     // initialize cuda-api
     cudaFree(0);
 """ % { 'id': dev_id }
@@ -907,8 +927,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
         proj%(id)s.%(name)s_dirty = false;
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
-                    
-                    
+
         return code
 
     def body_init_randomdistributions(self):
@@ -949,20 +968,15 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         if ops == []:
             return ""
 
-        from .GlobalOperationTemplate import min_template, max_template, mean_template, norm1_template, norm2_template
-        code = ""
+        from .GlobalOperationTemplate import global_operation_templates
+        header = ""
+        body = ""
+
         for op in list(set(ops)):
-            if op == 'min':
-                code += min_template
-            elif op == 'max':
-                code += max_template
-            elif op == 'mean':
-                code += mean_template
-            elif op == 'norm1':
-                code += norm1_template
-            elif op == 'norm2':
-                code += norm2_template
-        return code
+            header += global_operation_templates[op]['header']
+            body += global_operation_templates[op]['body']
+
+        return header, body
 
     def body_init_delay(self):
         code = """
@@ -1025,15 +1039,24 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def body_update_globalops(self):
         code = ""
+        from .GlobalOperationTemplate import global_operation_templates
+
+        code = """
+    double *tmp;
+    cudaMalloc((void**)&tmp, sizeof(double));
+"""
         for pop in self.populations.itervalues():
             # Is it a specific population?
             if pop.generator['omp']['body_update_globalops']:
-                code += pop.generator['omp']['body_update_globalops'] %{'id': pop.id}
+                code += pop.generator['omp']['body_update_globalops'] %{ 'id': pop.id}
                 continue
 
             for op in pop.global_operations:
-                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s);
-""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+                code += global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'var': op['variable']  } 
+
+        code += """
+    cudaFree(tmp);
+"""
         return code
 
     def body_record(self):

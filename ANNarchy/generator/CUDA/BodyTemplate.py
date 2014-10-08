@@ -120,6 +120,7 @@ void initialize(double _dt) {
 %(random_dist_init)s
 %(delay_init)s
 %(spike_init)s
+%(globalops_init)s
 
     // create streams
     stream_setup();
@@ -162,6 +163,7 @@ void step()
     ////////////////////////////////
     // Global operations (min/max/mean)
     ////////////////////////////////
+%(update_globalops)s
 
     cudaDeviceSynchronize();
 

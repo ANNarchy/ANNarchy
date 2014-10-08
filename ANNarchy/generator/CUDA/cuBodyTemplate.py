@@ -1,6 +1,7 @@
 cu_body_template=\
 """
 #include "cuANNarchy.h"
+#include <float.h>
 
 %(kernel_config)s
 
@@ -23,6 +24,11 @@ __device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
  * update synapses kernel               *
  ****************************************/
 %(syn_kernel)s
+
+/****************************************
+ * global operations kernel             *
+ ****************************************/
+%(glob_ops_kernel)s
 """
 
 cu_header_template=\
@@ -37,6 +43,9 @@ cu_header_template=\
 
 // projection step prototypes
 %(synapse)s
+
+// global operations
+%(glob_ops)s
 
 #endif
 """
