@@ -52,7 +52,8 @@ config = dict(
     'paradigm': "openmp",
     'method': "explicit",
     'seed': -1,
-    'structural_plasticity': False
+    'structural_plasticity': False,
+    'profiling': False
    }
 )
 

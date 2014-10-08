@@ -193,6 +193,13 @@ struct PopStruct%(id)s{
                 for func in pop.neuron.description['functions']:
                     code += ' '*4 + func['cpp'] + '\n'
 
+            # profiling related data
+            if Global.config['profiling']:
+                code += """
+    // profiling
+    std::vector<double> neuron_update;
+"""
+
             # Finish the structure
             code += """
 };    
@@ -319,6 +326,13 @@ struct ProjStruct%(id)s{
     };
 """ % {'extra_args': extra_args, 'delay_code': delay_code, 'add_code': add_code, 'remove_code': remove_code}
 
+            # profiling related data
+            if Global.config['profiling']:
+                code += """
+    // profiling
+    std::vector<double> compute_psp;
+"""
+
             # Finish the structure
             code += """
 };    
@@ -409,6 +423,8 @@ struct ProjStruct%(id)s{
         # Early stopping
         run_until = self.body_run_until()
 
+        #performance eval
+        performance_eval = self.body_performance_eval()
 
         from .BodyTemplate import body_template
         return body_template % {
@@ -429,7 +445,8 @@ struct ProjStruct%(id)s{
             'projection_init' : projection_init,
             'globalops_init' : globalops_init,
             'post_event' : post_event,
-            'record' : record
+            'record' : record,
+            'eval': performance_eval
         }
 
     def body_update_neuron(self):
@@ -449,22 +466,28 @@ struct ProjStruct%(id)s{
             from ..Utils import generate_equation_code
 
             # Global variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'id': pop.id}
-            if eqs.strip() != "":
+            global_eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'id': pop.id}
+
+            # Local variables
+            local_eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'id': pop.id}
+
+            # add profiling code if needed
+            if Global.config['profiling'] and (global_eqs.strip() != "" or local_eqs.strip() != ""):
+                from ...core.Population import profile_generator_template
+                code += profile_generator_template['omp']['update_neural_variables']['before'] % {'id': pop.id}
+
+            if global_eqs.strip() != "":
                 code += """
     // Updating the global variables of population %(id)s (%(name)s)
 %(eqs)s
-""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
+""" % {'id': pop.id, 'name' : pop.name, 'eqs': global_eqs}
 
-            # Local variables
-            eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'id': pop.id}
             code += """
     // Updating the local variables of population %(id)s (%(name)s)
     #pragma omp parallel for
     for(int i = 0; i < pop%(id)s.size; i++){
 %(eqs)s
-""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
-
+""" % {'id': pop.id, 'name' : pop.name, 'eqs': local_eqs}
 
             # Spike emission
             if pop.neuron.type == 'spike':
@@ -511,18 +534,19 @@ struct ProjStruct%(id)s{
             if(pop%(id)s.record_spike){
                 pop%(id)s.recorded_spike[i].push_back(t);
             }
-
         }
 """% {'id': pop.id} 
-
-                # End spike region
-
+            # End spike region
 
             # Finish parallel loop for the population
             code += """
     }
 """
-            
+
+            # finish performance measurement
+            if Global.config['profiling'] and (global_eqs.strip() != "" or local_eqs.strip() != ""):
+                from ...core.Population import profile_generator_template
+                code += profile_generator_template['omp']['update_neural_variables']['after'] % {'id': pop.id}
 
         return code
 
@@ -576,6 +600,10 @@ struct ProjStruct%(id)s{
                     )
             # No need for openmp if less than 10 neurons
             omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+
+            if Global.config['profiling']:
+                from ...core.Population import profile_generator_template
+                code += profile_generator_template['omp']['compute_psp']['before'] % { 'id': proj.id }
 
             # Generate the code depending on the operation
             if proj.synapse.operation == 'sum': # normal summation
@@ -647,6 +675,10 @@ struct ProjStruct%(id)s{
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
     'name_post': proj.post.name, 'name_pre': proj.pre.name, 
     'psp': psp.replace(';', ''), 'omp_code': omp_code}
+
+            if Global.config['profiling']:
+                from ...core.Population import profile_generator_template
+                code += profile_generator_template['omp']['compute_psp']['after'] % { 'id': proj.id }
 
             return code
 
@@ -1105,6 +1137,21 @@ struct ProjStruct%(id)s{
                     break;
 """ % {'id': pop.id, 'stop_code': stop_code}
         return code
+
+    def body_performance_eval(self):
+        if Global.config['profiling']:
+            code = ""
+
+            from ...core.Population import profile_generator_template
+            for proj in self.projections.itervalues():
+                code += profile_generator_template['omp']['compute_psp']['eval'] % { 'id': proj.id }
+
+            for pop in self.populations.itervalues():
+                code += profile_generator_template['omp']['update_neural_variables']['eval'] % { 'id': pop.id }
+
+            return code
+        else:
+            return ""
 
 
 #######################################################################

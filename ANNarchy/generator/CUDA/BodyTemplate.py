@@ -81,6 +81,15 @@ std::vector<std::vector<T> > deFlattenArray(std::vector<T> in, std::vector<int> 
 
 %(stream_setup)s
 
+void progress(int i, int nbSteps) {
+    double tInMs = nbSteps * dt;
+    if ( tInMs > 1000.0 )
+        std::cout << "\\rSimulate " << (int)(tInMs/1000.0) << " s: " << (int)( (double)(i+1)/double(nbSteps) * 100.0 )<< " finished.";
+    else
+        std::cout << "\\rSimulate " << tInMs << " ms: " << (int)( (double)(i+1)/double(nbSteps) * 100.0 )<< " finished.";
+    std::flush(std::cout);
+}
+
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
 %(host_device_transfer)s
@@ -88,11 +97,11 @@ void run(int nbSteps) {
     stream_assign();
 
     // simulation loop
-    for(int i=0; i<nbSteps; i++)
-    {
+    for(int i=0; i<nbSteps; i++) {
         step();
+        progress(i, nbSteps);
     }
-
+    std::cout << std::endl;
 %(device_host_transfer)s
 }
 
