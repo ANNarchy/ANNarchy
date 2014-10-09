@@ -40,7 +40,7 @@ class PopulationView(object):
         self.population = population
         self.ranks = ranks
         self.size = len(self.ranks)
-        self.neuron = self.population.neuron
+        self.neuron_type = self.population.neuron_type
         self.id = self.population.id
         self.name = population.name
 
