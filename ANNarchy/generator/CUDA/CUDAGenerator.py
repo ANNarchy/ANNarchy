@@ -966,7 +966,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
                 ops.append( op['function'] )
 
         if ops == []:
-            return ""
+            return "", ""
 
         from .GlobalOperationTemplate import global_operation_templates
         header = ""
