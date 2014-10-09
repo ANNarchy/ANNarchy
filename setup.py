@@ -77,6 +77,7 @@ setup(  name='ANNarchy',
                 "ANNarchy/core/cython_ext/Coordinates.pyx",
                 "ANNarchy/core/cython_ext/Transformations.pyx"]
         ),
-        include_dirs=[numpy.get_include()]
+        include_dirs=[numpy.get_include()],
+        zip_safe = False
 )
 
