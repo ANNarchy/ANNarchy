@@ -904,19 +904,11 @@ struct ProjStruct%(id)s{
         if ops == []:
             return ""
 
-        from .GlobalOperationTemplate import min_template, max_template, mean_template, norm1_template, norm2_template
+        from .GlobalOperationTemplate import global_operation_templates
         code = ""
         for op in list(set(ops)):
-            if op == 'min':
-                code += min_template
-            elif op == 'max':
-                code += max_template
-            elif op == 'mean':
-                code += mean_template
-            elif op == 'norm1':
-                code += norm1_template
-            elif op == 'norm2':
-                code += norm2_template
+            code += global_operation_templates[op]
+
         return code
 
     def body_init_delay(self):
