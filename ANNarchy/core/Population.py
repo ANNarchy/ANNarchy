@@ -261,10 +261,10 @@ class Population(object):
         
         # Store the neuron type
         if inspect.isclass(neuron):
-            self.neuron = neuron()
+            self.neuron_type = neuron()
         else:
-            self.neuron = copy.deepcopy(neuron)
-        self.neuron._analyse()
+            self.neuron_type = copy.deepcopy(neuron)
+        self.neuron_type._analyse()
         self.generator = copy.deepcopy(pop_generator_template)
         
         # Store the stop condition
@@ -285,17 +285,17 @@ class Population(object):
         # Get a list of parameters and variables
         self.parameters = []
         self.variables = []
-        for param in self.neuron.description['parameters']:
+        for param in self.neuron_type.description['parameters']:
             self.parameters.append(param['name'])
-        for var in self.neuron.description['variables']:
+        for var in self.neuron_type.description['variables']:
             self.variables.append(var['name'])
         self.attributes = self.parameters + self.variables
 
         # Store initial values
         self.init = {}
-        for param in self.neuron.description['parameters']:
+        for param in self.neuron_type.description['parameters']:
             self.init[param['name']] = param['init']
-        for var in self.neuron.description['variables']:
+        for var in self.neuron_type.description['variables']:
             self.init[var['name']] = var['init']
         
         # List of targets actually connected
@@ -344,16 +344,16 @@ class Population(object):
         self._init_attributes()
 
         # If the spike population has a refractory period:    
-        if self.neuron.type == 'spike' and self.neuron.description['refractory']:
-            if isinstance(self.neuron.description['refractory'], str): # a global variable
+        if self.neuron_type.type == 'spike' and self.neuron_type.description['refractory']:
+            if isinstance(self.neuron_type.description['refractory'], str): # a global variable
                 try:
-                    self.refractory = eval('self.'+self.neuron.description['refractory'])
+                    self.refractory = eval('self.'+self.neuron_type.description['refractory'])
                 except Exception, e:
-                    Global._print(e, self.neuron.description['refractory'])
+                    Global._print(e, self.neuron_type.description['refractory'])
                     Global._error('The initialization for the refractory period is not valid.')
                     exit(0)
             else: # a value
-                self.refractory = self.neuron.description['refractory']
+                self.refractory = self.neuron_type.description['refractory']
 
 
     def _init_attributes(self):
@@ -376,7 +376,7 @@ class Population(object):
                 if self.initialized: # access after compile()
                     return self._get_cython_attribute(name)
                 else: # access before compile()
-                    if name in self.neuron.description['local']:
+                    if name in self.neuron_type.description['local']:
                         if isinstance(self.init[name], np.ndarray):
                             return self.init[name]
                         else:
@@ -416,7 +416,7 @@ class Population(object):
         
         """
         try:
-            if attribute in self.neuron.description['local']:
+            if attribute in self.neuron_type.description['local']:
                 return getattr(self.cyInstance, 'get_'+attribute)().reshape(self.geometry)
             else:
                 return getattr(self.cyInstance, 'get_'+attribute)()
@@ -436,7 +436,7 @@ class Population(object):
         
         """
         try:
-            if attribute in self.neuron.description['local']:
+            if attribute in self.neuron_type.description['local']:
                 if isinstance(value, np.ndarray):
                     getattr(self.cyInstance, 'set_'+attribute)(value.reshape(self.size))
                 elif isinstance(value, list):
@@ -488,18 +488,18 @@ class Population(object):
     ################################
     @property
     def refractory(self):
-        if self.neuron.description['type'] == 'spike':
+        if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
                 return Global.config['dt']*self.cyInstance.get_refractory()
             else :
-                return self.neuron.description['refractory']
+                return self.neuron_type.description['refractory']
         else:
             Global._error('rate-coded neurons do not have refractory periods...')
             return None
 
     @refractory.setter
     def refractory(self, value):
-        if self.neuron.description['type'] == 'spike':
+        if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
                 if isinstance(value, RandomDistribution):
                     refs = (value.get_values(self.size)/Global.config['dt']).astype(int)
@@ -510,7 +510,7 @@ class Population(object):
                 # TODO cast into int
                 self.cyInstance.set_refractory(refs)
             else: # not initialized yet, saving for later
-                self.neuron.description['refractory'] = value
+                self.neuron_type.description['refractory'] = value
         else:
             Global._error('rate-coded neurons do not have refractory periods...')
 
@@ -924,21 +924,21 @@ class Population(object):
         for key, val in value.iteritems():
             if val == '': # a flag
                 try:
-                    self.neuron.description['variables'][rk_var]['flags'].index(key)
+                    self.neuron_type.description['variables'][rk_var]['flags'].index(key)
                 except: # the flag does not exist yet, we can add it
-                    self.neuron.description['variables'][rk_var]['flags'].append(key)
+                    self.neuron_type.description['variables'][rk_var]['flags'].append(key)
             elif val == None: # delete the flag
                 try:
-                    self.neuron.description['variables'][rk_var]['flags'].remove(key)
+                    self.neuron_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
-                    if has_key(self.neuron.description['variables'][rk_var]['bounds'], key):
-                        self.neuron.description['variables'][rk_var]['bounds'].pop(key)
+                    if has_key(self.neuron_type.description['variables'][rk_var]['bounds'], key):
+                        self.neuron_type.description['variables'][rk_var]['bounds'].pop(key)
             else: # new value for init, min, max...
                 if key == 'init':
-                    self.neuron.description['variables'][rk_var]['init'] = val 
+                    self.neuron_type.description['variables'][rk_var]['init'] = val 
                     self.init[name] = val              
                 else:
-                    self.neuron.description['variables'][rk_var]['bounds'][key] = val
+                    self.neuron_type.description['variables'][rk_var]['bounds'][key] = val
                 
        
             
@@ -964,13 +964,13 @@ class Population(object):
         if rk_var == -1:
             Global._error('The population '+self.name+' has no variable called ' + name)
             return         
-        self.neuron.description['variables'][rk_var]['eq'] = equation    
+        self.neuron_type.description['variables'][rk_var]['eq'] = equation    
             
             
     def _find_variable_index(self, name):
         " Returns the index of the variable name in self.description['variables']"
-        for idx in range(len(self.neuron.description['variables'])):
-            if self.neuron.description['variables'][idx]['name'] == name:
+        for idx in range(len(self.neuron_type.description['variables'])):
+            if self.neuron_type.description['variables'][idx]['name'] == name:
                 return idx
         return -1
 

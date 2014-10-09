@@ -31,7 +31,7 @@ class OMPGenerator(object):
 
         # Analyse the populations
         for name, pop in self.populations.iteritems():
-            pop.global_operations = pop.neuron.description['global_operations']
+            pop.global_operations = pop.neuron_type.description['global_operations']
 
         # Propagate the global operations from the projections to the populations
         for name, proj in self.projections.iteritems():
@@ -102,7 +102,7 @@ struct PopStruct%(id)s{
     int size;
 """
             # Spiking neurons have aditional data
-            if pop.neuron.type == 'spike':
+            if pop.neuron_type.type == 'spike':
                 code += """
     // Spiking population
     std::vector<bool> spike;
@@ -115,28 +115,28 @@ struct PopStruct%(id)s{
 """
 
             # Parameters
-            for var in pop.neuron.description['parameters']:
-                if var['name'] in pop.neuron.description['local']:
+            for var in pop.neuron_type.description['parameters']:
+                if var['name'] in pop.neuron_type.description['local']:
                     code += """
     // Local parameter %(name)s
     std::vector< %(type)s > %(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in pop.neuron.description['global']:
+                elif var['name'] in pop.neuron_type.description['global']:
                     code += """
     // Global parameter %(name)s
     %(type)s  %(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Variables
-            for var in pop.neuron.description['variables']:
-                if var['name'] in pop.neuron.description['local']:
+            for var in pop.neuron_type.description['variables']:
+                if var['name'] in pop.neuron_type.description['local']:
                     code += """
     // Local variable %(name)s
     std::vector< %(type)s > %(name)s ;
     std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in pop.neuron.description['global']:
+                elif var['name'] in pop.neuron_type.description['global']:
                     code += """
     // Global variable %(name)s
     %(type)s  %(name)s ;
@@ -148,8 +148,8 @@ struct PopStruct%(id)s{
             code += """
     // Targets
 """
-            if pop.neuron.type == 'rate':
-                for target in pop.neuron.description['targets']:
+            if pop.neuron_type.type == 'rate':
+                for target in pop.neuron_type.description['targets']:
                     code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
 
@@ -166,7 +166,7 @@ struct PopStruct%(id)s{
             code += """
     // Random numbers
 """
-            for rd in pop.neuron.description['random_distributions']:
+            for rd in pop.neuron_type.description['random_distributions']:
                 code += """    std::vector<double> %(rd_name)s;
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
@@ -174,7 +174,7 @@ struct PopStruct%(id)s{
 
             # Delays
             if pop.max_delay > 1 :
-                if pop.neuron.type == 'rate':
+                if pop.neuron_type.type == 'rate':
                     code += """
     // Delays for rate-coded population
     std::deque< std::vector<double> > _delayed_r;
@@ -186,11 +186,11 @@ struct PopStruct%(id)s{
 """
 
             # Local functions
-            if len(pop.neuron.description['functions'])>0:
+            if len(pop.neuron_type.description['functions'])>0:
                 code += """
     // Local functions
 """
-                for func in pop.neuron.description['functions']:
+                for func in pop.neuron_type.description['functions']:
                     code += ' '*4 + func['cpp'] + '\n'
 
             # profiling related data
@@ -216,6 +216,14 @@ struct PopStruct%(id)s{
         proj_struct = ""
         proj_ptr = ""
         for name, proj in self.projections.iteritems():
+            
+            # Is it a specific projection?
+            if proj.generator['omp']['header_proj_struct']:
+                proj_struct += proj.generator['omp']['header_proj_struct'] % {'id': pop.id}
+                proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
+"""% {'id': proj.id}
+                continue
+            
             code = """
 struct ProjStruct%(id)s{
     int size;
@@ -459,17 +467,17 @@ struct ProjStruct%(id)s{
                 continue
 
             # Is there any variable?
-            if len(pop.neuron.description['variables']) == 0: # no variable
+            if len(pop.neuron_type.description['variables']) == 0: # no variable
                 continue
 
             # Neural update
             from ..Utils import generate_equation_code
 
             # Global variables
-            global_eqs = generate_equation_code(pop.id, pop.neuron.description, 'global') % {'id': pop.id}
+            global_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id}
 
             # Local variables
-            local_eqs = generate_equation_code(pop.id, pop.neuron.description, 'local') % {'id': pop.id}
+            local_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
 
             # add profiling code if needed
             if Global.config['profiling'] and (global_eqs.strip() != "" or local_eqs.strip() != ""):
@@ -490,10 +498,10 @@ struct ProjStruct%(id)s{
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': local_eqs}
 
             # Spike emission
-            if pop.neuron.type == 'spike':
-                cond =  pop.neuron.description['spike']['spike_cond'] % {'id': pop.id}
+            if pop.neuron_type.type == 'spike':
+                cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
                 reset = ""; refrac = ""
-                for eq in pop.neuron.description['spike']['spike_reset']:
+                for eq in pop.neuron_type.description['spike']['spike_reset']:
                     reset += """
             %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id}}
@@ -562,7 +570,7 @@ struct ProjStruct%(id)s{
                 code += pop.generator['omp']['body_delay_code'] %{'id': pop.id}
                 continue
 
-            if pop.neuron.type == 'rate':
+            if pop.neuron_type.type == 'rate':
                 code += """
     // Enqueuing outputs of pop%(id)s (%(name)s)
     pop%(id)s._delayed_r.push_front(pop%(id)s.r);
@@ -792,7 +800,7 @@ struct ProjStruct%(id)s{
     def body_resetcomputesum_pop(self):
         code = "    // Reset presynaptic sums\n"
         for name, pop in self.populations.iteritems():
-            if pop.neuron.type == 'rate':
+            if pop.neuron_type.type == 'rate':
                 for target in pop.targets:
                     code += """
     memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
@@ -903,7 +911,7 @@ struct ProjStruct%(id)s{
                 code += pop.generator['omp']['body_random_dist_init'] %{'id': pop.id}
                 continue
 
-            for rd in pop.neuron.description['random_distributions']:
+            for rd in pop.neuron_type.description['random_distributions']:
                 code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
     pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
 """ % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
@@ -936,19 +944,11 @@ struct ProjStruct%(id)s{
         if ops == []:
             return ""
 
-        from .GlobalOperationTemplate import min_template, max_template, mean_template, norm1_template, norm2_template
+        from .GlobalOperationTemplate import global_operation_templates
         code = ""
         for op in list(set(ops)):
-            if op == 'min':
-                code += min_template
-            elif op == 'max':
-                code += max_template
-            elif op == 'mean':
-                code += mean_template
-            elif op == 'norm1':
-                code += norm1_template
-            elif op == 'norm2':
-                code += norm2_template
+            code += global_operation_templates[op]
+
         return code
 
     def body_init_delay(self):
@@ -963,7 +963,7 @@ struct ProjStruct%(id)s{
                     code += pop.generator['omp']['body_delay_init'] %{'id': pop.id, 'delay': pop.max_delay}
                     continue
 
-                if pop.neuron.type == 'rate':
+                if pop.neuron_type.type == 'rate':
                     code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
 """ % {'id': pop.id, 'delay': pop.max_delay}
                 else: # SPIKE
@@ -983,7 +983,7 @@ struct ProjStruct%(id)s{
                 code += pop.generator['omp']['body_spike_init'] %{'id': pop.id}
                 continue
 
-            if pop.neuron.type == 'spike':
+            if pop.neuron_type.type == 'spike':
                 code += """    
     pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
@@ -1027,14 +1027,14 @@ struct ProjStruct%(id)s{
                 code += pop.generator['omp']['body_random_dist_update'] %{'id': pop.id}
                 continue
 
-            if len(pop.neuron.description['random_distributions']) > 0:
+            if len(pop.neuron_type.description['random_distributions']) > 0:
                 code += """
     // RD of pop%(id)s
     #pragma omp parallel for
     for(int i = 0; i < pop%(id)s.size; i++)
     {
 """% {'id': pop.id}
-                for rd in pop.neuron.description['random_distributions']:
+                for rd in pop.neuron_type.description['random_distributions']:
                     code += """
         pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng[omp_get_thread_num()]);
 """ % {'id': pop.id, 'rd_name': rd['name']}
@@ -1066,7 +1066,7 @@ struct ProjStruct%(id)s{
                 code += pop.generator['omp']['body_record'] %{'id': pop.id}
                 continue
 
-            for var in pop.neuron.description['variables']:
+            for var in pop.neuron_type.description['variables']:
                 code += """
     if(pop%(id)s.record_%(name)s)
         pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
@@ -1102,7 +1102,7 @@ struct ProjStruct%(id)s{
                     break;
 """ % {'id': pop.id}
             else:
-                pop.neuron.description['stop_condition'] = {'eq': pop.stop_condition}
+                pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
                 from ANNarchy.parser.Extraction import extract_stop_condition
                 from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
                 # Find the paradigm OMP or CUDA
@@ -1110,9 +1110,9 @@ struct ProjStruct%(id)s{
                     pattern = pattern_cuda
                 else:
                     pattern = pattern_omp
-                extract_stop_condition(pop.neuron.description, pattern)
+                extract_stop_condition(pop.neuron_type.description, pattern)
 
-                if pop.neuron.description['stop_condition']['type'] == 'any':
+                if pop.neuron_type.description['stop_condition']['type'] == 'any':
                     stop_code = """
                     pop_stop = false;
                     for(int i=0; i<pop%(id)s.size; i++)
@@ -1120,7 +1120,7 @@ struct ProjStruct%(id)s{
                         if(%(condition)s)
                             pop_stop = true;
                     }
-    """ % {'id': pop.id, 'condition': pop.neuron.description['stop_condition']['cpp']% {'id': pop.id}}
+    """ % {'id': pop.id, 'condition': pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}}
                 else:
                     stop_code = """
                     pop_stop = true;
@@ -1129,7 +1129,7 @@ struct ProjStruct%(id)s{
                         if(!(%(condition)s))
                             pop_stop = false;
                     }
-    """ % {'id': pop.id, 'condition': pop.neuron.description['stop_condition']['cpp']% {'id': pop.id}}
+    """ % {'id': pop.id, 'condition': pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}}
 
                 code += """
                 case %(id)s: 
@@ -1195,35 +1195,35 @@ struct ProjStruct%(id)s{
         int size
 """            
             # Spiking neurons have aditional data
-            if pop.neuron.type == 'spike':
+            if pop.neuron_type.type == 'spike':
                 code += """
         vector[int] refractory
         bool record_spike
         vector[vector[long]] recorded_spike
 """
             # Parameters
-            for var in pop.neuron.description['parameters']:
-                if var['name'] in pop.neuron.description['local']:
+            for var in pop.neuron_type.description['parameters']:
+                if var['name'] in pop.neuron_type.description['local']:
                     code += """
         # Local parameter %(name)s
         vector[%(type)s] %(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in pop.neuron.description['global']:
+                elif var['name'] in pop.neuron_type.description['global']:
                     code += """
         # Global parameter %(name)s
         %(type)s  %(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Variables
-            for var in pop.neuron.description['variables']:
-                if var['name'] in pop.neuron.description['local']:
+            for var in pop.neuron_type.description['variables']:
+                if var['name'] in pop.neuron_type.description['local']:
                     code += """
         # Local variable %(name)s
         vector[%(type)s] %(name)s 
         vector[vector[%(type)s]] recorded_%(name)s 
         bool record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in pop.neuron.description['global']:
+                elif var['name'] in pop.neuron_type.description['global']:
                     code += """
         # Global variable %(name)s
         %(type)s  %(name)s 
@@ -1232,11 +1232,11 @@ struct ProjStruct%(id)s{
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Arrays for the presynaptic sums of rate-coded neurons
-            if pop.neuron.type == 'rate':
+            if pop.neuron_type.type == 'rate':
                 code += """
         # Targets
 """
-                for target in pop.neuron.description['targets']:
+                for target in pop.neuron_type.description['targets']:
                     code += """        vector[double] _sum_%(target)s
 """ % {'target' : target}
 
@@ -1254,6 +1254,13 @@ struct ProjStruct%(id)s{
         proj_struct = ""
         proj_ptr = ""
         for name, proj in self.projections.iteritems():
+            # Is it a specific projection?
+            if proj.generator['omp']['pyx_proj_struct']:
+                proj_struct += pop.generator['omp']['pyx_proj_struct'] %{'id': pop.id}
+                proj_ptr += """
+    ProjStruct%(id)s proj%(id)s"""% {'id': pop.id}
+                continue
+
             code = """
     cdef struct ProjStruct%(id)s :
         int size
@@ -1350,7 +1357,7 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.size = size"""% {'id': pop.id, 'name': pop.name}
 
             # Spiking neurons have aditional data
-            if pop.neuron.type == 'spike':
+            if pop.neuron_type.type == 'spike':
                 code += """
         # Spiking neuron
         pop%(id)s.refractory = vector[int](size, 0)
@@ -1361,9 +1368,9 @@ cdef class pop%(id)s_wrapper :
 """% {'id': pop.id}
 
             # Parameters
-            for var in pop.neuron.description['parameters']:
+            for var in pop.neuron_type.description['parameters']:
                 init = 0.0 if var['ctype'] == 'double' else 0
-                if var['name'] in pop.neuron.description['local']:                    
+                if var['name'] in pop.neuron_type.description['local']:                    
                     code += """
         pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
                 else: # global
@@ -1371,9 +1378,9 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.%(name)s = %(init)s""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Variables
-            for var in pop.neuron.description['variables']:
+            for var in pop.neuron_type.description['variables']:
                 init = 0.0 if var['ctype'] == 'double' else 0
-                if var['name'] in pop.neuron.description['local']:
+                if var['name'] in pop.neuron_type.description['local']:
                     code += """
         pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)
         pop%(id)s.recorded_%(name)s = vector[vector[%(type)s]](0, vector[%(type)s](0,%(init)s))
@@ -1385,8 +1392,8 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.record_%(name)s = False""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Targets
-            if pop.neuron.type == 'rate':
-                for target in pop.neuron.description['targets']:
+            if pop.neuron_type.type == 'rate':
+                for target in pop.neuron_type.description['targets']:
                     code += """
         pop%(id)s._sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
 
@@ -1399,7 +1406,7 @@ cdef class pop%(id)s_wrapper :
 """ % {'id': pop.id}
 
             # Spiking neurons have aditional data
-            if pop.neuron.type == 'spike':
+            if pop.neuron_type.type == 'spike':
                 code += """
     # Spiking neuron
     cpdef np.ndarray get_refractory(self):
@@ -1420,8 +1427,8 @@ cdef class pop%(id)s_wrapper :
 """% {'id': pop.id}
 
             # Parameters
-            for var in pop.neuron.description['parameters']:
-                if var['name'] in pop.neuron.description['local']:
+            for var in pop.neuron_type.description['parameters']:
+                if var['name'] in pop.neuron_type.description['local']:
                     code += """
     # Local parameter %(name)s
     cpdef np.ndarray get_%(name)s(self):
@@ -1434,7 +1441,7 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.%(name)s[rank] = value
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
-                elif var['name'] in pop.neuron.description['global']:
+                elif var['name'] in pop.neuron_type.description['global']:
                     code += """
     # Global parameter %(name)s
     cpdef %(type)s get_%(name)s(self):
@@ -1444,8 +1451,8 @@ cdef class pop%(id)s_wrapper :
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
             # Variables
-            for var in pop.neuron.description['variables']:
-                if var['name'] in pop.neuron.description['local']:
+            for var in pop.neuron_type.description['variables']:
+                if var['name'] in pop.neuron_type.description['local']:
                     code += """
     # Local variable %(name)s
     cpdef np.ndarray get_%(name)s(self):
@@ -1468,7 +1475,7 @@ cdef class pop%(id)s_wrapper :
         return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
-                elif var['name'] in pop.neuron.description['global']:
+                elif var['name'] in pop.neuron_type.description['global']:
                     code += """
     # Global variable %(name)s
     cpdef %(type)s get_%(name)s(self):
@@ -1491,6 +1498,11 @@ cdef class pop%(id)s_wrapper :
         # Cython wrappers for the projections
         code = ""
         for name, proj in self.projections.iteritems():
+            # Is it a specific population?
+            if proj.generator['omp']['pyx_proj_class']:
+                code += proj.generator['omp']['pyx_proj_class'] %{'id': proj.id}
+                continue
+
             # Init
             code += """
 cdef class proj%(id)s_wrapper :

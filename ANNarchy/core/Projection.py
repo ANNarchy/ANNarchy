@@ -31,6 +31,82 @@ from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 
+# Template for specific population bypassing code generation.
+# The id of the population should be let free with %(id)s
+proj_generator_template = {
+    'omp': {
+        # C++ struct to encapsulate all data
+        # Example:
+        # struct ProjStruct%(id)s{
+        #     // Number of dendrites
+        #     int size;
+        #     // Connectivity
+        #     std::vector<int> post_rank ;
+        #     std::vector< std::vector< int > > pre_rank ;
+        #     std::vector< std::vector< int > > delay ;
+        #    
+        #     // Local parameter w
+        #     std::vector< std::vector< double > > w ;
+        # }; 
+        'header_proj_struct' : None,
+
+        # Updates the synapse variables
+        # Example:
+        # 
+        #    TODO:
+        'body_update_synapse': None,
+
+        # compute the postsynaptic potential
+        # Example:
+        # 
+        #    TODO:
+        'body_compute_psp': None,
+        
+        # Export of the C++ struct to Cython (must have an indent of 4)
+        # Example:
+        # 
+        #    TODO:
+        'pyx_proj_struct': None,
+        
+        # Wrapper class in Cython (no indentation)
+        # Example:
+        # 
+        #    TODO:
+        'pyx_proj_class': None,
+    },
+    'cuda': {
+        # C++ struct to encapsulate all data
+        # Example:
+        # 
+        #    TODO:
+        'header_proj_struct' : None,
+
+        # Updates the synapse variables
+        # Example:
+        # 
+        #    TODO:
+        'body_update_synapse': None,
+
+        # compute the postsynaptic potential
+        # Example:
+        # 
+        #    TODO:
+        'body_compute_psp': None,
+        
+        # Export of the C++ struct to Cython (must have an indent of 4)
+        # Example:
+        # 
+        #    TODO:
+        'pyx_proj_struct': None,
+        
+        # Wrapper class in Cython (no indentation)
+        # Example:
+        # 
+        #    TODO:
+        'pyx_proj_class': None,
+    }
+}
+
 class Projection(object):
     """
     Represents all synapses of the same type between two populations.
@@ -79,7 +155,7 @@ class Projection(object):
         if not synapse:
             # No synapse attached assume default synapse based on
             # presynaptic population.
-            if self.pre.neuron.type == 'rate':
+            if self.pre.neuron_type.type == 'rate':
                 self.synapse = Synapse(parameters = "w=0.0", equations = "")
             else:
                 self.synapse = Synapse(parameters = "w=0.0", equations = "", pre_spike="g_target += w", post_spike="")
@@ -87,6 +163,7 @@ class Projection(object):
             self.synapse = copy.deepcopy(synapse)
 
         self.synapse._analyse()
+        self.generator = copy.deepcopy(proj_generator_template)
 
         # Create a default name
         self.id = len(Global._projections)
