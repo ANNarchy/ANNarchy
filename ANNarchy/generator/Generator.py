@@ -212,9 +212,6 @@ all:
 \tcython build/ANNarchyCore.pyx --cplus
 \tg++ -march=native %(flags)s -shared -fPIC -fpermissive -std=c++0x -I. -I/usr/include/python%(py_version)s -I %(numpy_include)s -fopenmp %(libs)s build/*.cpp -o ANNarchyCore.so
 
-clean:
-\trm -rf build/*.o
-\trm -rf build/*.so
 """ % {'flags': flags, 'libs': libs, 'py_version': py_version, 'numpy_include': numpy_include}
 
             # Write the Makefile to the disk

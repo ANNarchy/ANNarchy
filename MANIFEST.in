@@ -5,7 +5,6 @@ include setup.cfg
 include ANNarchy/core/cython_ext/*.pyx
 include ANNarchy/core/cython_ext/*.pxd
 exclude ANNarchy/core/cython_ext/*.cpp
-exclude ANNarchy/core/cython_ext/*.so
 recursive-include docs Makefile *.py *.rst *.png *.svg
 graft docs/_themes
 prune docs/_build
