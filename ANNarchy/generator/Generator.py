@@ -155,6 +155,9 @@ class Generator(object):
         # Perform compilation if something has changed
         if changed:
             self.compilation()
+
+            # Return to the current directory
+            os.chdir('..')
                 
         # Create the Python objects                
         self.instantiate()    
@@ -186,7 +189,7 @@ class Generator(object):
         Global._print('Compiling ... ')
         if Global.config['show_time']:
             t0 = time.time()
-                                
+
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
             if not self.debug_build:
@@ -249,9 +252,6 @@ all:
 
         if Global.config['verbose']:
             Global._print('Building network ...')
-
-        # Return to the current directory
-        os.chdir('..')
 
         # Import the Cython library
         cython_module = __import__('ANNarchyCore')
