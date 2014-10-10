@@ -323,7 +323,7 @@ def analyse_synapse(synapse):
                     break
             else: # not defined already
                 description['variables'].append(
-                {'name': var['name'], 'bounds': {}, 'ctype': 'double', 'init': 0.0, 
+                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'], 
                  'flags': [], 'transformed_eq': '', 'eq': '',
                  'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
                 )
@@ -339,7 +339,7 @@ def analyse_synapse(synapse):
                     break
             else: # not defined already
                 description['variables'].append(
-                {'name': var['name'], 'bounds': {}, 'ctype': 'double', 'init': 0.0, 
+                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'], 
                  'flags': [], 'transformed_eq': '', 'eq': '',
                  'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
                 )
@@ -446,7 +446,6 @@ def analyse_synapse(synapse):
         # Replace untouched variables with their original name
         for prev, new in untouched.iteritems():
             cpp_eq = cpp_eq.replace(prev, new)
-
 
         # Replace local functions
         for f in description['functions']:

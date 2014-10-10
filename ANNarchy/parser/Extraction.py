@@ -268,6 +268,21 @@ def extract_variables(description):
         name = definition['name']
         if name == '_undefined':
             exit(0)
+
+        # Process constraint
+        bounds, flags, ctype, init = extract_boundsflags(constraint)
+
+        # Store the result
+        desc = {'name': name,
+                'eq': equation,
+                'bounds': bounds,
+                'flags' : flags,
+                'ctype' : ctype,
+                'init' : init }
+        variables.append(desc)              
+    return variables        
+
+def extract_boundsflags(constraint):
         # Process the flags if any
         bounds, flags = extract_flags(constraint)
         # Get the type of the variable (float/int/bool)
@@ -296,15 +311,7 @@ def extract_variables(description):
                 init = 0
             elif ctype == 'double':
                 init = 0.0
-        # Store the result
-        desc = {'name': name,
-                'eq': equation,
-                'bounds': bounds,
-                'flags' : flags,
-                'ctype' : ctype,
-                'init' : init }
-        variables.append(desc)              
-    return variables        
+        return bounds, flags, ctype, init
     
 def extract_functions(description, local_global=False):
     """ Extracts all functions from a multiline description."""
@@ -420,17 +427,21 @@ def extract_spike_variable(description, pattern):
 
 def extract_pre_spike_variable(description, pattern):
     pre_spike_var = []
+
     # For all variables influenced by a presynaptic spike
-    for var in prepare_string(description['raw_pre_spike']):
+    for var in process_equations(description['raw_pre_spike']):
         # Get its name
-        name = extract_name(var)
-        raw_eq = var
+        name = var['name']
+        raw_eq = var['eq']
+
+        # Process the flags if any
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, description)
+        eq, condition = extract_ite(name, raw_eq, description)
             
         if condition == []:
-            translator = Equation(name, var, 
+            translator = Equation(name, raw_eq, 
                                   description['attributes'] + [name], 
                                   description['local'] + [name], 
                                   description['global'],
@@ -450,7 +461,8 @@ def extract_pre_spike_variable(description, pattern):
                                 global_index=pattern['proj_globalindex'])
 
         # Append the result of analysis
-        pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )
+        pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq,
+                                'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return pre_spike_var 
 
@@ -459,14 +471,19 @@ def extract_post_spike_variable(description, pattern):
     if not description['raw_post_spike']:
         return post_spike_var
     
-    for var in prepare_string(description['raw_post_spike']):
-        name = extract_name(var)
+    for var in process_equations(description['raw_post_spike']):
+        # Get its name
+        name = var['name']
+        raw_eq = var['eq']
+
+        # Process the flags if any
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, description)
+        eq, condition = extract_ite(name, raw_eq, description)
 
         if condition == []:
-            translator = Equation(name, var, 
+            translator = Equation(name, raw_eq, 
                                   description['attributes'] + [name], 
                                   description['local'] + [name], 
                                   description['global'],
@@ -482,7 +499,8 @@ def extract_post_spike_variable(description, pattern):
                                 index=pattern['proj_index'],
                                 global_index=pattern['proj_globalindex']) 
 
-        post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
+        post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var,
+                                'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return post_spike_var  
 

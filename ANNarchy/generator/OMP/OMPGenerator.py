@@ -960,14 +960,14 @@ struct ProjStruct%(id)s{
             # Recording
             for var in proj.synapse.description['variables']:
                 if var['name'] in proj.synapse.description['local']:
-                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< double > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< double > >());
-"""% {'id': proj.id, 'name': var['name']}
+                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
+"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
                 else:
-                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< double > > (proj%(id)s.post_rank.size(), std::vector< double >());
-"""% {'id': proj.id, 'name': var['name']}
+                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
+"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
 
         return code
-
+        
     def body_update_randomdistributions(self):
         code = """
     // Compute random distributions""" 
