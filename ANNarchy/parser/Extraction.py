@@ -154,8 +154,9 @@ def extract_prepost(name, eq, description, pattern):
     for var in list(set(pre_matches)):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
-                rep = '_pre_sum_' + val.group(1)
-                untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +val.group(1)+ pattern['proj_preindex']
+                target = val.group(1)
+                rep = '_pre_sum_' + target
+                untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +target+ pattern['proj_preindex']
                 return rep
 
             eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
@@ -169,8 +170,9 @@ def extract_prepost(name, eq, description, pattern):
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
-                rep = '_post_sum_' + val.group(1)
-                untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+val.group(1) + pattern['proj_postindex']
+                target = val.group(1)
+                rep = '_post_sum_' + target
+                untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+ target + pattern['proj_postindex']
                 return rep
             eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
         else:

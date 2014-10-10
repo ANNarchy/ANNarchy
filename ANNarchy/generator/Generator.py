@@ -309,4 +309,13 @@ all:
         generator.generate()
 
     def check_structure(self):
-        pass
+        # Check synapses depend on existing pre/post variables
+        for name, proj in self.projections.iteritems():
+            for dep in  proj.synapse.description['dependencies']['pre']:
+                if not dep in proj.pre.attributes:
+                    Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
+                    exit(0)
+            for dep in  proj.synapse.description['dependencies']['post']:
+                if not dep in proj.post.attributes:
+                    Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
+                    exit(0)
