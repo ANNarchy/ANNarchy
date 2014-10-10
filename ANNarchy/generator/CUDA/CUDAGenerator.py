@@ -170,10 +170,8 @@ struct PopStruct%(id)s{
     // Random numbers
 """
             for rd in pop.neuron_type.description['random_distributions']:
-                code += """    std::vector<double> %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
-
+                code += """    float* gpu_%(rd_name)s;
+""" % { 'rd_name' : rd['name'] }
 
             # Delays (TODO: more variables could be delayed)
             if pop.max_delay > 1:
@@ -514,6 +512,10 @@ ProjStruct%(id)s proj%(id)s;
                 else:
                     par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
 
+            # random variables
+            for rd in pop.neuron_type.description['random_distributions']:
+                var += """, float* %(rd_name)s""" % { 'rd_name' : rd['name'] }
+
             # global operations
             for op in pop.global_operations:
                 par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
@@ -546,11 +548,11 @@ ProjStruct%(id)s proj%(id)s;
                                     'global_eqs': glob_eqs,
                                     'pop_size': str(pop.size),
                                     'tar': tar,
-                                    'tar2': tar.replace("double*","").replace("int*",""),
+                                    'tar2': tar.replace("double*","").replace("float*","").replace("int*",""),
                                     'var': var,
-                                    'var2': var.replace("double*","").replace("int*",""),
+                                    'var2': var.replace("double*","").replace("float*","").replace("int*",""),
                                     'par': par,
-                                    'par2': par.replace("double","").replace("int","")
+                                    'par2': par.replace("double","").replace("float*","").replace("int","")
                                  }
 
             #
@@ -569,6 +571,10 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
                     var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] } 
                 else:
                     par += """, pop%(id)s.%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+
+            # random variables
+            for rd in pop.neuron_type.description['random_distributions']:
+                var += """, pop%(id)s.gpu_%(rd_name)s""" % { 'id': pop.id, 'rd_name' : rd['name'] }
 
             # targets
             for target in pop.neuron_type.description['targets']:
@@ -936,9 +942,9 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 """
         for pop in self.populations.itervalues():
             for rd in pop.neuron_type.description['random_distributions']:
-                code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
-    pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
-""" % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+                code += """    
+    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(float));
+""" % {'id': pop.id, 'rd_name': rd['name'] }
 
         return code
 
@@ -1021,20 +1027,13 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     // Compute random distributions""" 
         for pop in self.populations.itervalues():
             if len(pop.neuron_type.description['random_distributions']) > 0:
-                code += """
-    // RD of pop%(id)s
-    #pragma omp parallel for
-    for(int i = 0; i < pop%(id)s.size; i++)
-    {
-"""% {'id': pop.id}
                 for rd in pop.neuron_type.description['random_distributions']:
                     code += """
-        pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng[omp_get_thread_num()]);
+    curandStatus_t %(rd_name)s_state = curandGenerateUniform(gen, pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size);
+    if ( %(rd_name)s_state != CURAND_STATUS_SUCCESS )
+        std::cout << "curandError: " << %(rd_name)s_state << std::endl;
 """ % {'id': pop.id, 'rd_name': rd['name']}
 
-                code += """
-    }
-"""
         return code
 
     def body_update_globalops(self):

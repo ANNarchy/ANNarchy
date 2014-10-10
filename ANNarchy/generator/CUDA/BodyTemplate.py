@@ -1,9 +1,12 @@
 body_template = '''
 #include "ANNarchy.h"
 #include "cuANNarchy.h"
-
-#include <cuda_runtime_api.h>
 #include <math.h>
+
+// cuda specific header
+#include <cuda_runtime_api.h>
+#include <curand.h>
+
 
 #define _STREAMING
 
@@ -20,6 +23,9 @@ std::vector< std::mt19937 >  rng;
 
 // Projections
 %(proj_ptr)s
+
+// random 
+curandGenerator_t gen;
 
 template<typename T>
 std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
@@ -117,6 +123,10 @@ void initialize(double _dt) {
         rng.push_back(std::mt19937(time(NULL)*seed));
     }
 %(device_init)s
+
+    // random generator init
+    curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
+
 %(random_dist_init)s
 %(delay_init)s
 %(spike_init)s
