@@ -16,6 +16,7 @@ cdef class CSR:
     cpdef public int max_delay
     cpdef public int uniform_delay
     cdef public int size
+    cdef public int nb_synapses
     cdef public double dt
 
     # Insert methods
