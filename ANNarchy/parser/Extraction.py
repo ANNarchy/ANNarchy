@@ -467,8 +467,8 @@ def extract_post_spike_variable(description, pattern):
 
         if condition == []:
             translator = Equation(name, var, 
-                                  description['attributes'], 
-                                  description['local'], 
+                                  description['attributes'] + [name], 
+                                  description['local'] + [name], 
                                   description['global'],
                                   prefix=pattern['proj_prefix'],
                                   sep=pattern['proj_sep'],
