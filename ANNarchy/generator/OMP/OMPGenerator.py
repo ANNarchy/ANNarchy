@@ -209,6 +209,14 @@ struct PopStruct%(id)s{
         proj_struct = ""
         proj_ptr = ""
         for name, proj in self.projections.iteritems():
+            
+            # Is it a specific projection?
+            if proj.generator['omp']['header_proj_struct']:
+                proj_struct += proj.generator['omp']['header_proj_struct'] % {'id': pop.id}
+                proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
+"""% {'id': proj.id}
+                continue
+            
             code = """
 struct ProjStruct%(id)s{
     int size;
@@ -1199,6 +1207,13 @@ struct ProjStruct%(id)s{
         proj_struct = ""
         proj_ptr = ""
         for name, proj in self.projections.iteritems():
+            # Is it a specific projection?
+            if proj.generator['omp']['pyx_proj_struct']:
+                proj_struct += pop.generator['omp']['pyx_proj_struct'] %{'id': pop.id}
+                proj_ptr += """
+    ProjStruct%(id)s proj%(id)s"""% {'id': pop.id}
+                continue
+
             code = """
     cdef struct ProjStruct%(id)s :
         int size
@@ -1436,6 +1451,11 @@ cdef class pop%(id)s_wrapper :
         # Cython wrappers for the projections
         code = ""
         for name, proj in self.projections.iteritems():
+            # Is it a specific population?
+            if proj.generator['omp']['pyx_proj_class']:
+                code += proj.generator['omp']['pyx_proj_class'] %{'id': proj.id}
+                continue
+
             # Init
             code += """
 cdef class proj%(id)s_wrapper :

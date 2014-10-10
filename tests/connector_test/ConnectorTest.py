@@ -14,7 +14,7 @@ parameters="""
 """,
 equations="""
     noise = Uniform(0,1)
-    tau * dmp / dt + mp = baseline + noise
+    tau * dmp / dt + mp = baseline + noise + sum(one) + sum(all) + sum(gauss) + sum(dog) + sum(fixed_pre) + sum(fixed_prob) + sum(fixed_post)
     r = pos(mp)
 """ 
 )

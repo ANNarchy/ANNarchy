@@ -24,6 +24,7 @@ cdef class CSR:
 
         self.max_delay = 0
         self.size = 0
+        self.nb_synapses = 0
         self.uniform_delay = -1
         self.dt = Global.config['dt']
 
@@ -63,6 +64,7 @@ cdef class CSR:
 
         # Increase the size
         self.size += r.size()
+        self.nb_synapses += r.size()
 
     cpdef int get_max_delay(self):
         return self.max_delay
