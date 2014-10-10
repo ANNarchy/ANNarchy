@@ -156,7 +156,7 @@ class Generator(object):
         changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
-        if changed or not os.path.isfile(Global.annarchy_dir+'ANNarchyCore.so'):
+        if changed or not os.path.isfile(Global.annarchy_dir+'/ANNarchyCore.so'):
             self.compilation()
 
             # Return to the current directory

@@ -87,6 +87,15 @@ def analyse_neuron(neuron):
     description['parameters'] = parameters
     description['variables'] = variables
 
+    # Make sure r is defined for rate-coded networks
+    if neuron.type == 'rate':
+        for var in description['parameters'] + description['variables']:
+            if var['name'] == 'r':
+                break
+        else:
+            _error('Rate-coded neurons must define the variable "r".')
+            exit(0) 
+
     # Extract functions
     functions = extract_functions(neuron.functions, False)
     description['functions'] = functions
@@ -269,6 +278,15 @@ def analyse_synapse(synapse):
 
     # Extract functions
     functions = extract_functions(synapse.functions, False)
+        
+    # Check the presence of w
+    for var in parameters + variables:
+        if var['name'] == 'w':
+            break
+    else:
+        parameters.append(
+            {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0'}
+        )
 
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = get_attributes(parameters, variables)
@@ -277,7 +295,7 @@ def analyse_synapse(synapse):
     if len(attributes) != len(list(set(attributes))):
         _error('Attributes must be declared only once.', attributes)
         exit(0)
-        
+
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
@@ -295,8 +313,9 @@ def analyse_synapse(synapse):
     
     # Extract event-driven info TODO: check
     if description['type'] == 'spike':         
-            description['pre_spike'] = extract_pre_spike_variable(description, pattern)
-            description['post_spike'] = extract_post_spike_variable(description, pattern)
+        description['pre_spike'] = extract_pre_spike_variable(description, pattern)
+        description['post_spike'] = extract_post_spike_variable(description, pattern)
+
 
     # Variables names for the parser which should be left untouched
     untouched = {}   
