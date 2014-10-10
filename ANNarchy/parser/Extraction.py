@@ -198,55 +198,10 @@ def extract_parameters(description, extra_values):
         name = extract_name(equation)
         if name == '_undefined':
             exit(0)
-        # Process the flags if any
-        bounds, flags = extract_flags(constraint)
+            
+        # Process constraint
+        bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
 
-        # Get the type of the variable (float/int/bool)
-        if 'int' in flags:
-            ctype = 'int'
-        elif 'bool' in flags:
-            ctype = 'bool'
-        else:
-            ctype = 'double'
-        # For parameters, the initial value can be given in the equation
-        if 'init' in bounds.keys(): # if init is provided, it wins
-            init = bounds['init']
-            if ctype == 'bool':
-                if init in ['false', 'False', '0']:
-                    init = False
-                elif init in ['true', 'True', '1']:
-                    init = True
-            elif ctype == 'int':
-                init = int(init)
-            else:
-                init = float(init)
-        elif '=' in equation: # the value is in the equation
-            init = equation.split('=')[1].strip()
-            
-            if init in ['false', 'False']:
-                init = False
-                ctype = 'bool'
-            elif init in ['true', 'True']:
-                init = True
-                ctype = 'bool'
-            else:
-                try:
-                    init = eval('float(' + init + ')')
-                except:
-                    try:
-                        init = eval('int(' + init + ')')
-                    except:
-                        var = init.replace("'","")
-                        init = extra_values[var]
-                    
-        else: # Nothing is given: baseline : population
-            if ctype == 'bool':
-                init = False
-            elif ctype == 'int':
-                init = 0
-            elif ctype == 'double':
-                init = 0.0
-            
         # Store the result
         desc = {'name': name,
                 'eq': equation,
@@ -284,9 +239,10 @@ def extract_variables(description):
         variables.append(desc)              
     return variables        
 
-def extract_boundsflags(constraint):
+def extract_boundsflags(constraint, equation ="", extra_values={}):
         # Process the flags if any
         bounds, flags = extract_flags(constraint)
+
         # Get the type of the variable (float/int/bool)
         if 'int' in flags:
             ctype = 'int'
@@ -294,6 +250,7 @@ def extract_boundsflags(constraint):
             ctype = 'bool'
         else:
             ctype = 'double'
+
         # Get the init value if declared
         if 'init' in bounds.keys():
             init = bounds['init']
@@ -306,6 +263,24 @@ def extract_boundsflags(constraint):
                 init = int(init)
             else:
                 init = float(init)
+        elif '=' in equation: # the value is in the equation
+            init = equation.split('=')[1].strip()
+            
+            if init in ['false', 'False']:
+                init = False
+                ctype = 'bool'
+            elif init in ['true', 'True']:
+                init = True
+                ctype = 'bool'
+            else:
+                try:
+                    init = eval('float(' + init + ')')
+                except:
+                    try:
+                        init = eval('int(' + init + ')')
+                    except:
+                        var = init.replace("'","")
+                        init = extra_values[var]
         else: # Default = 0 according to ctype
             if ctype == 'bool':
                 init = False

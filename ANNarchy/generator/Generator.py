@@ -309,6 +309,9 @@ all:
         generator.generate()
 
     def check_structure(self):
+        """
+        Checks the structure to display more useful error messages.
+        """
         # Check synapses depend on existing pre/post variables
         for name, proj in self.projections.iteritems():
             for dep in  proj.synapse.description['dependencies']['pre']:
