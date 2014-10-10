@@ -222,9 +222,7 @@ def analyse_neuron(neuron):
                     switch = re.sub(r'([^_]+)'+prev, new, ' ' + switch).strip()
 
             else:
-                print cpp_eq
                 cpp_eq = re.sub(prev, new, cpp_eq)
-                print cpp_eq
                 if switch:
                     switch = re.sub(prev, new, switch)
 
