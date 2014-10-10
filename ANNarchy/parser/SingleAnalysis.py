@@ -138,8 +138,8 @@ def analyse_neuron(neuron):
         
         # Replace sum(target) with pop%(id)s.sum_exc[i]
         for target in description['targets']:
-            eq = eq.replace('sum('+target+')', '_sum_'+target )  
-            untouched['_sum_'+target] = pattern['pop_prefix'] + pattern['pop_sep'] + pattern['pop_sum'] + target + pattern['pop_index']
+            eq = eq.replace('sum('+target+')', '__sum_'+target+'__' )  
+            untouched['__sum_'+target+'__'] = pattern['pop_prefix'] + pattern['pop_sep'] + pattern['pop_sum'] + target + pattern['pop_index']
         
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description, pattern)
@@ -222,7 +222,9 @@ def analyse_neuron(neuron):
                     switch = re.sub(r'([^_]+)'+prev, new, ' ' + switch).strip()
 
             else:
+                print cpp_eq
                 cpp_eq = re.sub(prev, new, cpp_eq)
+                print cpp_eq
                 if switch:
                     switch = re.sub(prev, new, switch)
 

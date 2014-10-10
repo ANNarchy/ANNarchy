@@ -217,18 +217,20 @@ all:
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)
-            
-            if Global.config['verbose'] == False:
-                pipe_to_cmd_line = "> compile_stdout.log 2> compile_stderr.log"
-            else:
-                pipe_to_cmd_line = ""
                 
             # Start the compilation
             try:
-                subprocess.check_output("make -j4 "+ pipe_to_cmd_line, 
-                                            shell=True)
+                subprocess.check_output("make -j4 > compile_stdout.log 2> compile_stderr.log", 
+                                        shell=True)
             except subprocess.CalledProcessError:
-                Global._error('Compilation failed.\nCheck the compilation logs in annarchy/compile_stderr.log')
+                with open('compile_stderr.log', 'r') as rfile:
+                    msg = rfile.read()
+                Global._print(msg)
+                Global._error('Compilation failed.')
+                try:
+                    os.remove('ANNarchyCore.so')
+                except:
+                    pass
                 exit(0)
     
         else: # Windows: to test....
