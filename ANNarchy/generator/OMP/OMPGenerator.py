@@ -149,7 +149,7 @@ struct PopStruct%(id)s{
     // Targets
 """
             if pop.neuron_type.type == 'rate':
-                for target in pop.neuron_type.description['targets']:
+                for target in list(set(pop.neuron_type.description['targets']+pop.targets)):
                     code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
 
@@ -1189,7 +1189,7 @@ struct ProjStruct%(id)s{
                 code += """
         # Targets
 """
-                for target in pop.neuron_type.description['targets']:
+                for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
                     code += """        vector[double] _sum_%(target)s
 """ % {'target' : target}
 
@@ -1346,7 +1346,7 @@ cdef class pop%(id)s_wrapper :
 
             # Targets
             if pop.neuron_type.type == 'rate':
-                for target in pop.neuron_type.description['targets']:
+                for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
                     code += """
         pop%(id)s._sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
 
