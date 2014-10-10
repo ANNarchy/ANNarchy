@@ -146,6 +146,9 @@ class Generator(object):
     def generate(self):
         " Method to generate the C++ code."
 
+        # Check that everything is allright in the structure of the network.
+        self.check_structure()
+
         # Generate the code
         self.code_generation(self.cpp_stand_alone, self.profile_enabled, 
                                                         self.clean)
@@ -153,7 +156,7 @@ class Generator(object):
         changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
-        if changed:
+        if changed or not os.path.isfile(Global.annarchy_dir+'ANNarchyCore.so'):
             self.compilation()
 
             # Return to the current directory
@@ -304,3 +307,6 @@ all:
         from .OMP.OMPGenerator import OMPGenerator
         generator = OMPGenerator(self.populations, self.projections)
         generator.generate()
+
+    def check_structure(self):
+        pass
