@@ -26,6 +26,7 @@ import subprocess
 import shutil
 import time
 import numpy as np
+import re
 
 # ANNarchy core informations
 import ANNarchy
@@ -312,11 +313,26 @@ all:
         """
         Checks the structure to display more useful error messages.
         """
-        import re
-        # Check the population use global operations on variables which exist
+        # Check populations
+        for name, pop in self.populations.iteritems():
+            # Reserved variable names
+            for term in ['t', 'dt']:
+                if term in pop.attributes:
+                    Global._print(pop.neuron_type.parameters)
+                    Global._print(pop.neuron_type.equations)
+                    Global._error(term + ' is a reserved variable name')
+                    exit(0)
 
-        # Check synapses depend on existing pre/post variables
+        # Check projections
         for name, proj in self.projections.iteritems():
+            # Reserved variable names
+            for term in ['t', 'dt']:
+                if term in proj.attributes:
+                    Global._print(proj.synapse.parameters)
+                    Global._print(proj.synapse.equations)
+                    Global._error(term + ' is a reserved variable name')
+                    exit(0)
+            # Check existing pre variables
             for dep in  proj.synapse.description['dependencies']['pre']:
                 if dep.startswith('sum('):
                     target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()

@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _error, _warning, config
+from ANNarchy.core.Global import _error, _warning, _print, config
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
@@ -155,6 +155,10 @@ def extract_prepost(name, eq, description, pattern):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
                 target = val.group(1).strip()
+                if target == '':
+                    _print(eq)
+                    _error('pre.sum() requires one argument.')
+                    exit(0)
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
                 untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +target+ pattern['proj_preindex']
@@ -172,6 +176,10 @@ def extract_prepost(name, eq, description, pattern):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
                 target = val.group(1).strip()
+                if target == '':
+                    _print(eq)
+                    _error('post.sum() requires one argument.')
+                    exit(0)
                 dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target.strip()
                 untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+ target + pattern['proj_postindex']
@@ -363,6 +371,10 @@ def extract_targets(variables):
         # Rate-coded neurons
         code = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', var['eq'])
         for l, t in code:
+            if t.strip() == '':
+                _print(var['eq'])
+                _error('sum() must have one argument.')
+                exit(0)
             targets.append(t.strip())
         # Spiking neurons
         code = re.findall('([^\w.])g_([\w]+)', var['eq'])
