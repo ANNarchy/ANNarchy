@@ -97,7 +97,7 @@ def extract_globalops_neuron(name, eq, description, pattern):
     """
     untouched = {}    
     globs = []  
-    glop_names = ['min', 'max', 'mean']
+    glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
         matches = re.findall('([^\w]*)'+op+'\(([\w]*)\)', eq)
@@ -114,7 +114,8 @@ def extract_globalops_neuron(name, eq, description, pattern):
     return eq, untouched, globs
     
 def extract_globalops_synapse(name, eq, desc, pattern):
-    """ Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
+    """ 
+    Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
     untouched = {}    
