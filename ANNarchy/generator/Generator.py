@@ -319,7 +319,7 @@ all:
         for name, proj in self.projections.iteritems():
             for dep in  proj.synapse.description['dependencies']['pre']:
                 if dep.startswith('sum('):
-                    target = re.findall(r'\(([\w]+)\)', dep)[0]
+                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.pre.targets:
                         Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
                         exit(0)
@@ -329,7 +329,7 @@ all:
                     exit(0)
             for dep in  proj.synapse.description['dependencies']['post']:
                 if dep.startswith('sum('):
-                    target = re.findall(r'\(([\w]+)\)', dep)[0]
+                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.post.targets:
                         Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
                         exit(0)

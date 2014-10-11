@@ -129,13 +129,13 @@ def extract_globalops_synapse(name, eq, desc, pattern):
 
         for pre, var in pre_matches:
             globs['pre'].append({'function': op, 'variable': var.strip()})
-            newname =  '__pre_' + op + '_' + var
+            newname =  '__pre_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*pre\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = pattern['proj_preprefix'] + pattern['proj_sep'] + '_' + op + '_' + var
 
         for pre, var in post_matches:
-            globs['post'].append({'function': op, 'variable': var})
-            newname = '__post_' + op + '_' + var
+            globs['post'].append({'function': op, 'variable': var.strip()})
+            newname = '__post_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = pattern['proj_postprefix'] + pattern['proj_sep'] + '_' + op + '_' + var 
 
@@ -154,8 +154,8 @@ def extract_prepost(name, eq, description, pattern):
     for var in list(set(pre_matches)):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
-                target = val.group(1)
-                rep = '_pre_sum_' + target
+                target = val.group(1).strip()
+                rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
                 untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +target+ pattern['proj_preindex']
                 return rep
@@ -171,9 +171,9 @@ def extract_prepost(name, eq, description, pattern):
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
-                target = val.group(1)
+                target = val.group(1).strip()
                 dependencies['post'].append('sum('+target+')')
-                rep = '_post_sum_' + target
+                rep = '_post_sum_' + target.strip()
                 untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+ target + pattern['proj_postindex']
                 return rep
             eq = re.sub(r'post\.sum\(([\s\w]+)\)', idx_target, eq)
