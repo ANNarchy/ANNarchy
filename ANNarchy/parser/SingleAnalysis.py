@@ -147,7 +147,7 @@ def analyse_neuron(neuron):
         
         # Replace sum(target) with pop%(id)s.sum_exc[i]
         for target in description['targets']:
-            eq = eq.replace('sum('+target+')', '__sum_'+target+'__' )  
+            eq = re.sub('sum\(\s*'+target+'\s*\)', '__sum_'+target+'__', eq)
             untouched['__sum_'+target+'__'] = pattern['pop_prefix'] + pattern['pop_sep'] + pattern['pop_sum'] + target + pattern['pop_index']
         
         # Extract global operations

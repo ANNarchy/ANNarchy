@@ -38,7 +38,7 @@ def extract_randomdist(description, pattern):
         eq = variable['eq']
         # Search for all distributions
         for dist in available_distributions:
-            matches = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+dist+'\(([^()]+)\)', eq)
+            matches = re.findall('(?P<pre>[^\w.])'+dist+'\(([^()]+)\)', eq)
             if matches == ' ':
                 continue
             for l, v in matches:
@@ -100,14 +100,14 @@ def extract_globalops_neuron(name, eq, description, pattern):
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
-        matches = re.findall('([^\w]*)'+op+'\(([\w]*)\)', eq)
+        matches = re.findall('([^\w]*)'+op+'\(([\s\w]*)\)', eq)
         for pre, var in matches:
-            if var in description['local']:
-                globs.append({'function': op, 'variable': var})
+            if var.strip() in description['local']:
+                globs.append({'function': op, 'variable': var.strip()})
                 oldname = op + '(' + var + ')'
-                newname = '_' + op + '_' + var 
+                newname = '_' + op + '_' + var.strip() 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = pattern['pop_prefix'] + pattern['pop_sep'] + '_' + op + '_' + var 
+                untouched[newname] = pattern['pop_prefix'] + pattern['pop_sep'] + '_' + op + '_' + var.strip()
             else:
                 _error(eq+'\nThere is no local attribute '+var+'.')
                 exit(0)
@@ -124,20 +124,19 @@ def extract_globalops_synapse(name, eq, desc, pattern):
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
-        pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*pre\.([a-zA-Z0-9]+)\s*\)', eq)
-        post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*post\.([a-zA-Z0-9]+)\s*\)', eq)
+        pre_matches = re.findall('([^\w.])'+op+'\(\s*pre\.([\w]+)\s*\)', eq)
+        post_matches = re.findall('([^\w.])'+op+'\(\s*post\.([\w]+)\s*\)', eq)
 
         for pre, var in pre_matches:
-            globs['pre'].append({'function': op, 'variable': var})
-            oldname = op + '(pre.' + var + ')'
-            newname =  '_pre_' + op + '_' + var
-            eq = eq.replace(oldname, newname)
+            globs['pre'].append({'function': op, 'variable': var.strip()})
+            newname =  '__pre_' + op + '_' + var
+            eq = re.sub(op+'\(\s*pre\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = pattern['proj_preprefix'] + pattern['proj_sep'] + '_' + op + '_' + var
+
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var})
-            oldname = op + '(post.' + var + ')'
-            newname = '_post_' + op + '_' + var
-            eq = eq.replace(oldname, newname)
+            newname = '__post_' + op + '_' + var
+            eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = pattern['proj_postprefix'] + pattern['proj_sep'] + '_' + op + '_' + var 
 
     return eq, untouched, globs
@@ -147,8 +146,8 @@ def extract_prepost(name, eq, description, pattern):
 
     dependencies = {'pre': [], 'post': []}
 
-    pre_matches = re.findall(r'pre\.([a-zA-Z0-9_]+)', eq)
-    post_matches = re.findall(r'post\.([a-zA-Z0-9_]+)', eq)
+    pre_matches = re.findall(r'pre\.([\w]+)', eq)
+    post_matches = re.findall(r'post\.([\w]+)', eq)
 
     untouched = {}
     # Replace all pre.* occurences with a temporary variable
@@ -157,10 +156,11 @@ def extract_prepost(name, eq, description, pattern):
             def idx_target(val):
                 target = val.group(1)
                 rep = '_pre_sum_' + target
+                dependencies['pre'].append('sum('+target+')')
                 untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +target+ pattern['proj_preindex']
                 return rep
 
-            eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
+            eq = re.sub(r'pre\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['pre'].append(var)
             target = 'pre.' + var
@@ -172,10 +172,11 @@ def extract_prepost(name, eq, description, pattern):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
                 target = val.group(1)
+                dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target
                 untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+ target + pattern['proj_postindex']
                 return rep
-            eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
+            eq = re.sub(r'post\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
             target = 'post.' + var
@@ -360,13 +361,14 @@ def extract_targets(variables):
     targets = []
     for var in variables:
         # Rate-coded neurons
-        code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])sum\(([^()]+)\)', var['eq'])
+        code = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', var['eq'])
         for l, t in code:
             targets.append(t.strip())
         # Spiking neurons
-        code = re.findall('([^\_a-zA-Z0-9.])g_([\w]+)', var['eq'])
+        code = re.findall('([^\w.])g_([\w]+)', var['eq'])
         for l, t in code:
             targets.append(t.strip())
+
     return list(set(targets))
 
 def extract_spike_variable(description, pattern):

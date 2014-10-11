@@ -312,13 +312,28 @@ all:
         """
         Checks the structure to display more useful error messages.
         """
+        import re
+        # Check the population use global operations on variables which exist
+
         # Check synapses depend on existing pre/post variables
         for name, proj in self.projections.iteritems():
             for dep in  proj.synapse.description['dependencies']['pre']:
+                if dep.startswith('sum('):
+                    target = re.findall(r'\(([\w]+)\)', dep)[0]
+                    if not target in proj.pre.targets:
+                        Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
+                        exit(0)
+                    continue 
                 if not dep in proj.pre.attributes:
                     Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
                     exit(0)
             for dep in  proj.synapse.description['dependencies']['post']:
+                if dep.startswith('sum('):
+                    target = re.findall(r'\(([\w]+)\)', dep)[0]
+                    if not target in proj.post.targets:
+                        Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
+                        exit(0)
+                    continue 
                 if not dep in proj.post.attributes:
                     Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
                     exit(0)
