@@ -169,7 +169,7 @@ class Rate2SpikePopulation(Population):
             pop%(id)s.last_spike[i] = t;
         }
         else{
-            pop1.spike[i] = false;
+            pop%(id)s.spike[i] = false;
         }
     }
     // Gather spikes

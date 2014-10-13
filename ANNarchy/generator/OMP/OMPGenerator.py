@@ -218,6 +218,7 @@ struct PopStruct%(id)s{
                 continue
             
             code = """
+// %(pre_name)s -> %(post_name)s
 struct ProjStruct%(id)s{
     int size;
     // Learning flag
@@ -319,7 +320,7 @@ struct ProjStruct%(id)s{
             code += """
 };    
 """ 
-            proj_struct += code % {'id': proj.id}
+            proj_struct += code % {'id': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
 
             proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
 """% {
