@@ -87,6 +87,15 @@ def analyse_neuron(neuron):
     description['parameters'] = parameters
     description['variables'] = variables
 
+    # Make sure r is defined for rate-coded networks
+    if neuron.type == 'rate':
+        for var in description['parameters'] + description['variables']:
+            if var['name'] == 'r':
+                break
+        else:
+            _error('Rate-coded neurons must define the variable "r".')
+            exit(0) 
+
     # Extract functions
     functions = extract_functions(neuron.functions, False)
     description['functions'] = functions
@@ -138,8 +147,8 @@ def analyse_neuron(neuron):
         
         # Replace sum(target) with pop%(id)s.sum_exc[i]
         for target in description['targets']:
-            eq = eq.replace('sum('+target+')', '_sum_'+target )  
-            untouched['_sum_'+target] = pattern['pop_prefix'] + pattern['pop_sep'] + pattern['pop_sum'] + target + pattern['pop_index']
+            eq = re.sub('sum\(\s*'+target+'\s*\)', '__sum_'+target+'__', eq)
+            untouched['__sum_'+target+'__'] = pattern['pop_prefix'] + pattern['pop_sep'] + pattern['pop_sum'] + target + pattern['pop_index']
         
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description, pattern)
@@ -269,6 +278,15 @@ def analyse_synapse(synapse):
 
     # Extract functions
     functions = extract_functions(synapse.functions, False)
+        
+    # Check the presence of w
+    for var in parameters + variables:
+        if var['name'] == 'w':
+            break
+    else:
+        parameters.append(
+            {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0'}
+        )
 
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = get_attributes(parameters, variables)
@@ -277,7 +295,7 @@ def analyse_synapse(synapse):
     if len(attributes) != len(list(set(attributes))):
         _error('Attributes must be declared only once.', attributes)
         exit(0)
-        
+
     # Add this info to the description
     description['parameters'] = parameters
     description['variables'] = variables
@@ -293,10 +311,40 @@ def analyse_synapse(synapse):
     # Extract RandomDistribution objects
     description['random_distributions'] = extract_randomdist(description, pattern)
     
-    # Extract event-driven info TODO: check
-    if description['type'] == 'spike':         
-            description['pre_spike'] = extract_pre_spike_variable(description, pattern)
-            description['post_spike'] = extract_post_spike_variable(description, pattern)
+    # Extract event-driven info
+    if description['type'] == 'spike':  
+        # pre_spike event       
+        description['pre_spike'] = extract_pre_spike_variable(description, pattern)
+        for var in description['pre_spike']:
+            if var['name'] in ['g_target', 'w']: # Already dealt with
+                continue
+            for avar in description['variables']:
+                if var['name'] == avar['name']:
+                    break
+            else: # not defined already
+                description['variables'].append(
+                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'], 
+                 'flags': [], 'transformed_eq': '', 'eq': '',
+                 'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
+                )
+                description['local'].append(var['name'])
+                description['attributes'].append(var['name'])
+        # post_spike event
+        description['post_spike'] = extract_post_spike_variable(description, pattern)
+        for var in description['post_spike']:
+            if var['name'] in ['g_target', 'w']: # Already dealt with
+                continue
+            for avar in description['variables']:
+                if var['name'] == avar['name']:
+                    break
+            else: # not defined already
+                description['variables'].append(
+                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'], 
+                 'flags': [], 'transformed_eq': '', 'eq': '',
+                 'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
+                )
+                description['local'].append(var['name'])
+                description['attributes'].append(var['name'])
 
     # Variables names for the parser which should be left untouched
     untouched = {}   
@@ -305,6 +353,10 @@ def analyse_synapse(synapse):
     # Iterate over all variables
     for variable in description['variables']:
         eq = variable['transformed_eq']
+
+        # Event-driven variables
+        if eq.strip() == '':
+            continue
         
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description, pattern)
@@ -394,7 +446,6 @@ def analyse_synapse(synapse):
         # Replace untouched variables with their original name
         for prev, new in untouched.iteritems():
             cpp_eq = cpp_eq.replace(prev, new)
-
 
         # Replace local functions
         for f in description['functions']:

@@ -26,6 +26,7 @@ import subprocess
 import shutil
 import time
 import numpy as np
+import re
 
 # ANNarchy core informations
 import ANNarchy
@@ -146,6 +147,9 @@ class Generator(object):
     def generate(self):
         " Method to generate the C++ code."
 
+        # Check that everything is allright in the structure of the network.
+        self.check_structure()
+
         # Generate the code
         self.code_generation(self.cpp_stand_alone, self.profile_enabled, 
                                                         self.clean)
@@ -153,8 +157,11 @@ class Generator(object):
         changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
-        if changed:
+        if changed or not os.path.isfile(Global.annarchy_dir+'/ANNarchyCore.so'):
             self.compilation()
+
+            # Return to the current directory
+            os.chdir('..')
                 
         # Create the Python objects                
         self.instantiate()    
@@ -186,7 +193,7 @@ class Generator(object):
         Global._print('Compiling ... ')
         if Global.config['show_time']:
             t0 = time.time()
-                                
+
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
             if not self.debug_build:
@@ -235,30 +242,35 @@ clean:
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)
-            
-            if Global.config['verbose'] == False:
-                pipe_to_cmd_line = "> compile_stdout.log 2> compile_stderr.log"
-            else:
-                pipe_to_cmd_line = ""
                 
             # Start the compilation
             try:
                 if Global.config['paradigm'] == "cuda_35":
-                    subprocess.check_output("make cuda_35 -j4 "+ pipe_to_cmd_line, 
+                    subprocess.check_output("make cuda_35 -j4 ", 
                                             shell=True)
                 elif Global.config['paradigm'] == "cuda_20":
-                    subprocess.check_output("make cuda_20 -j4 "+ pipe_to_cmd_line, 
+                    subprocess.check_output("make cuda_20 -j4 ", 
                                             shell=True)                    
                 elif Global.config['paradigm'] == "openmp":
-                    subprocess.check_output("make openmp -j4 "+ pipe_to_cmd_line, 
+                    subprocess.check_output("make openmp -j4 ", 
                                             shell=True)
                 else:
                     Global._warning("unknown paradigm '"+Global.config['paradigm']+"': set default openmp")
-                    subprocess.check_output("make openmp -j4 "+ pipe_to_cmd_line, 
+                    subprocess.check_output("make openmp -j4 ", 
                                             shell=True)
                     
+                subprocess.check_output("make -j4 > compile_stdout.log 2> compile_stderr.log", 
+                                        shell=True)
+
             except subprocess.CalledProcessError:
-                Global._error('Compilation failed.\nCheck the compilation logs in annarchy/compile_stderr.log')
+                with open('compile_stderr.log', 'r') as rfile:
+                    msg = rfile.read()
+                Global._print(msg)
+                Global._error('Compilation failed.')
+                try:
+                    os.remove('ANNarchyCore.so')
+                except:
+                    pass
                 exit(0)
     
         else: # Windows: to test....
@@ -277,9 +289,6 @@ clean:
 
         if Global.config['verbose']:
             Global._print('Building network ...')
-
-        # Return to the current directory
-        os.chdir('..')
 
         # Import the Cython library
         cython_module = __import__('ANNarchyCore')
@@ -337,3 +346,48 @@ clean:
             from .CUDA.CUDAGenerator import CUDAGenerator
             generator = CUDAGenerator(self.populations, self.projections)
             generator.generate()
+
+    def check_structure(self):
+        """
+        Checks the structure to display more useful error messages.
+        """
+        # Check populations
+        for name, pop in self.populations.iteritems():
+            # Reserved variable names
+            for term in ['t', 'dt']:
+                if term in pop.attributes:
+                    Global._print(pop.neuron_type.parameters)
+                    Global._print(pop.neuron_type.equations)
+                    Global._error(term + ' is a reserved variable name')
+                    exit(0)
+
+        # Check projections
+        for name, proj in self.projections.iteritems():
+            # Reserved variable names
+            for term in ['t', 'dt']:
+                if term in proj.attributes:
+                    Global._print(proj.synapse.parameters)
+                    Global._print(proj.synapse.equations)
+                    Global._error(term + ' is a reserved variable name')
+                    exit(0)
+            # Check existing pre variables
+            for dep in  proj.synapse.description['dependencies']['pre']:
+                if dep.startswith('sum('):
+                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
+                    if not target in proj.pre.targets:
+                        Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
+                        exit(0)
+                    continue 
+                if not dep in proj.pre.attributes:
+                    Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
+                    exit(0)
+            for dep in  proj.synapse.description['dependencies']['post']:
+                if dep.startswith('sum('):
+                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
+                    if not target in proj.post.targets:
+                        Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
+                        exit(0)
+                    continue 
+                if not dep in proj.post.attributes:
+                    Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
+                    exit(0)

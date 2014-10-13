@@ -62,21 +62,22 @@ except:
 ################################################
 print('Installing ANNarchy on your system')
 setup(  name='ANNarchy',
-		version='4.3.0',
-		license='GPLv2 or later',
-		platforms='GNU/Linux',
-		description='Artificial Neural Networks architect',
-		long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed rate-coded or spiking neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
-		author='Julien Vitay and Helge Uelo Dinkelbach',
-		author_email='julien.vitay@informatik.tu-chemnitz.de',
-		url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
+        version='4.3.0',
+        license='GPLv2 or later',
+        platforms='GNU/Linux',
+        description='Artificial Neural Networks architect',
+        long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed rate-coded or spiking neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
+        author='Julien Vitay and Helge Uelo Dinkelbach',
+        author_email='julien.vitay@informatik.tu-chemnitz.de',
+        url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['core/cython_ext/*.pxd']},
+        package_data={'ANNarchy': ['data/core/*', 'core/cython_ext/*.pxd']},
         ext_modules = cythonize(
             [   "ANNarchy/core/cython_ext/Connector.pyx", 
                 "ANNarchy/core/cython_ext/Coordinates.pyx",
                 "ANNarchy/core/cython_ext/Transformations.pyx"]
         ),
-        include_dirs=[numpy.get_include()]
+        include_dirs=[numpy.get_include()],
+        zip_safe = False
 )
 

@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _error, _warning, config
+from ANNarchy.core.Global import _error, _warning, _print, config
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
@@ -38,7 +38,7 @@ def extract_randomdist(description, pattern):
         eq = variable['eq']
         # Search for all distributions
         for dist in available_distributions:
-            matches = re.findall('(?P<pre>[^\_a-zA-Z0-9.])'+dist+'\(([^()]+)\)', eq)
+            matches = re.findall('(?P<pre>[^\w.])'+dist+'\(([^()]+)\)', eq)
             if matches == ' ':
                 continue
             for l, v in matches:
@@ -97,24 +97,25 @@ def extract_globalops_neuron(name, eq, description, pattern):
     """
     untouched = {}    
     globs = []  
-    glop_names = ['min', 'max', 'mean']
+    glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
-        matches = re.findall('([^\w]*)'+op+'\(([\w]*)\)', eq)
+        matches = re.findall('([^\w]*)'+op+'\(([\s\w]*)\)', eq)
         for pre, var in matches:
-            if var in description['local']:
-                globs.append({'function': op, 'variable': var})
+            if var.strip() in description['local']:
+                globs.append({'function': op, 'variable': var.strip()})
                 oldname = op + '(' + var + ')'
-                newname = '_' + op + '_' + var 
+                newname = '_' + op + '_' + var.strip() 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = pattern['pop_prefix'] + pattern['pop_sep'] + '_' + op + '_' + var 
+                untouched[newname] = pattern['pop_prefix'] + pattern['pop_sep'] + '_' + op + '_' + var.strip()
             else:
                 _error(eq+'\nThere is no local attribute '+var+'.')
                 exit(0)
     return eq, untouched, globs
     
 def extract_globalops_synapse(name, eq, desc, pattern):
-    """ Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
+    """ 
+    Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
     untouched = {}    
@@ -123,20 +124,19 @@ def extract_globalops_synapse(name, eq, desc, pattern):
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     
     for op in glop_names:
-        pre_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*pre\.([a-zA-Z0-9]+)\s*\)', eq)
-        post_matches = re.findall('([^a-zA-Z0-9.])'+op+'\(\s*post\.([a-zA-Z0-9]+)\s*\)', eq)
+        pre_matches = re.findall('([^\w.])'+op+'\(\s*pre\.([\w]+)\s*\)', eq)
+        post_matches = re.findall('([^\w.])'+op+'\(\s*post\.([\w]+)\s*\)', eq)
 
         for pre, var in pre_matches:
-            globs['pre'].append({'function': op, 'variable': var})
-            oldname = op + '(pre.' + var + ')'
-            newname =  '_pre_' + op + '_' + var
-            eq = eq.replace(oldname, newname)
+            globs['pre'].append({'function': op, 'variable': var.strip()})
+            newname =  '__pre_' + op + '_' + var.strip()
+            eq = re.sub(op+'\(\s*pre\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = pattern['proj_preprefix'] + pattern['proj_sep'] + '_' + op + '_' + var
+
         for pre, var in post_matches:
-            globs['post'].append({'function': op, 'variable': var})
-            oldname = op + '(post.' + var + ')'
-            newname = '_post_' + op + '_' + var
-            eq = eq.replace(oldname, newname)
+            globs['post'].append({'function': op, 'variable': var.strip()})
+            newname = '__post_' + op + '_' + var.strip()
+            eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = pattern['proj_postprefix'] + pattern['proj_sep'] + '_' + op + '_' + var 
 
     return eq, untouched, globs
@@ -146,19 +146,25 @@ def extract_prepost(name, eq, description, pattern):
 
     dependencies = {'pre': [], 'post': []}
 
-    pre_matches = re.findall(r'pre\.([a-zA-Z0-9_]+)', eq)
-    post_matches = re.findall(r'post\.([a-zA-Z0-9_]+)', eq)
+    pre_matches = re.findall(r'pre\.([\w]+)', eq)
+    post_matches = re.findall(r'post\.([\w]+)', eq)
 
     untouched = {}
     # Replace all pre.* occurences with a temporary variable
     for var in list(set(pre_matches)):
         if var == 'sum': # pre.sum(exc)
             def idx_target(val):
-                rep = '_pre_sum_' + val.group(1)
-                untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +val.group(1)+ pattern['proj_preindex']
+                target = val.group(1).strip()
+                if target == '':
+                    _print(eq)
+                    _error('pre.sum() requires one argument.')
+                    exit(0)
+                rep = '_pre_sum_' + target.strip()
+                dependencies['pre'].append('sum('+target+')')
+                untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +target+ pattern['proj_preindex']
                 return rep
 
-            eq = re.sub(r'pre\.sum\(([a-zA-Z]+)\)', idx_target, eq)
+            eq = re.sub(r'pre\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['pre'].append(var)
             target = 'pre.' + var
@@ -169,10 +175,16 @@ def extract_prepost(name, eq, description, pattern):
     for var in list(set(post_matches)):
         if var == 'sum': # post.sum(exc)
             def idx_target(val):
-                rep = '_post_sum_' + val.group(1)
-                untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+val.group(1) + pattern['proj_postindex']
+                target = val.group(1).strip()
+                if target == '':
+                    _print(eq)
+                    _error('post.sum() requires one argument.')
+                    exit(0)
+                dependencies['post'].append('sum('+target+')')
+                rep = '_post_sum_' + target.strip()
+                untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+ target + pattern['proj_postindex']
                 return rep
-            eq = re.sub(r'post\.sum\(([a-zA-Z]+)\)', idx_target, eq)
+            eq = re.sub(r'post\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
             target = 'post.' + var
@@ -196,6 +208,48 @@ def extract_parameters(description, extra_values):
         name = extract_name(equation)
         if name == '_undefined':
             exit(0)
+            
+        # Process constraint
+        bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
+
+        # Store the result
+        desc = {'name': name,
+                'eq': equation,
+                'bounds': bounds,
+                'flags' : flags,
+                'ctype' : ctype,
+                'init' : init}
+        parameters.append(desc)              
+    return parameters
+    
+def extract_variables(description):
+    """ Extracts all variable information from a multiline description."""
+    variables = []
+    # Split the multilines into individual lines
+    variable_list = process_equations(description)
+    # Analyse all variables
+    for definition in variable_list:
+        # Retrieve the name, equation and constraints for the variable
+        equation = definition['eq']
+        constraint = definition['constraint']
+        name = definition['name']
+        if name == '_undefined':
+            exit(0)
+
+        # Process constraint
+        bounds, flags, ctype, init = extract_boundsflags(constraint)
+
+        # Store the result
+        desc = {'name': name,
+                'eq': equation,
+                'bounds': bounds,
+                'flags' : flags,
+                'ctype' : ctype,
+                'init' : init }
+        variables.append(desc)              
+    return variables        
+
+def extract_boundsflags(constraint, equation ="", extra_values={}):
         # Process the flags if any
         bounds, flags = extract_flags(constraint)
 
@@ -206,8 +260,9 @@ def extract_parameters(description, extra_values):
             ctype = 'bool'
         else:
             ctype = 'double'
-        # For parameters, the initial value can be given in the equation
-        if 'init' in bounds.keys(): # if init is provided, it wins
+
+        # Get the init value if declared
+        if 'init' in bounds.keys():
             init = bounds['init']
             if ctype == 'bool':
                 if init in ['false', 'False', '0']:
@@ -236,59 +291,6 @@ def extract_parameters(description, extra_values):
                     except:
                         var = init.replace("'","")
                         init = extra_values[var]
-                    
-        else: # Nothing is given: baseline : population
-            if ctype == 'bool':
-                init = False
-            elif ctype == 'int':
-                init = 0
-            elif ctype == 'double':
-                init = 0.0
-            
-        # Store the result
-        desc = {'name': name,
-                'eq': equation,
-                'bounds': bounds,
-                'flags' : flags,
-                'ctype' : ctype,
-                'init' : init}
-        parameters.append(desc)              
-    return parameters
-    
-def extract_variables(description):
-    """ Extracts all variable information from a multiline description."""
-    variables = []
-    # Split the multilines into individual lines
-    variable_list = process_equations(description)
-    # Analyse all variables
-    for definition in variable_list:
-        # Retrieve the name, equation and constraints for the variable
-        equation = definition['eq']
-        constraint = definition['constraint']
-        name = definition['name']
-        if name == '_undefined':
-            exit(0)
-        # Process the flags if any
-        bounds, flags = extract_flags(constraint)
-        # Get the type of the variable (float/int/bool)
-        if 'int' in flags:
-            ctype = 'int'
-        elif 'bool' in flags:
-            ctype = 'bool'
-        else:
-            ctype = 'double'
-        # Get the init value if declared
-        if 'init' in bounds.keys():
-            init = bounds['init']
-            if ctype == 'bool':
-                if init in ['false', 'False', '0']:
-                    init = False
-                elif init in ['true', 'True', '1']:
-                    init = True
-            elif ctype == 'int':
-                init = int(init)
-            else:
-                init = float(init)
         else: # Default = 0 according to ctype
             if ctype == 'bool':
                 init = False
@@ -296,15 +298,7 @@ def extract_variables(description):
                 init = 0
             elif ctype == 'double':
                 init = 0.0
-        # Store the result
-        desc = {'name': name,
-                'eq': equation,
-                'bounds': bounds,
-                'flags' : flags,
-                'ctype' : ctype,
-                'init' : init }
-        variables.append(desc)              
-    return variables        
+        return bounds, flags, ctype, init
     
 def extract_functions(description, local_global=False):
     """ Extracts all functions from a multiline description."""
@@ -375,13 +369,18 @@ def extract_targets(variables):
     targets = []
     for var in variables:
         # Rate-coded neurons
-        code = re.findall('(?P<pre>[^\_a-zA-Z0-9.])sum\(([^()]+)\)', var['eq'])
+        code = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', var['eq'])
         for l, t in code:
+            if t.strip() == '':
+                _print(var['eq'])
+                _error('sum() must have one argument.')
+                exit(0)
             targets.append(t.strip())
         # Spiking neurons
-        code = re.findall('([^\_a-zA-Z0-9.])g_([\w]+)', var['eq'])
+        code = re.findall('([^\w.])g_([\w]+)', var['eq'])
         for l, t in code:
             targets.append(t.strip())
+
     return list(set(targets))
 
 def extract_spike_variable(description, pattern):
@@ -420,17 +419,21 @@ def extract_spike_variable(description, pattern):
 
 def extract_pre_spike_variable(description, pattern):
     pre_spike_var = []
+
     # For all variables influenced by a presynaptic spike
-    for var in prepare_string(description['raw_pre_spike']):
+    for var in process_equations(description['raw_pre_spike']):
         # Get its name
-        name = extract_name(var)
-        raw_eq = var
+        name = var['name']
+        raw_eq = var['eq']
+
+        # Process the flags if any
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, description)
+        eq, condition = extract_ite(name, raw_eq, description)
             
         if condition == []:
-            translator = Equation(name, var, 
+            translator = Equation(name, raw_eq, 
                                   description['attributes'] + [name], 
                                   description['local'] + [name], 
                                   description['global'],
@@ -450,7 +453,8 @@ def extract_pre_spike_variable(description, pattern):
                                 global_index=pattern['proj_globalindex'])
 
         # Append the result of analysis
-        pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq} )
+        pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq,
+                                'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return pre_spike_var 
 
@@ -459,16 +463,21 @@ def extract_post_spike_variable(description, pattern):
     if not description['raw_post_spike']:
         return post_spike_var
     
-    for var in prepare_string(description['raw_post_spike']):
-        name = extract_name(var)
+    for var in process_equations(description['raw_post_spike']):
+        # Get its name
+        name = var['name']
+        raw_eq = var['eq']
+
+        # Process the flags if any
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, var, description)
+        eq, condition = extract_ite(name, raw_eq, description)
 
         if condition == []:
-            translator = Equation(name, var, 
-                                  description['attributes'], 
-                                  description['local'], 
+            translator = Equation(name, raw_eq, 
+                                  description['attributes'] + [name], 
+                                  description['local'] + [name], 
                                   description['global'],
                                   prefix=pattern['proj_prefix'],
                                   sep=pattern['proj_sep'],
@@ -482,7 +491,8 @@ def extract_post_spike_variable(description, pattern):
                                 index=pattern['proj_index'],
                                 global_index=pattern['proj_globalindex']) 
 
-        post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var} )
+        post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var,
+                                'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return post_spike_var  
 

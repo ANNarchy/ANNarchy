@@ -7,7 +7,7 @@ from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray
 from .core.Projection import Projection
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
-from .core.IO import save, load
+from .core.IO import save, load, load_parameter
 from .core.Utils import raster_plot, smoothed_rate, histogram
 from .models import *
 
