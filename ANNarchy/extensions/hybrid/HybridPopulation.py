@@ -37,7 +37,7 @@ class Spike2RatePopulation(Population):
         * **smooth**: time constant (in ms) of the low-pass filter used to smooth the firing rate (default: 1 ms, i.e no smoothing)
         """
         self.population = population
-        if not self.population.neuron.description['type'] == 'spike':
+        if not self.population.neuron_type.description['type'] == 'spike':
             Global._error('the population ' + self.population.name + ' must contain spiking neurons.')
             exit(0)
 
@@ -135,7 +135,7 @@ class Rate2SpikePopulation(Population):
         """
         self.population = population
 
-        if not self.population.neuron.description['type'] == 'rate':
+        if not self.population.neuron_type.description['type'] == 'rate':
             Global._error('the population ' + self.population.name + ' must contain rate-coded neurons.')
             exit(0)
 
