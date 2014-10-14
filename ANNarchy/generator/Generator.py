@@ -316,7 +316,7 @@ all:
         # Check populations
         for name, pop in self.populations.iteritems():
             # Reserved variable names
-            for term in ['t', 'dt']:
+            for term in ['t', 'dt', 't_pre', 't_post']:
                 if term in pop.attributes:
                     Global._print(pop.neuron_type.parameters)
                     Global._print(pop.neuron_type.equations)
@@ -326,7 +326,7 @@ all:
         # Check projections
         for name, proj in self.projections.iteritems():
             # Reserved variable names
-            for term in ['t', 'dt']:
+            for term in ['t', 'dt', 't_pre', 't_post']:
                 if term in proj.attributes:
                     Global._print(proj.synapse.parameters)
                     Global._print(proj.synapse.equations)
