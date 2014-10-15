@@ -329,6 +329,7 @@ def analyse_synapse(synapse):
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
+
         # post_spike event
         description['post_spike'] = extract_post_spike_variable(description, pattern)
         for var in description['post_spike']:
@@ -480,7 +481,7 @@ def analyse_synapse(synapse):
                                   global_index=pattern['proj_globalindex'])
             code = translator.parse()
         else:
-            code = translate_ITE('psp', eq, condition, synapse, untouched,
+            code = translate_ITE('psp', eq, condition, description, untouched,
                                   prefix=pattern['proj_prefix'],
                                   sep=pattern['proj_sep'],
                                   index=pattern['proj_index'],
@@ -494,5 +495,34 @@ def analyse_synapse(synapse):
         # Store the result
         psp['cpp'] = code
         description['psp'] = psp   
+
+    # Process event-driven info
+    if description['type'] == 'spike':  
+        for variable in description['pre_spike'] + description['post_spike']:
+            eq = variable['eq']
+            # Extract if-then-else statements
+            eq, condition = extract_ite(variable['name'], eq, description)        
+            # Analyse the equation
+            if condition == []:
+                translator = Equation(variable['name'], eq, 
+                                      description['attributes'], 
+                                      description['local'], 
+                                      description['global'], 
+                                      method = 'explicit', 
+                                      untouched = {},
+                                      prefix=pattern['proj_prefix'],
+                                      sep=pattern['proj_sep'],
+                                      index=pattern['proj_index'],
+                                      global_index=pattern['proj_globalindex'])
+                code = translator.parse()
+            else:
+                code = translate_ITE(variable['name'], eq, condition, description, {},
+                                      prefix=pattern['proj_prefix'],
+                                      sep=pattern['proj_sep'],
+                                      index=pattern['proj_index'],
+                                      global_index=pattern['proj_globalindex'], 
+                                      split=False)
+            # Store the result
+            variable['cpp'] = code # the C++ equation
 
     return description     

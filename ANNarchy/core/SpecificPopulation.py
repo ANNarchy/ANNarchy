@@ -89,7 +89,7 @@ class PoissonPopulation(Population):
                 p = Uniform(0.0, 1.0) * 1000.0 / dt
                 """,
                 spike = """
-                    p <= rates
+                    p < rates
                 """
             )
         else:
@@ -101,7 +101,7 @@ class PoissonPopulation(Population):
                 p = Uniform(0.0, 1.0) * 1000.0 / dt
                 """,
                 spike = """
-                    p <= rates
+                    p < rates
                 """
             )
         Population.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)

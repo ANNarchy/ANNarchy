@@ -49,8 +49,8 @@ STDP = Synapse(
         wmax = 0.01 : postsynaptic
     """,
     equations = """
-        tau_pre * dApre/dt = -Apre 
-        tau_post * dApost/dt = -Apost 
+        tau_pre * dApre/dt = -Apre : exact
+        tau_post * dApost/dt = -Apost : exact
     """,
     pre_spike="""
         g_target += w
