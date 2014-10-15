@@ -1048,7 +1048,7 @@ struct ProjStruct%(id)s{
                 from ANNarchy.parser.Extraction import extract_stop_condition
                 from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
                 # Find the paradigm OMP or CUDA
-                if config['paradigm'] == 'cuda':
+                if Global.config['paradigm'] == 'cuda':
                     pattern = pattern_cuda
                 else:
                     pattern = pattern_omp
