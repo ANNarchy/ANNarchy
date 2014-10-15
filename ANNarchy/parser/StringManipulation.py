@@ -140,8 +140,9 @@ def process_equations(equations):
     # All equations will be stored there, in the order of their definition
     variables = []        
     
+    equations = equations.replace(';', '\n').split('\n')
     # Iterate over all lines
-    for line in equations.splitlines():
+    for line in equations:
         # Skip empty lines
         definition = line.strip()
         if definition == '':

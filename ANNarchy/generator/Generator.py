@@ -26,6 +26,7 @@ import subprocess
 import shutil
 import time
 import numpy as np
+import re
 
 # ANNarchy core informations
 import ANNarchy
@@ -146,6 +147,9 @@ class Generator(object):
     def generate(self):
         " Method to generate the C++ code."
 
+        # Check that everything is allright in the structure of the network.
+        self.check_structure()
+
         # Generate the code
         self.code_generation(self.cpp_stand_alone, self.profile_enabled, 
                                                         self.clean)
@@ -153,7 +157,7 @@ class Generator(object):
         changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
-        if changed:
+        if changed or not os.path.isfile(Global.annarchy_dir+'/ANNarchyCore.so'):
             self.compilation()
 
             # Return to the current directory
@@ -304,3 +308,48 @@ all:
         from .OMP.OMPGenerator import OMPGenerator
         generator = OMPGenerator(self.populations, self.projections)
         generator.generate()
+
+    def check_structure(self):
+        """
+        Checks the structure to display more useful error messages.
+        """
+        # Check populations
+        for name, pop in self.populations.iteritems():
+            # Reserved variable names
+            for term in ['t', 'dt', 't_pre', 't_post']:
+                if term in pop.attributes:
+                    Global._print(pop.neuron_type.parameters)
+                    Global._print(pop.neuron_type.equations)
+                    Global._error(term + ' is a reserved variable name')
+                    exit(0)
+
+        # Check projections
+        for name, proj in self.projections.iteritems():
+            # Reserved variable names
+            for term in ['t', 'dt', 't_pre', 't_post']:
+                if term in proj.attributes:
+                    Global._print(proj.synapse.parameters)
+                    Global._print(proj.synapse.equations)
+                    Global._error(term + ' is a reserved variable name')
+                    exit(0)
+            # Check existing pre variables
+            for dep in  proj.synapse.description['dependencies']['pre']:
+                if dep.startswith('sum('):
+                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
+                    if not target in proj.pre.targets:
+                        Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
+                        exit(0)
+                    continue 
+                if not dep in proj.pre.attributes:
+                    Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
+                    exit(0)
+            for dep in  proj.synapse.description['dependencies']['post']:
+                if dep.startswith('sum('):
+                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
+                    if not target in proj.post.targets:
+                        Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
+                        exit(0)
+                    continue 
+                if not dep in proj.post.attributes:
+                    Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
+                    exit(0)

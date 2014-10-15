@@ -149,7 +149,7 @@ struct PopStruct%(id)s{
     // Targets
 """
             if pop.neuron_type.type == 'rate':
-                for target in pop.neuron_type.description['targets']:
+                for target in list(set(pop.neuron_type.description['targets']+pop.targets)):
                     code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
 
@@ -218,6 +218,7 @@ struct PopStruct%(id)s{
                 continue
             
             code = """
+// %(pre_name)s -> %(post_name)s
 struct ProjStruct%(id)s{
     int size;
     // Learning flag
@@ -261,18 +262,6 @@ struct ProjStruct%(id)s{
     std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     std::vector< int > record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
-
-            # Pre- or post_spike variables (including w)
-            if proj.synapse.description['type'] == 'spike':
-                extra_var = [var['name'] for var in proj.synapse.description['pre_spike'] + proj.synapse.description['post_spike'] ]
-                for var in list(set(extra_var)):
-                    if not var in proj.synapse.description['attributes'] + ['g_target']:
-                        code += """
-    // Local variable %(name)s added by default
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s ;
-    std::vector< int > record_%(name)s ;
-""" % {'type' : 'double', 'name': var}
 
             # Local functions
             if len(proj.synapse.description['functions'])>0:
@@ -331,7 +320,7 @@ struct ProjStruct%(id)s{
             code += """
 };    
 """ 
-            proj_struct += code % {'id': proj.id}
+            proj_struct += code % {'id': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
 
             proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
 """% {
@@ -972,20 +961,14 @@ struct ProjStruct%(id)s{
             # Recording
             for var in proj.synapse.description['variables']:
                 if var['name'] in proj.synapse.description['local']:
-                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< double > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< double > >());
-"""% {'id': proj.id, 'name': var['name']}
+                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
+"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
                 else:
-                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< double > > (proj%(id)s.post_rank.size(), std::vector< double >());
-"""% {'id': proj.id, 'name': var['name']}
-
-            if proj.synapse.description['type'] == 'spike':
-                for var in proj.synapse.description['pre_spike']:
-                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
-                        code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< double > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< double > >());
-"""% {'id': proj.id, 'name': var['name']}
+                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
+"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
 
         return code
-
+        
     def body_update_randomdistributions(self):
         code = """
     // Compute random distributions""" 
@@ -1049,15 +1032,6 @@ struct ProjStruct%(id)s{
     }
 """ % {'id': proj.id, 'name': var['name']}
 
-            if proj.synapse.description['type'] == 'spike':
-                for var in proj.synapse.description['pre_spike']:
-                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
-                        code += """
-    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
-        proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
-    }
-""" % {'id': proj.id, 'name': var['name']}
-
         return code
 
     def body_run_until(self):
@@ -1074,7 +1048,7 @@ struct ProjStruct%(id)s{
                 from ANNarchy.parser.Extraction import extract_stop_condition
                 from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
                 # Find the paradigm OMP or CUDA
-                if config['paradigm'] == 'cuda':
+                if Global.config['paradigm'] == 'cuda':
                     pattern = pattern_cuda
                 else:
                     pattern = pattern_omp
@@ -1189,7 +1163,7 @@ struct ProjStruct%(id)s{
                 code += """
         # Targets
 """
-                for target in pop.neuron_type.description['targets']:
+                for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
                     code += """        vector[double] _sum_%(target)s
 """ % {'target' : target}
 
@@ -1255,18 +1229,6 @@ struct ProjStruct%(id)s{
         vector[vector[%(type)s]] recorded_%(name)s
         vector[int] record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
-
-
-            # Pre- or post_spike variables (including w)
-            if proj.synapse.description['type'] == 'spike':
-                for var in proj.synapse.description['pre_spike']:
-                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
-                        code += """
-        # Local variable %(name)s
-        vector[vector[%(type)s]] %(name)s 
-        vector[vector[vector[%(type)s]]] recorded_%(name)s 
-        vector[int] record_%(name)s 
-""" % {'type' : 'double', 'name': var['name']}
 
             # Structural plasticity
             if Global.config['structural_plasticity']:
@@ -1346,7 +1308,7 @@ cdef class pop%(id)s_wrapper :
 
             # Targets
             if pop.neuron_type.type == 'rate':
-                for target in pop.neuron_type.description['targets']:
+                for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
                     code += """
         pop%(id)s._sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
 
@@ -1537,38 +1499,6 @@ cdef class proj%(id)s_wrapper :
     def set_delay(self, value):
         proj%(id)s.delay = value
 """% {'id': proj.id}
-
-            # Pre- or post_spike variables (including w)
-            if proj.synapse.description['type'] == 'spike':
-                for var in proj.synapse.description['pre_spike']:
-                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
-                        code += """
-    # Local variable %(name)s defined in pre_spike
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
-        proj%(id)s.%(name)s[rank] = value
-    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
-        return proj%(id)s.%(name)s[rank_post][rank_pre]
-    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
-        proj%(id)s.%(name)s[rank_post][rank_pre] = value
-    def start_record_%(name)s(self, int rank):
-        if not rank in list(proj%(id)s.record_%(name)s):
-            proj%(id)s.record_%(name)s.push_back(rank)
-    def stop_record_%(name)s(self, int rank):
-        cdef list tmp = list(proj%(id)s.record_%(name)s)
-        tmp.remove(rank)
-        proj%(id)s.record_%(name)s = tmp
-    def get_recorded_%(name)s(self, int rank):
-        cdef vector[vector[%(type)s]] data 
-        data = proj%(id)s.recorded_%(name)s[rank]
-        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
-        return data
-""" % {'id' : proj.id, 'name': var['name'], 'type': 'double'}
 
             # Parameters
             for var in proj.synapse.description['parameters']:
