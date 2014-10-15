@@ -190,7 +190,7 @@ class Dendrite(object):
         * **fill**: value to use when a synapse does not exist.
         """
         values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.post_rank)
-        ranks = self.proj.cyInstance._get_rank( self.post_rank )
+        ranks = self.proj.cyInstance.pre_rank( self.post_rank )
              
         m = fill * np.ones( self.pre.size )
         m[ranks] = values
