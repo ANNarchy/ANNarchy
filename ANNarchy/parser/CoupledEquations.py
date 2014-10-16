@@ -32,26 +32,26 @@ import re, pprint
 
 class CoupledEquations(object):
 
-    def __init__(self, pop, variables):
-        self.pop = pop
+    def __init__(self, description, variables):
+        self.description = description
         self.variables = variables
 
         self.untouched = variables[0]['untouched']
 
-        self.expressions = {}
+        self.expression_list = {}
         for var in self.variables:
-            self.expressions[var['name']] = var['transformed_eq']
+            self.expression_list[var['name']] = var['transformed_eq']
 
 
-        self.names = self.expressions.keys()
+        self.names = self.expression_list.keys()
 
-        self.local_variables = self.pop.description['local']
-        self.global_variables = self.pop.description['global']
+        self.local_variables = self.description['local']
+        self.global_variables = self.description['global']
 
         self.local_dict = Equation('tmp', '',
-                                      self.pop.description['attributes'], 
-                                      self.pop.description['local'], 
-                                      self.pop.description['global'], 
+                                      self.description['attributes'], 
+                                      self.description['local'], 
+                                      self.description['global'], 
                                       method = 'implicit',
                                       untouched = self.untouched
                                       ).local_dict
@@ -65,23 +65,23 @@ class CoupledEquations(object):
             methods.append(var['method'])
         if len(list(set(methods))) > 1: # mixture of methods
             _error('Can not mix different numerical methods when solving a system of equations.')
-            return None
+            exit(0)
         else:
             method = methods[0]
 
         if method == 'implicit' or method == 'semiimplicit':
-            return self.solve_implicit(expressions)
+            return self.solve_implicit(self.expression_list)
         elif method == 'midpoint': 
-            return self.solve_midpoint(expressions)
+            return self.solve_midpoint(self.expression_list)
 
 
-    def solve_implicit(self, expressions):
+    def solve_implicit(self, expression_list):
 
         equations = {}
         new_vars = {}
 
         # Pre-processing to replace the gradient
-        for name, expression in self.expressions.iteritems():
+        for name, expression in self.expression_list.iteritems():
             # transform the expression to suppress =
             if '=' in expression:
                 expression = expression.replace('=', '- (')
@@ -90,21 +90,21 @@ class CoupledEquations(object):
             expression = expression.replace(' ', '')
             # Transform the gradient into a difference TODO: more robust...
             expression = expression.replace('d'+name, '_t_gradient_')
-            expressions[name] = expression
+            expression_list[name] = expression
 
         # replace the variables by their future value
-        for name, expression in expressions.iteritems():
-            for n in names:
-                expression = expression.replace(n, '_'+n)
+        for name, expression in expression_list.iteritems():
+            for n in name:
+                expression = re.sub(r'([^\w]+)'+n+r'([^\w]+)', r'\1_'+n+r'\2', expression)
             expression = expression.replace('_t_gradient_', '(_'+name+' - '+name+')')
-            expressions[name] = expression
+            expression_list[name] = expression
 
             new_var = Symbol('_'+name)
             self.local_dict['_'+name] = new_var
             new_vars[new_var] = name
 
 
-        for name, expression in expressions.iteritems():
+        for name, expression in expression_list.iteritems():
             analysed = parse_expr(expression,
                 local_dict = self.local_dict,
                 transformations = (standard_transformations + (convert_xor,))
@@ -115,8 +115,8 @@ class CoupledEquations(object):
         try:
             solution = solve(equations.values(), new_vars.keys())
         except:
-            _error('The multiple ODEs can not be solved together using the implicit Euler method. Using the implicit Euler method for each ODE separately.')
-            return None
+            _error('The multiple ODEs can not be solved together using the implicit Euler method.')
+            exit(0)
 
         for var, sol in solution.iteritems():
             # simplify the solution
@@ -137,18 +137,19 @@ class CoupledEquations(object):
                     variable['cpp'] = cpp_eq
                     variable['switch'] = switch
             
+        
         return self.variables
 
 
 
-    def solve_midpoint(self, expressions):
+    def solve_midpoint(self, expression_list):
 
-        expressions = {}
+        expression_list = {}
         equations = {}
         evaluations = {}
 
         # Pre-processing to replace the gradient
-        for name, expression in self.expressions.iteritems():
+        for name, expression in self.expression_list.iteritems():
             # transform the expression to suppress =
             if '=' in expression:
                 expression = expression.replace('=', '- (')
@@ -158,9 +159,9 @@ class CoupledEquations(object):
             # Transform the gradient into a difference TODO: more robust...
             expression = expression.replace('d'+name+'/dt', '_gradient_'+name)
             self.local_dict['_gradient_'+name] = Symbol('_gradient_'+name)
-            expressions[name] = expression
+            expression_list[name] = expression
 
-        for name, expression in expressions.iteritems():
+        for name, expression in expression_list.iteritems():
             analysed = parse_expr(expression,
                 local_dict = self.local_dict,
                 transformations = (standard_transformations + (convert_xor,))
@@ -183,7 +184,7 @@ class CoupledEquations(object):
 
         # Compute the new values _x_new = f(x + dt/2*_k)
         news = {}
-        for name, expression in expressions.iteritems():
+        for name, expression in expression_list.iteritems():
             tmp_analysed = parse_expr(expression,
                 local_dict = tmp_dict,
                 transformations = (standard_transformations + (convert_xor,))
@@ -193,7 +194,7 @@ class CoupledEquations(object):
 
         # Compute the switches
         switches = {}
-        for name, expression in expressions.iteritems():
+        for name, expression in expression_list.iteritems():
             switches[name] = ccode(self.local_dict[name]) + ' += dt * _' + name + ' ;'
 
         # Store the generated code in the variables

@@ -58,7 +58,7 @@ class Equation(object):
         # Store attributes
         self.name = name
         self.expression = expression
-        self.variables = variables
+        self.attributes = variables
         self.local_variables = local_variables
         self.global_variables = global_variables
         self.untouched = untouched
@@ -87,7 +87,7 @@ class Equation(object):
             'False': Symbol('false'), 
         }
 
-        for var in self.variables: # Add each variable of the neuron
+        for var in self.attributes: # Add each variable of the neuron
             if var in self.local_variables:
                 self.local_dict[var] = Symbol(prefix + sep + var + index)
             elif var in self.global_variables:
@@ -199,6 +199,8 @@ class Equation(object):
             local_dict = self.local_dict
         )
 
+        self.analysed = analysed
+
         variable_name = self.local_dict[self.name]
 
         equation = simplify(collect( solve(analysed, new_var)[0] - variable_name, self.local_dict['dt']), ratio=1.0)
@@ -220,6 +222,8 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+
+        self.analysed = analysed
 
         variable_name = self.local_dict[self.name]
 
@@ -259,12 +263,14 @@ class Equation(object):
             local_dict = self.local_dict,
             transformations = (standard_transformations + (convert_xor,))
         )
+        self.analysed = analysed
 
         # Solve the equation for delta_mp
         solved = solve(analysed, new_var)
         if len(solved) > 1:
-            _warning(self.expression + ': the ODE is not linear, falling back to the semi-implicit method.')
-            return self.semiimplicit(expression)
+            _print(self.expression)
+            _error('the ODE is not linear, can not use the implicit method.')
+            exit(0)
         else:
             solved = solved[0]
 
@@ -330,7 +336,7 @@ class Equation(object):
             exit(0)
 
         # Check the steady state is not dependent on other variables
-        for var in self.variables:
+        for var in self.local_variables:
             if self.local_dict[var] in steadystate:
                 _print(self.expression)
                 _error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
@@ -370,6 +376,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Collect factor on the gradient and main variable A*dV/dt + B*V = C
         expanded = analysed.expand(modulus=None, power_base=False, power_exp=False, 
@@ -433,6 +440,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
 
         # Obtain C code
         code = self.c_code(analysed)
@@ -460,6 +468,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Obtain C code
         code = self.c_code(self.local_dict[self.name]) + ope + self.c_code(simplify(analysed, ratio=1.0)) +';'
@@ -477,6 +486,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Obtain C code
         code = self.c_code(self.local_dict[self.name]) + ' = ' + self.c_code(analysed) +';'
@@ -491,12 +501,21 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Obtain C code
         code = self.c_code(analysed) +';'
     
         # Return result
         return code
+
+    def dependencies(self):
+        deps = []
+        for att in self.attributes:
+            if self.local_dict[att] in self.analysed:
+                deps.append(att)
+        return deps
+        
         
 def transform_condition(expr):
     expr = expr.replace (' and ', ' & ')

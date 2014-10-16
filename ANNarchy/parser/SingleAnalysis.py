@@ -23,6 +23,7 @@
 """
 from ANNarchy.core.Global import _error, _warning, config
 from .Extraction import *
+from .CoupledEquations import CoupledEquations
 
 # Specific code generation for the chosen paradigm
 pattern_omp = {
@@ -60,6 +61,7 @@ pattern_cuda = {
 
 def analyse_neuron(neuron):
     """ Performs the initial analysis for a single neuron type."""
+    concurrent_odes = []
 
     # Find the paradigm OMP or CUDA
     if config['paradigm'] == 'cuda':
@@ -208,6 +210,7 @@ def analyse_neuron(neuron):
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'],)
             code = translator.parse()
+            dependencies = translator.dependencies()
         else: # An if-then-else statement
             code = translate_ITE(variable['name'], eq, condition, description, untouched,
                                   prefix=pattern['pop_prefix'],
@@ -244,11 +247,26 @@ def analyse_neuron(neuron):
         variable['switch'] = switch # switch value of ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
+        variable['dependencies'] = dependencies # may be needed later
+
+        # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
+        if method in ['implicit', 'midpoint']:
+            concurrent_odes.append(variable)
+
+    # After all variables are processed, do it again if they are concurrent
+    if len(concurrent_odes) > 1 :
+        solver = CoupledEquations(description, concurrent_odes)
+        new_eqs = solver.process_variables()
+        for idx, variable in enumerate(description['variables']):
+            for new_eq in new_eqs:
+                if variable['name'] == new_eq['name']:
+                    description['variables'][idx] = new_eq
 
     return description
 
 def analyse_synapse(synapse):  
     """ Performs the analysis for a single synapse."""  
+    concurrent_odes = []
  
     # Find the paradigm OMP or CUDA
     if config['paradigm'] == 'cuda':
@@ -429,6 +447,7 @@ def analyse_synapse(synapse):
                                   index=pattern['proj_index'],
                                   global_index=pattern['proj_globalindex'])
             code = translator.parse()
+            dependencies = translator.dependencies()
                 
         else: # An if-then-else statement
             code = translate_ITE(variable['name'], eq, condition, description, untouched,
@@ -457,7 +476,21 @@ def analyse_synapse(synapse):
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
+        variable['dependencies'] = dependencies # may be needed later
         
+        # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
+        if method in ['implicit', 'midpoint']:
+            concurrent_odes.append(variable)
+
+    # After all variables are processed, do it again if they are concurrent
+    if len(concurrent_odes) > 1 :
+        solver = CoupledEquations(description, concurrent_odes)
+        new_eqs = solver.process_variables()
+        for idx, variable in enumerate(description['variables']):
+            for new_eq in new_eqs:
+                if variable['name'] == new_eq['name']:
+                    description['variables'][idx] = new_eq
+                    
     # Translate the psp code if any
     if 'raw_psp' in description.keys():                
         psp = {'eq' : description['raw_psp'].strip() }
