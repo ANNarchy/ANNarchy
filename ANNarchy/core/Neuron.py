@@ -23,7 +23,7 @@
 """
 from ANNarchy.core.Global import _error
 from ANNarchy.parser.SingleAnalysis import analyse_neuron
-
+import numpy as np
 
 class Neuron(object):
     """
