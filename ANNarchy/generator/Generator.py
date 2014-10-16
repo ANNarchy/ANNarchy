@@ -332,6 +332,11 @@ all:
                     Global._print(proj.synapse.equations)
                     Global._error(term + ' is a reserved variable name')
                     exit(0)
+            # Check the connector method has been called
+            if not proj._synapses:
+                Global._error('The projection has not been initialized')
+                exit(0)
+
             # Check existing pre variables
             for dep in  proj.synapse.description['dependencies']['pre']:
                 if dep.startswith('sum('):

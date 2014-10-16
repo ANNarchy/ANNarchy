@@ -821,8 +821,8 @@ class Projection(object):
         
         *Parameters*:
         
-            * **variable**: name of variable
-            * **in_post_geometry**: if set to false, the data will be plotted as square grid. (default = True)
+        * **variable**: name of variable
+        * **in_post_geometry**: if set to false, the data will be plotted as square grid. (default = True)
         """        
         if in_post_geometry:
             x_size = self.post.geometry[1]
@@ -848,6 +848,40 @@ class Projection(object):
             res = np.concatenate((res, row))
         
         return res
+
+    def connectivity_matrix(self, fill=0.0):
+        """
+        Returns a dense connectivity matrix (2D Numpy array) representing the connections between the pre- and post-populations.
+
+        The first index of the matrix represents post-synaptic neurons, the second the pre-synaptic ones.
+
+        If PopulationViews were used for creating the projection, the matrix is expanded to the whole populations by default. 
+
+        *Parameters*:
+        
+        * **fill**: value to put in the matrix when there is no connection (default: 0.0).
+        """
+        if isinstance(self.pre, PopulationView):
+            size_pre = self.pre.population.size
+        else:
+            size_pre = self.pre.size
+        if isinstance(self.post, PopulationView):
+            size_post = self.post.population.size
+        else:
+            size_post = self.post.size
+
+        res = np.ones((size_post, size_pre)) * fill
+        for rank in self.post_ranks:
+            idx = self.post_ranks.index(rank)
+            try:
+                preranks = self.cyInstance.pre_rank(idx)
+                w = self.cyInstance.get_dendrite_w(idx)
+            except:
+                _error('The connectivity matrix can only be accessed after compilation')
+                return []
+            res[rank, preranks] = w
+        return res
+
 
     ################################
     ## Save/load methods

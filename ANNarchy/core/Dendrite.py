@@ -52,6 +52,15 @@ class Dendrite(object):
             return self.proj.cyInstance.nb_synapses(self.post_rank)
         return 0
 
+    @property
+    def pre_rank(self):
+        """
+        List of ranks of pre-synaptic neurons.
+        """
+        if self.proj.cyInstance:
+            return self.proj.cyInstance.pre_rank(self.post_rank)
+        return []
+
     def __len__(self):
         """
         Number of synapses.
