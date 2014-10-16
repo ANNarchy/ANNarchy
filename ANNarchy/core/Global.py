@@ -469,8 +469,6 @@ def _error(*var_text):
     """
     Prints an error message to standard out.
     """
-    import traceback
-    traceback.print_stack()
     text = 'ERROR: '
     for var in var_text:
         text += str(var) + ' '
