@@ -334,7 +334,7 @@ all:
                     exit(0)
             # Check the connector method has been called
             if not proj._synapses:
-                Global._error('The projection has not been initialized')
+                Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected. Call a connector method before compiling the network.')
                 exit(0)
 
             # Check existing pre variables
