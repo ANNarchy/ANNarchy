@@ -244,11 +244,10 @@ class Equation(object):
     
     def implicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
-        #return self.semiimplicit(expression)
 
         # Transform the gradient into a difference TODO: more robust...
         new_expression = expression.replace('d'+self.name, '_t_gradient_')
-        new_expression = new_expression.replace(self.name, '_'+self.name)
+        new_expression = re.sub(r'([^\w]+)'+self.name+r'([^\w]+)', r'\1_'+self.name+r'\2', new_expression)
         new_expression = new_expression.replace('_t_gradient_', '(_'+self.name+' - '+self.name+')')
 
         # Add a sympbol for the next value of the variable
@@ -324,10 +323,18 @@ class Equation(object):
     def eventdriven(self, expression):
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
+
         if real_tau == None: # the equation can not be standardized
-            _print(expression)
-            _error('The equation can not be evaluated exactly')
+            _print(self.expression)
+            _error('The equation is not a linear ODE and can not be evaluated exactly.')
             exit(0)
+
+        # Check the steady state is not dependent on other variables
+        for var in self.variables:
+            if self.local_dict[var] in steadystate:
+                _print(self.expression)
+                _error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
+                exit(0)
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
@@ -372,8 +379,9 @@ class Equation(object):
         collected_var = collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
         if self.method == 'exponential':
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
-                _warning(self.expression + ': the exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Using the explicit method instead.')
-                return None, None, None            
+                _print(self.expression)
+                _error('The exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
+                exit(0)           
     
         factor_var = collected_var[self.local_dict[self.name]]
         
@@ -498,3 +506,4 @@ def transform_condition(expr):
     expr = expr.replace (' not(', ' Not(')
     expr = expr.replace (' is ', ' == ')
     return expr
+
