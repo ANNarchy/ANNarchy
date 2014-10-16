@@ -211,6 +211,7 @@ def analyse_neuron(neuron):
                                   sep=pattern['pop_sep'],
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'])
+            dependencies = []
 
         
         if isinstance(code, str):
@@ -443,6 +444,7 @@ def analyse_synapse(synapse):
                                   sep=pattern['proj_sep'],
                                   index=pattern['proj_index'],
                                   global_index=pattern['proj_globalindex'])
+            dependencies = []
 
         if isinstance(code, str):
             cpp_eq = code
