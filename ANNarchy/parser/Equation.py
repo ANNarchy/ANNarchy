@@ -35,8 +35,7 @@ class Equation(object):
     '''
     Class to analyse one equation.
     '''
-    def __init__(self, name, expression, variables, 
-                 local_variables, global_variables, 
+    def __init__(self, name, expression, description, 
                  untouched = [], 
                  method='explicit', type=None, 
                  prefix='pop%(id)s', sep = '.',
@@ -58,9 +57,11 @@ class Equation(object):
         # Store attributes
         self.name = name
         self.expression = expression
-        self.attributes = variables
-        self.local_variables = local_variables
-        self.global_variables = global_variables
+        self.description = description
+        self.attributes = self.description['attributes']
+        self.local_attributes = self.description['local']
+        self.global_attributes = self.description['global']
+        self.variables = [var['name'] for var in self.description['variables']]
         self.untouched = untouched
         self.method = method
         self.prefix = prefix 
@@ -88,9 +89,9 @@ class Equation(object):
         }
 
         for var in self.attributes: # Add each variable of the neuron
-            if var in self.local_variables:
+            if var in self.local_attributes:
                 self.local_dict[var] = Symbol(prefix + sep + var + index)
-            elif var in self.global_variables:
+            elif var in self.global_attributes:
                 if var in _predefined:
                     continue
                 self.local_dict[var] = Symbol(prefix + sep + var + global_index)
@@ -336,7 +337,7 @@ class Equation(object):
             exit(0)
 
         # Check the steady state is not dependent on other variables
-        for var in self.local_variables:
+        for var in self.variables:
             if self.local_dict[var] in steadystate:
                 _print(self.expression)
                 _error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')

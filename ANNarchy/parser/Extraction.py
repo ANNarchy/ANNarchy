@@ -392,9 +392,7 @@ def extract_spike_variable(description, pattern):
         exit(0)
         
     translator = Equation('raw_spike_cond', cond[0].strip(), 
-                          description['attributes'], 
-                          description['local'], 
-                          description['global'], 
+                          description, 
                           prefix=pattern['pop_prefix'],
                           sep=pattern['pop_sep'],
                           index=pattern['pop_index'],
@@ -406,9 +404,7 @@ def extract_spike_variable(description, pattern):
         reset_desc = process_equations(description['raw_reset'])
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'], 
-                                  description['attributes'], 
-                                  description['local'], 
-                                  description['global'],
+                                  description,
                                   prefix=pattern['pop_prefix'],
                                   sep=pattern['pop_sep'],
                                   index=pattern['pop_index'],
@@ -473,9 +469,7 @@ def extract_stop_condition(pop, pattern):
                 pop['stop_condition']['type'] = 'all'
     # Convert the expression
     translator = Equation('stop_cond', eq, 
-                          pop['attributes'], 
-                          pop['local'], 
-                          pop['global'], 
+                          pop, 
                           type = 'cond',
                           prefix=pattern['pop_prefix'],
                           sep=pattern['pop_sep'],

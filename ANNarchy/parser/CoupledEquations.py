@@ -49,9 +49,7 @@ class CoupledEquations(object):
         self.global_variables = self.description['global']
 
         self.local_dict = Equation('tmp', '',
-                                      self.description['attributes'], 
-                                      self.description['local'], 
-                                      self.description['global'], 
+                                      self.description, 
                                       method = 'implicit',
                                       untouched = self.untouched
                                       ).local_dict

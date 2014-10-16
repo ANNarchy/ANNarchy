@@ -36,22 +36,19 @@ def translate_ITE(name, eq, condition, description, untouched, prefix, sep, inde
         then_statement = condition[1]
         else_statement = condition[2]
 
-        if_code = Equation(name, if_statement, description['attributes'], 
-                          description['local'], description['global'], 
+        if_code = Equation(name, if_statement, description, 
                           untouched = untouched.keys(),
                           type='cond', prefix=prefix, sep=sep, index=index, global_index=global_index).parse()
         if isinstance(then_statement, list): # nested conditional
             then_code =  process_ITE(then_statement)
         else:
-            then_code = Equation(name, then_statement, description['attributes'], 
-                          description['local'], description['global'], 
+            then_code = Equation(name, then_statement, description, 
                           untouched = untouched.keys(),
                           type='return', prefix=prefix, sep=sep, index=index, global_index=global_index).parse().split(';')[0]
         if isinstance(else_statement, list): # nested conditional
             else_code =  process_ITE(else_statement)
         else:
-            else_code = Equation(name, else_statement, description['attributes'], 
-                          description['local'], description['global'], 
+            else_code = Equation(name, else_statement, description, 
                           untouched = untouched.keys(),
                           type='return', prefix=prefix, sep=sep, index=index, global_index=global_index).parse().split(';')[0]
                           
@@ -60,8 +57,7 @@ def translate_ITE(name, eq, condition, description, untouched, prefix, sep, inde
           
     if split:
         # Main equation, where the right part is __conditional__
-        translator = Equation(name, eq, description['attributes'], 
-                              description['local'], description['global'], 
+        translator = Equation(name, eq, description, 
                               untouched = untouched.keys(), prefix=prefix, sep=sep, index=index, global_index=global_index)
         code = translator.parse() 
     else:

@@ -171,9 +171,7 @@ def analyse_neuron(neuron):
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
                 translator = Equation(variable['name'], variable['bounds']['min'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['pop_prefix'],
@@ -186,9 +184,7 @@ def analyse_neuron(neuron):
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
                 translator = Equation(variable['name'], variable['bounds']['max'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['pop_prefix'],
@@ -200,9 +196,7 @@ def analyse_neuron(neuron):
         # Analyse the equation
         if condition == []:
             translator = Equation(variable['name'], eq, 
-                                  description['attributes'], 
-                                  description['local'], 
-                                  description['global'], 
+                                  description, 
                                   method = method,
                                   untouched = untouched.keys(),
                                   prefix=pattern['pop_prefix'],
@@ -409,9 +403,7 @@ def analyse_synapse(synapse):
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
                 translator = Equation(variable['name'], variable['bounds']['min'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['proj_prefix'],
@@ -423,9 +415,7 @@ def analyse_synapse(synapse):
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
                 translator = Equation(variable['name'], variable['bounds']['max'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['proj_prefix'],
@@ -437,9 +427,7 @@ def analyse_synapse(synapse):
         # Analyse the equation
         if condition == []: # Call Equation
             translator = Equation(variable['name'], eq, 
-                                  description['attributes'], 
-                                  description['local'], 
-                                  description['global'], 
+                                  description, 
                                   method = method, 
                                   untouched = untouched.keys(),
                                   prefix=pattern['proj_prefix'],
@@ -502,9 +490,7 @@ def analyse_synapse(synapse):
         # Analyse the equation
         if condition == []:
             translator = Equation('psp', eq, 
-                                  description['attributes'], 
-                                  description['local'], 
-                                  description['global'], 
+                                  description, 
                                   method = 'explicit', 
                                   untouched = untouched.keys(),
                                   type='return',
@@ -538,9 +524,7 @@ def analyse_synapse(synapse):
             # Analyse the equation
             if condition == []:
                 translator = Equation(variable['name'], eq, 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       method = 'explicit', 
                                       untouched = {},
                                       prefix=pattern['proj_prefix'],
