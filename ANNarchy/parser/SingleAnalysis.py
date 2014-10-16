@@ -211,6 +211,7 @@ def analyse_neuron(neuron):
                                   sep=pattern['pop_sep'],
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'])
+            dependencies = []
 
         
         if isinstance(code, str):
