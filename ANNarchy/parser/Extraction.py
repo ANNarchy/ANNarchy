@@ -431,29 +431,9 @@ def extract_pre_spike_variable(description, pattern):
 
         # Extract if-then-else statements
         eq, condition = extract_ite(name, raw_eq, description)
-            
-        if condition == []:
-            translator = Equation(name, raw_eq, 
-                                  description['attributes'] + [name], 
-                                  description['local'] + [name], 
-                                  description['global'],
-                                  prefix=pattern['proj_prefix'],
-                                  sep=pattern['proj_sep'],
-                                  index=pattern['proj_index'],
-                                  global_index=pattern['proj_globalindex'])
-            eq = translator.parse()
-        else: 
-            eq = translate_ITE( name, 
-                                eq, 
-                                condition, 
-                                description, {}, 
-                                prefix=pattern['proj_prefix'],
-                                sep=pattern['proj_sep'],
-                                index=pattern['proj_index'],
-                                global_index=pattern['proj_globalindex'])
 
         # Append the result of analysis
-        pre_spike_var.append( { 'name': name, 'eq': eq , 'raw_eq' : raw_eq,
+        pre_spike_var.append( { 'name': name, 'eq': eq ,
                                 'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return pre_spike_var 
@@ -474,24 +454,7 @@ def extract_post_spike_variable(description, pattern):
         # Extract if-then-else statements
         eq, condition = extract_ite(name, raw_eq, description)
 
-        if condition == []:
-            translator = Equation(name, raw_eq, 
-                                  description['attributes'] + [name], 
-                                  description['local'] + [name], 
-                                  description['global'],
-                                  prefix=pattern['proj_prefix'],
-                                  sep=pattern['proj_sep'],
-                                  index=pattern['proj_index'],
-                                  global_index=pattern['proj_globalindex'])
-            eq = translator.parse()     
-        else: 
-            eq = translate_ITE( name, eq, condition, description, {},
-                                prefix=pattern['proj_prefix'],
-                                sep=pattern['proj_sep'],
-                                index=pattern['proj_index'],
-                                global_index=pattern['proj_globalindex']) 
-
-        post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : var,
+        post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : eq,
                                 'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return post_spike_var  
@@ -534,6 +497,8 @@ def find_method(variable):
         method = 'midpoint'
     elif 'explicit' in variable['flags']:
         method = 'explicit'
+    elif 'exact' in variable['flags']:
+        method = 'exact'
     else:
         method= config['method']
 

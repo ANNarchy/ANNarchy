@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _warning, _error
+from ANNarchy.core.Global import _warning, _error, _print
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
@@ -76,8 +76,9 @@ class Equation(object):
             'dt' : Symbol('dt'),
             't' : Symbol('double(t)*dt'),
             'w' : Symbol('proj%(id_proj)s.w'+index), 
-            't_pre': Symbol('(double)(%(pre_pop)s_last_spike[j])*dt'),
-            't_post': Symbol('(double)(%(post_pop)s_last_spike[i])*dt'),
+            'g_target': Symbol('sum'),
+            't_pre': Symbol('(double)(pop%(id_pre)s.last_spike[j])*dt'),
+            't_post': Symbol('(double)(pop%(id_post)s.last_spike[i])*dt'),
             'pos': Function('positive'),
             'positive': Function('positive'), 
             'neg': Function('negative'), 
@@ -184,6 +185,8 @@ class Equation(object):
             return self.exponential(expression)
         elif self.method == 'midpoint':
             return self.midpoint(expression)
+        elif self.method == 'exact':
+            return self.eventdriven(expression)
         
     def explicit(self, expression):
         " Explicit or backward Euler numerical method"
@@ -317,6 +320,23 @@ class Equation(object):
 
         # Return result
         return [explicit_code, switch]
+
+    def eventdriven(self, expression):
+        # Standardize the equation
+        real_tau, stepsize, steadystate = self.standardize_ODE(expression)
+        if real_tau == None: # the equation can not be standardized
+            _print(expression)
+            _error('The equation can not be evaluated exactly')
+            exit(0)
+
+        # Obtain C code
+        variable_name = self.c_code(self.local_dict[self.name])
+        steady = self.c_code(steadystate)
+        if steady == '0':
+            code = variable_name + '*= exp(dt*(proj%(id_proj)s._last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+        else:
+            code = variable_name + ' = ' + steady + ' + (' + variable_name + ' - ' + steady + ')*exp(dt*(proj%(id_proj)s._last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+        return code
     
     def standardize_ODE(self, expression):
         """ Transform any 1rst order ODE into the standardized form:

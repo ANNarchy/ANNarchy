@@ -76,6 +76,7 @@ authorized_keywords = [
     'semiimplicit',
     'exponential',
     'midpoint',
+    'exact',
     # Refractory
     'unless_refractory',
     # Type

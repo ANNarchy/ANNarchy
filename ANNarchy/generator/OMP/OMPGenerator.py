@@ -113,7 +113,6 @@ struct PopStruct%(id)s{
     bool record_spike;
     std::vector<std::vector<long> > recorded_spike;
 """
-
             # Parameters
             for var in pop.neuron_type.description['parameters']:
                 if var['name'] in pop.neuron_type.description['local']:
@@ -228,6 +227,16 @@ struct ProjStruct%(id)s{
     std::vector< std::vector< int > > pre_rank ;
 """
 
+            
+            # Exact integration
+            has_exact = False
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+            if has_exact:
+                code += """
+    std::vector<std::vector<long> > _last_event;
+"""
             # Delays
             if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
                 code +="""
@@ -660,42 +669,52 @@ struct ProjStruct%(id)s{
                 if eq['name'] == 'w':
                     learning = """
                     if(proj0._learning){
-                        %(eq)s
+                        %(eq)s 
                     }
-""" % {'eq': eq['eq'] % ids}
+""" % {'eq': eq['cpp'] % ids}
                 elif eq['name'] == 'g_target':
-                    psp = eq['eq'].split('=')[1]
+                    psp = eq['cpp'].split('=')[1]
                 else:
-                    pre_event_list.append(eq['eq'])
+                    pre_event_list.append(eq['cpp'])
 
             # Is the summation event-based or psp-based?
             event_based = True
             if 'psp' in  proj.synapse.description.keys(): # event-based
                 event_based = False
                 psp_code = """
-            // Event-driven variables
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += %(psp)s
+                sum += %(psp)s ;
 """ % {'id_proj' : proj.id, 'psp': proj.synapse.description['psp']['cpp'] % ids}
             else:
                 if psp == "": # default g_target += w
                     psp_code = """
-            // Event-driven variables
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
                 sum += proj%(id_proj)s.w[i][j]
 """ % ids
                 else:
                     psp_code = """
-            // Event-driven variables
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
                 sum += %(psp)s
 """ % {'id_proj' : proj.id, 'psp': psp % ids}
+
+            # Exact integration
+            has_exact = False
+            exact_code = ''
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+                    exact_code += """
+                %(exact)s
+""" % {'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id}}
+            if has_exact:
+                    event_based = False # to avoid the if not post.spike
+                    exact_code += """
+                proj%(id_proj)s._last_event[i][j] = t;
+""" % {'id_proj' : proj.id, 'exact': var['cpp']}
+
             
             # Other event-driven variables
             if len(pre_event_list) > 0: # There are other variables to update than g_target
                 code = ""
                 for eq in pre_event_list:
-                    code += ' ' * 20 + eq % {'id_proj' : proj.id} + '\n'
+                    code += ' ' * 16 + eq % {'id_proj' : proj.id} + '\n'
 
                 if event_based:
                     pre_event += """
@@ -731,6 +750,9 @@ struct ProjStruct%(id)s{
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            // Event-driven variables
+            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
+%(exact)s
 %(psp)s
 %(pre_event)s
             }
@@ -738,7 +760,8 @@ struct ProjStruct%(id)s{
         pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
-    'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code}
+    'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
+    'exact': exact_code}
 
             return code
 
@@ -769,10 +792,27 @@ struct ProjStruct%(id)s{
         code = ""
         for name, proj in self.projections.iteritems():
             if proj.synapse.type == 'spike':
-                # Gather the equations
+                if proj.synapse.description['post_spike'] == []:
+                    continue
+
                 post_code = ""
+
+                # Exact integration
+                has_exact = False
+                for var in proj.synapse.description['variables']:
+                    if var['method'] == 'exact':
+                        has_exact = True
+                        post_code += """
+                    %(exact)s
+""" % {'exact': var['cpp'] %{'id_proj' : proj.id}}
+                if has_exact:
+                    post_code += """
+                    proj%(id_proj)s._last_event[i][j] = t;
+""" % {'id_proj' : proj.id, 'exact': var['cpp']}
+
+                # Gather the equations
                 for eq in proj.synapse.description['post_spike']:
-                    post_code += ' ' * 20 + eq['eq'] %{'id_proj' : proj.id} + '\n'
+                    post_code += ' ' * 20 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
 
                 # Generate the code
                 if post_code != "":
@@ -958,6 +998,7 @@ struct ProjStruct%(id)s{
             # Learning by default
             code += """    proj%(id)s._learning = true;
 """ % {'id': proj.id}
+
             # Recording
             for var in proj.synapse.description['variables']:
                 if var['name'] in proj.synapse.description['local']:
@@ -966,6 +1007,7 @@ struct ProjStruct%(id)s{
                 else:
                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
 """% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
+            
 
         return code
         
@@ -1195,6 +1237,17 @@ struct ProjStruct%(id)s{
         vector[int] post_rank
         vector[vector[int]] pre_rank
 """         
+            
+            # Exact integration
+            has_exact = False
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+            if has_exact:
+                code += """
+        vector[vector[long]] _last_event
+"""% {'id': proj.id}
+
             # Delays
             if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
                 code +="""
@@ -1432,6 +1485,18 @@ cdef class proj%(id)s_wrapper :
         proj%(id)s.post_rank = syn.post_rank
         proj%(id)s.pre_rank = syn.pre_rank
         proj%(id)s.w = syn.w
+"""% {'id': proj.id}
+            
+            # Exact integration
+            has_exact = False
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+            if has_exact:
+                code += """
+        proj%(id)s._last_event = vector[vector[long]](nb_post, vector[long]())
+        for n in range(nb_post):
+            proj%(id)s._last_event[n] = vector[long](proj%(id)s.pre_rank[n].size(), -10000)
 """% {'id': proj.id}
 
             # Delays
