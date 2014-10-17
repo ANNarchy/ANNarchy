@@ -58,21 +58,21 @@ class Izhikevich(Neuron):
 
     The ODEs are solved using the explicit Euler method.
     """
-    def __init__(self, conductance="g_exc - g_inh"):
+    def __init__(self, a=0.2, b=0.2, c=-65.0, d=2.0, v_thresh=30.0, i_offset=0.0, noise=0.0, tau_refrac=0.0, conductance="g_exc - g_inh"):
         # Extract which targets are defined in the conductance
         import re
         targets = re.findall(r'g_([\w]+)', conductance)
         # Create the arguments
         parameters = """
-    noise = 0.0
-    a = 0.02
-    b = 0.2
-    c = -65.0
-    d = 2.0 
-    v_thresh = 30.0
-    i_offset = 0.0
-    tau_refrac = 0.0
-"""
+    noise = %(noise)s
+    a = %(a)s
+    b = %(b)s
+    c = %(c)s
+    d = %(d)s
+    v_thresh = %(v_thresh)s
+    i_offset = %(i_offset)s
+    tau_refrac = %(tau_refrac)s
+""" % {'a': a, 'b':b, 'c':c, 'd':d, 'v_thresh':v_thresh, 'i_offset':i_offset, 'noise':noise, 'tau_refrac':tau_refrac}
         # Equations for the variables
         equations="""
     I = %(conductance)s + noise * Normal(0.0, 1.0) + i_offset
@@ -149,25 +149,25 @@ class IF_curr_exp(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
-    def __init__(self):
+    def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
-    v_rest = -65.0
-    cm  = 1.0
-    tau_m  = 20.0
-    tau_refrac = 0.0
-    tau_syn_E = 5.0
-    tau_syn_I = 5.0
-    v_thresh = -50.0
-    v_reset = -65.0
-    i_offset = 0.0
-"""
+    v_rest = %(v_rest)s
+    cm  = %(cm)s
+    tau_m  = %(tau_m)s
+    tau_refrac = %(tau_refrac)s
+    tau_syn_E = %(tau_syn_E)s
+    tau_syn_I = %(tau_syn_I)s
+    v_thresh = %(v_thresh)s
+    v_reset = %(v_reset)s
+    i_offset = %(i_offset)s
+""" % {'v_rest':v_rest, 'cm':cm, 'tau_m':tau_m, 'tau_refrac':tau_refrac, 'tau_syn_E':tau_syn_E, 'tau_syn_I':tau_syn_I, 'v_thresh':v_thresh, 'v_reset':v_reset, 'i_offset':i_offset}
         # Equations for the variables
         equations="""    
-    cm * dv/dt = cm/tau_m*(v_rest -v)   + g_exc - g_inh + i_offset : exponential, init=-65.0
+    cm * dv/dt = cm/tau_m*(v_rest -v)   + g_exc - g_inh + i_offset : exponential, init=%(v_reset)s
     tau_syn_E * dg_exc/dt = - g_exc : exponential
     tau_syn_I * dg_inh/dt = - g_inh : exponential
-""" 
+""" % {'v_reset':v_reset}
 
         spike = """
     v > v_thresh
@@ -223,27 +223,27 @@ class IF_cond_exp(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
-    def __init__(self):
+    def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, e_rev_E = 0.0, e_rev_I = -70.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
-    v_rest = -65.0
-    cm  = 1.0
-    tau_m  = 20.0
-    tau_refrac = 0.0
-    tau_syn_E = 5.0
-    tau_syn_I = 5.0
-    e_rev_E = 0.0 
-    e_rev_I = -70.0
-    v_thresh = -50.0
-    v_reset = -65.0
-    i_offset = 0.0
-"""
+    v_rest = %(v_rest)s
+    cm  = %(cm)s
+    tau_m  = %(tau_m)s
+    tau_refrac = %(tau_refrac)s
+    tau_syn_E = %(tau_syn_E)s
+    tau_syn_I = %(tau_syn_I)s
+    v_thresh = %(v_thresh)s
+    v_reset = %(v_reset)s
+    i_offset = %(i_offset)s
+    e_rev_E = %(e_rev_E)s 
+    e_rev_I = %(e_rev_I)s
+""" % {'v_rest':v_rest, 'cm':cm, 'tau_m':tau_m, 'tau_refrac':tau_refrac, 'tau_syn_E':tau_syn_E, 'tau_syn_I':tau_syn_I, 'v_thresh':v_thresh, 'v_reset':v_reset, 'i_offset':i_offset, 'e_rev_E': e_rev_E, 'e_rev_I': e_rev_I}
         # Equations for the variables
         equations="""    
-    cm * dv/dt = cm/tau_m*(v_rest -v)   + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset : exponential, init=-65.0
+    cm * dv/dt = cm/tau_m*(v_rest -v)   + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset : exponential, init=%(v_reset)s
     tau_syn_E * dg_exc/dt = - g_exc : exponential
     tau_syn_I * dg_inh/dt = - g_inh : exponential
-"""
+"""% {'v_reset':v_reset}
 
         spike = """
     v > v_thresh
@@ -308,29 +308,29 @@ class IF_curr_alpha(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
-    def __init__(self):
+    def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
-    v_rest = -65.0
-    cm  = 1.0
-    tau_m  = 20.0
-    tau_refrac = 0.0
-    tau_syn_E = 5.0
-    tau_syn_I = 5.0
-    v_thresh = -50.0
-    v_reset = -65.0
-    i_offset = 0.0
-"""
+    v_rest = %(v_rest)s
+    cm  = %(cm)s
+    tau_m  = %(tau_m)s
+    tau_refrac = %(tau_refrac)s
+    tau_syn_E = %(tau_syn_E)s
+    tau_syn_I = %(tau_syn_I)s
+    v_thresh = %(v_thresh)s
+    v_reset = %(v_reset)s
+    i_offset = %(i_offset)s
+""" % {'v_rest':v_rest, 'cm':cm, 'tau_m':tau_m, 'tau_refrac':tau_refrac, 'tau_syn_E':tau_syn_E, 'tau_syn_I':tau_syn_I, 'v_thresh':v_thresh, 'v_reset':v_reset, 'i_offset':i_offset}
         # Equations for the variables
         equations="""  
     gmax_exc = exp((tau_syn_E - dt/2.0)/tau_syn_E)
     gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)  
-    cm * dv/dt = cm/tau_m*(v_rest -v)   + alpha_exc - alpha_inh + i_offset : exponential, init=-65.0
+    cm * dv/dt = cm/tau_m*(v_rest -v)   + alpha_exc - alpha_inh + i_offset : exponential, init=%(v_reset)s
     tau_syn_E * dg_exc/dt = - g_exc : exponential
     tau_syn_I * dg_inh/dt = - g_inh : exponential
     tau_syn_E * dalpha_exc/dt = gmax_exc * g_exc - alpha_exc  : exponential
     tau_syn_I * dalpha_inh/dt = gmax_inh * g_inh - alpha_inh  : exponential
-""" 
+"""  % {'v_reset':v_reset}
 
         spike = """
     v > v_thresh
@@ -393,31 +393,31 @@ class IF_cond_alpha(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
-    def __init__(self):
+    def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, e_rev_E = 0.0, e_rev_I = -70.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
-    v_rest = -65.0
-    cm  = 1.0
-    tau_m  = 20.0
-    tau_refrac = 0.0
-    tau_syn_E = 5.0
-    tau_syn_I = 5.0
-    e_rev_E = 0.0 
-    e_rev_I = -70.0
-    v_thresh = -50.0
-    v_reset = -65.0
-    i_offset = 0.0
-"""
+    v_rest = %(v_rest)s
+    cm  = %(cm)s
+    tau_m  = %(tau_m)s
+    tau_refrac = %(tau_refrac)s
+    tau_syn_E = %(tau_syn_E)s
+    tau_syn_I = %(tau_syn_I)s
+    v_thresh = %(v_thresh)s
+    v_reset = %(v_reset)s
+    i_offset = %(i_offset)s
+    e_rev_E = %(e_rev_E)s 
+    e_rev_I = %(e_rev_I)s
+""" % {'v_rest':v_rest, 'cm':cm, 'tau_m':tau_m, 'tau_refrac':tau_refrac, 'tau_syn_E':tau_syn_E, 'tau_syn_I':tau_syn_I, 'v_thresh':v_thresh, 'v_reset':v_reset, 'i_offset':i_offset, 'e_rev_E': e_rev_E, 'e_rev_I': e_rev_I}
         # Equations for the variables
         equations="""    
     gmax_exc = exp((tau_syn_E - dt/2.0)/tau_syn_E)
     gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)
-    cm * dv/dt = cm/tau_m*(v_rest -v)   + alpha_exc * (e_rev_E - v) + alpha_inh * (e_rev_I - v) + i_offset : exponential, init=-65.0
+    cm * dv/dt = cm/tau_m*(v_rest -v)   + alpha_exc * (e_rev_E - v) + alpha_inh * (e_rev_I - v) + i_offset : exponential, init=%(v_reset)s
     tau_syn_E * dg_exc/dt = - g_exc : exponential
     tau_syn_I * dg_inh/dt = - g_inh : exponential
     tau_syn_E * dalpha_exc/dt = gmax_exc * g_exc - alpha_exc  : exponential
     tau_syn_I * dalpha_inh/dt = gmax_inh * g_inh - alpha_inh  : exponential
-"""
+""" % {'v_reset': v_reset}
 
         spike = """
     v > v_thresh
@@ -493,37 +493,54 @@ class EIF_cond_exp_isfa_ista(Neuron):
 
     The ODEs are solved using the explicit Euler method.
 """
-    def __init__(self):
+    def __init__(self, v_rest = -70.6, cm = 0.281, tau_m = 9.3667, tau_refrac = 0.1, tau_syn_E = 5.0, tau_syn_I = 5.0, e_rev_E = 0.0, e_rev_I = -80.0, tau_w = 144.0, a = 4.0, b = 0.0805, i_offset = 0.0, delta_T = 2.0, v_thresh = -50.4, v_reset = -70.6, v_spike = -40.0):
         # Create the arguments
         parameters = """
-    v_rest = -70.6
-    cm = 0.281
-    tau_m = 9.3667
-    tau_refrac = 0.1
-    tau_syn_E = 5.0
-    tau_syn_I = 5.0
-    e_rev_E = 0.0
-    e_rev_I = -80.0
-    tau_w = 144.0
-    a = 4.0
-    b = 0.0805
-    i_offset = 0.0
-    delta_T = 2.0
-    v_thresh = -50.4
-    v_reset = -70.6
-    v_spike = -40.0
-"""
+    v_rest     = %(v_rest)s
+    cm         = %(cm)s
+    tau_m      = %(tau_m)s
+    tau_refrac = %(tau_refrac)s
+    tau_syn_E  = %(tau_syn_E)s
+    tau_syn_I  = %(tau_syn_I)s
+    e_rev_E    = %(e_rev_E)s
+    e_rev_I    = %(e_rev_I)s
+    tau_w      = %(tau_w)s
+    a          = %(a)s
+    b          = %(b)s
+    i_offset   = %(i_offset)s
+    delta_T    = %(delta_T)s
+    v_thresh   = %(v_thresh)s
+    v_reset    = %(v_reset)s
+    v_spike    = %(v_spike)s
+""" % {
+    'v_rest'     : v_rest    ,
+    'cm'         : cm        ,
+    'tau_m'      : tau_m     ,
+    'tau_refrac' : tau_refrac,
+    'tau_syn_E'  : tau_syn_E ,
+    'tau_syn_I'  : tau_syn_I ,
+    'e_rev_E'    : e_rev_E   ,
+    'e_rev_I'    : e_rev_I   ,
+    'tau_w'      : tau_w     ,
+    'a'          : a         ,
+    'b'          : b         ,
+    'i_offset'   : i_offset  ,
+    'delta_T'    : delta_T   ,
+    'v_thresh'   : v_thresh  ,
+    'v_reset'    : v_reset   ,
+    'v_spike'    : v_spike   ,
+}
         # Equations for the variables
         equations="""    
     I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
 
-    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=-70.6
+    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=%(v_reset)s
 
     tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w 
 
     tau_syn_E * dg_exc/dt = - g_exc : exponential
     tau_syn_I * dg_inh/dt = - g_inh : exponential
-"""
+""" % {'v_reset': v_reset}
 
         spike = """
     v > v_spike
@@ -584,6 +601,14 @@ class EIF_cond_alpha_isfa_ista(Neuron):
 
         tau_syn_I * dg_inh/dt = - g_inh
 
+    * alpha_exc : alpha function of excitatory current (init = 0.0)
+
+        tau_syn_E * dalpha_exc/dt = exp((tau_syn_E - dt/2.0)/tau_syn_E) * g_exc - alpha_exc  
+    
+    * alpha_inh: alpha function of inhibitory current (init = 0.0)
+
+        tau_syn_I * dalpha_inh/dt = exp((tau_syn_I - dt/2.0)/tau_syn_I) * g_inh - alpha_inh  
+
 
     Spike emission:
 
@@ -596,35 +621,52 @@ class EIF_cond_alpha_isfa_ista(Neuron):
 
     The ODEs are solved using the explicit Euler method.
 """
-    def __init__(self):
+    def __init__(self, v_rest = -70.6, cm = 0.281, tau_m = 9.3667, tau_refrac = 0.1, tau_syn_E = 5.0, tau_syn_I = 5.0, e_rev_E = 0.0, e_rev_I = -80.0, tau_w = 144.0, a = 4.0, b = 0.0805, i_offset = 0.0, delta_T = 2.0, v_thresh = -50.4, v_reset = -70.6, v_spike = -40.0):
         # Create the arguments
         parameters = """
-    v_rest = -70.6
-    cm = 0.281
-    tau_m = 9.3667
-    tau_refrac = 0.1
-    tau_syn_E = 5.0
-    tau_syn_I = 5.0
-    e_rev_E = 0.0
-    e_rev_I = -80.0
-    tau_w = 144.0
-    a = 4.0
-    b = 0.0805
-    i_offset = 0.0
-    delta_T = 2.0
-    v_thresh = -50.4
-    v_reset = -70.6
-    v_spike = -40.0
-"""
+    v_rest     = %(v_rest)s
+    cm         = %(cm)s
+    tau_m      = %(tau_m)s
+    tau_refrac = %(tau_refrac)s
+    tau_syn_E  = %(tau_syn_E)s
+    tau_syn_I  = %(tau_syn_I)s
+    e_rev_E    = %(e_rev_E)s
+    e_rev_I    = %(e_rev_I)s
+    tau_w      = %(tau_w)s
+    a          = %(a)s
+    b          = %(b)s
+    i_offset   = %(i_offset)s
+    delta_T    = %(delta_T)s
+    v_thresh   = %(v_thresh)s
+    v_reset    = %(v_reset)s
+    v_spike    = %(v_spike)s
+""" % {
+    'v_rest'     : v_rest    ,
+    'cm'         : cm        ,
+    'tau_m'      : tau_m     ,
+    'tau_refrac' : tau_refrac,
+    'tau_syn_E'  : tau_syn_E ,
+    'tau_syn_I'  : tau_syn_I ,
+    'e_rev_E'    : e_rev_E   ,
+    'e_rev_I'    : e_rev_I   ,
+    'tau_w'      : tau_w     ,
+    'a'          : a         ,
+    'b'          : b         ,
+    'i_offset'   : i_offset  ,
+    'delta_T'    : delta_T   ,
+    'v_thresh'   : v_thresh  ,
+    'v_reset'    : v_reset   ,
+    'v_spike'    : v_spike   ,
+}
         # Equations for the variables
         equations="""    
 
     gmax_exc = exp((tau_syn_E - dt/2.0)/tau_syn_E)
     gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)
     
-    I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
+    I = alpha_exc * (e_rev_E - v) + alpha_inh * (e_rev_I - v) + i_offset
 
-    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=-70.6
+    tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=%(v_reset)s
 
     tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w 
 
@@ -632,7 +674,7 @@ class EIF_cond_alpha_isfa_ista(Neuron):
     tau_syn_I * dg_inh/dt = - g_inh : exponential
     tau_syn_E * dalpha_exc/dt = gmax_exc * g_exc - alpha_exc  : exponential
     tau_syn_I * dalpha_inh/dt = gmax_inh * g_inh - alpha_inh  : exponential
-"""
+""" % {'v_reset': v_reset}
 
         spike = """
     v > v_spike
@@ -714,24 +756,39 @@ class HH_cond_exp(Neuron):
 
     The ODEs for n, m, h and v are solved using the midpoint method, while the conductances g_exc and g_inh are solved using the exponential Euler method.
 """
-    def __init__(self):
+    def __init__(self, gbar_Na = 20.0, gbar_K = 6.0, gleak = 0.01, cm = 0.2, v_offset = -63.0, e_rev_Na = 50.0, e_rev_K = -90.0, e_rev_leak = -65.0, e_rev_E = 0.0, e_rev_I = -80.0, tau_syn_E = 0.2, tau_syn_I = 2.0, i_offset = 0.0, v_thresh = 0.0):
 
         parameters = """
-    gbar_Na = 20.0 
-    gbar_K = 6.0  
-    gleak = 0.01
-    cm = 0.2 
-    v_offset = -63.0 
-    e_rev_Na = 50.0 
-    e_rev_K = -90.0  
-    e_rev_leak = -65.0 
-    e_rev_E = 0.0
-    e_rev_I = -80.0
-    tau_syn_E = 0.2 
-    tau_syn_I = 2.0
-    i_offset = 0.0
-    v_thresh = 0.0
-"""
+gbar_Na    = %(gbar_Na)s   
+gbar_K     = %(gbar_K)s     
+gleak      = %(gleak)s      
+cm         = %(cm)s        
+v_offset   = %(v_offset)s 
+e_rev_Na   = %(e_rev_Na )s 
+e_rev_K    = %(e_rev_K)s   
+e_rev_leak = %(e_rev_leak)s   
+e_rev_E    = %(e_rev_E)s    
+e_rev_I    = %(e_rev_I)s   
+tau_syn_E  = %(tau_syn_E)s 
+tau_syn_I  = %(tau_syn_I)s 
+i_offset   = %(i_offset)s  
+v_thresh   = %(v_thresh)s  
+""" % {
+'gbar_Na'    : gbar_Na   ,
+'gbar_K'     : gbar_K     ,
+'gleak'      : gleak      ,
+'cm'         : cm        ,
+'v_offset'   : v_offset  ,
+'e_rev_Na'   : e_rev_Na  ,
+'e_rev_K'    : e_rev_K   ,
+'e_rev_leak' : e_rev_leak   ,
+'e_rev_E'    : e_rev_E    ,
+'e_rev_I'    : e_rev_I   ,
+'tau_syn_E'  : tau_syn_E ,
+'tau_syn_I'  : tau_syn_I ,
+'i_offset'   : i_offset  ,
+'v_thresh'   : v_thresh  
+}
 
         equations = """
     # Previous membrane potential
@@ -753,12 +810,12 @@ class HH_cond_exp(Neuron):
 
     # Membrane equation
     cm * dv/dt = gleak*(e_rev_leak -v) + gbar_K * n**4 * (e_rev_K - v) + gbar_Na * m**3 * h * (e_rev_Na - v)
-                    + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset: exponential, init=-65.0
+                    + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset: exponential, init=%(e_rev_leak)s
 
     # Exponentially-decaying conductances
     tau_syn_E * dg_exc/dt = - g_exc : exponential
     tau_syn_I * dg_inh/dt = - g_inh : exponential
-"""
+""" % {'e_rev_leak': e_rev_leak}
 
         spike = "(v > v_thresh) and (prev_v <= v_thresh)"
 
