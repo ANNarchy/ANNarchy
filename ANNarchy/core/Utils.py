@@ -55,3 +55,15 @@ def smoothed_rate(data, smooth=0.0):
     """
     import ANNarchy.core.cython_ext.Transformations as Transformations
     return Transformations.smoothed_rate(data, smooth)
+
+def population_rate(data, smooth=Global.config['dt']):
+    """ Takes the recorded spikes of a population and returns a smoothed firing rate for the whole population.
+
+    *Parameters*:
+
+    * **data**: the dictionary returned by ``get_record()[pop]['spike']``
+
+    * **smooth**: the smoothing time constant (default: dt)
+    """
+    import ANNarchy.core.cython_ext.Transformations as Transformations
+    return Transformations.population_rate(data, smooth)
