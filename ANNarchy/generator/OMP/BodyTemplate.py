@@ -82,7 +82,7 @@ void step()
 {
 
     double sum;
-    int rk_pre, rk_post;
+    int rk_pre, rk_post, i, j, rk_j;
     
     ////////////////////////////////
     // Presynaptic events

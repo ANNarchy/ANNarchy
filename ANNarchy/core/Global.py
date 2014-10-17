@@ -298,6 +298,8 @@ def get_current_step():
     return _network.get_time()
 def set_current_step(t):
     return _network.set_time(int(t))
+def dt():
+    return config['dt']
 
 ################################
 ## Recording

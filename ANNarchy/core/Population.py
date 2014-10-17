@@ -829,22 +829,22 @@ class Population(object):
                 self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
 
 
-	    if not reshape:
+            if not reshape:
                 data[var] = {
-        	    'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
+                'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
                     'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
                     'data' : np.array(var_data).T if not var == 'spike' else np.array(var_data)
                 }
             else:
                 if not var == 'spike':
-	            var_data = np.array(var_data)
+                    var_data = np.array(var_data)
                     mat1 = var_data.reshape((var_data.shape[0],)+self.geometry)
 
-        	    data[var] = {
-        	        'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
-                        'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
-                        'data' : np.transpose(mat1, tuple( range(1, self.dimension+1)+[0]))
-                    }
+                    data[var] = {
+                        'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
+                            'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
+                            'data' : np.transpose(mat1, tuple( range(1, self.dimension+1)+[0]))
+                        }
                 else:
                     Global._error("reshape=true is invalid for get_record('spike')")
 

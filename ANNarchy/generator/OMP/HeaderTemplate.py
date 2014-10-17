@@ -3,6 +3,7 @@ header_template = """#ifndef __ANNARCHY_H__
 
 #include <string>
 #include <vector>
+#include <map>
 #include <deque>
 #include <iostream>
 #include <sstream>
