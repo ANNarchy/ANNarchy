@@ -300,10 +300,35 @@ struct ProjStruct%(id)s{
                 delay_code = ""
                 if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
                     delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
+                # Spiking networks must update the inv_rank array
+                spiking_addcode = ""
+                spiking_removecode = ""
+                if proj.synapse.type == 'spike':
+                    spiking_addcode = """
+        // Add the corresponding pair in inv_rank
+        int idx_post = 0;
+        for(int i=0; i<post_rank.size(); i++){
+            if(post_rank[i] == post){
+                idx_post = i;
+                break;
+            }
+        }
+        inv_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
+"""
+                    spiking_removecode = """
+        // Remove the corresponding pair in inv_rank
+        for(int i=0; i<inv_rank[pre].size(); i++){
+            if(inv_rank[pre][i].second == idx){
+                inv_rank[pre].erase(inv_rank[pre].begin() + i);
+                break;
+            }
+        }
+"""
                 # Generate the code
                 code += """
     // Structural plasticity
     void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s){
+        // Find the index of the synapse
         int idx = 0;
         for(int i=0; i<pre_rank[post].size(); i++){
             if(pre_rank[post][i] > pre){
@@ -315,8 +340,10 @@ struct ProjStruct%(id)s{
         w[post].insert(w[post].begin() + idx, weight);
         %(delay_code)s
 %(add_code)s
+%(spike_add)s
     };
     void removeSynapse(int post, int pre){
+        // Find the index of the synapse
         int idx = 0;
         for(int i=0; i<pre_rank[post].size(); i++){
             if(pre_rank[post][i] == pre){
@@ -327,8 +354,10 @@ struct ProjStruct%(id)s{
         pre_rank[post].erase(pre_rank[post].begin() + idx);
         w[post].erase(w[post].begin() + idx);
 %(remove_code)s  
+%(spike_remove)s
     };
-""" % {'extra_args': extra_args, 'delay_code': delay_code, 'add_code': add_code, 'remove_code': remove_code}
+""" % {'extra_args': extra_args, 'delay_code': delay_code, 'add_code': add_code, 'remove_code': remove_code,
+        'spike_add': spiking_addcode, 'spike_remove': spiking_removecode}
 
             # Finish the structure
             code += """
@@ -1006,10 +1035,6 @@ struct ProjStruct%(id)s{
 
             # Spiking neurons have aditional data
             if proj.synapse.type == 'spike':
-                if isinstance(proj.pre, PopulationView):
-                    presize = proj.pre.population.size
-                else:
-                    presize = proj.pre.size
                 code += """
     proj%(id_proj)s.inv_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
     for(int i=0; i<proj%(id_proj)s.pre_rank.size(); i++){
@@ -1017,7 +1042,16 @@ struct ProjStruct%(id)s{
             proj%(id_proj)s.inv_rank[proj%(id_proj)s.pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
         }
     }
-"""% {'id_proj': proj.id, 'presize': presize}
+// For debug...
+//    for (std::map< int, std::vector< std::pair<int, int> > >::iterator it=proj%(id_proj)s.inv_rank.begin(); it!=proj%(id_proj)s.inv_rank.end(); ++it) {
+//        std::cout << it->first << ": " ;
+//        for(int _id=0; _id<it->second.size(); _id++){
+//            std::pair<int, int> val = it->second[_id];
+//            std::cout << "(" << val.first << ", " << val.second << "), " ;
+//        }
+//        std::cout << std::endl ;
+//    }
+"""% {'id_proj': proj.id}
             # Recording
             for var in proj.synapse.description['variables']:
                 if var['name'] in proj.synapse.description['local']:
