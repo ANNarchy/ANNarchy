@@ -188,7 +188,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     cdef list post_ranks
     cdef vector[int] r
     cdef vector[double] w, d
-    cdef np.ndarray random_values, tmp, pre_range, pre_ranks
+    cdef np.ndarray random_values, tmp, pre_ranks
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
@@ -205,12 +205,11 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 
     # Create the projection data as CSR
     projection = CSR()
-    pre_range = np.arange(max_size_pre)
 
     for r_post in post_ranks:
         # List of pre ranks
         random_values = np.random.random(max_size_pre)
-        tmp = pre_range[random_values < probability]
+        tmp = pre_ranks[random_values < probability]
         if not allow_self_connections:
             tmp = tmp[tmp != r_post]
         r = tmp
