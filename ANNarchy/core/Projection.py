@@ -230,7 +230,7 @@ class Projection(object):
     @property
     def size(self):
         if self.cyInstance:
-            return self.cyInstance.size
+            return len(self.post_ranks)
         else:
             return 0
 
