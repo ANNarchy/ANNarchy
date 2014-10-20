@@ -97,12 +97,15 @@ class STDP(Synapse):
     **Pre-spike events**:
 
         g_target += w
+
         x += A_plus * w_max
+
         w = clip(w + y, w_min , w_max)
 
     **Post-spike events**:
 
         y -= A_minus * w_max
+        
         w = clip(w + x, w_min , w_max)
     """
 

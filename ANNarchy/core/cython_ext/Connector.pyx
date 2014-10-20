@@ -184,34 +184,37 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 
     cdef CSR projection
     cdef double weight
-    cdef int r_post, r_pre, size_pre
-    cdef list tmp, pre_ranks, post_ranks
+    cdef int r_post, r_pre, size_pre, max_size_pre
+    cdef list post_ranks
     cdef vector[int] r
     cdef vector[double] w, d
+    cdef np.ndarray random_values, tmp, pre_range, pre_ranks
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
         post_ranks = range(post.size)
+
     if hasattr(pre, 'ranks'): # PopulationView
-        pre_ranks = pre.ranks
+        pre_ranks = np.array(pre.ranks)
+        max_size_pre = len(pre.ranks)
     else:
-        pre_ranks = range(pre.size)
+        pre_ranks = np.arange(pre.size)
+        max_size_pre = pre.size
 
     # Create the projection data as CSR
     projection = CSR()
+    pre_range = np.arange(max_size_pre)
 
     for r_post in post_ranks:
         # List of pre ranks
-        tmp = []
-        for r_pre in pre_ranks:
-            if not allow_self_connections and (r_pre==r_post):
-                continue
-            if np.random.random() < probability:
-                tmp.append(r_pre)
+        random_values = np.random.random(max_size_pre)
+        tmp = pre_range[random_values < probability]
+        if not allow_self_connections:
+            tmp = tmp[tmp != r_post]
         r = tmp
-        size_pre = len(tmp)
+        size_pre = tmp.size
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
