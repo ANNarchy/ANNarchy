@@ -36,6 +36,10 @@ cdef class CSR:
         cdef vector[int] int_delays
         cdef int max_d, unif_d
 
+        # Do not add empty arrays
+        if r.size() == 0:
+            return
+
         # Store the connectivity
         self.post_rank.push_back(rk)
         self.pre_rank.push_back(r)
@@ -46,24 +50,24 @@ cdef class CSR:
         else:
             self.w.push_back(vector[double](r.size(), w[0]))
 
+        # Store delays and update the max
+        for i in range(d.size()):
+            int_delays.push_back(int(d[i]/self.dt))
+        self.delay.push_back(int_delays)
+        max_d = int(np.max(d)/self.dt)
+        if max_d > self.max_delay:
+            self.max_delay = max_d
+
         # Are the delays uniform?
-        if d.size() > 1 or r.size() == 1:
-            for i in range(d.size()):
-                int_delays.push_back(int(d[i]/self.dt))
-            self.delay.push_back(int_delays)
-            max_d = int(np.max(d)/self.dt)
-            if max_d > self.max_delay:
-                self.max_delay = max_d
-            if r.size() == 1: # delays can be uniform
-                self.uniform_delay = max_d 
+        if d.size() > 1 :
+            self.uniform_delay = -1
         else:
             unif_d = int(d[0]/self.dt)
-            self.uniform_delay = unif_d       
-            if unif_d > self.max_delay:
-                self.max_delay = unif_d
+            if self.uniform_delay != unif_d and self.size >0:
+                self.uniform_delay = -1
 
         # Increase the size
-        self.size += r.size()
+        self.size += 1
         self.nb_synapses += r.size()
 
     cpdef int get_max_delay(self):

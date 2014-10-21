@@ -243,7 +243,7 @@ struct ProjStruct%(id)s{
     std::vector<std::vector<long> > _last_event;
 """
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
     std::vector< std::vector< int > > delay ;
 """
@@ -298,7 +298,7 @@ struct ProjStruct%(id)s{
                         remove_code += ' '*8 + var['name'] + '[post].erase(' + var['name'] + '[post].begin() + idx);\n'
                 # Delays
                 delay_code = ""
-                if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+                if proj.max_delay > 1 and proj.uniform_delay == -1:
                     delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
                 # Spiking networks must update the inv_rank array
                 spiking_addcode = ""
@@ -604,7 +604,7 @@ struct ProjStruct%(id)s{
                 psp = (proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% {'id_proj' : proj.id})
             # Take delays into account if any
             if proj.max_delay > 1:
-                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                if proj.uniform_delay == -1 : # Non-uniform delays
                     psp = psp.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
                         'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
@@ -612,7 +612,7 @@ struct ProjStruct%(id)s{
                 else: # Uniform delays
                     psp = psp.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                     )
             # No need for openmp if less than 10 neurons
             omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
@@ -763,11 +763,11 @@ struct ProjStruct%(id)s{
 
             # Take delays into account if any
             if proj.max_delay > 1:
-                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                if proj.uniform_delay == -1 : # Non-uniform delays
                     Global._error('Non-uniform delays are not yet possible for spiking networks.')
                     exit()
                 else: # Uniform delays
-                    pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                    pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
             else:
                 pre_array = "pop%(id_pre)s.spiked" % ids
 
@@ -907,7 +907,7 @@ struct ProjStruct%(id)s{
 
             # Take delays into account if any
             if proj.max_delay > 1:
-                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                if proj.uniform_delay == -1 : # Non-uniform delays
                     code = code.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
                         'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
@@ -919,11 +919,11 @@ struct ProjStruct%(id)s{
                 else: # Uniform delays
                     code = code.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                     )
                     code = code.replace(
                         'pop%(id_pre)s.spike['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                        'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                     )
 
         return code
@@ -1302,7 +1302,7 @@ struct ProjStruct%(id)s{
 """% {'id': proj.id}
 
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
         vector[vector[int]] delay
 """
@@ -1553,7 +1553,7 @@ cdef class proj%(id)s_wrapper :
 """% {'id': proj.id}
 
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
         proj%(id)s.delay = syn.delay
 """% {'id': proj.id}
@@ -1610,7 +1610,7 @@ cdef class proj%(id)s_wrapper :
 """ % {'id': proj.id}
 
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
     def get_delay(self):
         return proj%(id)s.delay
