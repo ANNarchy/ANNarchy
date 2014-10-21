@@ -228,7 +228,7 @@ class Population(object):
             self.name = self.class_name
                 
         # Add the population to the global variable
-        Global._populations[self.class_name] = self
+        Global._populations.append(self)
         
         # Get a list of parameters and variables
         self.parameters = []

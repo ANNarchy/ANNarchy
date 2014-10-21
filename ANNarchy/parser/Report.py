@@ -67,7 +67,7 @@ template = """
 \\begin{tabularx}{\linewidth}{|l|X|}\hline
 %
 \hdr{2}{A}{Model Summary}\\\\ \\hline
-\\textbf{Populations}     & Three: excitatory, inhibitory, external input \\\\ \\hline
+\\textbf{Populations}     & %(population_names)s \\\\ \\hline
 \\textbf{Topology}        & --- \\\\ \\hline
 \\textbf{Connectivity}    & Random convergent connections \\\\ \\hline
 \\textbf{Neuron model}    & Leaky integrate-and-fire, fixed voltage
@@ -121,25 +121,8 @@ template = """
 \\textbf{Name} & Iaf neuron \\\\ \\hline
 \\textbf{Type} & Leaky integrate-and-fire, $\delta$-current input\\\\ \\hline
 \\raisebox{-4.5ex}{\parbox{\linewidth}{\\textbf{Subthreshold dynamics}}} &
-\\rule{1em}{0em}\\vspace*{-3.5ex}
-    \\begin{equation*}
-      \\begin{array}{r@{\;=\;}lll}
-      \\tau \dot{V}(t) & -V(t) + R I(t) &\\text{if} & t > t^*+\\tau_{\\text{rp}} \\
-      V(t) & V_{\\text{r}} & \\text{else} \\[2ex]
-      I(t) & \multicolumn{3}{l}{\\frac{\\tau}{R} \sum_{\\tilde{t}} w
-        \delta(t-(\\tilde{t}+\Delta))}
-      \end{array}
-    \end{equation*} 
-\\vspace*{-2.5ex}\\rule{1em}{0em}
  \\\\ \\hline
 \multirow{3}{*}{\\textbf{Spiking}} & 
-   If $V(t-)<\\theta \wedge V(t+)\geq \theta$
-\\vspace*{-1ex}
-\\begin{enumerate}\setlength{\itemsep}{-0.5ex}
-\item set $t^* = t$
-\item emit spike with time-stamp $t^*$
-\end{enumerate}
-\\vspace*{-4ex}\\rule{1em}{0em}
  \\\\ \\hline
 \end{tabularx}
 
@@ -180,8 +163,17 @@ Nordlie E, Gewaltig M-O, Plesser HE (2009). Towards Reproducible Descriptions of
     """
 
     # Print populations names and geometry
+    population_names = str(len(_populations)) + ': ' 
+
+    for pop in _populations:
+      # name
+      population_names += pop.name + ", " 
+
+    print population_names
 
     # Write the file to disk
-    txt = template      
+    txt = template  % {
+      'population_names' : population_names
+    }
     with open(filename, 'w') as wfile:
         wfile.write(txt)

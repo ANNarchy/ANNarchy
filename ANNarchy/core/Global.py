@@ -28,8 +28,8 @@ import time
 from math import ceil
 
 # Dictionaries of  instances
-_populations = {}       # created populations
-_projections = {}       # created projections
+_populations = []       # created populations
+_projections = []       # created projections
 _functions = []         # created functions
 
 # Global Cython instance
@@ -139,12 +139,12 @@ def reset(populations=True, projections=False, synapses = False):
     * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
-        for n, pop in _populations.iteritems():
+        for pop in _populations:
             pop.reset()
             
     if projections:
-        for n, proj in _projections.iteritems():
-            pop.reset(synapses)
+        for proj in _projections:
+            proj.reset(synapses)
 
     _network.set_time(0)
         
@@ -160,7 +160,7 @@ def get_population(name):
     
     * The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for n, pop in _populations.iteritems():
+    for pop in _populations:
         if pop.name == name:
             return pop
         

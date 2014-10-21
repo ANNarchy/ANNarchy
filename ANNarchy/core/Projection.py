@@ -156,7 +156,7 @@ class Projection(object):
         self.attributes = self.parameters + self.variables 
         
         # Add the population to the global variable
-        Global._projections[self.name] = self
+        Global._projections.append(self)
 
         # Finalize initialization
         self.initialized = False

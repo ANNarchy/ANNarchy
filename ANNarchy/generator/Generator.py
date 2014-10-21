@@ -263,7 +263,7 @@ all:
         Global._network = cython_module
 
         # Bind the py extensions to the corresponding python objects
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             if Global.config['verbose']:
                 Global._print('Create population', pop.name)
             if Global.config['show_time']:
@@ -276,7 +276,7 @@ all:
                 Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds') 
                             
         # Instantiate projections
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             if Global.config['verbose']:
                 Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')        
             if Global.config['show_time']:
@@ -314,7 +314,7 @@ all:
         Checks the structure to display more useful error messages.
         """
         # Check populations
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Reserved variable names
             for term in ['t', 'dt', 't_pre', 't_post']:
                 if term in pop.attributes:
@@ -324,7 +324,7 @@ all:
                     exit(0)
 
         # Check projections
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Reserved variable names
             for term in ['t', 'dt', 't_pre', 't_post']:
                 if term in proj.attributes:

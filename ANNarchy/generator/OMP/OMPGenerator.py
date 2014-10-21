@@ -30,11 +30,11 @@ class OMPGenerator(object):
     def propagate_global_ops(self):
 
         # Analyse the populations
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             pop.global_operations = pop.neuron_type.description['global_operations']
 
         # Propagate the global operations from the projections to the populations
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             for op in proj.synapse.description['pre_global_operations']:
                 if isinstance(proj.pre, PopulationView):
                     if not op in proj.pre.population.global_operations:
@@ -52,7 +52,7 @@ class OMPGenerator(object):
                         proj.post.global_operations.append(op)
 
         # Make sure the operations are declared only once
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             pop.global_operations = list(np.unique(np.array(pop.global_operations)))
 
 
@@ -86,7 +86,7 @@ class OMPGenerator(object):
         # struct declaration for each population
         pop_struct = ""
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
 
             # Is it a specific population?
             if pop.generator['omp']['header_pop_struct']:
@@ -207,7 +207,7 @@ struct PopStruct%(id)s{
         # struct declaration for each projection
         proj_struct = ""
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             
             # Is it a specific projection?
             if proj.generator['omp']['header_proj_struct']:
@@ -391,14 +391,14 @@ struct ProjStruct%(id)s{
 
         # struct declaration for each population
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Declaration of the structure
             pop_ptr += """PopStruct%(id)s pop%(id)s;
 """% {'id': pop.id}
 
         # struct declaration for each projection
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Declaration of the structure
             proj_ptr += """ProjStruct%(id)s proj%(id)s;
 """% {'id': proj.id}
@@ -474,7 +474,7 @@ struct ProjStruct%(id)s{
 
     def body_update_neuron(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
 
             # Is it a specific population?
             if pop.generator['omp']['body_update_neuron']:
@@ -568,7 +568,7 @@ struct ProjStruct%(id)s{
 
     def body_delay_neuron(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # No delay
             if pop.max_delay <= 1:
                 continue
@@ -800,7 +800,7 @@ struct ProjStruct%(id)s{
         code = ""
 
         # Sum over all synapses 
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             if proj.synapse.type == 'rate':
                 code += rate_coded(proj)
             else:
@@ -810,7 +810,7 @@ struct ProjStruct%(id)s{
 
     def body_resetcomputesum_pop(self):
         code = "    // Reset presynaptic sums\n"
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             if pop.neuron_type.type == 'rate':
                 for target in pop.targets:
                     code += """
@@ -821,7 +821,7 @@ struct ProjStruct%(id)s{
 
     def body_postevent_proj(self):
         code = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             if proj.synapse.type == 'spike':
                 if proj.synapse.description['post_spike'] == []:
                     continue
@@ -872,7 +872,7 @@ struct ProjStruct%(id)s{
         # Reset code
         code = ""
         # Sum over all synapses 
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             from ..Utils import generate_equation_code
             # Global variables
             global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
@@ -933,7 +933,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize random distribution objects
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_random_dist_init']:
                 code += pop.generator['omp']['body_random_dist_init'] %{'id': pop.id}
@@ -951,7 +951,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize global operations
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_globalops_init']:
                 code += pop.generator['omp']['body_globalops_init'] %{'id': pop.id}
@@ -965,7 +965,7 @@ struct ProjStruct%(id)s{
 
     def body_def_glops(self):
         ops = []
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             for op in pop.global_operations:
                 ops.append( op['function'] )
 
@@ -983,7 +983,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize delayed firing rates
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             if pop.max_delay > 1: # no need to generate the code otherwise
 
                 # Is it a specific population?
@@ -1004,7 +1004,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize spike arrays
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
 
             # Is it a specific population?
             if pop.generator['omp']['body_spike_init']:
@@ -1025,7 +1025,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize projections
 """
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Learning by default
             code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
@@ -1067,7 +1067,7 @@ struct ProjStruct%(id)s{
     def body_update_randomdistributions(self):
         code = """
     // Compute random distributions""" 
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_random_dist_update']:
                 code += pop.generator['omp']['body_random_dist_update'] %{'id': pop.id}
@@ -1092,7 +1092,7 @@ struct ProjStruct%(id)s{
 
     def body_update_globalops(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_update_globalops']:
                 code += pop.generator['omp']['body_update_globalops'] %{'id': pop.id}
@@ -1106,7 +1106,7 @@ struct ProjStruct%(id)s{
     def body_record(self):
         code = ""
         # Populations
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_record']:
                 code += pop.generator['omp']['body_record'] %{'id': pop.id}
@@ -1119,7 +1119,7 @@ struct ProjStruct%(id)s{
 """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
 
         # Projections
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             for var in proj.synapse.description['variables']:
                     code += """
     for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
@@ -1131,7 +1131,7 @@ struct ProjStruct%(id)s{
 
     def body_run_until(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             if not pop.stop_condition: # no stop condition has been defined
                 code += """
                 case %(id)s: 
@@ -1203,7 +1203,7 @@ struct ProjStruct%(id)s{
     def pyx_struct_pop(self):
         pop_struct = ""
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['pyx_pop_struct']:
                 pop_struct += pop.generator['omp']['pyx_pop_struct'] %{'id': pop.id}
@@ -1275,7 +1275,7 @@ struct ProjStruct%(id)s{
     def pyx_struct_proj(self):
         proj_struct = ""
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Is it a specific projection?
             if proj.generator['omp']['pyx_proj_struct']:
                 proj_struct += pop.generator['omp']['pyx_proj_struct'] %{'id': pop.id}
@@ -1363,7 +1363,7 @@ struct ProjStruct%(id)s{
     def pyx_wrapper_pop(self):
         # Cython wrappers for the populations
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['pyx_pop_class']:
                 code += pop.generator['omp']['pyx_pop_class'] %{'id': pop.id}
@@ -1518,7 +1518,7 @@ cdef class pop%(id)s_wrapper :
     def pyx_wrapper_proj(self):
         # Cython wrappers for the projections
         code = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Is it a specific population?
             if proj.generator['omp']['pyx_proj_class']:
                 code += proj.generator['omp']['pyx_proj_class'] %{'id': proj.id}
