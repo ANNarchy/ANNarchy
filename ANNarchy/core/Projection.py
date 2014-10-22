@@ -170,6 +170,9 @@ class Projection(object):
         # Recorded variables
         self.recorded_variables = {}
 
+        # Reporting
+        self.connector_description = "Specific"
+
     def _instantiate(self, module):
 
         self._connect(module)
@@ -578,6 +581,8 @@ class Projection(object):
             else:
                 shift = False
 
+        self.connector_description = "One-to-One"
+
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr(Connector.one_to_one(self.pre, self.post, weights, delays, shift))
         return self
@@ -594,6 +599,8 @@ class Projection(object):
         """
         if self.pre!=self.post:
             allow_self_connections = True
+
+        self.connector_description = "All-to-All"
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr(Connector.all_to_all(self.pre, self.post, weights, delays, allow_self_connections))
@@ -621,6 +628,9 @@ class Projection(object):
         if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
             _error('gaussian connector is only possible on whole populations, not PopulationViews.')
             exit(0)
+
+
+        self.connector_description = "Gaussian"
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr((self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections))
@@ -650,6 +660,8 @@ class Projection(object):
             _error('DoG connector is only possible on whole populations, not PopulationViews.')
             exit(0)
 
+        self.connector_description = "Difference-of-Gaussian"
+
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr(Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections))
 
@@ -674,6 +686,9 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
 
+
+        self.connector_description = "Random"
+
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr(Connector.fixed_probability(self.pre, self.post, probability, weights, delays, allow_self_connections))
         return self
@@ -697,6 +712,8 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
         
+        self.connector_description = "Random Convergent"
+
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr(Connector.fixed_number_pre(self.pre, self.post, number, weights, delays, allow_self_connections))
 
@@ -722,6 +739,8 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
         
+        self.connector_description = "Random Divergent"
+
         import ANNarchy.core.cython_ext.Connector as Connector 
         self._store_csr(Connector.fixed_number_post(self.pre, self.post, number, weights, delays, allow_self_connections))
         return self
@@ -738,6 +757,8 @@ class Projection(object):
         self._connector = method
         self._connector_params = args
         self._store_csr(self._connector(self.pre, self.post, **args))
+
+        self.connector_description = "User-defined"
 
         return self
 
@@ -784,6 +805,7 @@ class Projection(object):
             exit(0)
 
         # Store the synapses
+        self.connector_description = "From File"
         self._store_csr(csr)
         return self
 

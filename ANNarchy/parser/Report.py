@@ -1,8 +1,8 @@
 from ANNarchy.core.Global import _populations, _projections
 
-template = """
-% LaTeX file for generating the Model Description Table in Fig. 5 of
-%
+header = """
+%  LaTeX file for generating the Model Description Table in Fig. 5 of
+%  
 %  Nordlie E, Gewaltig M-O, Plesser HE (2009) 
 %  Towards Reproducible Descriptions of Neuronal Network Models.
 %  PLoS Comput Biol 5(8): e1000456. 
@@ -10,12 +10,12 @@ template = """
 %  Paper URL : http://dx.doi.org/10.1371/journal.pcbi.1000456
 %  Figure URL: http://dx.doi.org/10.1371/journal.pcbi.1000456.g005
 %
-% This file is released under a
+%  This file is released under a
 %
 %   Creative Commons Attribution, non-commercial, share-alike licence
 %   http://creativecommons.org/licenses/by-nc-sa/3.0/de/deed.en
 %
-% with the following specifications:
+%  with the following specifications:
 %
 %  1. When publishing tables generated from this LaTeX file and modified
 %     versions of it, you must cite the paper by Nordlie et al given above.
@@ -24,66 +24,51 @@ template = """
 %     and LaTeX source code files derived from it. You may commercially publish
 %     documents generated using this file and derivatived versions of this file.
 %
-% Contact: Hans Ekkehard Plesser, UMB (hans.ekkehard.plesser at umb.no)
+%  Contact: Hans Ekkehard Plesser, UMB (hans.ekkehard.plesser at umb.no)
+"""
 
+template = """
 \documentclass{article}
+\usepackage[margin=1in]{geometry} 
+\usepackage{tabularx}  
+\usepackage{multirow}  
+\usepackage{colortbl} 
 
-\usepackage[margin=1in]{geometry} % get enough space on page
-
-\usepackage{tabularx}  % automatically adjusts column width in tables
-\usepackage{multirow}  % allows entries spanning several rows  
-\usepackage{colortbl}  % allows coloring tables
-
-\usepackage[fleqn]{amsmath}   % displayed equations flush left
+\usepackage[fleqn]{amsmath} 
 \setlength{\mathindent}{0em}
-
-% use Helvetica for text, Pazo math fonts
 \usepackage{mathpazo}
 \usepackage[scaled=.95]{helvet}
 \\renewcommand\\familydefault{\sfdefault}
 
-\\renewcommand\\arraystretch{1.2}  % slightly more space in tables
+\\renewcommand\\arraystretch{1.2}  
+\pagestyle{empty}
 
-\pagestyle{empty}  % no header of footer
-
-% \hdr{ncols}{label}{title}
-%
-% Typeset header bar across table with ncols columns 
-% with label at left margin and centered title
-%
-\\newcommand{\hdr}[3]{%
-  \multicolumn{#1}{|l|}{%
-    \color{white}\cellcolor[gray]{0.0}%
-    \\textbf{\makebox[0pt]{#2}\hspace{0.5\linewidth}\makebox[0pt][c]{#3}}%
-  }%
+\\newcommand{\hdr}[3]{
+  \multicolumn{#1}{|l|}{
+    \color{white}\cellcolor[gray]{0.0}
+    \\textbf{\makebox[0pt]{#2}\hspace{0.5\linewidth}\makebox[0pt][c]{#3}}
+  }
 }
-
 
 \\begin{document}
 
-% - A ------------------------------------------------------------------------------
-
 \\noindent
 \\begin{tabularx}{\linewidth}{|l|X|}\hline
-%
 \hdr{2}{A}{Model Summary}\\\\ \\hline
 \\textbf{Populations}     & %(population_names)s \\\\ \\hline
 \\textbf{Topology}        & --- \\\\ \\hline
-\\textbf{Connectivity}    & Random convergent connections \\\\ \\hline
+\\textbf{Connectivity}    & %(connectivity)s \\\\ \\hline
 \\textbf{Neuron model}    & Leaky integrate-and-fire, fixed voltage
                            threshold, fixed absolute refractory time (voltage clamp) \\\\ \\hline
 \\textbf{Channel models}  & --- \\\\ \\hline
 \\textbf{Synapse model}   & $\delta$-current inputs (discontinuous
                            voltage jumps) \\\\ \\hline
 \\textbf{Plasticity}      & ---\\\\ \\hline
-\\textbf{Input}           & Independent fixed-rate Poisson spike trains to all
-                           neurons \\\\ \\hline
-\\textbf{Measurements}    & Spike activity \\\\ \\hline
+\\textbf{Input}           & TODO \\\\ \\hline
+\\textbf{Measurements}    & TODO \\\\ \\hline
 \end{tabularx}
 
 \\vspace{2ex}
-
-% - B -----------------------------------------------------------------------------
 
 \\noindent\\begin{tabularx}{\linewidth}{|l|l|X|}\hline
 \hdr{3}{B}{Populations}\\\\ \\hline
@@ -94,8 +79,6 @@ template = """
 \end{tabularx}
 
 \\vspace{2ex}
-
-% - C ------------------------------------------------------------------------------
 
 \\noindent\\begin{tabularx}{\linewidth}{|l|l|l|X|}\hline
 \hdr{4}{C}{Connectivity}\\\\ \\hline
@@ -114,8 +97,6 @@ template = """
 
 \\vspace{2ex}
 
-% - D ------------------------------------------------------------------------------
-
 \\noindent\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
 \hdr{2}{D}{Neuron and Synapse Model}\\\\ \\hline
 \\textbf{Name} & Iaf neuron \\\\ \\hline
@@ -128,8 +109,6 @@ template = """
 
 \\vspace{2ex}
 
-% - E ------------------------------------------------------------------------------
-
 \\noindent\\begin{tabularx}{\linewidth}{|l|X|}\hline
 \hdr{2}{E}{Input}\\\\ \\hline
 \\textbf{Type} & \\textbf{Description} \\\\ \\hline
@@ -139,15 +118,11 @@ generators per neuron, each generator projects to one neuron\\\\ \\hline
 
 \\vspace{2ex}
 
-% - F -----------------------------------------------------------------------------
-
 \\noindent\\begin{tabularx}{\linewidth}{|X|}\hline
 \hdr{1}{F}{Measurements}\\\\ \\hline
-Spike activity as raster plots, rates and ``global frequencies'', no details given
+TODO
 \\\\ \\hline
 \end{tabularx}
-
-% ---------------------------------------------------------------------------------
 
 \end{document}
 """
@@ -169,11 +144,12 @@ Nordlie E, Gewaltig M-O, Plesser HE (2009). Towards Reproducible Descriptions of
       # name
       population_names += pop.name + ", " 
 
-    print population_names
+    population_names = population_names[:-2] # suppress the last ,
 
     # Write the file to disk
     txt = template  % {
       'population_names' : population_names
     }
     with open(filename, 'w') as wfile:
+        wfile.write(header)
         wfile.write(txt)
