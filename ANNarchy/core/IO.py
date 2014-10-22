@@ -246,12 +246,12 @@ def load(filename, populations=True, projections=True):#, pure_data=True): TODO
         return
     if populations:
         # Over all populations
-        for name, pop in Global._populations.iteritems() :  
+        for pop in Global._populations:  
             # check if the population is contained in save file
             if pop.name in desc.keys():
                 _load_pop_data(pop, desc[pop.name])  
     if projections:    
-        for name, proj in Global._projections.iteritems() : 
+        for proj in Global._projections : 
             if proj.name in desc.keys():            
                 _load_proj_data(proj, desc[proj.name])
 
@@ -268,11 +268,11 @@ def _net_description(populations, projections):
     network_desc = {}   
     
     if populations:
-        for name, pop in Global._populations.iteritems():             
+        for pop in Global._populations:             
             network_desc[pop.name] = pop._data() 
 
     if projections:
-        for name, proj in Global._projections.iteritems():  
+        for proj in Global._projections:  
             network_desc[proj.name] = proj._data() 
 
 

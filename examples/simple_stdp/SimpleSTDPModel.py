@@ -38,30 +38,6 @@ IF = Neuron(
         v = vr
     """
 )
- 
-# Definition of the STDP learning rule
-STDP = Synapse(
-    parameters="""
-        tau_pre = 20.0 : postsynaptic
-        tau_post = 20.0 : postsynaptic
-        cApre = 0.01 : postsynaptic
-        cApost = -0.0105 : postsynaptic
-        wmax = 0.01 : postsynaptic
-    """,
-    equations = """
-        tau_pre * dApre/dt = -Apre 
-        tau_post * dApost/dt = -Apost 
-    """,
-    pre_spike="""
-        g_target += w
-        Apre += cApre * wmax
-        w = clip(w + Apost, 0.0 , wmax)
-    """,                  
-    post_spike="""
-        Apost += cApost * wmax
-        w = clip(w + Apre, 0.0 , wmax)
-    """
-)
 
 # Input population
 Input = PoissonPopulation(name = 'Input', geometry=N, rates=F)
@@ -74,7 +50,7 @@ proj = Projection(
     pre = Input, 
     post = Output, 
     target = 'exc',
-    synapse = STDP
+    synapse = STDP(tau_plus=20.0, tau_minus=20.0, A_plus=0.01, A_minus=0.0105, w_max=0.01)
 )
 proj.connect_all_to_all(weights=Uniform(0.0, gmax))
 

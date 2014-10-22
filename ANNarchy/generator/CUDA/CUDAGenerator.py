@@ -30,11 +30,11 @@ class CUDAGenerator(object):
     def propagate_global_ops(self):
 
         # Analyse the populations
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             pop.global_operations = pop.neuron_type.description['global_operations']
 
         # Propagate the global operations from the projections to the populations
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             for op in proj.synapse.description['pre_global_operations']:
                 if isinstance(proj.pre, PopulationView):
                     if not op in proj.pre.population.global_operations:
@@ -52,7 +52,7 @@ class CUDAGenerator(object):
                         proj.post.global_operations.append(op)
 
         # Make sure the operations are declared only once
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             pop.global_operations = list(np.unique(np.array(pop.global_operations)))
 
 
@@ -84,7 +84,7 @@ class CUDAGenerator(object):
         # struct declaration for each population
         pop_struct = ""
         pop_ptr = ""
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
 
             # Is it a specific population?
             if pop.generator['cuda']['header_pop_struct']:
@@ -206,7 +206,7 @@ extern PopStruct%(id)s pop%(id)s;
         # struct declaration for each projection
         proj_struct = ""
         proj_ptr = ""
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             code = """
 struct ProjStruct%(id)s{
     int size;
@@ -324,7 +324,7 @@ extern ProjStruct%(id)s proj%(id)s;
         """
         # struct declaration for each population
         pop_ptr = ""
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             # Declaration of the structure
             pop_ptr += """
 PopStruct%(id)s pop%(id)s;
@@ -332,7 +332,7 @@ PopStruct%(id)s pop%(id)s;
 
         # struct declaration for each projection
         proj_ptr = ""
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             # Declaration of the structure
             proj_ptr += """
 ProjStruct%(id)s proj%(id)s;
@@ -439,7 +439,7 @@ ProjStruct%(id)s proj%(id)s;
         cu_config = Global.cuda_config
 
         code = "// Population config\n"
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             num_threads = 32
             if pop in cu_config.keys():
                 num_threads = cu_config[pop]['num_threads']
@@ -447,7 +447,7 @@ ProjStruct%(id)s proj%(id)s;
             code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
 
         code += "\n// Population config\n"
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             num_threads = 192
             if proj in cu_config.keys():
                 num_threads = cu_config[proj]['num_threads']
@@ -455,7 +455,7 @@ ProjStruct%(id)s proj%(id)s;
             code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
 
         pop_assign = "    // populations\n"
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             if pop in Global.cuda_config.keys():
                 pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': pop.id, 'sid': Global.cuda_config[pop]['stream'] }
@@ -465,7 +465,7 @@ ProjStruct%(id)s proj%(id)s;
 """ % {'pid': pop.id }
 
         proj_assign = "    // populations\n"
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             if proj in Global.cuda_config.keys():
                 proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': proj.id, 'sid': Global.cuda_config[proj]['stream'] }
@@ -495,7 +495,7 @@ ProjStruct%(id)s proj%(id)s;
         body = ""
         call = ""
         
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             if len(pop.neuron_type.description['variables']) == 0: # no variable
                 continue
 
@@ -638,7 +638,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
             return "", "", ""
 
         # Sum over all synapses 
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             if proj.synapse.type == 'rate':
                 b, h, c = rate_coded(proj)
             else:
@@ -655,7 +655,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         body = ""
         call = ""
 
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
 
             from ..Utils import generate_equation_code
 
@@ -771,7 +771,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def body_delay_neuron(self):
         code = ""
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             if pop.max_delay <= 1:
                 continue
             code += """
@@ -784,7 +784,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def body_postevent_proj(self):
         code = ""
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             if proj.synapse.type == 'spike':
                 # Gather the equations
                 post_code = ""
@@ -816,7 +816,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         device_host_transfer = ""
 
         # transfers for populations
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             host_device_transfer += """
     // host to device transfers for %(pop_name)s""" % { 'pop_name': pop.name }
             for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
@@ -839,7 +839,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         # transfers for projections
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
             for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
                 if attr['name'] in proj.synapse.description['local']:
@@ -897,7 +897,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     cudaFree(0);
 """ % { 'id': dev_id }
 
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
             for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
                 if attr['name'] in pop.neuron_type.description['local']:
@@ -909,7 +909,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 """ % { 'id': pop.id, 'target': target }
                 
 
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             from .cuBodyTemplate import proj_basic_data
             
             # basic variables: post_rank, nb_synapses, off_synapses, pre_rank
@@ -940,7 +940,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         code = """
     // Initialize random distribution objects
 """
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             for rd in pop.neuron_type.description['random_distributions']:
                 code += """    
     cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(float));
@@ -953,7 +953,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         code = """
     // Initialize global operations
 """
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_globalops_init']:
                 code += pop.generator['omp']['body_globalops_init'] %{'id': pop.id}
@@ -967,7 +967,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def body_def_glops(self):
         ops = []
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             for op in pop.global_operations:
                 ops.append( op['function'] )
 
@@ -988,7 +988,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         code = """
     // Initialize delayed firing rates
 """
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             if pop.max_delay > 1:
                 if pop.neuron_type.type == 'rate':
                     code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
@@ -1002,7 +1002,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         code = """
     // Initialize spike arrays
 """
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             if pop.neuron_type.type == 'spike':
                 code += """    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
@@ -1016,7 +1016,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         code = """
     // Initialize projections
 """
-#         for name, proj in self.projections.iteritems():
+#         for proj in self.projections:
 #                 code += """    proj%(id)s._learning = true;
 # """ % {'id': proj.id}
 
@@ -1025,7 +1025,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     def body_update_randomdistributions(self):
         code = """
     // Compute random distributions""" 
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             if len(pop.neuron_type.description['random_distributions']) > 0:
                 for rd in pop.neuron_type.description['random_distributions']:
                     code += """
@@ -1044,7 +1044,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     double *tmp;
     cudaMalloc((void**)&tmp, sizeof(double));
 """
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_update_globalops']:
                 code += pop.generator['omp']['body_update_globalops'] %{ 'id': pop.id}
@@ -1060,7 +1060,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def body_record(self):
         code = ""
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             for var in pop.neuron_type.description['variables']:
                 code += """
     if(pop%(id)s.record_%(name)s)
@@ -1095,7 +1095,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     def pyx_struct_pop(self):
         pop_struct = ""
         pop_ptr = ""
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['cuda']['pyx_pop_struct']:
                 Global._error("No self-defined populations / projections available on CUDA yet.")
@@ -1166,7 +1166,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     def pyx_struct_proj(self):
         proj_struct = ""
         proj_ptr = ""
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             code = """
     cdef struct ProjStruct%(id)s :
         int size
@@ -1236,7 +1236,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     def pyx_wrapper_pop(self):
         # Cython wrappers for the populations
         code = ""
-        for pop in self.populations.itervalues():
+        for pop in self.populations:
             # Init
             code += """
 cdef class pop%(id)s_wrapper :
@@ -1383,7 +1383,7 @@ cdef class pop%(id)s_wrapper :
     def pyx_wrapper_proj(self):
         # Cython wrappers for the projections
         code = ""
-        for proj in self.projections.itervalues():
+        for proj in self.projections:
             # Init
             code += """
 cdef class proj%(id)s_wrapper :

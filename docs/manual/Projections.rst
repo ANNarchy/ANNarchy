@@ -126,7 +126,22 @@ The list of ranks of the post-synaptic neurons receiving synapses is obtained wi
 Local attributes
 -----------------
 
-The local parameters and variables of a projection (synapse-specific) have to be accessed through the **Dendrite** object, which gathers for a single postsynaptic neuron all synapses belonging to the projection. 
+**At the projection level**
+
+Local attributes can also be accessed globally through attributes. It will return a list of lists containing the synapse-specific values.
+
+The first index represents the post-synaptic neurons. It has the same length as `proj.post_ranks`. Beware that if some post-synaptic neurons do not receive any connection, this index will not correspond to the ranks.
+
+The second index addresses the pre-synaptic neurons. If the connection is sparse, it also is unrelated to the ranks of the pre-synaptic neurons in their populations. 
+
+.. warning::
+
+    Modifying these lists of lists is error-prone, so this method should be avoided if possible.
+
+
+**At the post-synaptic level**
+
+The local parameters and variables of a projection (synapse-specific) should better be accessed through the **Dendrite** object, which gathers for a single postsynaptic neuron all synapses belonging to the projection. 
 
 .. warning::
 
@@ -144,7 +159,7 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
         print dendrite.alpha
         print dendrite.w
         
-``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered postsynaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a one-dimensional Numpy array (``dendrite.w``).
+``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered postsynaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a list (``dendrite.w``).
 
 .. note::
 

@@ -30,11 +30,11 @@ class OMPGenerator(object):
     def propagate_global_ops(self):
 
         # Analyse the populations
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             pop.global_operations = pop.neuron_type.description['global_operations']
 
         # Propagate the global operations from the projections to the populations
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             for op in proj.synapse.description['pre_global_operations']:
                 if isinstance(proj.pre, PopulationView):
                     if not op in proj.pre.population.global_operations:
@@ -52,7 +52,7 @@ class OMPGenerator(object):
                         proj.post.global_operations.append(op)
 
         # Make sure the operations are declared only once
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             pop.global_operations = list(np.unique(np.array(pop.global_operations)))
 
 
@@ -86,7 +86,7 @@ class OMPGenerator(object):
         # struct declaration for each population
         pop_struct = ""
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
 
             # Is it a specific population?
             if pop.generator['omp']['header_pop_struct']:
@@ -113,7 +113,6 @@ struct PopStruct%(id)s{
     bool record_spike;
     std::vector<std::vector<long> > recorded_spike;
 """
-
             # Parameters
             for var in pop.neuron_type.description['parameters']:
                 if var['name'] in pop.neuron_type.description['local']:
@@ -182,7 +181,7 @@ struct PopStruct%(id)s{
                 else:
                     code += """
     // Delays for spike population
-    std::deque< std::vector<bool> > _delayed_spike;
+    std::deque< std::vector<int> > _delayed_spike;
 """
 
             # Local functions
@@ -215,7 +214,7 @@ struct PopStruct%(id)s{
         # struct declaration for each projection
         proj_struct = ""
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             
             # Is it a specific projection?
             if proj.generator['omp']['header_proj_struct']:
@@ -225,6 +224,7 @@ struct PopStruct%(id)s{
                 continue
             
             code = """
+// %(pre_name)s -> %(post_name)s
 struct ProjStruct%(id)s{
     int size;
     // Learning flag
@@ -234,8 +234,23 @@ struct ProjStruct%(id)s{
     std::vector< std::vector< int > > pre_rank ;
 """
 
+            # Spiking neurons have aditional data
+            if proj.synapse.type == 'spike':
+                code += """
+    std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
+"""
+            
+            # Exact integration
+            has_exact = False
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+            if has_exact:
+                code += """
+    std::vector<std::vector<long> > _last_event;
+"""
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
     std::vector< std::vector< int > > delay ;
 """
@@ -290,12 +305,37 @@ struct ProjStruct%(id)s{
                         remove_code += ' '*8 + var['name'] + '[post].erase(' + var['name'] + '[post].begin() + idx);\n'
                 # Delays
                 delay_code = ""
-                if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+                if proj.max_delay > 1 and proj.uniform_delay == -1:
                     delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
+                # Spiking networks must update the inv_rank array
+                spiking_addcode = ""
+                spiking_removecode = ""
+                if proj.synapse.type == 'spike':
+                    spiking_addcode = """
+        // Add the corresponding pair in inv_rank
+        int idx_post = 0;
+        for(int i=0; i<post_rank.size(); i++){
+            if(post_rank[i] == post){
+                idx_post = i;
+                break;
+            }
+        }
+        inv_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
+"""
+                    spiking_removecode = """
+        // Remove the corresponding pair in inv_rank
+        for(int i=0; i<inv_rank[pre].size(); i++){
+            if(inv_rank[pre][i].second == idx){
+                inv_rank[pre].erase(inv_rank[pre].begin() + i);
+                break;
+            }
+        }
+"""
                 # Generate the code
                 code += """
     // Structural plasticity
     void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s){
+        // Find the index of the synapse
         int idx = 0;
         for(int i=0; i<pre_rank[post].size(); i++){
             if(pre_rank[post][i] > pre){
@@ -307,8 +347,10 @@ struct ProjStruct%(id)s{
         w[post].insert(w[post].begin() + idx, weight);
         %(delay_code)s
 %(add_code)s
+%(spike_add)s
     };
     void removeSynapse(int post, int pre){
+        // Find the index of the synapse
         int idx = 0;
         for(int i=0; i<pre_rank[post].size(); i++){
             if(pre_rank[post][i] == pre){
@@ -319,8 +361,10 @@ struct ProjStruct%(id)s{
         pre_rank[post].erase(pre_rank[post].begin() + idx);
         w[post].erase(w[post].begin() + idx);
 %(remove_code)s  
+%(spike_remove)s
     };
-""" % {'extra_args': extra_args, 'delay_code': delay_code, 'add_code': add_code, 'remove_code': remove_code}
+""" % {'extra_args': extra_args, 'delay_code': delay_code, 'add_code': add_code, 'remove_code': remove_code,
+        'spike_add': spiking_addcode, 'spike_remove': spiking_removecode}
 
             # profiling related data
             if Global.config['profiling']:
@@ -333,7 +377,7 @@ struct ProjStruct%(id)s{
             code += """
 };    
 """ 
-            proj_struct += code % {'id': proj.id}
+            proj_struct += code % {'id': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
 
             proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
 """% {
@@ -361,14 +405,14 @@ struct ProjStruct%(id)s{
 
         # struct declaration for each population
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Declaration of the structure
             pop_ptr += """PopStruct%(id)s pop%(id)s;
 """% {'id': pop.id}
 
         # struct declaration for each projection
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Declaration of the structure
             proj_ptr += """ProjStruct%(id)s proj%(id)s;
 """% {'id': proj.id}
@@ -447,7 +491,7 @@ struct ProjStruct%(id)s{
 
     def body_update_neuron(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
 
             # Is it a specific population?
             if pop.generator['omp']['body_update_neuron']:
@@ -548,7 +592,7 @@ struct ProjStruct%(id)s{
 
     def body_delay_neuron(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # No delay
             if pop.max_delay <= 1:
                 continue
@@ -567,7 +611,7 @@ struct ProjStruct%(id)s{
             else:
                 code += """
     // Enqueuing outputs of pop%(id)s (%(name)s)
-    pop%(id)s._delayed_spike.push_front(pop%(id)s.spike);
+    pop%(id)s._delayed_spike.push_front(pop%(id)s.spiked);
     pop%(id)s._delayed_spike.pop_back();
 """ % {'id': pop.id, 'name' : pop.name }
 
@@ -584,7 +628,7 @@ struct ProjStruct%(id)s{
                 psp = (proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% {'id_proj' : proj.id})
             # Take delays into account if any
             if proj.max_delay > 1:
-                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                if proj.uniform_delay == -1 : # Non-uniform delays
                     psp = psp.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
                         'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
@@ -592,7 +636,7 @@ struct ProjStruct%(id)s{
                 else: # Uniform delays
                     psp = psp.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                     )
             # No need for openmp if less than 10 neurons
             omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
@@ -691,50 +735,57 @@ struct ProjStruct%(id)s{
                 if eq['name'] == 'w':
                     learning = """
                     if(proj0._learning){
-                        %(eq)s
+                        %(eq)s 
                     }
-""" % {'eq': eq['eq'] % ids}
+""" % {'eq': eq['cpp'] % ids}
                 elif eq['name'] == 'g_target':
-                    psp = eq['eq'].split('=')[1]
+                    psp = eq['cpp'].split('=')[1]
                 else:
-                    pre_event_list.append(eq['eq'])
+                    pre_event_list.append(eq['cpp'])
 
             # Is the summation event-based or psp-based?
             event_based = True
             if 'psp' in  proj.synapse.description.keys(): # event-based
                 event_based = False
-                psp_code = """
-            // Event-driven variables
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += %(psp)s
+                psp_code = """%(psp)s ;
 """ % {'id_proj' : proj.id, 'psp': proj.synapse.description['psp']['cpp'] % ids}
             else:
                 if psp == "": # default g_target += w
-                    psp_code = """
-            // Event-driven variables
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += proj%(id_proj)s.w[i][j]
+                    psp_code = """proj%(id_proj)s.w[i][j]
 """ % ids
                 else:
-                    psp_code = """
-            // Event-driven variables
-            if(proj%(id_proj)s_pre_spike[proj%(id_proj)s.pre_rank[i][j]]){
-                sum += %(psp)s
+                    psp_code = """%(psp)s
 """ % {'id_proj' : proj.id, 'psp': psp % ids}
+
+            # Exact integration
+            has_exact = False
+            exact_code = ''
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+                    exact_code += """
+            %(exact)s
+""" % {'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id}}
+            if has_exact:
+                    event_based = False # to avoid the if not post.spike
+                    exact_code += """
+            proj%(id_proj)s._last_event[i][j] = t;
+""" % {'id_proj' : proj.id, 'exact': var['cpp']}
+
             
             # Other event-driven variables
             if len(pre_event_list) > 0: # There are other variables to update than g_target
                 code = ""
                 for eq in pre_event_list:
-                    code += ' ' * 20 + eq % {'id_proj' : proj.id} + '\n'
+                    code += ' ' * 12 + eq % {'id_proj' : proj.id} + '\n'
 
                 if event_based:
                     pre_event += """
                 // Event-based variables should not be updated when the postsynaptic neuron fires.
-                if(!pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
+            if(!pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
 %(pre_event)s
 %(learning)s
-                }
+            }
 """% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
                 else:
                     pre_event += """
@@ -744,32 +795,36 @@ struct ProjStruct%(id)s{
 
             # Take delays into account if any
             if proj.max_delay > 1:
-                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                if proj.uniform_delay == -1 : # Non-uniform delays
                     Global._error('Non-uniform delays are not yet possible for spiking networks.')
                     exit()
                 else: # Uniform delays
-                    pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                    pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
             else:
-                pre_array = "pop%(id_pre)s.spike" % ids
+                pre_array = "pop%(id_pre)s.spiked" % ids
 
             # No need for openmp if less than 10 neurons
-            omp_code = """#pragma omp parallel for firstprivate(proj%(id_proj)s_pre_spike) private(sum)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j, _idx_i)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    std::vector<bool> proj%(id_proj)s_pre_spike = %(pre_array)s;
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-%(psp)s
+    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
+        rk_j = %(pre_array)s[_idx_j];
+        int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
+        int _idx_i = 0;
+        std::vector< std::pair<int, int> > inv_post = proj%(id_proj)s.inv_rank[rk_j];
+        %(omp_code)s
+        for(_idx_i = 0; _idx_i < nb_post; _idx_i++){
+            i = inv_post[_idx_i].first;
+            j = inv_post[_idx_i].second;
+%(exact)s
+            pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] +=%(psp)s
 %(pre_event)s
-            }
         }
-        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
-    'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code}
+    'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
+    'exact': exact_code}
 
             return code
 
@@ -777,7 +832,7 @@ struct ProjStruct%(id)s{
         code = ""
 
         # Sum over all synapses 
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             if proj.synapse.type == 'rate':
                 code += rate_coded(proj)
             else:
@@ -787,7 +842,7 @@ struct ProjStruct%(id)s{
 
     def body_resetcomputesum_pop(self):
         code = "    // Reset presynaptic sums\n"
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             if pop.neuron_type.type == 'rate':
                 for target in pop.targets:
                     code += """
@@ -798,12 +853,29 @@ struct ProjStruct%(id)s{
 
     def body_postevent_proj(self):
         code = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             if proj.synapse.type == 'spike':
-                # Gather the equations
+                if proj.synapse.description['post_spike'] == []:
+                    continue
+
                 post_code = ""
+
+                # Exact integration
+                has_exact = False
+                for var in proj.synapse.description['variables']:
+                    if var['method'] == 'exact':
+                        has_exact = True
+                        post_code += """
+                    %(exact)s
+""" % {'exact': var['cpp'] %{'id_proj' : proj.id}}
+                if has_exact:
+                    post_code += """
+                    proj%(id_proj)s._last_event[i][j] = t;
+""" % {'id_proj' : proj.id, 'exact': var['cpp']}
+
+                # Gather the equations
                 for eq in proj.synapse.description['post_spike']:
-                    post_code += ' ' * 20 + eq['eq'] %{'id_proj' : proj.id} + '\n'
+                    post_code += ' ' * 20 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
 
                 # Generate the code
                 if post_code != "":
@@ -832,7 +904,7 @@ struct ProjStruct%(id)s{
         # Reset code
         code = ""
         # Sum over all synapses 
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             from ..Utils import generate_equation_code
             # Global variables
             global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
@@ -867,7 +939,7 @@ struct ProjStruct%(id)s{
 
             # Take delays into account if any
             if proj.max_delay > 1:
-                if proj._synapses.uniform_delay == -1 : # Non-uniform delays
+                if proj.uniform_delay == -1 : # Non-uniform delays
                     code = code.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
                         'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
@@ -879,11 +951,11 @@ struct ProjStruct%(id)s{
                 else: # Uniform delays
                     code = code.replace(
                         'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                        'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                     )
                     code = code.replace(
                         'pop%(id_pre)s.spike['%{'id_pre': proj.pre.id}, 
-                        'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj._synapses.uniform_delay-1)}
+                        'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                     )
 
         return code
@@ -893,7 +965,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize random distribution objects
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_random_dist_init']:
                 code += pop.generator['omp']['body_random_dist_init'] %{'id': pop.id}
@@ -911,7 +983,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize global operations
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_globalops_init']:
                 code += pop.generator['omp']['body_globalops_init'] %{'id': pop.id}
@@ -925,7 +997,7 @@ struct ProjStruct%(id)s{
 
     def body_def_glops(self):
         ops = []
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             for op in pop.global_operations:
                 ops.append( op['function'] )
 
@@ -943,7 +1015,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize delayed firing rates
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             if pop.max_delay > 1: # no need to generate the code otherwise
 
                 # Is it a specific population?
@@ -955,7 +1027,7 @@ struct ProjStruct%(id)s{
                     code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
 """ % {'id': pop.id, 'delay': pop.max_delay}
                 else: # SPIKE
-                    code += """    pop%(id)s._delayed_spike = std::deque< std::vector<bool> >(%(delay)s, std::vector<bool>(pop%(id)s.size, false));
+                    code += """    pop%(id)s._delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
 """ % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
@@ -964,7 +1036,7 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize spike arrays
 """
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
 
             # Is it a specific population?
             if pop.generator['omp']['body_spike_init']:
@@ -985,10 +1057,33 @@ struct ProjStruct%(id)s{
         code = """
     // Initialize projections
 """
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Learning by default
-            code += """    proj%(id)s._learning = true;
-""" % {'id': proj.id}
+            code += """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    proj%(id_proj)s._learning = true;
+""" % {'id_proj': proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name}
+
+            # Spiking neurons have aditional data
+            if proj.synapse.type == 'spike':
+                code += """
+    proj%(id_proj)s.inv_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
+    for(int i=0; i<proj%(id_proj)s.pre_rank.size(); i++){
+        for(int j=0; j<proj%(id_proj)s.pre_rank[i].size(); j++){
+            proj%(id_proj)s.inv_rank[proj%(id_proj)s.pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
+        }
+    }
+// For debug...
+//    for (std::map< int, std::vector< std::pair<int, int> > >::iterator it=proj%(id_proj)s.inv_rank.begin(); it!=proj%(id_proj)s.inv_rank.end(); ++it) {
+//        std::cout << it->first << ": " ;
+//        for(int _id=0; _id<it->second.size(); _id++){
+//            std::pair<int, int> val = it->second[_id];
+//            std::cout << "(" << val.first << ", " << val.second << "), " ;
+//        }
+//        std::cout << std::endl ;
+//    }
+"""% {'id_proj': proj.id}
             # Recording
             for var in proj.synapse.description['variables']:
                 if var['name'] in proj.synapse.description['local']:
@@ -997,13 +1092,14 @@ struct ProjStruct%(id)s{
                 else:
                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
 """% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
+            
 
         return code
         
     def body_update_randomdistributions(self):
         code = """
     // Compute random distributions""" 
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_random_dist_update']:
                 code += pop.generator['omp']['body_random_dist_update'] %{'id': pop.id}
@@ -1028,7 +1124,7 @@ struct ProjStruct%(id)s{
 
     def body_update_globalops(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_update_globalops']:
                 code += pop.generator['omp']['body_update_globalops'] %{'id': pop.id}
@@ -1042,7 +1138,7 @@ struct ProjStruct%(id)s{
     def body_record(self):
         code = ""
         # Populations
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_record']:
                 code += pop.generator['omp']['body_record'] %{'id': pop.id}
@@ -1055,7 +1151,7 @@ struct ProjStruct%(id)s{
 """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
 
         # Projections
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             for var in proj.synapse.description['variables']:
                     code += """
     for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
@@ -1067,7 +1163,7 @@ struct ProjStruct%(id)s{
 
     def body_run_until(self):
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             if not pop.stop_condition: # no stop condition has been defined
                 code += """
                 case %(id)s: 
@@ -1079,7 +1175,7 @@ struct ProjStruct%(id)s{
                 from ANNarchy.parser.Extraction import extract_stop_condition
                 from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
                 # Find the paradigm OMP or CUDA
-                if config['paradigm'] == 'cuda':
+                if Global.config['paradigm'] == 'cuda':
                     pattern = pattern_cuda
                 else:
                     pattern = pattern_omp
@@ -1154,7 +1250,7 @@ struct ProjStruct%(id)s{
     def pyx_struct_pop(self):
         pop_struct = ""
         pop_ptr = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['pyx_pop_struct']:
                 pop_struct += pop.generator['omp']['pyx_pop_struct'] %{'id': pop.id}
@@ -1226,7 +1322,7 @@ struct ProjStruct%(id)s{
     def pyx_struct_proj(self):
         proj_struct = ""
         proj_ptr = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Is it a specific projection?
             if proj.generator['omp']['pyx_proj_struct']:
                 proj_struct += pop.generator['omp']['pyx_proj_struct'] %{'id': pop.id}
@@ -1241,8 +1337,19 @@ struct ProjStruct%(id)s{
         vector[int] post_rank
         vector[vector[int]] pre_rank
 """         
+            
+            # Exact integration
+            has_exact = False
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+            if has_exact:
+                code += """
+        vector[vector[long]] _last_event
+"""% {'id': proj.id}
+
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
         vector[vector[int]] delay
 """
@@ -1303,7 +1410,7 @@ struct ProjStruct%(id)s{
     def pyx_wrapper_pop(self):
         # Cython wrappers for the populations
         code = ""
-        for name, pop in self.populations.iteritems():
+        for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['pyx_pop_class']:
                 code += pop.generator['omp']['pyx_pop_class'] %{'id': pop.id}
@@ -1458,7 +1565,7 @@ cdef class pop%(id)s_wrapper :
     def pyx_wrapper_proj(self):
         # Cython wrappers for the projections
         code = ""
-        for name, proj in self.projections.iteritems():
+        for proj in self.projections:
             # Is it a specific population?
             if proj.generator['omp']['pyx_proj_class']:
                 code += proj.generator['omp']['pyx_proj_class'] %{'id': proj.id}
@@ -1479,9 +1586,21 @@ cdef class proj%(id)s_wrapper :
         proj%(id)s.pre_rank = syn.pre_rank
         proj%(id)s.w = syn.w
 """% {'id': proj.id}
+            
+            # Exact integration
+            has_exact = False
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+            if has_exact:
+                code += """
+        proj%(id)s._last_event = vector[vector[long]](nb_post, vector[long]())
+        for n in range(nb_post):
+            proj%(id)s._last_event[n] = vector[long](proj%(id)s.pre_rank[n].size(), -10000)
+"""% {'id': proj.id}
 
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
         proj%(id)s.delay = syn.delay
 """% {'id': proj.id}
@@ -1538,7 +1657,7 @@ cdef class proj%(id)s_wrapper :
 """ % {'id': proj.id}
 
             # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
                 code +="""
     def get_delay(self):
         return proj%(id)s.delay

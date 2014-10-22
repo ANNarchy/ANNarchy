@@ -28,11 +28,11 @@ DefaultSynapse = Synapse(
     pre_spike = "g_target += w; w += 1.0"
 )
 
-NEURON = 30
+NEURON = 20
 CONN = 10
 
 input_pop = Population(geometry=(NEURON), neuron=InputNeuron)
-output_pop = Population(geometry=(1), neuron=OutputNeuron)
+output_pop = Population(geometry=(10), neuron=OutputNeuron)
 
 proj = Projection(input_pop, output_pop, 'exc', synapse = DefaultSynapse).connect_fixed_number_pre(CONN, 1.0)
 
@@ -60,6 +60,7 @@ print 'Alpha:', proj.dendrite(0).alpha
 rank = int(raw_input('Add connection to: '))
 proj.dendrite(0).add_synapse(rank, 2.0)
 
+simulate(10.0)
 
 print 'Rank:', proj.dendrite(0).rank
 print 'Weights:', proj.dendrite(0).w
@@ -73,4 +74,4 @@ print 'Rank:', proj.dendrite(0).rank
 print 'Weights:', proj.dendrite(0).w
 print 'Alpha:', proj.dendrite(0).alpha
 
-simulate(10)
+simulate(10.0)

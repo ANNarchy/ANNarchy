@@ -6,6 +6,10 @@ def sort_odes(desc, locality='local'):
     is_pre_ode = True
     is_ode = False
     for param in desc['variables']: 
+        if param['cpp'] == '':
+            continue
+        if param['method'] == 'exact':
+            continue
         if param['name'] in desc[locality]: 
             if is_pre_ode: # look if it is an ode or not
                 if param['switch']: # ODE

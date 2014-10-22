@@ -122,6 +122,30 @@ For each postsynaptic neuron, there is a fixed probability that it forms a conne
 
     proj.connect_fixed_probability(probability = 0.2, weights=1.0) 
 
+Saved connectivity
+==================
+
+It is also possible to build a connection pattern using data saved during a precedent simulation. This is useful when:
+
+* pre-learning is done in another context;
+* a connector method for static synapses is particularly slow (e.g. DoG), but loading the result from a file is faster.
+  
+The connectivity of a projection can be saved (before or after ``compile()``) using: 
+
+.. code-block:: python
+
+    proj.save_connectivity(filename='proj.data')
+
+The filename can used relative or absolute paths. The data is saved in a binary format.
+
+It can then be used to create another projection: 
+
+.. code-block:: python
+
+    proj.connect_from_file(filename='proj.data')
+
+Only the connectivity (which neurons are connected), the weights and delays are loaded. Other synaptic variables are left untouched. The pre- and post-synaptic population must have the same size during saving and loading.
+
 
 User-defined patterns
 ==================================

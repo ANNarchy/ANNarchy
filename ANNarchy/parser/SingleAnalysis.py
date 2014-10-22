@@ -23,6 +23,7 @@
 """
 from ANNarchy.core.Global import _error, _warning, config
 from .Extraction import *
+from .CoupledEquations import CoupledEquations
 
 # Specific code generation for the chosen paradigm
 pattern_omp = {
@@ -60,6 +61,7 @@ pattern_cuda = {
 
 def analyse_neuron(neuron):
     """ Performs the initial analysis for a single neuron type."""
+    concurrent_odes = []
 
     # Find the paradigm OMP or CUDA
     if config['paradigm'] == 'cuda':
@@ -169,9 +171,7 @@ def analyse_neuron(neuron):
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
                 translator = Equation(variable['name'], variable['bounds']['min'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['pop_prefix'],
@@ -184,9 +184,7 @@ def analyse_neuron(neuron):
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
                 translator = Equation(variable['name'], variable['bounds']['max'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['pop_prefix'],
@@ -198,9 +196,7 @@ def analyse_neuron(neuron):
         # Analyse the equation
         if condition == []:
             translator = Equation(variable['name'], eq, 
-                                  description['attributes'], 
-                                  description['local'], 
-                                  description['global'], 
+                                  description, 
                                   method = method,
                                   untouched = untouched.keys(),
                                   prefix=pattern['pop_prefix'],
@@ -208,12 +204,14 @@ def analyse_neuron(neuron):
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'],)
             code = translator.parse()
+            dependencies = translator.dependencies()
         else: # An if-then-else statement
             code = translate_ITE(variable['name'], eq, condition, description, untouched,
                                   prefix=pattern['pop_prefix'],
                                   sep=pattern['pop_sep'],
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'])
+            dependencies = []
 
         
         if isinstance(code, str):
@@ -244,11 +242,26 @@ def analyse_neuron(neuron):
         variable['switch'] = switch # switch value of ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
+        variable['dependencies'] = dependencies # may be needed later
+
+        # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
+        if method in ['implicit', 'midpoint']:
+            concurrent_odes.append(variable)
+
+    # After all variables are processed, do it again if they are concurrent
+    if len(concurrent_odes) > 1 :
+        solver = CoupledEquations(description, concurrent_odes)
+        new_eqs = solver.process_variables()
+        for idx, variable in enumerate(description['variables']):
+            for new_eq in new_eqs:
+                if variable['name'] == new_eq['name']:
+                    description['variables'][idx] = new_eq
 
     return description
 
 def analyse_synapse(synapse):  
     """ Performs the analysis for a single synapse."""  
+    concurrent_odes = []
  
     # Find the paradigm OMP or CUDA
     if config['paradigm'] == 'cuda':
@@ -329,6 +342,7 @@ def analyse_synapse(synapse):
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
+
         # post_spike event
         description['post_spike'] = extract_post_spike_variable(description, pattern)
         for var in description['post_spike']:
@@ -390,9 +404,7 @@ def analyse_synapse(synapse):
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
                 translator = Equation(variable['name'], variable['bounds']['min'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['proj_prefix'],
@@ -404,9 +416,7 @@ def analyse_synapse(synapse):
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
                 translator = Equation(variable['name'], variable['bounds']['max'], 
-                                      description['attributes'], 
-                                      description['local'], 
-                                      description['global'], 
+                                      description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
                                       prefix=pattern['proj_prefix'],
@@ -418,9 +428,7 @@ def analyse_synapse(synapse):
         # Analyse the equation
         if condition == []: # Call Equation
             translator = Equation(variable['name'], eq, 
-                                  description['attributes'], 
-                                  description['local'], 
-                                  description['global'], 
+                                  description, 
                                   method = method, 
                                   untouched = untouched.keys(),
                                   prefix=pattern['proj_prefix'],
@@ -428,6 +436,7 @@ def analyse_synapse(synapse):
                                   index=pattern['proj_index'],
                                   global_index=pattern['proj_globalindex'])
             code = translator.parse()
+            dependencies = translator.dependencies()
                 
         else: # An if-then-else statement
             code = translate_ITE(variable['name'], eq, condition, description, untouched,
@@ -435,6 +444,7 @@ def analyse_synapse(synapse):
                                   sep=pattern['proj_sep'],
                                   index=pattern['proj_index'],
                                   global_index=pattern['proj_globalindex'])
+            dependencies = []
 
         if isinstance(code, str):
             cpp_eq = code
@@ -456,7 +466,21 @@ def analyse_synapse(synapse):
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
+        variable['dependencies'] = dependencies # may be needed later
         
+        # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
+        if method in ['implicit', 'midpoint']:
+            concurrent_odes.append(variable)
+
+    # After all variables are processed, do it again if they are concurrent
+    if len(concurrent_odes) > 1 :
+        solver = CoupledEquations(description, concurrent_odes)
+        new_eqs = solver.process_variables()
+        for idx, variable in enumerate(description['variables']):
+            for new_eq in new_eqs:
+                if variable['name'] == new_eq['name']:
+                    description['variables'][idx] = new_eq
+                    
     # Translate the psp code if any
     if 'raw_psp' in description.keys():                
         psp = {'eq' : description['raw_psp'].strip() }
@@ -468,9 +492,7 @@ def analyse_synapse(synapse):
         # Analyse the equation
         if condition == []:
             translator = Equation('psp', eq, 
-                                  description['attributes'], 
-                                  description['local'], 
-                                  description['global'], 
+                                  description, 
                                   method = 'explicit', 
                                   untouched = untouched.keys(),
                                   type='return',
@@ -480,7 +502,7 @@ def analyse_synapse(synapse):
                                   global_index=pattern['proj_globalindex'])
             code = translator.parse()
         else:
-            code = translate_ITE('psp', eq, condition, synapse, untouched,
+            code = translate_ITE('psp', eq, condition, description, untouched,
                                   prefix=pattern['proj_prefix'],
                                   sep=pattern['proj_sep'],
                                   index=pattern['proj_index'],
@@ -494,5 +516,32 @@ def analyse_synapse(synapse):
         # Store the result
         psp['cpp'] = code
         description['psp'] = psp   
+
+    # Process event-driven info
+    if description['type'] == 'spike':  
+        for variable in description['pre_spike'] + description['post_spike']:
+            eq = variable['eq']
+            # Extract if-then-else statements
+            eq, condition = extract_ite(variable['name'], eq, description)        
+            # Analyse the equation
+            if condition == []:
+                translator = Equation(variable['name'], eq, 
+                                      description, 
+                                      method = 'explicit', 
+                                      untouched = {},
+                                      prefix=pattern['proj_prefix'],
+                                      sep=pattern['proj_sep'],
+                                      index=pattern['proj_index'],
+                                      global_index=pattern['proj_globalindex'])
+                code = translator.parse()
+            else:
+                code = translate_ITE(variable['name'], eq, condition, description, {},
+                                      prefix=pattern['proj_prefix'],
+                                      sep=pattern['proj_sep'],
+                                      index=pattern['proj_index'],
+                                      global_index=pattern['proj_globalindex'], 
+                                      split=False)
+            # Store the result
+            variable['cpp'] = code # the C++ equation
 
     return description     

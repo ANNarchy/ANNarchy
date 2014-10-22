@@ -86,8 +86,8 @@ Using the notations of the Brian example and the corresponding parameter values,
             wmax = 0.01 : postsynaptic
         """,
         equations = """
-            tau_pre * dApre/dt = -Apre 
-            tau_post * dApost/dt = -Apost 
+            tau_pre * dApre/dt = -Apre : exact 
+            tau_post * dApost/dt = -Apost : exact
         """,
         pre_spike="""
             g_target += w
@@ -102,19 +102,30 @@ Using the notations of the Brian example and the corresponding parameter values,
 
 The parameters are flagged with ``postsynaptic`` as they have he same value for all synapses (this reduces considerably the needed memory space). 
 
-When a pre-synaptic spike occurs:
+**When a pre-synaptic spike occurs:**
 
 * the post-synaptic conductance is increased from ``w``,
 * ``Apre`` is incremented,
 * the synaptic weight ``w`` is increased from ``Apost``, resulting to LTD as ``Apost`` is negative. We also make sure it stays bounded by 0 and wmax by using the function ``clip()``.
   
-When a post-synaptic spike occurs:
+**When a post-synaptic spike occurs:**
 
 * ``Apost`` is decremented (as ``cApost`` is negative),
 * the synaptic weight is increased from ``Apre``, resulting to LTP.
   
-Otherwise, at every step of the simulation, ``Apre`` and ``Apost`` decay to 0 with their own dynamics.
+Otherwise, ``Apre`` and ``Apost`` decay to 0 with their own dynamics. This is only simulated, as the integration is performed analytically, using the ``exact`` flag.
 
+This online version of STDP is already provided by ANNarchy (:doc:`../API/SpecificSynapse`), so one can simply use:
+
+:: 
+
+    STDP(tau_plus=20.0, tau_minus=20.0, A_plus=0.01, A_minus=0.0105, w_max=0.01)
+
+when creating the projections.
+
+.. note::
+
+    The provided STDP synapse uses the PyNN notation for the parameters. In particular ``A_minus`` is positive. The variables ``A_pre`` and ``A_post`` are called ``x`` and ``y``, respectively.
 
 Creating the populations
 ========================

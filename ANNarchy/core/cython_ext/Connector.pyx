@@ -36,6 +36,10 @@ cdef class CSR:
         cdef vector[int] int_delays
         cdef int max_d, unif_d
 
+        # Do not add empty arrays
+        if r.size() == 0:
+            return
+
         # Store the connectivity
         self.post_rank.push_back(rk)
         self.pre_rank.push_back(r)
@@ -46,24 +50,24 @@ cdef class CSR:
         else:
             self.w.push_back(vector[double](r.size(), w[0]))
 
+        # Store delays and update the max
+        for i in range(d.size()):
+            int_delays.push_back(int(d[i]/self.dt))
+        self.delay.push_back(int_delays)
+        max_d = int(np.max(d)/self.dt)
+        if max_d > self.max_delay:
+            self.max_delay = max_d
+
         # Are the delays uniform?
-        if d.size() > 1 or r.size() == 1:
-            for i in range(d.size()):
-                int_delays.push_back(int(d[i]/self.dt))
-            self.delay.push_back(int_delays)
-            max_d = int(np.max(d)/self.dt)
-            if max_d > self.max_delay:
-                self.max_delay = max_d
-            if r.size() == 1: # delays can be uniform
-                self.uniform_delay = max_d 
+        if d.size() > 1 :
+            self.uniform_delay = -1
         else:
             unif_d = int(d[0]/self.dt)
-            self.uniform_delay = unif_d       
-            if unif_d > self.max_delay:
-                self.max_delay = unif_d
+            if self.uniform_delay != unif_d and self.size >0:
+                self.uniform_delay = -1
 
         # Increase the size
-        self.size += r.size()
+        self.size += 1
         self.nb_synapses += r.size()
 
     cpdef int get_max_delay(self):
@@ -184,34 +188,36 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 
     cdef CSR projection
     cdef double weight
-    cdef int r_post, r_pre, size_pre
-    cdef list tmp, pre_ranks, post_ranks
+    cdef int r_post, r_pre, size_pre, max_size_pre
+    cdef list post_ranks
     cdef vector[int] r
     cdef vector[double] w, d
+    cdef np.ndarray random_values, tmp, pre_ranks
 
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
         post_ranks = range(post.size)
+
     if hasattr(pre, 'ranks'): # PopulationView
-        pre_ranks = pre.ranks
+        pre_ranks = np.array(pre.ranks)
+        max_size_pre = len(pre.ranks)
     else:
-        pre_ranks = range(pre.size)
+        pre_ranks = np.arange(pre.size)
+        max_size_pre = pre.size
 
     # Create the projection data as CSR
     projection = CSR()
 
     for r_post in post_ranks:
         # List of pre ranks
-        tmp = []
-        for r_pre in pre_ranks:
-            if not allow_self_connections and (r_pre==r_post):
-                continue
-            if np.random.random() < probability:
-                tmp.append(r_pre)
+        random_values = np.random.random(max_size_pre)
+        tmp = pre_ranks[random_values < probability]
+        if not allow_self_connections:
+            tmp = tmp[tmp != r_post]
         r = tmp
-        size_pre = len(tmp)
+        size_pre = tmp.size
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights

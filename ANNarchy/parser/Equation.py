@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _warning, _error
+from ANNarchy.core.Global import _warning, _error, _print
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
@@ -35,8 +35,7 @@ class Equation(object):
     '''
     Class to analyse one equation.
     '''
-    def __init__(self, name, expression, variables, 
-                 local_variables, global_variables, 
+    def __init__(self, name, expression, description, 
                  untouched = [], 
                  method='explicit', type=None, 
                  prefix='pop%(id)s', sep = '.',
@@ -58,9 +57,11 @@ class Equation(object):
         # Store attributes
         self.name = name
         self.expression = expression
-        self.variables = variables
-        self.local_variables = local_variables
-        self.global_variables = global_variables
+        self.description = description
+        self.attributes = self.description['attributes']
+        self.local_attributes = self.description['local']
+        self.global_attributes = self.description['global']
+        self.variables = [var['name'] for var in self.description['variables']]
         self.untouched = untouched
         self.method = method
         self.prefix = prefix 
@@ -76,8 +77,9 @@ class Equation(object):
             'dt' : Symbol('dt'),
             't' : Symbol('double(t)*dt'),
             'w' : Symbol('proj%(id_proj)s.w'+index), 
-            't_pre': Symbol('(double)(%(pre_pop)s_last_spike[j])*dt'),
-            't_post': Symbol('(double)(%(post_pop)s_last_spike[i])*dt'),
+            'g_target': Symbol('sum'),
+            't_pre': Symbol('(double)(pop%(id_pre)s.last_spike[j])*dt'),
+            't_post': Symbol('(double)(pop%(id_post)s.last_spike[i])*dt'),
             'pos': Function('positive'),
             'positive': Function('positive'), 
             'neg': Function('negative'), 
@@ -86,10 +88,10 @@ class Equation(object):
             'False': Symbol('false'), 
         }
 
-        for var in self.variables: # Add each variable of the neuron
-            if var in self.local_variables:
+        for var in self.attributes: # Add each variable of the neuron
+            if var in self.local_attributes:
                 self.local_dict[var] = Symbol(prefix + sep + var + index)
-            elif var in self.global_variables:
+            elif var in self.global_attributes:
                 if var in _predefined:
                     continue
                 self.local_dict[var] = Symbol(prefix + sep + var + global_index)
@@ -184,6 +186,8 @@ class Equation(object):
             return self.exponential(expression)
         elif self.method == 'midpoint':
             return self.midpoint(expression)
+        elif self.method == 'exact':
+            return self.eventdriven(expression)
         
     def explicit(self, expression):
         " Explicit or backward Euler numerical method"
@@ -195,6 +199,8 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+
+        self.analysed = analysed
 
         variable_name = self.local_dict[self.name]
 
@@ -217,6 +223,8 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+
+        self.analysed = analysed
 
         variable_name = self.local_dict[self.name]
 
@@ -241,11 +249,10 @@ class Equation(object):
     
     def implicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
-        #return self.semiimplicit(expression)
 
         # Transform the gradient into a difference TODO: more robust...
         new_expression = expression.replace('d'+self.name, '_t_gradient_')
-        new_expression = new_expression.replace(self.name, '_'+self.name)
+        new_expression = re.sub(r'([^\w]+)'+self.name+r'([^\w]+)', r'\1_'+self.name+r'\2', new_expression)
         new_expression = new_expression.replace('_t_gradient_', '(_'+self.name+' - '+self.name+')')
 
         # Add a sympbol for the next value of the variable
@@ -257,12 +264,14 @@ class Equation(object):
             local_dict = self.local_dict,
             transformations = (standard_transformations + (convert_xor,))
         )
+        self.analysed = analysed
 
         # Solve the equation for delta_mp
         solved = solve(analysed, new_var)
         if len(solved) > 1:
-            _warning(self.expression + ': the ODE is not linear, falling back to the semi-implicit method.')
-            return self.semiimplicit(expression)
+            _print(self.expression)
+            _error('the ODE is not linear, can not use the implicit method.')
+            exit(0)
         else:
             solved = solved[0]
 
@@ -317,6 +326,31 @@ class Equation(object):
 
         # Return result
         return [explicit_code, switch]
+
+    def eventdriven(self, expression):
+        # Standardize the equation
+        real_tau, stepsize, steadystate = self.standardize_ODE(expression)
+
+        if real_tau == None: # the equation can not be standardized
+            _print(self.expression)
+            _error('The equation is not a linear ODE and can not be evaluated exactly.')
+            exit(0)
+
+        # Check the steady state is not dependent on other variables
+        for var in self.variables:
+            if self.local_dict[var] in steadystate:
+                _print(self.expression)
+                _error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
+                exit(0)
+
+        # Obtain C code
+        variable_name = self.c_code(self.local_dict[self.name])
+        steady = self.c_code(steadystate)
+        if steady == '0':
+            code = variable_name + '*= exp(dt*(proj%(id_proj)s._last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+        else:
+            code = variable_name + ' = ' + steady + ' + (' + variable_name + ' - ' + steady + ')*exp(dt*(proj%(id_proj)s._last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+        return code
     
     def standardize_ODE(self, expression):
         """ Transform any 1rst order ODE into the standardized form:
@@ -343,6 +377,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Collect factor on the gradient and main variable A*dV/dt + B*V = C
         expanded = analysed.expand(modulus=None, power_base=False, power_exp=False, 
@@ -352,8 +387,9 @@ class Equation(object):
         collected_var = collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
         if self.method == 'exponential':
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
-                _warning(self.expression + ': the exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Using the explicit method instead.')
-                return None, None, None            
+                _print(self.expression)
+                _error('The exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
+                exit(0)           
     
         factor_var = collected_var[self.local_dict[self.name]]
         
@@ -405,6 +441,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
 
         # Obtain C code
         code = self.c_code(analysed)
@@ -432,6 +469,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Obtain C code
         code = self.c_code(self.local_dict[self.name]) + ope + self.c_code(simplify(analysed, ratio=1.0)) +';'
@@ -449,6 +487,7 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Obtain C code
         code = self.c_code(self.local_dict[self.name]) + ' = ' + self.c_code(analysed) +';'
@@ -463,12 +502,21 @@ class Equation(object):
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
+        self.analysed = analysed
     
         # Obtain C code
         code = self.c_code(analysed) +';'
     
         # Return result
         return code
+
+    def dependencies(self):
+        deps = []
+        for att in self.attributes:
+            if self.local_dict[att] in self.analysed:
+                deps.append(att)
+        return deps
+        
         
 def transform_condition(expr):
     expr = expr.replace (' and ', ' & ')
@@ -478,3 +526,4 @@ def transform_condition(expr):
     expr = expr.replace (' not(', ' Not(')
     expr = expr.replace (' is ', ' == ')
     return expr
+
