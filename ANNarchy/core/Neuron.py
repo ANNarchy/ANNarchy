@@ -29,7 +29,7 @@ class Neuron(object):
     """
     Base class to define a neuron.
     """    
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, extra_values={} ):
+    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="" ):
         """         
         *Parameters*:
         
@@ -39,6 +39,8 @@ class Neuron(object):
             * **spike**: condition to emit a spike (only for spiking neurons).
             * **reset**: changes to the variables after a spike (only for spiking neurons).                  
             * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
+            * **name**: name of the neuron type (used for reporting only).
+            * **description**: short description of the neuron type (used for reporting).
                 
         """        
         
@@ -49,10 +51,19 @@ class Neuron(object):
         self.spike = spike
         self.reset = reset
         self.refractory = refractory
-        self.extra_values = extra_values
 
         # Find the type of the neuron
         self.type = 'spike' if self.spike else 'rate'
+
+        # Reporting
+        if name:
+            self.name = name
+        else:
+            self.name = 'Spiking neuron' if self.type == 'spike' else 'Rate-coded neuron'
+        if description:
+            self.short_description = description
+        else:
+            self.short_description = "User-defined model of a spiking point-neuron." if self.type == 'spike' else "User-defined model of a rate-coded neuron."
 
         # Analyse the neuron type
         self.description = None
@@ -92,7 +103,7 @@ class RateNeuron(Neuron):
     """
     Base class to define a rate-coded neuron.
     """    
-    def __init__(self, parameters="", equations="", functions=None, extra_values={}):
+    def __init__(self, parameters="", equations="", functions=None):
         """        
         *Parameters*:
         
@@ -101,13 +112,13 @@ class RateNeuron(Neuron):
             * **functions**: additional functions used in the variables' equations.
 
         """
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, extra_values=extra_values) 
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions) 
         
 class SpikeNeuron(Neuron):
     """
     Base class to define a spiking neuron.
     """    
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, extra_values={} ):
+    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None ):
         """         
         *Parameters*:
         
@@ -119,7 +130,7 @@ class SpikeNeuron(Neuron):
             * **refractory**: refractory period of a neuron after a spike.
                 
         """
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, extra_values=extra_values) 
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory) 
 
 
 class IndividualNeuron(object):

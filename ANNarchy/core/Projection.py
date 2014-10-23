@@ -23,7 +23,7 @@
 """
 import numpy as np
 import math
-import copy
+import copy, inspect
 
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
@@ -129,6 +129,8 @@ class Projection(object):
                 self.synapse = Synapse(equations = "")
             else:
                 self.synapse = Synapse(equations = "", pre_spike="g_target += w", post_spike="")
+        elif inspect.isclass(synapse):
+            self.synapse = synapse()
         else:
             self.synapse = copy.deepcopy(synapse)
 

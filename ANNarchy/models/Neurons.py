@@ -92,7 +92,8 @@ class Izhikevich(Neuron):
     v = c
     u += d: unless_refractory
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Izhikevich", description="Quadratic integrate-and-fire spiking neuron with adaptation.")
 
     def conductance(self, conductance):
         """
@@ -110,7 +111,7 @@ class IF_curr_exp(Neuron):
     """ 
     IF_curr_exp neuron.
 
-    Leaky integrate and fire model with fixed threshold and decaying-exponential post-synaptic current. (Separate synaptic currents for excitatory and inhibitory synapses).
+    Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current. (Separate synaptic currents for excitatory and inhibitory synapses).
 
     Parameters:
 
@@ -175,14 +176,15 @@ class IF_curr_exp(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current.")
 
 
 class IF_cond_exp(Neuron):
     """ 
     IF_cond_exp neuron.
 
-    Leaky integrate and fire model with fixed threshold and decaying-exponential post-synaptic conductance.
+    Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic conductance.
 
     Parameters:
 
@@ -251,7 +253,8 @@ class IF_cond_exp(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic conductances.")
 
 
 # Alpha conductances
@@ -259,7 +262,7 @@ class IF_curr_alpha(Neuron):
     """ 
     IF_curr_alpha neuron.
 
-    Leaky integrate and fire model with fixed threshold and alpha post-synaptic current. (Separate synaptic currents for excitatory and inhibitory synapses).
+    Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic currents. (Separate synaptic currents for excitatory and inhibitory synapses).
 
     The alpha currents are calculated through a system of two linears ODEs. After a spike is received at t_spike, it peaks at t_spike + tau_syn_X, with a maximum equal to the synaptic efficiency.
 
@@ -338,13 +341,14 @@ class IF_curr_alpha(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic currents.")
 
 class IF_cond_alpha(Neuron):
     """ 
     IF_cond_exp neuron.
 
-    Leaky integrate and fire model with fixed threshold and decaying-exponential post-synaptic conductance.
+    Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic conductance.
 
     Parameters:
 
@@ -425,7 +429,8 @@ class IF_cond_alpha(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic conductances.")
 
 
 ##################
@@ -436,7 +441,7 @@ class EIF_cond_exp_isfa_ista(Neuron):
     """ 
     EIF_cond_exp neuron.
 
-    Exponential integrate and fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
+    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
 
         Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
 
@@ -549,14 +554,15 @@ class EIF_cond_exp_isfa_ista(Neuron):
     v = v_reset
     w += b : unless_refractory
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Adaptive exponential Integrate-and-Fire", description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.).")
 
 
 class EIF_cond_alpha_isfa_ista(Neuron):
     """ 
     EIF_cond_alpha neuron.
 
-    Exponential integrate and fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
+    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.) according to:
 
         Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
 
@@ -683,7 +689,8 @@ class EIF_cond_alpha_isfa_ista(Neuron):
     v = v_reset
     w += b : unless_refractory
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Adaptive exponential Integrate-and-Fire", description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.).")
 
 
 ##################
@@ -821,5 +828,5 @@ v_thresh   = %(v_thresh)s
 
         reset = ""
 
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset)
-
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset,
+            name="Hodgkin-Huxley", description="Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-rectifier potassium currents.")

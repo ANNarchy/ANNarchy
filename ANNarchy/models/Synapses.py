@@ -49,7 +49,6 @@ class STP(Synapse):
     U = %(U)s
     """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         equations = """
-    }
     dx/dt = (1 - x)/tau_rec : init = 1.0, exact
     du/dt = (U - u)/tau_facil : init = %(U)s, exact   
     """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
@@ -59,7 +58,8 @@ class STP(Synapse):
     u += U * (1 - u)
     """
 
-        Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike)
+        Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike,
+            name="Short-term plasticity", description="Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.")
 
 
 ##################
@@ -134,4 +134,7 @@ class STDP(Synapse):
             w = clip(w + x, w_min , w_max)
         """
 
-        Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike, post_spike=post_spike)
+        Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike, post_spike=post_spike,
+            name="Spike-timing dependent plasticity", description="Synapse exhibiting spike-timing dependent plasticity.")
+
+

@@ -29,7 +29,7 @@ class Synapse(object):
     """
     Base class to define a synapse.
     """
-    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, extra_values=None ):
+    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, name=None, description=None ):
         """ 
         *Parameters*:
         
@@ -40,6 +40,8 @@ class Synapse(object):
             * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
             * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
             * **functions**: additional functions used in the equations.
+            * **name**: name of the synapse type (used for reporting only).
+            * **description**: short description of the synapse type (used for reporting).
             
         """  
         
@@ -51,7 +53,6 @@ class Synapse(object):
         self.post_spike = post_spike
         self.psp = psp
         self.operation = operation
-        self.extra_values = extra_values
 
         # Type of the synapse
         self.type = 'spike' if pre_spike else 'rate'
@@ -66,6 +67,16 @@ class Synapse(object):
 
         # Description
         self.description = None
+
+        # Reporting
+        if name:
+            self.name = name
+        else:
+            self.name = 'Spiking synapse' if self.type == 'spike' else 'Rate-coded synapse'
+        if description:
+            self.short_description = description
+        else:
+            self.short_description = "User-defined model of a spiking synapse." if self.type == 'spike' else "User-defined model of a rate-coded synapse."
 
     def _analyse(self):
         # Analyse the synapse type
@@ -85,7 +96,7 @@ class RateSynapse(Synapse):
     Base class to define a rate-coded synapse.
     """
     
-    def __init__(self, parameters="", equations="", psp=None, functions=None, extra_values=None):
+    def __init__(self, parameters="", equations="", psp=None, functions=None):
         """ 
         *Parameters*:
         
@@ -95,14 +106,14 @@ class RateSynapse(Synapse):
             * **functions**: additional functions used in the variables' equations.
             
         """         
-        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, functions=functions, extra_values=extra_values)
+        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, functions=functions)
         
 class SpikeSynapse(Synapse):
     """
     Bae class to define a spiking synapse.
     """
 
-    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None, extra_values=None ):
+    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None):
         """ 
         *Parameters*:
         
@@ -114,5 +125,5 @@ class SpikeSynapse(Synapse):
             * **functions**: additional functions used in the variables' equations.
             
         """  
-        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, pre_spike=pre_spike, post_spike=post_spike, functions=functions, extra_values=extra_values)
+        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, pre_spike=pre_spike, post_spike=post_spike, functions=functions)
 
