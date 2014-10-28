@@ -141,7 +141,7 @@ In order to easily display raster plots, the utility function ``raster_plot()`` 
 .. code-block:: python
 
     spikes = raster_plot(data[pop1]['spike'])
-    plot(spikes[0, :], spikes[:,1], '.')
+    plot(spikes[:,0], spikes[:,1], '.')
 
 The Numpy array returned by ``raster_plot()`` has two columns and N rows, where N is the total number of spikes emitted by the population during the simulation. The first column represent the time where a spike was emitted, while the second represents the rank of the neuron which fired.
 
