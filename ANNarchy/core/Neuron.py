@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy.core.Global import _error
+from ANNarchy.core.Global import _error, _neurons
 from ANNarchy.parser.SingleAnalysis import analyse_neuron
 import numpy as np
 
@@ -56,6 +56,11 @@ class Neuron(object):
         self.type = 'spike' if self.spike else 'rate'
 
         # Reporting
+        if not hasattr(self, '_instantiated') : # User-defined
+            _neurons.append(self)
+        elif len(self._instantiated) == 0: # First instantiated of the class
+            _neurons.append(self)
+
         if name:
             self.name = name
         else:

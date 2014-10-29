@@ -31,6 +31,8 @@ from math import ceil
 _populations = []       # created populations
 _projections = []       # created projections
 _functions = []         # created functions
+_neurons = []           # created neurons
+_synapses = []          # created synapses
 
 # Global Cython instance
 _network = None

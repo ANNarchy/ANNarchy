@@ -1,4 +1,10 @@
-from ANNarchy.core.Global import _populations, _projections
+from ANNarchy.core.Global import _populations, _projections, _neurons, _warning, _error
+from ANNarchy.core.Random import RandomDistribution
+from .Extraction import *
+
+from sympy import *
+from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
+import re
 
 header = """
 %  LaTeX file for generating the Model Description Table in Fig. 5 of
@@ -76,9 +82,7 @@ populations_template = """
 \\begin{tabularx}{\linewidth}{|l|l|X|}\hline
 \hdr{3}{B}{Populations}\\\\ \\hline
     \\textbf{Name}   & \\textbf{Elements} & \\textbf{Size} \\\\ \\hline
-    E             & Iaf neuron        & $N_{\\text{E}} = 4N_{\\text{I}}$  \\\\ \\hline
-    I             & Iaf neuron        & $N_{\\text{I}}$ \\\\ \\hline
-    E$_{\\text{ext}}$ & Poisson generator & $C_E(N_{\\text{E}}+N_{\\text{I}})$ \\\\ \\hline
+%(populations_description)s
 \end{tabularx}
 
 \\vspace{2ex}
@@ -88,17 +92,8 @@ connectivity_template = """
 \\noindent
 \\begin{tabularx}{\linewidth}{|l|l|l|X|}\hline
 \hdr{4}{C}{Connectivity}\\\\ \\hline
-\\textbf{Name} & \\textbf{Source} & \\textbf{Target} & \\textbf{Pattern} \\\\ \\hline
-    EE & E & E & 
-    Random convergent $C_{\\text{E}}\\rightarrow 1$, weight $J$, delay $D$ \\\\ \\hline
-    IE & E & I & 
-    Random convergent $C_{\\text{E}}\\rightarrow 1$, weight $J$, delay $D$ \\\\ \\hline
-    EI & I & E & 
-    Random convergent $C_{\\text{I}}\\rightarrow 1$, weight $-gJ$, delay $D$ \\\\ \\hline
-    II & I & I & 
-    Random convergent $C_{\\text{I}}\\rightarrow 1$, weight $-gJ$, delay $D$ \\\\ \\hline
-    Ext& E$_{\\text{ext}}$ & E $\cup$ I & 
-    Non-overlapping $C_{\\text{E}}\\rightarrow 1$, weight $J$, delay $D$ \\\\ \\hline
+\\textbf{Source} & \\textbf{Destination} & \\textbf{Target} & \\textbf{Pattern} \\\\ \\hline
+%(projections_description)s
 \end{tabularx}
 
 \\vspace{2ex}
@@ -107,16 +102,13 @@ connectivity_template = """
 neuron_models_template = """
 \\noindent
 \\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
-\hdr{2}{D}{Neuron and Synapse Model}\\\\ \\hline
-\\textbf{Name} & Iaf neuron \\\\ \\hline
-\\textbf{Type} & Leaky integrate-and-fire, $\delta$-current input\\\\ \\hline
-\\raisebox{-4.5ex}{\parbox{\linewidth}{\\textbf{Subthreshold dynamics}}} &
-\\\\ \\hline
-\multirow{3}{*}{\\textbf{Spiking}} & 
-\\\\ \\hline
+\hdr{2}{D}{Neuron Models}\\\\ \\hline
+%(first_neuron)s
 \end{tabularx}
-
 \\vspace{2ex}
+
+%(neurons)s
+
 """
 
 footer = """
@@ -155,21 +147,18 @@ def report(filename="./report.tex"):
         neuron_models = ""
         synapse_models = ""
 
-        list_neuron_models = []
         for pop in _populations:
             # population name
             population_names += pop.name + ", "
-            # neuron models
-            list_neuron_models.append(pop.neuron_type.name)
-        for neur in list(set(list_neuron_models)):
-            neuron_models += neur + ', '
+        for neur in _neurons:
+            neuron_models += neur.name + ', '
         population_names = population_names[:-2] # suppress the last ,
         neuron_models = neuron_models[:-2] # suppress the last ,
 
         list_connectivity = []
         list_synapse_models = []
         for proj in _projections:
-            list_connectivity.append(proj.connector_description)
+            list_connectivity.append(proj.connector_name)
             if not proj.synapse.name in ['Spiking synapse', 'Rate-coded synapse']:
                 list_synapse_models.append(proj.synapse.name)
         for con in list(set(list_connectivity)):
@@ -189,13 +178,204 @@ def report(filename="./report.tex"):
         }
         return txt
 
+    def generate_populations():
+        def format_size(pop):
+            size = str(pop.size)
+            if pop.dimension >1:
+                size += ' ('
+                for d in range(pop.dimension):
+                    size += str(pop.geometry[d]) + '*'
+                size = size.rsplit('*', 1)[0] + ')'
+            return size
+
+        txt = ""
+        pop_tpl = """
+    %(pop_name)s             & %(neuron_type)s        & $N_\\text{%(pop_name)s}$ = %(size)s  \\\\ \\hline
+"""
+        for pop in _populations:
+            txt += pop_tpl % {'pop_name': pop.name, 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
+
+        return populations_template % {'populations_description': txt}
+
+    def generate_projections():
+        txt = ""
+        proj_tpl = """
+    %(pre)s & %(post)s & %(target)s &
+    %(description)s \\\\ \\hline
+"""        
+        for proj in _projections:
+            txt += proj_tpl % {'pre': proj.pre.name, 'post': proj.post.name, 'target': proj.target,
+                                'description': proj.connector_description}
+
+        return connectivity_template % {'projections_description': txt}
+
+    def generate_neuron_models():
+        firstneuron = ""
+        neurons = ""
+
+        firstneuron_tpl = """
+\\textbf{Name} & %(name)s \\\\ \\hline
+\\textbf{Type} & %(description)s\\\\ \\hline
+\\textbf{%(equation_type)s} &
+%(variables)s 
+\\\\ \\hline
+"""
+
+        neuron_tpl = """
+\\noindent
+\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
+\\textbf{Name} & %(name)s \\\\ \\hline
+\\textbf{Type} & %(description)s\\\\ \\hline
+\\textbf{%(equation_type)s} &
+%(variables)s 
+\\\\ \\hline
+\end{tabularx}
+\\vspace{2ex}
+"""
+        for idx, neuron in enumerate(_neurons):
+            # Generate the code for the equations
+            eqs = _process_neuron_equations(neuron)
+
+            # Spiking neurons have an extra field for the spike condition
+            if neuron.type == 'spike':
+                spike_extra = """
+\\\\ \\hline
+\\textbf{Spiking} & 
+%(spike)s
+"""
+                spike_txt = "" # TODO
+                eqs += spike_extra % {'spike': spike_txt}
+
+
+            # Build the dictionary
+            desc = {
+                'name': neuron.name,
+                'description': neuron.short_description,
+                'variables': eqs,
+                'equation_type': "Subthreshold dynamics" if neuron.type == 'spike' else 'Equations'
+            }
+
+            # Generate the code depending on the neuron position
+            if idx == 0:
+                firstneuron = firstneuron_tpl % desc
+            else:
+                neurons += neuron_tpl % desc
+
+        return neuron_models_template % {'first_neuron': firstneuron,'neurons': neurons}
+
+
     # Analyse only the neurons/synapses which are different
 
     # Generate the summary
     summary = generate_summary()
+    # Generate the populations
+    populations = generate_populations()
+    # Generate the populations
+    projections = generate_projections()
+    # Generate the neuron models
+    neuron_models = generate_neuron_models()
 
     with open(filename, 'w') as wfile:
         wfile.write(header)
         wfile.write(preamble)
         wfile.write(summary)
+        wfile.write(populations)
+        wfile.write(projections)
+        wfile.write(neuron_models)
         wfile.write(footer)
+
+def _process_random(val):
+    "Transforms a connector attribute (weights, delays) into a string representation"
+    if isinstance(val, RandomDistribution):
+        return val.latex()
+    else:
+        return str(val)
+
+def _process_neuron_equations(neuron):
+    code = ""
+
+    # Extract parameters and variables
+    parameters = extract_parameters(neuron.parameters)
+    variables = extract_variables(neuron.equations)
+    variable_names = [var['name'] for var in variables]
+    attributes, local_var, global_var = get_attributes(parameters, variables)
+
+    # Create a dictionary for parsing
+    local_dict = {
+        'g_target': Symbol('g_\\text{target}'),
+        't_pre': Symbol('t_\\text{pre}'),
+        't_post': Symbol('t_\\text{pos}'),
+        'Uniform': Function('\mathcal{U}'),
+        'Normal': Function('\mathcal{N}'),
+    }
+
+    for att in attributes:
+        local_dict[att] = Symbol(_latexify_name(att, variable_names))
+
+    tex_dict = {}
+    for key, val in local_dict.iteritems():
+        tex_dict[val] = str(val)
+
+    for var in variables:
+        # Retrieve the equation
+        eq = var['eq']
+        # Extract if then else
+        # TODO
+        # Parse the equation
+        eq = eq.replace(' ', '') # supress spaces
+        ode = re.findall(r'([^\w]+)d([\w]+)/dt', eq)
+        if len(ode) > 0:
+            name = ode[0][1]
+            eq = eq.replace('d'+name+'/dt', '_grad_'+name)
+            grad_symbol = Symbol('\\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
+            local_dict['_grad_'+name] = grad_symbol
+            tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
+
+        left, right = eq.split('=')
+        try:
+            analysed_left = parse_expr(left,
+                local_dict = local_dict,
+                transformations = (standard_transformations + (convert_xor,))
+            )
+            latex_left = latex(analysed_left, symbol_names = tex_dict, mul_symbol="dot")
+        except:
+            _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+            latex_left = var['eq'].split('=')[0]
+        try:
+            analysed_right = parse_expr(right,
+                local_dict = local_dict,
+                transformations = (standard_transformations + (convert_xor,)) 
+            )
+            latex_right = latex(analysed_right, symbol_names = tex_dict, mul_symbol="dot")
+        except:
+            _warning('can not transform the right side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+            latex_right = var['eq'].split('=')[1]
+
+        var_code = latex_left + ' = ' + latex_right
+
+        # Add the code
+        code += """\\[
+%(eq)s
+\\]
+""" % {'eq': var_code}
+
+    return code
+
+greek = ['alpha', 'beta', 'gamma', 'epsilon', 'eta', 'kappa', 'delta', 'lambda', 'mu', 'nu', 'zeta', 'sigma', 'phi', 'psi', 'rho', 'omega', 'xi', 'tau',
+         'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Phi', 'Psi', 'Omega'
+]
+
+def _latexify_name(name, local):
+    equiv = ''
+    parts = name.split('_')
+    for p in parts:
+        if len(p) == 1:
+            equiv += '' + p + '_'
+        elif p in greek:
+            equiv += '\\' + p + '_'            
+        else:
+            equiv += '\\text{' + p + '}' + '_'
+    equiv = equiv[:-1]
+    if name in local:
+        equiv = '{' + equiv + '} (t)'
+    return equiv

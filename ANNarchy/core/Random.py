@@ -72,6 +72,9 @@ class RandomDistribution(object):
     def keywords(self):
         return available_distributions
 
+    def latex(self):
+        return '?'
+
 class Uniform(RandomDistribution):
     """
     Random distribution object using the uniform distribution between ``min`` and ``max``.
@@ -101,6 +104,9 @@ class Uniform(RandomDistribution):
         if self._cpp_seed != -1:
             np.random.seed(self._cpp_seed)
         return np.random.uniform(self.min, self.max, shape)
+
+    def latex(self):
+        return "$\\mathcal{U}$(" + str(self.min) + ', ' + str(self.max) + ')'
 
 
 class DiscreteUniform(RandomDistribution):
@@ -132,6 +138,9 @@ class DiscreteUniform(RandomDistribution):
         if self._cpp_seed != -1:
             np.random.seed(self._cpp_seed)
         return np.random.random_integers(self.min, self.max, shape)
+
+    def latex(self):
+        return "$\\mathcal{U}$(" + str(self.min) + ', ' + str(self.max) + ')'
     
     
 class Normal(RandomDistribution):
@@ -169,6 +178,9 @@ class Normal(RandomDistribution):
             data[data>self.max] = self.max
         return data
 
+    def latex(self):
+        return "$\\mathcal{N}$(" + str(self.mu) + ', ' + str(self.sigma) + ')'
+
 class LogNormal(RandomDistribution):
     """
     Random distribution instance returning a random value based on lognormal distribution.
@@ -196,6 +208,9 @@ class LogNormal(RandomDistribution):
         if self._cpp_seed != -1:
             np.random.seed(self._cpp_seed)
         return np.random.lognormal(self.mu, self.sigma, shape)
+
+    def latex(self):
+        return "$\\ln\\mathcal{N}$(" + str(self.mu) + ', ' + str(self.sigma) + ')'
 
 class Exponential(RandomDistribution):
     """
@@ -232,6 +247,8 @@ class Exponential(RandomDistribution):
             np.random.seed(self._cpp_seed)
         return np.random.exponential(self.Lambda, shape)
 
+    def latex(self):
+        return "$\\exp$(" + str(self.Lambda) + ')'
 
 class Gamma(RandomDistribution):
     """
@@ -260,3 +277,6 @@ class Gamma(RandomDistribution):
         if self._cpp_seed != -1:
             np.random.seed(self._cpp_seed)
         return np.random.gamma(self.alpha, self.beta, shape)
+
+    def latex(self):
+        return "$\\Gamma$(" + str(self.alpha) + ', ' + str(self.beta) + ')'

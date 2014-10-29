@@ -63,8 +63,10 @@ cdef class CSR:
             self.uniform_delay = -1
         else:
             unif_d = int(d[0]/self.dt)
-            if self.uniform_delay != unif_d and self.size >0:
+            if self.uniform_delay != unif_d and self.size > 0:
                 self.uniform_delay = -1
+            else:
+                self.uniform_delay = unif_d
 
         # Increase the size
         self.size += 1
