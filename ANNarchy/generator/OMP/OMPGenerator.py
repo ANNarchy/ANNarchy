@@ -772,17 +772,16 @@ struct ProjStruct%(id)s{
                 pre_array = "pop%(id_pre)s.spiked" % ids
 
             # No need for openmp if less than 10 neurons
-            omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j, _idx_i)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
         rk_j = %(pre_array)s[_idx_j];
         int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
-        int _idx_i = 0;
         std::vector< std::pair<int, int> > inv_post = proj%(id_proj)s.inv_rank[rk_j];
         %(omp_code)s
-        for(_idx_i = 0; _idx_i < nb_post; _idx_i++){
+        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
             i = inv_post[_idx_i].first;
             j = inv_post[_idx_i].second;
 %(exact)s
@@ -843,21 +842,20 @@ struct ProjStruct%(id)s{
 
                 # Gather the equations
                 for eq in proj.synapse.description['post_spike']:
-                    post_code += ' ' * 20 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
+                    post_code += ' ' * 16 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
 
                 # Generate the code
                 if post_code != "":
-                    omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+                    omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
                     code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning){
-        %(omp_code)s 
-        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-            if(pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
-                for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+        for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+            i = pop%(id_post)s.spiked[_idx_i];
+            %(omp_code)s 
+            for(j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
 %(post_event)s
-                }
             }
         }
     }
@@ -1076,7 +1074,7 @@ struct ProjStruct%(id)s{
             if len(pop.neuron_type.description['random_distributions']) > 0:
                 code += """
     // RD of pop%(id)s
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for(int i = 0; i < pop%(id)s.size; i++)
     {
 """% {'id': pop.id}
