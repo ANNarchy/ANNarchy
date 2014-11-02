@@ -7,7 +7,6 @@ body_template = '''
 */
 double dt;
 long int t;
-//std::vector< std::mt19937 >  rng;
 std::mt19937  rng;
 
 // Populations
@@ -66,11 +65,6 @@ void initialize(double _dt, long int seed) {
     t = (long int)(0);
 
     // Random number generators
-/*    int threads = std::max(1, omp_get_max_threads());
-    for(int seed = 0; seed < threads; ++seed)
-    {
-        rng.push_back(std::mt19937(time(NULL)*seed));
-    } */
     if(seed==-1){
         rng = std::mt19937(time(NULL));
     }

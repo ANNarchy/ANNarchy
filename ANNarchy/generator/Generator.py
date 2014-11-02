@@ -286,7 +286,7 @@ all:
             proj._instantiate(cython_module)
             
             if Global.config['show_time']:
-                Global._print('    took', (time.time()-t0)*1000, 'milliseconds')
+                Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
     
 
         # Finish to initialize the network, especially the rng

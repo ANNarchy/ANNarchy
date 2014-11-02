@@ -46,7 +46,6 @@ header_template = """#ifndef __ANNARCHY_H__
 */
 extern double dt;
 extern long int t;
-//extern std::vector< std::mt19937 >  rng;
 extern std::mt19937  rng;
 
 
