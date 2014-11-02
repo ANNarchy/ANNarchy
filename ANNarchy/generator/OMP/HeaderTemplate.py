@@ -46,7 +46,8 @@ header_template = """#ifndef __ANNARCHY_H__
 */
 extern double dt;
 extern long int t;
-extern std::vector< std::mt19937 >  rng;
+//extern std::vector< std::mt19937 >  rng;
+extern std::mt19937  rng;
 
 
 /*
@@ -66,7 +67,7 @@ extern std::vector< std::mt19937 >  rng;
  *
 */
 
-void initialize(double _dt) ;
+void initialize(double _dt, long int seed) ;
 
 void run(int nbSteps);
 

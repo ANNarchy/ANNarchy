@@ -291,7 +291,7 @@ all:
 
         # Finish to initialize the network, especially the rng
         # Must be called after the pops and projs are created!
-        cython_module.pyx_create(Global.config['dt'])
+        cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
 
         # Sets the desired number of threads
         cython_module.set_number_threads(Global.config['num_threads'])

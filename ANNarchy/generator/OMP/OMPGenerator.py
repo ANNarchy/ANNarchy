@@ -1080,7 +1080,8 @@ struct ProjStruct%(id)s{
 """% {'id': pop.id}
                 for rd in pop.neuron_type.description['random_distributions']:
                     code += """
-        pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng[omp_get_thread_num()]);
+        //pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng[omp_get_thread_num()]);
+        pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
 """ % {'id': pop.id, 'rd_name': rd['name']}
 
                 code += """

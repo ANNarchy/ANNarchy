@@ -26,6 +26,7 @@ from __future__ import print_function
 import sys, os
 import time
 from math import ceil
+import numpy as np
 
 # Dictionaries of  instances
 _populations = []       # created populations
@@ -129,6 +130,9 @@ def setup(**keyValueArgs):
             config[key] = keyValueArgs[key]
         else:
             _print('Unknown key:', key)
+
+        if key == 'seed':
+            np.random.seed(keyValueArgs[key])
     
 def reset(populations=True, projections=False, synapses = False):
     """

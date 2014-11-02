@@ -81,28 +81,21 @@ class Uniform(RandomDistribution):
 
     The returned values are floats in the range [min, max].
     """   
-    def __init__(self, min, max, seed=-1):
+    def __init__(self, min, max):
         """        
         *Parameters*:
         
         * **min**: minimum value.
         
         * **max**: maximum value.
-        
-        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
         self.min = min
         self.max = max
-        if seed == -1:
-            seed = Global.config['seed']
-        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a Numpy array with the given shape.
         """
-        if self._cpp_seed != -1:
-            np.random.seed(self._cpp_seed)
         return np.random.uniform(self.min, self.max, shape)
 
     def latex(self):
@@ -115,28 +108,21 @@ class DiscreteUniform(RandomDistribution):
 
     The returned values are integers in the range [min, max].
     """   
-    def __init__(self, min, max, seed=-1):
+    def __init__(self, min, max):
         """        
         *Parameters*:
         
         * **min**: minimum value
         
         * **max**: maximum value
-        
-        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
         self.min = min
         self.max = max
-        if seed == -1:
-            seed = Global.config['seed']
-        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        if self._cpp_seed != -1:
-            np.random.seed(self._cpp_seed)
         return np.random.random_integers(self.min, self.max, shape)
 
     def latex(self):
@@ -147,7 +133,7 @@ class Normal(RandomDistribution):
     """
     Random distribution instance returning a random value based on a normal (Gaussian) distribution.
     """   
-    def __init__(self, mu, sigma, min=None, max=None, seed=-1):
+    def __init__(self, mu, sigma, min=None, max=None):
         """        
         *Parameters*:
         
@@ -159,18 +145,13 @@ class Normal(RandomDistribution):
         """
         self.mu = mu
         self.sigma = sigma
-        if seed == -1:
-            seed = Global.config['seed']
         self.min = min
         self.max = max
-        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        if self._cpp_seed != -1:
-            np.random.seed(self._cpp_seed)
         data = np.random.normal(self.mu, self.sigma, shape)
         if self.min:
             data[data<self.min] = self.min
@@ -185,28 +166,21 @@ class LogNormal(RandomDistribution):
     """
     Random distribution instance returning a random value based on lognormal distribution.
     """   
-    def __init__(self, mu, sigma, seed=-1):
+    def __init__(self, mu, sigma):
         """        
         *Parameters*:
         
         * **mu**: mean of the distribution
         
         * **sigma**: standard deviation of the distribution
-        
-        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
         self.mu = mu
         self.sigma = sigma
-        if seed == -1:
-            seed = Global.config['seed']
-        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        if self._cpp_seed != -1:
-            np.random.seed(self._cpp_seed)
         return np.random.lognormal(self.mu, self.sigma, shape)
 
     def latex(self):
@@ -221,7 +195,7 @@ class Exponential(RandomDistribution):
         P(x | \lambda) = \lambda e^{(-\lambda x )}
 
     """   
-    def __init__(self, Lambda, seed=-1):
+    def __init__(self, Lambda):
         """        
         *Parameters*:
         
@@ -235,16 +209,11 @@ class Exponential(RandomDistribution):
 
         """
         self.Lambda = Lambda
-        if seed == -1:
-            seed = Global.config['seed']
-        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape.
         """
-        if self._cpp_seed != -1:
-            np.random.seed(self._cpp_seed)
         return np.random.exponential(self.Lambda, shape)
 
     def latex(self):
@@ -261,21 +230,14 @@ class Gamma(RandomDistribution):
         * **alpha**: shape of the gamma distribution
         
         * **beta**: scale of the gamma distribution
-        
-        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         """
         self.alpha = alpha
         self.beta = beta
-        if seed == -1:
-            seed = Global.config['seed']
-        self._cpp_seed = seed
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        if self._cpp_seed != -1:
-            np.random.seed(self._cpp_seed)
         return np.random.gamma(self.alpha, self.beta, shape)
 
     def latex(self):
