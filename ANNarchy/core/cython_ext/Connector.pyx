@@ -28,10 +28,10 @@ cdef class CSR:
         self.uniform_delay = -1
         self.dt = Global.config['dt']
 
-    def add(self, int rk, list r, list w, list d):
+    cpdef add(self, int rk, r, w, d):
         self.push_back(rk, r, w, d)
 
-    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d):
+    cpdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d):
 
         cdef vector[int] int_delays
         cdef int max_d, unif_d

@@ -254,7 +254,7 @@ For this example, we will create a Cython file ``CustomPatterns.pyx`` in the sam
             values = [weight for i in xrange(len(ranks)) ]
             delays = [0 for i in xrange(len(ranks)) ]
             # Add this information to the CSR matrix
-            synapses.push_back(post_rank, ranks, values, delays)
+            synapses.add(post_rank, ranks, values, delays)
                     
         return synapses
 
@@ -274,12 +274,6 @@ The only differences with the Python code are:
     cdef Connector.CSR synapses
     cdef int post_rank, pre_rank
     cdef list ranks, values, delays 
-
-* The data should be added to the CSR matrix with ``push_back()`` instead of ``add()``
-  
-.. code-block:: cython
-
-    synapses.push_back(post_rank, ranks, values, delays)
 
 To allow Cython to compile this file, we also need to provide with a kind of "Makefile" specifying that the code should be generated in C++, not C. This file should have the same name as the Cython file but end with ``.pyxbld``, here : ``CustomPatterns.pyxbld``.
 

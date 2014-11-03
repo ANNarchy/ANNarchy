@@ -20,7 +20,8 @@ cdef class CSR:
     cdef public double dt
 
     # Insert methods
-    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d)
+    cpdef add(self, int rk, r, w, d)
+    cpdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d)
 
     # Access methods
     cpdef int get_max_delay(self)
