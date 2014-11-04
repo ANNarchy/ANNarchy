@@ -32,9 +32,10 @@ class Dendrite(object):
 
         dendrite = proj.dendrite(6)
     """
-    def __init__(self, proj, post_rank):
+    def __init__(self, proj, post_rank, idx):
 
         self.post_rank = post_rank
+        self.idx = idx
         self.proj = proj
         self.pre = proj.pre
 
@@ -49,7 +50,7 @@ class Dendrite(object):
         Number of synapses.
         """
         if self.proj.cyInstance:
-            return self.proj.cyInstance.nb_synapses(self.post_rank)
+            return self.proj.cyInstance.nb_synapses(self.idx)
         return 0
 
     @property
@@ -58,7 +59,7 @@ class Dendrite(object):
         List of ranks of pre-synaptic neurons.
         """
         if self.proj.cyInstance:
-            return self.proj.cyInstance.pre_rank(self.post_rank)
+            return self.proj.cyInstance.pre_rank(self.idx)
         return []
 
     def __len__(self):
@@ -119,9 +120,9 @@ class Dendrite(object):
             return object.__getattribute__(self, name)
         elif hasattr(self, 'proj'):
             if name == 'rank':
-                return self.proj.cyInstance.pre_rank(self.post_rank)
+                return self.proj.cyInstance.pre_rank(self.idx)
             elif name in self.proj.attributes:
-                return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.post_rank)
+                return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.idx)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -136,9 +137,9 @@ class Dendrite(object):
         elif hasattr(self, 'proj'):
             if name in self.proj.attributes:
                 if isinstance(value, (np.ndarray, list)):
-                    getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.post_rank, value)
+                    getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.idx, value)
                 else :
-                    getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.post_rank, value * np.ones(self.size))
+                    getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.idx, value * np.ones(self.size))
             else:
                 object.__setattr__(self, name, value)
         else:
@@ -162,7 +163,7 @@ class Dendrite(object):
                 else: 
                     val = value[val_key]           
                 # Set the value
-                getattr(self.proj.cyInstance, 'set_dendrite_'+val_key)(self.post_rank, val)
+                getattr(self.proj.cyInstance, 'set_dendrite_'+val_key)(self.idx, val)
             else:
                 Global._error("Dendrite has no parameter/variable called", val_key)
                 
@@ -177,9 +178,9 @@ class Dendrite(object):
                 dendrite.get('w')
         """
         if name == 'rank':
-            return self.proj.cyInstance.pre_rank(self.post_rank)
+            return self.proj.cyInstance.pre_rank(self.idx)
         elif name in self.attributes:
-            return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.post_rank)
+            return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.idx)
         else:
             Global._error("Dendrite has no parameter/variable called", name)     
     
@@ -198,8 +199,8 @@ class Dendrite(object):
         * **variable**: name of the variable (default = 'w')
         * **fill**: value to use when a synapse does not exist.
         """
-        values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.post_rank)
-        ranks = self.proj.cyInstance.pre_rank( self.post_rank )
+        values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.idx)
+        ranks = self.proj.cyInstance.pre_rank( self.idx )
              
         m = fill * np.ones( self.pre.size )
         m[ranks] = values
@@ -444,7 +445,7 @@ class IndividualSynapse(object):
         if name in ['dendrite', 'attributes', 'rank', 'idx']:
             return object.__getattribute__(self, name)
         if name in self.attributes:
-            return getattr(self.dendrite.proj.cyInstance, 'get_synapse_'+name)(self.dendrite.post_rank, self.idx)
+            return getattr(self.dendrite.proj.cyInstance, 'get_synapse_'+name)(self.dendrite.idx, self.idx)
         return object.__getattribute__(self, name)
         
     def __setattr__(self, name, value):
@@ -452,7 +453,7 @@ class IndividualSynapse(object):
         if name in ['dendrite', 'attributes', 'rank', 'idx']:
             object.__setattr__(self, name, value)
         elif name in self.attributes:
-                getattr(self.dendrite.proj.cyInstance, 'set_synapse_'+name)(self.dendrite.post_rank, self.idx, value)
+                getattr(self.dendrite.proj.cyInstance, 'set_synapse_'+name)(self.dendrite.idx, self.idx, value)
         else:
             object.__setattr__(self, name, value)
 

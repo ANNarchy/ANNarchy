@@ -208,6 +208,10 @@ The lists ``values`` and ``delays`` are then created with the same size as ``ran
 
     Building such connectivity matrices in Python can be extremely slow, as Python is not made for tight nested loops. If the construction of your network lasts too long, you should definitely write this function in **Cython**.
 
+.. warning::
+
+    The ``add()`` should be only called once per post-synaptic neuron! If not, ANNarchy will have to reorder its internal representations and this will be really slow.
+
 
 **Usage of the pattern**
 

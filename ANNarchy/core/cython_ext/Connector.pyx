@@ -78,6 +78,64 @@ cdef class CSR:
     cpdef int get_uniform_delay(self):
         return self.uniform_delay
 
+    cpdef validate(self):
+        cdef int idx 
+        cdef vector[int] ranks
+        cdef vector[double] weights
+        cdef vector[int] delays
+        cdef dict doubletons = {}
+        cdef list postranks = list(self.post_rank)
+        cdef list set_postranks = list(set(postranks))
+        cdef list preranks, set_preranks
+
+        if len(postranks) != len(set_postranks):
+            ANNarchy.core.Global._warning('You have added several times the same post-synaptic neuron to the CSR data in your connector method.')
+            ANNarchy.core.Global._print('ANNarchy will try to sort the entries if possible, it may take some time...')
+        else: 
+            return
+
+        # Find out which post neurons are doubled.
+        for single in set_postranks:
+            doubletons[single] = []
+            for idx, possible_double in enumerate(postranks):
+                if possible_double == single:
+                    doubletons[single].append(idx)
+            if len(doubletons[single]) == 1 : # Only one occurence
+                doubletons.pop(single)
+
+        # Gather the info
+        for rk, indices in doubletons.iteritems():
+            # Store the different infos
+            ranks.clear()
+            weights.clear()
+            delays.clear()
+            for idx in reversed(indices): # Start from below, otherwise deletion crashes
+                # Gather data
+                ranks.insert(ranks.end(), self.pre_rank[idx].begin(), self.pre_rank[idx].end())
+                weights.insert(weights.end(), self.w[idx].begin(), self.w[idx].end())
+                delays.insert(delays.end(), self.delay[idx].begin(), self.delay[idx].end())
+                # Delete the old vectors
+                self.post_rank.erase(self.post_rank.begin()+idx)
+                self.pre_rank.erase(self.pre_rank.begin()+idx)
+                self.w.erase(self.w.begin()+idx)
+                self.delay.erase(self.delay.begin()+idx)
+
+            # Check if no synapse is doubled
+            preranks = list(ranks)
+            set_preranks = list(set(preranks))
+            if len(preranks) != len(set_preranks):
+                ANNarchy.core.Global._error('The same synapse has been declared multiple times! Check your code.')
+                exit(0)
+
+            # Add the new data
+            self.post_rank.push_back(rk)
+            self.pre_rank.push_back(ranks)
+            self.w.push_back(weights)
+            self.delay.push_back(delays)
+
+
+
+
 
 #################################
 #### Connector methods ##########

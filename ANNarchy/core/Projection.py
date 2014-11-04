@@ -253,8 +253,8 @@ class Projection(object):
         """
         Iteratively returns the dendrites corresponding to this projection.
         """
-        for n in self.post_ranks:
-            yield Dendrite(self, n)
+        for idx, n in enumerate(self.post_ranks):
+            yield Dendrite(self, n, idx)
     
     def dendrite(self, pos):
         """
@@ -270,7 +270,7 @@ class Projection(object):
             rank = self.post.rank_from_coordinates(pos)
 
         if rank in self.post_ranks:
-            return Dendrite(self, rank)
+            return Dendrite(self, rank, self.post_ranks.index(rank))
         else:
             Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
             return None
@@ -288,8 +288,8 @@ class Projection(object):
         
     def __iter__(self):
         " Returns iteratively each dendrite in the population in ascending postsynaptic rank order."
-        for n in self.post_ranks:
-            yield Dendrite(self, n)
+        for idx, n in enumerate(self.post_ranks):
+            yield Dendrite(self, n, idx)
 
     ################################
     ## Access to attributes
@@ -767,7 +767,9 @@ class Projection(object):
         """
         self._connector = method
         self._connector_params = args
-        self._store_csr(self._connector(self.pre, self.post, **args))
+        synapses = self._connector(self.pre, self.post, **args)
+        synapses.validate()
+        self._store_csr(synapses)
 
         self.connector_name = "User-defined"
         self.connector_description = "User-defined"

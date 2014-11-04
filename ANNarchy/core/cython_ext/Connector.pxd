@@ -26,3 +26,6 @@ cdef class CSR:
     # Access methods
     cpdef int get_max_delay(self)
     cpdef int get_uniform_delay(self)
+
+    # Method to clean a CSR object
+    cpdef validate(self)
