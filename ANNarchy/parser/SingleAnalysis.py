@@ -84,7 +84,7 @@ def analyse_neuron(neuron):
         description['refractory'] = neuron.refractory
         
     # Extract parameters and variables names
-    parameters = extract_parameters(neuron.parameters)
+    parameters = extract_parameters(neuron.parameters, neuron.extra_values)
     variables = extract_variables(neuron.equations)
     description['parameters'] = parameters
     description['variables'] = variables
@@ -286,7 +286,7 @@ def analyse_synapse(synapse):
         description['raw_post_spike'] = synapse.post_spike
 
     # Extract parameters and variables names
-    parameters = extract_parameters(synapse.parameters)
+    parameters = extract_parameters(synapse.parameters, synapse.extra_values)
     variables = extract_variables(synapse.equations)
 
     # Extract functions

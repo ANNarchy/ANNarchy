@@ -189,6 +189,9 @@ class Generator(object):
 
     def compilation(self):
         """ Create ANNarchyCore.so and py extensions if something has changed."""
+
+        # set OpenMP optimization flags
+        #os.environ["OMP_PROC_BIND"] = "true"
  
         Global._print('Compiling ... ')
         if Global.config['show_time']:

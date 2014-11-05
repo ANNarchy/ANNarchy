@@ -194,7 +194,7 @@ def extract_prepost(name, eq, description, pattern):
     return eq, untouched, dependencies
                    
 
-def extract_parameters(description):
+def extract_parameters(description, extra_values):
     """ Extracts all variable information from a multiline description."""
     parameters = []
     # Split the multilines into individual lines
@@ -210,7 +210,7 @@ def extract_parameters(description):
             exit(0)
             
         # Process constraint
-        bounds, flags, ctype, init = extract_boundsflags(constraint, equation)
+        bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
 
         # Store the result
         desc = {'name': name,
@@ -249,7 +249,7 @@ def extract_variables(description):
         variables.append(desc)              
     return variables        
 
-def extract_boundsflags(constraint, equation =""):
+def extract_boundsflags(constraint, equation ="", extra_values={}):
         # Process the flags if any
         bounds, flags = extract_flags(constraint)
 
@@ -286,8 +286,12 @@ def extract_boundsflags(constraint, equation =""):
                 try:
                     init = eval('float(' + init + ')')
                 except:
-                    init = eval('int(' + init + ')')
-                    
+                    try:
+                        init = eval('int(' + init + ')')
+                    except:
+                        var = init.replace("'","")
+                        init = extra_values[var]
+
         else: # Default = 0 according to ctype
             if ctype == 'bool':
                 init = False
