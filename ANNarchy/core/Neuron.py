@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy.core.Global import _error
+from ANNarchy.core.Global import _error, _neurons
 from ANNarchy.parser.SingleAnalysis import analyse_neuron
 import numpy as np
 
@@ -29,7 +29,7 @@ class Neuron(object):
     """
     Base class to define a neuron.
     """    
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, extra_values={} ):
+    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
         """         
         *Parameters*:
         
@@ -39,9 +39,11 @@ class Neuron(object):
             * **spike**: condition to emit a spike (only for spiking neurons).
             * **reset**: changes to the variables after a spike (only for spiking neurons).                  
             * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
-                
-        """        
-        
+            * **name**: name of the neuron type (used for reporting only).
+            * **description**: short description of the neuron type (used for reporting).
+
+        """
+
         # Store the parameters and equations
         self.parameters = parameters
         self.equations = equations
@@ -53,6 +55,21 @@ class Neuron(object):
 
         # Find the type of the neuron
         self.type = 'spike' if self.spike else 'rate'
+
+        # Reporting
+        if not hasattr(self, '_instantiated') : # User-defined
+            _neurons.append(self)
+        elif len(self._instantiated) == 0: # First instantiated of the class
+            _neurons.append(self)
+
+        if name:
+            self.name = name
+        else:
+            self.name = 'Spiking neuron' if self.type == 'spike' else 'Rate-coded neuron'
+        if description:
+            self.short_description = description
+        else:
+            self.short_description = "User-defined model of a spiking point-neuron." if self.type == 'spike' else "User-defined model of a rate-coded neuron."
 
         # Analyse the neuron type
         self.description = None
@@ -101,7 +118,7 @@ class RateNeuron(Neuron):
             * **functions**: additional functions used in the variables' equations.
 
         """
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, extra_values=extra_values) 
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, extra_values=extra_values)
         
 class SpikeNeuron(Neuron):
     """
@@ -117,10 +134,9 @@ class SpikeNeuron(Neuron):
             * **spike**: condition to emit a spike.
             * **reset**: changes to the variables after a spike                    
             * **refractory**: refractory period of a neuron after a spike.
-                
-        """
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, extra_values=extra_values) 
 
+        """
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, extra_values=extra_values)
 
 class IndividualNeuron(object):
     """

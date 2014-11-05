@@ -26,11 +26,14 @@ from __future__ import print_function
 import sys, os
 import time
 from math import ceil
+import numpy as np
 
 # Dictionaries of  instances
 _populations = []       # created populations
 _projections = []       # created projections
 _functions = []         # created functions
+_neurons = []           # created neurons
+_synapses = []          # created synapses
 
 # Global Cython instance
 _network = None
@@ -133,6 +136,9 @@ def setup(**keyValueArgs):
             config[key] = keyValueArgs[key]
         else:
             _print('Unknown key:', key)
+
+        if key == 'seed':
+            np.random.seed(keyValueArgs[key])
 
 def set_cuda_config(config):
     """

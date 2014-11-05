@@ -189,6 +189,9 @@ class Generator(object):
 
     def compilation(self):
         """ Create ANNarchyCore.so and py extensions if something has changed."""
+
+        # set OpenMP optimization flags
+        #os.environ["OMP_PROC_BIND"] = "true"
  
         Global._print('Compiling ... ')
         if Global.config['show_time']:
@@ -319,12 +322,12 @@ clean:
             proj._instantiate(cython_module)
             
             if Global.config['show_time']:
-                Global._print('    took', (time.time()-t0)*1000, 'milliseconds')
+                Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
     
 
         # Finish to initialize the network, especially the rng
         # Must be called after the pops and projs are created!
-        cython_module.pyx_create(Global.config['dt'])
+        cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
 
         # Sets the desired number of threads
         cython_module.set_number_threads(Global.config['num_threads'])

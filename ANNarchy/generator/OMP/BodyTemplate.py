@@ -7,7 +7,7 @@ body_template = '''
 */
 double dt;
 long int t;
-std::vector< std::mt19937 >  rng;
+std::mt19937  rng;
 
 // Populations
 %(pop_ptr)s
@@ -67,18 +67,20 @@ int run_until(int steps, std::vector<int> populations, bool or_and)
 }
 
 // Initialize the internal data and random numbers generators
-void initialize(double _dt) {
+void initialize(double _dt, long int seed) {
 
     // Internal variables
     dt = _dt;
     t = (long int)(0);
 
     // Random number generators
-    int threads = std::max(1, omp_get_max_threads());
-    for(int seed = 0; seed < threads; ++seed)
-    {
-        rng.push_back(std::mt19937(time(NULL)*seed));
+    if(seed==-1){
+        rng = std::mt19937(time(NULL));
     }
+    else{
+        rng = std::mt19937(seed);
+    }
+    
 %(random_dist_init)s
 %(delay_init)s
 %(spike_init)s

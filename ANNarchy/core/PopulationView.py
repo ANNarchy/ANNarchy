@@ -86,7 +86,7 @@ class PopulationView(object):
             * *name*: name of the parameter/variable.
         """
         if name in self.population.attributes:
-            all_val = getattr(self.population.cyInstance, 'get_'+name).reshape(self.population.size)
+            all_val = getattr(self.population, name).reshape(self.population.size)
             return all_val[self.ranks] 
         else:
             Global._error("Population does not have a parameter/variable called " + name + ".")
@@ -107,6 +107,21 @@ class PopulationView(object):
         
             If you modify the value of a parameter, this will be the case for ALL neurons of the population, not only the subset.
         """
+        def _set_single(name, rank, value):
+            if not self.population.initialized:
+                if not name in self.population.neuron_type.description['local']:
+                    _error('can not set the value of a global attribute from a PopulationView.')
+                    return
+                if isinstance(self.population.init[name], np.ndarray):
+                    self.population.init[name][rank] = value
+                else:
+                    val = self.population.init[name]
+                    data = val * np.ones(self.population.size)
+                    data[rank] = value
+                    self.population.init[name] = data.reshape(self.population.geometry)
+            else:
+                getattr(self.population.cyInstance, 'set_single_'+name)(rank, value)
+
         for val_key in value.keys():
             if hasattr(self.population, val_key):
                 # Check the value
@@ -114,27 +129,29 @@ class PopulationView(object):
                     if value[val_key].ndim >1 or len(value[val_key]) != self.size:
                         Global._error("You can only provide an array of the same size as the PopulationView", self.size)
                         return None
-                    if val_key in self.population.description['global']:
+                    if val_key in self.population.neuron_type.description['global']:
                         Global._error("Global attributes can only have one value in a population.")
                         return None
                     # Assign the value
-                    for rk in self.ranks:
-                        getattr(self.population.cyInstance, 'set_single_'+val_key)(rk, value[val_key][rk])
+                    for idx, rk in enumerate(self.ranks):
+                        _set_single(val_key, rk, value[val_key][idx])
+
                 elif isinstance(value[val_key], list): # list
                     if len(value[val_key]) != self.size:
                         Global._error("You can only provide a list of the same size as the PopulationView", self.size)
                         return None
-                    if val_key in self.population.description['global']:
+                    if val_key in self.population.neuron_type.description['global']:
                         Global._error("Global attributes can only have one value in a population.")
                         return None                    
                     # Assign the value
-                    for rk in range(self.size):
-                        getattr(self.population.cyInstance, 'set_single_'+val_key)(rk, value[val_key][rk]) 
+                    for idx, rk in enumerate(self.ranks):
+                        _set_single(val_key, rk, value[val_key][idx]) 
+
                 else: # single value
                     for rk in self.ranks:
-                        getattr(self.population.cyInstance, 'set_single_'+val_key)(rk, value[val_key])
+                        _set_single(val_key, rk, value[val_key])
             else:
-                Global._error("population does not contain value: ", val_key)
+                Global._error("the population has no attribute called ", val_key)
                 return None
                 
     def __add__(self, other):

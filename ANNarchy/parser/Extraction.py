@@ -291,6 +291,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                     except:
                         var = init.replace("'","")
                         init = extra_values[var]
+
         else: # Default = 0 according to ctype
             if ctype == 'bool':
                 init = False

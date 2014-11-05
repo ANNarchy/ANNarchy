@@ -58,6 +58,9 @@ class Izhikevich(Neuron):
 
     The ODEs are solved using the explicit Euler method.
     """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, a=0.2, b=0.2, c=-65.0, d=2.0, v_thresh=30.0, i_offset=0.0, noise=0.0, tau_refrac=0.0, conductance="g_exc - g_inh"):
         # Extract which targets are defined in the conductance
         import re
@@ -92,7 +95,11 @@ class Izhikevich(Neuron):
     v = c
     u += d: unless_refractory
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Izhikevich", description="Quadratic integrate-and-fire spiking neuron with adaptation.")
+
+        # For reporting
+        self._instantiated.append(True)
 
     def conductance(self, conductance):
         """
@@ -110,7 +117,7 @@ class IF_curr_exp(Neuron):
     """ 
     IF_curr_exp neuron.
 
-    Leaky integrate and fire model with fixed threshold and decaying-exponential post-synaptic current. (Separate synaptic currents for excitatory and inhibitory synapses).
+    Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current. (Separate synaptic currents for excitatory and inhibitory synapses).
 
     Parameters:
 
@@ -149,6 +156,9 @@ class IF_curr_exp(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
@@ -175,14 +185,17 @@ class IF_curr_exp(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current.")
 
+        # For reporting
+        self._instantiated.append(True)
 
 class IF_cond_exp(Neuron):
     """ 
     IF_cond_exp neuron.
 
-    Leaky integrate and fire model with fixed threshold and decaying-exponential post-synaptic conductance.
+    Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic conductance.
 
     Parameters:
 
@@ -223,6 +236,9 @@ class IF_cond_exp(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, e_rev_E = 0.0, e_rev_I = -70.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
@@ -251,15 +267,18 @@ class IF_cond_exp(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic conductances.")
 
+        # For reporting
+        self._instantiated.append(True)
 
 # Alpha conductances
 class IF_curr_alpha(Neuron):
     """ 
     IF_curr_alpha neuron.
 
-    Leaky integrate and fire model with fixed threshold and alpha post-synaptic current. (Separate synaptic currents for excitatory and inhibitory synapses).
+    Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic currents. (Separate synaptic currents for excitatory and inhibitory synapses).
 
     The alpha currents are calculated through a system of two linears ODEs. After a spike is received at t_spike, it peaks at t_spike + tau_syn_X, with a maximum equal to the synaptic efficiency.
 
@@ -308,6 +327,9 @@ class IF_curr_alpha(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
@@ -338,13 +360,18 @@ class IF_curr_alpha(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic currents.")
+
+        # For reporting
+        self._instantiated.append(True)
+
 
 class IF_cond_alpha(Neuron):
     """ 
     IF_cond_exp neuron.
 
-    Leaky integrate and fire model with fixed threshold and decaying-exponential post-synaptic conductance.
+    Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic conductance.
 
     Parameters:
 
@@ -393,6 +420,9 @@ class IF_cond_alpha(Neuron):
 
     The ODEs are solved using the exponential Euler method.
 """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, tau_syn_E=5.0, tau_syn_I=5.0, e_rev_E = 0.0, e_rev_I = -70.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         # Create the arguments
         parameters = """
@@ -425,8 +455,11 @@ class IF_cond_alpha(Neuron):
         reset = """
     v = v_reset
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Integrate-and-Fire", description="Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic conductances.")
 
+        # For reporting
+        self._instantiated.append(True)
 
 ##################
 ### EIF neurons
@@ -436,7 +469,7 @@ class EIF_cond_exp_isfa_ista(Neuron):
     """ 
     EIF_cond_exp neuron.
 
-    Exponential integrate and fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
+    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
 
         Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
 
@@ -493,6 +526,9 @@ class EIF_cond_exp_isfa_ista(Neuron):
 
     The ODEs are solved using the explicit Euler method.
 """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, v_rest = -70.6, cm = 0.281, tau_m = 9.3667, tau_refrac = 0.1, tau_syn_E = 5.0, tau_syn_I = 5.0, e_rev_E = 0.0, e_rev_I = -80.0, tau_w = 144.0, a = 4.0, b = 0.0805, i_offset = 0.0, delta_T = 2.0, v_thresh = -50.4, v_reset = -70.6, v_spike = -40.0):
         # Create the arguments
         parameters = """
@@ -549,14 +585,17 @@ class EIF_cond_exp_isfa_ista(Neuron):
     v = v_reset
     w += b : unless_refractory
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Adaptive exponential Integrate-and-Fire", description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.).")
 
+        # For reporting
+        self._instantiated.append(True)
 
 class EIF_cond_alpha_isfa_ista(Neuron):
     """ 
     EIF_cond_alpha neuron.
 
-    Exponential integrate and fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
+    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.) according to:
 
         Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
 
@@ -621,6 +660,9 @@ class EIF_cond_alpha_isfa_ista(Neuron):
 
     The ODEs are solved using the explicit Euler method.
 """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, v_rest = -70.6, cm = 0.281, tau_m = 9.3667, tau_refrac = 0.1, tau_syn_E = 5.0, tau_syn_I = 5.0, e_rev_E = 0.0, e_rev_I = -80.0, tau_w = 144.0, a = 4.0, b = 0.0805, i_offset = 0.0, delta_T = 2.0, v_thresh = -50.4, v_reset = -70.6, v_spike = -40.0):
         # Create the arguments
         parameters = """
@@ -683,8 +725,11 @@ class EIF_cond_alpha_isfa_ista(Neuron):
     v = v_reset
     w += b : unless_refractory
 """
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac')
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
+            name="Adaptive exponential Integrate-and-Fire", description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.).")
 
+        # For reporting
+        self._instantiated.append(True)
 
 ##################
 ### HH
@@ -756,6 +801,9 @@ class HH_cond_exp(Neuron):
 
     The ODEs for n, m, h and v are solved using the midpoint method, while the conductances g_exc and g_inh are solved using the exponential Euler method.
 """
+    # For reporting
+    _instantiated = []
+    
     def __init__(self, gbar_Na = 20.0, gbar_K = 6.0, gleak = 0.01, cm = 0.2, v_offset = -63.0, e_rev_Na = 50.0, e_rev_K = -90.0, e_rev_leak = -65.0, e_rev_E = 0.0, e_rev_I = -80.0, tau_syn_E = 0.2, tau_syn_I = 2.0, i_offset = 0.0, v_thresh = 0.0):
 
         parameters = """
@@ -821,5 +869,8 @@ v_thresh   = %(v_thresh)s
 
         reset = ""
 
-        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset)
+        Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset,
+            name="Hodgkin-Huxley", description="Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-rectifier potassium currents.")
 
+        # For reporting
+        self._instantiated.append(True)
