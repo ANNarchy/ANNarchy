@@ -692,7 +692,7 @@ struct ProjStruct%(id)s{
 
         def spiking(proj):
 
-            ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
+            ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target} 
 
             # Analyse all elements of pre_spike
             pre_event = ""
@@ -713,17 +713,17 @@ struct ProjStruct%(id)s{
 
             # Is the summation event-based or psp-based?
             event_based = True
-            if 'psp' in  proj.synapse.description.keys(): # event-based
+            psp_sum = None
+            if 'psp' in  proj.synapse.description.keys(): # not event-based
                 event_based = False
-                psp_code = """%(psp)s ;
-""" % {'id_proj' : proj.id, 'psp': proj.synapse.description['psp']['cpp'] % ids}
-            else:
-                if psp == "": # default g_target += w
-                    psp_code = """proj%(id_proj)s.w[i][j]
+                psp_code = ""            
+                # Event-based summation of psp
+            elif psp == "": # default g_target += w
+                psp_code = """pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += proj%(id_proj)s.w[i][j]
 """ % ids
-                else:
-                    psp_code = """%(psp)s
-""" % {'id_proj' : proj.id, 'psp': psp % ids}
+            else:
+                psp_code = """pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += %(psp)s
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'psp': psp % ids}
 
             # Exact integration
             has_exact = False
@@ -785,13 +785,33 @@ struct ProjStruct%(id)s{
             i = inv_post[_idx_i].first;
             j = inv_post[_idx_i].second;
 %(exact)s
-            pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] +=%(psp)s
+            %(psp)s
 %(pre_event)s
         }
     }
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
     'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
     'exact': exact_code}
+
+            # Not even-driven summation of psp
+            if 'psp' in  proj.synapse.description.keys(): # not event-based
+                omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+                psp_sum = """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum of psp
+    %(omp_code)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        sum = 0.0;
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            sum += %(psp)s
+        }
+        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] = sum;
+    }
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 
+       'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+       'psp': proj.synapse.description['psp']['cpp'] % ids, 'omp_code': omp_code}
+
+                code += psp_sum
+
 
             return code
 

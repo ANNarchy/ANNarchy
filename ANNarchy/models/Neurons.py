@@ -39,13 +39,13 @@ class Izhikevich(Neuron):
 
         I = conductance + i_offset + noise * Normal(0.0, 1.0)
 
-    * v : membrane potential in mV (init=-70.0).
+    * v : membrane potential in mV (init = c).
 
         dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I 
 
-    * u : recovery variable (init=-14.0).
+    * u : recovery variable (init= b * c).
 
-        du/dt = a * (b*v - u) 
+        du/dt = a * (b * v - u) 
 
     Spike emission:
 
@@ -79,9 +79,9 @@ class Izhikevich(Neuron):
         # Equations for the variables
         equations="""
     I = %(conductance)s + noise * Normal(0.0, 1.0) + i_offset
-    dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init = -70.0
-    du/dt = a * (b*v - u) : init=-14.0
-""" % { 'conductance' : conductance }
+    dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init = %(c)s
+    du/dt = a * (b*v - u) : init= %(u)s
+""" % { 'conductance' : conductance, 'c':c , 'u': b*c}
 
         # Default behavior for the conductances (avoid warning)
         for target in targets:

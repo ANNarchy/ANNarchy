@@ -10,6 +10,7 @@ from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exp
 from .core.IO import save, load, load_parameter
 from .core.Utils import raster_plot, smoothed_rate, histogram, population_rate
 from .models import *
+from .extensions import *
 
 try:
     from .core.cython_ext.Connector import CSR
