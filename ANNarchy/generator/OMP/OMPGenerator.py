@@ -775,7 +775,7 @@ struct ProjStruct%(id)s{
             omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
             code = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
         rk_j = %(pre_array)s[_idx_j];
         int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
@@ -797,7 +797,7 @@ struct ProjStruct%(id)s{
             if 'psp' in  proj.synapse.description.keys(): # not event-based
                 omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
                 psp_sum = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum of psp
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. sum of psp
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
