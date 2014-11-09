@@ -804,7 +804,7 @@ struct ProjStruct%(id)s{
         for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
             sum += %(psp)s
         }
-        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] = sum;
+        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 
        'name_post': proj.post.name, 'name_pre': proj.pre.name, 
@@ -835,6 +835,15 @@ struct ProjStruct%(id)s{
                     code += """
     memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
 """ % {'id': pop.id, 'target': target}
+        
+#         for proj in self.projections:
+#             if proj.synapse.type == 'spike':
+#                 if 'psp' in  proj.synapse.description.keys(): # not event-based
+#                     code += """
+#     memset( pop%(id_post)s.g_%(target)s.data(), 0.0, pop%(id_post)s.g_%(target)s.size() * sizeof(double));
+# """ % {'id_post': proj.post.id, 'target': proj.target}
+
+
 
         return code
 
