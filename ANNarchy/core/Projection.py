@@ -779,6 +779,15 @@ class Projection(object):
     def connect_from_matrix(self, weights, delays=0.0):
         """
         Builds a connection pattern according to a dense connectivity matrix.
+
+        The matrix must be N*M, where N is the number of neurons in the post-synaptic population and M in the pre-synaptic one. Lists of lists must have the same size.
+
+        If a synapse should not be created, the weight value should be None.
+
+        *Parameters*:
+
+        * **weights**: a matrix or list of lists representing the weights. If a value is None, the synapse will not be created.
+        * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0. 
         """
         try:
             from ANNarchy.core.cython_ext.Connector import CSR
