@@ -211,14 +211,14 @@ struct PopStruct%(id)s{
             
             # Is it a specific projection?
             if proj.generator['omp']['header_proj_struct']:
-                proj_struct += proj.generator['omp']['header_proj_struct'] % {'id': pop.id}
-                proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
-"""% {'id': proj.id}
+                proj_struct += proj.generator['omp']['header_proj_struct'] % {'id_proj': proj.id, 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target}
+                proj_ptr += """extern ProjStruct%(id_proj)s proj%(id_proj)s;
+"""% {'id_proj': proj.id}
                 continue
             
             code = """
 // %(pre_name)s -> %(post_name)s
-struct ProjStruct%(id)s{
+struct ProjStruct%(id_proj)s{
     int size;
     // Learning flag
     bool _learning;
@@ -363,11 +363,11 @@ struct ProjStruct%(id)s{
             code += """
 };    
 """ 
-            proj_struct += code % {'id': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
+            proj_struct += code % {'id_proj': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
 
-            proj_ptr += """extern ProjStruct%(id)s proj%(id)s;
+            proj_ptr += """extern ProjStruct%(id_proj)s proj%(id_proj)s;
 """% {
-    'id': proj.id,
+    'id_proj': proj.id,
 }
 
         return proj_struct, proj_ptr
@@ -1053,6 +1053,13 @@ struct ProjStruct%(id)s{
     // Initialize projections
 """
         for proj in self.projections:
+
+            # Is it a specific projection?
+            if proj.generator['omp']['body_proj_init']:
+                code += proj.generator['omp']['body_proj_init'] % {'id_proj': proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+    'name_post': proj.post.name, 'name_pre': proj.pre.name}
+                continue
+
             # Learning by default
             code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
@@ -1079,6 +1086,7 @@ struct ProjStruct%(id)s{
 //        std::cout << std::endl ;
 //    }
 """% {'id_proj': proj.id}
+
             # Recording
             for var in proj.synapse.description['variables']:
                 if var['name'] in proj.synapse.description['local']:
@@ -1305,13 +1313,13 @@ struct ProjStruct%(id)s{
         for proj in self.projections:
             # Is it a specific projection?
             if proj.generator['omp']['pyx_proj_struct']:
-                proj_struct += pop.generator['omp']['pyx_proj_struct'] %{'id': pop.id}
+                proj_struct += proj.generator['omp']['pyx_proj_struct'] %{'id_proj': proj.id, 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target}
                 proj_ptr += """
-    ProjStruct%(id)s proj%(id)s"""% {'id': pop.id}
+    ProjStruct%(id_proj)s proj%(id_proj)s"""% {'id_proj': proj.id}
                 continue
 
             code = """
-    cdef struct ProjStruct%(id)s :
+    cdef struct ProjStruct%(id_proj)s :
         int size
         bool _learning
         vector[int] post_rank
@@ -1378,12 +1386,12 @@ struct ProjStruct%(id)s{
 """ % {'extra_args': extra_args}
 
             # Finalize the code
-            proj_struct += code % {'id': proj.id}
+            proj_struct += code % {'id_proj': proj.id}
 
             # Population instance
             proj_ptr += """
-    ProjStruct%(id)s proj%(id)s"""% {
-    'id': proj.id,
+    ProjStruct%(id_proj)s proj%(id_proj)s"""% {
+    'id_proj': proj.id,
 }
         return proj_struct, proj_ptr
 
@@ -1548,7 +1556,7 @@ cdef class pop%(id)s_wrapper :
         for proj in self.projections:
             # Is it a specific population?
             if proj.generator['omp']['pyx_proj_class']:
-                code += proj.generator['omp']['pyx_proj_class'] %{'id': proj.id}
+                code += proj.generator['omp']['pyx_proj_class'] % {'id_proj': proj.id, 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target}
                 continue
 
             # Init

@@ -38,7 +38,7 @@ proj_generator_template = {
     'omp': {
         # C++ struct to encapsulate all data
         # Example:
-        # struct ProjStruct%(id)s{
+        # struct ProjStruct%(id_proj)s{
         #     // Number of dendrites
         #     int size;
         #     // Connectivity
@@ -50,6 +50,12 @@ proj_generator_template = {
         #     std::vector< std::vector< double > > w ;
         # }; 
         'header_proj_struct' : None,
+
+        # Initilaize the projection
+        # Example:
+        # 
+        #    TODO:
+        'body_proj_init': None,
 
         # Updates the synapse variables
         # Example:
