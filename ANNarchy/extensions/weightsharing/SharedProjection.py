@@ -2,7 +2,7 @@ from ANNarchy.core.Projection import Projection
 from ANNarchy.core.Synapse import Synapse
 import ANNarchy.core.Global as Global
 
-import numpy
+import numpy as np
 from math import floor
 
 # Code snippets
@@ -56,7 +56,7 @@ class SharedProjection(Projection):
 
             * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
             * **filter_or_kernel**: defines if the given weights are filter-based (dot-product) or kernel-based (convolution). TODO: explain. Default is kernel-based.
-            * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtully extended with this value. If it is equal to 'border', the values on the boundaries are repeated.
+            * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value. If it is equal to 'border', the values on the boundaries are repeated.
         """
         self.filter_or_kernel = filter_or_kernel
         self.padding = padding
@@ -85,7 +85,11 @@ class SharedProjection(Projection):
 
         if self.dim_kernel < self.dim_pre and self.dim_post < self.dim_pre: # pooling
             # must reshape the weight vector
-            pass
+            if self.dim_pre - self.dim_post == 1:
+                self.weights = self.weights.reshape((1,) + self.weights.shape)
+            else: # 2
+                self.weights = self.weights.reshape((1,1,) + self.weights.shape)
+            self.dim_kernel = self.weights.ndim
 
 
         # Generate the code
