@@ -211,7 +211,7 @@ struct PopStruct%(id)s{
             
             # Is it a specific projection?
             if proj.generator['omp']['header_proj_struct']:
-                proj_struct += proj.generator['omp']['header_proj_struct'] % {'id_proj': proj.id, 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target}
+                proj_struct += proj.generator['omp']['header_proj_struct']
                 proj_ptr += """extern ProjStruct%(id_proj)s proj%(id_proj)s;
 """% {'id_proj': proj.id}
                 continue
@@ -820,6 +820,11 @@ struct ProjStruct%(id_proj)s{
 
         # Sum over all synapses 
         for proj in self.projections:
+            # Is it a specific projection?
+            if proj.generator['omp']['body_compute_psp']:
+                code += proj.generator['omp']['body_compute_psp'] 
+                continue
+            # Call the right generator depnding on type
             if proj.synapse.type == 'rate':
                 code += rate_coded(proj)
             else:
@@ -1056,8 +1061,7 @@ struct ProjStruct%(id_proj)s{
 
             # Is it a specific projection?
             if proj.generator['omp']['body_proj_init']:
-                code += proj.generator['omp']['body_proj_init'] % {'id_proj': proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name}
+                code += proj.generator['omp']['body_proj_init'] 
                 continue
 
             # Learning by default
@@ -1313,7 +1317,7 @@ struct ProjStruct%(id_proj)s{
         for proj in self.projections:
             # Is it a specific projection?
             if proj.generator['omp']['pyx_proj_struct']:
-                proj_struct += proj.generator['omp']['pyx_proj_struct'] %{'id_proj': proj.id, 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target}
+                proj_struct += proj.generator['omp']['pyx_proj_struct']
                 proj_ptr += """
     ProjStruct%(id_proj)s proj%(id_proj)s"""% {'id_proj': proj.id}
                 continue
@@ -1556,7 +1560,7 @@ cdef class pop%(id)s_wrapper :
         for proj in self.projections:
             # Is it a specific population?
             if proj.generator['omp']['pyx_proj_class']:
-                code += proj.generator['omp']['pyx_proj_class'] % {'id_proj': proj.id, 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target}
+                code += proj.generator['omp']['pyx_proj_class'] 
                 continue
 
             # Init
