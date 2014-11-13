@@ -120,7 +120,7 @@ class SharedProjection(Projection):
 
         self.across_features = self.dim_kernel < self.dim_pre
         if self.across_features:
-            if self.pre.shape[-1] != self.post.shape[-1]:
+            if self.pre.geometry[-1] != self.post.geometry[-1]:
                 Global._error('If the kernel has fewer dimensions than the two populations (parallel convolutions), these must have the same number of neurons in the last dimension(s).')
                 exit(0)
 
