@@ -105,9 +105,10 @@ void run(int nbSteps) {
     // simulation loop
     for(int i=0; i<nbSteps; i++) {
         step();
-        progress(i, nbSteps);
+        //progress(i, nbSteps);
     }
-    std::cout << std::endl;
+    
+    //std::cout << std::endl;
 %(device_host_transfer)s
 }
 

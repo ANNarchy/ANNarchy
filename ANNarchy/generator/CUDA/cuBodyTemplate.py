@@ -9,6 +9,13 @@ cu_body_template=\
  * inline functions                     *
  ****************************************/
 __device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
+__device__ __forceinline__ double negative( double x ) { return x<0.0? x : 0.0; }
+__device__ __forceinline__ double clip(double x, double a, double b) { return x<a? a : (x>b? b :x); }
+
+/****************************************
+ * custom functions                     *
+ ****************************************/
+%(custom_func)s
 
 /****************************************
  * updating neural variables            *

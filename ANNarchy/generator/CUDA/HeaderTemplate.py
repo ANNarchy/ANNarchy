@@ -15,14 +15,6 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <cuda_runtime_api.h>
 
 /*
- * Built-in functions
- *
- */
-#define positive(x) (x>0.0? x : 0.0)
-#define negative(x) (x<0.0? x : 0.0)
-#define clip(x, a, b) (x<a? a : (x>b? b :x))
-
-/*
  * Structures for the populations
  *
  */
@@ -32,7 +24,6 @@ header_template = """#ifndef __ANNARCHY_H__
  *
  */
 %(proj_struct)s
-
 
 /*
  * Internal data

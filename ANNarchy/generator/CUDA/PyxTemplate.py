@@ -52,7 +52,8 @@ def pyx_run(int nb_steps):
 
 # Simulate for one step
 def pyx_step():
-    step()
+    run(1)    # directly calling step, would bypass memory transfers ...
+    #step()
 
 # Access time
 def set_time(t):

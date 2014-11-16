@@ -68,16 +68,12 @@ class CUDAGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.header_struct_proj()
 
-        # Custom functions
-        custom_func = self.header_custom_functions()
-
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
-            'custom_func': custom_func
         }
 
     def header_struct_pop(self):
@@ -298,20 +294,6 @@ extern ProjStruct%(id)s proj%(id)s;
 
         return proj_struct, proj_ptr
 
-    def header_custom_functions(self):
-
-        if len(Global._functions) == 0:
-            return ""
-
-        code = ""
-        from ANNarchy.parser.Extraction import extract_functions
-        for func in Global._functions:
-            code +=  extract_functions(func, local_global=True)[0]['cpp'] + '\n'
-
-        return code
-
-
-
 
 #######################################################################
 ############## BODY ###################################################
@@ -388,6 +370,9 @@ ProjStruct%(id)s proj%(id)s;
         # and concurrent kernel execution
         threads_per_kernel, stream_setup = self.body_kernel_config()
 
+        # Custom functions
+        custom_func = self.body_custom_functions()
+
         # Generate cuda header code for the analysed pops and projs
         from .cuBodyTemplate import cu_header_template
         cuda_header = cu_header_template % {
@@ -406,7 +391,8 @@ ProjStruct%(id)s proj%(id)s;
             'pop_kernel': update_neuron_body,
             'psp_kernel': compute_sums_body,
             'syn_kernel': update_synapse_body,
-            'glob_ops_kernel': glob_ops_body
+            'glob_ops_kernel': glob_ops_body,
+            'custom_func': custom_func
         }
         with open(Global.annarchy_dir+'/generate/cuANNarchy.cu', 'w') as ofile:
             ofile.write(cuda_body)
@@ -434,6 +420,25 @@ ProjStruct%(id)s proj%(id)s;
             'post_event' : post_event,
             'record' : record
         }
+
+    def body_custom_functions(self):
+        """
+        ATTENTION: the same as OMPGenerator.header_custom_func
+        """
+        if len(Global._functions) == 0:
+            return ""
+
+        Global._error("Not implemented yet: custom functions for GPGPU kernel ...")
+        return code 
+    
+#===============================================================================
+#         code = ""
+#         from ANNarchy.parser.Extraction import extract_functions
+#         for func in Global._functions:
+#             code +=  extract_functions(func, local_global=True)[0]['cpp'] + '\n'
+# 
+#         return code
+#===============================================================================
 
     def body_kernel_config(self):
         cu_config = Global.cuda_config
