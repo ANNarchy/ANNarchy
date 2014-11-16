@@ -4,7 +4,7 @@
 
 from ANNarchy import *
 
-setup(paradigm="cuda_35")
+setup(paradigm="cuda_20")
 
 # Defining the neuron
 InputNeuron = Neuron(   
