@@ -20,7 +20,7 @@ vertical_filter = np.array(
 proj = SharedProjection(
     pre = In, 
     post = Out, 
-    target = 'ws',
+    target = 'ws'
 ).convolve( weights = vertical_filter, filter_or_kernel=False, padding='border')
 
 # Compile
