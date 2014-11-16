@@ -60,7 +60,7 @@ extern std::vector< std::mt19937 >  rng;
  *
 */
 
-void initialize(double _dt) ;
+void initialize(double _dt, long seed) ;
 
 void run(int nbSteps);
 

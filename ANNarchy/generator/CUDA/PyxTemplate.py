@@ -20,7 +20,7 @@ cdef extern from "ANNarchy.h":
 %(proj_ptr)s
 
     # Methods
-    void initialize(double)
+    void initialize(double, long)
     void run(int nbSteps) 
     void step()
     
@@ -43,8 +43,8 @@ cdef extern from "ANNarchy.h":
 %(proj_class)s
 
 # Initialize the network
-def pyx_create(double dt):
-    initialize(dt)
+def pyx_create(double dt, long seed):
+    initialize(dt, seed)
 
 # Simulation for the given numer of steps
 def pyx_run(int nb_steps):

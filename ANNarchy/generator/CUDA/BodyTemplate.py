@@ -112,7 +112,7 @@ void run(int nbSteps) {
 }
 
 // Initialize the internal data and random numbers generators
-void initialize(double _dt) {
+void initialize(double _dt, long seed) {
 
     dt = _dt;
     t = (long int)(0);

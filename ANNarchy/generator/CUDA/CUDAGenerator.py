@@ -1029,9 +1029,9 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
             if len(pop.neuron_type.description['random_distributions']) > 0:
                 for rd in pop.neuron_type.description['random_distributions']:
                     code += """
-    curandStatus_t %(rd_name)s_state = curandGenerateUniform(gen, pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size);
-    if ( %(rd_name)s_state != CURAND_STATUS_SUCCESS )
-        std::cout << "curandError: " << %(rd_name)s_state << std::endl;
+    curandStatus_t pop%(id)s_%(rd_name)s_state = curandGenerateUniform(gen, pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size);
+    if ( pop%(id)s_%(rd_name)s_state != CURAND_STATUS_SUCCESS )
+        std::cout << "curandError: " << pop%(id)s_%(rd_name)s_state << std::endl;
 """ % {'id': pop.id, 'rd_name': rd['name']}
 
         return code

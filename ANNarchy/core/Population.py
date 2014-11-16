@@ -627,11 +627,15 @@ class Population(object):
         
             * **coord**: coordinate tuple, can be multidimensional.
         """
-        rank = self._rank_from_coord( coord, self.geometry )
-        
+        try:
+            rank = self._rank_from_coord( coord, self.geometry )
+        except:
+            Global._error('There is no neuron of coordinates', coord, 'in the population', self.name, self.geometry)
+            exit(0)
+
         if rank > self.size:
             Global._warning('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
-            return None
+            exit(0)
         else:
             return rank
 
@@ -645,10 +649,16 @@ class Population(object):
         """
         # Check the rank
         if not rank < self.size:
-            Global._warning('Error: the given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
-            return None
+            Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
+            exit(0)
         
-        return self._coord_from_rank( rank, self.geometry )
+        try:
+            coord = self._coord_from_rank( rank, self.geometry )
+        except:
+            Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
+            exit(0)
+        else:
+            return coord
 
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """

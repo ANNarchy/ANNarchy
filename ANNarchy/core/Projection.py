@@ -806,6 +806,66 @@ class Projection(object):
 
         return self
 
+    def connect_from_matrix(self, weights, delays=0.0):
+        """
+        Builds a connection pattern according to a dense connectivity matrix.
+
+        The matrix must be N*M, where N is the number of neurons in the post-synaptic population and M in the pre-synaptic one. Lists of lists must have the same size.
+
+        If a synapse should not be created, the weight value should be None.
+
+        *Parameters*:
+
+        * **weights**: a matrix or list of lists representing the weights. If a value is None, the synapse will not be created.
+        * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0. 
+        """
+        try:
+            from ANNarchy.core.cython_ext.Connector import CSR
+        except:
+            _error('ANNarchy was not successfully installed.')
+        csr = CSR()
+
+        if isinstance(weights, list):
+            try:
+                weights= np.array(weights)
+            except:
+                Global._error('connect_from_matrix: You must provide a dense 2D matrix.')
+                exit(0)
+
+        uniform_delay = not isinstance(delays, (list, np.ndarray))
+        if isinstance(delays, list):
+            try:
+                delays= np.array(delays)
+            except:
+                Global._error('connect_from_matrix: You must provide a dense 2D matrix.')
+                exit(0)
+
+        shape = weights.shape
+        if shape != (self.post.size, self.pre.size):
+            Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
+            exit(0)
+
+        for i in range(self.post.size):
+            rk = []
+            w = []
+            d = []
+            for idx, val in enumerate(list(weights[i, :])):
+                if val != None:
+                    rk.append(idx)
+                    w.append(val) 
+                    if not uniform_delay:
+                        d.append(delays[i,idx])   
+            if uniform_delay:        
+                d.append(delays)
+            if len(rk) > 0:
+                csr.add(i, rk, w, d)
+
+        # Store the synapses
+        self.connector_name = "Connectivity matrix"
+        self.connector_description = "Connectivity matrix"
+        self._store_csr(csr)
+        return self
+
     def connect_from_file(self, filename):
         """
         Builds a connection pattern using data saved using the Projection.save_connectivity() method.
