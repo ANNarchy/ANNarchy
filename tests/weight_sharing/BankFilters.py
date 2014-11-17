@@ -6,9 +6,9 @@ Input = Neuron(parameters="r = 0.0")
 Output = Neuron(equations="r = sum(ws): min=0.0")
 
 # Populations
-depth = 4
-In = Population((10, 10, 12), Input)
-Out = Population((5, 5, 4, 2), Output)
+depth = 3
+In = Population((10, 10, 3), Input)
+Out = Population((5, 5, 2), Output)
 
 
 # Filters
@@ -47,7 +47,7 @@ from pylab import *
 subplot(1,3,1)
 imshow(In.r[:,:,0], cmap = cm.gray, interpolation='nearest')
 subplot(1,3,2)
-imshow(Out.r[:,:,0, 0], cmap = cm.gray, interpolation='nearest')
+imshow(Out.r[:,:, 0], cmap = cm.gray, interpolation='nearest')
 subplot(1,3,3)
-imshow(Out.r[:,:,0, 1], cmap = cm.gray, interpolation='nearest')
+imshow(Out.r[:,:, 1], cmap = cm.gray, interpolation='nearest')
 show()

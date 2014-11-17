@@ -35,6 +35,13 @@ class SharedProjection(Projection):
             synapse = Synapse(psp=psp, operation=operation)
         )
 
+        if not Global.config["paradigm"] == "openmp":
+            Global._error('weightsharing is only implemented for the OpenMP paradigm.')
+            exit(0)
+
+        if not pre.neuron_type.type == 'rate':
+            Global._error('weightsharing is only implemented for rate-coded populations.')
+            exit(0)
 
     def _create(self):
         # create fake CSR object, just for compilation.
@@ -77,13 +84,15 @@ class SharedProjection(Projection):
         """
         Builds the shared connection pattern that will perform a convolution of the weights kernel on the pre-synaptic population.
 
-        This is the simplest convolution form, where the pre-population and kernel have the same dimension (1, 2 or 3 dimensions). 
+        Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution will be  
 
         If the post-population has the same dimension, the convolution is regular.
 
         If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
 
         If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example).  
+
+        If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population. Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population.
 
         Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel. 
 
@@ -358,6 +367,16 @@ class SharedProjection(Projection):
         self.dim_single_filter = self.weights.shape[1:]
 
         self.across_features = self.dim_single_filter < self.dim_pre
+
+        if self.nb_filters != self.post.geometry[-1]:
+            Global._error('The post-synaptic population must have', self.nb_filters, 'neurons in the last dimension.')
+            exit(0)
+
+        if self.dim_post -1 != self.dim_pre:
+            if self.weights.shape[-1] != self.pre.geometry[-1]:
+                Global._error('The pre-synaptic population must have', self.dim_single_filter[-1], 'neurons in the last dimension.')
+                exit(0)
+
 
         # Check if the list is already defined:
         if self.subsampling:

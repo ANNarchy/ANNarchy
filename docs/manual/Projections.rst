@@ -1,11 +1,11 @@
-======================
+ ======================
 Projections
 ======================
 
 
 
 Declaring the projections
-===========================
+=========================
 
 Once the populations are created, one can connect them by creating ``Projection`` instances:
 
