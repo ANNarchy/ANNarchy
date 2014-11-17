@@ -124,10 +124,6 @@ void initialize(double _dt, long seed) {
         rng.push_back(std::mt19937(time(NULL)*seed));
     }
 %(device_init)s
-
-    // random generator init
-    curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
-
 %(random_dist_init)s
 %(delay_init)s
 %(spike_init)s

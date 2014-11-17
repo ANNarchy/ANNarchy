@@ -943,6 +943,11 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def body_init_randomdistributions(self):
         code = """
+    // random generator init
+    curandStatus_t state = curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
+    if ( state != CURAND_STATUS_SUCCESS )
+        std::cout << "curandError: " << state << std::endl;    
+
     // Initialize random distribution objects
 """
         for pop in self.populations:
