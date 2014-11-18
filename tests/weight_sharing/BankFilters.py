@@ -7,8 +7,8 @@ Output = Neuron(equations="r = sum(ws): min=0.0")
 
 # Populations
 depth = 3
-In = Population((10, 10, 3), Input)
-Out = Population((5, 5, 2), Output)
+In = Population((100, 100, 3), Input)
+Out = Population((50, 50, 2), Output)
 
 
 # Filters
@@ -36,11 +36,11 @@ proj = SharedProjection(
 compile()
 
 # Set input
-In[:, 3:, :].r = 1.0
-In[:, 7:, :].r = 0.0
+In[:, 30:, :].r = 1.0
+In[:, 70:, :].r = 0.0
 
 # Simulate()
-simulate(1.0)
+simulate(10000.0, measure_time=True)
 
 # Plot
 from pylab import *

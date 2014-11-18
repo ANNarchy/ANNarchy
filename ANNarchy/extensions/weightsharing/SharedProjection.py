@@ -542,7 +542,7 @@ class SharedProjection(Projection):
         index = ""
         for dim in range(self.dim_kernel):
             index += '[' + indices[dim] + '_w]'
-        increment = psp.replace('[i][j]', index)
+        increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
 
         # Apply the operation
         if operation == "sum":
@@ -642,7 +642,7 @@ class SharedProjection(Projection):
         index = "[coord["+str(self.dim_pre)+"]]"
         for dim in range(self.dim_kernel-1):
             index += '[' + indices[dim] + '_w]'
-        increment = psp.replace('[i][j]', index)
+        increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
 
         # Apply the operation
         if operation == "sum":
@@ -834,18 +834,23 @@ cdef class proj%(id_proj)s_wrapper :
         # Compute sum
         wsum =  """
     // Shared proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
-    #pragma omp parallel for private(sum, rk_pre)
+    %(copy_filter)s
+    std::vector<int> coord;
+    #pragma omp parallel for private(sum, rk_pre, coord) firstprivate(proj%(id_proj)s_w)
     for(int i = 0; i < %(size_post)s; i++){
-        std::vector<int> coord = proj%(id_proj)s.pre_coords[i];
+        coord = proj%(id_proj)s.pre_coords[i];
 """ + convolve_code + """
         pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
     }
 """ 
+        # Copy the filter
+        copy_filter = filter_definition.replace('w', 'proj%(id_proj)s_w = proj%(id_proj)s.w')% {'id_proj': self.id}
 
         self.generator['omp']['body_compute_psp'] = wsum % {'id_proj': self.id, 
             'target': self.target,  
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
-            'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size
+            'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
+            'copy_filter': copy_filter
           }
 
 
