@@ -585,7 +585,9 @@ class Projection(object):
             * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
             * **shift**: specifies if the ranks of the presynaptic population should be shifted to match the start of the post-synaptic population ranks. Particularly useful for PopulationViews. Does not work yet for populations with geometry. Default: if the two populations have the same number of neurons, it is set to True. If not, it is set to False (only the ranks count).
         """
-        if not shift:
+        if not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
+            shift=False # no need
+        elif not shift:
             if self.pre.size == self.post.size:
                 shift = True
             else:

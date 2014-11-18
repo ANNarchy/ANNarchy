@@ -134,7 +134,24 @@ cdef class CSR:
             self.delay.push_back(delays)
 
 
+cdef _get_weights_delays(int size, weights, delays):
 
+    cdef vector[double] w, d
+    cdef list tmp
+
+    # Weights
+    if isinstance(weights, (int, float)):
+        w = vector[double](1, weights)
+    elif isinstance(weights, RandomDistribution):
+        tmp = weights.get_list_values(size)
+        w = tmp
+    # Delays
+    if isinstance(delays, (float, int)):
+        d = vector[double](1, delays)
+    elif isinstance(delays, RandomDistribution):
+        d = delays.get_list_values(size) 
+
+    return w, d
 
 
 #################################
@@ -200,44 +217,46 @@ def one_to_one(pre, post, weights, delays, shift):
     cdef vector[int] r
     cdef vector[double] w, d
 
+    # Create the projection data as CSR
+    projection = CSR()
+        
     # Retríeve ranks
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
         post_ranks = range(post.size)
-    if hasattr(pre, 'ranks'): # PopulationView
-        pre_ranks = pre.ranks
-    else:
-        pre_ranks = range(pre.size)
 
     if shift:
+        if hasattr(pre, 'ranks'): # PopulationView
+            pre_ranks = pre.ranks
+        else:
+            pre_ranks = range(pre.size)
         offset = min(post_ranks) - min(pre_ranks)
     else:
         offset = 0
 
-    # Create the projection data as CSR
-    projection = CSR()
 
-    for r_post in post_ranks:
-        # List of pre ranks
-        if not r_post - offset in pre_ranks:
-            continue
-        tmp = [r_post - offset]
-        r = tmp
-        # Weights
-        if isinstance(weights, (int, float)):
-            weight = weights
-            w = vector[double](1, weight)
-        elif isinstance(weights, RandomDistribution):
-            tmp = weights.get_list_values(1)
-            w = tmp
-        # Delays
-        if isinstance(delays, (float, int)):
-            d = vector[double](1, delays)
-        elif isinstance(delays, RandomDistribution):
-            d = delays.get_list_values(1) 
-        # Create the dendrite
-        projection.push_back(r_post, r, w, d)
+    if shift:
+        for r_post in post_ranks:
+            # List of pre ranks
+            if not r_post - offset in pre_ranks:
+                continue
+            r = vector[int](1, r_post - offset)
+            # Get the weights and delays
+            w, d = _get_weights_delays(1, weights, delays)
+            # Create the dendrite
+            projection.push_back(r_post, r, w, d)
+
+    else:
+        for r_post in post_ranks:
+            # List of pre ranks
+            r = vector[int](1, r_post)
+            # Get the weights and delays
+            w, d = _get_weights_delays(1, weights, delays)
+            # Create the dendrite
+            projection.push_back(r_post, r, w, d)
+
+            
 
     return projection
 

@@ -1,5 +1,5 @@
 ****************************************
-Extensions weightsharing
+Extension weightsharing
 ****************************************
 
 Shared projections (using the same set of weights for all post-synaptic neurons) are provided in the module ``ANNarchy.extensions.weightsharing``. They must be explicitely imported::
@@ -12,4 +12,5 @@ Class SharedProjection
 ===============================
 
 .. autoclass:: ANNarchy.extensions.weightsharing.SharedProjection
+    :members:
 
