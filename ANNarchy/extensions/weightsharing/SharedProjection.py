@@ -80,19 +80,19 @@ class SharedProjection(Projection):
     ### Connection methods
     ################################
 
-    def convolve(self, weights, filter_or_kernel=True, padding=0.0, subsampling=None):
+    def convolve(self, weights, method='convolution', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
         """
         Builds the shared connection pattern that will perform a convolution of the weights kernel on the pre-synaptic population.
 
-        Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution will be  
+        Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution will be implemented differentely.
 
-        If the post-population has the same dimension, the convolution is regular.
+        * If the post-population has the same dimension, the convolution is regular.
 
-        If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
+        * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
 
-        If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example).  
+        * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example).  
 
-        If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population. Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population.
+        * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population. Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population.
 
         Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel. 
 
@@ -100,11 +100,15 @@ class SharedProjection(Projection):
         *Parameters*:
 
             * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
-            * **filter_or_kernel**: defines if the given weights are filter-based (dot-product) or kernel-based (convolution). TODO: explain. Default is kernel-based.
+            * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default is 'convolution'.
+            * **keep_last_dimension**:
+            * **multiple**:
             * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated.
             * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter.
         """
-        self.filter_or_kernel = filter_or_kernel
+        self.method = method
+        self.keep_last_dimension = keep_last_dimension
+        self.multiple = multiple
         self.padding = padding
         self.subsampling = subsampling
 
@@ -130,37 +134,58 @@ class SharedProjection(Projection):
             Global._error('Too many dimensions for the kernel (maximum 4).')
             exit(0)
 
-        # Check if it is a bank of filters
-        self.bank = self.dim_kernel > self.dim_pre
-        if self.bank:
-            return self._generate_bank()
 
         # Check if the last axes match for parallel convolution (e.g. 3-2-3)
-        self.across_features = self.dim_kernel < self.dim_pre
-        if self.across_features:
-            if self.pre.geometry[-1] != self.post.geometry[-1]:
-                Global._error('If the kernel has fewer dimensions than the two populations (parallel convolutions), these must have the same number of neurons in the last dimension(s).')
+        if self.dim_kernel < self.dim_pre:
+            if not self.keep_last_dimension:
+                Global._error('If the kernel has less dimensions than the pre-synaptic population, you need to set the flag keep_last_dimension to True.')
                 exit(0)
 
+            if self.pre.geometry[-1] != self.post.geometry[-1]:
+                Global._error('If the kernel has fewer dimensions than the two populations (keep_last_dimension=True), these must have the same number of neurons in the last dimension.')
+                exit(0)
+
+        # If the last dim of the kernel matches the last dim of the pre-pop, the last pop can have one dimension less.
         if self.dim_post < self.dim_pre: # OK, but check the last dimension of the kernel has the same size as the post-population
             if self.weights.shape[-1] != self.pre.geometry[-1]:
                 Global._error('If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
                 exit(0)
 
+
+        # Check if it is a bank of filters
+        if self.dim_kernel > self.dim_pre:
+            if not self.multiple:
+                Global._error('If the kernel has more dimensions than the pre-synaptic population, you need to set the flag multiple to True.')
+                exit(0)
+            # if self.dim_kernel > self.dim_post:
+            #     if not self.keep_last_dimension:
+            #         Global._error('If the kernel has more dimensions than the post-synaptic population, you need to set the flag keep_last_dimension to True.')
+            #         exit(0)
+            if self.weights.shape[0] != self.post.geometry[-1]:
+                Global._error('For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
+                exit(0)
+
         # Generate the pre-synaptic coordinates
-        self._generate_pre_coordinates()
+        if not self.multiple:
+            self._generate_pre_coordinates()
+        else:
+            self._generate_pre_coordinates_bank()
 
         # Filter definition
         filter_definition, filter_pyx_definition = self._filter_definition()
 
         # Convolve_code
-        convolve_code, sum_code = self._generate_convolve_code()
+        if not self.multiple:
+            convolve_code, sum_code = self._generate_convolve_code()
+        else:
+            convolve_code, sum_code = self._generate_bank_code()
 
         # Generate the code
         self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
 
         # Finish building the synapses
         self._create()
+
 
     def pooling(self, extent=None, overlap=None):
         """
@@ -223,23 +248,6 @@ class SharedProjection(Projection):
         # Finish building the synapses
         self._create()
 
-
-    def _generate_bank(self):
-
-        # Generate the pre-synaptic coordinates
-        self._generate_pre_coordinates_bank()
-
-        # Filter definition
-        filter_definition, filter_pyx_definition = self._filter_definition()
-
-        # Convolve_code
-        convolve_code, sum_code = self._generate_bank_code()
-
-        # Generate the code
-        self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
-
-        # Finish building the synapses
-        self._create()
 
     ################################
     ### Generate centers
@@ -319,7 +327,7 @@ class SharedProjection(Projection):
                     exit(0)
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
-                if self.across_features:
+                if self.keep_last_dimension:
                     idx_range.append(range(self.post.geometry[dim]))
                 else:
                     idx_range.append([self._center_filter(self.weights.shape[dim])])
@@ -366,18 +374,6 @@ class SharedProjection(Projection):
         self.nb_filters = self.weights.shape[0]
         self.dim_single_filter = self.weights.shape[1:]
 
-        self.across_features = self.dim_single_filter < self.dim_pre
-
-        if self.nb_filters != self.post.geometry[-1]:
-            Global._error('The post-synaptic population must have', self.nb_filters, 'neurons in the last dimension.')
-            exit(0)
-
-        if self.dim_post -1 != self.dim_pre:
-            if self.weights.shape[-1] != self.pre.geometry[-1]:
-                Global._error('The pre-synaptic population must have', self.dim_single_filter[-1], 'neurons in the last dimension.')
-                exit(0)
-
-
         # Check if the list is already defined:
         if self.subsampling:
             try:
@@ -405,7 +401,7 @@ class SharedProjection(Projection):
                     exit(0)
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
-                if self.across_features:
+                if self.keep_last_dimension:
                     idx_range.append(range(self.post.geometry[dim]))
                 else:
                     idx_range.append([self._center_filter(self.weights.shape[dim])])
@@ -507,10 +503,10 @@ class SharedProjection(Projection):
         for dim in range(self.dim_pre):
             if dim < self.dim_kernel:
                 code += """
-            int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'index': indices[dim], 'dim': dim, 'operator': '-' if self.filter_or_kernel else '+', 'center': self._center_filter(self.weights.shape[dim])}
+            int %(index)s_pre = coord_%(id_proj)s[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim])}
             else:
                 code += """
-            int %(index)s_pre = coord[%(dim)s];""" % { 'index': indices[dim], 'dim': dim}
+            int %(index)s_pre = coord_%(id_proj)s[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
 
 
         # Check indices
@@ -607,10 +603,10 @@ class SharedProjection(Projection):
         for dim in range(self.dim_pre):
             if dim < self.dim_kernel:
                 code += """
-            int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'index': indices[dim], 'dim': dim, 'operator': '-' if self.filter_or_kernel else '+', 'center': self._center_filter(self.weights.shape[dim+1])}
+            int %(index)s_pre = coord_%(id_proj)s[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim+1])}
             else:
                 code += """
-            int %(index)s_pre = coord[%(dim)s];""" % { 'index': indices[dim], 'dim': dim}
+            int %(index)s_pre = coord_%(id_proj)s[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
 
 
         # Check indices
@@ -639,7 +635,7 @@ class SharedProjection(Projection):
 
         # Compute the increment
         psp = self.synapse.description['psp']['cpp']
-        index = "[coord["+str(self.dim_pre)+"]]"
+        index = "[coord_%(id_proj)s["+str(self.dim_pre)+"]]"
         for dim in range(self.dim_kernel-1):
             index += '[' + indices[dim] + '_w]'
         increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
@@ -702,10 +698,10 @@ class SharedProjection(Projection):
         for dim in range(self.dim_pre):
             if self.extent[dim] >1:
                 code += """
-            int %(index)s_pre = coord[%(dim)s] + %(index)s_w;""" % { 'index': indices[dim], 'dim': dim}
+            int %(index)s_pre = coord_%(id_proj)s[%(dim)s] + %(index)s_w;""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
             else:
                 code += """
-            int %(index)s_pre = coord[%(dim)s];""" % { 'index': indices[dim], 'dim': dim}
+            int %(index)s_pre = coord_%(id_proj)s[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
 
         # Check indices
         for dim in range(self.dim_pre):
@@ -835,22 +831,25 @@ cdef class proj%(id_proj)s_wrapper :
         wsum =  """
     // Shared proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
     %(copy_filter)s
-    std::vector<int> coord;
-    #pragma omp parallel for private(sum, rk_pre, coord) firstprivate(proj%(id_proj)s_w)
+    std::vector<int> coord_%(id_proj)s;
+    #pragma omp parallel for private(sum, rk_pre, coord_%(id_proj)s) %(omp_copy_filter)s
     for(int i = 0; i < %(size_post)s; i++){
-        coord = proj%(id_proj)s.pre_coords[i];
+        coord_%(id_proj)s = proj%(id_proj)s.pre_coords[i];
 """ + convolve_code + """
         pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
     }
 """ 
         # Copy the filter
         copy_filter = filter_definition.replace('w', 'proj%(id_proj)s_w = proj%(id_proj)s.w')% {'id_proj': self.id}
-
+        if filter_definition != "":
+            omp_copy_filter = "firstprivate(proj%(id_proj)s_w)"% {'id_proj': self.id}
+        else: # no need to firstprivate it
+            omp_copy_filter = ""
         self.generator['omp']['body_compute_psp'] = wsum % {'id_proj': self.id, 
             'target': self.target,  
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
-            'copy_filter': copy_filter
+            'copy_filter': copy_filter, 'omp_copy_filter': omp_copy_filter
           }
 
 

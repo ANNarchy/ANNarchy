@@ -14,7 +14,7 @@ pool_proj = SharedProjection(pre=pop, post=pooled, target='exc', operation='mean
 
 # Blue Filter
 blue_filter = [ [[ [2.0, -1.0, -1.0] ]] , [[ [-1.0, 2.0, -1.0] ]] , [[ [-1.0, -1.0, 2.0] ]]  ]
-blue_proj = SharedProjection(pre=pooled, post=filtered, target='exc').convolve(weights=blue_filter, filter_or_kernel=False, padding='border')
+blue_proj = SharedProjection(pre=pooled, post=filtered, target='exc').convolve(weights=blue_filter, method='filter', multiple=True, padding='border')
 
 # Compile
 compile()

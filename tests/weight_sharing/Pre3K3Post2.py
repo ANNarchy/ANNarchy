@@ -27,19 +27,19 @@ proj = SharedProjection(
     pre = In, 
     post = Out, 
     target = 'ws',
-).convolve( weights = vertical_filter, filter_or_kernel=False, padding='border')
+).convolve( weights = vertical_filter, method='filter', padding='border')
 
 proj = SharedProjection(
     pre = In, 
     post = smallOut, 
     target = 'ws',
-).convolve( weights = vertical_filter, filter_or_kernel=False, padding='border')
+).convolve( weights = vertical_filter, method='filter', padding='border')
 
 # Compile
 compile()
 
 # Set input
-In[5:, 5:, :].r = 1.0
+In[:, 5:, :].r = 1.0
 
 # Simulate()
 simulate(1.0)

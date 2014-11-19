@@ -6,8 +6,8 @@ Input = Neuron(parameters="r = 0.0")
 Output = Neuron(equations="r = sum(ws)")
 
 # Populations
-In = Population((20, 10, 5), Input)
-Out = Population((10, 5, 5), Output)
+In = Population((20, 20, 5), Input)
+Out = Population((10, 10, 5), Output)
 
 
 # Filters
@@ -24,7 +24,7 @@ proj = SharedProjection(
     pre = In, 
     post = Out, 
     target = 'ws',
-).convolve( weights = vertical_filter, filter_or_kernel=False, padding='border')
+).convolve( weights = vertical_filter, method='filter', keep_last_dimension=True, padding='border')
 
 # Compile
 compile()

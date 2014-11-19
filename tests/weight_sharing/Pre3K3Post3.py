@@ -27,13 +27,13 @@ proj = SharedProjection(
     pre = In, 
     post = Out, 
     target = 'ws',
-).convolve( weights = vertical_filter, filter_or_kernel=False, padding='border')
+).convolve( weights = vertical_filter, method='filter', padding='border')
 
 proj = SharedProjection(
     pre = In, 
     post = smallOut, 
     target = 'ws',
-).convolve( weights = vertical_filter, filter_or_kernel=False, padding='border')
+).convolve( weights = vertical_filter, method='filter', padding='border')
 
 # Compile
 compile()
