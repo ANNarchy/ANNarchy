@@ -84,15 +84,15 @@ class SharedProjection(Projection):
         """
         Builds the shared connection pattern that will perform a convolution of the weights kernel on the pre-synaptic population.
 
-        Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution will be implemented differentely.
+        Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution can be implemented differentely.
 
-        * If the post-population has the same dimension, the convolution is regular.
+        * If the pre- and post-populations have the same dimension as the kernel, the convolution is regular.
 
         * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
 
-        * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example).  
+        * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example). In this case, you must set ``keep_last_dimension`` to True.  
 
-        * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population. Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population.
+        * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population. Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True.
 
         Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel. 
 
@@ -100,11 +100,16 @@ class SharedProjection(Projection):
         *Parameters*:
 
             * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
-            * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default is 'convolution'.
-            * **keep_last_dimension**:
-            * **multiple**:
-            * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated.
-            * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter.
+            
+            * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
+            
+            * **keep_last_dimension**: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
+
+            * **multiple**: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
+            
+            * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
+            
+            * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. dDfault: None.
         """
         self.method = method
         self.keep_last_dimension = keep_last_dimension
