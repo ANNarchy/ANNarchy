@@ -176,6 +176,23 @@ It is the responsability of the user to find out which number of cores is optima
 Parallel computing with CUDA
 -------------------------------
 
-TODO: not implemented yet, planned in version 4.3.
+First of all, please note, that the CUDA paradigm is implemented for simulation of *rate-coded* neural networks. To run your network on GPUs you need to state to ANNarchy that you want to use CUDA as paradigm:
 
+.. code-block:: python
 
+    from ANNarchy import *
+    setup(paradigm="cuda_20")
+
+currently two versions of the CUDA paradigm are provided:
+    
+    * cuda_20: for all cards that support CUDA compute compability 2.0 and upper ( Fermi cards )
+    * cuda_35: for all cards that support CUDA compute compability 3.5 and upper ( Keplar cards )
+
+if you are uncertain, which compute compability belongs to your card, you can check it on the official website: https://developer.nvidia.com/cuda-gpus
+
+.. hint::
+
+    As the current implementation is a first test version, some of the features provided by ANNarchy are not supported yet:
+    
+        * weight sharing
+        * non-uniform synaptic delays
