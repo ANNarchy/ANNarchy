@@ -12,8 +12,8 @@ InputNeuron = Neuron(
         baseline = 0.0
     """,
     equations="""
-        noise = Uniform(-0.5, 0.5)
-        r = pos(baseline + noise)
+        noise = Uniform(0, 1)
+        r = pos(baseline + noise -0.5)
     """ 
 )
 
@@ -22,8 +22,8 @@ NeuralFieldNeuron = Neuron(
         tau = 10.0 : population
     """,
     equations="""
-        noise = Uniform(-0.5, 0.5)
-        tau * dmp / dt + mp = sum(exc) + sum(inh) + noise
+        noise = Uniform(0, 1)
+        tau * dmp / dt + mp = sum(exc) + sum(inh) + noise -0.5
         r = clip(mp, 0.0, 1.0) 
     """
 )
@@ -39,8 +39,7 @@ input_focus = Projection(
     post = FocusPop, 
     target = 'exc'
 )
-#input_focus.connect_one_to_one( weights=1.0, delays = 20.0 )
-input_focus.connect_one_to_one( weights=1.0 )
+input_focus.connect_one_to_one( weights=1.0, delays = 20.0 )
 
 focus_focus = Projection(
     pre = FocusPop, 
@@ -106,6 +105,8 @@ class GLViewer(object):
 # Main program
 if __name__ == "__main__":
 
+    set_cuda_config( { 'device': 1 } )
+
     # Analyse and compile everything, initialize the parameters/variables...
     compile()   
     
@@ -120,7 +121,3 @@ if __name__ == "__main__":
     
     # Start the simulation forever          
     viewer.run()
-
-     
-
-

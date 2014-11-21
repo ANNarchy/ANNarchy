@@ -169,12 +169,16 @@ struct PopStruct%(id)s{
                 code += """    float* gpu_%(rd_name)s;
 """ % { 'rd_name' : rd['name'] }
 
-            # Delays (TODO: more variables could be delayed)
+            # Delays
             if pop.max_delay > 1:
-                code += """
+                if pop.neuron_type.type == "rate":
+                    code += """
     // Delays for rate-coded population
-    std::deque< std::vector<double> > _delayed_r;
-"""
+    std::deque< double* > gpu_delayed_r;
+"""             
+                else:
+                    Global._error("synaptic delays for spiking neurons are not implemented yet ...")
+                    exit(0)
 
             # Local functions
             if len(pop.neuron_type.description['functions'])>0:
@@ -228,10 +232,10 @@ struct ProjStruct%(id)s{
 
             # Delays
             if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
-                code +="""
-    std::vector< std::vector< int > > delay ;
-    int* gpu_delay;
-"""
+                if proj._synapses.type == "rate":
+                    Global._error("only uniform delays are supported ...")
+                    exit(0)
+                
             # Parameters
             for var in proj.synapse.description['parameters']:
                 if var['name'] in proj.synapse.description['local']:
@@ -337,7 +341,7 @@ ProjStruct%(id)s proj%(id)s;
         host_device_transfer, device_host_transfer = self.body_memory_transfers()
 
         # Initialize delayed arrays
-        delay_init = "" #TODO: self.body_init_delay()
+        delay_init = self.body_init_delay()
 
         # Initialize spike arrays
         spike_init = "" #TODO: self.body_init_spike()
@@ -352,7 +356,7 @@ ProjStruct%(id)s proj%(id)s;
         update_neuron_body, update_neuron_header, update_neuron_call = self.body_update_neuron()
 
         # Enque delayed outputs
-        delay_code = "" #TODO: self.body_delay_neuron()
+        delay_code = self.body_delay_neuron()
 
         # Global operations
         update_globalops = self.body_update_globalops()
@@ -610,10 +614,6 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
             else: # custom psp
                 psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
-            # Take delays into account if any
-            if proj.max_delay > 1:
-                Global._error("synaptic delays are currently not supported.")
-
             from .cuBodyTemplate import psp_kernel
             body_code = psp_kernel % { 'id': proj.id,
                                        'pre': proj.pre.id,
@@ -635,6 +635,14 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
                                             'post': proj.post.id,
                                             'target': proj.target,
                                           }
+
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj.uniform_delay == -1:
+                    Global._error("only uniform delays are supported on GPUs.")
+                    exit(0)
+                else:
+                    call_code = call_code.replace("gpu_r", "gpu_delayed_r["+str(proj.max_delay-1)+"]")
 
             return body_code, header_code, call_code
 
@@ -775,14 +783,21 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         return body, header, call
 
     def body_delay_neuron(self):
+        """
+        This implementation is REALLY bad, but currently there is no better way
+        """
         code = ""
         for pop in self.populations:
             if pop.max_delay <= 1:
                 continue
             code += """
     // Enqueuing outputs of pop%(id)s
-    pop%(id)s._delayed_r.push_front(pop%(id)s.r);
-    pop%(id)s._delayed_r.pop_back();
+    double* endPtr_pop%(id)s = pop%(id)s.gpu_delayed_r.back();
+    pop%(id)s.gpu_delayed_r.pop_back();
+    pop%(id)s.gpu_delayed_r.push_front(endPtr_pop%(id)s);
+    std::vector<double> tmp_r_pop%(id)s = std::vector<double>( pop%(id)s.size, 0.0);
+    cudaMemcpy( tmp_r_pop%(id)s.data(), pop%(id)s.gpu_r, sizeof(double) * pop%(id)s.size, cudaMemcpyDeviceToHost);
+    cudaMemcpy( endPtr_pop%(id)s, tmp_r_pop%(id)s.data(), sizeof(double) * pop%(id)s.size, cudaMemcpyHostToDevice);
 """ % {'id': pop.id }
 
         return code
@@ -952,8 +967,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 """
         for pop in self.populations:
             for rd in pop.neuron_type.description['random_distributions']:
-                code += """    
-    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(float));
+                code += """    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(float));
 """ % {'id': pop.id, 'rd_name': rd['name'] }
 
         return code
@@ -1001,9 +1015,12 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         for pop in self.populations:
             if pop.max_delay > 1:
                 if pop.neuron_type.type == 'rate':
-                    code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
+                    code += """    pop%(id)s.gpu_delayed_r = std::deque< double* >(%(delay)s, NULL);
+    for ( int i = 0; i < %(delay)s; i++ )
+        cudaMalloc( (void**)& pop%(id)s.gpu_delayed_r[i], sizeof(double)*pop%(id)s.size);
 """ % {'id': pop.id, 'delay': pop.max_delay}
-                else: # TODO SPIKE
+                else:
+                    Global._error("no synaptic delays for cuda implemented ...")
                     pass
 
         return code
