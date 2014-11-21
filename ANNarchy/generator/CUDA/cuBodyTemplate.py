@@ -6,6 +6,26 @@ cu_body_template=\
 %(kernel_config)s
 
 /****************************************
+ * init random states                   *
+ ****************************************/
+__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed )
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if( tid < N )
+    {
+        curand_init( seed, tid, 0, &states[ tid ] );
+    }
+}
+
+void init_curand_states( int N, curandState* states, unsigned long seed ) {
+    int numThreads = 64;
+    int numBlocks = ceil (double(N) / double(numThreads));
+
+    rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
+}
+
+/****************************************
  * inline functions                     *
  ****************************************/
 __device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
@@ -41,6 +61,10 @@ __device__ __forceinline__ double clip(double x, double a, double b) { return x<
 cu_header_template=\
 """#ifndef __CUDA_KERNEL__
 #define __CUDA_KERNEL__
+#include <curand_kernel.h>
+
+// initialize cuda RNG states
+void init_curand_states( int N, curandState* states, unsigned long seed );
 
 // population step prototypes
 %(neuron)s

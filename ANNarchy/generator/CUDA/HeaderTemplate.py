@@ -12,7 +12,9 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <stdlib.h>
 #include <string.h>
 #include <random>
+
 #include <cuda_runtime_api.h>
+#include <curand_kernel.h>
 
 /*
  * Structures for the populations

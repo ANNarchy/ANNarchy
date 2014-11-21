@@ -166,7 +166,7 @@ struct PopStruct%(id)s{
     // Random numbers
 """
             for rd in pop.neuron_type.description['random_distributions']:
-                code += """    float* gpu_%(rd_name)s;
+                code += """    curandState* gpu_%(rd_name)s;
 """ % { 'rd_name' : rd['name'] }
 
             # Delays
@@ -332,7 +332,6 @@ ProjStruct%(id)s proj%(id)s;
 
         # Initialize random distributions
         rd_init_code = self.body_init_randomdistributions()
-        rd_update_code = self.body_update_randomdistributions()
 
         # Initialize device ptr
         device_init = self.body_init_device()
@@ -415,7 +414,6 @@ ProjStruct%(id)s proj%(id)s;
             'device_host_transfer': device_host_transfer,
             'device_init': device_init,
             'random_dist_init' : rd_init_code,
-            'random_dist_update' : rd_update_code,
             'delay_init' : delay_init,
             'delay_code' : delay_code,
             'spike_init' : spike_init,
@@ -523,7 +521,7 @@ ProjStruct%(id)s proj%(id)s;
 
             # random variables
             for rd in pop.neuron_type.description['random_distributions']:
-                var += """, float* %(rd_name)s""" % { 'rd_name' : rd['name'] }
+                var += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
 
             # global operations
             for op in pop.global_operations:
@@ -549,6 +547,27 @@ ProjStruct%(id)s proj%(id)s;
             loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
             loc_eqs = loc_eqs.replace("pop"+str(pop.id)+".", "")
 
+            # we replace the rand_%(id)s by the corresponding curand... term
+            for rd in pop.neuron_type.description['random_distributions']:
+                if rd['dist'] == "Uniform":
+                    term = """curand_uniform_double( &%(rd)s[i]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                    loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                if rd['dist'] == "Normal":
+                    term = """curand_normal_double( &%(rd)s[i])""" % { 'rd': rd['name'] };
+                    loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                else:
+                    Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+            # remove all types
+            repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
+            tar_wo_types = tar
+            var_wo_types = var
+            par_wo_types = par
+            for type in repl_types:
+                tar_wo_types = tar_wo_types.replace(type, "")
+                var_wo_types = var_wo_types.replace(type, "")
+                par_wo_types = par_wo_types.replace(type, "")
+
             #
             # create kernel prototypes
             from .cuBodyTemplate import pop_kernel
@@ -557,11 +576,11 @@ ProjStruct%(id)s proj%(id)s;
                                     'global_eqs': glob_eqs,
                                     'pop_size': str(pop.size),
                                     'tar': tar,
-                                    'tar2': tar.replace("double*","").replace("float*","").replace("int*",""),
+                                    'tar2': tar_wo_types,
                                     'var': var,
-                                    'var2': var.replace("double*","").replace("float*","").replace("int*",""),
+                                    'var2': var_wo_types,
                                     'par': par,
-                                    'par2': par.replace("double","").replace("float*","").replace("int","")
+                                    'par2': par_wo_types
                                  }
 
             #
@@ -958,16 +977,12 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def body_init_randomdistributions(self):
         code = """
-    // random generator init
-    curandStatus_t state = curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
-    if ( state != CURAND_STATUS_SUCCESS )
-        std::cout << "curandError: " << state << std::endl;    
-
     // Initialize random distribution objects
 """
         for pop in self.populations:
             for rd in pop.neuron_type.description['random_distributions']:
-                code += """    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(float));
+                code += """    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(curandState));
+    init_curand_states( pop%(id)s.size, pop%(id)s.gpu_%(rd_name)s, seed );
 """ % {'id': pop.id, 'rd_name': rd['name'] }
 
         return code
@@ -1046,20 +1061,6 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 #         for proj in self.projections:
 #                 code += """    proj%(id)s._learning = true;
 # """ % {'id': proj.id}
-
-        return code
-
-    def body_update_randomdistributions(self):
-        code = """
-    // Compute random distributions""" 
-        for pop in self.populations:
-            if len(pop.neuron_type.description['random_distributions']) > 0:
-                for rd in pop.neuron_type.description['random_distributions']:
-                    code += """
-    curandStatus_t pop%(id)s_%(rd_name)s_state = curandGenerateUniform(gen, pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size);
-    if ( pop%(id)s_%(rd_name)s_state != CURAND_STATUS_SUCCESS )
-        std::cout << "curandError: " << pop%(id)s_%(rd_name)s_state << std::endl;
-""" % {'id': pop.id, 'rd_name': rd['name']}
 
         return code
 

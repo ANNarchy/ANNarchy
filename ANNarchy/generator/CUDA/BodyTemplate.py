@@ -13,19 +13,15 @@ body_template = '''
 /*
  * Internal data
  *
-*/
+ */
 double dt;
 long int t;
-std::vector< std::mt19937 >  rng;
 
 // Populations
 %(pop_ptr)s
 
 // Projections
 %(proj_ptr)s
-
-// random 
-curandGenerator_t gen;
 
 template<typename T>
 std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
@@ -118,11 +114,6 @@ void initialize(double _dt, long seed) {
     dt = _dt;
     t = (long int)(0);
 
-    int threads = std::max(1, omp_get_max_threads());
-    for(int seed = 0; seed < threads; ++seed)
-    {
-        rng.push_back(std::mt19937(time(NULL)*seed));
-    }
 %(device_init)s
 %(random_dist_init)s
 %(delay_init)s
@@ -148,14 +139,6 @@ void step()
     ////////////////////////////////
     // Reset spikes
     ////////////////////////////////
-
-
-    ////////////////////////////////
-    // Update random distributions
-    ////////////////////////////////
-%(random_dist_update)s
-
-    cudaDeviceSynchronize();
 
     ////////////////////////////////
     // Update neural variables

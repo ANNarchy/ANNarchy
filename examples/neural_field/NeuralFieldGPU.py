@@ -12,8 +12,8 @@ InputNeuron = Neuron(
         baseline = 0.0
     """,
     equations="""
-        noise = Uniform(0, 1)
-        r = pos(baseline + noise -0.5)
+        noise = Uniform(-0.5, 0.5)
+        r = pos(baseline + noise)
     """ 
 )
 
@@ -22,8 +22,8 @@ NeuralFieldNeuron = Neuron(
         tau = 10.0 : population
     """,
     equations="""
-        noise = Uniform(0, 1)
-        tau * dmp / dt + mp = sum(exc) + sum(inh) + noise -0.5
+        noise = Uniform(-0.5, 0.5)
+        tau * dmp / dt + mp = sum(exc) + sum(inh) + noise
         r = clip(mp, 0.0, 1.0) 
     """
 )
