@@ -10,7 +10,7 @@ class Spike2RatePopulation(Population):
 
     Each neuron collects the spikes of corresponding spiking neuron over the last milliseconds (defined by the parameter ``window``), and computes the average firing rate in Hz over this sliding window.
 
-    The firing rate ``r`` of each neuron represents by default the firing rate in Hz. The output can be scaled with the parameter ``scaling``. For example, if you want that ``r=1.0`` represents a firing rate of 100Hz, you can set ``scaling`` to 0.01.
+    The firing rate ``r`` of each neuron represents by default the firing rate in Hz. The output can be scaled with the parameter ``scaling``. For example, if you want that ``r = 1.0`` represents a firing rate of 100Hz, you can set ``scaling`` to 100.0. The default is 1.0.
 
     By definition, the firing rate varies abruptly each time a new spike is perceived. The output can be smoothed with a low-pass filter of time constant ``smooth``.
 
@@ -23,7 +23,7 @@ class Spike2RatePopulation(Population):
             name='rate-coded', 
             window=50.0, 
             smooth=100.0, 
-            scaling=0.01
+            scaling=100.0
         )
     """
     def __init__(self, population, name=None, window = 100.0, scaling=1.0, smooth=1.0):
@@ -103,7 +103,7 @@ struct PopStruct%(id)s{
                 pop%(id)s.last_spikes[i].erase(pop%(id)s.last_spikes[i].begin()+j);
             }
         }
-        pop%(id)s.r[i] += dt*(pop%(id)s.scaling*1000.0 / pop%(id)s.window * nb - pop%(id)s.r[i] ) / pop%(id)s.smooth;
+        pop%(id)s.r[i] += dt*(1000.0/pop%(id)s.scaling / pop%(id)s.window * nb - pop%(id)s.r[i] ) / pop%(id)s.smooth;
     }
 """  % {'id' : self.id, 'id_pre': self.population.id}
 
@@ -114,7 +114,7 @@ class Rate2SpikePopulation(Population):
 
     This class allows to generate spike trains based on the computations of a rate-coded network (for example doing visual pre-processing). Creating a ``Rate2SpikePopulation`` allows to get a spiking population of the same size as the rate-coded population.
 
-    The firing rate ``r`` of the rate-coded population represents by default the desired firing rate in Hz. This value can be scaled with the parameter ``scaling``. For example, if you want that ``r=1.0`` represents a firing rate of 100Hz, you can set ``scaling`` to 100.0.
+    The firing rate ``r`` of the rate-coded population represents by default the desired firing rate in Hz. This value can be scaled with the parameter ``scaling``. For example, if you want that ``r = 1.0`` represents a firing rate of 100Hz, you can set ``scaling`` to 100.0.
 
     .. code-block:: python
 

@@ -38,7 +38,7 @@ proj_generator_template = {
     'omp': {
         # C++ struct to encapsulate all data
         # Example:
-        # struct ProjStruct%(id)s{
+        # struct ProjStruct%(id_proj)s{
         #     // Number of dendrites
         #     int size;
         #     // Connectivity
@@ -50,6 +50,12 @@ proj_generator_template = {
         #     std::vector< std::vector< double > > w ;
         # }; 
         'header_proj_struct' : None,
+
+        # Initilaize the projection
+        # Example:
+        # 
+        #    TODO:
+        'body_proj_init': None,
 
         # Updates the synapse variables
         # Example:
@@ -609,7 +615,9 @@ class Projection(object):
             * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
             * **shift**: specifies if the ranks of the presynaptic population should be shifted to match the start of the post-synaptic population ranks. Particularly useful for PopulationViews. Does not work yet for populations with geometry. Default: if the two populations have the same number of neurons, it is set to True. If not, it is set to False (only the ranks count).
         """
-        if not shift:
+        if not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
+            shift=False # no need
+        elif not shift:
             if self.pre.size == self.post.size:
                 shift = True
             else:

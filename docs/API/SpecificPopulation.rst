@@ -11,3 +11,17 @@ Class PoissonPopulation
 .. autoclass:: ANNarchy.PoissonPopulation
    :members:
 
+
+Class ImagePopulation
+=======================
+
+.. autoclass:: ANNarchy.extensions.image.ImagePopulation
+   :members:
+
+
+Class VideoPopulation
+=======================
+
+.. autoclass:: ANNarchy.extensions.image.VideoPopulation
+   :members:
+

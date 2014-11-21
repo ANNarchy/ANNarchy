@@ -5,6 +5,12 @@ ANNarchy versions
 Changelog
 ==========
 
+**4.3.1:** 
+
+* Weight-sharing for convolutions and pooling.
+* Possibility to create projections using a dense connection matrix or data saved in a file.
+* A seed can be defined for the random number generators.
+
 **4.3.0:** 
 
 * Simplified internal structure for the generated code. 
@@ -69,7 +75,6 @@ Planned features
 ==================
 
 * GPGPU implementation.
-* Weight sharing.
 
 
 

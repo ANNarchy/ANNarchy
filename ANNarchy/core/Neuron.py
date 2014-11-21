@@ -175,7 +175,7 @@ class IndividualNeuron(object):
             object.__setattr__(self, name, value)
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
-                if name in self.population.neuron.description['local']:
+                if name in self.population.neuron_type.description['local']:
                     if not self.population.initialized: # Store it in the temporary array
                         newval = self.population.get(name)
                         newval[self.population.coordinates_from_rank(self.rank)] = value

@@ -108,6 +108,6 @@ One could periodically track the too "old" synapses and remove them:
     Structural plasticity is rather slow because:
 
     * The ``for`` loops are in Python, not C++. Implementing structural plasticity in Cython should already help.
-    * The internal structure of ANNarchy allows for an efficient allocation/desallocation of synapses within a margin of 5% compared  to the initial number of synapses. Above this threshold, it can lead to massive transfer of data, slowing the simulation down.
+    * The memory allocated for the synapses of a projection may have to be displaced at another location. This can lead to massive transfer of data, slowing the simulation down.
       
     It is of course the user's responsability to balance synapse creation/destruction, otherwise projections could become either empty or fully connected on the long-term.

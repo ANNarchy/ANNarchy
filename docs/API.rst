@@ -19,3 +19,4 @@ This chapter provides documentation for the different methods and classes define
     API/RandomDistribution.rst
     API/Utilities.rst
     API/Hybrid.rst
+    API/Weightsharing.rst
