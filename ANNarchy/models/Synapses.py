@@ -12,25 +12,28 @@ class STP(Synapse):
 
     Note that the time constant of the post-synaptic current is set in the neuron model, not here.
 
-    *Parameters*:
+    **Parameters**:
 
     * tau_rec = 100.0 : depression time constant (ms).
+
     * tau_facil = 0.01 : facilitation time constant (ms).
+
     * U = 0.5 : use parameter.
 
-    *Variables*:
+    **Variables**:
 
-    * x : recovery variable.
+    * x : recovery variable::
 
         dx/dt = (1 - x)/tau_rec 
 
-    * u : facilitation variable.
+
+    * u : facilitation variable::
 
         du/dt = (U - u)/tau_facil 
 
     Both variables are integrated exactly. 
 
-    *Pre-spike events*:
+    **Pre-spike events**::
 
         g_target += w * u * x
         x *= (1 - u)
@@ -84,17 +87,17 @@ class STDP(Synapse):
 
     **Variables**:
 
-    * x : pre-synaptic trace.
+    * x : pre-synaptic trace::
 
         tau_plus  * dx/dt = -x
 
-    * y: post-synaptic trace.
+    * y: post-synaptic trace::
 
         tau_minus * dy/dt = -y
 
     Both variables are evaluated exactly.
 
-    **Pre-spike events**:
+    **Pre-spike events**::
 
         g_target += w
 
@@ -102,7 +105,7 @@ class STDP(Synapse):
 
         w = clip(w + y, w_min , w_max)
 
-    **Post-spike events**:
+    **Post-spike events**::
 
         y -= A_minus * w_max
         
