@@ -552,8 +552,11 @@ ProjStruct%(id)s proj%(id)s;
                 if rd['dist'] == "Uniform":
                     term = """curand_uniform_double( &%(rd)s[i]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
                     loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                if rd['dist'] == "Normal":
+                elif rd['dist'] == "Normal":
                     term = """curand_normal_double( &%(rd)s[i])""" % { 'rd': rd['name'] };
+                    loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                elif rd['dist'] == "LogNormal":
+                    term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
                     loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
                 else:
                     Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
