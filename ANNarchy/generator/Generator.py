@@ -200,12 +200,16 @@ class Generator(object):
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
             if not self.debug_build:
-                flags = "-O2 "
+                cpu_flags = "-march=native -O2"
+                gpu_flags = ""
             else:
-                flags = "-O0 -g -D_DEBUG"
+                cpu_flags = "-O0 -g -D_DEBUG"
+                gpu_flags = ""
                 
             if self.profile_enabled:
-                flags += "-g -G"
+                cpu_flags += " -g"
+                gpu_flags += " -G -lineinfo"
+                extra_libs.append("-lpapi")
                 
             libs = ""
             for l in extra_libs:
@@ -223,24 +227,24 @@ all:
     
 openmp:
 \tcython build/ANNarchyCore.pyx --cplus
-\tg++ -march=native %(flags)s -shared -fPIC -fpermissive -std=c++0x -I. -I/usr/include/python%(py_version)s -I %(numpy_include)s -fopenmp %(libs)s build/*.cpp -o ANNarchyCore.so
+\tg++ -fPIC -shared %(cpu_flags)s -fpermissive -std=c++0x -I. -I/usr/include/python%(py_version)s -I %(numpy_include)s -fopenmp build/*.cpp %(libs)s -o ANNarchyCore.so
 
 # CC 2.0 (Tesla)
 cuda_20:
 \tcython build/ANNarchyCore.pyx --cplus
-\tnvcc -gencode arch=compute_20,code=compute_20 -c build/cuANNarchy.cu -Xcompiler -fPIC -o build/cuANNarchy.o
-\tg++ -fPIC -shared %(flags)s -march=native -O2 -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp build/cuANNarchy.o -lcudart -lcurand -o ANNarchyCore.so
+\tnvcc -gencode arch=compute_20,code=compute_20 %(gpu_flags)s -c build/cuANNarchy.cu -Xcompiler -fPIC -o build/cuANNarchy.o
+\tg++ -fPIC -shared %(cpu_flags)s -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp build/cuANNarchy.o -lcudart -lcurand %(libs)s -o ANNarchyCore.so
 
 # CC 3.5 (Keplar)
 cuda_35:
 \tcython build/ANNarchyCore.pyx --cplus
-\tnvcc -gencode arch=compute_35,code=compute_35 -c build/cuANNarchy.cu -Xcompiler -fPIC -o build/cuANNarchy.o
-\tg++ -fPIC -shared %(flags)s -march=native -O2 -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp build/cuANNarchy.o -lcudart -lcurand -o ANNarchyCore.so
+\tnvcc -gencode arch=compute_35,code=compute_35 %(gpu_flags)s -c build/cuANNarchy.cu -Xcompiler -fPIC -o build/cuANNarchy.o
+\tg++ -fPIC -shared %(cpu_flags)s -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp build/cuANNarchy.o -lcudart -lcurand %(libs)s -o ANNarchyCore.so
 
 clean:
 \trm -rf build/*.o
 \trm -rf build/*.so
-""" % {'flags': flags, 'libs': libs, 'py_version': py_version, 'numpy_include': numpy_include}
+""" % {'cpu_flags': cpu_flags, 'gpu_flags': gpu_flags, 'libs': libs, 'py_version': py_version, 'numpy_include': numpy_include}
 
             # Write the Makefile to the disk
             with open('Makefile', 'w') as wfile:
@@ -349,6 +353,11 @@ clean:
             from .CUDA.CUDAGenerator import CUDAGenerator
             generator = CUDAGenerator(self.populations, self.projections)
             generator.generate()
+
+        if self.profile_enabled:
+            from .Profile.ProfileGenerator import ProfileGenerator
+            prof_generator = ProfileGenerator(self.populations, self.projections)
+            prof_generator.generate()
 
     def check_structure(self):
         """
