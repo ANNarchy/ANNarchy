@@ -124,15 +124,15 @@ struct PopStruct%(id)s{
     std::vector< %(type)s > %(name)s ;    // host
     %(type)s *gpu_%(name)s;    // device
     bool %(name)s_dirty;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    bool record_%(name)s ;
+    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
+    // bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in pop.neuron_type.description['global']:
                     code += """
     // Global variable %(name)s
     %(type)s  %(name)s ;
-    std::vector< %(type)s > recorded_%(name)s ;
-    bool record_%(name)s ;
+    // std::vector< %(type)s > recorded_%(name)s ;
+    // bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Arrays for the presynaptic sums
@@ -253,8 +253,8 @@ struct ProjStruct%(id)s{
     std::vector< std::vector< %(type)s > > %(name)s ;    // host
     %(type)s* gpu_%(name)s;    // device
     bool %(name)s_dirty;
-    //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    //bool record_%(name)s ;
+    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
+    // bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
@@ -262,8 +262,8 @@ struct ProjStruct%(id)s{
     std::vector<%(type)s>  %(name)s;    // host
     %(type)s* gpu_%(name)s;    // device
     bool %(name)s_dirty;
-    //std::vector< %(type)s > recorded_%(name)s ;
-    //bool record_%(name)s ;
+    // std::vector< %(type)s > recorded_%(name)s ;
+    // bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Pre- or post_spike variables (including w)
@@ -273,8 +273,8 @@ struct ProjStruct%(id)s{
                         code += """
     // Local variable %(name)s added by default
     std::vector< std::vector< %(type)s > > %(name)s ;
-    //std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    //bool record_%(name)s ;
+    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
+    // bool record_%(name)s ;
 """ % {'type' : 'double', 'name': var['name']}
 
             code += """
@@ -1027,14 +1027,16 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
             if proj.synapse.type == 'spike':
                 Global._error("no spiking implementation yet ..")
 
-            # Recording
-            for var in proj.synapse.description['variables']:
-                if var['name'] in proj.synapse.description['local']:
-                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
-"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
-                else:
-                    code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
-"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
+#===============================================================================
+#             # Recording
+#             for var in proj.synapse.description['variables']:
+#                 if var['name'] in proj.synapse.description['local']:
+#                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
+# """% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
+#                 else:
+#                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
+# """% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
+#===============================================================================
 
         return code
         
@@ -1174,13 +1176,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     cdef struct PopStruct%(id)s :
         int size
 """            
-            # Spiking neurons have aditional data
-            if pop.neuron_type.type == 'spike':
-                code += """
-        vector[int] refractory
-        bool record_spike
-        vector[vector[long]] recorded_spike
-"""
+
             # Parameters
             for var in pop.neuron_type.description['parameters']:
                 if var['name'] in pop.neuron_type.description['local']:
@@ -1329,17 +1325,6 @@ cdef class pop%(id)s_wrapper :
     def __cinit__(self, size):
         pop%(id)s.size = size"""% {'id': pop.id, 'name': pop.name}
 
-            # Spiking neurons have aditional data
-            if pop.neuron_type.type == 'spike':
-                code += """
-        # Spiking neuron
-        pop%(id)s.refractory = vector[int](size, 0)
-        pop%(id)s.record_spike = False
-        pop%(id)s.recorded_spike = vector[vector[long]]()
-        for i in xrange(pop%(id)s.size):
-            pop%(id)s.recorded_spike.push_back(vector[long]())
-"""% {'id': pop.id}
-
             # Parameters
             for var in pop.neuron_type.description['parameters']:
                 init = 0.0 if var['ctype'] == 'double' else 0
@@ -1381,27 +1366,6 @@ cdef class pop%(id)s_wrapper :
             return pop%(id)s.size
 """ % {'id': pop.id}
 
-            # Spiking neurons have aditional data
-            if pop.neuron_type.type == 'spike':
-                code += """
-    # Spiking neuron
-    cpdef np.ndarray get_refractory(self):
-        return pop%(id)s.refractory
-    cpdef set_refractory(self, np.ndarray value):
-        pop%(id)s.refractory = value
-
-    def start_record_spike(self):
-        pop%(id)s.record_spike = True
-    def stop_record_spike(self):
-        pop%(id)s.record_spike = False
-    def get_record_spike(self):
-        cdef vector[vector[long]] tmp = pop%(id)s.recorded_spike
-        for i in xrange(self.size):
-            pop%(id)s.recorded_spike[i].clear()
-        return tmp
-
-"""% {'id': pop.id}
-
             # Parameters
             for var in pop.neuron_type.description['parameters']:
                 if var['name'] in pop.neuron_type.description['local']:
@@ -1442,16 +1406,6 @@ cdef class pop%(id)s_wrapper :
     cpdef set_single_%(name)s(self, int rank, value):
         pop%(id)s.%(name)s_dirty = True
         pop%(id)s.%(name)s[rank] = value
-    def start_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = True
-    def stop_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = False
-    def get_record_%(name)s(self):
-        cdef vector[vector[%(type)s]] tmp = pop%(id)s.recorded_%(name)s
-        for i in xrange(tmp.size()):
-            pop%(id)s.recorded_%(name)s[i].clear()
-        pop%(id)s.recorded_%(name)s.clear()
-        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
                 elif var['name'] in pop.neuron_type.description['global']:
@@ -1461,14 +1415,6 @@ cdef class pop%(id)s_wrapper :
         return pop%(id)s.%(name)s
     cpdef set_%(name)s(self, %(type)s value):
         pop%(id)s.%(name)s = value
-    def start_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = True
-    def stop_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = False
-    def get_record_%(name)s(self):
-        cdef vector[%(type)s] tmp = pop%(id)s.recorded_%(name)s
-        pop%(id)s.recorded_%(name)s.clear()
-        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
         return code
@@ -1541,13 +1487,13 @@ cdef class proj%(id)s_wrapper :
                     init = 0.0 if var['ctype'] == 'double' else 0
                     code += """
         proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
-        proj%(id)s.record_%(name)s = vector[int]()
+        #proj%(id)s.record_%(name)s = vector[int]()
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
                 else:
                     init = 0.0 if var['ctype'] == 'double' else 0
                     code += """
         proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
-        proj%(id)s.record_%(name)s = vector[int]()
+        #proj%(id)s.record_%(name)s = vector[int]()
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Size property
@@ -1632,17 +1578,6 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
-    def start_record_%(name)s(self, int rank):
-        if not rank in list(proj%(id)s.record_%(name)s):
-            proj%(id)s.record_%(name)s.push_back(rank)
-    def stop_record_%(name)s(self, int rank):
-        cdef list tmp = list(proj%(id)s.record_%(name)s)
-        tmp.remove(rank)
-        proj%(id)s.record_%(name)s = tmp
-    def get_recorded_%(name)s(self, int rank):
-        cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
-        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
-        return data
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
                 elif var['name'] in proj.synapse.description['global']:
