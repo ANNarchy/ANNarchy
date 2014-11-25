@@ -648,7 +648,7 @@ class Projection(object):
         self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
         import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr((self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections))
+        self._store_csr(Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections))
         return self
     
     def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -680,7 +680,6 @@ class Projection(object):
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr(Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections))
-
         return self
 
     def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
