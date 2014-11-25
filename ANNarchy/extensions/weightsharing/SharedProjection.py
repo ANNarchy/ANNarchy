@@ -135,7 +135,7 @@ class SharedProjection(Projection):
         if self.dim_pre > 4:
             Global._error('Too many dimensions for the pre-synaptic population (maximum 4).')
             exit(0)
-        if self.dim_kernel > 4:
+        if self.dim_kernel > 5  or (not self.multiple and self.dim_kernel > 4):
             Global._error('Too many dimensions for the kernel (maximum 4).')
             exit(0)
 
