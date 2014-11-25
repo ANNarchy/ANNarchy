@@ -53,7 +53,6 @@ class SharedProjection(Projection):
         self.connector_name = "Shared weights"
         self.connector_description = "Shared weights"
         self._store_csr(csr)
-        return self
 
     
     def _connect(self, module):
