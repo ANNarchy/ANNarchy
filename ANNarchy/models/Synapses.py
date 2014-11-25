@@ -1,65 +1,114 @@
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Global import _error
 
+
+def list_standard_synapses():
+    "Returns a list of standard neuron models available."
+    return [STP, STDP, Hebb, Oja, IBCM]
+
 ##################
-### STP
+### Hebb
 ##################
-class STP(Synapse):
+class Hebb(Synapse):
     """ 
-    Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.:
+    Rate-coded synapse with Hebbian plasticity.
 
-        Tsodyks, Uziel and Markram (2000) Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses. Journal of Neuroscience 20:RC50
+    **Parameters**:
 
-    Note that the time constant of the post-synaptic current is set in the neuron model, not here.
+    * eta = 0.01 : learning rate.
 
-    *Parameters*:
+    **Learning rule**:
 
-    * tau_rec = 100.0 : depression time constant (ms).
-    * tau_facil = 0.01 : facilitation time constant (ms).
-    * U = 0.5 : use parameter.
+    * w : weight::
 
-    *Variables*:
-
-    * x : recovery variable.
-
-        dx/dt = (1 - x)/tau_rec 
-
-    * u : facilitation variable.
-
-        du/dt = (U - u)/tau_facil 
-
-    Both variables are integrated exactly. 
-
-    *Pre-spike events*:
-
-        g_target += w * u * x
-        x *= (1 - u)
-        u += U * (1 - u)
+        dw/dt = eta * pre.r * post.r
     """
 
-    def __init__(self, tau_rec=100.0, tau_facil=0.01, U=0.5):
-
-        if tau_facil<= 0.0:
-            _error('tau_facil must be positive. Choose a very small value if you have to, or derive a new synapse.')
-            exit(0)
+    def __init__(self, eta=0.01):
 
         parameters = """
-    tau_rec = %(tau_rec)s
-    tau_facil = %(tau_facil)s
-    U = %(U)s
-    """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
+    eta = %(eta)s
+    """ % {'eta': eta}
+
         equations = """
-    dx/dt = (1 - x)/tau_rec : init = 1.0, exact
-    du/dt = (U - u)/tau_facil : init = %(U)s, exact   
-    """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
-        pre_spike="""
-    g_target += w * u * x
-    x *= (1 - u)
-    u += U * (1 - u)
+    dw/dt = eta * pre.r * post.r : min=0.0, explicit 
     """
 
-        Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike,
-            name="Short-term plasticity", description="Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.")
+        Synapse.__init__(self, parameters=parameters, equations=equations,
+            name="Hebbian Plasticity", description="Simple Hebbian learning rule")
+
+##################
+### Ója
+##################
+class Oja(Synapse):
+    """ 
+    Rate-coded synapse with regularized Hebbian plasticity (Oja).
+
+    **Parameters**:
+
+    * eta = 0.01 : learning rate.
+
+    * alpha = 1.0 : regularization constant.
+
+    **Learning rule**:
+
+    * w : weight::
+
+        dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w )
+    """
+
+    def __init__(self, eta=0.01, alpha=1.0):
+
+        parameters = """
+    eta = %(eta)s
+    alpha = %(alpha)s
+    """ % {'eta': eta, 'alpha': alpha}
+
+        equations = """
+    dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0, explicit 
+    """
+
+        Synapse.__init__(self, parameters=parameters, equations=equations,
+            name="Oja plasticity", description="Regularized Hebbian learning rule.")
+
+##################
+### IBCM
+##################
+class IBCM(Synapse):
+    """ 
+    Rate-coded synapse with Intrator & Cooper (1992) plasticity.
+
+    **Parameters**:
+
+    * eta = 0.01 : learning rate.
+
+    * tau = 2000.0 : time constant of the post-synaptic threshold.
+
+    **Learning rule**:
+
+    * theta : post-synaptic threshold::
+
+        tau * dtheta/dt + theta = post.r^2
+
+    * w : weight::
+
+        dw/dt = eta * post.r * (post.r - theta) * pre.r 
+    """
+
+    def __init__(self, eta=0.01):
+
+        parameters = """
+    eta = %(eta)s
+    tau = %(tau)s
+    """ % {'eta': eta, 'tau': tau}
+
+        equations = """
+        tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
+        dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
+    """
+
+        Synapse.__init__(self, parameters=parameters, equations=equations,
+            name="IBCM", description="Intrator and Cooper (1992) learning rule.")
 
 
 ##################
@@ -80,21 +129,21 @@ class STDP(Synapse):
     * A_plus = 0.01 : increase of the pre-synaptic trace after a spike.
     * A_minus = 0.01 : decrease of the post.synaptic trace after a spike. 
     * w_min = 0.0 : minimal value of the weight w.
-    * w_max = 1.0 : maimal value of the weight w.
+    * w_max = 1.0 : maximal value of the weight w.
 
     **Variables**:
 
-    * x : pre-synaptic trace.
+    * x : pre-synaptic trace::
 
         tau_plus  * dx/dt = -x
 
-    * y: post-synaptic trace.
+    * y: post-synaptic trace::
 
         tau_minus * dy/dt = -y
 
     Both variables are evaluated exactly.
 
-    **Pre-spike events**:
+    **Pre-spike events**::
 
         g_target += w
 
@@ -102,7 +151,7 @@ class STDP(Synapse):
 
         w = clip(w + y, w_min , w_max)
 
-    **Post-spike events**:
+    **Post-spike events**::
 
         y -= A_minus * w_max
         

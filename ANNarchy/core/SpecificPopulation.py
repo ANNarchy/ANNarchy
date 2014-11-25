@@ -52,9 +52,11 @@ class PoissonPopulation(Population):
                 '''
             )
 
+    The refractory period can also be set, so that a neuron can not emit two spikes too close from each other.
+
     """
 
-    def __init__(self, geometry, name=None, rates=10.0, parameters=None):
+    def __init__(self, geometry, name=None, rates=10.0, parameters=None, refractory=None):
         """        
         *Parameters*:
         
@@ -77,7 +79,8 @@ class PoissonPopulation(Population):
                 """ % {'rates': rates},
                 spike = """
                     p < rates
-                """
+                """,
+                refractory=refractory
             )
 
         elif isinstance(rates, np.ndarray):
@@ -90,7 +93,8 @@ class PoissonPopulation(Population):
                 """,
                 spike = """
                 p < rates
-                """
+                """,
+                refractory=refractory
             )
         else:
             poisson_neuron = Neuron(
@@ -102,7 +106,8 @@ class PoissonPopulation(Population):
                 """,
                 spike = """
                 p < rates
-                """
+                """,
+                refractory=refractory
             )
         Population.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
         
@@ -117,12 +122,7 @@ class SpikeSourceArray(Population):
 
     *Parameters*:
 
-<<<<<<< HEAD
-    * **spike_times** : a list of times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise.
-=======
     * **spike_times** : a list of times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
->>>>>>> v43/master
-
     * **name**: optional name for the population.
     """
     def __init__(self, spike_times, name=None):
