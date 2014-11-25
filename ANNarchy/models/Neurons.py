@@ -1,8 +1,84 @@
 from ANNarchy.core.Neuron import Neuron
 
-def list_standard_models():
+def list_standard_neurons():
     "Returns a list of standard neuron models available."
-    return [Izhikevich, IF_curr_exp, IF_cond_exp, IF_curr_alpha, IF_cond_alpha, HH_cond_exp, EIF_cond_alpha_isfa_ista, EIF_cond_exp_isfa_ista]
+    return [LeakyIntegrator, Izhikevich, IF_curr_exp, IF_cond_exp, IF_curr_alpha, IF_cond_alpha, HH_cond_exp, EIF_cond_alpha_isfa_ista, EIF_cond_exp_isfa_ista]
+
+
+##################
+### Leaky Integrator
+##################
+class LeakyIntegrator(Neuron):
+    """ 
+    Leaky-integrator rate-coded neuron, optionally noisy.
+
+    This simple rate-coded neuron defines an internal variable :math:`v(t)` which integrates the inputs :math:`I(t)` with a time constant :math:`\tau` and a baseline ``B``. An additive noise :math:`N(t)` can be optionally defined: 
+
+    .. math::
+
+        \\tau \cdot \\frac{dv(t)}{dt} + v(t) = I(t) + B + N(t)
+
+    The transfer function is the positive (or rectified linear ReLU) function with a thresholf :math:`T`:
+
+    .. math::
+
+        r(t) = (v(t) - T)^+
+
+    By default, the input ``I(t)`` to this neuron is "sum(exc) - sum(inh)", but this can be changed by setting the ``sum`` argument::
+
+        neuron = LeakyIntegrator(sum="sum('exc')")
+
+    By default, there is no additive noise, but the ``noise`` argument can be passed with a specific distribution::
+
+        neuron = LeakyIntegrator(noise="Normal(0.0, 1.0)")
+
+
+    Parameters:
+
+    * tau = 10.0 : Time constant in ms of the neuron.
+    * B = 0.0 : Baseline value for v.
+    * T = 0.0 : Threshold for the positive transfer function.
+
+    Variables:
+
+    * v : internal variable (init = 0.0)::
+
+        tau * dv/dt + v = sum(exc) - sum(inh) + B + N
+
+    * r : firing rate (init = 0.0)::
+
+        r = pos(v - T)
+
+    The ODE is solved using the exponential Euler method.
+    """
+    # For reporting
+    _instantiated = []
+    
+    def __init__(self, tau=10.0, B=0.0, T=0.0, sum='sum(exc) - sum(inh)', noise=None):
+        
+        # Create the arguments
+        parameters = """
+    tau = %(tau)s : population
+    B = %(B)s
+    T = %(T)s : population
+""" % {'tau': tau, 'B': B, 'T': T}
+
+        # Equations for the variables
+        if not noise:
+            noise_def = ''
+        else:
+            noise_def = '+ ' + noise
+
+        equations="""
+    tau * dv/dt + v = %(sum)s + B %(noise)s : exponential
+    r = pos(v - T)
+""" % { 'sum' : sum, 'noise': noise_def}
+
+        Neuron.__init__(self, parameters=parameters, equations=equations,
+            name="Leaky-Integrator", description="Leaky-Integrator with positive transfer function and additive noise.")
+
+        # For reporting
+        self._instantiated.append(True)
 
 
 ##################
@@ -18,9 +94,9 @@ class Izhikevich(Neuron):
 
         \\frac{du}{dt} = a * (b * v - u) 
 
-    By default, the conductance is "g_exc - g_inh", but this can be changed with the ``conductance`` method::
+    By default, the conductance is "g_exc - g_inh", but this can be changed by setting the ``conductance`` argument::
 
-        neuron = Izhikevich.conductance('g_ampa * (1 + g_nmda) - g_gaba')
+        neuron = Izhikevich(conductance='g_ampa * (1 + g_nmda) - g_gaba')
 
     The synapses are instantaneous, i.e the corresponding conductance is increased from the synaptic efficiency w at the time step when a spike is received.
 
@@ -102,14 +178,6 @@ class Izhikevich(Neuron):
 
         # For reporting
         self._instantiated.append(True)
-
-    def conductance(self, conductance):
-        """
-        Sets the input current or conductance in the equation of I.
-
-        Default: "g_exc - g_inh"
-        """
-        return IzhikevichClass(conductance=conductance)
 
 
 ##################
