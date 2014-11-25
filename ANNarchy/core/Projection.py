@@ -618,7 +618,6 @@ class Projection(object):
 
         import ANNarchy.core.cython_ext.Connector as Connector
         self._store_csr(Connector.all_to_all(self.pre, self.post, weights, delays, allow_self_connections))
-
         return self
 
     def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):

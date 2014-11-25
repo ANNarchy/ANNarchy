@@ -190,7 +190,7 @@ class SharedProjection(Projection):
 
         # Finish building the synapses
         self._create()
-
+        return self
 
     def pooling(self, extent=None, overlap=None):
         """
@@ -252,6 +252,7 @@ class SharedProjection(Projection):
 
         # Finish building the synapses
         self._create()
+        return self
 
     def copy(self, projection):
         """
@@ -289,6 +290,7 @@ class SharedProjection(Projection):
 
         # Finish building the synapses
         self._create()
+        return self
 
     ################################
     ### Generate centers
