@@ -113,6 +113,14 @@ struct PopStruct%(id)s{
     bool record_spike;
     std::vector<std::vector<long> > recorded_spike;
 """
+
+            # Record
+            code+="""
+    // Record parameter
+    int record_period;
+    int record_offset;
+"""
+
             # Parameters
             for var in pop.neuron_type.description['parameters']:
                 if var['name'] in pop.neuron_type.description['local']:
@@ -1153,9 +1161,9 @@ struct ProjStruct%(id_proj)s{
 
             for var in pop.neuron_type.description['variables']:
                 code += """
-    if(pop%(id)s.record_%(name)s)
+    if(pop%(id)s.record_%(name)s && ( t %(mod)s pop%(id)s.record_period == pop%(id)s.record_offset ) )
         pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
-""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
+""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name'], 'mod': '%' }
 
         # Projections
         for proj in self.projections:
@@ -1262,6 +1270,14 @@ struct ProjStruct%(id_proj)s{
         bool record_spike
         vector[vector[long]] recorded_spike
 """
+
+            # Record parameter
+            code += """
+        # Record parameter
+        int record_offset
+        int record_period
+"""
+
             # Parameters
             for var in pop.neuron_type.description['parameters']:
                 if var['name'] in pop.neuron_type.description['local']:
@@ -1425,7 +1441,14 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.recorded_spike = vector[vector[long]]()
         for i in xrange(pop%(id)s.size):
             pop%(id)s.recorded_spike.push_back(vector[long]())
-"""% {'id': pop.id}
+""" % {'id': pop.id}
+
+            # Record parameter
+            code += """
+        # record parameter
+        pop%(id)s.record_period = 1
+        pop%(id)s.record_offset = 0
+""" % {'id': pop.id}
 
             # Parameters
             for var in pop.neuron_type.description['parameters']:
@@ -1484,7 +1507,16 @@ cdef class pop%(id)s_wrapper :
             pop%(id)s.recorded_spike[i].clear()
         return tmp
 
-"""% {'id': pop.id}
+""" % {'id': pop.id}
+
+            # Record parameter
+            code += """
+    # Record parameter
+    cpdef set_record_period( self, int period ):
+        pop%(id)s.record_period = period
+    cpdef set_record_offset( self, int offset ):
+        pop%(id)s.record_offset = offset
+""" % {'id': pop.id}
 
             # Parameters
             for var in pop.neuron_type.description['parameters']:
