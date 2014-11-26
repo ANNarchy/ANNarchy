@@ -1,8 +1,84 @@
 from ANNarchy.core.Neuron import Neuron
 
-def list_standard_models():
+def list_standard_neurons():
     "Returns a list of standard neuron models available."
-    return [Izhikevich, IF_curr_exp, IF_cond_exp, IF_curr_alpha, IF_cond_alpha, HH_cond_exp, EIF_cond_alpha_isfa_ista, EIF_cond_exp_isfa_ista]
+    return [LeakyIntegrator, Izhikevich, IF_curr_exp, IF_cond_exp, IF_curr_alpha, IF_cond_alpha, HH_cond_exp, EIF_cond_alpha_isfa_ista, EIF_cond_exp_isfa_ista]
+
+
+##################
+### Leaky Integrator
+##################
+class LeakyIntegrator(Neuron):
+    """ 
+    Leaky-integrator rate-coded neuron, optionally noisy.
+
+    This simple rate-coded neuron defines an internal variable :math:`v(t)` which integrates the inputs :math:`I(t)` with a time constant :math:`\tau` and a baseline ``B``. An additive noise :math:`N(t)` can be optionally defined: 
+
+    .. math::
+
+        \\tau \cdot \\frac{dv(t)}{dt} + v(t) = I(t) + B + N(t)
+
+    The transfer function is the positive (or rectified linear ReLU) function with a thresholf :math:`T`:
+
+    .. math::
+
+        r(t) = (v(t) - T)^+
+
+    By default, the input ``I(t)`` to this neuron is "sum(exc) - sum(inh)", but this can be changed by setting the ``sum`` argument::
+
+        neuron = LeakyIntegrator(sum="sum('exc')")
+
+    By default, there is no additive noise, but the ``noise`` argument can be passed with a specific distribution::
+
+        neuron = LeakyIntegrator(noise="Normal(0.0, 1.0)")
+
+
+    Parameters:
+
+    * tau = 10.0 : Time constant in ms of the neuron.
+    * B = 0.0 : Baseline value for v.
+    * T = 0.0 : Threshold for the positive transfer function.
+
+    Variables:
+
+    * v : internal variable (init = 0.0)::
+
+        tau * dv/dt + v = sum(exc) - sum(inh) + B + N
+
+    * r : firing rate (init = 0.0)::
+
+        r = pos(v - T)
+
+    The ODE is solved using the exponential Euler method.
+    """
+    # For reporting
+    _instantiated = []
+    
+    def __init__(self, tau=10.0, B=0.0, T=0.0, sum='sum(exc) - sum(inh)', noise=None):
+        
+        # Create the arguments
+        parameters = """
+    tau = %(tau)s : population
+    B = %(B)s
+    T = %(T)s : population
+""" % {'tau': tau, 'B': B, 'T': T}
+
+        # Equations for the variables
+        if not noise:
+            noise_def = ''
+        else:
+            noise_def = '+ ' + noise
+
+        equations="""
+    tau * dv/dt + v = %(sum)s + B %(noise)s : exponential
+    r = pos(v - T)
+""" % { 'sum' : sum, 'noise': noise_def}
+
+        Neuron.__init__(self, parameters=parameters, equations=equations,
+            name="Leaky-Integrator", description="Leaky-Integrator with positive transfer function and additive noise.")
+
+        # For reporting
+        self._instantiated.append(True)
 
 
 ##################
@@ -12,13 +88,15 @@ class Izhikevich(Neuron):
     """ 
     Izhikevich neuron.
 
-        du/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I 
+    .. math::
 
-        du/dt = a * (b * v - u) 
+        \\frac{dv}{dt} = 0.04 * v^2 + 5.0 * v + 140.0 - u + I 
 
-    By default, the conductance is "g_exc - g_inh", but this can be changed with the ``conductance`` method::
+        \\frac{du}{dt} = a * (b * v - u) 
 
-        neuron = Izhikevich.conductance('g_ampa * (1 + g_nmda) - g_gaba')
+    By default, the conductance is "g_exc - g_inh", but this can be changed by setting the ``conductance`` argument::
+
+        neuron = Izhikevich(conductance='g_ampa * (1 + g_nmda) - g_gaba')
 
     The synapses are instantaneous, i.e the corresponding conductance is increased from the synaptic efficiency w at the time step when a spike is received.
 
@@ -35,23 +113,23 @@ class Izhikevich(Neuron):
 
     Variables:
 
-    * I : input current (user-defined conductance/current + external current + normal noise).
+    * I : input current (user-defined conductance/current + external current + normal noise)::
 
         I = conductance + i_offset + noise * Normal(0.0, 1.0)
 
-    * v : membrane potential in mV (init = c).
+    * v : membrane potential in mV (init = c)::
 
         dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I 
 
-    * u : recovery variable (init= b * c).
+    * u : recovery variable (init= b * c)::
 
         du/dt = a * (b * v - u) 
 
-    Spike emission:
+    Spike emission::
 
         v > v_thresh
 
-    Reset:
+    Reset::
 
         v = c
         u += d : unless_refractory 
@@ -101,14 +179,6 @@ class Izhikevich(Neuron):
         # For reporting
         self._instantiated.append(True)
 
-    def conductance(self, conductance):
-        """
-        Sets the input current or conductance in the equation of I.
-
-        Default: "g_exc - g_inh"
-        """
-        return IzhikevichClass(conductance=conductance)
-
 
 ##################
 ### IF neurons
@@ -133,24 +203,24 @@ class IF_curr_exp(Neuron):
 
     Variables:
 
-    * v : membrane potential in mV (init=-65.0).
+    * v : membrane potential in mV (init=-65.0)::
 
         cm * dv/dt = cm/tau_m*(v_rest -v)   + g_exc - g_inh + i_offset
 
-    * g_exc : excitatory current (init = 0.0)
+    * g_exc : excitatory current (init = 0.0)::
 
         tau_syn_E * dg_exc/dt = - g_exc
 
-    * g_inh : inhibitory current (init = 0.0)
+    * g_inh : inhibitory current (init = 0.0)::
 
         tau_syn_I * dg_inh/dt = - g_inh
 
 
-    Spike emission:
+    Spike emission::
 
         v > v_thresh
 
-    Reset:
+    Reset::
 
         v = v_reset
 
@@ -213,24 +283,24 @@ class IF_cond_exp(Neuron):
 
     Variables:
 
-    * v : membrane potential in mV (init=-65.0).
+    * v : membrane potential in mV (init=-65.0)::
 
         cm * dv/dt = cm/tau_m*(v_rest -v)  + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
 
-    * g_exc : excitatory current (init = 0.0)
+    * g_exc : excitatory current (init = 0.0)::
 
         tau_syn_E * dg_exc/dt = - g_exc
 
-    * g_inh : inhibitory current (init = 0.0)
+    * g_inh : inhibitory current (init = 0.0)::
 
         tau_syn_I * dg_inh/dt = - g_inh
 
 
-    Spike emission:
+    Spike emission::
 
         v > v_thresh
 
-    Reset:
+    Reset::
 
         v = v_reset
 
@@ -296,32 +366,32 @@ class IF_curr_alpha(Neuron):
 
     Variables:
 
-    * v : membrane potential in mV (init=-65.0).
+    * v : membrane potential in mV (init=-65.0)::
 
         cm * dv/dt = cm/tau_m*(v_rest -v) + alpha_exc - alpha_inh + i_offset
 
-    * g_exc : excitatory current (init = 0.0)
+    * g_exc : excitatory current (init = 0.0)::
 
         tau_syn_E * dg_exc/dt = - g_exc
 
-    * alpha_exc : alpha function of excitatory current (init = 0.0)
+    * alpha_exc : alpha function of excitatory current (init = 0.0)::
 
         tau_syn_E * dalpha_exc/dt = exp((tau_syn_E - dt/2.0)/tau_syn_E) * g_exc - alpha_exc
 
-    * g_inh : inhibitory current (init = 0.0)
+    * g_inh : inhibitory current (init = 0.0)::
 
         tau_syn_I * dg_inh/dt = - g_inh
 
-    * alpha_inh : alpha function of inhibitory current (init = 0.0)
+    * alpha_inh : alpha function of inhibitory current (init = 0.0)::
 
         tau_syn_I * dalpha_inh/dt = exp((tau_syn_I - dt/2.0)/tau_syn_I) * g_inh - alpha_inh
 
 
-    Spike emission:
+    Spike emission::
 
         v > v_thresh
 
-    Reset:
+    Reset::
 
         v = v_reset
 
@@ -389,32 +459,32 @@ class IF_cond_alpha(Neuron):
 
     Variables:
 
-    * v : membrane potential in mV (init=-65.0).
+    * v : membrane potential in mV (init=-65.0)::
 
         cm * dv/dt = cm/tau_m*(v_rest -v)  + alpha_exc * (e_rev_E - v) + alpha_inh * (e_rev_I - v) + i_offset
 
-    * g_exc : excitatory conductance (init = 0.0)
+    * g_exc : excitatory conductance (init = 0.0)::
 
         tau_syn_E * dg_exc/dt = - g_exc
 
-    * alpha_exc : alpha function of excitatory conductance (init = 0.0)
+    * alpha_exc : alpha function of excitatory conductance (init = 0.0)::
 
         tau_syn_E * dalpha_exc/dt = exp((tau_syn_E - dt/2.0)/tau_syn_E) * g_exc - alpha_exc
 
-    * g_inh : inhibitory conductance (init = 0.0)
+    * g_inh : inhibitory conductance (init = 0.0)::
 
         tau_syn_I * dg_inh/dt = - g_inh
 
-    * alpha_inh : alpha function of inhibitory current (init = 0.0)
+    * alpha_inh : alpha function of inhibitory current (init = 0.0)::
 
         tau_syn_I * dalpha_inh/dt = exp((tau_syn_I - dt/2.0)/tau_syn_I) * g_inh - alpha_inh
 
 
-    Spike emission:
+    Spike emission::
 
         v > v_thresh
 
-    Reset:
+    Reset::
 
         v = v_reset
 
@@ -494,32 +564,32 @@ class EIF_cond_exp_isfa_ista(Neuron):
 
     Variables:
 
-    * I : input current (nA)
+    * I : input current (nA)::
 
         I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
 
-    * v : membrane potential in mV (init=-70.6).
+    * v : membrane potential in mV (init=-70.6)::
 
         tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w)
 
-    * w : adaptation variable (init=0.0).
+    * w : adaptation variable (init=0.0)::
 
         tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w
 
-    * g_exc : excitatory current (init = 0.0)
+    * g_exc : excitatory current (init = 0.0)::
 
         tau_syn_E * dg_exc/dt = - g_exc
 
-    * g_inh : inhibitory current (init = 0.0)
+    * g_inh : inhibitory current (init = 0.0)::
 
         tau_syn_I * dg_inh/dt = - g_inh
 
 
-    Spike emission:
+    Spike emission::
 
         v > v_thresh
 
-    Reset:
+    Reset::
 
         v = v_reset
         u += b : unless_refractory
@@ -620,40 +690,40 @@ class EIF_cond_alpha_isfa_ista(Neuron):
 
     Variables:
 
-    * I : input current (nA)
+    * I : input current (nA)::
 
         I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
 
-    * v : membrane potential in mV (init=-70.6).
+    * v : membrane potential in mV (init=-70.6)::
 
         tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w)
 
-    * w : adaptation variable (init=0.0).
+    * w : adaptation variable (init=0.0)::
 
         tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w
 
-    * g_exc : excitatory current (init = 0.0)
+    * g_exc : excitatory current (init = 0.0)::
 
         tau_syn_E * dg_exc/dt = - g_exc
 
-    * g_inh : inhibitory current (init = 0.0)
+    * g_inh : inhibitory current (init = 0.0)::
 
         tau_syn_I * dg_inh/dt = - g_inh
 
-    * alpha_exc : alpha function of excitatory current (init = 0.0)
+    * alpha_exc : alpha function of excitatory current (init = 0.0)::
 
         tau_syn_E * dalpha_exc/dt = exp((tau_syn_E - dt/2.0)/tau_syn_E) * g_exc - alpha_exc  
     
-    * alpha_inh: alpha function of inhibitory current (init = 0.0)
+    * alpha_inh: alpha function of inhibitory current (init = 0.0)::
 
         tau_syn_I * dalpha_inh/dt = exp((tau_syn_I - dt/2.0)/tau_syn_I) * g_inh - alpha_inh  
 
 
-    Spike emission:
+    Spike emission::
 
         v > v_spike
 
-    Reset:
+    Reset::
 
         v = v_reset
         u += b : unless_refractory
@@ -763,7 +833,7 @@ class HH_cond_exp(Neuron):
 
     Variables:
 
-    * Voltage-dependent rate constants an, bn, am, bm, ah, bh
+    * Voltage-dependent rate constants an, bn, am, bm, ah, bh::
 
         an = 0.032 * (15.0 - v + v_offset) / (exp((15.0 - v + v_offset)/5.0) - 1.0)
         am = 0.32  * (13.0 - v + v_offset) / (exp((13.0 - v + v_offset)/4.0) - 1.0)
@@ -773,29 +843,29 @@ class HH_cond_exp(Neuron):
         bm = 0.28  * (v - v_offset - 40.0) / (exp((v - v_offset - 40.0)/5.0) - 1.0)
         bh = 4.0/(1.0 + exp (( 10.0 - v + v_offset )) )
 
-    * Activation variables n, m, h (h is initialized to 1.0, n and m to 0.0)
+    * Activation variables n, m, h (h is initialized to 1.0, n and m to 0.0)::
 
         dn/dt = an * (1.0 - n) - bn * n 
         dm/dt = am * (1.0 - m) - bm * m 
         dh/dt = ah * (1.0 - h) - bh * h 
 
 
-    * v : membrane potential in mV (init=-65.0).
+    * v : membrane potential in mV (init=-65.0)::
 
         cm * dv/dt = gleak*(e_rev_leak -v) + gbar_K * n**4 * (e_rev_K - v) + gbar_Na * m**3 * h * (e_rev_Na - v)
 
                     + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
 
-    * g_exc : excitatory conductance (init = 0.0)
+    * g_exc : excitatory conductance (init = 0.0)::
 
         tau_syn_E * dg_exc/dt = - g_exc
 
-    * g_inh : inhibitory conductance (init = 0.0)
+    * g_inh : inhibitory conductance (init = 0.0)::
 
         tau_syn_I * dg_inh/dt = - g_inh
 
 
-    Spike emission:
+    Spike emission::
 
         v > v_thresh and v(t-1) < v_thresh (the spike is emitted only once when v crosses the threshold from below)
 

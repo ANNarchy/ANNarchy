@@ -135,7 +135,7 @@ class SharedProjection(Projection):
         if self.dim_pre > 4:
             Global._error('Too many dimensions for the pre-synaptic population (maximum 4).')
             exit(0)
-        if self.dim_kernel > 4:
+        if self.dim_kernel > 5  or (not self.multiple and self.dim_kernel > 4):
             Global._error('Too many dimensions for the kernel (maximum 4).')
             exit(0)
 
@@ -190,7 +190,7 @@ class SharedProjection(Projection):
 
         # Finish building the synapses
         self._create()
-
+        return self
 
     def pooling(self, extent=None, overlap=None):
         """
@@ -252,7 +252,45 @@ class SharedProjection(Projection):
 
         # Finish building the synapses
         self._create()
+        return self
 
+    def copy(self, projection):
+        """
+            Creates a virtual connection pattern reusing the weights and delays of an already-defined projection.
+
+            Although the original projection can be learnable, this one can not. Changes in the original weights will be reflected in this projection. The only possible modifications are ``psp`` and ``operation``.
+
+            The pre- and post-synaptic populations of each projection must have the same geometry.
+
+            *Parameters*:
+
+            * **projection**: the projection to reuse.
+        """
+        self.projection = projection
+
+        if not isinstance(self.projection, Projection):
+            Global._error('You must provide an existing projection to copy().')
+            exit(0)
+
+        if isinstance(self.projection, SharedProjection):
+            Global._error('You can only copy regular projections, not shared projections.')
+            exit(0)
+
+        if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:
+            Global._error('When copying a projection, the geometries must be the same.')
+            exit(0)
+
+        # Dummy weights
+        self.weights = None
+        self.pre_coordinates = []
+
+        # Generate the code
+        self._generate_copy()
+        
+
+        # Finish building the synapses
+        self._create()
+        return self
 
     ################################
     ### Generate centers
@@ -856,6 +894,143 @@ cdef class proj%(id_proj)s_wrapper :
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'copy_filter': copy_filter, 'omp_copy_filter': omp_copy_filter
           }
+
+
+    def _generate_copy(self):
+
+        # C++ header
+        self.generator['omp']['header_proj_struct'] = ""
+
+        # PYX header
+        self.generator['omp']['pyx_proj_struct'] = ""
+
+        # Pyx class
+        proj_class = """
+# Shared projection %(name_pre)s -> %(name_post)s, target %(target)s, copied from proj%(id)s
+cdef class proj%(id_proj)s_wrapper :
+    def __cinit__(self, weights, coords):
+        pass
+
+    property size:
+        def __get__(self):
+            return proj%(id)s.size
+
+    def nb_synapses(self, int n):
+        return proj%(id)s.pre_rank[n].size()
+
+    def post_rank(self):
+        return proj%(id)s.post_rank
+    def pre_rank(self, int n):
+        return proj%(id)s.pre_coords[n]
+
+    # Local parameter w
+    def get_w(self):
+        return proj%(id)s.w
+    def set_w(self, value):
+        print 'Not possible to set weights in a shared projection.'
+    def get_dendrite_w(self, int rank):
+        return proj%(id)s.w[rank]
+    def set_dendrite_w(self, int rank, vector[double] value):
+        print 'Not possible to set weights in a shared projection.'
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return proj%(id)s.w[rank_post][rank_pre]
+    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+        print 'Not possible to set weights in a shared projection.'
+
+"""
+        self.generator['omp']['pyx_proj_class'] = proj_class % { 'id_proj': self.id, 'target': self.target, 
+            'name_pre': self.pre.name, 
+            'name_post': self.post.name, 'size_post': self.post.size,
+            'id': self.projection.id
+        }
+
+        # No need to initialize anything (no recordable variable, no learning)
+        self.generator['omp']['body_proj_init'] = ""
+
+        # OMP code
+        omp_code = '#pragma omp parallel for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
+
+        # PSP
+        psp = self.synapse.description['psp']['cpp'].replace('%(id_proj)s', '%(id)s').replace('rk_pre', 'proj%(id)s.pre_rank[i][j]').replace(';', '') % {'id' : self.projection.id, 'id_post': self.post.id, 'id_pre': self.pre.id}
+            
+        # Take delays into account if any
+        if self.projection.max_delay > 1:
+            if self.projection.uniform_delay == -1 : # Non-uniform delays
+                psp = psp.replace(
+                    'pop%(id_pre)s.r['%{'id_pre': self.pre.id}, 
+                    'pop%(id_pre)s._delayed_r[proj%(id)s.delay[i][j]-1]['%{'id' : self.projection.id, 'id_pre': self.pre.id}
+                )
+            else: # Uniform delays
+                psp = psp.replace(
+                    'pop%(id_pre)s.r['%{'id_pre': self.pre.id}, 
+                    'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_pre': self.pre.id, 'delay': str(self.projection.uniform_delay-1)}
+                )
+
+        # Operation to be performed: sum, max, min, mean
+        operation = self.synapse.operation
+
+        if operation == 'sum':
+            sum_code = """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
+    %(omp_code)s
+    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        sum = 0.0;
+        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            sum += %(psp)s ;
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
+    }
+"""
+        elif operation == 'max':
+            sum_code = """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
+    %(omp_code)s
+    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        sum = %(psp)s;
+        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            if(%(psp)s > sum){
+                sum = %(psp)s ;
+            }
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
+    }
+"""
+        elif operation == 'min':
+            sum_code = """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
+    %(omp_code)s
+    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        sum = %(psp)s;
+        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            if(%(psp)s < sum){
+                sum = %(psp)s ;
+            }
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
+    }
+"""
+        elif operation == 'mean':
+            sum_code = """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
+    %(omp_code)s
+    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        sum = 0.0;
+        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            sum += %(psp)s ;
+        }
+        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum/ (double)(proj%(id)s.pre_rank[i].size());
+    }
+"""
+        else:
+            sum_code = ""
+
+        self.generator['omp']['body_compute_psp'] = sum_code % { 'id_proj': self.id, 'target': self.target, 
+        'id_pre': self.pre.id, 'name_pre': self.pre.name, 
+        'id_post': self.post.id, 'name_post': self.post.name,
+        'id': self.projection.id,
+        'omp_code': omp_code,
+        'psp': psp
+        }
 
 
 

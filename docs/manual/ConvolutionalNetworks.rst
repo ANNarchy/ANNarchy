@@ -175,3 +175,23 @@ If the number of dimensions do not match, you have to specify the ``extent`` arg
 .. warning::
 
     The default ``operation`` for a SharedProjection is ``'sum'``. You should not forget to set it to ``'max'`` if you want max-pooling (or ``'min'`` or ``'mean'``). 
+
+
+Sharing weights with another projection
+=======================================
+
+A different possibility to share weights is between two projections. If your network is composed of populations of the same size, and the projection patterns are identical, it could save some memory to "share" the weights of one projection with another, so they are created only once.
+
+To this end, you can use the ``copy()`` method of SharedProjection and pass it an existing projection::
+
+    pop1 = Population(geometry=(30, 30), neuron=Whatever)
+    pop2 = Population(geometry=(20, 20), neuron=Whatever)
+    pop3 = Population(geometry=(20, 20), neuron=Whatever)
+
+
+    proj1 = Projection(pop1, pop2, 'exc').connect_gaussian(amp = 1.0, sigma=0.3, delays=2.0)
+    proj2 = SharedProjection(pop1, pop3, 'exc').copy(proj1)
+
+This only works when the pre- and post-populations of each projection have the same geometry, but they can be different, of course. If the original projection is learnable, the copied projection will see the changes. However, it is not possible for the shared projection to learn on its own. SharedProjection only accepts ``psp`` and ``operation`` as parameters, which can be different from the original projection.
+
+It is only possible to copy regular projections, not other shared projections. The transmission delays wil lbe identical between the two projections.
