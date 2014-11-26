@@ -38,7 +38,7 @@ class Hebb(Synapse):
             name="Hebbian Plasticity", description="Simple Hebbian learning rule")
 
 ##################
-### Ója
+### Oja
 ##################
 class Oja(Synapse):
     """ 

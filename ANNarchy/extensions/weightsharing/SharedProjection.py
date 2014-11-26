@@ -345,7 +345,7 @@ class SharedProjection(Projection):
         # Check if the list is already defined:
         if self.subsampling:
             try:
-                shape = np.array(self.subsampling)
+                shape = np.array(self.subsampling).shape
             except:
                 Global._error('The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
