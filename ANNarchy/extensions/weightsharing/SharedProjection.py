@@ -49,11 +49,12 @@ class SharedProjection(Projection):
             from ANNarchy.core.cython_ext.Connector import CSR
         except:
             _error('ANNarchy was not successfully installed.')
-        csr = CSR() 
+        csr = CSR()
+        csr.max_delay = self.delays
+        csr.uniform_delay = self.delays
         self.connector_name = "Shared weights"
         self.connector_description = "Shared weights"
         self._store_csr(csr)
-        return self
 
     
     def _connect(self, module):
@@ -75,12 +76,31 @@ class SharedProjection(Projection):
         del self._synapses
         self._synapses = None
 
+    def center(self, *args, **kwds):
+        """ 
+        Returns the coordinates in the pre-synaptic population of the center of the kernel corresponding to the post-synaptic with the given rank or coordinates.
+
+        *Parameters*
+
+        * **rank**: rank or coordinates of the post-synaptic neuron. If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        """
+        if len(args) == 1:
+            rank =  args[0]
+        else:
+            rank = self.post.rank_from_coordinates(args)
+
+
+        if self.initialized:
+            return tuple(self.cyInstance.pre_rank(rank))
+        else:
+            return tuple(self.pre_coordinates[rank])
+
 
     ################################
     ### Connection methods
     ################################
 
-    def convolve(self, weights, method='convolution', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
+    def convolve(self, weights, delays=0.0, method='convolution', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
         """
         Builds the shared connection pattern that will perform a convolution of the weights kernel on the pre-synaptic population.
 
@@ -100,6 +120,8 @@ class SharedProjection(Projection):
         *Parameters*:
 
             * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
+
+            * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons. 
             
             * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
             
@@ -122,6 +144,9 @@ class SharedProjection(Projection):
             self.weights = np.array(weights)
         else:
             self.weights = weights
+
+        # Process the delays
+        self.delays = delays
 
 
         # Check dimensions of populations and weight matrix
@@ -192,7 +217,7 @@ class SharedProjection(Projection):
         self._create()
         return self
 
-    def pooling(self, extent=None, overlap=None):
+    def pooling(self, delays=0.0, extent=None, overlap=None):
         """
         Builds the shared connection pattern that will perform a pooling operation over the pre-synaptic population.
 
@@ -201,6 +226,8 @@ class SharedProjection(Projection):
         If the SharedProjection does not define an operation, the default is "sum". If you want max-pooling, you should set it to "max". 
         
         *Parameters*:
+
+            * **delays**: delays (in ms) in synaptic transmission. Must be a single value for all neurons.
 
             * **extent**: Extent of the pooling area expressed in the geometry of the pre-synaptic population. In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons.
 
@@ -226,6 +253,12 @@ class SharedProjection(Projection):
             Global._error('You must provide a tuple for the extent of the pooling operation.')
             exit(0)
 
+        # Process the delays
+        self.delays = delays
+
+        # Change the psp by default
+        if self.synapse.description['raw_psp'] == "w * pre.r":
+            self.synapse.description['psp']['cpp'] = "pop%(id_pre)s.r[rk_pre]"
 
         # Check dimensions of populations 
         self.dim_pre = self.pre.dimension
@@ -346,7 +379,7 @@ class SharedProjection(Projection):
         # Check if the list is already defined:
         if self.subsampling:
             try:
-                shape = np.array(self.subsampling)
+                shape = np.array(self.subsampling).shape
             except:
                 Global._error('The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
@@ -354,6 +387,7 @@ class SharedProjection(Projection):
                 Global._error('The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = self.subsampling
+            return
 
         # Otherwise create it, possibly with sub-sampling
         coords = [[] for i in range(self.post.size)]
@@ -420,7 +454,7 @@ class SharedProjection(Projection):
         # Check if the list is already defined:
         if self.subsampling:
             try:
-                shape = np.array(self.subsampling)
+                shape = np.array(self.subsampling).shape
             except:
                 Global._error('The sub-sampling list must have', self.post.size / self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
@@ -428,6 +462,7 @@ class SharedProjection(Projection):
                 Global._error('The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = self.subsampling
+            return
 
         # Otherwise create it, possibly with sub-sampling
         coords = [[] for i in range(self.post.size)]
@@ -583,6 +618,11 @@ class SharedProjection(Projection):
             index += '[' + indices[dim] + '_w]'
         increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
 
+
+        # Delays
+        if self.delays > Global.config['dt']:
+            increment = increment.replace('pop%(id_pre)s.r[rk_pre]', 'pop%(id_pre)s._delayed_r['+str(int(self.delays/Global.config['dt'])-1)+'][rk_pre]')
+
         # Apply the operation
         if operation == "sum":
             code += """
@@ -683,6 +723,11 @@ class SharedProjection(Projection):
             index += '[' + indices[dim] + '_w]'
         increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
 
+
+        # Delays
+        if self.delays > Global.config['dt']:
+            increment = increment.replace('pop%(id_pre)s.r[rk_pre]', 'pop%(id_pre)s._delayed_r['+str(int(self.delays/Global.config['dt'])-1)+'][rk_pre]')
+
         # Apply the operation
         if operation == "sum":
             code += """
@@ -757,21 +802,28 @@ class SharedProjection(Projection):
         code += """
             rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
+        # Compute the value to pool
+        psp = self.synapse.description['psp']['cpp']
+
+        # Delays
+        if self.delays > Global.config['dt']:
+            psp = psp.replace('pop%(id_pre)s.r[rk_pre]', 'pop%(id_pre)s._delayed_r['+str(int(self.delays/Global.config['dt'])-1)+'][rk_pre]')
+
         # Apply the operation
         if operation == "sum":
             code += """
-            sum += pop%(id_pre)s.r[rk_pre];"""
+            sum += %(psp)s;"""
         elif operation == "max":
             code += """
-            double _psp = pop%(id_pre)s.r[rk_pre];
+            double _psp = %(psp)s;
             if(_psp > sum) sum = _psp;"""
         elif operation == "min":
             code += """
-            double _psp = pop%(id_pre)s.r[rk_pre];
+            double _psp = %(psp)s;
             if(_psp < sum) sum = _psp;"""
         elif operation == "mean":
             code += """
-            sum += pop%(id_pre)s.r[rk_pre];"""
+            sum += %(psp)s;"""
         else:
             Global._error('Operation', operation, 'is not implemented yet for shared projections with pooling.')
 
@@ -784,7 +836,8 @@ class SharedProjection(Projection):
         impl_code = code % {'id_proj': self.id, 
             'target': self.target,  
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
-            'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size
+            'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
+            'psp': psp
           }  
 
         if operation == "mean":
@@ -841,7 +894,7 @@ cdef class proj%(id_proj)s_wrapper :
             return %(size_post)s
 """ + ( """
     def nb_synapses(self, int n):
-        return %(size_post)s * proj%(id_proj)s.w.size()
+        return %(size_filter)s
 """ if kernel else """
     def nb_synapses(self, int n):
         return 0
@@ -862,9 +915,12 @@ cdef class proj%(id_proj)s_wrapper :
         proj%(id_proj)s.w = value
 
 """
-        self.generator['omp']['pyx_proj_class'] = proj_class % { 'id_proj': self.id, 'target': self.target, 
+        self.generator['omp']['pyx_proj_class'] = proj_class % { 
+            'id_proj': self.id, 'target': self.target, 
             'name_pre': self.pre.name, 
-            'name_post': self.post.name, 'size_post': self.post.size,
+            'name_post': self.post.name, 
+            'size_post': self.post.size,
+            'size_filter': self.weights.size if kernel else 0,
         }
 
         # No need to initialize anything (no recordable variable, no learning)
@@ -921,7 +977,7 @@ cdef class proj%(id_proj)s_wrapper :
     def post_rank(self):
         return proj%(id)s.post_rank
     def pre_rank(self, int n):
-        return proj%(id)s.pre_coords[n]
+        return proj%(id)s.pre_rank[n]
 
     # Local parameter w
     def get_w(self):
