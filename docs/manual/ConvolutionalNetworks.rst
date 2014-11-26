@@ -55,6 +55,17 @@ Several options can be passed to the ``convolve()`` method:
 
 * ``subsampling``. In convolutional networks, the convolution operation is often coupled with a reduction in the number of neurons in each dimension. In the example above, the post-synaptic population could be defined with a geometry (50, 50). For each post-synaptic neuron, the coordinates of the center of the applied kernel would be automatically shifted from two pre-synaptic neurons compared to the preious one. However, if the number of neurons in one dimension of the pre-synaptic population is not exactly a multiple of the number of post-synaptic neurons in the same dimension, ANNarchy can not guess what the correct correspondance should be. In this case, you have to specify this mapping by providing to the ``subsampling`` argument a list of pre-synaptic coordinates defining the position of the center of the kernel for each post-synaptic neuron. The list is indexed by the rank of the post-synaptic neurons (use the ``rank_from_coordinates()`` method) and must have the same size as the population. Each element should be a list of coordinates in the pre-synaptic population's geometry (with as many elements as dimensions). It is possible to provide a Numpy array instead of a list of lists.
 
+One can access the coordinates in the pre-synaptic geometry of the center of the filter corresponding to a particular post-synaptic neuron by calling the ``center()`` method of ``SharedProjection`` with the rank or coordinates of the post neuron::
+
+
+    pre = Population(geometry=(100, 100), neuron = Whatever)
+    post = Population(geometry=(50, 50), neuron = Whatever)
+
+    proj = SharedProjection(pre=pre, post=post, target='exc')
+    proj.convolve(weights=vertical_filter)
+
+    pre_coordinates = proj.center(10, 10) # returns (20, 20)
+
 
 In some cases, the post-synaptic population can have less dimensions than the pre-synaptic one. An example would be when the pre-synaptic population has three dimensions (e.g. (100, 100, 3)), the last representing the R, G and components of an image. A 3D filter, with 3 components in the last dimension, would result in a (100, 100, 1) post-synaptic population (or any subsampling of it). ANNarchy accepts in this case the use of a 2D population (100, 100), but it will be checked that the number of elements in the last dimension of the flter equals the number of pre-synaptic neurons in the last dimension::
 

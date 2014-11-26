@@ -74,6 +74,25 @@ class SharedProjection(Projection):
         del self._synapses
         self._synapses = None
 
+    def center(self, *args, **kwds):
+        """ 
+        Returns the coordinates in the pre-synaptic population of the center of the kernel corresponding to the post-synaptic with the given rank or coordinates.
+
+        *Parameters*
+
+        * **rank**: rank or coordinates of the post-synaptic neuron. If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        """
+        if len(args) == 1:
+            rank =  args[0]
+        else:
+            rank = self.post.rank_from_coordinates(args)
+
+
+        if self.initialized:
+            return tuple(self.cyInstance.pre_rank(rank))
+        else:
+            return tuple(self.pre_coordinates[rank])
+
 
     ################################
     ### Connection methods
@@ -353,6 +372,7 @@ class SharedProjection(Projection):
                 Global._error('The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = self.subsampling
+            return
 
         # Otherwise create it, possibly with sub-sampling
         coords = [[] for i in range(self.post.size)]
@@ -419,7 +439,7 @@ class SharedProjection(Projection):
         # Check if the list is already defined:
         if self.subsampling:
             try:
-                shape = np.array(self.subsampling)
+                shape = np.array(self.subsampling).shape
             except:
                 Global._error('The sub-sampling list must have', self.post.size / self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
@@ -427,6 +447,7 @@ class SharedProjection(Projection):
                 Global._error('The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = self.subsampling
+            return
 
         # Otherwise create it, possibly with sub-sampling
         coords = [[] for i in range(self.post.size)]
@@ -840,7 +861,7 @@ cdef class proj%(id_proj)s_wrapper :
             return %(size_post)s
 """ + ( """
     def nb_synapses(self, int n):
-        return %(size_post)s * proj%(id_proj)s.w.size()
+        return %(size_filter)s
 """ if kernel else """
     def nb_synapses(self, int n):
         return 0
@@ -861,9 +882,12 @@ cdef class proj%(id_proj)s_wrapper :
         proj%(id_proj)s.w = value
 
 """
-        self.generator['omp']['pyx_proj_class'] = proj_class % { 'id_proj': self.id, 'target': self.target, 
+        self.generator['omp']['pyx_proj_class'] = proj_class % { 
+            'id_proj': self.id, 'target': self.target, 
             'name_pre': self.pre.name, 
-            'name_post': self.post.name, 'size_post': self.post.size,
+            'name_post': self.post.name, 
+            'size_post': self.post.size,
+            'size_filter': self.weights.size if kernel else 0,
         }
 
         # No need to initialize anything (no recordable variable, no learning)
@@ -920,7 +944,7 @@ cdef class proj%(id_proj)s_wrapper :
     def post_rank(self):
         return proj%(id)s.post_rank
     def pre_rank(self, int n):
-        return proj%(id)s.pre_coords[n]
+        return proj%(id)s.pre_rank[n]
 
     # Local parameter w
     def get_w(self):

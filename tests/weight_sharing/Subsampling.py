@@ -7,8 +7,7 @@ Output = Neuron(equations="r = sum(ws)")
 
 # Populations
 In = Population((10, 10), Input)
-Out = Population((10, 10), Output)
-smallOut = Population((5, 5), Output)
+Out = Population((2, 2), Output)
 
 
 # Filters
@@ -20,18 +19,15 @@ vertical_filter = np.array(
     ]
 )
 
+# Centers for subsampling
+sampling = [(0,0), (4,5), (5,4), (5,5)]
+
 # Full connection
 proj = SharedProjection(
     pre = In, 
     post = Out, 
     target = 'ws',
-).convolve( weights = vertical_filter, method='filter', padding='border')
-
-proj_small = SharedProjection(
-    pre = In, 
-    post = smallOut, 
-    target = 'ws',
-).convolve( weights = vertical_filter, method='filter', padding='border')
+).convolve( weights = vertical_filter, method='filter', padding='border', subsampling=sampling)
 
 # Compile
 compile()
@@ -44,10 +40,8 @@ simulate(1.0)
 
 # Plot
 from pylab import *
-subplot(1,3,1)
+subplot(1,2,1)
 imshow(In.r, cmap = cm.gray, interpolation='nearest')
-subplot(1,3,2)
+subplot(1,2,2)
 imshow(Out.r, cmap = cm.gray, interpolation='nearest')
-subplot(1,3,3)
-imshow(smallOut.r, cmap = cm.gray, interpolation='nearest')
 show()
