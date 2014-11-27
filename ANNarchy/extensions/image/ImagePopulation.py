@@ -186,6 +186,7 @@ protected:
 
 struct PopStruct%(id)s{
     int size;
+    bool _active;
     std::vector< double > r ;
     CameraDeviceCPP* camera_;
     void StartCamera(int id, int width, int height, int depth){
@@ -206,6 +207,7 @@ struct PopStruct%(id)s{
     # Population %(id)s (VideoPopulation)
     cdef struct PopStruct%(id)s  :
         int size
+        bool _active
         vector[double] r
         void StartCamera(int id, int width, int height, int depth)
         void GrabImage()
@@ -222,6 +224,9 @@ cdef class pop%(id)s_wrapper :
     property size:
         def __get__(self):
             return pop%(id)s.size
+
+    def activate(self, bool val):
+        pop%(id)s._active = val
 
     # Local parameter r
     cpdef np.ndarray get_r(self):

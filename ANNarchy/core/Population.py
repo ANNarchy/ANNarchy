@@ -160,7 +160,7 @@ pop_generator_template = {
 
 class Population(object):
     """
-    Represents a population of neurons.
+    Represents a population of homogeneous neurons.
     """
 
     def __init__(self, geometry, neuron, name=None, stop_condition=None):
@@ -258,6 +258,7 @@ class Population(object):
         # Finalize initialization
         self.initialized = False
         self.cyInstance = None
+        self._activated = True
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions. 
@@ -308,12 +309,31 @@ class Population(object):
         """ Method used after compilation to initialize the attributes."""
         self.initialized = True  
         self.set(self.init)
+        self.cyInstance.activate(self._activated)
 
     def reset(self):
         """
         Resets all parameters and variables to the value they had before the call to compile.
         """
         self._init_attributes()
+
+    def enable(self):
+        """
+        Enables computations in this population (including the projections leading to it).
+        """
+        if self.initialized:
+            self.cyInstance.activate(True)
+        else:
+            self._activated = True
+
+    def disable(self):
+        """
+        Enables computations in this population (including the projections leading to it).
+        """
+        if self.initialized:
+            self.cyInstance.activate(False)
+        else:
+            self._activated = False
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."

@@ -100,6 +100,8 @@ class OMPGenerator(object):
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
+    // Active
+    bool _active;
 """
             # Spiking neurons have aditional data
             if pop.neuron_type.type == 'spike':
@@ -500,6 +502,7 @@ struct ProjStruct%(id_proj)s{
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
             code += """
     // Updating the local variables of population %(id)s (%(name)s)
+    if(pop%(id)s._active){
     #pragma omp parallel for
     for(int i = 0; i < pop%(id)s.size; i++){
 %(eqs)s
@@ -561,6 +564,7 @@ struct ProjStruct%(id_proj)s{
             # Finish parallel loop for the population
             code += """
     }
+    } // active
 """
             
 
@@ -581,14 +585,18 @@ struct ProjStruct%(id_proj)s{
             if pop.neuron_type.type == 'rate':
                 code += """
     // Enqueuing outputs of pop%(id)s (%(name)s)
-    pop%(id)s._delayed_r.push_front(pop%(id)s.r);
-    pop%(id)s._delayed_r.pop_back();
+    if (pop%(id)s._active){
+        pop%(id)s._delayed_r.push_front(pop%(id)s.r);
+        pop%(id)s._delayed_r.pop_back();
+    }
 """ % {'id': pop.id, 'name' : pop.name }
             else:
                 code += """
     // Enqueuing outputs of pop%(id)s (%(name)s)
-    pop%(id)s._delayed_spike.push_front(pop%(id)s.spiked);
-    pop%(id)s._delayed_spike.pop_back();
+    if (pop%(id)s._active){
+        pop%(id)s._delayed_spike.push_front(pop%(id)s.spiked);
+        pop%(id)s._delayed_spike.pop_back();
+    }
 """ % {'id': pop.id, 'name' : pop.name }
 
         return code
@@ -621,6 +629,7 @@ struct ProjStruct%(id_proj)s{
             if proj.synapse.operation == 'sum': # normal summation
                 code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum
+    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
@@ -629,6 +638,7 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
+    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
     'name_post': proj.post.name, 'name_pre': proj.pre.name, 
@@ -637,6 +647,7 @@ struct ProjStruct%(id_proj)s{
             elif proj.synapse.operation == 'max': # max pooling
                 code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = max
+    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         int j= 0;
@@ -648,6 +659,7 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
+    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
     'name_post': proj.post.name, 'name_pre': proj.pre.name, 
@@ -656,6 +668,7 @@ struct ProjStruct%(id_proj)s{
             elif proj.synapse.operation == 'min': # max pooling
                 code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = min
+    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         int j= 0;
@@ -667,6 +680,7 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
+    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
     'name_post': proj.post.name, 'name_pre': proj.pre.name, 
@@ -675,6 +689,7 @@ struct ProjStruct%(id_proj)s{
             elif proj.synapse.operation == 'mean': # max pooling
                 code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
+    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0 ;
@@ -683,6 +698,7 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum / (double)(proj%(id_proj)s.pre_rank[i].size());
     }
+    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
     'name_post': proj.post.name, 'name_pre': proj.pre.name, 
@@ -776,19 +792,21 @@ struct ProjStruct%(id_proj)s{
 
             code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
-    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
-        rk_j = %(pre_array)s[_idx_j];
-        int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
-        std::vector< std::pair<int, int> > inv_post = proj%(id_proj)s.inv_rank[rk_j];
-        %(omp_code)s
-        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
-            i = inv_post[_idx_i].first;
-            j = inv_post[_idx_i].second;
-%(exact)s
-            %(psp)s
-%(pre_event)s
+    if (pop%(id_post)s._active){
+        for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
+            rk_j = %(pre_array)s[_idx_j];
+            int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
+            std::vector< std::pair<int, int> > inv_post = proj%(id_proj)s.inv_rank[rk_j];
+            %(omp_code)s
+            for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+                i = inv_post[_idx_i].first;
+                j = inv_post[_idx_i].second;
+    %(exact)s
+                %(psp)s
+    %(pre_event)s
+            }
         }
-    }
+    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
     'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
     'exact': exact_code}
@@ -798,6 +816,7 @@ struct ProjStruct%(id_proj)s{
                 omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
                 psp_sum = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. sum of psp
+    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0;
@@ -806,6 +825,7 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
+    } // active
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 
        'name_post': proj.post.name, 'name_pre': proj.pre.name, 
        'psp': proj.synapse.description['psp']['cpp'] % ids, 'omp_code': omp_code}
@@ -838,7 +858,8 @@ struct ProjStruct%(id_proj)s{
             if pop.neuron_type.type == 'rate':
                 for target in pop.targets:
                     code += """
-    memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
+    if (pop%(id)s._active)
+        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
 """ % {'id': pop.id, 'target': target}
         
 #         for proj in self.projections:
@@ -884,7 +905,7 @@ struct ProjStruct%(id_proj)s{
 
                     code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    if(proj%(id_proj)s._learning){
+    if(proj%(id_proj)s._learning && pop%(id_post)s._active)){
         for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
             i = pop%(id_post)s.spiked[_idx_i];
             %(omp_code)s 
@@ -917,7 +938,7 @@ struct ProjStruct%(id_proj)s{
                 omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
                 code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    if(proj%(id_proj)s._learning){
+    if(proj%(id_proj)s._learning && pop%(id_post)s._active){
         %(omp)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
@@ -1038,6 +1059,12 @@ struct ProjStruct%(id_proj)s{
 """
         for pop in self.populations:
 
+            # active is true by default
+            code += """    
+    // Population %(id)s
+    pop%(id)s._active = true;
+""" % {'id': pop.id}
+
             # Is it a specific population?
             if pop.generator['omp']['body_spike_init']:
                 code += pop.generator['omp']['body_spike_init'] %{'id': pop.id}
@@ -1115,16 +1142,17 @@ struct ProjStruct%(id_proj)s{
             if len(pop.neuron_type.description['random_distributions']) > 0:
                 code += """
     // RD of pop%(id)s
-    //#pragma omp parallel for
-    for(int i = 0; i < pop%(id)s.size; i++)
-    {
+    if (pop%(id)s._active){
+        for(int i = 0; i < pop%(id)s.size; i++)
+        {
 """% {'id': pop.id}
                 for rd in pop.neuron_type.description['random_distributions']:
                     code += """
-        pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
+            pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
 """ % {'id': pop.id, 'rd_name': rd['name']}
 
                 code += """
+        }
     }
 """
         return code
@@ -1137,9 +1165,18 @@ struct ProjStruct%(id_proj)s{
                 code += pop.generator['omp']['body_update_globalops'] %{'id': pop.id}
                 continue
 
-            for op in pop.global_operations:
-                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s.data(), pop%(id)s.size);
+            if len(pop.global_operations) > 0:
+                code += """
+    if (pop%(id)s._active){
+"""% {'id': pop.id}
+
+                for op in pop.global_operations:
+                    code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s.data(), pop%(id)s.size);
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+
+                code += """
+    }
+"""
         return code
 
     def body_record(self):
@@ -1254,6 +1291,7 @@ struct ProjStruct%(id_proj)s{
     # Population %(id)s (%(name)s)
     cdef struct PopStruct%(id)s :
         int size
+        bool _active
 """            
             # Spiking neurons have aditional data
             if pop.neuron_type.type == 'spike':
@@ -1463,6 +1501,13 @@ cdef class pop%(id)s_wrapper :
     property size:
         def __get__(self):
             return pop%(id)s.size
+""" % {'id': pop.id}
+
+            # Activate population
+            code += """
+
+    def activate(self, bool val):
+        pop%(id)s._active = val
 """ % {'id': pop.id}
 
             # Spiking neurons have aditional data
