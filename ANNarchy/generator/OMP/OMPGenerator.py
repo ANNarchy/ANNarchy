@@ -913,7 +913,7 @@ struct ProjStruct%(id_proj)s{
 
                     code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    if(proj%(id_proj)s._learning && pop%(id_post)s._active)){
+    if(proj%(id_proj)s._learning && pop%(id_post)s._active){
         for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
             i = pop%(id_post)s.spiked[_idx_i];
             %(omp_code)s 
