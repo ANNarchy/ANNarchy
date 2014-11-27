@@ -212,7 +212,7 @@ profile_generator_template = {
 
 class Population(object):
     """
-    Represents a population of neurons.
+    Represents a population of homogeneous neurons.
     """
 
     def __init__(self, geometry, neuron, name=None, stop_condition=None):
@@ -310,6 +310,7 @@ class Population(object):
         # Finalize initialization
         self.initialized = False
         self.cyInstance = None
+        self._activated = True
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions. 
@@ -360,12 +361,31 @@ class Population(object):
         """ Method used after compilation to initialize the attributes."""
         self.initialized = True  
         self.set(self.init)
+        self.cyInstance.activate(self._activated)
 
     def reset(self):
         """
         Resets all parameters and variables to the value they had before the call to compile.
         """
         self._init_attributes()
+
+    def enable(self):
+        """
+        Enables computations in this population (including the projections leading to it).
+        """
+        if self.initialized:
+            self.cyInstance.activate(True)
+        else:
+            self._activated = True
+
+    def disable(self):
+        """
+        Enables computations in this population (including the projections leading to it).
+        """
+        if self.initialized:
+            self.cyInstance.activate(False)
+        else:
+            self._activated = False
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
@@ -688,13 +708,15 @@ class Population(object):
     ################################
     ## Recording
     ################################
-    def start_record(self, variable):
+    def start_record(self, variable, period = Global.config['dt']):
         """
         Start recording neural variables.
         
         Parameter:
             
             * **variable**: single variable name or list of variable names.  
+
+            * **period**: delay between two recording (default: dt).
 
         Example::
 
@@ -710,13 +732,17 @@ class Population(object):
         else:
             print('Error: variable must be either a string or list of strings.')
         
+        # set period and offset
+        self.cyInstance.set_record_period( int(period/Global.config['dt']), Global.get_current_step() )
+
+        # start recording of variables
         for var in _variable:
             if not var in self.variables + ['spike']:
                 Global._error('start: ' + var, 'is not a recordable variable of the population.')
                 return
 
             self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1]}
-            
+
             try:
                 getattr(self.cyInstance, 'start_record_'+var)()
             except:

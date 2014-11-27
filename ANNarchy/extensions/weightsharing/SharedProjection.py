@@ -1028,53 +1028,61 @@ cdef class proj%(id_proj)s_wrapper :
         if operation == 'sum':
             sum_code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    %(omp_code)s
-    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
-            sum += %(psp)s ;
+    if(pop%(id_post)s._active){
+        %(omp_code)s
+        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+            sum = 0.0;
+            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+                sum += %(psp)s ;
+            }
+            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
     }
 """
         elif operation == 'max':
             sum_code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    %(omp_code)s
-    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
-        sum = %(psp)s;
-        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
-            if(%(psp)s > sum){
-                sum = %(psp)s ;
+    if(pop%(id_post)s._active){
+        %(omp_code)s
+        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+            sum = %(psp)s;
+            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+                if(%(psp)s > sum){
+                    sum = %(psp)s ;
+                }
             }
+            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
     }
 """
         elif operation == 'min':
             sum_code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    %(omp_code)s
-    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
-        sum = %(psp)s;
-        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
-            if(%(psp)s < sum){
-                sum = %(psp)s ;
+    if(pop%(id_post)s._active){
+        %(omp_code)s
+        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+            sum = %(psp)s;
+            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+                if(%(psp)s < sum){
+                    sum = %(psp)s ;
+                }
             }
+            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
     }
 """
         elif operation == 'mean':
             sum_code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    %(omp_code)s
-    for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
-            sum += %(psp)s ;
+    if(pop%(id_post)s._active){
+        %(omp_code)s
+        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+            sum = 0.0;
+            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+                sum += %(psp)s ;
+            }
+            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum/ (double)(proj%(id)s.pre_rank[i].size());
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum/ (double)(proj%(id)s.pre_rank[i].size());
     }
 """
         else:

@@ -335,14 +335,16 @@ def dt():
 ################################
 ## Recording
 ################################
-def start_record(to_record):
+def start_record(to_record, period = {}):
     """
     Starts recording of variables in different populations. 
     
     *Parameter*:
     
     * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). 
-    
+
+    * **period**: a dictionary with population objects as keys and record periods (in ms) as values (default: dt for each).
+
     Example::
     
         to_record = { 
@@ -353,11 +355,22 @@ def start_record(to_record):
     """
     global _recorded_populations
     _recorded_populations = to_record
+
     for pop, variables in to_record.iteritems():
-        if not isinstance(pop, str):
-            pop.start_record(variables)
-        else:
-            get_population(pop).start_record(variables)
+        # get name and object
+        pop_obj = pop if not isinstance(pop, str) else get_population(pop)
+        pop_name = pop if isinstance(pop, str) else pop.name
+
+        try: # key == obj
+            period = record_period[pop_obj]
+        except:
+            try: # key == name
+                period = record_period[pop_name]
+            except: # nothing set
+                period = config['dt']
+
+        # start recording
+        pop_obj.start_record(variables, period)
 
 def get_record(to_record=None, reshape=False):
     """

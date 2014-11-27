@@ -34,6 +34,11 @@ After the call to this method, the value taken by these variables at each time s
     simulate(500.0)
     simulate(500.0)
 
+
+.. note::
+
+    **New in 4.3.2** : it is possible to add a ``period`` argument (in ms) to ``start_record()`` to record the variables only once every ``period`` ms. The next recording will be at the beginning of the next call to ``simulate()``. Values between two recordings are ignored. This can reduce a lot the memory usage of recordings.
+
 To retrieve the recorded values and free the corresponding memory, you can call the ``get_record()`` method:
 
 .. code-block:: python

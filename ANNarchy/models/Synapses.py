@@ -129,17 +129,17 @@ class STP(Synapse):
 
     *Variables*:
 
-    * x : recovery variable.
+    * x : recovery variable::
 
         dx/dt = (1 - x)/tau_rec 
 
-    * u : facilitation variable.
+    * u : facilitation variable::
 
         du/dt = (U - u)/tau_facil 
 
     Both variables are integrated exactly. 
 
-    *Pre-spike events*:
+    *Pre-spike events*::
 
         g_target += w * u * x
         x *= (1 - u)

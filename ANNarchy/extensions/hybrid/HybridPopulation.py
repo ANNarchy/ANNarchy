@@ -88,6 +88,7 @@ class Spike2RatePopulation(Population):
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
+    bool _active;
 
     // Global parameter cut
     double  cut ;
@@ -166,6 +167,7 @@ struct PopStruct%(id)s{
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
+    bool _active;
 
     // Global parameter window
     double  window ;
@@ -242,6 +244,7 @@ struct PopStruct%(id)s{
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
+    bool _active;
 
     // Local parameter window
     double  window ;
@@ -362,33 +365,35 @@ class Rate2SpikePopulation(Population):
         # Generate the code
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of population %(id)s (Rate2SpikePopulation)
-    #pragma omp parallel for
-    for(int i = 0; i < pop%(id)s.size; i++){
+    if pop%(id)s._active{}
+        #pragma omp parallel for
+        for(int i = 0; i < pop%(id)s.size; i++){
 
-        pop%(id)s.rates[i] = pop%(id_pre)s.r[i] * pop%(id)s.scaling;
+            pop%(id)s.rates[i] = pop%(id_pre)s.r[i] * pop%(id)s.scaling;
 
-            
-        if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
+                
+            if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
 
-            pop%(id)s.refractory_remaining[i]--;
-            pop%(id)s.spike[i] = false;
+                pop%(id)s.refractory_remaining[i]--;
+                pop%(id)s.spike[i] = false;
+            }
+            else if(pop%(id)s.rates[i] > pop%(id)s.rand_0[i]*1000.0/dt){
+                pop%(id)s.spike[i] = true;
+                pop%(id)s.last_spike[i] = t;
+                pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
+            }
+            else{
+                pop%(id)s.spike[i] = false;
+            }
         }
-        else if(pop%(id)s.rates[i] > pop%(id)s.rand_0[i]*1000.0/dt){
-            pop%(id)s.spike[i] = true;
-            pop%(id)s.last_spike[i] = t;
-            pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
-        }
-        else{
-            pop%(id)s.spike[i] = false;
-        }
-    }
-    // Gather spikes
-    pop%(id)s.spiked.clear();
-    for(int i=0; i< pop%(id)s.size; i++){
-        if(pop%(id)s.spike[i]){
-            pop%(id)s.spiked.push_back(i);
-            if(pop%(id)s.record_spike){
-                pop%(id)s.recorded_spike[i].push_back(t);
+        // Gather spikes
+        pop%(id)s.spiked.clear();
+        for(int i=0; i< pop%(id)s.size; i++){
+            if(pop%(id)s.spike[i]){
+                pop%(id)s.spiked.push_back(i);
+                if(pop%(id)s.record_spike){
+                    pop%(id)s.recorded_spike[i].push_back(t);
+                }
             }
         }
     }
