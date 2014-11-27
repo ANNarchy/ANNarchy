@@ -310,14 +310,18 @@ def dt():
 ################################
 ## Recording
 ################################
-def start_record(to_record):
+def start_record(to_record, record_period = {}, record_offset = {}):
     """
     Starts recording of variables in different populations. 
     
     *Parameter*:
     
     * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). 
-    
+
+    * **record_period**: a dictionary with population objects as keys and record periods as values
+
+    * **record_offset**: a dictionary with population objects as keys and record offset as values
+
     Example::
     
         to_record = { 
@@ -329,10 +333,27 @@ def start_record(to_record):
     global _recorded_populations
     _recorded_populations = to_record
     for pop, variables in to_record.iteritems():
-        if not isinstance(pop, str):
-            pop.start_record(variables)
-        else:
-            get_population(pop).start_record(variables)
+        # get name and object
+        pop_obj = pop if not isinstance(pop, str) else get_population(pop)
+        pop_name = pop if isinstance(pop, str) else pop.name
+
+        try: # key == obj
+            period = record_period[pop_obj]
+        except:
+            try: # key == name
+                period = record_period[pop_name]
+            except: # nothing set
+                period = 1
+        try: # key == obj
+            offset = record_offset[pop_obj]
+        except:
+            try: # key == name
+                offset = record_offset[pop_name]
+            except: # nothing set
+                offset = 0
+
+        # start recording
+        pop_obj.start_record(variables, period, offset)
 
 def get_record(to_record=None, reshape=False):
     """
