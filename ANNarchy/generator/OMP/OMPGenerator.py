@@ -120,7 +120,7 @@ struct PopStruct%(id)s{
             code+="""
     // Record parameter
     int record_period;
-    int record_offset;
+    long int record_offset;
 """
 
             # Parameters
@@ -1198,7 +1198,7 @@ struct ProjStruct%(id_proj)s{
 
             for var in pop.neuron_type.description['variables']:
                 code += """
-    if(pop%(id)s.record_%(name)s && ( t %(mod)s pop%(id)s.record_period == pop%(id)s.record_offset ) )
+    if(pop%(id)s.record_%(name)s && ( (t - pop%(id)s.record_offset) %(mod)s pop%(id)s.record_period == 0 ) )
         pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
 """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name'], 'mod': '%' }
 
@@ -1312,7 +1312,7 @@ struct ProjStruct%(id_proj)s{
             # Record parameter
             code += """
         # Record parameter
-        int record_offset
+        long int record_offset
         int record_period
 """
 
@@ -1557,10 +1557,9 @@ cdef class pop%(id)s_wrapper :
             # Record parameter
             code += """
     # Record parameter
-    cpdef set_record_period( self, int period ):
+    cpdef set_record_period( self, int period, long int t ):
         pop%(id)s.record_period = period
-    cpdef set_record_offset( self, int offset ):
-        pop%(id)s.record_offset = offset
+        pop%(id)s.record_offset = t
 """ % {'id': pop.id}
 
             # Parameters

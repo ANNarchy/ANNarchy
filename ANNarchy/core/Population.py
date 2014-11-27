@@ -656,7 +656,7 @@ class Population(object):
     ################################
     ## Recording
     ################################
-    def start_record(self, variable, period = 1, offset = 0):
+    def start_record(self, variable, period = Global.config['dt']):
         """
         Start recording neural variables.
         
@@ -664,9 +664,7 @@ class Population(object):
             
             * **variable**: single variable name or list of variable names.  
 
-            * **period**: every period number of step the data will be recorded ( default set to 1 )
-
-            * **offset**: by default the first step of every period will be recorded, with offset one may move the recording point in the period.
+            * **period**: delay between two recording (default: dt).
 
         Example::
 
@@ -683,8 +681,7 @@ class Population(object):
             print('Error: variable must be either a string or list of strings.')
         
         # set period and offset
-        self.cyInstance.set_record_period( period )
-        self.cyInstance.set_record_offset( offset )
+        self.cyInstance.set_record_period( int(period/Global.config['dt']), Global.get_current_step() )
 
         # start recording of variables
         for var in _variable:
