@@ -97,8 +97,18 @@ struct PopStruct%(id)s{
     // Number of neurons
     int size;
 
-    // concurrent kernel execution
+    // assigned stream for concurrent kernel execution ( CC > 2.x )
     cudaStream_t stream;
+
+    // Active
+    bool _active;
+"""
+
+            # Record
+            code+="""
+    // Record parameter
+    int record_period;
+    long int record_offset;
 """
 
             # Parameters
@@ -806,12 +816,14 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
                 continue
             code += """
     // Enqueuing outputs of pop%(id)s
-    double* endPtr_pop%(id)s = pop%(id)s.gpu_delayed_r.back();
-    pop%(id)s.gpu_delayed_r.pop_back();
-    pop%(id)s.gpu_delayed_r.push_front(endPtr_pop%(id)s);
-    std::vector<double> tmp_r_pop%(id)s = std::vector<double>( pop%(id)s.size, 0.0);
-    cudaMemcpy( tmp_r_pop%(id)s.data(), pop%(id)s.gpu_r, sizeof(double) * pop%(id)s.size, cudaMemcpyDeviceToHost);
-    cudaMemcpy( endPtr_pop%(id)s, tmp_r_pop%(id)s.data(), sizeof(double) * pop%(id)s.size, cudaMemcpyHostToDevice);
+    if ( pop%(id)s._active ) {
+        double* endPtr_pop%(id)s = pop%(id)s.gpu_delayed_r.back();
+        pop%(id)s.gpu_delayed_r.pop_back();
+        pop%(id)s.gpu_delayed_r.push_front(endPtr_pop%(id)s);
+        std::vector<double> tmp_r_pop%(id)s = std::vector<double>( pop%(id)s.size, 0.0);
+        cudaMemcpy( tmp_r_pop%(id)s.data(), pop%(id)s.gpu_r, sizeof(double) * pop%(id)s.size, cudaMemcpyDeviceToHost);
+        cudaMemcpy( endPtr_pop%(id)s, tmp_r_pop%(id)s.data(), sizeof(double) * pop%(id)s.size, cudaMemcpyHostToDevice);
+    }
 """ % {'id': pop.id }
 
         return code
@@ -1175,6 +1187,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     # Population %(id)s (%(name)s)
     cdef struct PopStruct%(id)s :
         int size
+        bool _active
 """            
 
             # Parameters
@@ -1364,6 +1377,12 @@ cdef class pop%(id)s_wrapper :
     property size:
         def __get__(self):
             return pop%(id)s.size
+""" % {'id': pop.id}
+
+            # Activate population
+            code += """
+    def activate(self, bool val):
+        pop%(id)s._active = val
 """ % {'id': pop.id}
 
             # Parameters

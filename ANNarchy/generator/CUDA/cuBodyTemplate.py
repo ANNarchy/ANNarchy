@@ -110,7 +110,8 @@ void Pop%(id)s_step(cudaStream_t stream, double dt%(tar)s%(var)s%(par)s)
 pop_kernel_call =\
 """
     // Updating the local and global variables of population %(id)s
-    Pop%(id)s_step(/* default arguments */
+    if ( pop%(id)s._active ) {
+        Pop%(id)s_step(/* default arguments */
               pop%(id)s.stream, dt
               /* population targets */
               %(tar)s
@@ -118,6 +119,7 @@ pop_kernel_call =\
               %(var)s
               /* kernel constants */
               %(par)s );
+    }
 """
 
 syn_kernel=\
@@ -161,7 +163,7 @@ void Proj%(id)s_step(cudaStream_t stream, int size, int* post_rank, int *pre_ran
 syn_kernel_call =\
 """
     // Updating the variables of projection %(id)s
-    if ( proj%(id)s._learning )
+    if ( proj%(id)s._learning && pop%(id)s._active )
     {
         Proj%(id)s_step(/* kernel config */
                   proj%(id)s.stream, proj%(id)s.post_rank.size(), proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
@@ -230,13 +232,15 @@ void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* 
 psp_kernel_call =\
 """
     // proj%(id)s: pop%(pre)s -> pop%(post)s
-    Pop%(pre)s_Pop%(post)s_%(target)s_psp( proj%(id)s.stream, pop%(post)s.size,
+    if ( pop%(post)s._active ) {
+        Pop%(pre)s_Pop%(post)s_%(target)s_psp( proj%(id)s.stream, pop%(post)s.size,
                        /* ranks and offsets */
                        proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
                        /* computation data */
                        pop%(pre)s.gpu_r, proj%(id)s.gpu_w,
                        /* result */
                        pop%(post)s.gpu_sum_%(target)s );
+    }
 """
 
 proj_basic_data =\

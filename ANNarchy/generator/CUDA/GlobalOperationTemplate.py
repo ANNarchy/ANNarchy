@@ -51,8 +51,10 @@ void max_value(double* result, double *gpu_array, int N)
 }
 """,
         'call' : """
-    max_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-    cudaMemcpy(&pop%(id)s._max_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s._active ) {
+        max_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._max_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+    }
 """
     },
 
@@ -108,8 +110,10 @@ void min_value(double* result, double *gpu_array, int N)
 }
 """,
         'call' : """
-    min_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-    cudaMemcpy(&pop%(id)s._min_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s._active ) {
+        min_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._min_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+    }
 """
     },
 
@@ -165,8 +169,10 @@ void mean_value(double* result, double *gpu_array, int N)
 }
 """,
         'call' : """
-    mean_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-    cudaMemcpy(&pop%(id)s._mean_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s._active ) {
+        mean_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._mean_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+    }
 """
     }
     
