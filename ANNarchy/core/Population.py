@@ -689,7 +689,7 @@ class Population(object):
                 Global._error('start: ' + var, 'is not a recordable variable of the population.')
                 return
 
-            self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1]}
+            self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1], 'period': period}
 
             try:
                 getattr(self.cyInstance, 'start_record_'+var)()
@@ -803,6 +803,9 @@ class Population(object):
                 print(var, 'is not a recordable variable of', self.name)
                 continue
             
+            # set period and offset
+            self.cyInstance.set_record_period( int(self.recorded_variables[var]['period']/Global.config['dt']), Global.get_current_step() )
+
             try:
                 getattr(self.cyInstance, 'start_record_'+var)()
 
@@ -867,9 +870,10 @@ class Population(object):
 
             if not reshape:
                 data[var] = {
-                'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
+                    'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
                     'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
-                    'data' : np.array(var_data).T if not var == 'spike' else np.array(var_data)
+                    'data' : np.array(var_data).T if not var == 'spike' else np.array(var_data),
+                    'period' : self.recorded_variables[var]['period']
                 }
             else:
                 if not var == 'spike':
@@ -878,8 +882,9 @@ class Population(object):
 
                     data[var] = {
                         'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
-                            'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
-                            'data' : np.transpose(mat1, tuple( range(1, self.dimension+1)+[0]))
+                        'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
+                        'data' : np.transpose(mat1, tuple( range(1, self.dimension+1)+[0])),
+                        'period' : self.recorded_variables[var]['period']
                         }
                 else:
                     Global._error("reshape=true is invalid for get_record('spike')")

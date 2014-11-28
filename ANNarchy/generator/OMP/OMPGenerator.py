@@ -278,6 +278,8 @@ struct ProjStruct%(id_proj)s{
     std::vector< std::vector< %(type)s > > %(name)s ;
     std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s ;
     std::vector< int > record_%(name)s ;
+    std::vector< int > record_period_%(name)s ;
+    std::vector< long int > record_offset_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
@@ -285,6 +287,8 @@ struct ProjStruct%(id_proj)s{
     std::vector<%(type)s>  %(name)s ;
     std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     std::vector< int > record_%(name)s ;
+    std::vector< int > record_period_%(name)s ;
+    std::vector< long int > record_offset_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Local functions
@@ -1207,9 +1211,10 @@ struct ProjStruct%(id_proj)s{
             for var in proj.synapse.description['variables']:
                     code += """
     for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
-        proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
+        if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
+            proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
     }
-""" % {'id': proj.id, 'name': var['name']}
+""" % {'id': proj.id, 'name': var['name'], 'modulo': '%'}
 
         return code
 
@@ -1420,6 +1425,8 @@ struct ProjStruct%(id_proj)s{
         vector[vector[%(type)s]] %(name)s 
         vector[vector[vector[%(type)s]]] recorded_%(name)s 
         vector[int] record_%(name)s 
+        vector[int] record_period_%(name)s 
+        vector[long] record_offset_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
                 elif var['name'] in proj.synapse.description['global']:
                     code += """
@@ -1427,6 +1434,8 @@ struct ProjStruct%(id_proj)s{
         vector[%(type)s]  %(name)s 
         vector[vector[%(type)s]] recorded_%(name)s
         vector[int] record_%(name)s 
+        vector[int] record_period_%(name)s 
+        vector[long] record_offset_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             # Structural plasticity
@@ -1697,12 +1706,16 @@ cdef class proj%(id)s_wrapper :
                     code += """
         proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
         proj%(id)s.record_%(name)s = vector[int]()
+        proj%(id)s.record_period_%(name)s = vector[int]()
+        proj%(id)s.record_offset_%(name)s = vector[long]()
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
                 else:
                     init = 0.0 if var['ctype'] == 'double' else 0
                     code += """
         proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
         proj%(id)s.record_%(name)s = vector[int]()
+        proj%(id)s.record_period_%(name)s = vector[int]()
+        proj%(id)s.record_offset_%(name)s = vector[long]()
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             # Size property
@@ -1782,13 +1795,17 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
-    def start_record_%(name)s(self, int rank):
+    def start_record_%(name)s(self, int rank, int period, long int offset):
         if not rank in list(proj%(id)s.record_%(name)s):
             proj%(id)s.record_%(name)s.push_back(rank)
+            proj%(id)s.record_period_%(name)s.push_back(period)
+            proj%(id)s.record_offset_%(name)s.push_back(offset)
     def stop_record_%(name)s(self, int rank):
-        cdef list tmp = list(proj%(id)s.record_%(name)s)
-        tmp.remove(rank)
-        proj%(id)s.record_%(name)s = tmp
+        cdef list tmp_record = list(proj%(id)s.record_%(name)s)
+        cdef int idx = tmp_record.index(rank)
+        proj%(id)s.record_%(name)s.erase(proj%(id)s.record_%(name)s.begin() + idx)
+        proj%(id)s.record_period_%(name)s.erase(proj%(id)s.record_period_%(name)s.begin() + idx)
+        proj%(id)s.record_offset_%(name)s.erase(proj%(id)s.record_offset_%(name)s.begin() + idx)
     def get_recorded_%(name)s(self, int rank):
         cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
         proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
