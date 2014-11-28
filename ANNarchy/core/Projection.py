@@ -57,6 +57,16 @@ proj_generator_template = {
         #    TODO:
         'body_proj_init': None,
 
+        # Updates the random numbers
+        # Example:
+        #   TODO
+        'body_random_dist_update': None,
+
+        # Initializes the random numbers
+        # Example:
+        #   TODO
+        'body_random_dist_init': None,
+
         # Updates the synapse variables
         # Example:
         # 

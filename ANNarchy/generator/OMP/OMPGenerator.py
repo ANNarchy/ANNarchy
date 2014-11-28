@@ -258,6 +258,15 @@ struct ProjStruct%(id_proj)s{
     std::vector< std::vector< int > > delay ;
 """
 
+            # Arrays for the random numbers
+            code += """
+    // Random numbers
+"""
+            for rd in proj.synapse.description['random_distributions']:
+                code += """    std::vector< std::vector<double> > %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+
             # Parameters
             for var in proj.synapse.description['parameters']:
                 if var['name'] in proj.synapse.description['local']:
@@ -949,19 +958,6 @@ struct ProjStruct%(id_proj)s{
         for proj in self.projections:
 
             from ..Utils import generate_equation_code
-
-            # Pruning if any
-            pruning=""
-            if Global.config['structural_plasticity'] and 'pruning' in proj.synapse.description.keys():
-                pruning_structure = proj.synapse.description['pruning']
-                pruning = """
-        // StructuralPlasticity pruning: %(eq)s
-        if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
-            if(%(condition)s){
-                proj%(id_proj)s.removeSynapse(rk_post, rk_pre);
-            }
-        }
-""" % {'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%', 'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}}
             
             # Global variables
             global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
@@ -986,14 +982,31 @@ struct ProjStruct%(id_proj)s{
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
                 rk_pre = proj%(id_proj)s.pre_rank[i][j];
                 %(local)s
-                %(pruning)s
             }
-"""%{'id_proj' : proj.id, 'local': local_eq, 'pruning': pruning}
+"""%{'id_proj' : proj.id, 'local': local_eq}
 
                 code += """
         }
     }
 """
+            # Pruning if any
+            pruning=""
+            if Global.config['structural_plasticity'] and 'pruning' in proj.synapse.description.keys():
+                pruning_structure = proj.synapse.description['pruning']
+                code += """
+    // proj%(id_proj)s pruning: %(eq)s
+    if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
+        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+            rk_post = proj%(id_proj)s.post_rank[i];
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                rk_pre = proj%(id_proj)s.pre_rank[i][j];
+                if(%(condition)s){
+                    proj%(id_proj)s.removeSynapse(i, rk_pre);
+                }
+            }
+        }
+    }
+""" % {'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%', 'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}}
 
             # Take delays into account if any
             if proj.max_delay > 1:
@@ -1033,6 +1046,20 @@ struct ProjStruct%(id_proj)s{
                 code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
     pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
 """ % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+
+        for proj in self.projections:
+            # Is it a specific population?
+            if proj.generator['omp']['body_random_dist_init']:
+                code += proj.generator['omp']['body_random_dist_init'] %{'id_proj': proj.id}
+                continue
+
+            for rd in proj.synapse.description['random_distributions']:
+                code += """    proj%(id_proj)s.%(rd_name)s = std::vector< std::vector<double> >(proj%(id_proj)s.post_rank.size(), std::vector<double>());
+    for(int i=0; i<proj%(id_proj)s.post_rank.size(); i++){
+        proj%(id_proj)s.%(rd_name)s[i] = std::vector<double>(proj%(id_proj)s.pre_rank[i].size(), 0.0);
+    }
+    proj%(id_proj)s.dist_%(rd_name)s = %(rd_init)s;
+""" % {'id_proj': proj.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': proj.id}}
 
         return code
 
@@ -1180,8 +1207,7 @@ struct ProjStruct%(id_proj)s{
         return code
         
     def body_update_randomdistributions(self):
-        code = """
-    // Compute random distributions""" 
+        code = "" 
         for pop in self.populations:
             # Is it a specific population?
             if pop.generator['omp']['body_random_dist_update']:
@@ -1199,6 +1225,27 @@ struct ProjStruct%(id_proj)s{
                     code += """
             pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
 """ % {'id': pop.id, 'rd_name': rd['name']}
+
+                code += """
+        }
+    }
+"""
+        for proj in self.projections:
+            # Is it a specific population?
+            if proj.generator['omp']['body_random_dist_update']:
+                code += proj.generator['omp']['body_random_dist_update'] %{'id': pop.id}
+                continue
+
+            if len(proj.synapse.description['random_distributions']) > 0:
+                code += """
+    // RD of proj%(id_proj)s
+    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+"""% {'id_proj': proj.id}
+
+                for rd in proj.synapse.description['random_distributions']:
+                    code += """
+            proj%(id_proj)s.%(rd_name)s[i][j] = proj%(id_proj)s.dist_%(rd_name)s(rng);""" % {'id_proj': proj.id, 'rd_name': rd['name']}
 
                 code += """
         }
