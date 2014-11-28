@@ -163,6 +163,8 @@ class Generator(object):
             # Return to the current directory
             os.chdir('..')
                 
+        Global.set_compiled()
+        
         # Create the Python objects                
         self.instantiate()    
 
@@ -245,8 +247,6 @@ all:
     
         else: # Windows: to test....
             pass
-        
-        Global._compiled = True
 
         Global._print('OK')
         if Global.config['show_time']:

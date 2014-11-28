@@ -544,4 +544,20 @@ def analyse_synapse(synapse):
             # Store the result
             variable['cpp'] = code # the C++ equation
 
+    # Structural plasticity
+    if synapse.pruning:
+
+        translator = Equation('test', synapse.pruning, 
+                              description, 
+                              method = 'cond', 
+                              untouched = {},
+                              prefix=pattern['proj_prefix'],
+                              sep=pattern['proj_sep'],
+                              index=pattern['proj_index'],
+                              global_index=pattern['proj_globalindex'])
+
+        code = translator.parse()
+        pruning = {'eq': synapse.pruning, 'cpp': code}
+        description['pruning'] = pruning
+
     return description     

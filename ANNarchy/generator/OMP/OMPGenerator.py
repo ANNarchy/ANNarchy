@@ -257,6 +257,7 @@ struct ProjStruct%(id_proj)s{
                 code +="""
     std::vector< std::vector< int > > delay ;
 """
+
             # Parameters
             for var in proj.synapse.description['parameters']:
                 if var['name'] in proj.synapse.description['local']:
@@ -301,6 +302,14 @@ struct ProjStruct%(id_proj)s{
 
             # Structural plasticity
             if Global.config['structural_plasticity']:
+                # Pruning defined in the synapse
+                if 'pruning' in proj.synapse.description.keys():
+                    code +="""
+    // Pruning
+    bool _pruning;
+    int _pruning_period;
+    long int _pruning_offset;
+"""
                 # Retrieve the names of extra attributes   
                 extra_args = ""
                 add_code = ""
@@ -938,7 +947,22 @@ struct ProjStruct%(id_proj)s{
         code = ""
         # Sum over all synapses 
         for proj in self.projections:
+
             from ..Utils import generate_equation_code
+
+            # Pruning if any
+            pruning=""
+            if Global.config['structural_plasticity'] and 'pruning' in proj.synapse.description.keys():
+                pruning_structure = proj.synapse.description['pruning']
+                pruning = """
+        // StructuralPlasticity pruning: %(eq)s
+        if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
+            if(%(condition)s){
+                proj%(id_proj)s.removeSynapse(rk_post, rk_pre);
+            }
+        }
+""" % {'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%', 'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}}
+            
             # Global variables
             global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
@@ -962,8 +986,9 @@ struct ProjStruct%(id_proj)s{
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
                 rk_pre = proj%(id_proj)s.pre_rank[i][j];
                 %(local)s
+                %(pruning)s
             }
-"""%{'id_proj' : proj.id, 'local': local_eq}
+"""%{'id_proj' : proj.id, 'local': local_eq, 'pruning': pruning}
 
                 code += """
         }
@@ -1119,16 +1144,19 @@ struct ProjStruct%(id_proj)s{
             proj%(id_proj)s.inv_rank[proj%(id_proj)s.pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
         }
     }
-// For debug...
-//    for (std::map< int, std::vector< std::pair<int, int> > >::iterator it=proj%(id_proj)s.inv_rank.begin(); it!=proj%(id_proj)s.inv_rank.end(); ++it) {
-//        std::cout << it->first << ": " ;
-//        for(int _id=0; _id<it->second.size(); _id++){
-//            std::pair<int, int> val = it->second[_id];
-//            std::cout << "(" << val.first << ", " << val.second << "), " ;
-//        }
-//        std::cout << std::endl ;
-//    }
 """% {'id_proj': proj.id}
+
+                debug = """
+// For debug...
+    for (std::map< int, std::vector< std::pair<int, int> > >::iterator it=proj%(id_proj)s.inv_rank.begin(); it!=proj%(id_proj)s.inv_rank.end(); ++it) {
+        std::cout << it->first << ": " ;
+        for(int _id=0; _id<it->second.size(); _id++){
+            std::pair<int, int> val = it->second[_id];
+            std::cout << "(" << val.first << ", " << val.second << "), " ;
+        }
+        std::cout << std::endl ;
+    }
+"""
 
             # Recording
             for var in proj.synapse.description['variables']:
@@ -1138,6 +1166,15 @@ struct ProjStruct%(id_proj)s{
                 else:
                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
 """% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
+
+            # Pruning
+            if Global.config['structural_plasticity'] and 'pruning' in proj.synapse.description.keys():
+                code +="""
+    // Pruning
+    proj%(id_proj)s._pruning = false;
+    proj%(id_proj)s._pruning_period = 1;
+    proj%(id_proj)s._pruning_offset = 0;
+"""% {'id_proj': proj.id}
             
 
         return code
@@ -1440,6 +1477,16 @@ struct ProjStruct%(id_proj)s{
 
             # Structural plasticity
             if Global.config['structural_plasticity']:
+
+                # Pruning in the synapse
+                if 'pruning' in proj.synapse.description.keys():
+                    code += """
+        # Pruning
+        bool _pruning
+        int _pruning_period
+        long _pruning_offset
+"""
+
                 # Retrieve the names of extra attributes   
                 extra_args = ""
                 for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
@@ -1827,6 +1874,17 @@ cdef class proj%(id)s_wrapper :
 
              # Structural plasticity
             if Global.config['structural_plasticity']:
+                # Pruning in the synapse
+                if 'pruning' in proj.synapse.description.keys():
+                    code += """
+    # Pruning
+    def start_pruning(self, int period, long offset):
+        proj%(id)s._pruning = True
+        proj%(id)s._pruning_period = period
+        proj%(id)s._pruning_offset = offset
+    def stop_pruning(self):
+        proj%(id)s._pruning = False
+"""% {'id' : proj.id}
                 # Retrieve the names of extra attributes   
                 extra_args = ""
                 extra_values = ""

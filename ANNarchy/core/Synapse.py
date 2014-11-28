@@ -29,7 +29,7 @@ class Synapse(object):
     """
     Base class to define a synapse.
     """
-    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, name=None, description=None, extra_values={} ):
+    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, pruning=None, name=None, description=None, extra_values={} ):
         """ 
         *Parameters*:
         
@@ -54,6 +54,7 @@ class Synapse(object):
         self.psp = psp
         self.operation = operation
         self.extra_values = extra_values
+        self.pruning = pruning
 
         # Type of the synapse
         self.type = 'spike' if pre_spike else 'rate'
