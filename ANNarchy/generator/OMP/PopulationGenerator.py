@@ -127,7 +127,7 @@ struct PopStruct%(id)s{
         code += """
 };    
 """   
-        return code  
+        return code  % {'id': pop.id}
 
 
 #######################################################################
