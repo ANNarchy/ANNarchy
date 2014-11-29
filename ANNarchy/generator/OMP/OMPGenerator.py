@@ -332,7 +332,7 @@ class OMPGenerator(object):
 
     def body_init_population(self):
         code = """
-    // Initialize population variables
+    // Initialize populations
 """
         for pop in self.populations:
             code += self.popgen.init_population(pop)

@@ -1,5 +1,4 @@
 import ANNarchy.core.Global as Global
-from ANNarchy.core.PopulationView import PopulationView
 
 import numpy as np
 
