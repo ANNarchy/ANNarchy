@@ -1,5 +1,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
+from .PopulationGenerator import PopulationGenerator
+from .ProjectionGenerator import ProjectionGenerator
 
 import numpy as np
 
@@ -10,6 +12,9 @@ class CUDAGenerator(object):
         self.populations = populations
         self.projections = projections
 
+        self.popgen = PopulationGenerator()
+        self.projgen = ProjectionGenerator()
+        
     def generate(self):
 
         # Propagte the global operations needed by the projections to the corresponding populations.
@@ -81,126 +86,11 @@ class CUDAGenerator(object):
         pop_struct = ""
         pop_ptr = ""
         for pop in self.populations:
-
-            # Is it a specific population?
-            if pop.generator['cuda']['header_pop_struct']:
-                Global._error("Customized populations are not usable on CUDA yet.")
-                continue
-
-            if pop.neuron_type.type == 'spike':
-                Global._error("Spiking populations are not usable on CUDA yet.")
-                continue
-
-            # Generate the structure for the population.
-            code = """
-struct PopStruct%(id)s{
-    // Number of neurons
-    int size;
-
-    // assigned stream for concurrent kernel execution ( CC > 2.x )
-    cudaStream_t stream;
-
-    // Active
-    bool _active;
-"""
-
-            # Record
-            code+="""
-    // Record parameter
-    int record_period;
-    long int record_offset;
-"""
-
-            # Parameters
-            for var in pop.neuron_type.description['parameters']:
-                if var['name'] in pop.neuron_type.description['local']:
-                    code += """
-    // Local parameter %(name)s
-    std::vector< %(type)s > %(name)s;    // host
-    %(type)s *gpu_%(name)s;    // device
-    bool %(name)s_dirty;
-""" % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in pop.neuron_type.description['global']:
-                    code += """
-    // Global parameter %(name)s
-    %(type)s  %(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            # Variables
-            for var in pop.neuron_type.description['variables']:
-                if var['name'] in pop.neuron_type.description['local']:
-                    code += """
-    // Local variable %(name)s
-    std::vector< %(type)s > %(name)s ;    // host
-    %(type)s *gpu_%(name)s;    // device
-    bool %(name)s_dirty;
-    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    // bool record_%(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in pop.neuron_type.description['global']:
-                    code += """
-    // Global variable %(name)s
-    %(type)s  %(name)s ;
-    // std::vector< %(type)s > recorded_%(name)s ;
-    // bool record_%(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            # Arrays for the presynaptic sums
-            code += """
-    // Targets
-"""
-            if pop.neuron_type.type == 'rate':
-                for target in list(set(pop.neuron_type.description['targets']+pop.targets)):
-                    code += """    std::vector<double> _sum_%(target)s;    // host
-    double *gpu_sum_%(target)s;    // device
-""" % {'target' : target}
-
-            # Global operations
-            code += """
-    // Global operations
-"""
-            for op in pop.global_operations:
-                code += """    double _%(op)s_%(var)s;
-""" % {'op': op['function'], 'var': op['variable']}
-
-            # Arrays for the random numbers
-            code += """
-    // Random numbers
-"""
-            for rd in pop.neuron_type.description['random_distributions']:
-                code += """    curandState* gpu_%(rd_name)s;
-""" % { 'rd_name' : rd['name'] }
-
-            # Delays
-            if pop.max_delay > 1:
-                if pop.neuron_type.type == "rate":
-                    code += """
-    // Delays for rate-coded population
-    std::deque< double* > gpu_delayed_r;
-"""             
-                else:
-                    Global._error("synaptic delays for spiking neurons are not implemented yet ...")
-                    exit(0)
-
-            # Local functions
-            if len(pop.neuron_type.description['functions'])>0:
-                code += """
-    // Local functions
-"""
-                for func in pop.neuron_type.description['functions']:
-                    code += ' '*4 + func['cpp'] + '\n'
-
-            # Finish the structure
-            code += """
-};
-"""           
-            pop_struct += code % {'id': pop.id}
-
-            pop_ptr += """
-extern PopStruct%(id)s pop%(id)s;
-"""% {
-    'id': pop.id,
-}
+            # Header struct
+            pop_struct += self.popgen.header_struct(pop)      
+            # Extern pointer
+            pop_ptr += """extern PopStruct%(id)s pop%(id)s;
+"""% {'id': pop.id}
 
         return pop_struct, pop_ptr
 
@@ -209,97 +99,14 @@ extern PopStruct%(id)s pop%(id)s;
         proj_struct = ""
         proj_ptr = ""
         for proj in self.projections:
-            code = """
-struct ProjStruct%(id)s{
-    int size;
-
-    // stream
-    cudaStream_t stream;
-    
-    // Learning flag
-    bool _learning;
-    // Connectivity
-    std::vector<int> post_rank ;
-    int* gpu_post_rank;
-    std::vector< std::vector< int > > pre_rank ;
-    int* gpu_pre_rank;
-    int* gpu_nb_synapses;
-    int* gpu_off_synapses;
-    
-    // flat connectivity parameters 
-    int overallSynapses;
-    std::vector<int> flat_idx;
-    std::vector<int> flat_off;
-"""
-
-            # Delays
-            if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
-                if proj._synapses.type == "rate":
-                    Global._error("only uniform delays are supported ...")
-                    exit(0)
-                
-            # Parameters
-            for var in proj.synapse.description['parameters']:
-                if var['name'] in proj.synapse.description['local']:
-                    code += """
-    // Local parameter %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s;    // host
-    %(type)s* gpu_%(name)s;    // device
-    bool %(name)s_dirty;    
-""" % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in proj.synapse.description['global']:
-                    code += """
-    // Global parameter %(name)s
-    std::vector<%(type)s>  %(name)s;
-    %(type)s* gpu_%(name)s;    // device
-    bool %(name)s_dirty;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            # Variables
-            for var in proj.synapse.description['variables']:
-                if var['name'] in proj.synapse.description['local']:
-                    code += """
-    // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;    // host
-    %(type)s* gpu_%(name)s;    // device
-    bool %(name)s_dirty;
-    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    // bool record_%(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
-                elif var['name'] in proj.synapse.description['global']:
-                    code += """
-    // Global variable %(name)s
-    std::vector<%(type)s>  %(name)s;    // host
-    %(type)s* gpu_%(name)s;    // device
-    bool %(name)s_dirty;
-    // std::vector< %(type)s > recorded_%(name)s ;
-    // bool record_%(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            # Pre- or post_spike variables (including w)
-            if proj.synapse.description['type'] == 'spike':
-                for var in proj.synapse.description['pre_spike']:
-                    if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
-                        code += """
-    // Local variable %(name)s added by default
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    // bool record_%(name)s ;
-""" % {'type' : 'double', 'name': var['name']}
-
-            code += """
-};    
-""" 
-            proj_struct += code % {'id': proj.id}
-
-            proj_ptr += """
-extern ProjStruct%(id)s proj%(id)s;
-"""% {
-    'id': proj.id,
-}
+            # Header struct
+            proj_struct += self.projgen.header_struct(proj)
+            # Extern pointer
+            proj_ptr += """extern ProjStruct%(id_proj)s proj%(id_proj)s;
+"""% {'id_proj': proj.id}
 
         return proj_struct, proj_ptr
-
+        
 
 #######################################################################
 ############## BODY ###################################################
