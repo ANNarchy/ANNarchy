@@ -573,4 +573,32 @@ def analyse_synapse(synapse):
         pruning = {'eq': synapse.pruning, 'cpp': code}
         description['pruning'] = pruning
 
+    if synapse.creating:
+        # Extract pre/post depndencies
+        eq, untouched, dependencies = extract_prepost('test', synapse.creating, description, pattern)
+        # Parse code
+        translator = Equation('test', eq, 
+                              description, 
+                              method = 'cond', 
+                              untouched = {},
+                              prefix=pattern['proj_prefix'],
+                              sep=pattern['proj_sep'],
+                              index=pattern['proj_index'],
+                              global_index=pattern['proj_globalindex'])
+
+        code = translator.parse()
+
+        # Replace untouched variables with their original name
+        for prev, new in untouched.iteritems():
+            code = code.replace(prev, new) 
+
+        # Add new dependencies
+        for dep in dependencies['pre']:
+            description['dependencies']['pre'].append(dep)
+        for dep in dependencies['post']:
+            description['dependencies']['post'].append(dep)
+
+        creating = {'eq': synapse.creating, 'cpp': code}
+        description['creating'] = creating
+
     return description     

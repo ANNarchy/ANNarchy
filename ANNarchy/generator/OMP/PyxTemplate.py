@@ -49,7 +49,15 @@ def pyx_create(double dt, long seed):
 
 # Simulation for the given numer of steps
 def pyx_run(int nb_steps):
-    run(nb_steps)
+    cdef int nb, rest
+    if nb_steps < 1000:
+        run(nb_steps)
+    else:
+        nb = int(nb_steps/1000)
+        rest = nb_steps %% 1000
+        for i in range(nb):
+            run(1000)
+        run(rest)
 
 # Simulation for the given number of steps except if a criterion is reached
 def pyx_run_until(int nb_steps, list populations, bool mode):

@@ -296,6 +296,13 @@ all:
         # Must be called after the pops and projs are created!
         cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
 
+
+        # Transfer inial values
+        for pop in self.populations:
+            pop._init_attributes()
+        for proj in self.projections:
+            proj._init_attributes()
+
         # Sets the desired number of threads
         cython_module.set_number_threads(Global.config['num_threads'])
             

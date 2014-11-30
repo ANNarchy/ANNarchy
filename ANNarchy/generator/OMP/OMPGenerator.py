@@ -276,13 +276,15 @@ class OMPGenerator(object):
     def body_structural_plasticity(self):
 
         # Pruning if any
-        pruning=""
+        pruning=""; creating=""
         if Global.config['structural_plasticity'] :
             for proj in self.projections:
                 if 'pruning' in proj.synapse.description.keys():
                     pruning += self.projgen.pruning(proj)
+                if 'creating' in proj.synapse.description.keys():
+                    creating += self.projgen.creating(proj)
 
-        return pruning
+        return creating + pruning
 
     def body_init_randomdistributions(self):
         code = """
