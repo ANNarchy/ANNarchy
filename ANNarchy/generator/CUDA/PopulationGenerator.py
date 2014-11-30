@@ -298,20 +298,19 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
         return code
 
-    def init_delay(self):
+    def init_delay(self, pop):
         code = """
     // Initialize delayed firing rates
 """
-        for pop in self.populations:
-            if pop.max_delay > 1:
-                if pop.neuron_type.type == 'rate':
-                    code += """    pop%(id)s.gpu_delayed_r = std::deque< double* >(%(delay)s, NULL);
+        if pop.max_delay > 1:
+            if pop.neuron_type.type == 'rate':
+                code += """    pop%(id)s.gpu_delayed_r = std::deque< double* >(%(delay)s, NULL);
     for ( int i = 0; i < %(delay)s; i++ )
         cudaMalloc( (void**)& pop%(id)s.gpu_delayed_r[i], sizeof(double)*pop%(id)s.size);
 """ % {'id': pop.id, 'delay': pop.max_delay}
-                else:
-                    Global._error("no synaptic delays for spiking synapses on cuda implemented ...")
-                    pass
+            else:
+                Global._error("no synaptic delays for spiking synapses on cuda implemented ...")
+                pass
 
         return code
 
