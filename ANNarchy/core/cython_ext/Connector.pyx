@@ -32,7 +32,7 @@ cdef class CSR:
         self.push_back(rk, r, w, d)
 
     cpdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d):
-
+        cdef unsigned int i
         cdef vector[int] int_delays
         cdef int max_d, unif_d
 
@@ -79,14 +79,14 @@ cdef class CSR:
         return self.uniform_delay
 
     cpdef validate(self):
-        cdef int idx 
+        cdef int idx, single, rk
         cdef vector[int] ranks
         cdef vector[double] weights
         cdef vector[int] delays
         cdef dict doubletons = {}
         cdef list postranks = list(self.post_rank)
         cdef list set_postranks = list(set(postranks))
-        cdef list preranks, set_preranks
+        cdef list preranks, set_preranks, indices
 
         if len(postranks) != len(set_postranks):
             ANNarchy.core.Global._warning('You have added several times the same post-synaptic neuron to the CSR data in your connector method.')
