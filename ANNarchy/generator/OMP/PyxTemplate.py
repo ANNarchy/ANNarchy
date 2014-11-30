@@ -1,5 +1,5 @@
 pyx_template = '''# cython: embedsignature=True
-
+from cpython.exc cimport PyErr_CheckSignals
 from libcpp.vector cimport vector
 from libcpp cimport bool
 import numpy as np
@@ -57,6 +57,7 @@ def pyx_run(int nb_steps):
         rest = nb_steps %% 1000
         for i in range(nb):
             run(1000)
+            PyErr_CheckSignals()
         run(rest)
 
 # Simulation for the given number of steps except if a criterion is reached
