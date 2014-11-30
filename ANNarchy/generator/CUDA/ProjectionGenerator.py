@@ -37,7 +37,15 @@ struct ProjStruct%(id)s{
             if proj._synapses.type == "rate":
                 Global._error("only uniform delays are supported ...")
                 exit(0)
-            
+
+        # Arrays for the random numbers
+        code += """
+    // RNG states
+"""
+        for rd in proj.synapse.description['random_distributions']:
+            code += """    curandState* gpu_%(rd_name)s;
+""" % { 'rd_name' : rd['name'] }
+
         # Parameters
         for var in proj.synapse.description['parameters']:
             if var['name'] in proj.synapse.description['local']:
@@ -219,12 +227,38 @@ struct ProjStruct%(id)s{
             local_eq = local_eq.replace(old, new)
             global_eq = global_eq.replace(old, new)
 
+        # random variables
+        for rd in proj.synapse.description['random_distributions']:
+            par += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
+
+        # we replace the rand_%(id)s by the corresponding curand... term
+        for rd in proj.synapse.description['random_distributions']:
+            if rd['dist'] == "Uniform":
+                term = """curand_uniform_double( &%(rd)s[i]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                local_eq = local_eq.replace(rd['name']+"[j]", term)
+            elif rd['dist'] == "Normal":
+                term = """curand_normal_double( &%(rd)s[i])""" % { 'rd': rd['name'] };
+                local_eq = local_eq.replace(rd['name']+"[j]", term)
+            elif rd['dist'] == "LogNormal":
+                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                local_eq = local_eq.replace(rd['name']+"[j]", term)
+            else:
+                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        # remove all types
+        repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
+        var_wo_types = var
+        par_wo_types = par
+        for type in repl_types:
+            var_wo_types = var_wo_types.replace(type, "")
+            par_wo_types = par_wo_types.replace(type, "")
+
         from .cuBodyTemplate import syn_kernel
         body = syn_kernel % { 'id': proj.id,
                                'par': par,
-                               'par2': par.replace("double","").replace("int",""),
+                               'par2': par_wo_types,
                                'var': var,
-                               'var2': var.replace("double*","").replace("int*",""),
+                               'var2': var_wo_types,
                                'global_eqs': global_eq,
                                'local_eqs': local_eq,
                                'target': proj.target,
@@ -256,6 +290,10 @@ struct ProjStruct%(id)s{
         for g_op in post_global_ops:
             glob += """, pop%(id)s.%(name)s """ % { 'id': proj.post.id, 'name': g_op }
 
+        # random variables
+        for rd in proj.synapse.description['random_distributions']:
+            glob += """, proj%(id)s.gpu_%(rd_name)s""" % { 'id': proj.id, 'rd_name' : rd['name'] }
+
         # generate code
         from .cuBodyTemplate import syn_kernel_call
         call = syn_kernel_call % { 'id': proj.id,
@@ -278,9 +316,11 @@ struct ProjStruct%(id)s{
 
         code = ""
         for rd in proj.synapse.description['random_distributions']:
-            Global._error("random numbers on synapse level is not implemented for CUDA ... ")
+            code += """    cudaMalloc((void**)&proj%(id)s.gpu_%(rd_name)s, pop%(post)s.size * sizeof(curandState));
+    init_curand_states( pop%(post)s.size, proj%(id)s.gpu_%(rd_name)s, seed );
+""" % {'id': proj.id, 'post': proj.post.id, 'rd_name': rd['name'] }
 
-        return ""
+        return code
 
     def init_projection(self, proj):
         code = ""
