@@ -18,52 +18,20 @@ std::mt19937  rng;
 // Global operations
 %(glops_def)s
 
-void progress(int i, int nbSteps) {
-    double tInMs = nbSteps * dt;
-    if ( tInMs > 1000.0 )
-        std::cout << "\\rSimulate " << (int)(tInMs/1000.0) << " s: " << (int)( (double)(i+1)/double(nbSteps) * 100.0 )<< " finished.";
-    else
-        std::cout << "\\rSimulate " << tInMs << " ms: " << (int)( (double)(i+1)/double(nbSteps) * 100.0 )<< " finished.";
-    std::flush(std::cout);
-}
-
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
+
     for(int i=0; i<nbSteps; i++) {
         step();
-        //progress(i, nbSteps);
     }
-    //std::cout << std::endl;
-%(eval)s
+
 }
 
 int run_until(int steps, std::vector<int> populations, bool or_and)
 {
-    bool stop = false;
-    bool pop_stop = false;
-    int nb = 0;
-    for(int n = 0; n < steps; n++)
-    {
-        step();
-        nb++;
-        stop = or_and;
-        for(int i=0; i<populations.size();i++)
-        {
-            // Check all populations
-            switch(populations[i]){
-%(run_until)s
-            }
 
-            // Accumulate the results
-            if(or_and)
-                stop = stop && pop_stop;
-            else
-                stop = stop || pop_stop;
-        }
-        if(stop)
-            break;
-    }
-    return nb;
+%(run_until)s
+
 }
 
 // Initialize the internal data and random numbers generators
@@ -137,6 +105,11 @@ void step()
     // Postsynaptic events
     ////////////////////////////////
 %(post_event)s
+
+    ////////////////////////////////
+    // Structural plasticity
+    ////////////////////////////////
+%(structural_plasticity)s
 
     ////////////////////////////////
     // Recording

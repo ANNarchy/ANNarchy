@@ -262,13 +262,15 @@ class Dendrite(object):
     #########################
     ### Recording
     #########################   
-    def start_record(self, variable):
+    def start_record(self, variable, period=Global.config['dt']):
         """
         Starts recording the given variables.
         
         **Parameter**:
             
-        * **variable**: single variable name or list of variable names.        
+        * **variable**: single variable name or list of variable names.   
+
+        * period of recording in milliseconds.     
         """
         _variable = []
         
@@ -281,7 +283,7 @@ class Dendrite(object):
         
         for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank)
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank, int(period/Global.config['dt']), Global.get_current_step())
                     
             except :
                 Global._error('start: '+ var + ' is not a recordable variable.')
@@ -290,7 +292,7 @@ class Dendrite(object):
             if not self.post_rank in self.proj.recorded_variables.keys():
                 self.proj.recorded_variables[self.post_rank] = {}
             
-            self.proj.recorded_variables[self.post_rank][var]= {'start': [Global.get_current_step()], 'stop': [-1]}
+            self.proj.recorded_variables[self.post_rank][var]= {'start': [Global.get_current_step()], 'stop': [-1], 'period': period}
 
             if Global.config['verbose']:
                 print('start recording of', var, '(', self.proj.name, ')')
@@ -372,7 +374,7 @@ class Dendrite(object):
         
         for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank)
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank, int(self.proj.recorded_variables[self.post_rank][var]['period']/Global.config['dt']), Global.get_current_step())
             except:
                 Global._error('resume:: ' + var + ' is not a recordable variable.')
                 return
@@ -422,7 +424,8 @@ class Dendrite(object):
                 'stop' : self.proj.recorded_variables[self.post_rank][var]['stop'] \
                         if len(self.proj.recorded_variables[self.post_rank][var]['stop']) > 1 \
                         else self.proj.recorded_variables[self.post_rank][var]['stop'][0] ,
-                'data' : data
+                'data' : data,
+                'period': self.proj.recorded_variables[self.post_rank][var]['period']
             }
 
             self.proj.recorded_variables[self.post_rank][var]['start'] = [Global.get_current_step()]
