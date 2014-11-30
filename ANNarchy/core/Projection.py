@@ -92,34 +92,13 @@ proj_generator_template = {
         'pyx_proj_class': None,
     },
     'cuda': {
-        # C++ struct to encapsulate all data
-        # Example:
-        # 
-        #    TODO:
         'header_proj_struct' : None,
-
-        # Updates the synapse variables
-        # Example:
-        # 
-        #    TODO:
+        'body_proj_init': None,
+        'body_random_dist_update': None,
+        'body_random_dist_init': None,
         'body_update_synapse': None,
-
-        # compute the postsynaptic potential
-        # Example:
-        # 
-        #    TODO:
         'body_compute_psp': None,
-        
-        # Export of the C++ struct to Cython (must have an indent of 4)
-        # Example:
-        # 
-        #    TODO:
         'pyx_proj_struct': None,
-        
-        # Wrapper class in Cython (no indentation)
-        # Example:
-        # 
-        #    TODO:
         'pyx_proj_class': None,
     }
 }

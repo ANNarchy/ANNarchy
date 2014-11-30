@@ -122,6 +122,15 @@ struct PopStruct%(id)s{
         body:    kernel implementation
         call:    kernel call
         """
+        # is it a specific population ?
+        if pop.generator['cuda']['body_update_neuron']:
+            Global._error("Customized populations are not usable on CUDA yet.")
+            return "", "", ""
+
+        # no variable
+        if len(pop.neuron_type.description['variables']) == 0:
+            return "", "", ""
+
         # Neural update
         from ..Utils import generate_equation_code
 
@@ -267,3 +276,87 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
     }
 """
         return code % {'id': pop.id }
+
+    def init_globalops(self, pop):
+        # Is it a specific population?
+        if pop.generator['cuda']['body_globalops_init']:
+            return pop.generator['cuda']['body_globalops_init'] %{'id': pop.id}
+
+        code = ""
+        for op in pop.global_operations:
+            code += """    pop%(id)s._%(op)s_%(var)s = 0.0;
+""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+
+        return code
+
+    def init_random_distributions(self, pop):
+        code = ""
+        for rd in pop.neuron_type.description['random_distributions']:
+            code += """    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(curandState));
+    init_curand_states( pop%(id)s.size, pop%(id)s.gpu_%(rd_name)s, seed );
+""" % {'id': pop.id, 'rd_name': rd['name'] }
+
+        return code
+
+    def init_delay(self):
+        code = """
+    // Initialize delayed firing rates
+"""
+        for pop in self.populations:
+            if pop.max_delay > 1:
+                if pop.neuron_type.type == 'rate':
+                    code += """    pop%(id)s.gpu_delayed_r = std::deque< double* >(%(delay)s, NULL);
+    for ( int i = 0; i < %(delay)s; i++ )
+        cudaMalloc( (void**)& pop%(id)s.gpu_delayed_r[i], sizeof(double)*pop%(id)s.size);
+""" % {'id': pop.id, 'delay': pop.max_delay}
+                else:
+                    Global._error("no synaptic delays for spiking synapses on cuda implemented ...")
+                    pass
+
+        return code
+
+    def init_population(self, pop):
+        # Is it a specific population?
+        if pop.generator['cuda']['body_spike_init']:
+            return pop.generator['cuda']['body_spike_init'] %{'id': pop.id}
+
+        # active is true by default
+        code = """
+    // Population %(id)s
+    pop%(id)s._active = true;
+""" % {'id': pop.id}
+
+        if pop.neuron_type.type == 'spike':
+            code += """
+    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
+    pop%(id)s.spiked = std::vector<int>(0, 0);
+    pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
+    pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
+""" % {'id': pop.id}
+
+        return code
+
+    def reset_computesum(self, pop):
+        code = ""
+        for target in pop.targets:
+            code += """
+    if (pop%(id)s._active)
+        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
+""" % {'id': pop.id, 'target': target}
+        return code
+
+    def update_globalops(self, pop):
+        from .GlobalOperationTemplate import global_operation_templates
+        code = ""
+        for op in pop.global_operations:
+            code += global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'var': op['variable']  }
+
+        return code
+
+    def record(self, pop):
+        # Is it a specific population?
+        if pop.generator['cuda']['body_record']:
+            return pop.generator['cuda']['body_record'] %{'id': pop.id}
+
+        # TODO:
+        return ""

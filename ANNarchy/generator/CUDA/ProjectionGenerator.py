@@ -101,6 +101,11 @@ struct ProjStruct%(id)s{
         body:    kernel implementation
         call:    kernel call
         """
+        # Is it a specific projection?
+        if proj.generator['cuda']['body_compute_psp']:
+            Global._error("Customized rate-code projections are not usable on CUDA yet.")
+            return "", "", ""
+
         # Retrieve the psp code
         if not 'psp' in  proj.synapse.description.keys(): # default
             psp = "r[pre_rank[i]] * w[i];"
@@ -140,6 +145,11 @@ struct ProjStruct%(id)s{
         return body_code, header_code, call_code
 
     def computesum_spiking(self, proj):
+        # Is it a specific projection?
+        if proj.generator['cuda']['body_compute_psp']:
+            Global._error("Customized spiking projections are not usable on CUDA yet.")
+            return "", "", ""
+
         Global._error("Spiking models are not supported currently on CUDA devices.")
         return "", "", ""
 
@@ -256,3 +266,43 @@ struct ProjStruct%(id)s{
                                  }
 
         return body, header, call
+
+    def pruning(self, proj):
+        Global._error("Pruning is not implemented for CUDA ... ")
+        return ""
+
+    def init_random_distributions(self, proj):
+        # Is it a specific projection?
+        if proj.generator['omp']['body_random_dist_init']:
+            return proj.generator['omp']['body_random_dist_init'] %{'id_proj': proj.id}
+
+        code = ""
+        for rd in proj.synapse.description['random_distributions']:
+            Global._error("random numbers on synapse level is not implemented for CUDA ... ")
+
+        return ""
+
+    def init_projection(self, proj):
+        code = ""
+        # Is it a specific projection?
+        if proj.generator['cuda']['body_proj_init']:
+            return proj.generator['cuda']['body_proj_init']
+
+        # Learning by default
+        code += """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    proj%(id_proj)s._learning = true;
+""" % {'id_proj': proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name}
+
+        # Spiking neurons have aditional data
+        if proj.synapse.type == 'spike':
+            Global._error("no spiking implementation yet ..")
+
+        # Recording
+        # TODO: not implemented yet
+
+        return code
+
+    def record(self, proj):
+        # TODO: not implemented yet
+        return ""

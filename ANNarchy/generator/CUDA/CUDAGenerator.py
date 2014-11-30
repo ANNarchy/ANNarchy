@@ -255,15 +255,6 @@ class CUDAGenerator(object):
         call = ""
 
         for pop in self.populations:
-            # is it a specific population ?
-            if pop.generator['cuda']['body_update_neuron']:
-                Global._error("Customized populations are not usable on CUDA yet.")
-                continue
-
-            # no variable
-            if len(pop.neuron_type.description['variables']) == 0:
-                continue
-
             pop_header, pop_body, pop_call = self.popgen.update_neuron(pop)
             
             header += pop_header
@@ -285,11 +276,6 @@ class CUDAGenerator(object):
         call = ""
 
         for proj in self.projections:
-            # Is it a specific projection?
-            if proj.generator['omp']['body_compute_psp']:
-                Global._error("Customized projections are not usable on CUDA yet.")
-                continue
-
             # Call the right generator depending on type
             if proj.synapse.type == 'rate':
                 b, h, c = self.projgen.computesum_rate(proj)
@@ -317,157 +303,34 @@ class CUDAGenerator(object):
 
         return body, header, call
 
-    def body_memory_transfers(self):
-        host_device_transfer = ""
-        device_host_transfer = ""
+    def body_structural_plasticity(self):
+        # Pruning if any
+        pruning=""
+        if Global.config['structural_plasticity'] :
+            for proj in self.projections:
+                if 'pruning' in proj.synapse.description.keys():
+                    pruning += self.projgen.pruning(proj)
 
-        # transfers for populations
-        for pop in self.populations:
-            host_device_transfer += """
-    // host to device transfers for %(pop_name)s""" % { 'pop_name': pop.name }
-            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
-                if attr['name'] in pop.neuron_type.description['local']:
-                    host_device_transfer += """
-        // %(attr_name)s: local
-        if( pop%(id)s.%(attr_name)s_dirty )
-        {
-            //std::cout << "Transfer pop%(id)s.%(attr_name)s" << std::endl;
-            cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            pop%(id)s.%(attr_name)s_dirty = false;
-        }
-""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
-
-            device_host_transfer += """
-    // device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
-            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
-                if attr['name'] in pop.neuron_type.description['local']:
-                    device_host_transfer += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
-
-        # transfers for projections
-        for proj in self.projections:
-            host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
-            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
-                if attr['name'] in proj.synapse.description['local']:
-                    host_device_transfer += """
-        // %(name)s: local
-        if ( proj%(id)s.%(name)s_dirty )
-        {
-            auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
-            cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            flat_proj%(id)s_%(name)s.clear();
-        }
-""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
-                else:
-                    host_device_transfer += """
-        // %(name)s: global
-        if ( proj%(id)s.%(name)s_dirty )
-        {
-            cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-        }
-""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
-
-            device_host_transfer += """
-    // device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
-            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
-                if attr['name'] in proj.synapse.description['local']:
-                    device_host_transfer += """
-            // %(name)s: local
-            std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
-            cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, proj%(id)s.flat_idx);
-            flat_proj%(id)s_%(name)s.clear();
-""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
-                else:
-                    device_host_transfer += """
-            // %(name)s: global
-            cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
-
-        return host_device_transfer, device_host_transfer
-
-    def body_init_device(self):
-        code = ""
-
-        dev_id = 0 # default cuda device
-        if 'device' in Global.cuda_config.keys():
-            dev_id = Global.cuda_config['device']
-
-        code += """
-    // set active cuda device
-    auto status = cudaSetDevice(%(id)s);
-    if ( status != cudaSuccess )
-        std::cerr << "Error on setting cuda device ... " << std::endl;
-
-    // initialize cuda-api
-    cudaFree(0);
-""" % { 'id': dev_id }
-
-        for pop in self.populations:
-            code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
-            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
-                if attr['name'] in pop.neuron_type.description['local']:
-                    code += """\tcudaMalloc((void**)&pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s));
-        pop%(id)s.%(attr_name)s_dirty = true;
-""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
-            for target in pop.neuron_type.description['targets']:
-                code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
-""" % { 'id': pop.id, 'target': target }
-                
-
-        for proj in self.projections:
-            from .cuBodyTemplate import proj_basic_data
-            
-            # basic variables: post_rank, nb_synapses, off_synapses, pre_rank
-            code += proj_basic_data % { 'id': proj.id }
-
-            # other variables, parameters
-            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
-                if attr['name'] in proj.synapse.description['local']:
-                    code += """
-        // %(name)s
-        auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
-        cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s));
-        cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_%(name)s.clear();
-        proj%(id)s.%(name)s_dirty = false;
-""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
-                else:
-                    code += """
-        // %(name)s
-        cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s));
-        cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-        proj%(id)s.%(name)s_dirty = false;
-""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
-
-        return code
+        return pruning
 
     def body_init_randomdistributions(self):
         code = """
-    // Initialize random distribution objects
+    // Initialize RNG states
 """
         for pop in self.populations:
-            for rd in pop.neuron_type.description['random_distributions']:
-                code += """    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(curandState));
-    init_curand_states( pop%(id)s.size, pop%(id)s.gpu_%(rd_name)s, seed );
-""" % {'id': pop.id, 'rd_name': rd['name'] }
+            code += self.popgen.init_random_distributions(pop)
+
+        for proj in self.projections:
+            code += self.projgen.init_random_distributions(proj)
 
         return code
-
 
     def body_init_globalops(self):
         code = """
     // Initialize global operations
 """
         for pop in self.populations:
-            # Is it a specific population?
-            if pop.generator['omp']['body_globalops_init']:
-                code += pop.generator['omp']['body_globalops_init'] %{'id': pop.id}
-                continue
-
-            for op in pop.global_operations:
-                code += """    pop%(id)s._%(op)s_%(var)s = 0.0;
-""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+            code += self.popgen.init_globalops(pop)
 
         return code
 
@@ -491,19 +354,19 @@ class CUDAGenerator(object):
         return header, body
 
     def body_init_delay(self):
+        code = ""
+        for pop in self.populations:
+            if pop.max_delay > 1: # no need to generate the code otherwise
+                code += self.popgen.init_delay(pop)
+
+        return code
+
+    def body_init_population(self):
         code = """
-    // Initialize delayed firing rates
+    // Initialize populations
 """
         for pop in self.populations:
-            if pop.max_delay > 1:
-                if pop.neuron_type.type == 'rate':
-                    code += """    pop%(id)s.gpu_delayed_r = std::deque< double* >(%(delay)s, NULL);
-    for ( int i = 0; i < %(delay)s; i++ )
-        cudaMalloc( (void**)& pop%(id)s.gpu_delayed_r[i], sizeof(double)*pop%(id)s.size);
-""" % {'id': pop.id, 'delay': pop.max_delay}
-                else:
-                    Global._error("no synaptic delays for spiking synapses on cuda implemented ...")
-                    pass
+            code += self.popgen.init_population(pop)
 
         return code
 
@@ -512,49 +375,20 @@ class CUDAGenerator(object):
     // Initialize projections
 """
         for proj in self.projections:
-
-            # Is it a specific projection?
-            if proj.generator['omp']['body_proj_init']:
-                code += proj.generator['omp']['body_proj_init']
-                continue
-
-            # Learning by default
-            code += """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    proj%(id_proj)s._learning = true;
-""" % {'id_proj': proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name}
-
-            # Spiking neurons have aditional data
-            if proj.synapse.type == 'spike':
-                Global._error("no spiking implementation yet ..")
-
-#===============================================================================
-#             # Recording
-#             for var in proj.synapse.description['variables']:
-#                 if var['name'] in proj.synapse.description['local']:
-#                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
-# """% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
-#                 else:
-#                     code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
-# """% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
-#===============================================================================
+            code += self.projgen.init_projection(proj)
 
         return code
         
     def body_update_globalops(self):
         code = ""
-        from .GlobalOperationTemplate import global_operation_templates
-
         for pop in self.populations:
             # Is it a specific population?
-            if pop.generator['omp']['body_update_globalops']:
-                code += pop.generator['omp']['body_update_globalops'] %{ 'id': pop.id}
+            if pop.generator['cuda']['body_update_globalops']:
+                code += pop.generator['cuda']['body_update_globalops'] %{ 'id': pop.id}
                 continue
+            code += self.popgen.update_globalops(pop)
 
-            for op in pop.global_operations:
-                code += global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'var': op['variable']  } 
-
-        if code != "":
+        if code.strip() != '':
             code = """
     double *tmp;
     cudaMalloc((void**)&tmp, sizeof(double));
@@ -569,25 +403,11 @@ class CUDAGenerator(object):
         code = ""
         # Populations
         for pop in self.populations:
-            # Is it a specific population?
-            if pop.generator['cuda']['body_record']:
-                code += pop.generator['cuda']['body_record'] %{'id': pop.id}
-                continue
-
-            for var in pop.neuron_type.description['variables']:
-                code += """
-    if(pop%(id)s.record_%(name)s)
-        pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
-""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
+           code += self.popgen.record(pop)
 
         # Projections
         for proj in self.projections:
-            for var in proj.synapse.description['variables']:
-                    code += """
-    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
-        proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
-    }
-""" % {'id': proj.id, 'name': var['name']}
+           code += self.projgen.record(proj)
 
         return code
 
@@ -656,53 +476,7 @@ class CUDAGenerator(object):
 #         return code
 #===============================================================================
 
-    def body_kernel_config(self):
-        cu_config = Global.cuda_config
 
-        code = "// Population config\n"
-        for pop in self.populations:
-            num_threads = 32
-            if pop in cu_config.keys():
-                num_threads = cu_config[pop]['num_threads']
-
-            code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
-
-        code += "\n// Population config\n"
-        for proj in self.projections:
-            num_threads = 192
-            if proj in cu_config.keys():
-                num_threads = cu_config[proj]['num_threads']
-
-            code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
-
-        pop_assign = "    // populations\n"
-        for pop in self.populations:
-            if pop in Global.cuda_config.keys():
-                pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
-""" % {'pid': pop.id, 'sid': Global.cuda_config[pop]['stream'] }
-            else:
-                # default stream
-                pop_assign += """    pop%(pid)s.stream = 0;
-""" % {'pid': pop.id }
-
-        proj_assign = "    // populations\n"
-        for proj in self.projections:
-            if proj in Global.cuda_config.keys():
-                proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
-""" % {'pid': proj.id, 'sid': Global.cuda_config[proj]['stream'] }
-            else:
-                # default stream
-                proj_assign += """    proj%(pid)s.stream = 0;
-""" % {'pid': proj.id }
-
-        from .cuBodyTemplate import stream_setup
-        stream_config = stream_setup % {
-            'nbStreams': 2,
-            'pop_assign': pop_assign,
-            'proj_assign': proj_assign
-        }
-
-        return code, stream_config
 
 #######################################################################
 ############## PYX ####################################################
@@ -1173,3 +947,178 @@ cdef class proj%(id)s_wrapper :
                 Global._error('structural plasticity is not supported yet on CUDA ...')
 
         return code
+
+#######################################################################
+############## HOST - DEVICE ##########################################
+#######################################################################
+    def body_memory_transfers(self):
+        host_device_transfer = ""
+        device_host_transfer = ""
+
+        # transfers for populations
+        for pop in self.populations:
+            host_device_transfer += """
+    // host to device transfers for %(pop_name)s""" % { 'pop_name': pop.name }
+            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
+                if attr['name'] in pop.neuron_type.description['local']:
+                    host_device_transfer += """
+        // %(attr_name)s: local
+        if( pop%(id)s.%(attr_name)s_dirty )
+        {
+            //std::cout << "Transfer pop%(id)s.%(attr_name)s" << std::endl;
+            cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            pop%(id)s.%(attr_name)s_dirty = false;
+        }
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+
+            device_host_transfer += """
+    // device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
+                if attr['name'] in pop.neuron_type.description['local']:
+                    device_host_transfer += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+
+        # transfers for projections
+        for proj in self.projections:
+            host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
+            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
+                if attr['name'] in proj.synapse.description['local']:
+                    host_device_transfer += """
+        // %(name)s: local
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+            auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            flat_proj%(id)s_%(name)s.clear();
+        }
+""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
+                else:
+                    host_device_transfer += """
+        // %(name)s: global
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        }
+""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
+
+            device_host_transfer += """
+    // device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
+            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
+                if attr['name'] in proj.synapse.description['local']:
+                    device_host_transfer += """
+            // %(name)s: local
+            std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
+            cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, proj%(id)s.flat_idx);
+            flat_proj%(id)s_%(name)s.clear();
+""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
+                else:
+                    device_host_transfer += """
+            // %(name)s: global
+            cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
+
+        return host_device_transfer, device_host_transfer
+
+    def body_init_device(self):
+        code = ""
+
+        dev_id = 0 # default cuda device
+        if 'device' in Global.cuda_config.keys():
+            dev_id = Global.cuda_config['device']
+
+        code += """
+    // set active cuda device
+    auto status = cudaSetDevice(%(id)s);
+    if ( status != cudaSuccess )
+        std::cerr << "Error on setting cuda device ... " << std::endl;
+
+    // initialize cuda-api
+    cudaFree(0);
+""" % { 'id': dev_id }
+
+        for pop in self.populations:
+            code += """\n\t// Initialize device memory for %(pop_name)s\n""" % { 'pop_name': pop.name }
+            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
+                if attr['name'] in pop.neuron_type.description['local']:
+                    code += """\tcudaMalloc((void**)&pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s));
+        pop%(id)s.%(attr_name)s_dirty = true;
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+            for target in pop.neuron_type.description['targets']:
+                code += """\tcudaMalloc((void**)&pop%(id)s.gpu_sum_%(target)s, pop%(id)s.size * sizeof(double));
+""" % { 'id': pop.id, 'target': target }
+
+        for proj in self.projections:
+            from .cuBodyTemplate import proj_basic_data
+
+            # basic variables: post_rank, nb_synapses, off_synapses, pre_rank
+            code += proj_basic_data % { 'id': proj.id }
+
+            # other variables, parameters
+            for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
+                if attr['name'] in proj.synapse.description['local']:
+                    code += """
+        // %(name)s
+        auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+        cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s));
+        cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        flat_proj%(id)s_%(name)s.clear();
+        proj%(id)s.%(name)s_dirty = false;
+""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
+                else:
+                    code += """
+        // %(name)s
+        cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s));
+        cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        proj%(id)s.%(name)s_dirty = false;
+""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
+
+        return code
+
+    def body_kernel_config(self):
+        cu_config = Global.cuda_config
+
+        code = "// Population config\n"
+        for pop in self.populations:
+            num_threads = 32
+            if pop in cu_config.keys():
+                num_threads = cu_config[pop]['num_threads']
+
+            code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
+
+        code += "\n// Population config\n"
+        for proj in self.projections:
+            num_threads = 192
+            if proj in cu_config.keys():
+                num_threads = cu_config[proj]['num_threads']
+
+            code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
+
+        pop_assign = "    // populations\n"
+        for pop in self.populations:
+            if pop in Global.cuda_config.keys():
+                pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
+""" % {'pid': pop.id, 'sid': Global.cuda_config[pop]['stream'] }
+            else:
+                # default stream
+                pop_assign += """    pop%(pid)s.stream = 0;
+""" % {'pid': pop.id }
+
+        proj_assign = "    // populations\n"
+        for proj in self.projections:
+            if proj in Global.cuda_config.keys():
+                proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
+""" % {'pid': proj.id, 'sid': Global.cuda_config[proj]['stream'] }
+            else:
+                # default stream
+                proj_assign += """    proj%(pid)s.stream = 0;
+""" % {'pid': proj.id }
+
+        from .cuBodyTemplate import stream_setup
+        stream_config = stream_setup % {
+            'nbStreams': 2,
+            'pop_assign': pop_assign,
+            'proj_assign': proj_assign
+        }
+
+        return code, stream_config
