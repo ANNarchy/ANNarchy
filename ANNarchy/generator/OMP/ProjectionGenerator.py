@@ -1045,11 +1045,18 @@ cdef class proj%(id)s_wrapper :
     def creating(self, proj):
         creating_structure = proj.synapse.description['creating']
 
+        proba = ""; proba_init = ""
+        if 'proba' in creating_structure['bounds'].keys():
+            val = creating_structure['bounds']['proba']
+            proba = '&&(unif(rng)<' + val + ')'
+            proba_init = "std::uniform_real_distribution<double> unif(0.0, 1.0);"
+
         omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
         creating = """
     // proj%(id_proj)s creating: %(eq)s
     if((proj%(id_proj)s._creating)&&((t - proj%(id_proj)s._creating_offset) %(modulo)s proj%(id_proj)s._creating_period == 0)){
+        %(proba_init)s
         //%(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
@@ -1063,9 +1070,9 @@ cdef class proj%(id)s_wrapper :
                             break;
                         }
                     }
-                    if(!_exists){
+                    if(!_exists%(proba)s){
                         std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
-                        proj%(id_proj)s.addSynapse(i, rk_pre, 0.0);
+                        proj%(id_proj)s.addSynapse(i, rk_pre, %(weights)s);
 
                     }
                 }
@@ -1074,32 +1081,47 @@ cdef class proj%(id)s_wrapper :
     }
 """ % { 'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
         'eq': creating_structure['eq'], 'modulo': '%', 
-        'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id},
-        'omp_code': omp_code}
+        'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 
+        'id_post': proj.post.id, 'id_pre': proj.pre.id},
+        'omp_code': omp_code,
+        'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
+        'proba' : proba, 'proba_init': proba_init
+        }
         
         return creating
 
     def pruning(self, proj):
         pruning_structure = proj.synapse.description['pruning']
 
+
+        proba = ""; proba_init = ""
+        if 'proba' in pruning_structure['bounds'].keys():
+            val = pruning_structure['bounds']['proba']
+            proba = '&&(unif(rng)<' + val + ')'
+            proba_init = "std::uniform_real_distribution<double> unif(0.0, 1.0);"
+
         omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
         pruning = """
     // proj%(id_proj)s pruning: %(eq)s
     if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
+        %(proba_init)s
         %(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
                 rk_pre = proj%(id_proj)s.pre_rank[i][j];
-                if(%(condition)s){
+                if(%(condition)s%(proba)s){
                     proj%(id_proj)s.removeSynapse(i, j);
                 }
             }
         }
     }
 """ % { 'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%', 
-        'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id},
-        'omp_code': omp_code}
+        'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 
+        'id_post': proj.post.id, 'id_pre': proj.pre.id},
+        'omp_code': omp_code,
+        'proba' : proba, 'proba_init': proba_init
+        }
         
         return pruning
