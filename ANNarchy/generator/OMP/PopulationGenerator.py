@@ -298,7 +298,9 @@ struct PopStruct%(id)s{
     def init_population(self, pop):
         # active is true by default
         code = """    
+    /////////////////////////////
     // Population %(id)s
+    /////////////////////////////
     pop%(id)s._active = true;
     pop%(id)s.record_period = 1;
     pop%(id)s.record_offset = 0;
@@ -314,26 +316,34 @@ struct PopStruct%(id)s{
             init = 0.0 if var['ctype'] == 'double' else 0
             if var['name'] in pop.neuron_type.description['local']:                    
                 code += """
-    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+    // Local parameter %(name)s
+    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             else: # global
                 code += """
-    pop%(id)s.%(name)s = %(init)s;""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+    // Global parameter %(name)s
+    pop%(id)s.%(name)s = %(init)s;
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             init = 0.0 if var['ctype'] == 'double' else 0
             if var['name'] in pop.neuron_type.description['local']:
                 code += """
+    // Local variable %(name)s
     pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
     pop%(id)s.recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
-    pop%(id)s.record_%(name)s = false;""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+    pop%(id)s.record_%(name)s = false;
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             else: # global
                 code += """
+    // Global variable %(name)s
     pop%(id)s.%(name)s = %(init)s;
     pop%(id)s.recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
-    pop%(id)s.record_%(name)s = false;""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+    pop%(id)s.record_%(name)s = false;
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Targets
         if pop.neuron_type.type == 'rate':
