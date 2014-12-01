@@ -300,6 +300,8 @@ struct PopStruct%(id)s{
         code = """    
     // Population %(id)s
     pop%(id)s._active = true;
+    pop%(id)s.record_period = 1;
+    pop%(id)s.record_offset = 0;
 """ % {'id': pop.id}
 
         # Is it a specific population?
@@ -307,8 +309,46 @@ struct PopStruct%(id)s{
             code += pop.generator['omp']['body_spike_init'] %{'id': pop.id}
             return code
 
+        # Parameters
+        for var in pop.neuron_type.description['parameters']:
+            init = 0.0 if var['ctype'] == 'double' else 0
+            if var['name'] in pop.neuron_type.description['local']:                    
+                code += """
+    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+            else: # global
+                code += """
+    pop%(id)s.%(name)s = %(init)s;""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Variables
+        for var in pop.neuron_type.description['variables']:
+            init = 0.0 if var['ctype'] == 'double' else 0
+            if var['name'] in pop.neuron_type.description['local']:
+                code += """
+    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
+    pop%(id)s.recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
+    pop%(id)s.record_%(name)s = false;""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+            else: # global
+                code += """
+    pop%(id)s.%(name)s = %(init)s;
+    pop%(id)s.recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
+    pop%(id)s.record_%(name)s = false;""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Targets
+        if pop.neuron_type.type == 'rate':
+            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
+                code += """
+    pop%(id)s._sum_%(target)s = std::vector<double>(pop%(id)s.size, 0.0);""" %{'id': pop.id, 'target': target}
+
         if pop.neuron_type.type == 'spike':
             code += """    
+    // Spiking neuron
+    pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
+    pop%(id)s.record_spike = false;
+    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
+    for(int i = 0; i < pop%(id)s.size; i++)
+        pop%(id)s.recorded_spike.push_back(std::vector<long int>());
     pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
@@ -519,57 +559,8 @@ struct PopStruct%(id)s{
 cdef class pop%(id)s_wrapper :
 
     def __cinit__(self, size):
-        pop%(id)s.size = size"""% {'id': pop.id, 'name': pop.name}
-
-        # Spiking neurons have aditional data
-        if pop.neuron_type.type == 'spike':
-            code += """
-        # Spiking neuron
-        pop%(id)s.refractory = vector[int](size, 0)
-        pop%(id)s.record_spike = False
-        pop%(id)s.recorded_spike = vector[vector[long]]()
-        for i in xrange(pop%(id)s.size):
-            pop%(id)s.recorded_spike.push_back(vector[long]())
-""" % {'id': pop.id}
-
-        # Record parameter
-        code += """
-        # record parameter
-        pop%(id)s.record_period = 1
-        pop%(id)s.record_offset = 0
-""" % {'id': pop.id}
-
-        # Parameters
-        for var in pop.neuron_type.description['parameters']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:                    
-                code += """
-        pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else: # global
-                code += """
-        pop%(id)s.%(name)s = %(init)s""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-        # Variables
-        for var in pop.neuron_type.description['variables']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-        pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)
-        pop%(id)s.recorded_%(name)s = vector[vector[%(type)s]](0, vector[%(type)s](0,%(init)s))
-        pop%(id)s.record_%(name)s = False""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else: # global
-                code += """
-        pop%(id)s.%(name)s = %(init)s
-        pop%(id)s.recorded_%(name)s = vector[%(type)s](0, %(init)s)
-        pop%(id)s.record_%(name)s = False""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-        # Targets
-        if pop.neuron_type.type == 'rate':
-            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
-                code += """
-        pop%(id)s._sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
+        pop%(id)s.size = size
+"""% {'id': pop.id, 'name': pop.name}
 
         # Size property
         code += """

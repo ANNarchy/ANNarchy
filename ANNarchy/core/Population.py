@@ -340,9 +340,13 @@ class Population(object):
     def _instantiate(self, module):
         # Create the Cython instance 
         self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
-        
-        # Create the attributes and actualize the initial values
-        self._init_attributes()
+
+
+    def _init_attributes(self):
+        """ Method used after compilation to initialize the attributes."""
+        self.initialized = True  
+        self.set(self.init)
+        self.cyInstance.activate(self._activated)
 
         # If the spike population has a refractory period:    
         if self.neuron_type.type == 'spike' and self.neuron_type.description['refractory']:
@@ -355,13 +359,6 @@ class Population(object):
                     exit(0)
             else: # a value
                 self.refractory = self.neuron_type.description['refractory']
-
-
-    def _init_attributes(self):
-        """ Method used after compilation to initialize the attributes."""
-        self.initialized = True  
-        self.set(self.init)
-        self.cyInstance.activate(self._activated)
 
     def reset(self):
         """
