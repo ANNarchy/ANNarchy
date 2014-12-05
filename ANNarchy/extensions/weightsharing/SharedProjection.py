@@ -482,7 +482,7 @@ class SharedProjection(Projection):
                 if self.keep_last_dimension:
                     idx_range.append(range(self.post.geometry[dim]))
                 else:
-                    idx_range.append([self._center_filter(self.weights.shape[dim])])
+                    idx_range.append([self._center_filter(self.weights.shape[dim+1])])
 
 
         # Generates coordinates TODO: Find a more robust way!
