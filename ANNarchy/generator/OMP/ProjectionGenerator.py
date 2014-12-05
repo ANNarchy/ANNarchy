@@ -497,7 +497,9 @@ struct ProjStruct%(id_proj)s{
 
         # Learning by default
         code = """
+    /////////////////////////////////////////
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    /////////////////////////////////////////
     proj%(id_proj)s._learning = true;
 """ % { 'id_proj': proj.id, 'target': proj.target, 
         'id_post': proj.post.id, 'id_pre': proj.pre.id, 
@@ -510,11 +512,13 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
+    // Local parameter %(name)s
     proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj0.post_rank.size(), std::vector<%(type)s>());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
+    // Global parameter %(name)s
     proj%(id)s.%(name)s = std::vector<%(type)s>(proj0.post_rank.size(), %(init)s);
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
@@ -525,18 +529,22 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
+    // Local variable %(name)s
     proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj0.post_rank.size(), std::vector<%(type)s>());
     proj%(id)s.record_%(name)s = std::vector<int>();
     proj%(id)s.record_period_%(name)s = std::vector<int>();
     proj%(id)s.record_offset_%(name)s = std::vector<long int>();
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
+    // Global variable %(name)s
     proj%(id)s.%(name)s = std::vector<%(type)s>(proj0.post_rank.size(), %(init)s);
     proj%(id)s.record_%(name)s = std::vector<int>();
     proj%(id)s.record_period_%(name)s = std::vector<int>();
     proj%(id)s.record_offset_%(name)s = std::vector<long int>();
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Spiking neurons have aditional data
@@ -561,16 +569,6 @@ struct ProjStruct%(id_proj)s{
         std::cout << std::endl ;
     }
 """
-
-        # Recording
-        for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
-"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
-            else:
-                code += """    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
-"""% {'id': proj.id, 'name': var['name'], 'type': var['ctype']}
-
         # Pruning
         if Global.config['structural_plasticity']:
             if 'pruning' in proj.synapse.description.keys():
@@ -745,42 +743,6 @@ cdef class proj%(id)s_wrapper :
             code +="""
         proj%(id)s.delay = syn.delay
 """% {'id': proj.id}
-
-#         # Initialize parameters
-#         for var in proj.synapse.description['parameters']:
-#             if var['name'] == 'w':
-#                 continue
-#             if var['name'] in proj.synapse.description['local']:
-#                 init = 0.0 if var['ctype'] == 'double' else 0
-#                 code += """
-#         proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
-# """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-#             else:
-#                 init = 0.0 if var['ctype'] == 'double' else 0
-#                 code += """
-#         proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
-# """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-#         # Initialize variables
-#         for var in proj.synapse.description['variables']:
-#             if var['name'] == 'w':
-#                 continue
-#             if var['name'] in proj.synapse.description['local']:
-#                 init = 0.0 if var['ctype'] == 'double' else 0
-#                 code += """
-#         proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
-#         proj%(id)s.record_%(name)s = vector[int]()
-#         proj%(id)s.record_period_%(name)s = vector[int]()
-#         proj%(id)s.record_offset_%(name)s = vector[long]()
-# """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-#             else:
-#                 init = 0.0 if var['ctype'] == 'double' else 0
-#                 code += """
-#         proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
-#         proj%(id)s.record_%(name)s = vector[int]()
-#         proj%(id)s.record_period_%(name)s = vector[int]()
-#         proj%(id)s.record_offset_%(name)s = vector[long]()
-# """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Size property
         code += """
@@ -1001,6 +963,20 @@ cdef class proj%(id)s_wrapper :
             }
         }
 """
+
+        # Randomdistributions
+        rd_addcode = ""; rd_removecode = ""
+        for rd in proj.synapse.description['random_distributions']:
+            rd_addcode += """
+        %(name)s[post].insert(%(name)s[post].begin() + idx, 0.0);
+""" % {'name': rd['name']}
+            
+            rd_removecode += """
+        %(name)s[post].erase(%(name)s[post].begin() + idx);
+""" % {'name': rd['name']}
+            
+
+
         # Generate the code
         code += """
     // Structural plasticity
@@ -1028,16 +1004,20 @@ cdef class proj%(id)s_wrapper :
         %(delay_code)s
 %(add_code)s
 %(spike_add)s
+%(rd_add)s
     };
     void removeSynapse(int post, int idx){
         pre_rank[post].erase(pre_rank[post].begin() + idx);
         w[post].erase(w[post].begin() + idx);
 %(remove_code)s  
 %(spike_remove)s
+%(rd_remove)s
     };
 """ % { 'extra_args': extra_args, 'delay_code': delay_code, 
         'add_code': add_code, 'remove_code': remove_code,
-        'spike_add': spiking_addcode, 'spike_remove': spiking_removecode}
+        'spike_add': spiking_addcode, 'spike_remove': spiking_removecode,
+        'rd_add': rd_addcode, 'rd_remove': rd_removecode
+        }
 
         return code
 
