@@ -482,5 +482,359 @@ openmp_profile_body=\
 """
 #include "Profiling.h"
 
-// TODO:
+Profiling::Profiling() {
+}
+
+/*
+    Init
+*/
+void Profiling::init(int extended)
+{
+ //Profiling Array allocate
+        Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
+        Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
+
+ //additional initialisations
+    if (extended){
+        init_thread();
+    }
+}
+void Profiling::init_thread()
+{
+//Profiling thread-Array allocate
+        Prof_thread_statistic= new Profiling_thread_statistic[Profiling_thread_count];
+    for(int i=0;i<Profiling_thread_count;i++)
+    {
+        Prof_thread_statistic[i].thread=new Profiling_thread_statistic_core[thread_count];
+        for(int j=0;j<thread_count;j++)
+        {
+            Prof_thread_statistic[i].thread[j].core=new Profiling_thread_statistic_unit[core_count];
+        }
+    }
+
+}
+/*
+    CPU Cycles
+*/
+void Profiling::error_CPU_time_prof()
+{
+  if(Profil){
+    start_CPU_time_prof(Profiling_time_CPU_count);
+    stop_CPU_time_prof(Profiling_time_CPU_count);
+  }
+}
+
+void Profiling::error_CPU_cycles_prof()
+{
+  if(Profil){
+    start_CPU_cycles_prof(Profiling_cycles_CPU_count);
+    stop_CPU_cycles_prof(Profiling_cycles_CPU_count);
+  }
+}
+
+/*
+    CPU Time
+*/
+void Profiling::start_CPU_time_prof( int number)
+{
+  if(Profil){
+    Prof_time_CPU[number].start = PAPI_get_real_usec();    
+  }
+}
+    
+void Profiling::stop_CPU_time_prof( int number,int directevaluate)
+{
+  if(Profil){
+    Prof_time_CPU[number].stop = PAPI_get_real_usec();
+
+    if (directevaluate){
+            evaluate_CPU_time_prof(number);
+     }
+  }
+}
+
+void Profiling::evaluate_CPU_time_prof( int number)
+{
+  if(Profil){
+    double dt_ms;
+
+    //pre-evaluate CPU time
+    dt_ms=((double)(Prof_time_CPU[number].stop-Prof_time_CPU[number].start))/1000.0;//Launch time
+    dt_ms/=1000.0;//ms => s
+
+    Prof_time_CPU[number].time.summ+=dt_ms;
+    Prof_time_CPU[number].time.count++;
+    Prof_time_CPU[number].time.summsqr+=sqr(dt_ms);
+    (dt_ms<Prof_time_CPU[number].time.min)?(Prof_time_CPU[number].time.min=dt_ms):1;
+    (Prof_time_CPU[number].time.max<dt_ms)?(Prof_time_CPU[number].time.max=dt_ms):1;//min/max
+  }
+}
+
+/*
+    CPU Cycles
+*/
+void Profiling::start_CPU_cycles_prof( int number)
+{
+  if(Profil){
+    Prof_cycles_CPU[number].start = PAPI_get_real_cyc();    
+  }
+}
+    
+void Profiling::stop_CPU_cycles_prof( int number,int directevaluate)
+{
+  if(Profil){
+    Prof_cycles_CPU[number].stop = PAPI_get_real_cyc();
+
+    if (directevaluate){
+            evaluate_CPU_cycles_prof(number);
+     }
+  }
+}
+
+void Profiling::evaluate_CPU_cycles_prof( int number)
+{
+  if(Profil){
+    double dt_ms;
+
+    //pre-evaluate CPU time
+    dt_ms=((double)(Prof_cycles_CPU[number].stop-Prof_cycles_CPU[number].start))/1000.0;//Launch time
+    dt_ms/=1000.0;//ms => s
+
+    Prof_cycles_CPU[number].time.summ+=dt_ms;
+    Prof_cycles_CPU[number].time.count++;
+    Prof_cycles_CPU[number].time.summsqr+=sqr(dt_ms);
+    (dt_ms<Prof_cycles_CPU[number].time.min)?(Prof_cycles_CPU[number].time.min=dt_ms):1;
+    (Prof_cycles_CPU[number].time.max<dt_ms)?(Prof_cycles_CPU[number].time.max=dt_ms):1;//min/max
+  }
+}
+
+/*
+    Overall Time
+*/
+void Profiling::start_overall_time_prof()
+{
+  if(Profil){
+    Prof_general.start = PAPI_get_real_usec();    
+  }
+}
+    
+void Profiling::stop_overall_time_prof()
+{
+  if(Profil){
+
+    Prof_general.stop = PAPI_get_real_usec();
+
+    evaluate_overall_time_prof();
+  }
+}
+
+void Profiling::evaluate_overall_time_prof()
+{
+  if(Profil){
+    Prof_general.CPU_summ=((double)(Prof_general.stop-Prof_general.start))/1000.0/1000.0;//s
+  }
+}
+
+/*
+    Thread statistic
+*/
+void Profiling::thread_statistic_run( int number)
+{
+  if(Profil){
+    Prof_thread_statistic[number].thread[omp_get_thread_num()].core[sched_getcpu()].count++;
+  }
+}
+
+/*
+    Evaluation
+*/
+void Profiling::evaluate(int disp, int file,const char * filename)
+{
+    evaluate_calc();
+    if (disp)evaluate_disp();
+    if (file)evaluate_file(filename);
+}
+
+void Profiling::evaluate_calc()
+{
+    for(int i=0;i<Profiling_time_CPU_count+1;i++){//+1 for calc error-stuff
+
+        Prof_time_CPU[i].time.avg=Prof_time_CPU[i].time.summ/Prof_time_CPU[i].time.count;
+        Prof_time_CPU[i].time.standard=sqrt(Prof_time_CPU[i].time.summsqr/Prof_time_CPU[i].time.count-sqr(Prof_time_CPU[i].time.avg));
+        Prof_time_CPU[i].time.prozent_CPU=100.0*Prof_time_CPU[i].time.summ/Prof_general.CPU_summ;
+    }
+    for(int i=0;i<Profiling_cycles_CPU_count+1;i++){//+1 for calc error-stuff
+
+        Prof_cycles_CPU[i].time.avg=Prof_cycles_CPU[i].time.summ/Prof_cycles_CPU[i].time.count;
+        Prof_cycles_CPU[i].time.standard=sqrt(Prof_cycles_CPU[i].time.summsqr/Prof_cycles_CPU[i].time.count-sqr(Prof_cycles_CPU[i].time.avg));
+        Prof_cycles_CPU[i].time.prozent_CPU=0;//100.0*Prof_cycles_CPU[i].time.summ/Prof_general.CPU_cycles;
+    }
+    for(int i=0;i<Profiling_thread_count;i++){//+1 for calc error-stuff
+        int max=0;
+        for(int j=0;j<thread_count;j++)
+        {
+            for(int k=0;k<core_count;k++)
+            {
+                if(Prof_thread_statistic[i].thread[j].core[k].count)max=j;
+            }
+        }
+        Prof_thread_statistic[i].used_threads=max;
+    }
+}
+void Profiling::evaluate_disp()
+{
+    std::cout.precision(8);
+    std::cout << "Overall time: "<< std::fixed << Prof_general.CPU_summ     << "s " << std::endl;
+    for(int i=0;i<Profiling_time_CPU_count;i++){
+        int found = (Prof_time_CPU[i].name.find(":")!=std::string::npos)||(Prof_time_CPU[i].name.find("#")!=std::string::npos);//1 wenn Prof_time_CPU[i].name ungueltig 
+        if ((Prof_time_CPU[i].name=="")||(found))
+            std::cout << "CPU_Time "<<i;
+        else     
+            std::cout << Prof_time_CPU[i].name;
+        std::cout     <<" time: "          << std::fixed << Prof_time_CPU[i].time.summ     << "s "
+                << "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< "% "
+                << "Average time: "      << std::fixed << Prof_time_CPU[i].time.avg     << "s "
+                << "Minimum time: "      << std::fixed << Prof_time_CPU[i].time.min     << "s "
+                << "Maximum time: "      << std::fixed << Prof_time_CPU[i].time.max     << "s "
+                << "Standard deviation: "<< std::fixed << Prof_time_CPU[i].time.standard     << "s "<< std::endl;
+    }
+        std::cout     << std::endl;
+    for(int i=0;i<Profiling_cycles_CPU_count;i++){
+        int found = (Prof_cycles_CPU[i].name.find(":")!=std::string::npos)||(Prof_cycles_CPU[i].name.find("#")!=std::string::npos);//1 wenn Prof_time_CPU[i].name ungueltig 
+        if ((Prof_cycles_CPU[i].name=="")||(found))
+            std::cout << "CPU_cycles "<<i;
+        else     
+            std::cout << Prof_cycles_CPU[i].name;
+        std::cout     <<" cycles: "          << std::fixed << Prof_cycles_CPU[i].time.summ     << " "
+                //<< "Relative to CPU cycles: " << std::fixed << Prof_cycles_CPU[i].time.prozent_CPU<< "% "
+                << "Average cycles: "      << std::fixed << Prof_cycles_CPU[i].time.avg     << " "
+                << "Minimum cycles: "      << std::fixed << Prof_cycles_CPU[i].time.min     << " "
+                << "Maximum cycles: "      << std::fixed << Prof_cycles_CPU[i].time.max     << " "
+                << "Standard deviation: "<< std::fixed << Prof_cycles_CPU[i].time.standard     << " "<< std::endl;
+    }
+        std::cout     << std::endl;
+    for(int i=0;i<Profiling_thread_count;i++){
+        int found = (Prof_thread_statistic[i].name.find(":")!=std::string::npos)||(Prof_thread_statistic[i].name.find("#")!=std::string::npos);//1 wenn Prof_time_CPU[i].name ungueltig 
+        if ((Prof_thread_statistic[i].name=="")||(found))
+            std::cout << "Thread statistic "<<i;
+        else     
+            std::cout << Prof_thread_statistic[i].name;
+
+        std::cout     <<":"<< std::endl;
+        for(int j=0;j<thread_count;j++)
+        {
+            std::cout     <<"  Thread "<<j<<":"<< std::endl;
+            for(int k=0;k<core_count;k++)
+            {
+                if(Prof_thread_statistic[i].thread[j].core[k].count)
+                    std::cout     <<"    core "  << k << ": "<< Prof_thread_statistic[i].thread[j].core[k].count<<" units"<< std::endl;
+            }
+        }
+    }
+        std::cout     << std::endl;
+}
+int Profiling::evaluate_file(const char * filename)
+{
+    std::ofstream fp;
+    fp.open(filename,std::ios::out|std::ios::trunc);
+    if (!(fp.is_open()))return 0;
+    fp.precision(8);
+    fp <<"#"                                                //Trennzeile 1:CPU Gesammtzeit
+     << "Overall time: in s"<< std::endl;
+    fp << std::fixed << Prof_general.CPU_summ << std::endl;
+    fp <<"#"                                                //Trennzeile 2:GPU Gesammtzeit
+     << "On GPU only: in s"<< std::endl;
+    fp <<"#"                                                //Trennzeile 3:CPU Zeiten
+     << "Name:Summe(s):Relative(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):additonal"<< std::endl;
+        for(int i=0;i<Profiling_time_CPU_count;i++){
+            int found = checkstring(Prof_time_CPU[i].name);//1 wenn Prof_time_CPU[i].name ungueltig 
+            if ((Prof_time_CPU[i].name=="")||(found))
+                fp << "CPU_Time "<<i;
+            else     
+                fp << Prof_time_CPU[i].name;
+
+            fp <<           ":" << std::fixed << Prof_time_CPU[i].time.summ 
+                    << ":" << std::fixed << Prof_time_CPU[i].time.prozent_CPU
+                    << ":" << std::fixed << Prof_time_CPU[i].time.count     
+                    << ":" << std::fixed << Prof_time_CPU[i].time.avg     
+                    << ":" << std::fixed << Prof_time_CPU[i].time.min     
+                    << ":" << std::fixed << Prof_time_CPU[i].time.max     
+                    << ":" << std::fixed << Prof_time_CPU[i].time.standard;
+            found = checkstring(Prof_time_CPU[i].additonal);//1 wenn Prof_time_CPU[i].name ungueltig 
+            if ((Prof_time_CPU[i].additonal=="")||(found))
+                fp << ":"<< std::endl;
+            else     
+                fp <<":"<< Prof_time_CPU[i].additonal<< std::endl;
+        }
+    fp <<"#"                                                //Trennzeile 4:GPU Zeiten
+     << "Name:Summe(s):Relative_CPU(%):Relative_GPU(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):additonal"<< std::endl;
+    fp <<"#"                                                //Trennzeile 5:Initialisierungs Zeiten
+     << "Name:Summe(s):Faktor_CPU(1)"<< std::endl;
+    fp <<"#"                                                //Trennzeile 6:Memcopy
+     << "Name:Time summ(s):Relative_CPU(%):Relative_GPU(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):(Memory)summ(Byte):Average(Byte):Minimum(Byte):Maximum(Byte):Standard deviation(Byte):(Throughput)Average(Byte/s):Minimum(Byte/s):Maximum(Byte/s):Standard deviation(Byte/s):additonal"<< std::endl;
+    fp <<"#"                                                //Trennzeile 7:CPU Cycles
+     << "Name:Summe(1):Calls(1):Average(1):Minimum(1):Maximum(1):Standard deviation(1):additonal"<< std::endl;
+        for(int i=0;i<Profiling_cycles_CPU_count;i++){
+            int found = checkstring(Prof_cycles_CPU[i].name);//1 wenn name ungueltig 
+            if ((Prof_cycles_CPU[i].name=="")||(found))
+                fp << "CPU_cycles "<<i;
+            else     
+                fp << Prof_cycles_CPU[i].name;
+
+            fp <<           ":" << std::fixed << Prof_cycles_CPU[i].time.summ 
+                    //<< ":" << std::fixed << Prof_cycles_CPU[i].time.prozent_CPU
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.count     
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.avg     
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.min     
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.max     
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.standard;
+            found = checkstring(Prof_cycles_CPU[i].additonal);//1 wenn name ungueltig 
+            if ((Prof_cycles_CPU[i].additonal=="")||(found))
+                fp << ":"<< std::endl;
+            else     
+                fp <<":"<< Prof_cycles_CPU[i].additonal<< std::endl;
+        }
+    fp <<"#"                                                //Trennzeile 8:Messfehler
+     << "Name:Average(.):Minimum(.):Maximum(.):Standard deviation(.)"<< std::endl;
+        int i=Profiling_cycles_CPU_count;
+            fp << "CPU cycles Error:"<< std::fixed << Prof_cycles_CPU[i].time.avg     
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.min     
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.max     
+                    << ":" << std::fixed << Prof_cycles_CPU[i].time.standard<< std::endl;
+            i=Profiling_time_CPU_count;
+            fp << "CPU time Error:"<< std::fixed << Prof_time_CPU[i].time.avg     
+                    << ":" << std::fixed << Prof_time_CPU[i].time.min     
+                    << ":" << std::fixed << Prof_time_CPU[i].time.max     
+                    << ":" << std::fixed << Prof_time_CPU[i].time.standard<< std::endl;
+
+    fp <<"#"                                                //Trennzeile 9:Thread statistic
+     << "Name:additonal:Thread count:core count:[Threadnumber[,CPUnumber=Items]*]*(Thread count) Example:Hello World:is great:3:0,2=100:1,1=50,3=50:2,2=1,13=7000"<< std::endl;
+        for(int i=0;i<Profiling_thread_count;i++){
+            int found = checkstring(Prof_thread_statistic[i].name);//1 wenn name ungueltig 
+            if ((Prof_thread_statistic[i].name=="")||(found))
+                fp << "Thread statistic "<<i;
+            else     
+                fp << Prof_thread_statistic[i].name;
+
+            found = checkstring(Prof_thread_statistic[i].additonal);//1 wenn name ungueltig 
+            if ((Prof_cycles_CPU[i].additonal=="")||(found))
+                fp << ":";
+            else     
+                fp <<":"<< Prof_cycles_CPU[i].additonal;
+
+            fp <<           ":" << std::fixed << Prof_thread_statistic[i].used_threads<<":" << std::fixed << core_count;
+            for(int j=0;j<Prof_thread_statistic[i].used_threads;j++)
+            {
+                fp <<":j";
+                for(int k=0;k<core_count;k++)
+                {
+                    if(Prof_thread_statistic[i].thread[j].core[k].count)
+                        fp <<","<<k<<"="<< std::fixed << Prof_thread_statistic[i].thread[j].core[k].count;
+                }
+            }
+            fp<< std::endl;
+        }
+
+    return 1;
+}
 """

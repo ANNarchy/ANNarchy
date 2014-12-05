@@ -266,6 +266,7 @@ class Population(object):
             self.neuron_type = copy.deepcopy(neuron)
         self.neuron_type._analyse()
         self.generator = copy.deepcopy(pop_generator_template)
+        self.prof_generator = copy.deepcopy(profile_generator_template)
         
         # Store the stop condition
         self.stop_condition = stop_condition

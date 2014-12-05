@@ -137,25 +137,33 @@ struct ProjStruct%(id_proj)s{
                 )
         # No need for openmp if less than 10 neurons
         omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        prof_begin = proj.prof_generator['omp']['compute_psp']['before'] if Global.config['profiling'] else ""
+        prof_end = proj.prof_generator['omp']['compute_psp']['after'] if Global.config['profiling'] else ""
 
         # Generate the code depending on the operation
         if proj.synapse.operation == 'sum': # normal summation
             code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum
     if (pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            sum += %(psp)s
+        %(prof_begin)s
+        %(omp_code)s
+        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+            sum = 0.0;
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                sum += %(psp)s
+            }
+            pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
-    }
+        %(prof_end)s
     } // active
-"""%{'id_proj' : proj.id, 'target': proj.target, 
-    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-    'psp': psp, 'omp_code': omp_code}
+"""%{ 'id_proj' : proj.id, 'target': proj.target, 
+      'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+      'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+      'psp': psp, 
+      'omp_code': omp_code,
+      'prof_begin': prof_begin,
+      'prof_end': prof_end
+    }
 
         elif proj.synapse.operation == 'max': # max pooling
             code+= """
