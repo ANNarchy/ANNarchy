@@ -32,6 +32,9 @@ import re
 import ANNarchy
 import ANNarchy.core.Global as Global
 
+from optparse import OptionParser
+from optparse import OptionGroup
+
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
 extra_libs = []
@@ -66,8 +69,32 @@ def _folder_management(profile_enabled, clean):
         f.write(ANNarchy.__release__)
 
     sys.path.append(Global.annarchy_dir)
-            
+
+def setup_parser():
+    # override the error behavior of OptionParser,
+    # normally an unknwon arg would raise an exception
+    class MyOptionParser(OptionParser):
+        def error(self, msg):
+            pass
     
+    parser = MyOptionParser ("usage: python %prog [options]")
+
+    group = OptionGroup(parser, "general")
+    group.add_option("-c", "--clean", help="enforce complete recompile", action="store_true", default=False, dest="clean")
+    group.add_option("-d", "--debug", help="ANNarchy is compiled with debug symbols and additional checks", action="store_true", default=False, dest="debug")
+    group.add_option("-v", "--verbose", help="show all messages", action="store_true", default=False, dest="verbose")
+    parser.add_option_group(group)
+
+    group = OptionGroup(parser, "OpenMP")
+    group.add_option("-j", help="number of threads should be used", type="int", action="store", default=1, dest="num_threads")
+    parser.add_option_group(group)
+
+    group = OptionGroup(parser, "others")
+    group.add_option("--profile", help="enable profiling", action="store_true", default=False, dest="profile")
+    parser.add_option_group(group)
+
+    return parser
+
 def compile(clean=False, populations=None, projections=None, cpp_stand_alone=False, debug_build=False, profile_enabled = False):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
@@ -84,27 +111,14 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
     * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     * **profile_enabled**: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
     """
-   
-    # first argument is python script itself.
-    for arg in sys.argv[1:]:
-        if arg == '--clean':
-            clean = True
-        elif arg == '--debug':
-            debug_build = True
-        elif arg == '--verbose':
-            Global.config['verbose'] = True
-        elif arg == '--profile':
-            profile_enabled = True
-        elif str(arg).find('-j')!= -1:
-            try:
-                num_threads = int(arg.replace('-j',''))
-                Global.config['num_threads'] = num_threads
-                Global._debug( 'use', num_threads, 'threads')
-            except:
-                Global._error( 'wrong format, expected -jx')
-        else:
-            Global._error( 'unknown command line argument', arg )
-    
+    parser = setup_parser()
+    (options, args) = parser.parse_args()
+
+    Global.config['verbose'] = options.verbose
+    profile_enabled = options.profile
+    debug_build = options.debug
+    clean = options.clean
+
     if populations == None: # Default network
         populations = Global._populations
 
