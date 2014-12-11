@@ -49,14 +49,16 @@ pattern_cuda = {
     'pop_sep': '.',
     'pop_index': '[i]',
     'pop_globalindex': '',
-    'pop_sum': 'sum_',
+    'pop_sum': '_sum_',
     # Projections
-    'proj_prefix': 'proj%(id_proj)s',
-    'proj_sep': '.',
-    'proj_index': '[i][j]',
+    'proj_prefix': '',
+    'proj_sep': '',
+    'proj_index': '[j]',
     'proj_globalindex': '[i]',
-    'proj_preprefix': 'pop%(id_pre)s',
-    'proj_postprefix': 'pop%(id_post)s',
+    'proj_preprefix': 'pop%(id_pre)s_',
+    'proj_postprefix': 'pop%(id_post)s_',
+    'proj_preindex': '[rk_pre]',
+    'proj_postindex': '[rk_post]',
 }
 
 def analyse_neuron(neuron):
@@ -64,10 +66,10 @@ def analyse_neuron(neuron):
     concurrent_odes = []
 
     # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'cuda':
-        pattern = pattern_cuda
-    else:
+    if config['paradigm'] == 'openmp':
         pattern = pattern_omp
+    else:
+        pattern = pattern_cuda
 
     # Store basic information
     description = {
@@ -264,10 +266,10 @@ def analyse_synapse(synapse):
     concurrent_odes = []
  
     # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'cuda':
-        pattern = pattern_cuda
+    if config['paradigm'] == 'openmp':
+        pattern = pattern_omp
     else:
-        pattern = pattern_omp  
+        pattern = pattern_cuda  
 
     # Store basic information
     description = {
@@ -412,7 +414,7 @@ def analyse_synapse(synapse):
                                       index=pattern['proj_index'],
                                       global_index=pattern['proj_globalindex'])
                 variable['bounds']['min'] = translator.parse().replace(';', '')
-
+                
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
                 translator = Equation(variable['name'], variable['bounds']['max'], 

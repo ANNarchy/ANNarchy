@@ -185,48 +185,32 @@ struct ProjStruct%(id)s{
         # remove doubled entries
         pre_dependencies = list(set(proj.synapse.description['dependencies']['pre']))
         pre_global_ops = list(set(pre_global_ops))
-        post_global_ops = list(set(post_global_ops))
         post_dependencies = list(set(proj.synapse.description['dependencies']['post']))
-
-        # remove unnecessary stuff, transfrom index of OMP to CUDA
-        local_eq = local_eq.replace("proj"+str(proj.id)+".","")
-        local_eq = local_eq.replace("[i][j]","[j]")
-
-        # remove unnecessary stuff
-        global_eq = global_eq.replace("proj"+str(proj.id)+".","")
+        post_global_ops = list(set(post_global_ops))
 
         var = ""
         par = ""
+        
         # synaptic variables / parameters
         for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
             var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
 
         # replace pre- and postsynaptic global operations / variable accesses
-        for pre_var in pre_dependencies:
-            old = """pop%(id)s.%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
-            new = """pre_%(name)s""" % { 'name': pre_var}
-            var += ", double* " + new
-            local_eq = local_eq.replace(old, new)
-            global_eq = global_eq.replace(old, new)
-        for g_op in pre_global_ops:
-            old = """pop%(id)s.%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
-            new = """pre_%(name)s""" % { 'name': g_op}
-            par += ", double " + new
-            local_eq = local_eq.replace(old, new)
-            global_eq = global_eq.replace(old, new)
-        for post_var in post_dependencies:
-            old = """pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': post_var}
-            new = """post_%(name)s""" % { 'name': post_var}
-            var += ", double* " + new
-            local_eq = local_eq.replace(old, new)
-            global_eq = global_eq.replace(old, new)
-        for g_op in post_global_ops:
-            old = """pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': g_op}
-            new = """post_%(name)s""" % { 'name': g_op}
-            par += ", double " + new
-            local_eq = local_eq.replace(old, new)
-            global_eq = global_eq.replace(old, new)
-
+        if  (proj.pre.id !=  proj.post.id):
+            for pre_var in pre_dependencies:
+                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
+            for g_op in pre_global_ops:
+                par += """, double pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
+            for post_var in post_dependencies:
+                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.post.id, 'name': post_var}
+            for g_op in post_global_ops:
+                old = """, double pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': g_op}
+        else:
+            for pre_var in list(set(pre_dependencies + post_dependencies)):
+                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
+            for g_op in list(set(pre_global_ops+post_global_ops)):
+                par += """, double pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
+             
         # random variables
         for rd in proj.synapse.description['random_distributions']:
             par += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
@@ -271,18 +255,24 @@ struct ProjStruct%(id)s{
             'var': var,
             'par': par
           }
-
+        
         #
         # calling entity
         local = ""
         for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
             local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
-
-        for pre_var in pre_dependencies:
-            local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
-
-        for post_var in post_dependencies:
-            local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+            
+        if (proj.pre.id == proj.post.id):
+            for var in list(set(pre_dependencies + post_dependencies)):
+                if var in pre_dependencies:
+                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
+                else:
+                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+        else:
+            for pre_var in pre_dependencies:
+                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
+            for post_var in post_dependencies:
+                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
 
         glob = ""
         for g_op in pre_global_ops:
@@ -346,3 +336,254 @@ struct ProjStruct%(id)s{
     def record(self, proj):
         # TODO: not implemented yet
         return ""
+
+#######################################################################
+############## PYX ####################################################
+#######################################################################
+
+    def pyx_struct(self, proj):
+        # Is it a specific projection?
+        if proj.generator['cuda']['pyx_proj_struct']:
+            return proj.generator['cuda']['pyx_proj_struct'] % {'id_proj': proj.id}
+
+        code = """
+    cdef struct ProjStruct%(id_proj)s :
+        int size
+        bool _learning
+        vector[int] post_rank
+        vector[vector[int]] pre_rank
+"""         
+
+        # Exact integration
+        has_exact = False
+        for var in proj.synapse.description['variables']:
+            if var['method'] == 'exact':
+                has_exact = True
+        if has_exact:
+            code += """
+        vector[vector[long]] _last_event
+"""% {'id': proj.id}
+
+        # Delays
+        if proj.max_delay > 1 and proj.uniform_delay == -1:
+            code +="""
+        vector[vector[int]] delay
+"""
+        # Parameters
+        for var in proj.synapse.description['parameters']:
+            if var['name'] in proj.synapse.description['local']:
+                code += """
+        # Local parameter %(name)s
+        vector[vector[%(type)s]] %(name)s
+        bool %(name)s_dirty
+""" % {'type' : var['ctype'], 'name': var['name']}
+
+            elif var['name'] in proj.synapse.description['global']:
+                code += """
+        # Global parameter %(name)s
+        vector[%(type)s]  %(name)s
+        bool %(name)s_dirty 
+""" % {'type' : var['ctype'], 'name': var['name']}
+
+        # Variables
+        for var in proj.synapse.description['variables']:
+            if var['name'] in proj.synapse.description['local']:
+                code += """
+        # Local variable %(name)s
+        vector[vector[%(type)s]] %(name)s 
+        #vector[vector[vector[%(type)s]]] recorded_%(name)s 
+        #vector[int] record_%(name)s 
+""" % {'type' : var['ctype'], 'name': var['name']}
+
+            elif var['name'] in proj.synapse.description['global']:
+                code += """
+        # Global variable %(name)s
+        vector[%(type)s]  %(name)s 
+        #vector[vector[%(type)s]] recorded_%(name)s
+        #vector[int] record_%(name)s 
+""" % {'type' : var['ctype'], 'name': var['name']}
+
+        # Structural plasticity
+        if Global.config['structural_plasticity']:
+            Global._error("Structural plasticity is not supported yet on GPUs")
+
+        # Finalize the code
+        return code % {'id_proj': proj.id}
+
+    def pyx_wrapper(self, proj):
+        # Is it a specific projection?
+        if proj.generator['cuda']['pyx_proj_class']:
+            return proj.generator['cuda']['pyx_proj_class'] % { 'proj_id': proj.id }
+
+        # Init
+        code = """
+cdef class proj%(id)s_wrapper :
+
+    def __cinit__(self, synapses):
+
+        cdef CSR syn = synapses
+        cdef int size = syn.size
+        cdef int nb_post = syn.post_rank.size()
+
+        proj%(id)s.size = size
+        proj%(id)s.post_rank = syn.post_rank
+        proj%(id)s.pre_rank = syn.pre_rank
+        proj%(id)s.w = syn.w
+
+        proj%(id)s._learning = True
+"""% {'id': proj.id}
+
+        # Exact integration
+        has_exact = False
+        for var in proj.synapse.description['variables']:
+            if var['method'] == 'exact':
+                has_exact = True
+        if has_exact:
+            code += """
+        proj%(id)s._last_event = vector[vector[long]](nb_post, vector[long]())
+        for n in range(nb_post):
+            proj%(id)s._last_event[n] = vector[long](proj%(id)s.pre_rank[n].size(), -10000)
+"""% {'id': proj.id}
+
+        # Delays
+        if proj.max_delay > 1 and proj.uniform_delay == -1:
+            code +="""
+        proj%(id)s.delay = syn.delay
+"""% {'id': proj.id}
+
+        # Initialize parameters
+        for var in proj.synapse.description['parameters']:
+            if var['name'] == 'w':
+                continue
+            if var['name'] in proj.synapse.description['local']:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+        proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+            else:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+        proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Initialize variables
+        for var in proj.synapse.description['variables']:
+            if var['name'] == 'w':
+                continue
+            if var['name'] in proj.synapse.description['local']:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+        proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
+        #proj%(id)s.record_%(name)s = vector[int]()
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+            else:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+        proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
+        #proj%(id)s.record_%(name)s = vector[int]()
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Size property
+        code += """
+
+    property size:
+        def __get__(self):
+            return proj%(id)s.size
+
+    def nb_synapses(self, int n):
+        return proj%(id)s.pre_rank[n].size()
+
+    def _set_learning(self, bool l):
+        proj%(id)s._learning = l
+
+    def post_rank(self):
+        return proj%(id)s.post_rank
+    def pre_rank(self, int n):
+        return proj%(id)s.pre_rank[n]
+""" % {'id': proj.id}
+
+        # Delays
+        if proj.max_delay > 1 and proj.uniform_delay == -1:
+            code +="""
+    def get_delay(self):
+        return proj%(id)s.delay
+    def set_delay(self, value):
+        proj%(id)s.delay = value
+"""% {'id': proj.id}
+
+        # Parameters
+        for var in proj.synapse.description['parameters']:
+            if var['name'] in proj.synapse.description['local']:
+                code += """
+    # Local parameter %(name)s
+    def get_%(name)s(self):
+        return proj%(id)s.%(name)s
+    def set_%(name)s(self, value):
+        proj%(id)s.%(name)s_dirty = True
+        proj%(id)s.%(name)s = value
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
+        proj%(id)s.%(name)s_dirty = True
+        proj%(id)s.%(name)s[rank] = value
+    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
+        return proj%(id)s.%(name)s[rank_post][rank_pre]
+    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
+        proj%(id)s.%(name)s_dirty = True
+        proj%(id)s.%(name)s[rank_post][rank_pre] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+
+            elif var['name'] in proj.synapse.description['global']:
+                code += """
+    # Global parameter %(name)s
+    def get_%(name)s(self):
+        return proj%(id)s.%(name)s
+    def set_%(name)s(self, value):
+        proj%(id)s.%(name)s_dirty = True
+        proj%(id)s.%(name)s = value
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, %(type)s value):
+        proj%(id)s.%(name)s_dirty = True
+        proj%(id)s.%(name)s[rank] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+
+        # Variables
+        for var in proj.synapse.description['variables']:
+            if var['name'] in proj.synapse.description['local']:
+                code += """
+    # Local variable %(name)s
+    def get_%(name)s(self):
+        return proj%(id)s.%(name)s
+    def set_%(name)s(self, value):
+        proj%(id)s.%(name)s = value
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
+        proj%(id)s.%(name)s[rank] = value
+    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
+        return proj%(id)s.%(name)s[rank_post][rank_pre]
+    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
+        proj%(id)s.%(name)s[rank_post][rank_pre] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+
+            elif var['name'] in proj.synapse.description['global']:
+                code += """
+    # Global variable %(name)s
+    def get_%(name)s(self):
+        return proj%(id)s.%(name)s
+    def set_%(name)s(self, value):
+        proj%(id)s.%(name)s = value
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.%(name)s[rank]
+    def set_dendrite_%(name)s(self, int rank, %(type)s value):
+        proj%(id)s.%(name)s[rank] = value
+""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+
+         # Structural plasticity
+        if Global.config['structural_plasticity']:
+            Global._error('structural plasticity is not supported yet on CUDA ...')
+
+        return code
