@@ -544,4 +544,10 @@ def analyse_synapse(synapse):
             # Store the result
             variable['cpp'] = code # the C++ equation
 
+    # Structural plasticity
+    if synapse.pruning:
+        description['pruning'] = extract_structural_plasticity(synapse.pruning, description, pattern)
+    if synapse.creating:
+        description['creating'] = extract_structural_plasticity(synapse.creating, description, pattern)
+
     return description     

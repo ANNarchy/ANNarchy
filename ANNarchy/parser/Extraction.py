@@ -479,6 +479,42 @@ def extract_stop_condition(pop, pattern):
     code = translator.parse()
     pop['stop_condition']['cpp'] = '(' + code + ')'
 
+def extract_structural_plasticity(statement, description, pattern):
+    # Extract flags
+    try:
+        eq, constraint = statement.rsplit(':', 1)
+        bounds, flags = extract_flags(constraint)
+    except:
+        eq = statement.strip()
+        bounds = {}
+        flags = []
+
+    # Extract pre/post dependencies
+    eq, untouched, dependencies = extract_prepost('test', eq, description, pattern)
+    # Parse code
+    translator = Equation('test', eq, 
+                          description, 
+                          method = 'cond', 
+                          untouched = {},
+                          prefix=pattern['proj_prefix'],
+                          sep=pattern['proj_sep'],
+                          index=pattern['proj_index'],
+                          global_index=pattern['proj_globalindex'])
+
+    code = translator.parse()
+
+    # Replace untouched variables with their original name
+    for prev, new in untouched.iteritems():
+        code = code.replace(prev, new) 
+
+    # Add new dependencies
+    for dep in dependencies['pre']:
+        description['dependencies']['pre'].append(dep)
+    for dep in dependencies['post']:
+        description['dependencies']['post'].append(dep)
+
+    return {'eq': eq, 'cpp': code, 'bounds': bounds, 'flags': flags}
+    
 
 def find_method(variable):
 

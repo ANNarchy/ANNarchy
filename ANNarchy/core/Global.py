@@ -43,6 +43,9 @@ annarchy_dir = os.getcwd() + '/annarchy'
 
 # Flag to tell if the network has already been compiled
 _compiled = False   # I know it's evil
+def set_compiled(): # called by the generator
+    global _compiled
+    _compiled = True
 
 # Configuration
 config = dict(

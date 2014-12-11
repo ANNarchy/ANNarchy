@@ -57,6 +57,16 @@ proj_generator_template = {
         #    TODO:
         'body_proj_init': None,
 
+        # Updates the random numbers
+        # Example:
+        #   TODO
+        'body_random_dist_update': None,
+
+        # Initializes the random numbers
+        # Example:
+        #   TODO
+        'body_random_dist_init': None,
+
         # Updates the synapse variables
         # Example:
         # 
@@ -189,7 +199,7 @@ class Projection(object):
 
         self.initialized = True  
 
-        self._init_attributes()
+        #self._init_attributes()
 
     def _init_attributes(self):
         """ 
@@ -1122,3 +1132,90 @@ class Projection(object):
         from ANNarchy.core.IO import _load_data, _load_proj_data
         _load_proj_data(self, _load_data(filename))
 
+
+    ################################
+    ## Structural plasticity
+    ################################
+    def start_pruning(self, period=Global.config['dt']):
+        """
+        Starts pruning the synapses in the projection if the synapse defines a 'pruning' argument.
+
+        'structural_plasticity' must be set to True in setup().
+
+        *Parameters*:
+
+        * **period**: how often pruning should be evaluated (default: dt, i.e. each step)
+        """
+        if not Global._compiled:
+            Global._error('Can not start pruning if the network is not compiled.')
+            exit(0)
+        if Global.config['structural_plasticity']:
+            try:
+                self.cyInstance.start_pruning(int(period/Global.config['dt']), Global.get_current_step())
+            except:
+                Global._error("The synapse does not define a 'pruning' argument.")
+                exit(0)
+        else:
+            Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
+            exit(0)
+
+    def stop_pruning(self):
+        """
+        Stops pruning the synapses in the projection if the synapse defines a 'pruning' argument.
+
+        'structural_plasticity' must be set to True in setup().
+        """
+        if not Global._compiled:
+            Global._error('Can not stop pruning if the network is not compiled.')
+            exit(0)
+        if Global.config['structural_plasticity']:
+            try:
+                self.cyInstance.start_pruning()
+            except:
+                Global._error("The synapse does not define a 'pruning' argument.")
+                exit(0)
+        else:
+            Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
+            exit(0)
+
+    def start_creating(self, period=Global.config['dt']):
+        """
+        Starts creating the synapses in the projection if the synapse defines a 'creating' argument.
+
+        'structural_plasticity' must be set to True in setup().
+
+        *Parameters*:
+
+        * **period**: how often creating should be evaluated (default: dt, i.e. each step)
+        """
+        if not Global._compiled:
+            Global._error('Can not start creating if the network is not compiled.')
+            exit(0)
+        if Global.config['structural_plasticity']:
+            try:
+                self.cyInstance.start_creating(int(period/Global.config['dt']), Global.get_current_step())
+            except:
+                Global._error("The synapse does not define a 'creating' argument.")
+                exit(0)
+        else:
+            Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
+            exit(0)
+
+    def stop_creating(self):
+        """
+        Stops creating the synapses in the projection if the synapse defines a 'creating' argument.
+
+        'structural_plasticity' must be set to True in setup().
+        """
+        if not Global._compiled:
+            Global._error('Can not stop creating if the network is not compiled.')
+            exit(0)
+        if Global.config['structural_plasticity']:
+            try:
+                self.cyInstance.stop_creating()
+            except:
+                Global._error("The synapse does not define a 'creating' argument.")
+                exit(0)
+        else:
+            Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
+            exit(0)
