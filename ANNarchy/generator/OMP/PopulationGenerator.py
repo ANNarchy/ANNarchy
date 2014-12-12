@@ -157,13 +157,26 @@ struct PopStruct%(id)s{
 
         # Local variables
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+
+        # Profiling code
+        if Global.config['profiling']:
+            from ..Profile.Template import profile_generator_omp_template
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+            prof_begin = profile_generator_omp_template['update_neuron']['before'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
+            prof_end = profile_generator_omp_template['update_neuron']['after'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
+        else:
+            prof_begin = ""
+            prof_end = ""
+        
         code += """
     // Updating the local variables of population %(id)s (%(name)s)
     if(pop%(id)s._active){
+        %(prof_begin)s
         #pragma omp parallel for
         for(int i = 0; i < pop%(id)s.size; i++){
 %(eqs)s
-""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
+""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs, 'prof_begin': prof_begin}
 
 
         # Spike emission
@@ -220,8 +233,9 @@ struct PopStruct%(id)s{
         # Finish parallel loop for the population
         code += """
         }
+        %(prof_end)s
     } // active
-"""
+""" % { 'prof_end': prof_end }
         return code
 
 

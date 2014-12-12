@@ -169,7 +169,7 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void set_CPU_cycles_number(int number){Profiling_cycles_CPU_count=number;}
     void set_thread_statistic_number(int number){Profiling_thread_count=number;}
     void set_max_thread_number(int number){thread_count=number;}
-    void set_max_core_number(int number){core_count=number;}
+    void set_max_core_number(int number){core_count=number;}//don't needed
 
     //Aufruf direkt nach allen set Number's
     void init(int extended=1);
@@ -269,5 +269,6 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void evaluate_disp();
     int evaluate_file(const char * filename="Profiling.log");
 };
+
 #endif
 """

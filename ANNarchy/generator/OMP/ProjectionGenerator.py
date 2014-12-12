@@ -137,9 +137,18 @@ struct ProjStruct%(id_proj)s{
                 )
         # No need for openmp if less than 10 neurons
         omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-        prof_begin = proj.prof_generator['omp']['compute_psp']['before'] if Global.config['profiling'] else ""
-        prof_end = proj.prof_generator['omp']['compute_psp']['after'] if Global.config['profiling'] else ""
-
+        
+        # Profiling code
+        if Global.config['profiling']:
+            from ..Profile.Template import profile_generator_omp_template
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+            prof_begin = profile_generator_omp_template['compute_psp']['before'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
+            prof_end = profile_generator_omp_template['compute_psp']['after'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
+        else:
+            prof_begin = ""
+            prof_end = ""
+        
         # Generate the code depending on the operation
         if proj.synapse.operation == 'sum': # normal summation
             code+= """

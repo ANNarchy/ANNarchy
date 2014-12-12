@@ -10,13 +10,13 @@ Profiling::Profiling() {
 */
 void Profiling::init(int extended)
 {
- //Profiling Array allocate
-        Prof_time=     new Profiling_time[Profiling_time_count];
-        Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count];
-        Prof_time_init=new Profiling_time[Profiling_time_init_count];
-        Prof_memcopy=  new Profiling_memcopy[Profiling_memcopy_count];
-
- //additional initialisations
+    //Profiling Array allocate
+    Prof_time=     new Profiling_time[Profiling_time_count];
+    Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count];
+    Prof_time_init=new Profiling_time[Profiling_time_init_count];
+    Prof_memcopy=  new Profiling_memcopy[Profiling_memcopy_count];
+    
+     //additional initialisations
     if (extended){
         init_GPU_prof();
     }
@@ -338,8 +338,8 @@ void Profiling::evaluate_disp()
         else     
             std::cout << Prof_memcopy[i].name;
         std::cout     <<" time: "          << std::fixed << Prof_memcopy[i].time.summ     << "s "
-                << "Relative to CPU time: " << std::fixed << Prof_memcopy[i].time.prozent_CPU<< "% "
-                << "Relative to GPU time: " << std::fixed << Prof_memcopy[i].time.prozent_GPU<< "% "
+                << "Relative to CPU time: " << std::fixed << Prof_memcopy[i].time.prozent_CPU<< " "
+                << "Relative to GPU time: " << std::fixed << Prof_memcopy[i].time.prozent_GPU<< " "
                 << "Average time: "      << std::fixed << Prof_memcopy[i].time.avg     << "s "
                 << "Minimum time: "      << std::fixed << Prof_memcopy[i].time.min     << "s "
                 << "Maximum time: "      << std::fixed << Prof_memcopy[i].time.max     << "s "
@@ -365,7 +365,7 @@ void Profiling::evaluate_disp()
         else     
             std::cout << Prof_time_CPU[i].name;
         std::cout     <<" time: "          << std::fixed << Prof_time_CPU[i].time.summ     << "s "
-                << "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< "% "
+                << "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< " "
                 << "Average time: "      << std::fixed << Prof_time_CPU[i].time.avg     << "s "
                 << "Minimum time: "      << std::fixed << Prof_time_CPU[i].time.min     << "s "
                 << "Maximum time: "      << std::fixed << Prof_time_CPU[i].time.max     << "s "
@@ -379,8 +379,8 @@ void Profiling::evaluate_disp()
         else     
             std::cout << Prof_time[i].name;
         std::cout     <<" time: "          << std::fixed << Prof_time[i].time.summ     << "s "
-                << "Relative to CPU time: " << std::fixed << Prof_time[i].time.prozent_CPU<< "% "
-                << "Relative to GPU time: " << std::fixed << Prof_time[i].time.prozent_GPU<< "% "
+                << "Relative to CPU time: " << std::fixed << Prof_time[i].time.prozent_CPU<< " "
+                << "Relative to GPU time: " << std::fixed << Prof_time[i].time.prozent_GPU<< " "
                 << "Average time: "      << std::fixed << Prof_time[i].time.avg     << "s "
                 << "Minimum time: "      << std::fixed << Prof_time[i].time.min     << "s "
                 << "Maximum time: "      << std::fixed << Prof_time[i].time.max     << "s "
@@ -400,7 +400,7 @@ int Profiling::evaluate_file(const char * filename)
      << "On GPU only: in s"<< std::endl;
     fp << std::fixed << Prof_general.GPU_summ << std::endl;
     fp <<"#"                                                //Trennzeile 3:CPU Zeiten
-     << "Name:Summe(s):Relative(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s)"<< std::endl;
+     << "Name:Summe(s):Relative():Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s)"<< std::endl;
         for(int i=0;i<Profiling_time_CPU_count;i++){
             int found = (Prof_time_CPU[i].name.find(":")!=std::string::npos)||(Prof_time_CPU[i].name.find("#")!=std::string::npos);//1 wenn Prof_time_CPU[i].name ungueltig 
             if ((Prof_time_CPU[i].name=="")||(found))
@@ -417,7 +417,7 @@ int Profiling::evaluate_file(const char * filename)
                     << ":" << std::fixed << Prof_time_CPU[i].time.standard << std::endl;
         }
     fp <<"#"                                                //Trennzeile 4:GPU Zeiten
-     << "Name:Summe(s):Relative_CPU(%):Relative_GPU(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s)"<< std::endl;
+     << "Name:Summe(s):Relative_CPU():Relative_GPU():Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s)"<< std::endl;
         for(int i=0;i<Profiling_time_count;i++){
             int found = (Prof_time[i].name.find(":")!=std::string::npos)||(Prof_time[i].name.find("#")!=std::string::npos);//1 wenn Prof_time[i].name ungueltig 
             if ((Prof_time[i].name=="")||(found))
@@ -447,7 +447,7 @@ int Profiling::evaluate_file(const char * filename)
                     <<":" << std::fixed << (Prof_time_init[i].time.prozent_CPU/100.0)<< std::endl;
         }
     fp <<"#"                                                //Trennzeile 6:Memcopy
-     << "Name:Time summ(s):Relative_CPU(%):Relative_GPU(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):(Memory)summ(Byte):Average(Byte):Minimum(Byte):Maximum(Byte):Standard deviation(Byte):(Throughput)Average(Byte/s):Minimum(Byte/s):Maximum(Byte/s):Standard deviation(Byte/s)"<< std::endl;
+     << "Name:Time summ(s):Relative_CPU():Relative_GPU():Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):(Memory)summ(Byte):Average(Byte):Minimum(Byte):Maximum(Byte):Standard deviation(Byte):(Throughput)Average(Byte/s):Minimum(Byte/s):Maximum(Byte/s):Standard deviation(Byte/s)"<< std::endl;
         for(int i=0;i<Profiling_memcopy_count;i++){
             int found = (Prof_memcopy[i].name.find(":")!=std::string::npos)||(Prof_memcopy[i].name.find("#")!=std::string::npos);//1 wenn Prof_time_CPU[i].name ungueltig 
             if ((Prof_memcopy[i].name=="")||(found))
@@ -490,19 +490,27 @@ Profiling::Profiling() {
 */
 void Profiling::init(int extended)
 {
- //Profiling Array allocate
-        Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
-        Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
+%(init)s
 
- //additional initialisations
+    //Profiling Array allocate
+    Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
+    Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
+
+%(init2)s
+    
+    //additional initializations
     if (extended){
         init_thread();
     }
 }
+
 void Profiling::init_thread()
 {
-//Profiling thread-Array allocate
-        Prof_thread_statistic= new Profiling_thread_statistic[Profiling_thread_count];
+    //Profiling thread-Array allocate
+    const PAPI_hw_info_t *hwinfo = NULL;
+    hwinfo=PAPI_get_hardware_info();
+    if (core_count==0) core_count=hwinfo->totalcpus;
+    Prof_thread_statistic= new Profiling_thread_statistic[Profiling_thread_count];
     for(int i=0;i<Profiling_thread_count;i++)
     {
         Prof_thread_statistic[i].thread=new Profiling_thread_statistic_core[thread_count];
@@ -594,17 +602,16 @@ void Profiling::stop_CPU_cycles_prof( int number,int directevaluate)
 void Profiling::evaluate_CPU_cycles_prof( int number)
 {
   if(Profil){
-    double dt_ms;
+    double dt;
 
-    //pre-evaluate CPU time
-    dt_ms=((double)(Prof_cycles_CPU[number].stop-Prof_cycles_CPU[number].start))/1000.0;//Launch time
-    dt_ms/=1000.0;//ms => s
+    //pre-evaluate CPU cycles
+    dt=((double)(Prof_cycles_CPU[number].stop-Prof_cycles_CPU[number].start));
 
-    Prof_cycles_CPU[number].time.summ+=dt_ms;
+    Prof_cycles_CPU[number].time.summ+=dt;
     Prof_cycles_CPU[number].time.count++;
-    Prof_cycles_CPU[number].time.summsqr+=sqr(dt_ms);
-    (dt_ms<Prof_cycles_CPU[number].time.min)?(Prof_cycles_CPU[number].time.min=dt_ms):1;
-    (Prof_cycles_CPU[number].time.max<dt_ms)?(Prof_cycles_CPU[number].time.max=dt_ms):1;//min/max
+    Prof_cycles_CPU[number].time.summsqr+=sqr(dt);
+    (dt<Prof_cycles_CPU[number].time.min)?(Prof_cycles_CPU[number].time.min=dt):1;
+    (Prof_cycles_CPU[number].time.max<dt)?(Prof_cycles_CPU[number].time.max=dt):1;//min/max
   }
 }
 
@@ -692,7 +699,7 @@ void Profiling::evaluate_disp()
         else     
             std::cout << Prof_time_CPU[i].name;
         std::cout     <<" time: "          << std::fixed << Prof_time_CPU[i].time.summ     << "s "
-                << "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< "% "
+                << "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< " "
                 << "Average time: "      << std::fixed << Prof_time_CPU[i].time.avg     << "s "
                 << "Minimum time: "      << std::fixed << Prof_time_CPU[i].time.min     << "s "
                 << "Maximum time: "      << std::fixed << Prof_time_CPU[i].time.max     << "s "
@@ -706,7 +713,7 @@ void Profiling::evaluate_disp()
         else     
             std::cout << Prof_cycles_CPU[i].name;
         std::cout     <<" cycles: "          << std::fixed << Prof_cycles_CPU[i].time.summ     << " "
-                //<< "Relative to CPU cycles: " << std::fixed << Prof_cycles_CPU[i].time.prozent_CPU<< "% "
+                //<< "Relative to CPU cycles: " << std::fixed << Prof_cycles_CPU[i].time.prozent_CPU<< " "
                 << "Average cycles: "      << std::fixed << Prof_cycles_CPU[i].time.avg     << " "
                 << "Minimum cycles: "      << std::fixed << Prof_cycles_CPU[i].time.min     << " "
                 << "Maximum cycles: "      << std::fixed << Prof_cycles_CPU[i].time.max     << " "
@@ -745,7 +752,7 @@ int Profiling::evaluate_file(const char * filename)
     fp <<"#"                                                //Trennzeile 2:GPU Gesammtzeit
      << "On GPU only: in s"<< std::endl;
     fp <<"#"                                                //Trennzeile 3:CPU Zeiten
-     << "Name:Summe(s):Relative(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):additonal"<< std::endl;
+     << "Name:Summe(s):Relative():Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):additonal"<< std::endl;
         for(int i=0;i<Profiling_time_CPU_count;i++){
             int found = checkstring(Prof_time_CPU[i].name);//1 wenn Prof_time_CPU[i].name ungueltig 
             if ((Prof_time_CPU[i].name=="")||(found))
@@ -767,11 +774,11 @@ int Profiling::evaluate_file(const char * filename)
                 fp <<":"<< Prof_time_CPU[i].additonal<< std::endl;
         }
     fp <<"#"                                                //Trennzeile 4:GPU Zeiten
-     << "Name:Summe(s):Relative_CPU(%):Relative_GPU(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):additonal"<< std::endl;
+     << "Name:Summe(s):Relative_CPU():Relative_GPU():Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):additonal"<< std::endl;
     fp <<"#"                                                //Trennzeile 5:Initialisierungs Zeiten
      << "Name:Summe(s):Faktor_CPU(1)"<< std::endl;
     fp <<"#"                                                //Trennzeile 6:Memcopy
-     << "Name:Time summ(s):Relative_CPU(%):Relative_GPU(%):Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):(Memory)summ(Byte):Average(Byte):Minimum(Byte):Maximum(Byte):Standard deviation(Byte):(Throughput)Average(Byte/s):Minimum(Byte/s):Maximum(Byte/s):Standard deviation(Byte/s):additonal"<< std::endl;
+     << "Name:Time summ(s):Relative_CPU():Relative_GPU():Calls(1):Average(s):Minimum(s):Maximum(s):Standard deviation(s):(Memory)summ(Byte):Average(Byte):Minimum(Byte):Maximum(Byte):Standard deviation(Byte):(Throughput)Average(Byte/s):Minimum(Byte/s):Maximum(Byte/s):Standard deviation(Byte/s):additonal"<< std::endl;
     fp <<"#"                                                //Trennzeile 7:CPU Cycles
      << "Name:Summe(1):Calls(1):Average(1):Minimum(1):Maximum(1):Standard deviation(1):additonal"<< std::endl;
         for(int i=0;i<Profiling_cycles_CPU_count;i++){

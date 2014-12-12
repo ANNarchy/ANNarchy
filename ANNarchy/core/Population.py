@@ -171,45 +171,6 @@ pop_generator_template = {
     } 
 }
 
-profile_generator_template = {
-    'omp': {
-        'update_neural_variables': {
-            'before' : """
-    double pop%(id)s_t1 = omp_get_wtime(); """,
-            'after' : """
-    double pop%(id)s_t2 = omp_get_wtime();
-    pop%(id)s.neuron_update.push_back((pop%(id)s_t2 - pop%(id)s_t1) * 1000.0);
-""",
-            'eval': """
-    double pop%(id)s_neur_update_avg = 0.0;
-    for ( auto it = pop%(id)s.neuron_update.begin(); it != pop%(id)s.neuron_update.end(); it ++ ) {
-        pop%(id)s_neur_update_avg += *it;
-    }
-
-    if (pop%(id)s.neuron_update.size() > 0 )
-        std::cout << "Population%(id)s::update_neural_variables took " << pop%(id)s_neur_update_avg / (double)(pop%(id)s.neuron_update.size()) << std::endl;
-"""
-        },
-        'compute_psp': {
-            'before' : """
-    double proj%(id)s_t1 = omp_get_wtime();""",
-            'after' : """
-    double proj%(id)s_t2 = omp_get_wtime();
-    proj%(id)s.compute_psp.push_back((proj%(id)s_t2 - proj%(id)s_t1) * 1000.0);
-""",
-            'eval': """
-    double proj%(id)s_psp_avg = 0.0;
-    for ( auto it = proj%(id)s.compute_psp.begin(); it != proj%(id)s.compute_psp.end(); it ++ ) {
-        proj%(id)s_psp_avg += *it;
-    }
-
-    if (proj%(id)s.compute_psp.size() > 0 )
-        std::cout << "Projection%(id)s::compute_psp took " << proj%(id)s_psp_avg / (double)(proj%(id)s.compute_psp.size()) << std::endl;
-"""
-        }
-    }
-}
-
 class Population(object):
     """
     Represents a population of homogeneous neurons.
@@ -266,7 +227,6 @@ class Population(object):
             self.neuron_type = copy.deepcopy(neuron)
         self.neuron_type._analyse()
         self.generator = copy.deepcopy(pop_generator_template)
-        self.prof_generator = copy.deepcopy(profile_generator_template)
         
         # Store the stop condition
         self.stop_condition = stop_condition
