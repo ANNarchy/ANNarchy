@@ -158,22 +158,24 @@ cdef class proj%(id_proj)s_wrapper :
         wsum =  """
     // Diagonal proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
     if(pop%(id_post)s._active){
-    int proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f;
-    //#pragma omp parallel for private(proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f)
-    for(int idx_0 = 0; idx_0 < %(dim_post_0)s; idx_0++){
-        sum = 0.0;
-        for(int idx_1 = 0; idx_1 < %(dim_pre_1)s; idx_1++){
-            proj%(id_proj)s_idx_0 = (idx_0 + idx_1 + %(offset)s) %% %(dim_pre_0)s;
-            proj%(id_proj)s_idx_1 = (%(inc1)s idx_1) %% %(dim_pre_1)s;
-            for(int idx_f=0; idx_f < proj%(id_proj)s.w.size(); idx_f++){
-                proj%(id_proj)s_idx_f = (proj%(id_proj)s_idx_1 + (idx_f - %(center_filter)s) ) %% %(dim_pre_1)s;
-                sum += proj%(id_proj)s.w[idx_f] * pop%(id_pre)s.r[proj%(id_proj)s_idx_f + %(dim_pre_1)s* proj%(id_proj)s_idx_0];
+        int proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f;
+        std::vector<double> proj%(id_proj)s_w = proj%(id_proj)s.w;
+        std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;
+        #pragma omp parallel for private(sum, proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f) firstprivate(proj%(id_proj)s_w, proj%(id_proj)s_pre_r)
+        for(int idx_0 = 0; idx_0 < %(dim_post_0)s; idx_0++){
+            sum = 0.0;
+            for(int idx_1 = 0; idx_1 < %(dim_pre_1)s; idx_1++){
+                proj%(id_proj)s_idx_0 = (idx_0 + idx_1 + %(offset)s) %% %(dim_pre_0)s;
+                proj%(id_proj)s_idx_1 = (%(inc1)s idx_1) %% %(dim_pre_1)s;
+                for(int idx_f=0; idx_f < %(size_filter)s; idx_f++){
+                    proj%(id_proj)s_idx_f = (proj%(id_proj)s_idx_1 + (idx_f - %(center_filter)s) ) %% %(dim_pre_1)s;
+                    sum += proj%(id_proj)s_w[idx_f] * proj%(id_proj)s_pre_r[proj%(id_proj)s_idx_f + %(dim_pre_1)s * proj%(id_proj)s_idx_0];
+                }
+            }
+            for(int idx_1 = 0; idx_1 < %(dim_post_1)s; idx_1++){
+                pop%(id_post)s._sum_%(target)s[idx_1 + %(dim_post_1)s*idx_0] += sum;
             }
         }
-        for(int idx_1 = 0; idx_1 < %(dim_post_1)s; idx_1++){
-            pop%(id_post)s._sum_%(target)s[idx_1 + %(dim_post_1)s*idx_0] += sum;
-        }
-    }
     }// active
 """ 
 
@@ -195,6 +197,7 @@ cdef class proj%(id_proj)s_wrapper :
             'offset': self.offset,
             'dim_post_0': dim_post_0, 'dim_post_1': dim_post_1,
             'dim_pre_0': dim_pre_0, 'dim_pre_1': dim_pre_1,
+            'size_filter': len(self.weights),
             'center_filter': int(len(self.weights)/2),
             'inc1': inc1
           }
