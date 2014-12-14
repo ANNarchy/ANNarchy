@@ -147,6 +147,7 @@ openmp_profile_header=\
 #include <omp.h>
 #include <papi.h>
 #include <sched.h>  // sched_getcpu
+#include <algorithm>
 
 #define pos(x) (x>0.0? x : 0.0)
 #define sqr(x) (x*x)
@@ -220,6 +221,11 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
         double prozent_CPU;
         double summ=0;
         double summsqr=0;
+
+        // [hdin] sometimes needed for additional evaluation
+        bool storeRawData=true;
+        double adjustedMean=0.0;
+        std::vector<double> rawData=std::vector<double>();
     };
 
     struct Profiling_thread_statistic_unit{
@@ -260,15 +266,104 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     int Profil=1;
 
     //Profiling
-        Profiling_time *Prof_time_CPU;
-        Profiling_time *Prof_cycles_CPU;
-        Profiling_thread_statistic *Prof_thread_statistic;
-        Profiling_general Prof_general;
+    Profiling_time *Prof_time_CPU;
+    Profiling_time *Prof_cycles_CPU;
+    Profiling_thread_statistic *Prof_thread_statistic;
+    Profiling_general Prof_general;
 
     void evaluate_calc();
     void evaluate_disp();
     int evaluate_file(const char * filename="Profiling.log");
-};
+    
+    /**
+     *    \brief        Adjusting mean by removing items from dataset
+     *    \details      removal of the 5 percent highest and lowest values from the dataset. This is only valid if the dataset is big enough
+     *    \param[in]    data    vector containing the data to compute mean from
+     *    \return       in case of either no data or less then 100 elements the function return 0.0
+     *                  otherwise returns mean over remaining data
+     */
+    double compAdjustedMeanV1(std::vector<double> data) {
+        if ( data.empty() )
+            return 0.0;
 
+        if ( data.size() < 100 )
+            return 0.0;
+
+        int toRemove = ceil(double(data.size()) / 100.0 * 5.0); // remove 10 percent of the items 
+        std::vector<double> tmp = data; // need to copy vector, otherwise we would overwrite input
+        std::sort( tmp.begin(), tmp.end() ); // default comparison is '<'
+        
+        tmp.erase( tmp.end()-toRemove, tmp.end());
+        tmp.erase( tmp.begin(), tmp.begin()+toRemove);
+        
+        double sum = 0.0;
+        for ( auto it = tmp.begin(); it != tmp.end(); it++ )
+            sum+= *it;
+            
+        return sum / double(tmp.size());
+    }
+    
+    /**
+     *    \brief        compute mean
+     *    \details      implemented as template function
+     *    \param[in]    data    vector containing the data to compute standard deviation from
+     *    \return       computed mean
+     */
+    template<typename T>
+    T compMean(std::vector<T> data) {
+        // compute mean
+        T sum = 0.0;
+        for ( auto it = data.begin(); it != data.end(); it++ )
+            sum += *it;
+        return T(sum / double(data.size()));
+    }
+    
+    /**
+     *    \brief        compute stdandard deviation
+     *    \details      implemented as template function and use N-1 as divisor
+     *    \param[in]    data    vector containing the data to compute standard deviation from
+     *    \param[in]    mean    pre-computed mean over data
+     *    \return       standard deviation
+     */
+    template<typename T>
+    T compStandardDeviation(std::vector<T> data, T mean) {
+        // compute varianz
+        T var = 0.0;
+        for ( auto it = data.begin(); it != data.end(); it++ )
+            var += (*it-mean)*(*it-mean);
+        
+        // Notice: there are both variants in literature divide b N or N-1,
+        //         I decided I take the second version, as it seems the more correct one.
+        return sqrt( (var / double(data.size()-1) ) );
+    }
+
+    /**
+     *    \brief        Adjusting mean by removing items dependant on stdandard deviation
+     *    \details      removal of the items which are to far from mean ( 3 times standard deviation )
+     *    \param[in]    data               vector containing the data to compute mean from
+     *    \param[in]    thresholdFactor    determine size of window <=> mean +- thresholdFactor * std_dev 
+     *    \return       in case of no data the function return 0.0
+     *                  otherwise returns mean over adjusted data
+     */
+    double compAdjustedMeanV2(std::vector<double> data, double thresholdFactor = 3.0) {
+        if ( data.empty() )
+            return 0.0;
+
+        // compute mean and standard deviation
+        double mean = compMean<double>(data);
+        double std_dev = compStandardDeviation<double>(data, mean);
+        
+        // remove all items higher then threshold
+        std::vector<double> tmp = data;
+        double pos_threshold = mean+thresholdFactor*std_dev;
+        double neg_threshold = mean-thresholdFactor*std_dev;
+        for ( auto it = tmp.begin(); it != tmp.end(); it++ )
+            if ( *it < neg_threshold || *it > pos_threshold )
+                it = tmp.erase(it);
+
+        // compute and return adjusted mean
+        return compMean<double>(tmp);
+    }    
+};
 #endif
 """
