@@ -461,7 +461,7 @@ class SharedProjection(Projection):
             if shape != (self.post.size/ self.post.geometry[-1], self.pre.dimension):
                 Global._error('The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
-            self.pre_coordinates = self.subsampling
+            self.pre_coordinates = [c + [d] for c in self.subsampling  for d  in range(self.nb_filters)]
             return
 
         # Otherwise create it, possibly with sub-sampling
