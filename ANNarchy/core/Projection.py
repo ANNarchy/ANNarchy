@@ -660,7 +660,7 @@ class Projection(object):
         self._store_csr(Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections))
         return self
     
-    def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+    def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False, shared=False):
         """
         Builds a Difference-Of-Gaussians connection pattern between the two populations.
 
@@ -676,6 +676,7 @@ class Projection(object):
             * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
             * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
             * **allow_self_connections**: allows connections between a neuron and itself.
+            * **shared**: if the weights are shared by the neurons (default: false)
         """
         if self.pre!=self.post:
             allow_self_connections = True
@@ -687,8 +688,13 @@ class Projection(object):
         self.connector_name = "Difference-of-Gaussian"
         self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
 
-        import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr(Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections))
+        if not shared:
+            import ANNarchy.core.cython_ext.Connector as Connector
+            self._store_csr(Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections))
+        else:
+            import ANNarchy.core.cython_ext.Connector as Connector
+            span_x range(-self.pre.geometry[0], self.pre.geometry[0])
+            self._store_csr(Connector.CSR())
         return self
 
     def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
