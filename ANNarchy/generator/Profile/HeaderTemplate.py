@@ -147,10 +147,13 @@ openmp_profile_header=\
 #include <omp.h>
 #include <papi.h>
 #include <sched.h>  // sched_getcpu
+
+//[hdin]
 #include <algorithm>
+#include <iterator>
 
 #define pos(x) (x>0.0? x : 0.0)
-#define sqr(x) (x*x)
+#define square(x) (x*x)
 #define checkstring(x) ((x.find(":")!=std::string::npos)||(x.find("#")!=std::string::npos)||(x.find("\\n")!=std::string::npos))
 
 class Profiling {
@@ -172,9 +175,15 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void set_max_thread_number(int number){thread_count=number;}
     void set_max_core_number(int number){core_count=number;}//don't needed
 
+    void set_CPU_time_hight_trash_count(  int number,int count){Prof_time_CPU[number].time.maxac=count;}
+    void set_CPU_time_low_trash_count(  int number,int count){Prof_time_CPU[number].time.minac=count;}
+    void set_CPU_cycles_hight_trash_count(  int number,int count){Prof_time_CPU[number].time.maxac=count;}
+    void set_CPU_cycles_low_trash_count(  int number,int count){Prof_time_CPU[number].time.minac=count;}
+
     //Aufruf direkt nach allen set Number's
     void init(int extended=1);
     void init_thread();
+    void init_trash();
 
     //Funktionen um alle Profiling Aktionen an(Standart)/ab zuschalten(betrifft !ALLE! start/stop/evaluate)->Messung Gesammtzeit ohne Profiling Wartepausen
     void set_profiling_off(){Profil=0;}
@@ -186,9 +195,15 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void set_thread_statistic_name(int number,std::string name){Prof_thread_statistic[number].name=name;}
 
     //additonal Syntax fuer Python Auswertung: Zahl(X-Ache);String
-    void set_CPU_time_additonal(  int number,std::string additonal){Prof_time_CPU[number].additonal=additonal;}
-    void set_CPU_cycles_additonal(int number,std::string additonal){Prof_cycles_CPU[number].additonal=additonal;}
-    void set_thread_statistic_additonal(int number,std::string additonal){Prof_thread_statistic[number].additonal=additonal;}
+    void set_CPU_time_additional(  int number,std::string additonal){Prof_time_CPU[number].additonal=additonal;}
+    void set_CPU_cycles_additional(int number,std::string additonal){Prof_cycles_CPU[number].additonal=additonal;}
+    void set_thread_statistic_additional(int number,std::string additonal){Prof_thread_statistic[number].additonal=additonal;}
+
+    //for [hdin]
+    void store_CPU_time_raw(int number){Prof_time_CPU[number].storeRawData=true;}
+    void store_not_CPU_time_raw(int number){Prof_time_CPU[number].storeRawData=false;}
+    void store_CPU_cycles_raw(int number){Prof_cycles_CPU[number].storeRawData=true;}
+    void store_not_CPU_cycles_raw(int number){Prof_cycles_CPU[number].storeRawData=false;}
 
     void start_CPU_time_prof( int number);
     void start_overall_time_prof();
@@ -202,10 +217,15 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void evaluate_overall_time_prof();
     void evaluate_CPU_cycles_prof( int number);
 
+    void reset_CPU_time_prof( int number);
+    void reset_CPU_cycles_prof( int number);
+    void reset_thread_statistic( int number);
+    void reset_overall_time_prof();
+
     void error_CPU_time_prof();
     void error_CPU_cycles_prof();
 
-    //use at parallel loop
+    //use within parallel loop
     void thread_statistic_run( int number);
 
     void evaluate(int disp, int file,const char * filename="Profiling.log");
@@ -222,8 +242,11 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
         double summ=0;
         double summsqr=0;
 
+
+        double *maxarray,*minarray;
+        int maxac=0;
+        int minac=0;
         // [hdin] sometimes needed for additional evaluation
-        bool storeRawData=true;
         double adjustedMean=0.0;
         std::vector<double> rawData=std::vector<double>();
     };
@@ -236,6 +259,7 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
            std::string name="";
            std::string additonal="";
         Profiling_unit time;
+        bool storeRawData=false;
 
         long_long start,stop;
     };
@@ -266,22 +290,15 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     int Profil=1;
 
     //Profiling
-    Profiling_time *Prof_time_CPU;
-    Profiling_time *Prof_cycles_CPU;
-    Profiling_thread_statistic *Prof_thread_statistic;
-    Profiling_general Prof_general;
+        Profiling_time *Prof_time_CPU;
+        Profiling_time *Prof_cycles_CPU;
+        Profiling_thread_statistic *Prof_thread_statistic;
+        Profiling_general Prof_general;
 
     void evaluate_calc();
     void evaluate_disp();
     int evaluate_file(const char * filename="Profiling.log");
-    
-    /**
-     *    \brief        Adjusting mean by removing items from dataset
-     *    \details      removal of the 5 percent highest and lowest values from the dataset. This is only valid if the dataset is big enough
-     *    \param[in]    data    vector containing the data to compute mean from
-     *    \return       in case of either no data or less then 100 elements the function return 0.0
-     *                  otherwise returns mean over remaining data
-     */
+
     double compAdjustedMeanV1(std::vector<double> data) {
         if ( data.empty() )
             return 0.0;
@@ -303,12 +320,6 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
         return sum / double(tmp.size());
     }
     
-    /**
-     *    \brief        compute mean
-     *    \details      implemented as template function
-     *    \param[in]    data    vector containing the data to compute standard deviation from
-     *    \return       computed mean
-     */
     template<typename T>
     T compMean(std::vector<T> data) {
         // compute mean
@@ -318,13 +329,6 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
         return T(sum / double(data.size()));
     }
     
-    /**
-     *    \brief        compute stdandard deviation
-     *    \details      implemented as template function and use N-1 as divisor
-     *    \param[in]    data    vector containing the data to compute standard deviation from
-     *    \param[in]    mean    pre-computed mean over data
-     *    \return       standard deviation
-     */
     template<typename T>
     T compStandardDeviation(std::vector<T> data, T mean) {
         // compute varianz
@@ -337,23 +341,13 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
         return sqrt( (var / double(data.size()-1) ) );
     }
 
-    /**
-     *    \brief        Adjusting mean by removing items dependant on stdandard deviation
-     *    \details      removal of the items which are to far from mean ( 3 times standard deviation )
-     *    \param[in]    data               vector containing the data to compute mean from
-     *    \param[in]    thresholdFactor    determine size of window <=> mean +- thresholdFactor * std_dev 
-     *    \return       in case of no data the function return 0.0
-     *                  otherwise returns mean over adjusted data
-     */
     double compAdjustedMeanV2(std::vector<double> data, double thresholdFactor = 3.0) {
         if ( data.empty() )
             return 0.0;
 
-        // compute mean and standard deviation
         double mean = compMean<double>(data);
         double std_dev = compStandardDeviation<double>(data, mean);
-        
-        // remove all items higher then threshold
+
         std::vector<double> tmp = data;
         double pos_threshold = mean+thresholdFactor*std_dev;
         double neg_threshold = mean-thresholdFactor*std_dev;
@@ -361,7 +355,6 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
             if ( *it < neg_threshold || *it > pos_threshold )
                 it = tmp.erase(it);
 
-        // compute and return adjusted mean
         return compMean<double>(tmp);
     }    
 };

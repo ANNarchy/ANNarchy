@@ -57,11 +57,11 @@ class ProfileGenerator(object):
 
         c = 0
         for proj in Global._projections:
-            add += """        set_CPU_time_additonal( i*%(num_op)s+%(off)s, s);
+            add += """        set_CPU_time_additional( i*%(num_op)s+%(off)s, s);
 """ % { 'id': proj.id, 'num_op': num_op, 'off': c }
             c+= 1
         for pop in Global._populations:
-            add += """        set_CPU_time_additonal( i*%(num_op)s+%(off)s, s);
+            add += """        set_CPU_time_additional( i*%(num_op)s+%(off)s, s);
 """ % { 'id': pop.id, 'num_op': num_op, 'off': c }
             c+= 1
 
