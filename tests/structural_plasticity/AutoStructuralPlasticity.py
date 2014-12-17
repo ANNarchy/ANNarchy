@@ -22,8 +22,8 @@ OutputNeuron = Neuron(
 
 DefaultSynapse = Synapse(
     parameters = "max_age = 10.0 : postsynaptic",
-    equations = "age = if pre.r > 0.5: 0.0 else: age + dt; p = Uniform(0.0, 1.0)",
-    pruning="(age > max_age) and (p>0.5) ",
+    equations = "age = if pre.r > 0.5: 0.0 else: age + dt",
+    pruning="(age > max_age) : proba = 0.5",
     creating="(pre.r > 0.5) : w=0.5"
 )
 
@@ -47,14 +47,12 @@ print '3 synapses initially'
 print 'ranks:', proj[0].pre_rank
 print 'weights:', proj[0].w
 print 'age:', proj[0].age
-print 'proba:', proj[0].p
 proj.start_creating()
 simulate(1.0)
 print 'A synapse to neuron 4 should be added.'
 print 'ranks:', proj[0].pre_rank
 print 'weights:', proj[0].w
 print 'age:', proj[0].age
-print 'proba:', proj[0].p
 proj.stop_creating()
 
 print 'Simulating again is not a problem'
@@ -62,6 +60,12 @@ simulate(10.0)
 print 'ranks:', proj[0].pre_rank
 print 'weights:', proj[0].w
 print 'age:', proj[0].age
-print 'proba:', proj[0].p
 
-print 'But it crashes on exit...'
+
+print 'Start pruning. The synapses to 1 and 2 max be deleted with proba 0.5'
+proj.start_pruning()
+simulate(1.0)
+proj.stop_pruning()
+print 'ranks:', proj[0].pre_rank
+print 'weights:', proj[0].w
+print 'age:', proj[0].age
