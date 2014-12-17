@@ -14,6 +14,7 @@ InputNeuron = Neuron(
 )
 
 OutputNeuron = Neuron(
+    parameters="tau=0.0: population",
     equations="""
         r = sum(exc)
         200.0*dtrace/dt + trace = r
@@ -41,7 +42,7 @@ compile()
 input_pop[0].r = 1.0
 input_pop[4].r = 1.0
 
-
+print output_pop[0]
 
 print '3 synapses initially'
 print 'ranks:', proj[0].pre_rank
