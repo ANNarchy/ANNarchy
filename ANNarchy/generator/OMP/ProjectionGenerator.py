@@ -1028,8 +1028,10 @@ cdef class proj%(id)s_wrapper :
         proba = ""; proba_init = ""
         if 'proba' in creating_structure['bounds'].keys():
             val = creating_structure['bounds']['proba']
-            proba = '&&(unif(rng)<' + val + ')'
-            proba_init = "std::uniform_real_distribution<double> unif(0.0, 1.0);"
+            proba += '&&(unif(rng)<' + val + ')'
+            proba_init += "std::uniform_real_distribution<double> unif(0.0, 1.0);"
+        if  creating_structure['rd']:
+            proba_init += "\n        " +  creating_structure['rd']['template'] + ' rd(' + creating_structure['rd']['args'] + ');'
 
         omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
@@ -1050,7 +1052,7 @@ cdef class proj%(id)s_wrapper :
                             break;
                         }
                     }
-                    if(!_exists%(proba)s){
+                    if((!_exists)%(proba)s){
                         std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
                         proj%(id_proj)s.addSynapse(i, rk_pre, %(weights)s);
 
@@ -1079,6 +1081,8 @@ cdef class proj%(id)s_wrapper :
             val = pruning_structure['bounds']['proba']
             proba = '&&(unif(rng)<' + val + ')'
             proba_init = "std::uniform_real_distribution<double> unif(0.0, 1.0);"
+        if pruning_structure['rd']:
+            proba_init += "\n        " +  pruning_structure['rd']['template'] + ' rd(' + pruning_structure['rd']['args'] + ');'
 
         omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
@@ -1091,7 +1095,7 @@ cdef class proj%(id)s_wrapper :
             rk_post = proj%(id_proj)s.post_rank[i];
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
                 rk_pre = proj%(id_proj)s.pre_rank[i][j];
-                if(%(condition)s%(proba)s){
+                if((%(condition)s)%(proba)s){
                     proj%(id_proj)s.removeSynapse(i, j);
                 }
             }

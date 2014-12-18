@@ -24,8 +24,8 @@ OutputNeuron = Neuron(
 DefaultSynapse = Synapse(
     parameters = "max_age = 10.0 : postsynaptic",
     equations = "age = if pre.r > 0.5: 0.0 else: age + dt",
-    pruning="(age > max_age) : proba = 0.5",
-    creating="(pre.r > 0.5) : w=0.5"
+    pruning="(age > max_age + Uniform(10, 100)) : proba = 0.5",
+    creating="(pre.r > Uniform(0.0, 1.0)) : proba=0.5, w=0.5"
 )
 
 
@@ -41,8 +41,6 @@ compile()
 
 input_pop[0].r = 1.0
 input_pop[4].r = 1.0
-
-print output_pop[0]
 
 print '3 synapses initially'
 print 'ranks:', proj[0].pre_rank
