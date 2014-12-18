@@ -11,13 +11,13 @@ pop1 = Population(geometry = (dim_x, dim_y), neuron=input_neuron)
 pop2 = Population(geometry = (dim_x, dim_y), neuron=sum_neuron)
 
 # Create the diagonal projection
-proj = DiagonalProjection(pop1, pop2, 'exc').connect(weights = np.array([0.1, 0.5, 1.0, 0.5, 0.1]), offset=dim_x/2, slope=-1)
+proj = DiagonalProjection(pop1, pop2, 'exc').connect(weights = np.array([0.1, 0.5, 1.0, 0.5, 0.1]), offset=dim_x/2, slope=1)
 
 # Compile
 compile()
 
 # Set input
-cx, cy = 5, 10
+cx, cy = 10, 5
 x, y = np.meshgrid(range(dim_x), range(dim_y))
 pop1.r = np.exp(-((x - cx)**2+(y - cy)**2)/3.0).T
 
