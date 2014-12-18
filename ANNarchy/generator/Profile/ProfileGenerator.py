@@ -51,8 +51,8 @@ class ProfileGenerator(object):
 """ % { 'id': proj.id, 'num_op': num_op, 'off': c }
             c+= 1
         for pop in Global._populations:
-            name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"Pop%(id)s - step");
-""" % { 'id': pop.id, 'num_op': num_op, 'off': c }
+            name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"%(name)s-step()");
+""" % { 'name': pop.name, 'num_op': num_op, 'off': c }
             c+= 1
 
         c = 0

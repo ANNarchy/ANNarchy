@@ -857,7 +857,7 @@ void Profiling::evaluate_disp()
             std::cout << Prof_cycles_CPU[i].name;
         std::cout     <<" cycles: "          << std::fixed << Prof_cycles_CPU[i].time.summ     << " "
                 //<< "Relative to CPU cycles: " << std::fixed << Prof_cycles_CPU[i].time.prozent_CPU<< " "
-                << "Average cycles: "      << std::fixed << Prof_cycles_CPU[i].time.avg     << " "
+                << "Average cycles: "      << std::fixed << Prof_cycles_CPU[i].time.avg     << " " 
                 << "Minimum cycles: "      << std::fixed << Prof_cycles_CPU[i].time.min     << " "
                 << "Maximum cycles: "      << std::fixed << Prof_cycles_CPU[i].time.max     << " "
                 << "Standard deviation: "<< std::fixed << Prof_cycles_CPU[i].time.standard     << " "<< std::endl;

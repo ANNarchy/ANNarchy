@@ -259,7 +259,7 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
            std::string name="";
            std::string additonal="";
         Profiling_unit time;
-        bool storeRawData=false;
+        bool storeRawData=true;
 
         long_long start,stop;
     };
