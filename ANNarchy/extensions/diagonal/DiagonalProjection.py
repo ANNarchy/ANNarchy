@@ -158,37 +158,49 @@ cdef class proj%(id_proj)s_wrapper :
         wsum =  """
     // Diagonal proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
     if(pop%(id_post)s._active){
-        int proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f;
+        int proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f, proj%(id_proj)s_start;
         std::vector<double> proj%(id_proj)s_w = proj%(id_proj)s.w;
         std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;
-        #pragma omp parallel for private(sum, proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f) firstprivate(proj%(id_proj)s_w, proj%(id_proj)s_pre_r)
-        for(int idx_0 = 0; idx_0 < %(dim_post_0)s; idx_0++){
+        #pragma omp parallel for private(sum, proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f, proj%(id_proj)s_start) firstprivate(proj%(id_proj)s_w, proj%(id_proj)s_pre_r)
+        for(int idx = 0; idx < %(dim_post_1)s; idx++){
             sum = 0.0;
+            proj%(id_proj)s_start = (idx %(inc0)s %(offset)s ) ;
+            //std::cout << "Neuron: " << idx << " : " << proj%(id_proj)s_start << std::endl;
             for(int idx_1 = 0; idx_1 < %(dim_pre_1)s; idx_1++){
-                proj%(id_proj)s_idx_0 = (idx_0 + idx_1 + %(offset)s) %% %(dim_pre_0)s;
-                proj%(id_proj)s_idx_1 = (%(inc1)s idx_1) %% %(dim_pre_1)s;
+                proj%(id_proj)s_idx_0 = idx_1;
+                proj%(id_proj)s_idx_1 = proj%(id_proj)s_start + %(inc1)s idx_1;
+                if ((proj%(id_proj)s_idx_1 < 0) || (proj%(id_proj)s_idx_1 > %(dim_pre_1)s-1))
+                    continue;
+                //std::cout << proj%(id_proj)s_idx_0 << " " << proj%(id_proj)s_idx_1 << std::endl;
                 for(int idx_f=0; idx_f < %(size_filter)s; idx_f++){
-                    proj%(id_proj)s_idx_f = (proj%(id_proj)s_idx_1 + (idx_f - %(center_filter)s) ) %% %(dim_pre_1)s;
+                    proj%(id_proj)s_idx_f = (proj%(id_proj)s_idx_1 + (idx_f - %(center_filter)s) );
+                    if ((proj%(id_proj)s_idx_f < 0) || (proj%(id_proj)s_idx_f > %(dim_pre_1)s-1))
+                        continue;
                     sum += proj%(id_proj)s_w[idx_f] * proj%(id_proj)s_pre_r[proj%(id_proj)s_idx_f + %(dim_pre_1)s * proj%(id_proj)s_idx_0];
                 }
             }
-            for(int idx_1 = 0; idx_1 < %(dim_post_1)s; idx_1++){
-                pop%(id_post)s._sum_%(target)s[idx_1 + %(dim_post_1)s*idx_0] += sum;
+            for(int idx_1 = 0; idx_1 < %(dim_post_0)s; idx_1++){
+                pop%(id_post)s._sum_%(target)s[idx + %(dim_post_1)s*idx_1] += sum;
             }
         }
     }// active
 """ 
 
         if self.slope == 1 :
+            inc0 = "-"
             inc1 = ""             
         elif self.slope > 1 :
+            inc0 = " - "
             inc1 = str(self.slope) + '*'
         elif self.slope == 0 :
+            inc0 = "-"
             inc1 = '0*'
         elif self.slope == -1 :
-            inc1 = str(dim_pre_1 -1)  + '-' 
+            inc0 = "+"
+            inc1 = '-' 
         else:
-            inc1 = str(dim_pre_1 -1) + ' - ' + str(-self.slope)
+            inc0 = "+"
+            inc1 = ' - ' + str(-self.slope) + '*'
 
         self.generator['omp']['body_compute_psp'] = wsum % {'id_proj': self.id, 
             'target': self.target,  
@@ -199,5 +211,6 @@ cdef class proj%(id_proj)s_wrapper :
             'dim_pre_0': dim_pre_0, 'dim_pre_1': dim_pre_1,
             'size_filter': len(self.weights),
             'center_filter': int(len(self.weights)/2),
+            'inc0': inc0,
             'inc1': inc1
           }
