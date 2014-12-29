@@ -114,6 +114,7 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
     parser = setup_parser()
     (options, args) = parser.parse_args()
 
+    Global.config['num_threads'] = options.num_threads
     Global.config['verbose'] = options.verbose
     profile_enabled = options.profile
     Global.config['profiling']= options.profile

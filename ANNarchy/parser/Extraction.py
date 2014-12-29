@@ -489,8 +489,53 @@ def extract_structural_plasticity(statement, description, pattern):
         bounds = {}
         flags = []
 
+    # Extract RD
+    rd = None
+    for dist in available_distributions:
+        matches = re.findall('(?P<pre>[^\w.])'+dist+'\(([^()]+)\)', eq)
+        for l, v in matches:
+            # Check the arguments
+            arguments = v.split(',')
+            # Check the number of provided arguments
+            if len(arguments) < distributions_arguments[dist]:
+                _error(eq)
+                _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
+            elif len(arguments) > distributions_arguments[dist]:
+                _error(eq)
+                _error('Too many parameters provided to the distribution ' + dist)
+            # Process the arguments
+            processed_arguments = ""
+            for idx in range(len(arguments)):
+                try:
+                    arg = float(arguments[idx])
+                except: # A global parameter
+                    _error(eq)
+                    _error('Random distributions for creating/pruning synapses must use foxed values.')
+                    exit(0)
+                processed_arguments += str(arg)
+                if idx != len(arguments)-1: # not the last one
+                    processed_arguments += ', '
+            definition = distributions_equivalents[dist] + '(' + processed_arguments + ')'
+            
+            # Store its definition
+            if rd:
+                _error(eq)
+                _error('Only one random distribution per equation is allowed.')
+                exit(0)
+
+            rd = {'name': 'rand_' + str(0) ,
+                    'origin': dist+'('+v+')',
+                    'dist': dist,
+                    'definition': definition,
+                    'args' : processed_arguments,
+                    'template': distributions_equivalents[dist]}
+
+    if rd:
+        eq = eq.replace(rd['origin'], 'rd(rng)')
+
     # Extract pre/post dependencies
     eq, untouched, dependencies = extract_prepost('test', eq, description, pattern)
+
     # Parse code
     translator = Equation('test', eq, 
                           description, 
@@ -513,7 +558,7 @@ def extract_structural_plasticity(statement, description, pattern):
     for dep in dependencies['post']:
         description['dependencies']['post'].append(dep)
 
-    return {'eq': eq, 'cpp': code, 'bounds': bounds, 'flags': flags}
+    return {'eq': eq, 'cpp': code, 'bounds': bounds, 'flags': flags, 'rd': rd}
     
 
 def find_method(variable):

@@ -1177,7 +1177,7 @@ class Projection(object):
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.start_pruning(int(period/Global.config['dt']), Global.get_current_step())
-            except:
+            except :
                 Global._error("The synapse does not define a 'pruning' argument.")
                 exit(0)
         else:
@@ -1195,7 +1195,7 @@ class Projection(object):
             exit(0)
         if Global.config['structural_plasticity']:
             try:
-                self.cyInstance.start_pruning()
+                self.cyInstance.stop_pruning()
             except:
                 Global._error("The synapse does not define a 'pruning' argument.")
                 exit(0)

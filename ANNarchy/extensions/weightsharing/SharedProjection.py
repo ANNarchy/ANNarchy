@@ -461,7 +461,7 @@ class SharedProjection(Projection):
             if shape != (self.post.size/ self.post.geometry[-1], self.pre.dimension):
                 Global._error('The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
-            self.pre_coordinates = self.subsampling
+            self.pre_coordinates = [c + [d] for c in self.subsampling  for d  in range(self.nb_filters)]
             return
 
         # Otherwise create it, possibly with sub-sampling
@@ -586,7 +586,6 @@ class SharedProjection(Projection):
                 code += """
             int %(index)s_pre = coord_%(id_proj)s[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
 
-
         # Check indices
         for dim in range(self.dim_kernel):
             if operation in ['sum', 'mean']:
@@ -598,13 +597,13 @@ class SharedProjection(Projection):
                     code += """
             if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
                 sum += %(padding)s;
-                break;
+                continue;
             }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
             
             else: # min, max
                 code += """
             if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
-                break;
+                continue;
             }""" % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
 
         # Compute pre-synaptic rank
@@ -703,13 +702,13 @@ class SharedProjection(Projection):
                     code += """
             if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
                 sum += %(padding)s;
-                break;
+                continue;
             }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
             
             else: # min, max
                 code += """
             if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
-                break;
+                continue;
             }""" % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
 
         # Compute pre-synaptic rank
@@ -795,7 +794,7 @@ class SharedProjection(Projection):
         for dim in range(self.dim_pre):
             code += """
             if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
-                break;
+                continue;
             }""" % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
 
         # Compute pre-synaptic rank

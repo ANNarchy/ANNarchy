@@ -2,11 +2,7 @@
 Structural plasticity
 ***********************************
 
-ANNarchy supports the dynamic addition/suppression of synapses during the simulation (i.e. after compilation). Two methods of the ``Dendrite`` class are available for this:
-
-* ``add_synapse()``
-
-* ``remove_synapse()``   
+ANNarchy supports the dynamic addition/suppression of synapses during the simulation (i.e. after compilation).   
 
 Because structural plasticity adds some complexity to the generated code, it has to be enabled before compilation by setting the ``structural_plasticity`` flag to ``True`` in the call to ``setup()``:
 
@@ -14,11 +10,27 @@ Because structural plasticity adds some complexity to the generated code, it has
 
     setup(structural_plasticity=True)
 
-If the flag is not set, the methods will do nothing.
+If the flag is not set, the following methods will do nothing.
+
+There are two possibilities to dynamically create or delete synapses:
+
+* From Python, using methods at the dendrite level.
+
+* Automatically, by defining conditions for creating/pruning in the synapse type.
+
+
+Dendrite level
+================
+
+Two methods of the ``Dendrite`` class are available for creating/deleting synapses:
+
+* ``create_synapse()``
+
+* ``prune_synapse()`` 
 
 
 Creating synapses
-==================
+------------------
 
 Let's suppose that we want to add regularly new synapses between strongly active but not yet connected neurons with a low probability. One could for example define a neuron type with an additional variable averaging the firing rate over a long period of time.
 
@@ -65,22 +77,17 @@ one could randomly add new synapses between strongly active neurons:
                 # If they are both sufficientely active
                 if random.random() < pop1[pre].mean_r * pop2[post].mean_r :
                     # Add a synapse with weight 1.0 and the default delay
-                    proj[post].add_synapse(pre, 1.0)    
+                    proj[post].create_synapse(pre, 1.0)    
             
 Removing synapses 
-==================
+-----------------
 
 Removing useless synapses (pruning) is also possible. Let's consider a synapse type whose "age" is incremented as long as both pre- and post-synaptic neurons are inactive at the same time:
 
 .. code-block:: python
 
-    Oja = Synapse(
-        parameters="""
-            tau = 5000
-            alpha = 8.0
-        """,
+    AgingSynapse = Synapse(
         equations="""
-            tau * dw / dt = pre.r * post.r - alpha * post.r^2 * w
             age = if pre.r * post.r > 0.0 : 
                     0
                   else :
@@ -101,13 +108,19 @@ One could periodically track the too "old" synapses and remove them:
             # If the synapse is too old
             if proj[post].age[pre] > T :
                 # Remove it
-                proj[post].remove_synapse(pre)
+                proj[post].prune_synapse(pre)
             
 .. warning::
 
-    Structural plasticity is rather slow because:
+    This form of structural plasticity is rather slow because:
 
-    * The ``for`` loops are in Python, not C++. Implementing structural plasticity in Cython should already help.
+    * The ``for`` loops are in Python, not C++. Implementing this structural plasticity in Cython should already help.
+
     * The memory allocated for the synapses of a projection may have to be displaced at another location. This can lead to massive transfer of data, slowing the simulation down.
       
     It is of course the user's responsability to balance synapse creation/destruction, otherwise projections could become either empty or fully connected on the long-term.
+
+
+Synapse level
+==============
+
