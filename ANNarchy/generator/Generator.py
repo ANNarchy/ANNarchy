@@ -1,4 +1,4 @@
-""" 
+"""
 
     Generator.py
     
@@ -218,6 +218,11 @@ class Generator(object):
 
         os.chdir(Global.annarchy_dir)
         if sys.platform.startswith('linux'): # Linux systems
+
+            if Global.config['paradigm'] != "openmp":
+                from .CudaCheck import CudaCheck as CC
+                a = CC()
+
             if not self.debug_build:
                 cpu_flags = "-march=native -O2"
                 gpu_flags = ""
@@ -271,12 +276,18 @@ clean:
                 
             # Start the compilation
             try:
-                if Global.config['paradigm'] == "cuda_35":
-                    subprocess.check_output("make cuda_35 -j4 ", 
-                                            shell=True)
-                elif Global.config['paradigm'] == "cuda_20":
-                    subprocess.check_output("make cuda_20 -j4 ", 
-                                            shell=True)                    
+                if Global.config['paradigm'] == "cuda":
+                    from .CudaCheck import CudaCheck
+                    cu_version = CudaCheck().version()
+            
+                    if cu_version > (3.0):
+                        print "Build with cuda 3.x"
+                        subprocess.check_output("make cuda_35 -j4 ", 
+                                                 shell=True)
+                    else:
+                        print "Build with cuda 2.x"
+                        subprocess.check_output("make cuda_20 -j4 ", 
+                                                 shell=True)                    
                 elif Global.config['paradigm'] == "openmp":
                     subprocess.check_output("make openmp -j4 ", 
                                             shell=True)

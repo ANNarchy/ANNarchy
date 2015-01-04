@@ -57,6 +57,37 @@ except:
     print('You can install it from pip or: http://www.cython.org')
     exit(0)
 
+# extend installer class to support makefiles
+from setuptools.command.install import install
+from setuptools.command.develop import develop
+
+def cuda_supported():
+    import os
+    if os.system("which nvcc")==0:
+        return True
+    else:
+        return False
+
+class MyInstall(install):
+
+    def run(self):
+        install.run(self)
+        print("\n\n\n\nI did it!!!!\n\n\n\n")
+
+class MyDevelop(develop):
+
+    def run(self):
+        if cuda_supported():
+            import os
+            cwd = os.getcwd()
+            print("Building cuda_check ...")
+            os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
+            os.system("make clean && make")
+            os.chdir(cwd)
+
+        print("Building ANNarchy ...")
+        develop.run(self)
+
 ################################################
 # Perform the installation
 ################################################
@@ -75,9 +106,11 @@ setup(  name='ANNarchy',
         ext_modules = cythonize(
             [   "ANNarchy/core/cython_ext/Connector.pyx", 
                 "ANNarchy/core/cython_ext/Coordinates.pyx",
-                "ANNarchy/core/cython_ext/Transformations.pyx"]
+                "ANNarchy/core/cython_ext/Transformations.pyx" ]
         ),
         include_dirs=[numpy.get_include()],
-        zip_safe = False
+        zip_safe = False,
+        cmdclass={'develop': MyDevelop,
+                  'install': MyInstall },
 )
 
