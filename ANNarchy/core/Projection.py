@@ -162,7 +162,6 @@ class Projection(object):
 
         self.synapse._analyse()
         self.generator = copy.deepcopy(proj_generator_template)
-        self.prof_generator = copy.deepcopy(profile_generator_template)
 
         # Create a default name
         self.id = len(Global._projections)
