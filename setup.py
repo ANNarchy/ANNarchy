@@ -57,41 +57,22 @@ except:
     print('You can install it from pip or: http://www.cython.org')
     exit(0)
 
-# extend installer class to support makefiles
-from setuptools.command.install import install
-from setuptools.command.develop import develop
+# check for cuda
+import os
+if os.system("which nvcc")==0:
+    cwd = os.getcwd()
+    print("Building cuda_check ...")
+    os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
+    os.system("make clean && make")
+    os.chdir(cwd)
 
-def cuda_supported():
-    import os
-    if os.system("which nvcc")==0:
-        return True
-    else:
-        return False
-
-class MyInstall(install):
-
-    def run(self):
-        install.run(self)
-        print("\n\n\n\nI did it!!!!\n\n\n\n")
-
-class MyDevelop(develop):
-
-    def run(self):
-        if cuda_supported():
-            import os
-            cwd = os.getcwd()
-            print("Building cuda_check ...")
-            os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
-            os.system("make clean && make")
-            os.chdir(cwd)
-
-        print("Building ANNarchy ...")
-        develop.run(self)
 
 ################################################
 # Perform the installation
 ################################################
 print('Installing ANNarchy on your system')
+
+
 setup(  name='ANNarchy',
         version='4.3.2',
         license='GPLv2 or later',
@@ -102,7 +83,7 @@ setup(  name='ANNarchy',
         author_email='julien.vitay@informatik.tu-chemnitz.de',
         url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['data/core/*', 'core/cython_ext/*.pxd']},
+        package_data={'ANNarchy': ['core/cython_ext/*.pxd','generator/CudaCheck/cuda_check.so']},
         ext_modules = cythonize(
             [   "ANNarchy/core/cython_ext/Connector.pyx", 
                 "ANNarchy/core/cython_ext/Coordinates.pyx",
@@ -110,7 +91,5 @@ setup(  name='ANNarchy',
         ),
         include_dirs=[numpy.get_include()],
         zip_safe = False,
-        cmdclass={'develop': MyDevelop,
-                  'install': MyInstall },
 )
 

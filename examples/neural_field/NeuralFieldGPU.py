@@ -4,7 +4,7 @@
 #
 from ANNarchy import *
 
-setup(paradigm="cuda_20")
+setup(paradigm="cuda")
 
 # Define the neuron classes
 InputNeuron = Neuron(   
