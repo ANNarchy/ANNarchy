@@ -1025,6 +1025,7 @@ cdef class proj%(id)s_wrapper :
     def creating(self, proj):
         creating_structure = proj.synapse.description['creating']
 
+        # Random stuff
         proba = ""; proba_init = ""
         if 'proba' in creating_structure['bounds'].keys():
             val = creating_structure['bounds']['proba']
@@ -1033,6 +1034,23 @@ cdef class proj%(id)s_wrapper :
         if  creating_structure['rd']:
             proba_init += "\n        " +  creating_structure['rd']['template'] + ' rd(' + creating_structure['rd']['args'] + ');'
 
+        # delays
+        delay = ""
+        if 'd' in creating_structure['bounds'].keys():
+            d = int(creating_structure['bounds']['delay']/Global.config['dt'])
+            if proj.max_delay > 1 and proj.uniform_delay == -1:
+                if d > proj.max_delay:
+                    Global._error('creating: you can not add a delay higher than the maximum of existing delays')
+                    exit(0)
+                delay = ", " + str(d)
+            else:
+                if d != proj.uniform_delay:
+                    Global._error('creating: you can not add a delay different from the others if they were constant.')
+                    exit(0)
+
+
+
+        # OMP
         omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
         creating = """
@@ -1054,7 +1072,7 @@ cdef class proj%(id)s_wrapper :
                     }
                     if((!_exists)%(proba)s){
                         std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
-                        proj%(id_proj)s.addSynapse(i, rk_pre, %(weights)s);
+                        proj%(id_proj)s.addSynapse(i, rk_pre, %(weights)s%(delay)s);
 
                     }
                 }
@@ -1067,7 +1085,8 @@ cdef class proj%(id)s_wrapper :
         'id_post': proj.post.id, 'id_pre': proj.pre.id},
         'omp_code': omp_code,
         'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
-        'proba' : proba, 'proba_init': proba_init
+        'proba' : proba, 'proba_init': proba_init,
+        'delay': delay
         }
         
         return creating

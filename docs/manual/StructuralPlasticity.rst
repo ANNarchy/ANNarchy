@@ -14,9 +14,9 @@ If the flag is not set, the following methods will do nothing.
 
 There are two possibilities to dynamically create or delete synapses:
 
-* From Python, using methods at the dendrite level.
+* Externally, using methods at the dendrite level from Python.
 
-* Automatically, by defining conditions for creating/pruning in the synapse type.
+* Internally, by defining conditions for creating/pruning in the synapse description.
 
 
 Dendrite level
@@ -57,17 +57,10 @@ Two populations are created and connected using a sparse connectivity:
     pop2 = Population(1000, LeakyIntegratorNeuron)
     proj = Projection(pop1, pop2, 'exc', Oja).connect_fixed_probability(weights = 1.0, probability=0.1)
 
-After a long piece of simulation:
+After an initial period of simulation, one could add new synapses between strongly active pair of neurons:
 
 .. code-block:: python
 
-    simulate(100000.0) # Simulate 100s
-
-one could randomly add new synapses between strongly active neurons:
-
-.. code-block:: python
-
-    import random
     # For all postsynaptic neurons
     for post in xrange(pop2.size):
         # For all presynaptic neurons
@@ -75,9 +68,11 @@ one could randomly add new synapses between strongly active neurons:
             # If the neurons are not connected yet
             if not pre in proj[post].ranks:
                 # If they are both sufficientely active
-                if random.random() < pop1[pre].mean_r * pop2[post].mean_r :
+                if pop1[pre].mean_r * pop2[post].mean_r > 0.7:
                     # Add a synapse with weight 1.0 and the default delay
-                    proj[post].create_synapse(pre, 1.0)    
+                    proj[post].create_synapse(pre, 1.0)   
+
+``create_synapse`` only allows to specify the value of the weight and the delay. Other syanptic variables will take the value they would have had before compile(). If another value is desired, it should be explicitely set afterwards. 
             
 Removing synapses 
 -----------------
@@ -106,7 +101,7 @@ One could periodically track the too "old" synapses and remove them:
         # For all existing synapses
         for pre in proj[post].ranks:
             # If the synapse is too old
-            if proj[post].age[pre] > T :
+            if proj[post][pre].age > T :
                 # Remove it
                 proj[post].prune_synapse(pre)
             
@@ -124,3 +119,71 @@ One could periodically track the too "old" synapses and remove them:
 Synapse level
 ==============
 
+Conditions for creating or deleting synapses can also be specified in the synapse description, through the ``creating`` or ``pruning`` arguments. Thise arguments accept string descriptions of the boolean conditions at which a synapse should be created/deleted, using the same notation as other arguments.
+
+Creating synapses
+------------------
+
+The creation of a synapse must be described by a boolean expression:
+
+.. code-block:: python 
+
+    CreatingSynapse = Synapse(
+        parameters = " ... ",
+        equations = " ... ",
+        creating = "pre.mean_r * post.mean_r > 0.7 : proba = 0.5, w = 1.0"
+    )
+
+The condition can make use of any pre- or post-synaptic variable, but NOT synaptic variables, as they obviously do not exist yet. Global parameters (defined with the ``postsynaptic`` flag) can nevertheless be used. 
+
+Several flags can be passed to the expression: 
+
+* ``proba`` specifies the probability according to which a synapse will be created, if the condition is met. The default is 1.0 (i.e. a synapse will be created whenever the condition is fulfilled).
+
+* ``w`` specifies the value for the weight which will be created (default: 0.0).
+
+* ``d`` specifies the delay (default: the same as all other synapses if the delay is constant in the projection, ``dt`` otherwise). 
+
+.. warning::
+
+    Note that the new value for the delay can not exceed the maximal delay in the projection, nor be different from the others if they were all equal.
+
+
+Other synaptic variables will take the default value after creation.
+
+Synapse creation is not automatically enabled at the start of the simulation: the Projectiom method ``start_creating()`` must be called:
+
+.. code-block:: python
+    
+    proj.start_creating(period=100.0)
+
+This method accepts a ``period`` parameter specifying how often the conditions for creating synapses will be checked (in ms). By default they would be checked at each time step (``dt``), what would be too costly.
+
+Similarly, the ``stop_creating()`` method can be called to stop the creation conditions from being checked.
+
+
+Deleting synapses
+------------------
+
+Synaptic pruning also rely on a boolean expression: 
+
+
+.. code-block:: python 
+
+    PruningSynapse = Synapse(
+        parameters = " T = 100000 : int, postsynaptic ",
+        equations = """
+            age = if pre.r * post.r > 0.0 : 
+                    0
+                  else :
+                    age + 1 : init = 0, int""",
+        pruning = "age > T : proba = 0.5"
+    )
+
+* A synapse type can combine ``creating`` and ``pruning`` arguments.
+
+* The ``pruning`` argument can rely on synaptic variables (here ``age``), as the synapse already exist.
+
+* Only the ``proba`` flag can be passed to specify the probability at which the synapse will be deleted if the condition is met.
+
+* Pruning has to be started/stopped with the ``start_pruning()`` and ``stop_pruning()`` methods. ``start_pruning()`` accepts a ``period`` argument.
