@@ -61,10 +61,13 @@ except:
 import os
 if os.system("which nvcc")==0:
     cwd = os.getcwd()
-    print("Building cuda_check ...")
+    print('Checking for CUDA... OK')
     os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
     os.system("make clean && make")
     os.chdir(cwd)
+else:
+    print('Checking for CUDA... NO')
+    print("Warning: CUDA is not available on your system. Only OpenMP can be used to perform the simulations.")
 
 
 ################################################
