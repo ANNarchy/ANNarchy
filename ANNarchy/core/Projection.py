@@ -103,21 +103,6 @@ proj_generator_template = {
     }
 }
 
-profile_generator_template = {
-    'omp': {
-        'compute_psp': {
-            'before' : "",
-            'after' : ""
-        }
-    },
-    'cuda': {
-        'compute_psp': {
-            'before' : "",
-            'after' : ""
-        }
-    }
-}
-
 class Projection(object):
     """
     Represents all synapses of the same type between two populations.

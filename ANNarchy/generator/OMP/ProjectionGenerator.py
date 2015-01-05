@@ -154,6 +154,7 @@ struct ProjStruct%(id_proj)s{
             code+= """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum
     if (pop%(id_post)s._active){
+
         %(prof_begin)s
         %(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
@@ -164,6 +165,22 @@ struct ProjStruct%(id_proj)s{
             pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
         }
         %(prof_end)s
+        
+        /*
+        %(prof_begin)s
+        
+        #pragma omp parallel        
+        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+            sum = 0.0;
+            
+            #pragma omp for reduction(+:sum)
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                sum += %(psp)s
+            }
+            pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+        }
+        %(prof_end)s
+        */      
     } // active
 """%{ 'id_proj' : proj.id, 'target': proj.target, 
       'id_post': proj.post.id, 'id_pre': proj.pre.id, 
