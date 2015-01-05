@@ -62,7 +62,7 @@ except:
 ################################################
 print('Installing ANNarchy on your system')
 setup(  name='ANNarchy',
-        version='4.3.2',
+        version='4.3.3',
         license='GPLv2 or later',
         platforms='GNU/Linux',
         description='Artificial Neural Networks architect',
@@ -71,7 +71,7 @@ setup(  name='ANNarchy',
         author_email='julien.vitay@informatik.tu-chemnitz.de',
         url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['data/core/*', 'core/cython_ext/*.pxd']},
+        package_data={'ANNarchy': ['core/cython_ext/*.pxd']},
         ext_modules = cythonize(
             [   "ANNarchy/core/cython_ext/Connector.pyx", 
                 "ANNarchy/core/cython_ext/Coordinates.pyx",

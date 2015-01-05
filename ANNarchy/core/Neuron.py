@@ -161,7 +161,10 @@ class IndividualNeuron(object):
                     else:
                         return val
                 else:
-                    return getattr(self.population.cyInstance, 'get_single_'+name)(self.rank)
+                    if name in self.population.neuron_type.description['local']:
+                        return getattr(self.population.cyInstance, 'get_single_'+name)(self.rank)
+                    else:
+                        return getattr(self.population.cyInstance, 'get_'+name)()
             else:
                 return object.__getattribute__(self, name)
         else:

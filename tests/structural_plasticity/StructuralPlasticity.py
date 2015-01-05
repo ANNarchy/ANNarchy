@@ -46,10 +46,6 @@ print 'Alpha:', proj.dendrite(0).alpha
 
 dendrite = proj.dendrite(0)
 
-synapse = dendrite.synapse(proj.dendrite(0).rank[2])
-
-synapse.w = 10.0
-
 for synapse in proj.dendrite(0):
     print synapse.rank, synapse.w
 
@@ -58,7 +54,7 @@ print 'Weights:', proj.dendrite(0).w
 print 'Alpha:', proj.dendrite(0).alpha
 
 rank = int(raw_input('Add connection to: '))
-proj.dendrite(0).add_synapse(rank, 2.0)
+proj.dendrite(0).create_synapse(rank, 2.0)
 
 simulate(10.0)
 
@@ -68,7 +64,7 @@ print 'Alpha:', proj.dendrite(0).alpha
 
 rank = int(raw_input('Remove connection to: '))
 
-proj.dendrite(0).remove_synapse(rank)
+proj.dendrite(0).prune_synapse(rank)
 
 print 'Rank:', proj.dendrite(0).rank
 print 'Weights:', proj.dendrite(0).w

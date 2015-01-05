@@ -197,7 +197,7 @@ class Dendrite(object):
         *Parameter*:
         
         * **variable**: name of the variable (default = 'w')
-        * **fill**: value to use when a synapse does not exist.
+        * **fill**: value to use when a synapse does not exist (default: 0.0).
         """
         values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.idx)
         ranks = self.proj.cyInstance.pre_rank( self.idx )
@@ -211,14 +211,14 @@ class Dendrite(object):
     #########################
     ### Structural plasticity
     ######################### 
-    def add_synapse(self, rank, w, delay=0):
+    def create_synapse(self, rank, w=0.0, delay=0):
         """
-        Adds a synapse to the dendrite.
+        Creates a synapse for this dendrite with the given pre-synaptic neuron.
         
         *Parameters*:
         
         * **rank**: rank of the pre-synaptic neuron
-        * **w**: synaptic weight
+        * **w**: synaptic weight (defalt: 0.0).
         * **delay**: synaptic delay (default = dt)
         """
         if not Global.config['structural_plasticity']:
@@ -239,11 +239,14 @@ class Dendrite(object):
                     init = self.proj.init[var['name']]
                 extra_attributes[var['name']] = init
 
-        self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
+        try:
+            self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
+        except Exception, e:
+            print e
     
-    def remove_synapse(self, rank):
+    def prune_synapse(self, rank):
         """
-        Removes the synapse from the dendrite.
+        Removes the synapse with the given pre-synaptic neuron from the dendrite.
         
         *Parameters*:
         
@@ -254,7 +257,7 @@ class Dendrite(object):
             return 
 
         if not rank in self.rank:
-            Global._error('the synapse of rank ' + str(rank) + ' did not already exist.')
+            Global._error('the synapse with the pre-synaptic neuron of rank ' + str(rank) + ' did not already exist.')
             return   
 
         self.proj.cyInstance.remove_synapse(self.post_rank, rank)
@@ -279,7 +282,7 @@ class Dendrite(object):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print('Error: variable must be either a string or list of strings.')
+            Global._error('variable must be either a string or list of strings.')
         
         for var in _variable:            
             try:
@@ -313,7 +316,7 @@ class Dendrite(object):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print 'Error: variable must be either a string or list of strings.'       
+            Global._error('variable must be either a string or list of strings.'  )     
         
         for var in _variable:            
             try:
@@ -340,7 +343,7 @@ class Dendrite(object):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print('Error: variable must be either a string or list of strings.')       
+            Global._error('variable must be either a string or list of strings.')       
         
         for var in _variable:
             try:
@@ -370,7 +373,7 @@ class Dendrite(object):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print('Error: variable must be either a string or list of strings.')
+            Global._error('variable must be either a string or list of strings.')
         
         for var in _variable:            
             try:
@@ -398,7 +401,7 @@ class Dendrite(object):
         elif isinstance(variable, list):
             _variable = variable
         else:
-            print('Error: variable must be either a string or list of strings.')
+            Global._error('variable must be either a string or list of strings.')
         
         data_dict = {}
         
