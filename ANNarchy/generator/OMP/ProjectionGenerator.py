@@ -231,10 +231,10 @@ struct ProjStruct%(id_proj)s{
         for eq in proj.synapse.description['pre_spike']:
             if eq['name'] == 'w':
                 learning = """
-                    if(proj0._learning){
+                    if(proj%(id_proj)s._learning){
                         %(eq)s 
                     }
-""" % {'eq': eq['cpp'] % ids}
+""" % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids}
             elif eq['name'] == 'g_target':
                 psp = eq['cpp'].split('=')[1]
             else:
@@ -513,13 +513,13 @@ struct ProjStruct%(id_proj)s{
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Local parameter %(name)s
-    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj0.post_rank.size(), std::vector<%(type)s>());
+    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Global parameter %(name)s
-    proj%(id)s.%(name)s = std::vector<%(type)s>(proj0.post_rank.size(), %(init)s);
+    proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Initialize variables
@@ -530,7 +530,7 @@ struct ProjStruct%(id_proj)s{
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Local variable %(name)s
-    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj0.post_rank.size(), std::vector<%(type)s>());
+    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
     proj%(id)s.record_%(name)s = std::vector<int>();
     proj%(id)s.record_period_%(name)s = std::vector<int>();
     proj%(id)s.record_offset_%(name)s = std::vector<long int>();
@@ -540,7 +540,7 @@ struct ProjStruct%(id_proj)s{
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Global variable %(name)s
-    proj%(id)s.%(name)s = std::vector<%(type)s>(proj0.post_rank.size(), %(init)s);
+    proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
     proj%(id)s.record_%(name)s = std::vector<int>();
     proj%(id)s.record_period_%(name)s = std::vector<int>();
     proj%(id)s.record_offset_%(name)s = std::vector<long int>();
