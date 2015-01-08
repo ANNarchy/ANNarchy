@@ -80,11 +80,11 @@ class Synapse(object):
         if name:
             self.name = name
         else:
-            self.name = 'Spiking synapse' if self.type == 'spike' else 'Rate-coded synapse'
+            self.name = 'Standard spiking synapse' if self.type == 'spike' else 'Standard rate-coded synapse'
         if description:
             self.short_description = description
         else:
-            self.short_description = "Spiking synapse." if self.type == 'spike' else "Rate-coded synapse."
+            self.short_description = "Instantaneous increase of the post-synaptic conductance after a spike is received." if self.type == 'spike' else "Summation of the pre-synaptic firing rate weighted by the synaptic efficiency."
 
     def _analyse(self):
         # Analyse the synapse type

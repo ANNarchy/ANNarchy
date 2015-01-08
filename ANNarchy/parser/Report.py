@@ -100,30 +100,6 @@ connectivity_template = """
 \\vspace{2ex}
 """
 
-neuron_models_template = """
-\\noindent
-\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
-\hdr{2}{D}{Neuron Models}\\\\ \\hline
-%(first_neuron)s
-\end{tabularx}
-\\vspace{2ex}
-
-%(neurons)s
-
-"""
-
-synapse_models_template = """
-\\noindent
-\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
-\hdr{2}{E}{Synapse Models}\\\\ \\hline
-%(first_synapse)s
-\end{tabularx}
-\\vspace{2ex}
-
-%(synapses)s
-
-"""
-
 footer = """
 \\noindent\\begin{tabularx}{\linewidth}{|l|X|}\hline
 \hdr{2}{X}{Input}\\\\ \\hline
@@ -223,20 +199,14 @@ def report(filename="./report.tex"):
         return connectivity_template % {'projections_description': txt}
 
     def generate_neuron_models():
-        firstneuron = ""
         neurons = ""
 
-        firstneuron_tpl = """
-\\textbf{Name} & %(name)s \\\\ \\hline
-\\textbf{Type} & %(description)s\\\\ \\hline
-\\textbf{%(equation_type)s} &
-%(variables)s 
-\\\\ \\hline
-"""
+        firstneuron = "\hdr{2}{D}{Neuron Models}\\\\ \\hline"
 
         neuron_tpl = """
 \\noindent
 \\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
+%(firstneuron)s
 \\textbf{Name} & %(name)s \\\\ \\hline
 \\textbf{Type} & %(description)s\\\\ \\hline
 \\textbf{%(equation_type)s} &
@@ -263,73 +233,72 @@ def report(filename="./report.tex"):
             desc = {
                 'name': neuron.name,
                 'description': neuron.short_description,
+                'firstneuron': firstneuron if idx ==0 else "",
                 'variables': eqs,
                 'equation_type': "Subthreshold dynamics" if neuron.type == 'spike' else 'Equations'
             }
 
             # Generate the code depending on the neuron position
-            if idx == 0:
-                firstneuron = firstneuron_tpl % desc
-            else:
-                neurons += neuron_tpl % desc
+            neurons += neuron_tpl % desc
 
-        return neuron_models_template % {'first_neuron': firstneuron,'neurons': neurons}
+        return neurons
 
     def generate_synapse_models():
         firstsynapse = ""
         synapses = ""
 
-        firstsynapse_tpl = """
-\\textbf{Name} & %(name)s \\\\ \\hline
-\\textbf{Type} & %(description)s\\\\ \\hline
-\\textbf{PSP} & %(psp)s\\\\ \\hline
-\\textbf{%(equation_type)s} &
-%(variables)s 
-\\\\ \\hline
-"""
+        firstsynapse = "\hdr{2}{E}{Synapse Models}\\\\ \\hline"
 
         synapse_tpl = """
 \\noindent
 \\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
+%(firstsynapse)s
 \\textbf{Name} & %(name)s \\\\ \\hline
 \\textbf{Type} & %(description)s\\\\ \\hline
-\\textbf{PSP} & %(psp)s\\\\ \\hline
-\\textbf{%(equation_type)s} &
-%(variables)s 
-\\\\ \\hline
+\\textbf{PSP} & %(psp)s\\\\ \\hline 
+%(variables)s
+%(preevent)s
+%(postevent)s
 \end{tabularx}
 \\vspace{2ex}
 """
         for idx, synapse in enumerate(_synapses):
             # Generate the code for the equations
-            psp, eqs, spike_txt = _process_synapse_equations(synapse)
+            psp, eqs, pre_desc, post_desc = _process_synapse_equations(synapse)
+
+            # Synaptic variables
+            variables = "\\textbf{Equations} & %(variables)s  \\\\ \\hline" % {'variables':eqs} if eqs != "" else ""
 
             # Spiking neurons have extra fields for the event-driven
             if synapse.type == 'spike':
-                spike_extra = """
+                preevent = """
+\\textbf{Pre-synaptic event} & TODO
 \\\\ \\hline
-\\textbf{Spiking} & 
-%(spike)s
+"""
+                postevent = """
+\\textbf{Post-synaptic event} & TODO
+\\\\ \\hline
 """
                 #eqs += spike_extra % {'spike': spike_txt}
-
+            else:
+                preevent = ""
+                postevent = ""
 
             # Build the dictionary
             desc = {
                 'name': synapse.name,
                 'description': synapse.short_description,
-                'variables': eqs,
+                'firstsynapse': firstsynapse if idx == 0 else "",
+                'variables': variables,
                 'psp': psp,
-                'equation_type': 'Equations'
+                'preevent': preevent,
+                'postevent': postevent
             }
 
-            # Generate the code depending on the neuron position
-            if idx == 0:
-                firstsynapse = firstsynapse_tpl % desc
-            else:
-                synapses += synapse_tpl % desc
+            # Generate the code
+            synapses += synapse_tpl % desc
 
-        return synapse_models_template % {'first_synapse': firstsynapse,'synapses': synapses}
+        return synapses
 
     # stdout
     _print('Generating report in', filename)
@@ -424,12 +393,12 @@ def _process_neuron_equations(neuron):
         return code, ""
 
     # Additional code for spiking neurons
-    spike_code = "If $" + _analyse_part(neuron.spike, local_dict, tex_dict) + "$:"
+    spike_code = "If $" + _analyse_part(neuron.spike, local_dict, tex_dict) + "$ or $t \leq t^* + t_\\text{refractory}$:"
 
     # Reset
     spike_code += """
     \\begin{enumerate}
-        \item Emit a spike"""
+        \item Emit a spike at time $t^*$"""
     
     reset_vars = extract_spike_variable(neuron.description, pattern_omp)['spike_reset']
     for var in reset_vars:
@@ -459,7 +428,8 @@ def _process_neuron_equations(neuron):
 def _process_synapse_equations(synapse):
     psp = ""
     code = ""
-    spiking = ""
+    pre_event = ""
+    post_event = ""
 
     # Extract parameters and variables
     parameters = extract_parameters(synapse.parameters)
@@ -486,10 +456,15 @@ def _process_synapse_equations(synapse):
 
     # PSP
     if synapse.psp:
-        psp = synapse.psp.strip()
+        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description, pattern_omp)
+        for dep in dependencies['post']:
+            local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
+        for dep in dependencies['pre']:
+            local_dict['_pre_'+dep] = Symbol("{" + dep + "^\\text{pre}}(t)")
+        psp = "$" + _analyse_part(psp, local_dict, tex_dict) + "$"
     else:
         if synapse.type == 'rate':
-            psp = "$w(t) \cdot \\text{pre}.r(t)$"
+            psp = "$w(t) \cdot r^\\text{pre}(t)$"
         else:
             psp = "$g_\\text{target}(t) = g_\\text{target}(t) + w(t)$"
 
@@ -500,7 +475,10 @@ def _process_synapse_equations(synapse):
         eq = var['eq']
         # pre/post variables
         eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
-        print eq, untouched_var, dependencies
+        for dep in dependencies['post']:
+            local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
+        for dep in dependencies['pre']:
+            local_dict['_pre_'+dep] = Symbol("{" + dep + "^\\text{pre}}(t)")
         # Parse the equation
         eq = eq.replace(' ', '') # supress spaces
         ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
@@ -531,7 +509,7 @@ def _process_synapse_equations(synapse):
 \\]
 """ % {'eq': var_code}
 
-    return psp, code, spiking
+    return psp, code, pre_event, post_event
 
 
 

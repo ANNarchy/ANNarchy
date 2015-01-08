@@ -69,7 +69,7 @@ class Neuron(object):
         if description:
             self.short_description = description
         else:
-            self.short_description = "User-defined model of a spiking point-neuron." if self.type == 'spike' else "User-defined model of a rate-coded neuron."
+            self.short_description = "Specific model of a spiking point-neuron." if self.type == 'spike' else "Specific model of a rate-coded neuron."
 
         # Analyse the neuron type
         self.description = None
