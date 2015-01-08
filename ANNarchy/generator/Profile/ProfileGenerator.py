@@ -35,7 +35,7 @@ class ProfileGenerator(object):
         from .BodyTemplate import openmp_profile_body, cuda_profile_body
 
         num_op = self.calculate_num_ops()
-        num_threads = 6
+        num_threads = 8
         
         # count initialization
         count = """    set_CPU_time_number( %(num_op)s * %(num_thread)s );

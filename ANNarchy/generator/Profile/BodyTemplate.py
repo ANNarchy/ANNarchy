@@ -943,7 +943,10 @@ void Profiling::evaluate_calc()
 }
 
 void Profiling::evaluate_disp() {
-    std::cout.precision(8);
+    if ( evaluateInMillisecs_ )
+    	std::cout.precision(4);
+    else
+    	std::cout.precision(8);
     std::cout << "Overall time: "<< std::fixed << Prof_general.CPU_summ     << "s " << std::endl;
     
     // CPU time
@@ -955,19 +958,28 @@ void Profiling::evaluate_disp() {
         if ((Prof_time_CPU[i].name=="")||(found))
             std::cout << "CPU_Time "<<i;
         else     
-            std::cout << Prof_time_CPU[i].name;
+            std::cout << Prof_time_CPU[i].name+" ";
 
-        std::cout   <<" time: " << std::fixed << Prof_time_CPU[i].time.summ << "s "
-                	<< "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< " "
-                	<< "Average time: " << std::fixed << Prof_time_CPU[i].time.avg << "s "
-                	<< "Minimum time: " << std::fixed << Prof_time_CPU[i].time.min << "s "
-                	<< "Maximum time: " << std::fixed << Prof_time_CPU[i].time.max << "s "
-                	<< "Standard deviation: "<< std::fixed << Prof_time_CPU[i].time.standard << "s "<< std::endl;
+		if ( evaluateInMillisecs_ ) {
+	        std::cout   << "acc. time: " << std::fixed << Prof_time_CPU[i].time.summ * 1000.0 << "ms "
+	                	<< "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< " "
+	                	<< "Average time: " << std::fixed << Prof_time_CPU[i].time.avg * 1000.0 << "ms "
+	                	<< "Minimum time: " << std::fixed << Prof_time_CPU[i].time.min * 1000.0 << "ms "
+	                	<< "Maximum time: " << std::fixed << Prof_time_CPU[i].time.max * 1000.0 << "ms "
+	                	<< "Standard deviation: "<< std::fixed << Prof_time_CPU[i].time.standard * 1000.0 << "ms "<< std::endl;
+		} else {
+	        std::cout   << "acc. time: " << std::fixed << Prof_time_CPU[i].time.summ << "s "
+	                	<< "Relative to CPU time: " << std::fixed << Prof_time_CPU[i].time.prozent_CPU<< " "
+	                	<< "Average time: " << std::fixed << Prof_time_CPU[i].time.avg << "s "
+	                	<< "Minimum time: " << std::fixed << Prof_time_CPU[i].time.min << "s "
+	                	<< "Maximum time: " << std::fixed << Prof_time_CPU[i].time.max << "s "
+	                	<< "Standard deviation: "<< std::fixed << Prof_time_CPU[i].time.standard << "s "<< std::endl;
+        }
     }
     std::cout     << std::endl;
     
     // CPU cycles
-    for(int i=0;i<Profiling_cycles_CPU_count;i++){
+    for(int i=0;i<Profiling_cycles_CPU_count;i++) {
         if ( Prof_cycles_CPU[i].time.count == 0 )
             continue; // no data
         int found = (Prof_cycles_CPU[i].name.find(":")!=std::string::npos)||(Prof_cycles_CPU[i].name.find("#")!=std::string::npos);//1 wenn Prof_time_CPU[i].name ungueltig 

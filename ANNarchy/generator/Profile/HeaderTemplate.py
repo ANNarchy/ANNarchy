@@ -262,6 +262,7 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void evaluate(int disp, int file,const char * filename="Profiling.log");
 
     private:
+    bool evaluateInMillisecs_ = true;
 
     struct Profiling_unit{
         long count=0;
