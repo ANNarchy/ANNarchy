@@ -68,6 +68,9 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
         'cpp': param['cpp'] }
             # Min-Max bounds
             for bound, val in param['bounds'].iteritems():
+                if bound == "init":
+                    continue
+
                 code += """
         if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
             %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
@@ -125,9 +128,12 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
         %(switch)s 
 """ % { 'comment': '// '+param['eq'],
         'switch' : param['switch']}
-    
+
             # Min-Max bounds
             for bound, val in param['bounds'].iteritems():
+                if bound == "init":
+                    continue
+
                 code += """
         if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
             %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
@@ -156,6 +162,9 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
 
             # Min-Max bounds
             for bound, val in param['bounds'].iteritems():
+                if bound == "init":
+                    continue
+
                 code += """
         if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
             %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
