@@ -1,6 +1,7 @@
-from ANNarchy.core.Global import _populations, _projections, _neurons, _warning, _error
+from ANNarchy.core.Global import _populations, _projections, _neurons, _synapses, _warning, _error, _print
 from ANNarchy.core.Random import RandomDistribution
 from .Extraction import *
+from .SingleAnalysis import pattern_omp
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
@@ -99,21 +100,9 @@ connectivity_template = """
 \\vspace{2ex}
 """
 
-neuron_models_template = """
-\\noindent
-\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
-\hdr{2}{D}{Neuron Models}\\\\ \\hline
-%(first_neuron)s
-\end{tabularx}
-\\vspace{2ex}
-
-%(neurons)s
-
-"""
-
 footer = """
 \\noindent\\begin{tabularx}{\linewidth}{|l|X|}\hline
-\hdr{2}{E}{Input}\\\\ \\hline
+\hdr{2}{X}{Input}\\\\ \\hline
 \\textbf{Type} & \\textbf{Description} \\\\ \\hline
 ---
 \\\\ \\hline
@@ -122,7 +111,7 @@ footer = """
 \\vspace{2ex}
 
 \\noindent\\begin{tabularx}{\linewidth}{|X|}\hline
-\hdr{1}{F}{Measurements}\\\\ \\hline
+\hdr{1}{Y}{Measurements}\\\\ \\hline
 ---
 \\\\ \\hline
 \end{tabularx}
@@ -210,20 +199,14 @@ def report(filename="./report.tex"):
         return connectivity_template % {'projections_description': txt}
 
     def generate_neuron_models():
-        firstneuron = ""
         neurons = ""
 
-        firstneuron_tpl = """
-\\textbf{Name} & %(name)s \\\\ \\hline
-\\textbf{Type} & %(description)s\\\\ \\hline
-\\textbf{%(equation_type)s} &
-%(variables)s 
-\\\\ \\hline
-"""
+        firstneuron = "\hdr{2}{D}{Neuron Models}\\\\ \\hline"
 
         neuron_tpl = """
 \\noindent
 \\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
+%(firstneuron)s
 \\textbf{Name} & %(name)s \\\\ \\hline
 \\textbf{Type} & %(description)s\\\\ \\hline
 \\textbf{%(equation_type)s} &
@@ -234,7 +217,7 @@ def report(filename="./report.tex"):
 """
         for idx, neuron in enumerate(_neurons):
             # Generate the code for the equations
-            eqs = _process_neuron_equations(neuron)
+            eqs, spike_txt = _process_neuron_equations(neuron)
 
             # Spiking neurons have an extra field for the spike condition
             if neuron.type == 'spike':
@@ -243,7 +226,6 @@ def report(filename="./report.tex"):
 \\textbf{Spiking} & 
 %(spike)s
 """
-                spike_txt = "" # TODO
                 eqs += spike_extra % {'spike': spike_txt}
 
 
@@ -251,20 +233,75 @@ def report(filename="./report.tex"):
             desc = {
                 'name': neuron.name,
                 'description': neuron.short_description,
+                'firstneuron': firstneuron if idx ==0 else "",
                 'variables': eqs,
                 'equation_type': "Subthreshold dynamics" if neuron.type == 'spike' else 'Equations'
             }
 
             # Generate the code depending on the neuron position
-            if idx == 0:
-                firstneuron = firstneuron_tpl % desc
+            neurons += neuron_tpl % desc
+
+        return neurons
+
+    def generate_synapse_models():
+        firstsynapse = ""
+        synapses = ""
+
+        firstsynapse = "\hdr{2}{E}{Synapse Models}\\\\ \\hline"
+
+        synapse_tpl = """
+\\noindent
+\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
+%(firstsynapse)s
+\\textbf{Name} & %(name)s \\\\ \\hline
+\\textbf{Type} & %(description)s\\\\ \\hline
+\\textbf{PSP} & %(psp)s\\\\ \\hline 
+%(variables)s
+%(preevent)s
+%(postevent)s
+\end{tabularx}
+\\vspace{2ex}
+"""
+        for idx, synapse in enumerate(_synapses):
+            # Generate the code for the equations
+            psp, eqs, pre_desc, post_desc = _process_synapse_equations(synapse)
+
+            # Synaptic variables
+            variables = "\\textbf{Equations} & %(variables)s  \\\\ \\hline" % {'variables':eqs} if eqs != "" else ""
+
+            # Spiking neurons have extra fields for the event-driven
+            if synapse.type == 'spike':
+                preevent = """
+\\textbf{Pre-synaptic event} & TODO
+\\\\ \\hline
+"""
+                postevent = """
+\\textbf{Post-synaptic event} & TODO
+\\\\ \\hline
+"""
+                #eqs += spike_extra % {'spike': spike_txt}
             else:
-                neurons += neuron_tpl % desc
+                preevent = ""
+                postevent = ""
 
-        return neuron_models_template % {'first_neuron': firstneuron,'neurons': neurons}
+            # Build the dictionary
+            desc = {
+                'name': synapse.name,
+                'description': synapse.short_description,
+                'firstsynapse': firstsynapse if idx == 0 else "",
+                'variables': variables,
+                'psp': psp,
+                'preevent': preevent,
+                'postevent': postevent
+            }
 
+            # Generate the code
+            synapses += synapse_tpl % desc
 
-    # Analyse only the neurons/synapses which are different
+        return synapses
+
+    # stdout
+    _print('Generating report in', filename)
 
     # Generate the summary
     summary = generate_summary()
@@ -274,6 +311,8 @@ def report(filename="./report.tex"):
     projections = generate_projections()
     # Generate the neuron models
     neuron_models = generate_neuron_models()
+    # Generate the synapse models
+    synapse_models = generate_synapse_models()
 
     with open(filename, 'w') as wfile:
         wfile.write(header)
@@ -282,6 +321,7 @@ def report(filename="./report.tex"):
         wfile.write(populations)
         wfile.write(projections)
         wfile.write(neuron_models)
+        wfile.write(synapse_models)
         wfile.write(footer)
 
 def _process_random(val):
@@ -319,11 +359,9 @@ def _process_neuron_equations(neuron):
     for var in variables:
         # Retrieve the equation
         eq = var['eq']
-        # Extract if then else
-        # TODO
         # Parse the equation
         eq = eq.replace(' ', '') # supress spaces
-        ode = re.findall(r'([^\w]+)d([\w]+)/dt', eq)
+        ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
         if len(ode) > 0:
             name = ode[0][1]
             eq = eq.replace('d'+name+'/dt', '_grad_'+name)
@@ -333,20 +371,12 @@ def _process_neuron_equations(neuron):
 
         left, right = eq.split('=')
         try:
-            analysed_left = parse_expr(left,
-                local_dict = local_dict,
-                transformations = (standard_transformations + (convert_xor,))
-            )
-            latex_left = latex(analysed_left, symbol_names = tex_dict, mul_symbol="dot")
+            latex_left = _analyse_part(left, local_dict, tex_dict)
         except:
             _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
             latex_left = var['eq'].split('=')[0]
         try:
-            analysed_right = parse_expr(right,
-                local_dict = local_dict,
-                transformations = (standard_transformations + (convert_xor,)) 
-            )
-            latex_right = latex(analysed_right, symbol_names = tex_dict, mul_symbol="dot")
+            latex_right = _analyse_part(right, local_dict, tex_dict)
         except:
             _warning('can not transform the right side of ' + var['eq']+' to LaTeX, you have to it by hand...')
             latex_right = var['eq'].split('=')[1]
@@ -359,23 +389,182 @@ def _process_neuron_equations(neuron):
 \\]
 """ % {'eq': var_code}
 
-    return code
+    if not neuron.spike: # rate-code, no spike
+        return code, ""
 
+    # Additional code for spiking neurons
+    spike_code = "If $" + _analyse_part(neuron.spike, local_dict, tex_dict) + "$ or $t \leq t^* + t_\\text{refractory}$:"
+
+    # Reset
+    spike_code += """
+    \\begin{enumerate}
+        \item Emit a spike at time $t^*$"""
+    
+    reset_vars = extract_spike_variable(neuron.description, pattern_omp)['spike_reset']
+    for var in reset_vars:
+        eq = var['eq']
+
+        left = eq.split('=')[0]
+        if left[-1] in ['+', '-', '*', '/']:
+            op = left[-1]
+            left = _analyse_part(left[:-1], local_dict, tex_dict)
+            operator = " = " + left +  " " + op + " "
+        else:
+            left = _analyse_part(left, local_dict, tex_dict)
+            operator = " = "
+        right = _analyse_part(eq.split('=')[1], local_dict, tex_dict)
+        spike_code += """
+        \item $""" + left + " " + operator + " " + right + "$"
+
+        if 'unless_refractory' in var['constraint']:
+            spike_code += " (not during the refractory period)."
+
+    spike_code += """
+    \end{enumerate}"""
+
+    return code, spike_code
+
+
+def _process_synapse_equations(synapse):
+    psp = ""
+    code = ""
+    pre_event = ""
+    post_event = ""
+
+    # Extract parameters and variables
+    parameters = extract_parameters(synapse.parameters)
+    variables = extract_variables(synapse.equations)
+    variable_names = [var['name'] for var in variables]
+    attributes, local_var, global_var = get_attributes(parameters, variables)
+
+    # Create a dictionary for parsing
+    local_dict = {
+        'g_target': Symbol('g_\\text{target}'),
+        't_pre': Symbol('t_\\text{pre}'),
+        't_post': Symbol('t_\\text{pos}'),
+        'Uniform': Function('\mathcal{U}'),
+        'Normal': Function('\mathcal{N}'),
+    }
+
+    for att in attributes:
+        local_dict[att] = Symbol(_latexify_name(att, variable_names))
+
+    tex_dict = {}
+    for key, val in local_dict.iteritems():
+        tex_dict[val] = str(val)
+
+
+    # PSP
+    if synapse.psp:
+        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description, pattern_omp)
+        for dep in dependencies['post']:
+            local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
+        for dep in dependencies['pre']:
+            local_dict['_pre_'+dep] = Symbol("{" + dep + "^\\text{pre}}(t)")
+        psp = "$" + _analyse_part(psp, local_dict, tex_dict) + "$"
+    else:
+        if synapse.type == 'rate':
+            psp = "$w(t) \cdot r^\\text{pre}(t)$"
+        else:
+            psp = "$g_\\text{target}(t) = g_\\text{target}(t) + w(t)$"
+
+
+    # Variables
+    for var in variables:
+        # Retrieve the equation
+        eq = var['eq']
+        # pre/post variables
+        eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
+        for dep in dependencies['post']:
+            local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
+        for dep in dependencies['pre']:
+            local_dict['_pre_'+dep] = Symbol("{" + dep + "^\\text{pre}}(t)")
+        # Parse the equation
+        eq = eq.replace(' ', '') # supress spaces
+        ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
+        if len(ode) > 0:
+            name = ode[0][1]
+            eq = eq.replace('d'+name+'/dt', '_grad_'+name)
+            grad_symbol = Symbol('\\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
+            local_dict['_grad_'+name] = grad_symbol
+            tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
+
+        left, right = eq.split('=')
+        try:
+            latex_left = _analyse_part(left, local_dict, tex_dict)
+        except:
+            _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+            latex_left = var['eq'].split('=')[0]
+        try:
+            latex_right = _analyse_part(right, local_dict, tex_dict)
+        except:
+            _warning('can not transform the right side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+            latex_right = var['eq'].split('=')[1]
+
+        var_code = latex_left + ' = ' + latex_right
+
+        # Add the code
+        code += """\\[
+%(eq)s
+\\]
+""" % {'eq': var_code}
+
+    return psp, code, pre_event, post_event
+
+
+
+# Analyses and transform to latex a single part of an equation
+def _analyse_part(expr, local_dict, tex_dict):
+    def regular_expr(expr):
+        analysed = parse_expr(expr,
+            local_dict = local_dict,
+            transformations = (standard_transformations + (convert_xor,)) 
+            )
+        return latex(analysed, symbol_names = tex_dict, mul_symbol="dot")
+
+    # Extract if/then/else
+    if 'else:' in expr:
+        condition = re.findall(r'if(.*?):', expr)[0]
+        then = re.findall(':(.*?)else:', expr)[0]
+        else_st = expr.split('else:')[1]
+        return "\\begin{cases}" + regular_expr(then) + "\qquad \\text{if} \quad " + regular_expr(condition) + "\\\\ "+ regular_expr(else_st) +" \qquad \\text{otherwise.} \end{cases}"
+    
+    # return the transformed equation
+    return regular_expr(expr)
+
+# Latexify names
 greek = ['alpha', 'beta', 'gamma', 'epsilon', 'eta', 'kappa', 'delta', 'lambda', 'mu', 'nu', 'zeta', 'sigma', 'phi', 'psi', 'rho', 'omega', 'xi', 'tau',
          'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Phi', 'Psi', 'Omega'
 ]
 
 def _latexify_name(name, local):
-    equiv = ''
     parts = name.split('_')
-    for p in parts:
-        if len(p) == 1:
-            equiv += '' + p + '_'
-        elif p in greek:
-            equiv += '\\' + p + '_'            
+    if len(parts) == 1:
+        if len(name) == 1:
+            equiv = name
+        elif name in greek:
+            equiv = '\\' + name
         else:
-            equiv += '\\text{' + p + '}' + '_'
-    equiv = equiv[:-1]
-    if name in local:
-        equiv = '{' + equiv + '} (t)'
-    return equiv
+            equiv = '\\text{' + name + '}'
+        if name in local:
+            equiv = '{' + equiv + '}(t)'
+        return equiv
+    elif len(parts) == 2:
+        equiv = ""
+        for p in parts:
+            if len(p) == 1:
+                equiv += '' + p + '_'
+            elif p in greek:
+                equiv += '\\' + p + '_'            
+            else:
+                equiv += '\\text{' + p + '}' + '_'
+        equiv = equiv[:-1]
+        if name in local:
+            equiv = '{' + equiv + '}(t)'
+        return equiv
+    else:
+        equiv = '\\text{' + name + '}'
+        equiv = equiv.replace('_', '\_')
+        if name in local:
+            equiv = equiv + '(t)'
+        return equiv

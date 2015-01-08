@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-import ANNarchy.core.Global as Global
+from ANNarchy.core.Global import _error, _synapses
 from ANNarchy.parser.SingleAnalysis import analyse_synapse
 
         
@@ -62,32 +62,39 @@ class Synapse(object):
 
         # Check the operation
         if self.type == 'spike' and self.operation != 'sum':
-            Global._error('spiking synapses can only perform a sum of presynaptic potentials.')
+            _error('spiking synapses can only perform a sum of presynaptic potentials.')
             exit(0)
         if not self.operation in ['sum', 'min', 'max', 'mean']:
-            Global._error('the only operations permitted are: sum (default), min, max, mean.')
+            _error('the only operations permitted are: sum (default), min, max, mean.')
             exit(0)
 
         # Description
         self.description = None
 
         # Reporting
+        if not hasattr(self, '_instantiated') : # User-defined
+            _synapses.append(self)
+        elif len(self._instantiated) == 0: # First instantiated of the class
+            _synapses.append(self)
+
         if name:
             self.name = name
         else:
-            self.name = 'Spiking synapse' if self.type == 'spike' else 'Rate-coded synapse'
+            self.name = 'Standard spiking synapse' if self.type == 'spike' else 'Standard rate-coded synapse'
         if description:
             self.short_description = description
         else:
-            self.short_description = "User-defined model of a spiking synapse." if self.type == 'spike' else "User-defined model of a rate-coded synapse."
+            self.short_description = "Instantaneous increase of the post-synaptic conductance after a spike is received." if self.type == 'spike' else "Summation of the pre-synaptic firing rate weighted by the synaptic efficiency."
 
     def _analyse(self):
         # Analyse the synapse type
         if not self.description:
             self.description = analyse_synapse(self)
 
-    def __add__(self, synapse):        
-        self._variables.update(synapse.variables) 
+    def __add__(self, synapse):  
+        _error('adding synapse models is not implemented yet.')
+        exit(0)      
+        #self._variables.update(synapse.variables) 
 
     def __str__(self):
         import pprint

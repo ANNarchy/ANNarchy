@@ -24,8 +24,8 @@ OutputNeuron = Neuron(
 DefaultSynapse = Synapse(
     parameters = "max_age = 10.0 : postsynaptic",
     equations = "age = if pre.r > 0.5: 0.0 else: age + dt",
-    pruning="(age > max_age + Uniform(10, 100)) : proba = 0.5",
-    creating="(pre.r > Uniform(0.0, 1.0)) : proba=0.5, w=0.5"
+    pruning="age > max_age : proba = 0.5",
+    creating="pre.r > 0.5 : proba=0.5, w=0.5"
 )
 
 
@@ -61,7 +61,7 @@ print 'weights:', proj[0].w
 print 'age:', proj[0].age
 
 
-print 'Start pruning. The synapses to 1 and 2 max be deleted with proba 0.5'
+print 'Start pruning. The synapses to 1, 2 and 4 may be deleted with proba 0.5'
 proj.start_pruning()
 simulate(1.0)
 proj.stop_pruning()

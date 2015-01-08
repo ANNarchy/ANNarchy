@@ -194,7 +194,7 @@ def extract_prepost(name, eq, description, pattern):
     return eq, untouched, dependencies
                    
 
-def extract_parameters(description, extra_values):
+def extract_parameters(description, extra_values={}):
     """ Extracts all variable information from a multiline description."""
     parameters = []
     # Split the multilines into individual lines

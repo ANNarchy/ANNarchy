@@ -5,6 +5,18 @@ ANNarchy versions
 Changelog
 ==========
 
+**4.3.3:**
+
+* Structural plasticity can be defined at the synaptic level.
+
+**4.3.2:**
+
+* Random distributions are available in synapses.
+* Populations can be momentarily disabled/enabled.
+* Recording can be done with a given period instead of every time step.
+* Different modes for Spike2Rate conversion.
+* Extension for shared projections (convolution/pooling) improved.
+
 **4.3.1:** 
 
 * CUDA implementation for rate-coded networks with small restrictions.

@@ -9,6 +9,7 @@ from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
 from .core.IO import save, load, load_parameter
 from .core.Utils import raster_plot, smoothed_rate, histogram, population_rate
+from .parser.Report import report
 from .models import *
 from .extensions import *
 
@@ -26,6 +27,6 @@ import os, sys
 
 # Version
 __version__ = '4.3'
-__release__ = '4.3.2'
+__release__ = '4.3.3'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                    ') on ' + sys.platform + ' (' + os.name + ').' )
