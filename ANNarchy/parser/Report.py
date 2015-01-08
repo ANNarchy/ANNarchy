@@ -255,7 +255,7 @@ def report(filename="./report.tex"):
 %(firstsynapse)s
 \\textbf{Name} & %(name)s \\\\ \\hline
 \\textbf{Type} & %(description)s\\\\ \\hline
-\\textbf{PSP} & %(psp)s\\\\ \\hline 
+%(psp)s
 %(variables)s
 %(preevent)s
 %(postevent)s
@@ -269,17 +269,31 @@ def report(filename="./report.tex"):
             # Synaptic variables
             variables = "\\textbf{Equations} & %(variables)s  \\\\ \\hline" % {'variables':eqs} if eqs != "" else ""
 
+            # PSP
+            if psp != "":
+                psp_code = """
+\\textbf{PSP} & %(psp)s\\\\ \\hline""" % {'psp': psp}
+            else: 
+                psp_code = ""
+
             # Spiking neurons have extra fields for the event-driven
             if synapse.type == 'spike':
-                preevent = """
-\\textbf{Pre-synaptic event} & TODO
+                if pre_desc != "":
+                    preevent = """
+\\textbf{Pre-synaptic event} & 
+%(preevent)s
 \\\\ \\hline
-"""
-                postevent = """
-\\textbf{Post-synaptic event} & TODO
+""" % {'preevent': pre_desc}
+                else:
+                    preevent = ""
+                if post_desc != "":
+                    postevent = """
+\\textbf{Post-synaptic event} & 
+%(postevent)s
 \\\\ \\hline
-"""
-                #eqs += spike_extra % {'spike': spike_txt}
+""" % {'postevent': post_desc}
+                else:
+                    postevent = ""
             else:
                 preevent = ""
                 postevent = ""
@@ -290,7 +304,7 @@ def report(filename="./report.tex"):
                 'description': synapse.short_description,
                 'firstsynapse': firstsynapse if idx == 0 else "",
                 'variables': variables,
-                'psp': psp,
+                'psp': psp_code,
                 'preevent': preevent,
                 'postevent': postevent
             }
@@ -439,7 +453,8 @@ def _process_synapse_equations(synapse):
 
     # Create a dictionary for parsing
     local_dict = {
-        'g_target': Symbol('g_\\text{target}'),
+        'w': Symbol('w(t)'),
+        'g_target': Symbol('g_\\text{target}(t)'),
         't_pre': Symbol('t_\\text{pre}'),
         't_post': Symbol('t_\\text{pos}'),
         'Uniform': Function('\mathcal{U}'),
@@ -466,7 +481,7 @@ def _process_synapse_equations(synapse):
         if synapse.type == 'rate':
             psp = "$w(t) \cdot r^\\text{pre}(t)$"
         else:
-            psp = "$g_\\text{target}(t) = g_\\text{target}(t) + w(t)$"
+            psp = ""
 
 
     # Variables
@@ -508,6 +523,80 @@ def _process_synapse_equations(synapse):
 %(eq)s
 \\]
 """ % {'eq': var_code}
+
+    # Pre-event
+    if synapse.type == 'spike':
+        for var in extract_pre_spike_variable(synapse.description, pattern_omp):
+            eq = var['eq']
+            # pre/post variables
+            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
+            for dep in dependencies['post']:
+                local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
+            for dep in dependencies['pre']:
+                local_dict['_pre_'+dep] = Symbol("{" + dep + "^\\text{pre}}(t)")
+
+            left = eq.split('=')[0]
+            if left[-1] in ['+', '-', '*', '/']:
+                op = left[-1]
+                try:
+                    left = _analyse_part(left[:-1], local_dict, tex_dict)
+                except:
+                    _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+                    left = left[:-1]
+                operator = " = " + left +  " " + op + " ("
+            else:
+                try:
+                    left = _analyse_part(left, local_dict, tex_dict)
+                except:
+                    _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+                operator = " = "
+            try:
+                right = _analyse_part(eq.split('=')[1], local_dict, tex_dict)
+            except:
+                _warning('can not transform the right side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+                right = var['eq'].split('=')[1]
+
+            var_code = left + operator + right + (" )" if operator != " = " else "")
+            pre_event += """\\[
+%(eq)s
+\\]
+""" % {'eq': var_code}
+        for var in extract_post_spike_variable(synapse.description, pattern_omp):
+            eq = var['eq']
+            # pre/post variables
+            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
+            for dep in dependencies['post']:
+                local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
+            for dep in dependencies['pre']:
+                local_dict['_pre_'+dep] = Symbol("{" + dep + "^\\text{pre}}(t)")
+
+            left = eq.split('=')[0]
+            if left[-1] in ['+', '-', '*', '/']:
+                op = left[-1]
+                try:
+                    left = _analyse_part(left[:-1], local_dict, tex_dict)
+                except:
+                    _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+                    left = left[:-1]
+                operator = " = " + left +  " " + op + " ("
+            else:
+                try:
+                    left = _analyse_part(left, local_dict, tex_dict)
+                except:
+                    _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+                operator = " = "
+            try:
+                right = _analyse_part(eq.split('=')[1], local_dict, tex_dict)
+            except:
+                _warning('can not transform the right side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+                right = var['eq'].split('=')[1]
+
+            var_code = left + operator + right + (" )" if operator != " = " else "")
+            post_event += """\\[
+%(eq)s
+\\]
+""" % {'eq': var_code}
+
 
     return psp, code, pre_event, post_event
 
