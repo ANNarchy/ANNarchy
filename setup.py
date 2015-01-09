@@ -59,7 +59,7 @@ except:
 
 # check for cuda
 import os
-if os.system("which nvcc")==0:
+if os.system("nvcc --version")==0:
     cwd = os.getcwd()
     print('Checking for CUDA... OK')
     os.chdir(cwd+"/ANNarchy/generator/CudaCheck")

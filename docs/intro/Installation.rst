@@ -39,6 +39,9 @@ Additionally, the following packages are optional but strongly recommended:
     * lxml >= 3.0 (to save the networks in .xml format)
     * scipy >= 0.12 (to save the networks in Matlab format)
     
+For CUDA:
+
+    * the CUDA-SDK available on the official website: https://developer.nvidia.com/cuda-downloads (we recommend to use at least to SDK version >6.x)
     
 The version requirement on Sympy is rather new (as of May 2014) and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
 
@@ -72,6 +75,11 @@ If you have superuser permissions, you can install ANNarchy in ``/usr/local`` by
     
 This simply installs a Python egg in ``/usr/local/lib/python2.7/dist-packages/`` (replace '2.7' with your Python version). 
 
+.. note::
+
+    Sometimes the detection of cuda fails during not set environment variables. In this case try:
+    
+        sudo env "PATH=$PATH" "LIBRARY_PATH=$LIBRARY_PATH" python setup.py ...
 
 **Installation in home directory** 
 
