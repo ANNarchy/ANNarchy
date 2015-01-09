@@ -20,13 +20,13 @@ int rc;
     #
     # Operations
     'compute_psp': {
-            'before' : """    profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );""",
-            'after' : """    profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );
-    rc++;"""
+            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );""",
+            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );
+        rc++;"""
     },
     'update_neuron': {
-            'before' : """        profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );""",
-            'after' : """        profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );
+            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );""",
+            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );
         rc++;"""
     }
 }
