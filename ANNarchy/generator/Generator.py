@@ -279,8 +279,8 @@ clean:
                 if Global.config['paradigm'] == "cuda":
                     from .CudaCheck import CudaCheck
                     cu_version = CudaCheck().version()
-            
-                    if cu_version > (3.0):
+
+                    if cu_version >= (3,0):
                         print "Build with cuda 3.x"
                         subprocess.check_output("make cuda_35 -j4 ", 
                                                  shell=True)
