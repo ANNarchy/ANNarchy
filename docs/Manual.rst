@@ -21,3 +21,4 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/Recording.rst
     manual/StructuralPlasticity.rst
     manual/ConvolutionalNetworks.rst
+    manual/Reporting.rst

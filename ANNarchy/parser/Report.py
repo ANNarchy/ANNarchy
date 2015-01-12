@@ -98,9 +98,9 @@ populations_template = """
 
 connectivity_template = """
 \\noindent
-\\begin{tabularx}{\linewidth}{|l|l|l|X|}\hline
-\hdr{4}{C}{Connectivity}\\\\ \\hline
-\\textbf{Source} & \\textbf{Destination} & \\textbf{Target} & \\textbf{Pattern} \\\\ \\hline
+\\begin{tabularx}{\linewidth}{|l|l|l|X|X|}\hline
+\hdr{5}{C}{Connectivity}\\\\ \\hline
+\\textbf{Source} & \\textbf{Destination} & \\textbf{Target} & \\textbf{Synapse} & \\textbf{Pattern} \\\\ \\hline
 %(projections_description)s
 \end{tabularx}
 
@@ -131,7 +131,7 @@ projparameters_template = """
 
 footer = """
 \\noindent\\begin{tabularx}{\linewidth}{|l|X|}\hline
-\hdr{2}{X}{Input}\\\\ \\hline
+\hdr{2}{H}{Input}\\\\ \\hline
 \\textbf{Type} & \\textbf{Description} \\\\ \\hline
 ---
 \\\\ \\hline
@@ -140,7 +140,7 @@ footer = """
 \\vspace{2ex}
 
 \\noindent\\begin{tabularx}{\linewidth}{|X|}\hline
-\hdr{1}{Y}{Measurements}\\\\ \\hline
+\hdr{1}{I}{Measurements}\\\\ \\hline
 ---
 \\\\ \\hline
 \end{tabularx}
@@ -215,7 +215,7 @@ def _generate_summary():
     list_synapse_models = []
     for proj in _projections:
         list_connectivity.append(proj.connector_name)
-        if not proj.synapse.name in ['Spiking synapse', 'Rate-coded synapse']:
+        if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
             list_synapse_models.append(proj.synapse.name)
     for con in list(set(list_connectivity)):
         connectivity += con + ', '
@@ -273,11 +273,16 @@ def _generate_population_parameters():
 def _generate_projections():
     txt = ""
     proj_tpl = """
-    %(pre)s & %(post)s & %(target)s &
+    %(pre)s & %(post)s & %(target)s & %(synapse)s &
     %(description)s \\\\ \\hline
 """        
     for proj in _projections:
+        if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
+            name = proj.synapse.name
+        else:
+            name = "-"
         txt += proj_tpl % {'pre': proj.pre.name, 'post': proj.post.name, 'target': proj.target,
+                            'synapse': name,
                             'description': proj.connector_description}
 
     return connectivity_template % {'projections_description': txt}
