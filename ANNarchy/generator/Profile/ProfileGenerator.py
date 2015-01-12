@@ -24,6 +24,25 @@ class ProfileGenerator(object):
             num_ops += 1
         return num_ops
 
+    def annotate_computesum_rate_omp(self, code, proj):
+        from .Template import profile_generator_omp_template
+        prof_begin = profile_generator_omp_template['compute_psp']['before'] % { 'num_ops': self.calculate_num_ops(), 'off': "(rc %"+str(self.calculate_num_ops())+")" }
+        prof_end = profile_generator_omp_template['compute_psp']['after'] % { 'num_ops': self.calculate_num_ops(), 'off': "(rc %"+str(self.calculate_num_ops())+")" }
+
+        prof_code = """
+        // first run, measuring average time
+        %(prof_begin)s
+%(code)s
+        %(prof_end)s
+        """ % {'id_proj' : proj.id, 'target': proj.target,
+               'name_post': proj.post.name, 'name_pre': proj.pre.name,
+               'id_post': proj.post.id,
+               'code': code,
+               'prof_begin': prof_begin,
+               'prof_end': prof_end
+               }
+        return prof_code
+
     def _generate_header(self):
         from .HeaderTemplate import openmp_profile_header, cuda_profile_header
         if Global.config["paradigm"] == "openmp":

@@ -206,29 +206,22 @@ struct ProjStruct%(id_proj)s{
 
         # Profiling code
         if Global.config['profiling']:
-            from ..Profile.Template import profile_generator_omp_template
             from ..Profile.ProfileGenerator import ProfileGenerator
             pGen = ProfileGenerator(Global._populations, Global._projections)
-            prof_begin = profile_generator_omp_template['compute_psp']['before'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
-            prof_end = profile_generator_omp_template['compute_psp']['after'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
-        else:
-            prof_begin = ""
-            prof_end = ""
+
+            # annotate code
+            code = pGen.annotate_computesum_rate_omp(code, proj)
 
         # finish the code
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
     if (pop%(id_post)s._active){
-        %(prof_begin)s
 %(code)s
-        %(prof_end)s
     } // active
         """ % {'id_proj' : proj.id, 'target': proj.target,
                'name_post': proj.post.name, 'name_pre': proj.pre.name,
                'id_post': proj.post.id,
                'code': code,
-               'prof_begin': prof_begin,
-               'prof_end': prof_end
                }
 
         return code
