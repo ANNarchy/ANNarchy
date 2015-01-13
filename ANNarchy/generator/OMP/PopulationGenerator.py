@@ -157,69 +157,61 @@ struct PopStruct%(id)s{
 
         # Local variables
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+
+        # Rate code neuronss
         code += """
     // Updating the local variables of population %(id)s (%(name)s)
     if(pop%(id)s._active){
-        #pragma omp parallel for
-        for(int i = 0; i < pop%(id)s.size; i++){
+        #pragma omp parallel for firstprivate(dt)
+        for(int i = 0; i < %(size)s; i++){
 %(eqs)s
-""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
+        }
+""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs}
 
 
         # Spike emission
         if pop.neuron_type.type == 'spike':
             cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
             reset = ""; refrac = ""
+
             for eq in pop.neuron_type.description['spike']['spike_reset']:
                 reset += """
-            %(reset)s
+                %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id}}
                 if not 'unless_refractory' in eq['constraint']:
                     refrac += """
-            %(refrac)s
+                %(refrac)s
 """ % {'refrac': eq['cpp'] % {'id': pop.id} }
 
             # Main code
             code += """
-            // Emit spike depending on refractory period            
-            if(pop%(id)s.refractory_remaining[i] >0){ // Refractory period
+        // Gather spikes
+        pop%(id)s.spiked.clear();
+        for(int i = 0; i < %(size)s; i++){
+            if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
 %(refrac)s
                 pop%(id)s.refractory_remaining[i]--;
                 pop%(id)s.spike[i] = false;
             }
-            else if(%(condition)s){
+            else if(%(condition)s){ // Emit a spike
 %(reset)s        
-
-                pop%(id)s.spike[i] = true;
-                pop%(id)s.last_spike[i] = t;
-                pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
-            }
-            else{
-                pop%(id)s.spike[i] = false;
-            }
-
-""" % {'condition' : cond, 'reset': reset, 'refrac': refrac, 'id': pop.id }
-
-            # Finish parallel loop for the population
-            code += """
-        }
-        // Gather spikes
-        pop%(id)s.spiked.clear();
-        for(int i=0; i< pop%(id)s.size; i++){
-            if(pop%(id)s.spike[i]){
                 pop%(id)s.spiked.push_back(i);
                 if(pop%(id)s.record_spike){
                     pop%(id)s.recorded_spike[i].push_back(t);
                 }
-
+                pop%(id)s.spike[i] = true;
+                pop%(id)s.last_spike[i] = t;
+                pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
             }
-"""% {'id': pop.id} 
+            else{ // No spike
+                pop%(id)s.spike[i] = false;
+            }
+        }
+"""% {'id': pop.id, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac': refrac} 
 
                 # End spike region
 
-        # Finish parallel loop for the population
         code += """
-        }
     } // active
 """
         return code

@@ -48,14 +48,14 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
     #########################
     if len(pre_odes) > 0:
         code += """
-        /////////////////////////
-        // Before the ODES
-        /////////////////////////
+            /////////////////////////
+            // Before the ODES
+            /////////////////////////
 """
         for param in pre_odes: 
             code += """
-        %(comment)s
-        %(cpp)s
+            %(comment)s
+            %(cpp)s
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
             # Min-Max bounds
@@ -64,14 +64,14 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                 if bound == 'min':
                     if obj == 'pop':
                         code += """
-        if(pop%(id)s.%(var)s[i] < %(val)s)
-            pop%(id)s.%(var)s[i] = %(val)s;
+            if(pop%(id)s.%(var)s[i] < %(val)s)
+                pop%(id)s.%(var)s[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                     else:
                         code += """
-        if(proj%(id)s.%(var)s[i][j] < %(val)s)
-            proj%(id)s.%(var)s[i][j] = %(val)s;
+            if(proj%(id)s.%(var)s[i][j] < %(val)s)
+                proj%(id)s.%(var)s[i][j] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
 
@@ -79,14 +79,14 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                 if bound == 'max':
                     if obj == 'pop':
                         code += """
-        if(pop%(id)s.%(var)s[i] > %(val)s)
-            pop%(id)s.%(var)s[i] = %(val)s;
+            if(pop%(id)s.%(var)s[i] > %(val)s)
+                pop%(id)s.%(var)s[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                     else:
                         code += """
-        if(proj%(id)s.%(var)s[i][j] > %(val)s)
-            proj%(id)s.%(var)s[i][j] = %(val)s;
+            if(proj%(id)s.%(var)s[i][j] > %(val)s)
+                proj%(id)s.%(var)s[i][j] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
 
@@ -104,13 +104,13 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
     # Iterate over all steps
     if len(odes) > 0:
         code += """
-        /////////////////////////
-        // ODES
-        /////////////////////////
+            /////////////////////////
+            // ODES
+            /////////////////////////
 """
         for step in range(nb_step):
             code += """
-        // Step %(step)s
+            // Step %(step)s
         """ % {'step' : str(step+1)}
             for param in odes:
                 if isinstance(param['cpp'], list) and step < len(param['cpp']):
@@ -120,21 +120,21 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                 else:
                     eq = ''
                 code += """
-        %(comment)s
-        %(cpp)s
+            %(comment)s
+            %(cpp)s
 """ % { 'comment': '// '+param['eq'],
                 'cpp': eq }
 
         # Generate the switch code
         code += """    
-        /////////////////////
-        // Switch values
-        /////////////////////
+            /////////////////////
+            // Switch values
+            /////////////////////
 """
         for param in odes: 
             code += """
-        %(comment)s
-        %(switch)s 
+            %(comment)s
+            %(switch)s 
 """ % { 'comment': '// '+param['eq'],
         'switch' : param['switch']}
     
@@ -145,28 +145,28 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                 if bound == 'min':
                     if obj == 'pop':
                         code += """
-        if(pop%(id)s.%(var)s[i] < %(val)s)
-            pop%(id)s.%(var)s[i] = %(val)s;
+            if(pop%(id)s.%(var)s[i] < %(val)s)
+                pop%(id)s.%(var)s[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                     else:
                         code += """
-        if(proj%(id)s.%(var)s[i][j] < %(val)s)
-            proj%(id)s.%(var)s[i][j] = %(val)s;
+            if(proj%(id)s.%(var)s[i][j] < %(val)s)
+                proj%(id)s.%(var)s[i][j] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                 # Bound max 
                 if bound == 'max':
                     if obj == 'pop':
                         code += """
-        if(pop%(id)s.%(var)s[i] > %(val)s)
-            pop%(id)s.%(var)s[i] = %(val)s;
+            if(pop%(id)s.%(var)s[i] > %(val)s)
+                pop%(id)s.%(var)s[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                     else:
                         code += """
-        if(proj%(id)s.%(var)s[i][j] > %(val)s)
-            proj%(id)s.%(var)s[i][j] = %(val)s;
+            if(proj%(id)s.%(var)s[i][j] > %(val)s)
+                proj%(id)s.%(var)s[i][j] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
 
@@ -175,14 +175,14 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
     #######################
     if len(post_odes) > 0:
         code += """
-        /////////////////////////
-        // After the ODES
-        /////////////////////////
+            /////////////////////////
+            // After the ODES
+            /////////////////////////
 """
         for param in post_odes: 
             code += """
-        %(comment)s
-        %(cpp)s
+            %(comment)s
+            %(cpp)s
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
             # Min-Max bounds
@@ -191,28 +191,28 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                 if bound == 'min':
                     if obj == 'pop':
                         code += """
-        if(pop%(id)s.%(var)s[i] < %(val)s)
-            pop%(id)s.%(var)s[i] = %(val)s;
+            if(pop%(id)s.%(var)s[i] < %(val)s)
+                pop%(id)s.%(var)s[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                     else:
                         code += """
-        if(proj%(id)s.%(var)s[i][j] < %(val)s)
-            proj%(id)s.%(var)s[i][j] = %(val)s;
+            if(proj%(id)s.%(var)s[i][j] < %(val)s)
+                proj%(id)s.%(var)s[i][j] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                 # Bound max 
                 if bound == 'max':
                     if obj == 'pop':
                         code += """
-        if(pop%(id)s.%(var)s[i] > %(val)s)
-            pop%(id)s.%(var)s[i] = %(val)s;
+            if(pop%(id)s.%(var)s[i] > %(val)s)
+                pop%(id)s.%(var)s[i] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
                     else:
                         code += """
-        if(proj%(id)s.%(var)s[i][j] > %(val)s)
-            proj%(id)s.%(var)s[i][j] = %(val)s;
+            if(proj%(id)s.%(var)s[i][j] > %(val)s)
+                proj%(id)s.%(var)s[i][j] = %(val)s;
 """ % {'var' : param['name'], 'val' : val,
         'id': id}
 
