@@ -25,7 +25,6 @@ struct PopStruct%(id)s{
         if pop.neuron_type.type == 'spike':
             code += """
     // Spiking population
-    std::vector<bool> spike;
     std::vector<long int> last_spike;
     std::vector<int> spiked;
     std::vector<int> refractory;
@@ -191,7 +190,6 @@ struct PopStruct%(id)s{
             if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
 %(refrac)s
                 pop%(id)s.refractory_remaining[i]--;
-                pop%(id)s.spike[i] = false;
             }
             else if(%(condition)s){ // Emit a spike
 %(reset)s        
@@ -199,12 +197,8 @@ struct PopStruct%(id)s{
                 if(pop%(id)s.record_spike){
                     pop%(id)s.recorded_spike[i].push_back(t);
                 }
-                pop%(id)s.spike[i] = true;
                 pop%(id)s.last_spike[i] = t;
                 pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
-            }
-            else{ // No spike
-                pop%(id)s.spike[i] = false;
             }
         }
 """% {'id': pop.id, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac': refrac} 
@@ -351,7 +345,6 @@ struct PopStruct%(id)s{
     pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
     for(int i = 0; i < pop%(id)s.size; i++)
         pop%(id)s.recorded_spike.push_back(std::vector<long int>());
-    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);

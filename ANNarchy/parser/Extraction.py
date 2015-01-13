@@ -206,7 +206,8 @@ def extract_parameters(description, extra_values={}):
         equation, constraint = split_equation(definition)
         # Extract the name of the variable
         name = extract_name(equation)
-        if name == '_undefined':
+        if name in ['_undefined', ""]:
+            _error("Definition can not be analysed: " + equation)
             exit(0)
             
         # Process constraint

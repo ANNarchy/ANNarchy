@@ -189,24 +189,13 @@ struct PopStruct%(id)s{
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of SpikeArray population %(id)s
     if(pop%(id)s._active){
-        #pragma omp parallel for
         for(int i = 0; i < pop%(id)s.size; i++){
             // Emit spike 
             if( (t >= (long int)(pop%(id)s.next_spike[i]/dt)) && (t < (long int)(pop%(id)s.next_spike[i]/dt) +1 ) ){
-                pop%(id)s.spike[i] = true;
                 pop%(id)s.last_spike[i] = t;
                 pop%(id)s.idx_next_spike[i]++ ;
                 if(pop%(id)s.idx_next_spike[i] < pop%(id)s.spike_times[i].size())
                     pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][pop%(id)s.idx_next_spike[i]];
-            }
-            else{
-                pop%(id)s.spike[i] = false;
-            }
-        }
-        // Gather spikes
-        pop%(id)s.spiked.clear();
-        for(int i=0; i< pop%(id)s.size; i++){
-            if(pop%(id)s.spike[i]){
                 pop%(id)s.spiked.push_back(i);
                 if(pop%(id)s.record_spike){
                     pop%(id)s.recorded_spike[i].push_back(t);
