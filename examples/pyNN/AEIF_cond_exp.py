@@ -37,7 +37,7 @@ pop.tau_w, pop.a, pop.b, pop.v_reset = 144.0,  4.0, 0.0805, -70.6
 compile()
 
 # Start recording
-pop.start_record(['spike', 'v', 'w'])
+pop.start_record(['spike', 'v', 'w'], period=dt)
 
 # Add current of 1 nA and simulate
 simulate(20.0)

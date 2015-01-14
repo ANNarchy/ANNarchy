@@ -2,12 +2,12 @@
 #	 Implementation of the performance profiling as presented in Dinkelbach et al. 2012
 #
 from ANNarchy import *
-from ANNarchy.extensions.Profile import *
+from ANNarchy.core import Global
 
 # Defining the neurons
 InputNeuron = RateNeuron(
     equations="""
-        r = 0.2 : init = 0.1 
+        r = Uniform(0,1)
     """
 )
 
@@ -18,12 +18,14 @@ OutputNeuron = RateNeuron(
 )
 
 # setup net        
-input_pop = Population(geometry=(1000), neuron=InputNeuron)
-output_pop = Population(geometry=(20), neuron=OutputNeuron)
+input_pop = Population(geometry=(10000), neuron=InputNeuron, name="Input")
+output_pop = Population(geometry=(20), neuron=OutputNeuron, name="Output")
 
-input_output = Projection( input_pop, output_pop, 'exc').connect_fixed_number_pre(100, 1.0)
+input_output = Projection( input_pop, output_pop, 'exc').connect_fixed_number_pre(1000, 0.1)
 
 compile()
 
 # run steps
-simulate(100)
+for i in range(1,7):
+    Global._network.set_number_threads(i)
+    simulate(200)

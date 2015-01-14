@@ -57,12 +57,27 @@ except:
     print('You can install it from pip or: http://www.cython.org')
     exit(0)
 
+# check for cuda
+import os
+if os.system("nvcc --version")==0:
+    cwd = os.getcwd()
+    print('Checking for CUDA... OK')
+    os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
+    os.system("make clean && make")
+    os.chdir(cwd)
+else:
+    print('Checking for CUDA... NO')
+    print("Warning: CUDA is not available on your system. Only OpenMP can be used to perform the simulations.")
+
+
 ################################################
 # Perform the installation
 ################################################
 print('Installing ANNarchy on your system')
+
+
 setup(  name='ANNarchy',
-        version='4.3.4',
+        version='4.4.0',
         license='GPLv2 or later',
         platforms='GNU/Linux',
         description='Artificial Neural Networks architect',
@@ -71,13 +86,13 @@ setup(  name='ANNarchy',
         author_email='julien.vitay@informatik.tu-chemnitz.de',
         url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['core/cython_ext/*.pxd']},
+        package_data={'ANNarchy': ['core/cython_ext/*.pxd','generator/CudaCheck/cuda_check.so']},
         ext_modules = cythonize(
             [   "ANNarchy/core/cython_ext/Connector.pyx", 
                 "ANNarchy/core/cython_ext/Coordinates.pyx",
-                "ANNarchy/core/cython_ext/Transformations.pyx"]
+                "ANNarchy/core/cython_ext/Transformations.pyx" ]
         ),
         include_dirs=[numpy.get_include()],
-        zip_safe = False
+        zip_safe = False,
 )
 

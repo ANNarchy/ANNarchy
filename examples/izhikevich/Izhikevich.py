@@ -8,6 +8,7 @@
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
+setup(num_threads=8)
 
 # Create the excitatory population
 Exc = Population(name='Exc', geometry=800, neuron=Izhikevich)

@@ -154,21 +154,23 @@ struct PopStruct%(id)s{
 %(eqs)s
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
-        # Local variables
+        # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
-
-        # Rate code neuronss
         code += """
-    // Updating the local variables of population %(id)s (%(name)s)
-    if(pop%(id)s._active){
+        // Updating the local variables of population %(id)s (%(name)s)
         #pragma omp parallel for firstprivate(dt)
         for(int i = 0; i < %(size)s; i++){
 %(eqs)s
         }
 """ % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs}
 
+        # if profiling enabled, annotate with profiling code
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+            code = pGen.annotate_update_neuron_omp(code, pop)
 
-        # Spike emission
+        # Spike emission, as following step
         if pop.neuron_type.type == 'spike':
             cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
             reset = ""; refrac = ""
@@ -184,7 +186,7 @@ struct PopStruct%(id)s{
 
             # Main code
             code += """
-        // Gather spikes
+        // Gather spikes for population %(id)s (%(name)s)
         pop%(id)s.spiked.clear();
         for(int i = 0; i < %(size)s; i++){
             if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
@@ -192,7 +194,7 @@ struct PopStruct%(id)s{
                 pop%(id)s.refractory_remaining[i]--;
             }
             else if(%(condition)s){ // Emit a spike
-%(reset)s        
+%(reset)s
                 pop%(id)s.spiked.push_back(i);
                 if(pop%(id)s.record_spike){
                     pop%(id)s.recorded_spike[i].push_back(t);
@@ -201,13 +203,16 @@ struct PopStruct%(id)s{
                 pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
             }
         }
-"""% {'id': pop.id, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac': refrac} 
+"""% {'id': pop.id, 'name': pop.name, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac': refrac} 
 
-                # End spike region
-
-        code += """
+        # finish code
+        code = """
+    if(pop%(id)s._active){
+%(code)s
     } // active
-"""
+""" % {'id': pop.id, 'code': code }
+
+        # End spike region
         return code
 
 

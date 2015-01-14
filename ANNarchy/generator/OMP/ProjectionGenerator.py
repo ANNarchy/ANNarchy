@@ -137,30 +137,27 @@ struct ProjStruct%(id_proj)s{
                 )
         # No need for openmp if less than 10 neurons
         omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-
+        
         # Generate the code depending on the operation
         if proj.synapse.operation == 'sum': # normal summation
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum
-    if (pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            sum += %(psp)s
+        %(omp_code)s
+        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+            sum = 0.0;
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                sum += %(psp)s
+            }
+            pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+"""%{ 'id_proj' : proj.id, 'target': proj.target, 
+      'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+      'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+      'psp': psp, 
+      'omp_code': omp_code,
     }
-    } // active
-"""%{'id_proj' : proj.id, 'target': proj.target, 
-    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-    'psp': psp, 'omp_code': omp_code}
 
         elif proj.synapse.operation == 'max': # max pooling
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = max
-    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         int j= 0;
@@ -172,16 +169,12 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
     'psp': psp.replace(';', ''), 'omp_code': omp_code}
 
         elif proj.synapse.operation == 'min': # max pooling
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = min
-    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         int j= 0;
@@ -193,16 +186,12 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
     }
-    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
     'psp': psp.replace(';', ''), 'omp_code': omp_code}
 
         elif proj.synapse.operation == 'mean': # max pooling
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
-    if (pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
         sum = 0.0 ;
@@ -211,17 +200,46 @@ struct ProjStruct%(id_proj)s{
         }
         pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum / (double)(proj%(id_proj)s.pre_rank[i].size());
     }
+"""%{ 'id_proj' : proj.id, 'target': proj.target,
+      'id_post': proj.post.id, 'id_pre': proj.pre.id,
+      'psp': psp.replace(';', ''), 'omp_code': omp_code }
+
+        # Profiling code
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+
+            # annotate code
+            code = pGen.annotate_computesum_rate_omp(code, proj)
+
+        # finish the code
+        code = """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
+    if (pop%(id_post)s._active){
+%(code)s
     } // active
-"""%{'id_proj' : proj.id, 'target': proj.target, 
-    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+        """ % {'id_proj' : proj.id, 'target': proj.target,
+               'name_post': proj.post.name, 'name_pre': proj.pre.name,
+               'id_post': proj.post.id,
+               'code': code,
+               }
 
         return code
 
     def computesum_spiking(self, proj):
 
         ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target} 
+
+        # Profiling code
+        if Global.config['profiling']:
+            from ..Profile.Template import profile_generator_omp_template
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+            prof_begin = profile_generator_omp_template['compute_psp']['before'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
+            prof_end = profile_generator_omp_template['compute_psp']['after'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
+        else:
+            prof_begin = ""
+            prof_end = ""
 
         # Analyse all elements of pre_spike
         pre_event = ""
@@ -306,6 +324,7 @@ struct ProjStruct%(id_proj)s{
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
     if (pop%(id_post)s._active){
+        %(prof_begin)s
         for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
             rk_j = %(pre_array)s[_idx_j];
             int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
@@ -314,15 +333,17 @@ struct ProjStruct%(id_proj)s{
             for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
                 i = inv_post[_idx_i].first;
                 j = inv_post[_idx_i].second;
-    %(exact)s
+%(exact)s
                 %(psp)s
-    %(pre_event)s
+%(pre_event)s
             }
         }
+        %(prof_end)s
     } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
     'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
-    'exact': exact_code}
+    'exact': exact_code,
+    'prof_begin': prof_begin, 'prof_end': prof_end}
 
         # Not even-driven summation of psp
         if 'psp' in  proj.synapse.description.keys(): # not event-based
@@ -344,7 +365,6 @@ struct ProjStruct%(id_proj)s{
        'psp': proj.synapse.description['psp']['cpp'] % ids, 'omp_code': omp_code}
 
             code += psp_sum
-
 
         return code
 

@@ -193,6 +193,12 @@ class OMPGenerator(object):
         # Early stopping
         run_until = self.body_run_until()
 
+        #Profiling
+        from ..Profile.Template import profile_generator_omp_template
+        prof_include = "" if not Global.config["profiling"] else profile_generator_omp_template['include']
+        prof_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
+        prof_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
+        prof_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
 
         from .BodyTemplate import body_template
         return body_template % {
@@ -214,7 +220,11 @@ class OMPGenerator(object):
             'globalops_init' : globalops_init,
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
-            'record' : record
+            'record' : record,
+            'prof_include': prof_include,
+            'prof_init': prof_init,
+            'prof_pre': prof_pre,
+            'prof_post': prof_post
         }
 
     def body_update_neuron(self):

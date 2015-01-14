@@ -1,5 +1,6 @@
 body_template = '''
 #include "ANNarchy.h"
+%(prof_include)s
 
 /*
  * Internal data
@@ -21,10 +22,11 @@ std::mt19937  rng;
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
 
-    for(int i=0; i<nbSteps; i++)
-    {
+%(prof_pre)s
+    for(int i=0; i<nbSteps; i++) {
         step();
     }
+%(prof_post)s
 
 }
 
@@ -37,6 +39,8 @@ int run_until(int steps, std::vector<int> populations, bool or_and)
 
 // Initialize the internal data and random numbers generators
 void initialize(double _dt, long int seed) {
+
+%(prof_init)s
 
     // Internal variables
     dt = _dt;
@@ -78,7 +82,7 @@ void step()
     ////////////////////////////////
     // Update neural variables
     ////////////////////////////////
-%(update_neuron)s    
+%(update_neuron)s
 
     ////////////////////////////////
     // Delay outputs
@@ -88,7 +92,7 @@ void step()
     ////////////////////////////////
     // Global operations (min/max/mean)
     ////////////////////////////////
-%(update_globalops)s    
+%(update_globalops)s
 
 
     ////////////////////////////////

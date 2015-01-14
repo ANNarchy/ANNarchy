@@ -91,7 +91,16 @@ proj_generator_template = {
         #    TODO:
         'pyx_proj_class': None,
     },
-    'cuda': {} # TODO
+    'cuda': {
+        'header_proj_struct' : None,
+        'body_proj_init': None,
+        'body_random_dist_update': None,
+        'body_random_dist_init': None,
+        'body_update_synapse': None,
+        'body_compute_psp': None,
+        'pyx_proj_struct': None,
+        'pyx_proj_class': None,
+    }
 }
 
 class Projection(object):

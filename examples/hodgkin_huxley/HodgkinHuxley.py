@@ -64,7 +64,7 @@ pop.V = -50.0
 
 compile()
 
-pop.start_record(['spike', 'V', 'n', 'm', 'h'])
+pop.start_record(['spike', 'V', 'n', 'm', 'h'], period=dt)
 
 # Preparation
 simulate(100.0)

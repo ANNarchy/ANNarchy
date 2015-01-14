@@ -1,6 +1,6 @@
 import numpy as np
 cimport numpy as np
-from ANNarchy import simulate
+from ANNarchy import step
     
 cdef class World:
     " Environment class allowing to clamp a rotating bubble into the baseline of a population."
@@ -43,4 +43,4 @@ cdef class World:
             # Clamp the bubble into pop.baseline
             self.pop.baseline = self.data
             # Simulate 1 ms
-            simulate(1)  
+            step()  
