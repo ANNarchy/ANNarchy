@@ -5,6 +5,11 @@ ANNarchy versions
 Changelog
 ==========
 
+**4.3.4:**
+
+* Automatic reporting is added.
+* Several bug fixes.
+
 **4.3.3:**
 
 * Structural plasticity can be defined at the synaptic level.
