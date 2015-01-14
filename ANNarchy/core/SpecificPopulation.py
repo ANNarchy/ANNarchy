@@ -80,7 +80,9 @@ class PoissonPopulation(Population):
                 spike = """
                     p < rates
                 """,
-                refractory=refractory
+                refractory=refractory,
+                name="Poisson",
+                description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
 
         elif isinstance(rates, np.ndarray):
@@ -94,7 +96,9 @@ class PoissonPopulation(Population):
                 spike = """
                 p < rates
                 """,
-                refractory=refractory
+                refractory=refractory,
+                name="Poisson",
+                description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
         else:
             poisson_neuron = Neuron(
@@ -107,7 +111,9 @@ class PoissonPopulation(Population):
                 spike = """
                 p < rates
                 """,
-                refractory=refractory
+                refractory=refractory,
+                name="Poisson",
+                description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
         Population.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
         
@@ -144,7 +150,9 @@ class SpikeSourceArray(Population):
             """,
             equations="",
             spike=" t == spike_times",
-            reset=""
+            reset="",
+            name="Spike source",
+            description="Spikes source array."
         )
 
         Population.__init__(self, geometry=nb_neurons, neuron=neuron, name=name)
@@ -152,7 +160,7 @@ class SpikeSourceArray(Population):
         # Do some sorting to save C++ complexity
         times = []
         for neur_times in spike_times:
-            times.append(sorted(list(set(neur_times))) ) # suppress doublons and sort
+            times.append(sorted(list(set(neur_times)))) # suppress doublons and sort
 
         self.init['spike_times'] = times
 
@@ -163,6 +171,11 @@ struct PopStruct%(id)s{
     // Number of neurons
     int size;
     bool _active;
+
+    // Record parameter
+    int record_period;
+    long int record_offset;
+
     // Spiking population
     std::vector<bool> spike;
     std::deque< std::vector<int> > _delayed_spike;
@@ -170,25 +183,33 @@ struct PopStruct%(id)s{
     std::vector<int> spiked;
     bool record_spike;
     std::vector<std::vector<long> > recorded_spike;
+
     // Local parameter spike_times
     std::vector< std::vector< double > > spike_times ;
     std::vector< double >  next_spike ;
     std::vector< int > idx_next_spike;
 }; 
 """
-        self.generator['omp']['body_spike_init'] = """    
+        self.generator['omp']['body_spike_init'] = """  
     pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
-    pop%(id)s.next_spike = std::vector<double>(pop%(id)s.size, -10000L);
-    for(int i=0; i<pop%(id)s.size; i++){
-        pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][0];  
+    pop%(id)s.next_spike = std::vector<double>(pop%(id)s.size, -10000.0);
+    for(int i=0; i< pop%(id)s.size; i++){
+        if(!pop%(id)s.spike_times[i].empty())
+            pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][0];  
     }
     pop%(id)s.idx_next_spike = std::vector<int>(pop%(id)s.size, 0);
+    pop%(id)s.record_spike = false;
+    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
+    for(int i = 0; i < pop%(id)s.size; i++)
+        pop%(id)s.recorded_spike.push_back(std::vector<long int>());
 """
+
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of SpikeArray population %(id)s
     if(pop%(id)s._active){
+        pop%(id)s.spiked.clear();
         for(int i = 0; i < pop%(id)s.size; i++){
             // Emit spike 
             if( (t >= (long int)(pop%(id)s.next_spike[i]/dt)) && (t < (long int)(pop%(id)s.next_spike[i]/dt) +1 ) ){
@@ -209,6 +230,10 @@ struct PopStruct%(id)s{
         int size
         bool _active
 
+        # Record parameter
+        int record_period
+        long int record_offset
+
         bool record_spike
         vector[vector[long]] recorded_spike
 
@@ -217,15 +242,9 @@ struct PopStruct%(id)s{
 """
         self.generator['omp']['pyx_pop_class'] = """
 cdef class pop%(id)s_wrapper :
-    def __cinit__(self, size):
+    def __cinit__(self, size, times):
         pop%(id)s.size = size
-        # Spiking neuron
-        pop%(id)s.record_spike = False
-        pop%(id)s.recorded_spike = vector[vector[long]]()
-        for i in xrange(pop%(id)s.size):
-            pop%(id)s.recorded_spike.push_back(vector[long]())
-
-        pop%(id)s.spike_times = vector[vector[double]](size, vector[double]())
+        pop%(id)s.spike_times = times
 
     property size:
         def __get__(self):
@@ -245,6 +264,10 @@ cdef class pop%(id)s_wrapper :
             pop%(id)s.recorded_spike[i].clear()
         return tmp
 
+    # Record parameter
+    cpdef set_record_period( self, int period, long int t ):
+        pop%(id)s.record_period = period
+        pop%(id)s.record_offset = t
 
     # Local parameter spike_times
     cpdef get_spike_times(self):
@@ -253,6 +276,10 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.spike_times = value
 """
 
+        
+    def _instantiate(self, module):
+        # Create the Cython instance 
+        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.init['spike_times'])
 
     def __setattr__(self, name, value):
         if name == 'spike_times':

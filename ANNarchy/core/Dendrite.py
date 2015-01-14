@@ -265,7 +265,7 @@ class Dendrite(object):
     #########################
     ### Recording
     #########################   
-    def start_record(self, variable, period=Global.config['dt']):
+    def start_record(self, variable, period=None):
         """
         Starts recording the given variables.
         
@@ -275,6 +275,9 @@ class Dendrite(object):
 
         * period of recording in milliseconds.     
         """
+        if not period:
+            period = Global.config['dt']
+
         _variable = []
         
         if isinstance(variable, str):

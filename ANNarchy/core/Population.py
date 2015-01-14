@@ -653,7 +653,7 @@ class Population(object):
     ################################
     ## Recording
     ################################
-    def start_record(self, variable, period = Global.config['dt']):
+    def start_record(self, variable, period = None):
         """
         Start recording neural variables.
         
@@ -668,6 +668,8 @@ class Population(object):
             pop1.start_record('r')
             pop2.start_record(['mp', 'r'])      
         """
+        if not period:
+            period = Global.config['dt']
         _variable = []
         
         if isinstance(variable, str):

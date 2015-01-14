@@ -287,7 +287,7 @@ all:
         # Bind the py extensions to the corresponding python objects
         for pop in self.populations:
             if Global.config['verbose']:
-                Global._print('Create population', pop.name)
+                Global._print('Creating population', pop.name)
             if Global.config['show_time']:
                 t0 = time.time()
             
@@ -309,17 +309,19 @@ all:
             
             if Global.config['show_time']:
                 Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
-    
 
         # Finish to initialize the network, especially the rng
         # Must be called after the pops and projs are created!
         cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
 
-
-        # Transfer inial values
+        # Transfer initial values
         for pop in self.populations:
+            if Global.config['verbose']:
+                Global._print('Initializing population', pop.name)
             pop._init_attributes()
         for proj in self.projections:
+            if Global.config['verbose']:
+                Global._print('Initializing projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')  
             proj._init_attributes()
 
         # Sets the desired number of threads

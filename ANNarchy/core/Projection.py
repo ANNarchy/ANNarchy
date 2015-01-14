@@ -1136,7 +1136,7 @@ class Projection(object):
     ################################
     ## Structural plasticity
     ################################
-    def start_pruning(self, period=Global.config['dt']):
+    def start_pruning(self, period=None):
         """
         Starts pruning the synapses in the projection if the synapse defines a 'pruning' argument.
 
@@ -1146,6 +1146,8 @@ class Projection(object):
 
         * **period**: how often pruning should be evaluated (default: dt, i.e. each step)
         """
+        if not period:
+            period = Global.config['dt']
         if not Global._compiled:
             Global._error('Can not start pruning if the network is not compiled.')
             exit(0)
@@ -1178,7 +1180,7 @@ class Projection(object):
             Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
             exit(0)
 
-    def start_creating(self, period=Global.config['dt']):
+    def start_creating(self, period=None):
         """
         Starts creating the synapses in the projection if the synapse defines a 'creating' argument.
 
@@ -1188,6 +1190,8 @@ class Projection(object):
 
         * **period**: how often creating should be evaluated (default: dt, i.e. each step)
         """
+        if not period:
+            period = Global.config['dt']
         if not Global._compiled:
             Global._error('Can not start creating if the network is not compiled.')
             exit(0)
