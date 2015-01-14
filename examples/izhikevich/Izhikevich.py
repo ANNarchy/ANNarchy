@@ -8,6 +8,7 @@
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
+setup(num_threads=8)
 
 # Create the excitatory population
 Exc = Population(name='Exc', geometry=800, neuron=Izhikevich)
@@ -66,7 +67,7 @@ Exc.start_record(['spike', 'v'])
 Inh.start_record('spike')
 
 # Simulate 1 second   
-simulate(1000.0, measure_time=True)
+simulate(1000000.0, measure_time=True)
 
 # Retrieve the recordings
 exc_data = Exc.get_record()

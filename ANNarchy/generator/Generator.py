@@ -86,7 +86,7 @@ def setup_parser():
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "OpenMP")
-    group.add_option("-j", help="number of threads should be used", type="int", action="store", default=1, dest="num_threads")
+    group.add_option("-j", help="number of threads should be used", type="int", action="store", default=None, dest="num_threads")
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "others")
@@ -114,11 +114,15 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
     parser = setup_parser()
     (options, args) = parser.parse_args()
 
-    Global.config['num_threads'] = options.num_threads
+    if options.num_threads != None:
+        Global.config['num_threads'] = options.num_threads
+    elif Global.config['num_threads'] == None:
+        Global.config['num_threads'] = 1
+
+    print Global.config['num_threads']
     Global.config['verbose'] = options.verbose
     profile_enabled = options.profile
     Global.config['profiling']= options.profile
-    Global.config['num_threads'] = options.num_threads
     debug_build = options.debug
     clean = options.clean
 
