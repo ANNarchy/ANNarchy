@@ -34,13 +34,26 @@ class ProfileGenerator(object):
         %(prof_begin)s
 %(code)s
         %(prof_end)s
-        """ % {'id_proj' : proj.id, 'target': proj.target,
-               'name_post': proj.post.name, 'name_pre': proj.pre.name,
-               'id_post': proj.post.id,
-               'code': code,
-               'prof_begin': prof_begin,
-               'prof_end': prof_end
-               }
+""" % {'code': code,
+       'prof_begin': prof_begin,
+       'prof_end': prof_end
+       }
+        return prof_code
+
+    def annotate_update_neuron_omp(self, code, pop):
+        from .Template import profile_generator_omp_template
+        prof_begin = profile_generator_omp_template['update_neuron']['before'] % { 'num_ops': self.calculate_num_ops(), 'off': "(rc %"+str(self.calculate_num_ops())+")" }
+        prof_end = profile_generator_omp_template['update_neuron']['after'] % { 'num_ops': self.calculate_num_ops(), 'off': "(rc %"+str(self.calculate_num_ops())+")" }
+
+        prof_code = """
+        // first run, measuring average time
+        %(prof_begin)s
+%(code)s
+        %(prof_end)s
+""" % {'code': code,
+       'prof_begin': prof_begin,
+       'prof_end': prof_end
+       }
         return prof_code
 
     def _generate_header(self):

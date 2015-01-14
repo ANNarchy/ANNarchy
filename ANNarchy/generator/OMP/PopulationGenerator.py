@@ -25,7 +25,6 @@ struct PopStruct%(id)s{
         if pop.neuron_type.type == 'spike':
             code += """
     // Spiking population
-    std::vector<bool> spike;
     std::vector<long int> last_spike;
     std::vector<int> spiked;
     std::vector<int> refractory;
@@ -155,87 +154,65 @@ struct PopStruct%(id)s{
 %(eqs)s
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
-        # Local variables
+        # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+        code += """
+        // Updating the local variables of population %(id)s (%(name)s)
+        #pragma omp parallel for firstprivate(dt)
+        for(int i = 0; i < %(size)s; i++){
+%(eqs)s
+        }
+""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs}
 
-        # Profiling code
+        # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
-            from ..Profile.Template import profile_generator_omp_template
             from ..Profile.ProfileGenerator import ProfileGenerator
             pGen = ProfileGenerator(Global._populations, Global._projections)
-            prof_begin = profile_generator_omp_template['update_neuron']['before'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
-            prof_end = profile_generator_omp_template['update_neuron']['after'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
-        else:
-            prof_begin = ""
-            prof_end = ""
-        
-        code += """
-    // Updating the local variables of population %(id)s (%(name)s)
-    if(pop%(id)s._active){
-        %(prof_begin)s
-        #pragma omp parallel for
-        for(int i = 0; i < pop%(id)s.size; i++){
-%(eqs)s
-""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs, 'prof_begin': prof_begin}
+            code = pGen.annotate_update_neuron_omp(code, pop)
 
-
-        # Spike emission
+        # Spike emission, as following step
         if pop.neuron_type.type == 'spike':
             cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
             reset = ""; refrac = ""
+
             for eq in pop.neuron_type.description['spike']['spike_reset']:
                 reset += """
-            %(reset)s
+                %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id}}
                 if not 'unless_refractory' in eq['constraint']:
                     refrac += """
-            %(refrac)s
+                %(refrac)s
 """ % {'refrac': eq['cpp'] % {'id': pop.id} }
 
             # Main code
             code += """
-            // Emit spike depending on refractory period            
-            if(pop%(id)s.refractory_remaining[i] >0){ // Refractory period
+        // Gather spikes for population %(id)s (%(name)s)
+        pop%(id)s.spiked.clear();
+        for(int i = 0; i < %(size)s; i++){
+            if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
 %(refrac)s
                 pop%(id)s.refractory_remaining[i]--;
-                pop%(id)s.spike[i] = false;
             }
-            else if(%(condition)s){
-%(reset)s        
-
-                pop%(id)s.spike[i] = true;
-                pop%(id)s.last_spike[i] = t;
-                pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
-            }
-            else{
-                pop%(id)s.spike[i] = false;
-            }
-
-""" % {'condition' : cond, 'reset': reset, 'refrac': refrac, 'id': pop.id }
-
-            # Finish parallel loop for the population
-            code += """
-        }
-        // Gather spikes
-        pop%(id)s.spiked.clear();
-        for(int i=0; i< pop%(id)s.size; i++){
-            if(pop%(id)s.spike[i]){
+            else if(%(condition)s){ // Emit a spike
+%(reset)s
                 pop%(id)s.spiked.push_back(i);
                 if(pop%(id)s.record_spike){
                     pop%(id)s.recorded_spike[i].push_back(t);
                 }
-
+                pop%(id)s.last_spike[i] = t;
+                pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
             }
-"""% {'id': pop.id} 
-
-                # End spike region
-
-        # Finish parallel loop for the population
-        code += """
         }
-        %(prof_end)s
+"""% {'id': pop.id, 'name': pop.name, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac': refrac} 
+
+        # finish code
+        code = """
+    if(pop%(id)s._active){
+%(code)s
     } // active
-""" % { 'prof_end': prof_end }
+""" % {'id': pop.id, 'code': code }
+
+        # End spike region
         return code
 
 
@@ -373,7 +350,6 @@ struct PopStruct%(id)s{
     pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
     for(int i = 0; i < pop%(id)s.size; i++)
         pop%(id)s.recorded_spike.push_back(std::vector<long int>());
-    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);

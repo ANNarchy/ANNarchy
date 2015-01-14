@@ -82,7 +82,7 @@ ANNarchy will check before the compilation that the pre- or post-synaptic neuron
 
 .. warning::
 
-    As of version 4.1.3, only ``pre.r`` takes delays into account. Trying to access other presynaptic variables will return their value at the current simulation step.
+    Only ``pre.r`` takes delays into account. Trying to access other presynaptic variables will return their value at the current simulation step.
 
 
 Global operations
@@ -90,9 +90,11 @@ Global operations
 
 Some learning rules require global information about the pre- or post-synaptic population, which is not local to the synapse, such as the mean or maximal activity in the presynaptic population. This information can be accessed at the synapse-level. The special functions:
 
-* ``min`` for minimum,
-* ``max`` for maximum and
-* ``mean`` for mean
+* ``min(v)`` for the minimum: :math:`\min_i v_i`,
+* ``max(v)`` for the maximum: :math:`\max_i v_i`,
+* ``mean(v)`` for the mean: :math:`\frac{1}{N} \sum_i v_i`,
+* ``norm1(v)`` for the L1-norm: :math:`\frac{1}{N} \sum_i |v_i|`,
+* ``norm2(v)`` for the L2-norm: :math:`\frac{1}{N} \sum_i v_i^2`
   
 are available for any pre- or post-synaptic variable.
 
@@ -119,6 +121,7 @@ Using the global operations, such a learning rule is trivial to implement:
 
     * Such global operations can become expensive to compute if the populations are too big.
     * The global operations are performed over the whole population, not only the synapses which actually reach the post-synaptic neuron.
+    * They can only be applied to a single variable, not a combination or function of them.
 
 
 Defining the postsynaptic potential (psp)

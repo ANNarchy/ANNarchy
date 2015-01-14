@@ -25,7 +25,7 @@
 # Functions for string manipulation
 ####################################
 import re
-from ANNarchy.core.Global import _error, _warning, authorized_keywords
+from ANNarchy.core.Global import _error, _warning, _print, authorized_keywords
         
 def split_equation(definition):
     " Splits a description into equation and flags."
@@ -81,7 +81,11 @@ def extract_name(equation, left=False):
         operators = ['+', '-', '*', '/']
         for op in operators:
             if equation.endswith(op): 
-                return equation.split(op)[0]      
+                return equation.split(op)[0]   
+    # Check for error
+    if name.strip() == "":
+        _error('the variable name can not be extracted from ' + equation)
+        exit(0)   
     # Search for any operation in the left side
     operators = ['+', '-', '*', '/']
     ode = False
@@ -174,10 +178,15 @@ def process_equations(equations):
         split_operators = re.findall('([\s\w\+\-\*\/]+)=([^=])', equation)
         if len(split_operators) == 1: # definition of a new variable
             # Retrieve the name
-            name = extract_name(split_operators[0][0], left=True)
-            if name == '_undefined':
+            eq = split_operators[0][0]
+            if eq.strip() == "":
+                _error(equation)
+                _print('The equation can not be analysed, check the syntax.')
+                exit(0)
+            name = extract_name(eq, left=True)
+            if name in ['_undefined', '']:
                 _error('No variable name can be found in ' + equation)
-                return []
+                exit(0)
             # Append the result
             variables.append({'name': name, 'eq': equation.strip(), 'constraint': constraint.strip()})
         elif len(split_operators) == 0: 
@@ -186,5 +195,5 @@ def process_equations(equations):
             variables[-1]['constraint'] += constraint
         else:
             print 'Error: only one assignement operator is allowed per equation.'
-            return []
+            exit(0)
     return variables 

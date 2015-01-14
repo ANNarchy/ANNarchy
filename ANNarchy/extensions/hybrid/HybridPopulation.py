@@ -375,15 +375,10 @@ class Rate2SpikePopulation(Population):
             if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
 
                 pop%(id)s.refractory_remaining[i]--;
-                pop%(id)s.spike[i] = false;
             }
             else if(pop%(id)s.rates[i] > pop%(id)s.rand_0[i]*1000.0/dt){
-                pop%(id)s.spike[i] = true;
                 pop%(id)s.last_spike[i] = t;
                 pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
-            }
-            else{
-                pop%(id)s.spike[i] = false;
             }
         }
         // Gather spikes
