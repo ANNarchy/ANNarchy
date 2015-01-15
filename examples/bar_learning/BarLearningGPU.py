@@ -140,7 +140,7 @@ class Viewer(object):
 if __name__=='__main__':
 
     config = {
-        'device': 1,
+        'device': 0,
 	Input: { 'num_threads': 32, 'stream': 0 },
         Feature: { 'num_threads': 32, 'stream': 1 },
         Input_Feature: { 'num_threads': 192, 'stream': 0 },

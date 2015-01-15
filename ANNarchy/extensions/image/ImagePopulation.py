@@ -187,7 +187,12 @@ protected:
 struct PopStruct%(id)s{
     int size;
     bool _active;
+    // Record parameter
+    int record_period;
+    long int record_offset;
+    // Rate
     std::vector< double > r ;
+    // Camera
     CameraDeviceCPP* camera_;
     void StartCamera(int id, int width, int height, int depth){
         camera_ = new CameraDeviceCPP(id, width, height, depth);
@@ -208,6 +213,8 @@ struct PopStruct%(id)s{
     cdef struct PopStruct%(id)s  :
         int size
         bool _active
+        int record_period
+        long int record_offset
         vector[double] r
         void StartCamera(int id, int width, int height, int depth)
         void GrabImage()

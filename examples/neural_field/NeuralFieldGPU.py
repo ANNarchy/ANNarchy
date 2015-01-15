@@ -105,8 +105,6 @@ class GLViewer(object):
 # Main program
 if __name__ == "__main__":
 
-    set_cuda_config( { 'device': 1 } )
-
     # Analyse and compile everything, initialize the parameters/variables...
     compile()   
     
