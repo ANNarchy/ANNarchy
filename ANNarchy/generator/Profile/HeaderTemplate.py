@@ -195,24 +195,25 @@ class Profiling {
         ~Profiling() {
         }
 
-/*
-Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max standart_devariation
-*/
-    
-    /*Set/get Anzahl,Namen*/
+    /*use following functions only befor the init function to set how many measurement units of each type you want to use*/
     void set_CPU_time_number(  int number){Profiling_time_CPU_count=number;}
     void set_CPU_cycles_number(int number){Profiling_cycles_CPU_count=number;}
     void set_thread_statistic_number(int number){Profiling_thread_count=number;}
+    void set_overall_number(int number){Profiling_overall_count=number;}
+    
+    /*use following function only befor the init thread function to set how many treads you want to use maximal in thread statistic measurements*/
     void set_max_thread_number(int number){thread_count=number;}
-    void set_max_core_number(int number){core_count=number;}//don't needed
 
+    /*use following functions only befor the init trash function*/
     void set_CPU_time_hight_trash_count(  int number,int count){Prof_time_CPU[number].time.maxac=count;}
     void set_CPU_time_low_trash_count(  int number,int count){Prof_time_CPU[number].time.minac=count;}
     void set_CPU_cycles_hight_trash_count(  int number,int count){Prof_time_CPU[number].time.maxac=count;}
     void set_CPU_cycles_low_trash_count(  int number,int count){Prof_time_CPU[number].time.minac=count;}
 
     //Aufruf direkt nach allen set Number's
-    void init(int extended=1);
+    //param extended: set Bit 0x01:execute init thread 
+    //                  set Bit 0x02:execute init trash
+    void init(int extended=3);
     void init_thread();
     void init_trash();
 
@@ -220,15 +221,60 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void set_profiling_off(){Profil=0;}
     void set_profiling_on( ){Profil=1;}
 
-    //Folgende Funktionen erst nach init nutzbar
+/*use all following functions only after the init function*/
+
+    //set Names for output
     void set_CPU_time_name(  int number,std::string name){Prof_time_CPU[number].name=name;}
     void set_CPU_cycles_name(int number,std::string name){Prof_cycles_CPU[number].name=name;}
     void set_thread_statistic_name(int number,std::string name){Prof_thread_statistic[number].name=name;}
 
-    //additonal Syntax fuer Python Auswertung: Zahl(X-Ache);String
+    //set additional for output in files ( syntax depends on the evaluator )
     void set_CPU_time_additional(  int number,std::string additonal){Prof_time_CPU[number].additonal=additonal;}
     void set_CPU_cycles_additional(int number,std::string additonal){Prof_cycles_CPU[number].additonal=additonal;}
     void set_thread_statistic_additional(int number,std::string additonal){Prof_thread_statistic[number].additonal=additonal;}
+
+    //set related overall time
+    void set_CPU_time_related_time(  int number,int overallnumber){Prof_time_CPU[number].overall_time=overallnumber;}
+    //void set_CPU_cycles_related_time(int number,int overallnumber){Prof_cycles_CPU[number].overall_time=overallnumber;}
+
+    //set 'General section' text for output in files ( syntax depends on the evaluator )
+    void set_general_text(std::string text){Generaltext=text;}
+    
+    void start_CPU_time_prof( int number);
+    void start_overall_time_prof(int number=0);
+    void start_CPU_cycles_prof( int number);
+
+    void stop_CPU_time_prof( int number,int directevaluate=1);
+    void stop_overall_time_prof(int number=0,int directevaluate=1);
+    void stop_CPU_cycles_prof( int number,int directevaluate=1);
+
+    //use this functions only if directevaluate=0 in the corresponding stop function
+    void evaluate_CPU_time_prof( int number);
+    void evaluate_overall_time_prof(int number=0);
+    void evaluate_CPU_cycles_prof( int number);
+
+    //reset single measurement units
+    void reset_CPU_time_prof( int number);
+    void reset_CPU_cycles_prof( int number);
+    void reset_thread_statistic( int number);
+    void reset_overall_time_prof(int number=0);
+
+    //get measurement results 
+    //    return: Average
+    double get_CPU_time_prof( int number);
+    double get_CPU_cycles_prof( int number);
+    double get_overall_time_prof(int number=0);
+
+    //measurement Error measure
+    void error_CPU_time_prof();
+    void error_CPU_cycles_prof();
+
+    //use within parallel loop
+    void thread_statistic_run( int number);
+
+    //Generate output
+    void evaluate(int disp, int file,const char * filename="Profiling.log");
+    int mergefiles(const char * infilename1,const char * infilename2="Profiling.log",const char * outfilename="Profiling.log");
 
     //for [hdin]
     void store_CPU_time_raw(int number){Prof_time_CPU[number].storeRawData=true;}
@@ -236,32 +282,15 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     void store_CPU_cycles_raw(int number){Prof_cycles_CPU[number].storeRawData=true;}
     void store_not_CPU_cycles_raw(int number){Prof_cycles_CPU[number].storeRawData=false;}
 
-    void start_CPU_time_prof( int number);
-    void start_overall_time_prof();
-    void start_CPU_cycles_prof( int number);
+    enum TimeUnits{
+        MICROSECS=0,
+        MILLISECS,
+        SECS
+    };
 
-    void stop_CPU_time_prof( int number,int directevaluate=1);
-    void stop_overall_time_prof();
-    void stop_CPU_cycles_prof( int number,int directevaluate=1);
-
-    void evaluate_CPU_time_prof( int number);
-    void evaluate_overall_time_prof();
-    void evaluate_CPU_cycles_prof( int number);
-
-    void reset_CPU_time_prof( int number);
-    void reset_CPU_cycles_prof( int number);
-    void reset_thread_statistic( int number);
-    void reset_overall_time_prof();
-
-    void error_CPU_time_prof();
-    void error_CPU_cycles_prof();
-
-    //use within parallel loop
-    void thread_statistic_run( int number);
-
-    void evaluate(int disp, int file,const char * filename="Profiling.log");
-
-    private:
+    void set_time_unit(TimeUnits time_unit) { used_time_unit = time_unit; }
+    
+private:
     bool evaluateInMillisecs_ = true;
 
     struct Profiling_unit{
@@ -274,10 +303,11 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
         double summ=0;
         double summsqr=0;
 
-
+        //'Trash' section
         double *maxarray,*minarray;
         int maxac=0;
         int minac=0;
+        
         // [hdin] sometimes needed for additional evaluation
         double adjustedMean=0.0;
         std::vector<double> rawData=std::vector<double>();
@@ -288,12 +318,16 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     };
 
     struct Profiling_time{
-           std::string name="";
-           std::string additonal="";
+       std::string name="";
+       std::string additonal="";
         Profiling_unit time;
-        bool storeRawData=true;
+
+        int overall_time=0;
+        int calculated=0;
 
         long_long start,stop;
+
+        bool storeRawData=false;
     };
 
     struct Profiling_thread_statistic_core{
@@ -316,20 +350,27 @@ Thread statistic: gruppen: summenbildung-> anz threads[kerne]: summ min avg max 
     int Profiling_time_CPU_count=0;
     int Profiling_cycles_CPU_count=0;
     int Profiling_thread_count=0;
+    int Profiling_overall_count=1;
     int thread_count=0;
     int core_count=0;
 
     int Profil=1;
 
     //Profiling
-        Profiling_time *Prof_time_CPU;
-        Profiling_time *Prof_cycles_CPU;
-        Profiling_thread_statistic *Prof_thread_statistic;
-        Profiling_general Prof_general;
+    Profiling_time *Prof_time_CPU;
+    Profiling_time *Prof_cycles_CPU;
+    Profiling_thread_statistic *Prof_thread_statistic;
+    Profiling_general *Prof_general;
+    std::string Generaltext="";
 
-    void evaluate_calc();
+    void evaluate_calc(int sec=0, int number=0);
+    void evaluate_recalc(int sec=0,int number=0);
     void evaluate_disp();
     int evaluate_file(const char * filename="Profiling.log");
+
+    // [hdin] time unit handling
+    std::vector< std::pair<std::string, double> > time_units;   ///< used time units: unit name and rescale factor
+    int used_time_unit; ///< chose time unit (default TimeUnit::SECS)
 
     double compAdjustedMeanV1(std::vector<double> data) {
         if ( data.empty() )
