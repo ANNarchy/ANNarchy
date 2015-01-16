@@ -168,7 +168,7 @@ struct PopStruct%(id)s{
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
             pGen = ProfileGenerator(Global._populations, Global._projections)
-            code = pGen.annotate_update_neuron_omp(code, pop)
+            code = pGen.annotate_update_neuron_omp(code)
 
         # Spike emission, as following step
         if pop.neuron_type.type == 'spike':

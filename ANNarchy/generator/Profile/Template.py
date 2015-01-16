@@ -8,10 +8,9 @@ int rc;
     //initialize profiler
     profiler = new Profiling();
     profiler->init(0);
-    rc=0;
     std::cout << "Profile " << omp_get_max_threads() << std::endl;
     """,
-    'run_pre': """// before
+    'run_pre': """  rc=0;
     """,
     'run_post': """// after
     std::cout << "Profile " << omp_get_max_threads() << std::endl;
@@ -20,13 +19,18 @@ int rc;
     #
     # Operations
     'compute_psp': {
-            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );""",
-            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );
+            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );""",
+            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );
+        rc++;"""
+    },
+    'update_synapse': {
+            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );""",
+            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );
         rc++;"""
     },
     'update_neuron': {
-            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );""",
-            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + %(off)s );
+            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );""",
+            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );
         rc++;"""
     }
 }

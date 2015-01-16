@@ -4,6 +4,13 @@ import numpy as np
 
 class ProjectionGenerator(object):
 
+    def __init__(self):
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            self._prof_gen = ProfileGenerator(Global._populations, Global._projections)
+        else:
+            self._prof_gen = None
+
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
@@ -209,8 +216,9 @@ struct ProjStruct%(id_proj)s{
             from ..Profile.ProfileGenerator import ProfileGenerator
             pGen = ProfileGenerator(Global._populations, Global._projections)
 
-            # annotate code
-            code = pGen.annotate_computesum_rate_omp(code, proj)
+        # annotate code
+        if self._prof_gen:
+            code = self._prof_gen.annotate_computesum_rate_omp(code)
 
         # finish the code
         code = """
@@ -416,7 +424,7 @@ struct ProjStruct%(id_proj)s{
     def update_synapse(self, proj):
         code = ""
         from ..Utils import generate_equation_code
-        
+
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
@@ -427,14 +435,12 @@ struct ProjStruct%(id_proj)s{
         if local_eq.strip() != '' or global_eq.strip() != '' :
             omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    if(proj%(id_proj)s._learning && pop%(id_post)s._active){
         %(omp)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
 %(global)s
 """%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'omp': omp_code}
- 
+
             if local_eq.strip() != "": 
                 code+= """
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
@@ -445,7 +451,6 @@ struct ProjStruct%(id_proj)s{
 
             code += """
         }
-    }
 """
 
         # Take delays into account if any
@@ -468,6 +473,19 @@ struct ProjStruct%(id_proj)s{
                     'pop%(id_pre)s.spike['%{'id_pre': proj.pre.id}, 
                     'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                 )
+
+        # profiling annotation
+        if self._prof_gen:
+            code = self._prof_gen.annotate_update_synapse_omp(code)
+
+        # finish the code block
+        code = """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    if(proj%(id_proj)s._learning && pop%(id_post)s._active){
+%(code)s
+    } // active
+""" % { 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target,
+        'id_proj': proj.id, 'id_post': proj.post.id, 'code': code }
 
         return code
 
