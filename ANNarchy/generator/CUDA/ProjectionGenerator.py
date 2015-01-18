@@ -1,23 +1,54 @@
+"""
+
+    ProjectionGenerator.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
 import ANNarchy.core.Global as Global
 
-import numpy as np
-
 class ProjectionGenerator(object):
-    
-    def header_struct(self, proj):    
+
+    def __init__(self):
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            self._prof_gen = ProfileGenerator(Global._populations, Global._projections)
+        else:
+            self._prof_gen = None
+
+#######################################################################
+############## HEADER #################################################
+#######################################################################
+    def header_struct(self, proj):
         # Is it a specific projection?
         if proj.generator['cuda']['header_proj_struct']:
             return proj.generator['cuda']['header_proj_struct']
 
         code = """
-struct ProjStruct%(id)s{
+// %(pre_name)s -> %(post_name)s
+struct ProjStruct%(id_proj)s{
+    // number of dendrites
     int size;
 
-    // stream
-    cudaStream_t stream;
-    
     // Learning flag
     bool _learning;
+
     // Connectivity
     std::vector<int> post_rank ;
     int* gpu_post_rank;
@@ -30,17 +61,24 @@ struct ProjStruct%(id)s{
     int overallSynapses;
     std::vector<int> flat_idx;
     std::vector<int> flat_off;
+
+    // stream
+    cudaStream_t stream;
 """
+
+        # Spiking neurons have aditional data
+        if proj.synapse.type == 'spike':
+            Global._error("No GPU implementation ...")
+            exit(0)
 
         # Delays
         if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
-            if proj._synapses.type == "rate":
-                Global._error("only uniform delays are supported ...")
-                exit(0)
+            Global._error("only uniform delays are supported ...")
+            exit(0)
 
         # Arrays for the random numbers
         code += """
-    // RNG states
+    // cudaRNG states, per dendrite
 """
         for rd in proj.synapse.description['random_distributions']:
             code += """    curandState* gpu_%(rd_name)s;
@@ -51,15 +89,16 @@ struct ProjStruct%(id)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
     // Local parameter %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s;    // host
-    %(type)s* gpu_%(name)s;    // device
+    std::vector< std::vector< %(type)s > > %(name)s;
+    %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;    
 """ % {'type' : var['ctype'], 'name': var['name']}
+
             elif var['name'] in proj.synapse.description['global']:
                 code += """
     // Global parameter %(name)s
     std::vector<%(type)s>  %(name)s;
-    %(type)s* gpu_%(name)s;    // device
+    %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
@@ -68,37 +107,50 @@ struct ProjStruct%(id)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
     // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;    // host
-    %(type)s* gpu_%(name)s;    // device
+    std::vector< std::vector< %(type)s > > %(name)s;
+    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s;
+    std::vector< int > record_%(name)s;
+    std::vector< int > record_period_%(name)s;
+    std::vector< long int > record_offset_%(name)s;
+    %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;
-    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    // bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
+
             elif var['name'] in proj.synapse.description['global']:
                 code += """
     // Global variable %(name)s
-    std::vector<%(type)s>  %(name)s;    // host
-    %(type)s* gpu_%(name)s;    // device
+    std::vector<%(type)s>  %(name)s;
+    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
+    std::vector< int > record_%(name)s ;
+    std::vector< int > record_period_%(name)s ;
+    std::vector< long int > record_offset_%(name)s ;
+    %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;
-    // std::vector< %(type)s > recorded_%(name)s ;
-    // bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
-        # Pre- or post_spike variables (including w)
-        if proj.synapse.description['type'] == 'spike':
-            for var in proj.synapse.description['pre_spike']:
-                if not var['name'] in proj.synapse.description['attributes'] + ['g_target']:
-                    code += """
-    // Local variable %(name)s added by default
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    // std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    // bool record_%(name)s ;
-""" % {'type' : 'double', 'name': var['name']}
+        # Local functions
+        if len(proj.synapse.description['functions'])>0:
+            code += """
+    // Local functions
+"""
+            for func in proj.synapse.description['functions']:
+                code += ' '*4 + func['cpp'] + '\n'
 
+        # Structural plasticity
+        if Global.config['structural_plasticity']:
+            code += self.header_structural_plasticity(proj)
+
+        # Finish the structure
         code += """
 };    
 """ 
-        return code % {'id': proj.id}
+        return code % {'id_proj': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
+
+
+
+#######################################################################
+############## BODY ###################################################
+#######################################################################
 
 
     def computesum_rate(self, proj):
@@ -109,10 +161,7 @@ struct ProjStruct%(id)s{
         body:    kernel implementation
         call:    kernel call
         """
-        # Is it a specific projection?
-        if proj.generator['cuda']['body_compute_psp']:
-            Global._error("Customized rate-code projections are not usable on CUDA yet.")
-            return "", "", ""
+        code = ""
 
         # Retrieve the psp code
         if not 'psp' in  proj.synapse.description.keys(): # default
@@ -160,6 +209,12 @@ struct ProjStruct%(id)s{
 
         Global._error("Spiking models are not supported currently on CUDA devices.")
         return "", "", ""
+
+    def postevent(self, proj):
+        code = ""
+        Global._error("Spiking models are not supported currently on CUDA devices.")
+
+        return ""
 
     def update_synapse(self, proj):
         from ..Utils import generate_equation_code
@@ -313,29 +368,100 @@ struct ProjStruct%(id)s{
         return code
 
     def init_projection(self, proj):
-        code = ""
+
         # Is it a specific projection?
         if proj.generator['cuda']['body_proj_init']:
             return proj.generator['cuda']['body_proj_init']
 
         # Learning by default
-        code += """
+        code = """
+    /////////////////////////////////////////
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    /////////////////////////////////////////
     proj%(id_proj)s._learning = true;
-""" % {'id_proj': proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name}
+""" % { 'id_proj': proj.id, 'target': proj.target,
+        'id_post': proj.post.id, 'id_pre': proj.pre.id,
+        'name_post': proj.post.name, 'name_pre': proj.pre.name}
+
+        # Initialize parameters
+        for var in proj.synapse.description['parameters']:
+            if var['name'] == 'w':
+                continue
+            if var['name'] in proj.synapse.description['local']:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+    // Local parameter %(name)s
+    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
+    proj%(id)s.%(name)s_dirty = true;
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+            else:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+    // Global parameter %(name)s
+    proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
+    proj%(id)s.%(name)s_dirty = true;
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Initialize variables
+        for var in proj.synapse.description['variables']:
+            if var['name'] == 'w':
+                continue
+            if var['name'] in proj.synapse.description['local']:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+    // Local variable %(name)s
+    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
+    proj%(id)s.record_%(name)s = std::vector<int>();
+    proj%(id)s.record_period_%(name)s = std::vector<int>();
+    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+            else:
+                init = 0.0 if var['ctype'] == 'double' else 0
+                code += """
+    // Global variable %(name)s
+    proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
+    proj%(id)s.record_%(name)s = std::vector<int>();
+    proj%(id)s.record_period_%(name)s = std::vector<int>();
+    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Spiking neurons have aditional data
         if proj.synapse.type == 'spike':
-            Global._error("no spiking implementation yet ..")
+            Global._error("Spiking models are not supported on GPUs yet ...")
+            exit(0)
 
-        # Recording
-        # TODO: not implemented yet
+            debug = """
+// For debug...
+    for (std::map< int, std::vector< std::pair<int, int> > >::iterator it=proj%(id_proj)s.inv_rank.begin(); it!=proj%(id_proj)s.inv_rank.end(); ++it) {
+        std::cout << it->first << ": " ;
+        for(int _id=0; _id<it->second.size(); _id++){
+            std::pair<int, int> val = it->second[_id];
+            std::cout << "(" << val.first << ", " << val.second << "), " ;
+        }
+        std::cout << std::endl ;
+    }
+"""
+        # Pruning
+        if Global.config['structural_plasticity']:
+            Global._error("Structural plasticity is not supported on GPUs yet ...")
+            exit(0)
 
         return code
 
     def record(self, proj):
-        # TODO: not implemented yet
-        return ""
+        code = ""
+        for var in proj.synapse.description['variables']:
+            Global._warning("Recording of synaptic variables is not supported on GPUs ... ")
+
+#            code += """
+#    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
+#        if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
+#            proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
+#    }
+#""" % {'id': proj.id, 'name': var['name'], 'modulo': '%'}
+        return code
 
 #######################################################################
 ############## PYX ####################################################
@@ -411,6 +537,7 @@ struct ProjStruct%(id)s{
         return code % {'id_proj': proj.id}
 
     def pyx_wrapper(self, proj):
+
         # Is it a specific projection?
         if proj.generator['cuda']['pyx_proj_class']:
             return proj.generator['cuda']['pyx_proj_class'] % { 'proj_id': proj.id }
@@ -429,8 +556,6 @@ cdef class proj%(id)s_wrapper :
         proj%(id)s.post_rank = syn.post_rank
         proj%(id)s.pre_rank = syn.pre_rank
         proj%(id)s.w = syn.w
-
-        proj%(id)s._learning = True
 """% {'id': proj.id}
 
         # Exact integration
@@ -450,40 +575,6 @@ cdef class proj%(id)s_wrapper :
             code +="""
         proj%(id)s.delay = syn.delay
 """% {'id': proj.id}
-
-        # Initialize parameters
-        for var in proj.synapse.description['parameters']:
-            if var['name'] == 'w':
-                continue
-            if var['name'] in proj.synapse.description['local']:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-        proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-        proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-        # Initialize variables
-        for var in proj.synapse.description['variables']:
-            if var['name'] == 'w':
-                continue
-            if var['name'] in proj.synapse.description['local']:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-        proj%(id)s.%(name)s = vector[vector[%(type)s]](nb_post, vector[%(type)s]())
-        #proj%(id)s.record_%(name)s = vector[int]()
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-        proj%(id)s.%(name)s = vector[%(type)s](nb_post, %(init)s)
-        #proj%(id)s.record_%(name)s = vector[int]()
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Size property
         code += """
@@ -521,17 +612,16 @@ cdef class proj%(id)s_wrapper :
     def get_%(name)s(self):
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
-        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s = value
+        proj%(id)s.%(name)s_dirty = True
     def get_dendrite_%(name)s(self, int rank):
         return proj%(id)s.%(name)s[rank]
     def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
-        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s[rank] = value
+        proj%(id)s.%(name)s_dirty = True
     def get_synapse_%(name)s(self, int rank_post, int rank_pre):
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
-        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
@@ -541,12 +631,10 @@ cdef class proj%(id)s_wrapper :
     def get_%(name)s(self):
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
-        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s = value
     def get_dendrite_%(name)s(self, int rank):
         return proj%(id)s.%(name)s[rank]
     def set_dendrite_%(name)s(self, int rank, %(type)s value):
-        proj%(id)s.%(name)s_dirty = True
         proj%(id)s.%(name)s[rank] = value
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
@@ -559,14 +647,32 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s
     def set_%(name)s(self, value):
         proj%(id)s.%(name)s = value
+        proj%(id)s.%(name)s_dirty = True
     def get_dendrite_%(name)s(self, int rank):
         return proj%(id)s.%(name)s[rank]
     def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
         proj%(id)s.%(name)s[rank] = value
+        proj%(id)s.%(name)s_dirty = True        
     def get_synapse_%(name)s(self, int rank_post, int rank_pre):
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
+        proj%(id)s.%(name)s_dirty = True        
+    def start_record_%(name)s(self, int rank, int period, long int offset):
+        if not rank in list(proj%(id)s.record_%(name)s):
+            proj%(id)s.record_%(name)s.push_back(rank)
+            proj%(id)s.record_period_%(name)s.push_back(period)
+            proj%(id)s.record_offset_%(name)s.push_back(offset)
+    def stop_record_%(name)s(self, int rank):
+        cdef list tmp_record = list(proj%(id)s.record_%(name)s)
+        cdef int idx = tmp_record.index(rank)
+        proj%(id)s.record_%(name)s.erase(proj%(id)s.record_%(name)s.begin() + idx)
+        proj%(id)s.record_period_%(name)s.erase(proj%(id)s.record_period_%(name)s.begin() + idx)
+        proj%(id)s.record_offset_%(name)s.erase(proj%(id)s.record_offset_%(name)s.begin() + idx)
+    def get_recorded_%(name)s(self, int rank):
+        cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
+        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
+        return data
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
             elif var['name'] in proj.synapse.description['global']:

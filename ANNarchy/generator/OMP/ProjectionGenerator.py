@@ -1,6 +1,27 @@
-import ANNarchy.core.Global as Global
+"""
 
-import numpy as np
+    ProjectionGenerator.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+import ANNarchy.core.Global as Global
 
 class ProjectionGenerator(object):
 
@@ -18,13 +39,16 @@ class ProjectionGenerator(object):
         # Is it a specific projection?
         if proj.generator['omp']['header_proj_struct']:
             return proj.generator['omp']['header_proj_struct']
-            
+
         code = """
 // %(pre_name)s -> %(post_name)s
 struct ProjStruct%(id_proj)s{
+    // number of dendrites
     int size;
+
     // Learning flag
     bool _learning;
+
     // Connectivity
     std::vector<int> post_rank ;
     std::vector< std::vector< int > > pre_rank ;
@@ -45,6 +69,7 @@ struct ProjStruct%(id_proj)s{
                 code += """
     std::vector<std::vector<long> > _last_event;
 """
+
         # Delays
         if proj.max_delay > 1 and proj.uniform_delay == -1:
             code +="""
@@ -65,13 +90,13 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
     // Local parameter %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
+    std::vector< std::vector< %(type)s > > %(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
     // Global parameter %(name)s
-    std::vector<%(type)s>  %(name)s ;
+    std::vector<%(type)s>  %(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Variables
@@ -79,17 +104,17 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
     // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s ;
-    std::vector< int > record_%(name)s ;
-    std::vector< int > record_period_%(name)s ;
-    std::vector< long int > record_offset_%(name)s ;
+    std::vector< std::vector< %(type)s > > %(name)s;
+    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s;
+    std::vector< int > record_%(name)s;
+    std::vector< int > record_period_%(name)s;
+    std::vector< long int > record_offset_%(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
     // Global variable %(name)s
-    std::vector<%(type)s>  %(name)s ;
+    std::vector<%(type)s>  %(name)s;
     std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     std::vector< int > record_%(name)s ;
     std::vector< int > record_period_%(name)s ;
@@ -539,8 +564,8 @@ struct ProjStruct%(id_proj)s{
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     /////////////////////////////////////////
     proj%(id_proj)s._learning = true;
-""" % { 'id_proj': proj.id, 'target': proj.target, 
-        'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+""" % { 'id_proj': proj.id, 'target': proj.target,
+        'id_post': proj.post.id, 'id_pre': proj.pre.id,
         'name_post': proj.post.name, 'name_pre': proj.pre.name}
 
         # Initialize parameters
@@ -629,7 +654,7 @@ struct ProjStruct%(id_proj)s{
     def record(self, proj):
         code = ""
         for var in proj.synapse.description['variables']:
-                code += """
+            code += """
     for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
         if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
             proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
@@ -643,7 +668,7 @@ struct ProjStruct%(id_proj)s{
 #######################################################################
 
     def pyx_struct(self, proj):
-       # Is it a specific projection?
+        # Is it a specific projection?
         if proj.generator['omp']['pyx_proj_struct']:
             return proj.generator['omp']['pyx_proj_struct']
 
@@ -654,7 +679,7 @@ struct ProjStruct%(id_proj)s{
         vector[int] post_rank
         vector[vector[int]] pre_rank
 """         
-            
+
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
@@ -675,7 +700,7 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
         # Local parameter %(name)s
-        vector[vector[%(type)s]] %(name)s 
+        vector[vector[%(type)s]] %(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
@@ -741,7 +766,6 @@ struct ProjStruct%(id_proj)s{
         # Finalize the code
         return code % {'id_proj': proj.id}
 
-
     def pyx_wrapper(self, proj):
 
         # Is it a specific population?
@@ -757,13 +781,13 @@ cdef class proj%(id)s_wrapper :
         cdef CSR syn = synapses
         cdef int size = syn.size
         cdef int nb_post = syn.post_rank.size()
-        
+
         proj%(id)s.size = size
         proj%(id)s.post_rank = syn.post_rank
         proj%(id)s.pre_rank = syn.pre_rank
         proj%(id)s.w = syn.w
 """% {'id': proj.id}
-            
+
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:

@@ -119,6 +119,7 @@ void initialize(double _dt, long seed) {
 %(delay_init)s
 %(spike_init)s
 %(globalops_init)s
+%(projection_init)s
 
     // create streams
     stream_setup();
