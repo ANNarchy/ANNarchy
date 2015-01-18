@@ -5,7 +5,7 @@ body_template = '''
 /*
  * Internal data
  *
-*/
+ */
 double dt;
 long int t;
 std::mt19937  rng;
@@ -120,7 +120,6 @@ void step()
     // Increase internal time
     ////////////////////////////////
     t++;
-    std::cout << "rc " << rc <<std::endl;
 }
 
 

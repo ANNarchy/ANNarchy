@@ -489,7 +489,7 @@ struct ProjStruct%(id_proj)s{
 
         return code
 
-    def init_randomdistributions(self, proj):
+    def init_random_distributions(self, proj):
         # Is it a specific population?
         if proj.generator['omp']['body_random_dist_init']:
             return proj.generator['omp']['body_random_dist_init'] %{'id_proj': proj.id}

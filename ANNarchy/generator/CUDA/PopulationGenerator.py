@@ -22,7 +22,9 @@ struct PopStruct%(id)s{
     cudaStream_t stream;
 """
         # Spiking neurons have aditional data
-        # TODO:
+        if pop.neuron_type.type == 'spike':
+            Global._error("Spike coded neurons are not supported on GPUs yet ... ")
+            exit(0)
 
         # Record
         code+="""
@@ -30,14 +32,18 @@ struct PopStruct%(id)s{
     int record_period;
     long int record_offset;
 """
+        #
+        # create for each variable a host, device array and add dirty flag
+        # if the flag is set to true, the next possible time, the data will
+        # exchanged between host and GPU
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             if var['name'] in pop.neuron_type.description['local']:
                 code += """
     // Local parameter %(name)s
-    std::vector< %(type)s > %(name)s;    // host
-    %(type)s *gpu_%(name)s;    // device
+    std::vector< %(type)s > %(name)s;
+    %(type)s *gpu_%(name)s;
     bool %(name)s_dirty;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
@@ -52,8 +58,8 @@ struct PopStruct%(id)s{
             if var['name'] in pop.neuron_type.description['local']:
                 code += """
     // Local variable %(name)s
-    std::vector< %(type)s > %(name)s ;    // host
-    %(type)s *gpu_%(name)s;    // device
+    std::vector< %(type)s > %(name)s ;
+    %(type)s *gpu_%(name)s;
     bool %(name)s_dirty;
     std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     bool record_%(name)s ;
@@ -63,7 +69,7 @@ struct PopStruct%(id)s{
                 code += """
     // Global variable %(name)s
     %(type)s  %(name)s ;
-    %(type)s *gpu_%(name)s;    // device
+    %(type)s *gpu_%(name)s;
     bool %(name)s_dirty;
     std::vector< %(type)s > recorded_%(name)s ;
     bool record_%(name)s ;
@@ -75,8 +81,8 @@ struct PopStruct%(id)s{
 """
         if pop.neuron_type.type == 'rate':
             for target in list(set(pop.neuron_type.description['targets']+pop.targets)):
-                code += """    std::vector<double> _sum_%(target)s;    // host
-    double *gpu_sum_%(target)s;    // device
+                code += """    std::vector<double> _sum_%(target)s;
+    double *gpu_sum_%(target)s;
 """ % {'target' : target}
 
         # Global operations
@@ -89,7 +95,7 @@ struct PopStruct%(id)s{
 
         # Arrays for the random numbers
         code += """
-    // RNG states
+    // cuda RNG states
 """
         for rd in pop.neuron_type.description['random_distributions']:
             code += """    curandState* gpu_%(rd_name)s;
@@ -101,7 +107,7 @@ struct PopStruct%(id)s{
                 code += """
     // Delays for rate-coded population
     std::deque< double* > gpu_delayed_r;
-"""             
+"""
             else:
                 Global._error("synaptic delays for spiking neurons are not implemented yet ...")
                 exit(0)
@@ -117,10 +123,14 @@ struct PopStruct%(id)s{
         # Finish the structure
         code += """
 };
-"""           
+"""
         return code % {'id': pop.id}
 
-    def update_neuron(self, pop):#
+#######################################################################
+############## BODY ###################################################
+#######################################################################
+
+    def update_neuron(self, pop):
         """
         returns all data needed for population step kernels:
 
@@ -128,12 +138,12 @@ struct PopStruct%(id)s{
         body:    kernel implementation
         call:    kernel call
         """
-        # is it a specific population ?
+        # Is it a specific population?
         if pop.generator['cuda']['body_update_neuron']:
             Global._error("Customized populations are not usable on CUDA yet.")
             return "", "", ""
 
-        # no variable
+        # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
             return "", "", ""
 
@@ -260,18 +270,26 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         return body, header, call
 
     def delay_code(self, pop):
-        #
-        #    Currently I see no better way to implement delays, as consequence of missing device-device memory transfers ...
-        #
-        #    This implementation is from a performance point of view problematic, cause of low host-device memory bandwith,
-        #    maybe enhancable through pinned memory (CC 2.x), or asynchronous device transfers (CC 3.x)
-        code = ""
+        """
+        Implementation Note:
 
+            Currently I see no better way to implement delays, as consequence of missing device-device memory transfers ...
+
+            This implementation is from a performance point of view problematic, cause of low host-device memory bandwith,
+            maybe enhancable through pinned memory (CC 2.x), or asynchronous device transfers (CC 3.x)
+        """
+        # No delay
         if pop.max_delay <= 1:
             return ""
 
-        code += """
-    // Enqueuing outputs of pop%(id)s
+        # Is it a specific population?
+        if pop.generator['cuda']['body_delay_code']:
+            return pop.generator['cuda']['body_delay_code'] % {'id': pop.id}
+
+        code = ""
+        if pop.neuron_type.type == 'rate':
+            code += """
+    // Enqueuing outputs of pop%(id)s (%(name)s)
     if ( pop%(id)s._active ) {
         double* endPtr_pop%(id)s = pop%(id)s.gpu_delayed_r.back();
         pop%(id)s.gpu_delayed_r.pop_back();
@@ -280,8 +298,12 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         cudaMemcpy( tmp_r_pop%(id)s.data(), pop%(id)s.gpu_r, sizeof(double) * pop%(id)s.size, cudaMemcpyDeviceToHost);
         cudaMemcpy( endPtr_pop%(id)s, tmp_r_pop%(id)s.data(), sizeof(double) * pop%(id)s.size, cudaMemcpyHostToDevice);
     }
-"""
-        return code % {'id': pop.id }
+""" % {'id': pop.id, 'name' : pop.name }
+        else:
+            Global._error("Customized delay code is not usable on CUDA yet.")
+            return ""
+
+        return code
 
     def init_globalops(self, pop):
         # Is it a specific population?
@@ -292,48 +314,104 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         for op in pop.global_operations:
             code += """    pop%(id)s._%(op)s_%(var)s = 0.0;
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
-
         return code
 
     def init_random_distributions(self, pop):
+        # Is it a specific population?
+        if pop.generator['omp']['body_random_dist_init']:
+            return pop.generator['omp']['body_random_dist_init'] %{'id': pop.id}
+
         code = ""
         for rd in pop.neuron_type.description['random_distributions']:
             code += """    cudaMalloc((void**)&pop%(id)s.gpu_%(rd_name)s, pop%(id)s.size * sizeof(curandState));
     init_curand_states( pop%(id)s.size, pop%(id)s.gpu_%(rd_name)s, seed );
 """ % {'id': pop.id, 'rd_name': rd['name'] }
-
         return code
 
     def init_delay(self, pop):
-        code = """
-    // Initialize delayed firing rates
-"""
-        if pop.max_delay > 1:
-            if pop.neuron_type.type == 'rate':
-                code += """    pop%(id)s.gpu_delayed_r = std::deque< double* >(%(delay)s, NULL);
+        code = "    // Delays from pop%(id)s (%(name)s)\n" % {'id': pop.id, 'name': pop.name}
+
+        # Is it a specific population?
+        if pop.generator['omp']['body_delay_init']:
+            code += pop.generator['omp']['body_delay_init'] %{'id': pop.id, 'delay': pop.max_delay}
+            return code
+
+        if pop.neuron_type.type == 'rate':
+            code += """    pop%(id)s.gpu_delayed_r = std::deque< double* >(%(delay)s, NULL);
     for ( int i = 0; i < %(delay)s; i++ )
         cudaMalloc( (void**)& pop%(id)s.gpu_delayed_r[i], sizeof(double)*pop%(id)s.size);
 """ % {'id': pop.id, 'delay': pop.max_delay}
-            else:
-                Global._error("no synaptic delays for spiking synapses on cuda implemented ...")
-                pass
+        else: # SPIKE
+            Global._error("no synaptic delays for spiking synapses on cuda implemented ...")
+            pass
 
         return code
 
     def init_population(self, pop):
-        # Is it a specific population?
-        if pop.generator['cuda']['body_spike_init']:
-            return pop.generator['cuda']['body_spike_init'] %{'id': pop.id}
-
         # active is true by default
         code = """
+    /////////////////////////////
     // Population %(id)s
+    /////////////////////////////
     pop%(id)s._active = true;
+    pop%(id)s.record_period = 1;
+    pop%(id)s.record_offset = 0;
 """ % {'id': pop.id}
+
+        # Is it a specific population?
+        if pop.generator['cuda']['body_spike_init']:
+            code += pop.generator['cuda']['body_spike_init'] %{'id': pop.id}
+            return code
+
+        # Parameters
+        for var in pop.neuron_type.description['parameters']:
+            init = 0.0 if var['ctype'] == 'double' else 0
+            if var['name'] in pop.neuron_type.description['local']:     
+                code += """
+    // Local parameter %(name)s
+    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
+    pop%(id)s.%(name)s_dirty = true;
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+            else: # global
+                code += """
+    // Global parameter %(name)s
+    pop%(id)s.%(name)s = %(init)s;
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Variables
+        for var in pop.neuron_type.description['variables']:
+            init = 0.0 if var['ctype'] == 'double' else 0
+            if var['name'] in pop.neuron_type.description['local']:
+                code += """
+    // Local variable %(name)s
+    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
+    pop%(id)s.recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
+    pop%(id)s.record_%(name)s = false;
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+            else: # global
+                code += """
+    // Global variable %(name)s
+    pop%(id)s.%(name)s = %(init)s;
+    pop%(id)s.recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
+    pop%(id)s.record_%(name)s = false;
+""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Targets
+        if pop.neuron_type.type == 'rate':
+            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
+                code += """
+    pop%(id)s._sum_%(target)s = std::vector<double>(pop%(id)s.size, 0.0);""" %{'id': pop.id, 'target': target}
 
         if pop.neuron_type.type == 'spike':
             code += """
-    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
+    // Spiking neuron
+    pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
+    pop%(id)s.record_spike = false;
+    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
+    for(int i = 0; i < pop%(id)s.size; i++)
+        pop%(id)s.recorded_spike.push_back(std::vector<long int>());
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
@@ -352,9 +430,20 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 
     def update_globalops(self, pop):
         from .GlobalOperationTemplate import global_operation_templates
+
+        # Is it a specific population?
+        if pop.generator['cuda']['body_update_globalops']:
+            return pop.generator['cuda']['body_update_globalops'] %{ 'id': pop.id}
+
         code = ""
         for op in pop.global_operations:
-            code += global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'var': op['variable']  }
+            call = global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'var': op['variable']  }
+            code += """
+    double *tmp;
+    cudaMalloc((void**)&tmp, sizeof(double));
+%(call)s
+    cudaFree(tmp);
+""" % { 'call': call}
 
         return code
 

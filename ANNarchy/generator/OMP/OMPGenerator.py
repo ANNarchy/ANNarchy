@@ -20,15 +20,15 @@ class OMPGenerator(object):
         # Propagte the global operations needed by the projections to the corresponding populations.
         self.propagate_global_ops()
 
-        # Generate header code for the analysed pops and projs  
+        # Generate header code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self.generate_header())
             
-        # Generate cpp code for the analysed pops and projs  
+        # Generate cpp code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
             ofile.write(self.generate_body())
-            
-        # Generate cython code for the analysed pops and projs  
+
+        # Generate cython code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchyCore.pyx', 'w') as ofile:
             ofile.write(self.generate_pyx())
 
@@ -59,8 +59,6 @@ class OMPGenerator(object):
         # Make sure the operations are declared only once
         for pop in self.populations:
             pop.global_operations = list(np.unique(np.array(pop.global_operations)))
-
-
 
 
 
@@ -129,7 +127,6 @@ class OMPGenerator(object):
 ############## BODY ###################################################
 #######################################################################
     def generate_body(self):
-
         # struct declaration for each population
         pop_ptr = ""
         for pop in self.populations:
@@ -200,6 +197,7 @@ class OMPGenerator(object):
         prof_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
         prof_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
 
+        # Generate cpp code for the analysed pops and projs
         from .BodyTemplate import body_template
         return body_template % {
             'pop_ptr': pop_ptr,
@@ -284,9 +282,9 @@ class OMPGenerator(object):
 
 
     def body_structural_plasticity(self):
-
         # Pruning if any
-        pruning=""; creating=""
+        pruning=""
+        creating=""
         if Global.config['structural_plasticity'] :
             for proj in self.projections:
                 if 'pruning' in proj.synapse.description.keys():
@@ -301,13 +299,12 @@ class OMPGenerator(object):
     // Initialize random distribution objects
 """
         for pop in self.populations:
-            code += self.popgen.init_randomdistributions(pop)
+            code += self.popgen.init_random_distributions(pop)
 
         for proj in self.projections:
-            code += self.projgen.init_randomdistributions(proj)
+            code += self.projgen.init_random_distributions(proj)
 
         return code
-
 
     def body_init_globalops(self):
         code = """

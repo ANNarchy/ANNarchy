@@ -11,7 +11,6 @@ class PopulationGenerator(object):
         # Is it a specific population?
         if pop.generator['omp']['header_pop_struct']:
             return pop.generator['omp']['header_pop_struct'] % {'id': pop.id}
-            
 
         # Generate the structure for the population.
         code = """
@@ -81,7 +80,6 @@ struct PopStruct%(id)s{
                 code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
 
-
         # Global operations
         code += """
     // Global operations
@@ -92,7 +90,7 @@ struct PopStruct%(id)s{
 
         # Arrays for the random numbers
         code += """
-    // Random numbers
+    // Random numbers (STL implementation)
 """
         for rd in pop.neuron_type.description['random_distributions']:
             code += """    std::vector<double> %(rd_name)s;
@@ -101,8 +99,8 @@ struct PopStruct%(id)s{
 
 
         # Delays
-        if pop.max_delay > 1 :
-            if pop.neuron_type.type == 'rate':
+        if pop.max_delay > 1:
+            if pop.neuron_type.type == "rate":
                 code += """
     // Delays for rate-coded population
     std::deque< std::vector<double> > _delayed_r;
@@ -123,23 +121,24 @@ struct PopStruct%(id)s{
 
         # Finish the structure
         code += """
-};    
-"""   
-        return code  % {'id': pop.id}
-
+};
+"""
+        return code % {'id': pop.id}
 
 #######################################################################
 ############## BODY ###################################################
 #######################################################################
 
     def update_neuron(self, pop):
-
+        """
+        generate omp update code.
+        """
         # Is it a specific population?
         if pop.generator['omp']['body_update_neuron']:
             return pop.generator['omp']['body_update_neuron'] %{'id': pop.id}
 
         # Is there any variable?
-        if len(pop.neuron_type.description['variables']) == 0: # no variable
+        if len(pop.neuron_type.description['variables']) == 0:
             return ""
 
         # Neural update
@@ -223,13 +222,13 @@ struct PopStruct%(id)s{
 
         # Is it a specific population?
         if pop.generator['omp']['body_delay_code']:
-            return pop.generator['omp']['body_delay_code'] %{'id': pop.id}
+            return pop.generator['omp']['body_delay_code'] % {'id': pop.id}
 
         code = ""
         if pop.neuron_type.type == 'rate':
             code += """
     // Enqueuing outputs of pop%(id)s (%(name)s)
-    if (pop%(id)s._active){
+    if ( pop%(id)s._active ) {
         pop%(id)s._delayed_r.push_front(pop%(id)s.r);
         pop%(id)s._delayed_r.pop_back();
     }
@@ -257,7 +256,7 @@ struct PopStruct%(id)s{
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         return code
 
-    def init_randomdistributions(self, pop):
+    def init_random_distributions(self, pop):
         # Is it a specific population?
         if pop.generator['omp']['body_random_dist_init']:
             return pop.generator['omp']['body_random_dist_init'] %{'id': pop.id}
@@ -270,7 +269,7 @@ struct PopStruct%(id)s{
         return code
 
     def init_delay(self, pop):
-        code = "    // Delays from pop%(id)s\n" % {'id': pop.id}
+        code = "    // Delays from pop%(id)s (%(name)s)\n" % {'id': pop.id, 'name': pop.name}
 
         # Is it a specific population?
         if pop.generator['omp']['body_delay_init']:
@@ -288,7 +287,7 @@ struct PopStruct%(id)s{
 
     def init_population(self, pop):
         # active is true by default
-        code = """    
+        code = """
     /////////////////////////////
     // Population %(id)s
     /////////////////////////////
