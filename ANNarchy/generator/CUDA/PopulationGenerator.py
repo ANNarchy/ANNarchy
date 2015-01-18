@@ -1,3 +1,26 @@
+"""
+
+    PopulationGenerator.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
 import ANNarchy.core.Global as Global
 
 class PopulationGenerator(object):
@@ -6,6 +29,17 @@ class PopulationGenerator(object):
 ############## HEADER #################################################
 #######################################################################
     def header_struct(self, pop):
+        """
+        Generate the c-style struct definition for a population object.
+
+        Implementation notes:
+
+            we create for each variable a host, device array and add dirty flag if the flag is set to true, the next possible time, the data will exchanged between host and GPU
+
+        Validate:
+
+        * local functions for neurons
+        """
         # Is it a specific population?
         if pop.generator['cuda']['header_pop_struct']:
             return pop.generator['cuda']['header_pop_struct'] % {'id': pop.id}
@@ -32,10 +66,6 @@ struct PopStruct%(id)s{
     int record_period;
     long int record_offset;
 """
-        #
-        # create for each variable a host, device array and add dirty flag
-        # if the flag is set to true, the next possible time, the data will
-        # exchanged between host and GPU
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
@@ -366,7 +396,7 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:     
+            if var['name'] in pop.neuron_type.description['local']:
                 code += """
     // Local parameter %(name)s
     pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
@@ -429,16 +459,17 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         return code
 
     def update_globalops(self, pop):
-        from .GlobalOperationTemplate import global_operation_templates
-
         # Is it a specific population?
         if pop.generator['cuda']['body_update_globalops']:
             return pop.generator['cuda']['body_update_globalops'] %{ 'id': pop.id}
 
         code = ""
-        for op in pop.global_operations:
-            call = global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'var': op['variable']  }
-            code += """
+        if len(pop.global_operations) > 0:
+            from .GlobalOperationTemplate import global_operation_templates
+            
+            for op in pop.global_operations:
+                call = global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'var': op['variable']  }
+                code += """
     double *tmp;
     cudaMalloc((void**)&tmp, sizeof(double));
 %(call)s
@@ -448,12 +479,70 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         return code
 
     def record(self, pop):
+        """
+        Implementation note:
+
+        * maybe the performance of this step can be enhanced with asynchronous copy mechanism. Otherwise this will limit for sure the performance ...
+        """
         # Is it a specific population?
         if pop.generator['cuda']['body_record']:
             return pop.generator['cuda']['body_record'] %{'id': pop.id}
 
-        # TODO:
-        return ""
+        code = ""
+        for var in pop.neuron_type.description['variables']:
+            code += """
+    if(pop%(id)s.record_%(name)s && ( (t - pop%(id)s.record_offset) %(mod)s pop%(id)s.record_period == 0 ) ) {
+        cudaMemcpy(pop%(id)s.gpu_%(name)s, pop%(id)s.%(name)s.data(), pop%(id)s.size * sizeof(double), cudaMemcpyHostToDevice);
+        pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
+    }""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name'], 'mod': '%' }
+
+        return code
+
+    def stop_condition(self, pop):
+        if not pop.stop_condition: # no stop condition has been defined
+            return """
+                case %(id)s:
+                    pop_stop = false;
+                    break;
+""" % {'id': pop.id}
+
+        pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
+
+        from ANNarchy.parser.Extraction import extract_stop_condition
+        from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
+
+        # Find the paradigm OMP or CUDA
+        if Global.config['paradigm'] == 'cuda':
+            pattern = pattern_cuda
+        else:
+            pattern = pattern_omp
+
+        extract_stop_condition(pop.neuron_type.description, pattern)
+
+        if pop.neuron_type.description['stop_condition']['type'] == 'any':
+            stop_code = """
+                    pop_stop = false;
+                    for(int i=0; i<pop%(id)s.size; i++)
+                    {
+                        if(%(condition)s)
+                            pop_stop = true;
+                    }
+    """ % {'id': pop.id, 'condition': pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}}
+        else:
+            stop_code = """
+                    pop_stop = true;
+                    for(int i=0; i<pop%(id)s.size; i++)
+                    {
+                        if(!(%(condition)s))
+                            pop_stop = false;
+                    }
+    """ % {'id': pop.id, 'condition': pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}}
+
+        return """
+                case %(id)s:
+%(stop_code)s
+                    break;
+""" % {'id': pop.id, 'stop_code': stop_code}
 
 #######################################################################
 ############## PYX ####################################################
@@ -470,6 +559,10 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         int size
         bool _active
 """
+        # Spiking neurons have aditional data
+        if pop.neuron_type.type == 'spike':
+            Global._error("Spiking neurons are not supported yet on GPUs ...")
+            exit(0)
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
@@ -493,8 +586,8 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         # Local variable %(name)s
         vector[%(type)s] %(name)s
         bool %(name)s_dirty
-        #vector[vector[%(type)s]] recorded_%(name)s 
-        #bool record_%(name)s 
+        vector[vector[%(type)s]] recorded_%(name)s
+        bool record_%(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -502,8 +595,8 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
         # Global variable %(name)s
         %(type)s  %(name)s
         bool %(name)s_dirty
-        #vector[%(type)s] recorded_%(name)s
-        #bool record_%(name)s
+        vector[%(type)s] recorded_%(name)s
+        bool record_%(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Arrays for the presynaptic sums of rate-coded neurons
@@ -529,41 +622,8 @@ void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
 cdef class pop%(id)s_wrapper :
 
     def __cinit__(self, size):
-        pop%(id)s.size = size"""% {'id': pop.id, 'name': pop.name}
-
-        # Parameters
-        for var in pop.neuron_type.description['parameters']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-        pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)
-        pop%(id)s.%(name)s_dirty = True""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else: # global
-                code += """
-        pop%(id)s.%(name)s = %(init)s""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-        # Variables
-        for var in pop.neuron_type.description['variables']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-        pop%(id)s.%(name)s = vector[%(type)s](size, %(init)s)
-        #pop%(id)s.recorded_%(name)s = vector[vector[%(type)s]](0, vector[%(type)s](0,%(init)s))
-        #pop%(id)s.record_%(name)s = False""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else: # global
-                code += """
-        pop%(id)s.%(name)s = %(init)s
-        pop%(id)s.%(name)s_dirty = True
-        #pop%(id)s.recorded_%(name)s = vector[%(type)s](0, %(init)s)
-        #pop%(id)s.record_%(name)s = False""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-        # Targets
-        if pop.neuron_type.type == 'rate':
-            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
-                code += """
-        pop%(id)s._sum_%(target)s = vector[double](size, 0.0)""" %{'id': pop.id, 'target': target}
+        pop%(id)s.size = size
+"""% {'id': pop.id, 'name': pop.name}
 
         # Size property
         code += """
@@ -575,8 +635,22 @@ cdef class pop%(id)s_wrapper :
 
         # Activate population
         code += """
+
     def activate(self, bool val):
         pop%(id)s._active = val
+""" % {'id': pop.id}
+
+        # Spiking neurons have aditional data
+        if pop.neuron_type.type == 'spike':
+            Global._error("Spiking neurons are not supported yet on GPUs ...")
+            exit(0)
+
+        # Record parameter
+        code += """
+    # Record parameter
+    cpdef set_record_period( self, int period, long int t ):
+        pop%(id)s.record_period = period
+        pop%(id)s.record_offset = t
 """ % {'id': pop.id}
 
         # Parameters
@@ -587,12 +661,13 @@ cdef class pop%(id)s_wrapper :
     cpdef np.ndarray get_%(name)s(self):
         return np.array(pop%(id)s.%(name)s)
     cpdef set_%(name)s(self, np.ndarray value):
-        pop%(id)s.%(name)s_dirty = True
         pop%(id)s.%(name)s = value
+        pop%(id)s.%(name)s_dirty = True
     cpdef %(type)s get_single_%(name)s(self, int rank):
         return pop%(id)s.%(name)s[rank]
     cpdef set_single_%(name)s(self, int rank, value):
         pop%(id)s.%(name)s[rank] = value
+        pop%(id)s.%(name)s_dirty = True
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -612,13 +687,23 @@ cdef class pop%(id)s_wrapper :
     cpdef np.ndarray get_%(name)s(self):
         return np.array(pop%(id)s.%(name)s)
     cpdef set_%(name)s(self, np.ndarray value):
-        pop%(id)s.%(name)s_dirty = True
         pop%(id)s.%(name)s = value
+        pop%(id)s.%(name)s_dirty = True
     cpdef %(type)s get_single_%(name)s(self, int rank):
         return pop%(id)s.%(name)s[rank]
     cpdef set_single_%(name)s(self, int rank, value):
-        pop%(id)s.%(name)s_dirty = True
         pop%(id)s.%(name)s[rank] = value
+        pop%(id)s.%(name)s_dirty = True
+    def start_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = True
+    def stop_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = False
+    def get_record_%(name)s(self):
+        cdef vector[vector[%(type)s]] tmp = pop%(id)s.recorded_%(name)s
+        for i in xrange(tmp.size()):
+            pop%(id)s.recorded_%(name)s[i].clear()
+        pop%(id)s.recorded_%(name)s.clear()
+        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -628,6 +713,14 @@ cdef class pop%(id)s_wrapper :
         return pop%(id)s.%(name)s
     cpdef set_%(name)s(self, %(type)s value):
         pop%(id)s.%(name)s = value
+    def start_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = True
+    def stop_record_%(name)s(self):
+        pop%(id)s.record_%(name)s = False
+    def get_record_%(name)s(self):
+        cdef vector[%(type)s] tmp = pop%(id)s.recorded_%(name)s
+        pop%(id)s.recorded_%(name)s.clear()
+        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
         return code

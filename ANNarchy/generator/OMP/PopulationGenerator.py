@@ -1,6 +1,27 @@
-import ANNarchy.core.Global as Global
+"""
 
-import numpy as np
+    PopulationGenerator.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+import ANNarchy.core.Global as Global
 
 class PopulationGenerator(object):
 
@@ -8,6 +29,9 @@ class PopulationGenerator(object):
 ############## HEADER #################################################
 #######################################################################
     def header_struct(self, pop):
+        """
+        Generate the c-style struct definition for a population object.
+        """
         # Is it a specific population?
         if pop.generator['omp']['header_pop_struct']:
             return pop.generator['omp']['header_pop_struct'] % {'id': pop.id}
@@ -44,7 +68,7 @@ struct PopStruct%(id)s{
             if var['name'] in pop.neuron_type.description['local']:
                 code += """
     // Local parameter %(name)s
-    std::vector< %(type)s > %(name)s ;
+    std::vector< %(type)s > %(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -304,7 +328,7 @@ struct PopStruct%(id)s{
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:                    
+            if var['name'] in pop.neuron_type.description['local']:
                 code += """
     // Local parameter %(name)s
     pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
@@ -342,7 +366,7 @@ struct PopStruct%(id)s{
     pop%(id)s._sum_%(target)s = std::vector<double>(pop%(id)s.size, 0.0);""" %{'id': pop.id, 'target': target}
 
         if pop.neuron_type.type == 'spike':
-            code += """    
+            code += """
     // Spiking neuron
     pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
     pop%(id)s.record_spike = false;
@@ -364,33 +388,6 @@ struct PopStruct%(id)s{
         memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
 """ % {'id': pop.id, 'target': target}
         return code
-
-    def update_random_distributions(self, pop):
-        # Is it a specific population?
-        if pop.generator['omp']['body_random_dist_update']:
-            return pop.generator['omp']['body_random_dist_update'] %{'id': pop.id}
-
-        code = ""
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-            code += """
-    // RD of pop%(id)s
-    if (pop%(id)s._active){
-        for(int i = 0; i < pop%(id)s.size; i++)
-        {
-"""% {'id': pop.id}
-
-            for rd in pop.neuron_type.description['random_distributions']:
-                code += """
-            pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
-""" % {'id': pop.id, 'rd_name': rd['name']}
-
-            code += """
-        }
-    }
-"""
-
-        return code
-
 
     def update_globalops(self, pop):
         # Is it a specific population?
@@ -430,7 +427,7 @@ struct PopStruct%(id)s{
     def stop_condition(self, pop):
         if not pop.stop_condition: # no stop condition has been defined
             return """
-                case %(id)s: 
+                case %(id)s:
                     pop_stop = false;
                     break;
 """ % {'id': pop.id}
@@ -468,10 +465,36 @@ struct PopStruct%(id)s{
     """ % {'id': pop.id, 'condition': pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}}
 
         return """
-                case %(id)s: 
+                case %(id)s:
 %(stop_code)s
                     break;
 """ % {'id': pop.id, 'stop_code': stop_code}
+
+    def update_random_distributions(self, pop):
+        # Is it a specific population?
+        if pop.generator['omp']['body_random_dist_update']:
+            return pop.generator['omp']['body_random_dist_update'] %{'id': pop.id}
+
+        code = ""
+        if len(pop.neuron_type.description['random_distributions']) > 0:
+            code += """
+    // RD of pop%(id)s
+    if (pop%(id)s._active){
+        for(int i = 0; i < pop%(id)s.size; i++)
+        {
+"""% {'id': pop.id}
+
+            for rd in pop.neuron_type.description['random_distributions']:
+                code += """
+            pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
+""" % {'id': pop.id, 'rd_name': rd['name']}
+
+            code += """
+        }
+    }
+"""
+
+        return code
 
 #######################################################################
 ############## PYX ####################################################
@@ -487,7 +510,7 @@ struct PopStruct%(id)s{
     cdef struct PopStruct%(id)s :
         int size
         bool _active
-"""            
+"""
         # Spiking neurons have aditional data
         if pop.neuron_type.type == 'spike':
             code += """
@@ -508,13 +531,13 @@ struct PopStruct%(id)s{
             if var['name'] in pop.neuron_type.description['local']:
                 code += """
         # Local parameter %(name)s
-        vector[%(type)s] %(name)s 
+        vector[%(type)s] %(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
                 code += """
         # Global parameter %(name)s
-        %(type)s  %(name)s 
+        %(type)s  %(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Variables
@@ -522,17 +545,17 @@ struct PopStruct%(id)s{
             if var['name'] in pop.neuron_type.description['local']:
                 code += """
         # Local variable %(name)s
-        vector[%(type)s] %(name)s 
-        vector[vector[%(type)s]] recorded_%(name)s 
-        bool record_%(name)s 
+        vector[%(type)s] %(name)s
+        vector[vector[%(type)s]] recorded_%(name)s
+        bool record_%(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
                 code += """
         # Global variable %(name)s
-        %(type)s  %(name)s 
+        %(type)s  %(name)s
         vector[%(type)s] recorded_%(name)s
-        bool record_%(name)s 
+        bool record_%(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Arrays for the presynaptic sums of rate-coded neurons
