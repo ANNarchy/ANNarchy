@@ -263,17 +263,6 @@ struct ProjStruct%(id_proj)s{
 
         ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target} 
 
-        # Profiling code
-        if Global.config['profiling']:
-            from ..Profile.Template import profile_generator_omp_template
-            from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._populations, Global._projections)
-            prof_begin = profile_generator_omp_template['compute_psp']['before'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
-            prof_end = profile_generator_omp_template['compute_psp']['after'] % { 'num_ops': pGen.calculate_num_ops(), 'off': "(rc %"+str(pGen.calculate_num_ops())+")" }
-        else:
-            prof_begin = ""
-            prof_end = ""
-
         # Analyse all elements of pre_spike
         pre_event = ""
         pre_event_list = []
@@ -357,7 +346,6 @@ struct ProjStruct%(id_proj)s{
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
     if (pop%(id_post)s._active){
-        %(prof_begin)s
         for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
             rk_j = %(pre_array)s[_idx_j];
             int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
@@ -371,12 +359,10 @@ struct ProjStruct%(id_proj)s{
 %(pre_event)s
             }
         }
-        %(prof_end)s
     } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
     'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
-    'exact': exact_code,
-    'prof_begin': prof_begin, 'prof_end': prof_end}
+    'exact': exact_code }
 
         # Not even-driven summation of psp
         if 'psp' in  proj.synapse.description.keys(): # not event-based
@@ -398,6 +384,10 @@ struct ProjStruct%(id_proj)s{
        'psp': proj.synapse.description['psp']['cpp'] % ids, 'omp_code': omp_code}
 
             code += psp_sum
+
+        # annotate code
+        if self._prof_gen:
+            code = self._prof_gen.annotate_computesum_spiking_omp(code)
 
         return code
 

@@ -213,7 +213,7 @@ struct PopStruct%(id)s{
 """ % {'refrac': eq['cpp'] % {'id': pop.id} }
 
             # Main code
-            code += """
+            spike_gather = """
         // Gather spikes for population %(id)s (%(name)s)
         pop%(id)s.spiked.clear();
         for(int i = 0; i < %(size)s; i++){
@@ -232,6 +232,14 @@ struct PopStruct%(id)s{
             }
         }
 """% {'id': pop.id, 'name': pop.name, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac': refrac} 
+
+            # if profiling enabled, annotate with profiling code
+            if Global.config['profiling']:
+                from ..Profile.ProfileGenerator import ProfileGenerator
+                pGen = ProfileGenerator(Global._populations, Global._projections)
+                spike_gather = pGen.annotate_spike_propagation_omp(spike_gather)
+
+            code += spike_gather
 
         # finish code
         code = """
