@@ -170,9 +170,10 @@ struct PopStruct%(id)s{
 
         # Spike emission
         if pop.neuron_type.type == 'spike':
+            # Process the condition
             cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
             reset = ""; refrac = ""
-
+            # reset equations
             for eq in pop.neuron_type.description['spike']['spike_reset']:
                 reset += """
                 %(reset)s
@@ -182,26 +183,34 @@ struct PopStruct%(id)s{
                 %(refrac)s
 """ % {'refrac': eq['cpp'] % {'id': pop.id} }
 
+            # Is there a refractory period?
+            if pop.neuron_type.refractory or pop.refractory:
+                refrac_period = """if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
+%(refrac)s
+                pop%(id)s.refractory_remaining[i]--;
+            }
+            else """ %  {'id': pop.id, 'refrac': refrac}
+                refrac_inc = "pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];" %  {'id': pop.id}
+            else:
+                refrac_period = ""
+                refrac_inc = ""
+
             # Main code
             code += """
         // Gather spikes
         pop%(id)s.spiked.clear();
         for(int i = 0; i < %(size)s; i++){
-            if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
-%(refrac)s
-                pop%(id)s.refractory_remaining[i]--;
-            }
-            else if(%(condition)s){ // Emit a spike
+            %(refrac_period)sif(%(condition)s){ // Emit a spike
 %(reset)s        
                 pop%(id)s.spiked.push_back(i);
                 if(pop%(id)s.record_spike){
                     pop%(id)s.recorded_spike[i].push_back(t);
                 }
                 pop%(id)s.last_spike[i] = t;
-                pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
+                %(refrac_inc)s
             }
         }
-"""% {'id': pop.id, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac': refrac} 
+"""% {'id': pop.id, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac_period': refrac_period, 'refrac_inc': refrac_inc} 
 
                 # End spike region
 
