@@ -10,10 +10,14 @@ int rc;
     profiler->init(0);
     std::cout << "Profile " << omp_get_max_threads() << std::endl;
     """,
-    'run_pre': """  rc=0;
+    'step_pre': """  rc=0;
+    """,
+    'run_pre': """// before
+    profiler->start_overall_time_prof(omp_get_max_threads()-1);
     """,
     'run_post': """// after
     std::cout << "Profile " << omp_get_max_threads() << std::endl;
+    profiler->stop_overall_time_prof(omp_get_max_threads()-1);
     profiler->evaluate(1,1);
     """,
     #

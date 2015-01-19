@@ -596,7 +596,29 @@ openmp_profile_body=\
 """
 #include "Profiling.h"
 
+/*
+ *  Preinitialize Profiling class
+ */
 Profiling::Profiling() {
+	Profiling_time_CPU_count=0;
+	Profiling_cycles_CPU_count=0;
+	Profiling_thread_count=0;
+	Profiling_overall_count=1;
+	thread_count=0;
+	core_count=0;
+
+	Profil=1;
+
+	Prof_time_CPU=NULL;
+    Prof_cycles_CPU=NULL;
+    Prof_thread_statistic=NULL;
+    Prof_general=NULL;
+	Generaltext="";
+
+	// initialize PAPI
+	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
+		exit(1);
+
 	// initialize time units, common profiling unit is s, this are transforming 
 	// units for command-line output
 	time_units.push_back(std::pair<std::string, double>("us ", 1.0E6));
@@ -608,23 +630,63 @@ Profiling::Profiling() {
 }
 
 /*
+ *  Destruct Profiling class
+ */
+Profiling::~Profiling() {
+	if(Prof_time_CPU!=NULL){
+	    for(int i=0;i<Profiling_time_CPU_count+1;i++)//+1->Messfehler
+	    {
+	        delete[] Prof_time_CPU[i].time.maxarray;
+	        delete[] Prof_time_CPU[i].time.minarray;
+	    }
+		delete[] Prof_time_CPU;
+	}
+	if(Prof_cycles_CPU!=NULL){
+	    for(int i=0;i<Profiling_cycles_CPU_count+1;i++)//+1-->Messfehler
+	    {
+	        delete[] Prof_cycles_CPU[i].time.maxarray;
+	        delete[] Prof_cycles_CPU[i].time.minarray;
+	    }
+	    delete[] Prof_cycles_CPU;
+	}
+	if(Prof_general!=NULL)
+	    delete[] Prof_general;
+	if(Prof_thread_statistic!=NULL){
+	    for(int i=0;i<Profiling_thread_count;i++)
+	    {
+	        for(int j=0;j<thread_count;j++)
+	        {
+	            delete[] Prof_thread_statistic[i].thread[j].core;
+	        }
+	        delete[] Prof_thread_statistic[i].thread;
+	    }
+		delete[] Prof_thread_statistic;
+	}
+}
+
+/*
  *  Init
  */
 void Profiling::init(int extended) {
+	if( Profil ) {
+
+		// TODO: delete pre-existing elements
+
 %(init)s
 
-	//Profiling Array allocate
-	Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
-	Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
-	Prof_general= new Profiling_general[Profiling_overall_count+1];
+		//Profiling Array allocate
+		Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
+		Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
+		Prof_general= new Profiling_general[Profiling_overall_count+1];
     
 %(init2)s
     
-	//additional initializations
-	if (extended & 0x01)
-		init_thread();
-	if (extended & 0x02)
-		init_trash();
+		//additional initializations
+		if (extended & 0x01)
+			init_thread();
+		if (extended & 0x02)
+			init_trash();
+	}
 }
 
 void Profiling::init_thread() {
@@ -644,14 +706,14 @@ void Profiling::init_thread() {
 }
 
 void Profiling::init_trash() {
-    for(int i=0;i<Profiling_time_CPU_count;i++) {
+    for(int i=0;i<Profiling_time_CPU_count+1;i++) { //+1-->Messfehler
         Prof_time_CPU[i].time.maxarray=new double[Prof_time_CPU[i].time.maxac];
         for(int j=0;j<Prof_time_CPU[i].time.maxac;j++)Prof_time_CPU[i].time.maxarray[j]=FLT_MIN;
         Prof_time_CPU[i].time.minarray=new double[Prof_time_CPU[i].time.minac];
         for(int j=0;j<Prof_time_CPU[i].time.minac;j++)Prof_time_CPU[i].time.minarray[j]=FLT_MAX;
     }
     
-    for(int i=0;i<Profiling_cycles_CPU_count;i++) {
+    for(int i=0;i<Profiling_cycles_CPU_count+1;i++) { //+1-->Messfehler
         Prof_cycles_CPU[i].time.maxarray=new double[Prof_cycles_CPU[i].time.maxac];
         for(int j=0;j<Prof_cycles_CPU[i].time.maxac;j++)Prof_cycles_CPU[i].time.maxarray[j]=FLT_MIN;
         Prof_cycles_CPU[i].time.minarray=new double[Prof_cycles_CPU[i].time.minac];
@@ -1145,8 +1207,10 @@ int Profiling::evaluate_file(const char * filename)
 {
     std::ofstream fp;
     fp.open(filename,std::ios::out|std::ios::trunc);
-	if (!(fp.is_open()))return 1;
-		int found = (Generaltext.find("#")!=std::string::npos);//1 wenn Generaltext ungueltig 
+	if (!(fp.is_open()))
+		return 1;
+
+	int found = (Generaltext.find("#")!=std::string::npos);//1 wenn Generaltext ungueltig 
 	if (!(found))
 		fp << Generaltext << std::endl;
     fp.precision(8);
@@ -1238,10 +1302,10 @@ int Profiling::evaluate_file(const char * filename)
                 fp << Prof_thread_statistic[i].name;
 
             found = checkstring(Prof_thread_statistic[i].additonal);//1 wenn name ungueltig 
-            if ((Prof_cycles_CPU[i].additonal=="")||(found))
+            if ((Prof_thread_statistic[i].additonal=="")||(found))
                 fp << ":";
             else     
-                fp <<":"<< Prof_cycles_CPU[i].additonal;
+                fp <<":"<< Prof_thread_statistic[i].additonal;
 
             fp <<           ":" << std::fixed << Prof_thread_statistic[i].used_threads<<":" << std::fixed << core_count;
             for(int j=0;j<Prof_thread_statistic[i].used_threads;j++)

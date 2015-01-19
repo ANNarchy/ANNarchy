@@ -113,10 +113,11 @@ class ProfileGenerator(object):
         """
         generate Profiling.cpp
         """
-        num_threads = 8        #TODO: replace
+        num_threads = 6        #TODO: replace
         
         # count initialization
         count = """    set_CPU_time_number( %(num_op)s * %(num_thread)s );
+        set_overall_number( %(num_thread)s );
 """ % { 'num_op': self._num_ops,
         'num_thread': num_threads,
        }

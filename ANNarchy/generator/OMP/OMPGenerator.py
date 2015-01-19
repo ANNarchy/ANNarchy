@@ -194,8 +194,9 @@ class OMPGenerator(object):
         from ..Profile.Template import profile_generator_omp_template
         prof_include = "" if not Global.config["profiling"] else profile_generator_omp_template['include']
         prof_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
-        prof_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
-        prof_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
+        prof_step_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['step_pre']
+        prof_run_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
+        prof_run_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
 
         # Generate cpp code for the analysed pops and projs
         from .BodyTemplate import body_template
@@ -221,8 +222,9 @@ class OMPGenerator(object):
             'record' : record,
             'prof_include': prof_include,
             'prof_init': prof_init,
-            'prof_pre': prof_pre,
-            'prof_post': prof_post
+            'prof_step_pre': prof_step_pre,
+            'prof_run_pre': prof_run_pre,
+            'prof_run_post': prof_run_post
         }
 
     def body_update_neuron(self):

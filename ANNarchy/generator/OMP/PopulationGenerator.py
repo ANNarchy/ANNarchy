@@ -163,7 +163,12 @@ struct PopStruct%(id)s{
 
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
-            return ""
+            # even if there are no variables we still need to do something for profiling
+            if Global.config['profiling']:
+                return "\n    //nothing to do for pop%(id)s, but increase counter\n    rc++;\n" % {'id': pop.id}
+            else:
+                return ""
+
 
         # Neural update
         from ..Utils import generate_equation_code

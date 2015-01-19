@@ -24,7 +24,7 @@ cuda_profile_header =\
 class Profiling {
     
     public:
-        Profiling() ;
+        Profiling();
 
         ~Profiling() {
         }
@@ -190,10 +190,9 @@ openmp_profile_header=\
 class Profiling {
     
     public:
-        Profiling() ;
+        Profiling();
 
-        ~Profiling() {
-        }
+        ~Profiling();
 
     /*use following functions only befor the init function to set how many measurement units of each type you want to use*/
     void set_CPU_time_number(  int number){Profiling_time_CPU_count=number;}
