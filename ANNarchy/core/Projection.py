@@ -852,6 +852,57 @@ class Projection(object):
         self._store_csr(csr)
         return self
 
+    def connect_from_sparse(self, weights, delays=0.0):
+        """
+        Builds a connectivity pattern using a Scipy sparse matrix for the weights and (optionally) delays.
+
+        *Parameters*:
+
+        * **weights**: a sparse lil_matrix object created from scipy.
+        * **delays**: the value of the homogenous delay (default: dt).
+        """
+        try:
+            from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
+        except:
+            Global._error("scipy is not installed, sparse matrices can not be loaded.")
+            exit(0)
+
+        if not isinstance(weights, (lil_matrix, csr_matrix, csc_matrix)):
+            Global._error("only lil, csr and csc matrices are allowed for now.")
+            exit(0)
+
+        # Create an empty CSR object
+        try:
+            from ANNarchy.core.cython_ext.Connector import CSR
+        except:
+            _error('ANNarchy was not successfully installed.')
+        csr = CSR()
+
+        # Find offsets
+        if hasattr(self.pre, 'ranks'):
+            offset_pre = self.pre.ranks[0]
+        else:
+            offset_pre = 0
+        if hasattr(self.post, 'ranks'):
+            offset_post = self.post.ranks[0]
+        else:
+            offset_post = 0
+        
+        # Process the sparse matrix and fill the csr
+        W = csc_matrix(weights)
+        W.sort_indices()
+        (pre, post) = W.shape
+        for idx_post in xrange(post):
+            pre_rank = W.getcol(idx_post).indices
+            w = W.getcol(idx_post).data
+            csr.add(idx_post + offset_post, pre_rank + offset_pre, w, [float(delays)])
+        
+        # Store the synapses
+        self.connector_name = "Sparse connectivity matrix"
+        self.connector_description = "Sparse connectivity matrix"
+        self._store_csr(csr)
+        return self
+
     def connect_from_file(self, filename):
         """
         Builds a connection pattern using data saved using the Projection.save_connectivity() method.

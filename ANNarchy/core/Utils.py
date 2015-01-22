@@ -1,6 +1,9 @@
 import numpy as np
 import ANNarchy.core.Global as Global
 
+######################
+# Plotting methods
+######################
 def raster_plot(data, compact=False):
     """ Transforms recorded spikes to display easily a raster plot for a spiking population.
 
@@ -67,3 +70,30 @@ def population_rate(data, smooth=Global.config['dt']):
     """
     import ANNarchy.core.cython_ext.Transformations as Transformations
     return Transformations.population_rate(data, smooth)
+
+
+
+######################
+# Sparse matrices
+######################
+
+def sparse_random_matrix(pre, post, p, weight, delay=0):
+    """
+    Returns a sparse (lil) matrix to connect the pre and post populations with the probability p and the value weight.
+    """
+    try:
+        from scipy.sparse import lil_matrix
+    except:
+        Global._warning("scipy is not installed, sparse matrices won't work")
+        return None
+    from random import sample
+    W=lil_matrix((pre, post))
+    for i in xrange(pre):
+        k=np.random.binomial(post,p,1)[0]
+        W.rows[i]=sample(xrange(post),k)
+        W.data[i]=[weight]*k
+
+    return W
+
+
+
