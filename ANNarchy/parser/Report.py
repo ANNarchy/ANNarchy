@@ -205,7 +205,7 @@ def _generate_summary():
 
     for pop in _populations:
         # population name
-        population_names += pop.name + ", "
+        population_names += pop_name(pop.name) + ", "
     for neur in _neurons:
         neuron_models += neur.name + ', '
     population_names = population_names[:-2] # suppress the last ,
@@ -249,7 +249,7 @@ def _generate_populations():
     %(pop_name)s             & %(neuron_type)s        & $N_\\text{%(pop_name)s}$ = %(size)s  \\\\ \\hline
 """
     for pop in _populations:
-        txt += pop_tpl % {'pop_name': pop.name, 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
+        txt += pop_tpl % {'pop_name': pop_name(pop.name), 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
 
     return populations_template % {'populations_description': txt}
 
@@ -264,7 +264,7 @@ def _generate_population_parameters():
             val = pop.init[param]
             if isinstance(val, (list, np.ndarray)):
                 val = "$[" + str(min(val)) + ", " + str(max(val)) + "]$"
-            parameters += pop_tpl % {'name': pop.name if idx==0 else "", 'param': _latexify_name(param, []), 'value': val}
+            parameters += pop_tpl % {'name': pop_name(pop.name) if idx==0 else "", 'param': _latexify_name(param, []), 'value': val}
 
         txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{F}{Population parameters}\\\\ \\hline" if rk==0 else ""}
 
@@ -281,7 +281,7 @@ def _generate_projections():
             name = proj.synapse.name
         else:
             name = "-"
-        txt += proj_tpl % {'pre': proj.pre.name, 'post': proj.post.name, 'target': proj.target,
+        txt += proj_tpl % {'pre': pop_name(proj.pre.name), 'post': pop_name(proj.post.name), 'target': proj.target,
                             'synapse': name,
                             'description': proj.connector_description}
 
@@ -301,7 +301,7 @@ def _generate_projection_parameters():
             if param == 'w':
                 continue
             if idx == 0:
-                proj_name = "%(pre)s  $\\rightarrow$ %(post)s with target %(target)s" % {'pre': proj.pre.name, 'post': proj.post.name, 'target': proj.target}
+                proj_name = "%(pre)s  $\\rightarrow$ %(post)s with target %(target)s" % {'pre': pop_name(proj.pre.name), 'post': pop_name(proj.post.name), 'target': proj.target}
             else:
                 proj_name = ""
             val = proj.init[param]
@@ -705,3 +705,6 @@ def _latexify_name(name, local):
         if name in local:
             equiv = equiv + '(t)'
         return equiv
+
+def pop_name(name):
+    return name.replace('_', '\_')

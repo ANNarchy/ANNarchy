@@ -109,7 +109,7 @@ class RateNeuron(Neuron):
     """
     Base class to define a rate-coded neuron.
     """    
-    def __init__(self, parameters="", equations="", functions=None, extra_values={}):
+    def __init__(self, parameters="", equations="", functions=None, name="", description="", extra_values={}):
         """        
         *Parameters*:
         
@@ -118,13 +118,14 @@ class RateNeuron(Neuron):
             * **functions**: additional functions used in the variables' equations.
 
         """
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, extra_values=extra_values)
+        _warning("The use of RateNeuron or SpikeNeuron is deprecated, use Neuron instead.")
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, name=name, description=description, extra_values=extra_values)
         
 class SpikeNeuron(Neuron):
     """
     Base class to define a spiking neuron.
     """    
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, extra_values={} ):
+    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
         """         
         *Parameters*:
         
@@ -136,7 +137,8 @@ class SpikeNeuron(Neuron):
             * **refractory**: refractory period of a neuron after a spike.
 
         """
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, extra_values=extra_values)
+        _warning("The use of RateNeuron or SpikeNeuron is deprecated, use Neuron instead.")
+        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, name=name, description=description, extra_values=extra_values)
 
 class IndividualNeuron(object):
     """

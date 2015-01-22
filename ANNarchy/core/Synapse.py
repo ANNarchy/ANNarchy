@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _error, _synapses
+from ANNarchy.core.Global import _error, _warning, _synapses
 from ANNarchy.parser.SingleAnalysis import analyse_synapse
 
         
@@ -106,7 +106,7 @@ class RateSynapse(Synapse):
     Base class to define a rate-coded synapse.
     """
     
-    def __init__(self, parameters="", equations="", psp=None, functions=None, extra_values={}):
+    def __init__(self, parameters="", equations="", psp=None, functions=None, name=None, description=None, extra_values={}):
         """ 
         *Parameters*:
         
@@ -116,14 +116,15 @@ class RateSynapse(Synapse):
             * **functions**: additional functions used in the variables' equations.
 
         """         
-        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, functions=functions, extra_values=extra_values)
+        _warning("The use of RateSynapse or SpikeSynapse is deprecated, use Synapse instead.")
+        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, functions=functions, name=name, description=description, extra_values=extra_values)
         
 class SpikeSynapse(Synapse):
     """
     Bae class to define a spiking synapse.
     """
 
-    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None, extra_values={}):
+    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None, name=None, description=None, extra_values={}):
         """ 
         *Parameters*:
         
@@ -135,5 +136,6 @@ class SpikeSynapse(Synapse):
             * **functions**: additional functions used in the variables' equations.
 
         """  
-        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, pre_spike=pre_spike, post_spike=post_spike, functions=functions, extra_values=extra_values)
+        _warning("The use of RateSynapse or SpikeSynapse is deprecated, use Synapse instead.")
+        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, pre_spike=pre_spike, post_spike=post_spike, functions=functions, name=name, description=description, extra_values=extra_values)
 
