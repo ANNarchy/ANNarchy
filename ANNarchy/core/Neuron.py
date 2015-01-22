@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-from ANNarchy.core.Global import _error, _neurons
+from ANNarchy.core.Global import _error, _warning, _neurons
 from ANNarchy.parser.SingleAnalysis import analyse_neuron
 import numpy as np
 
