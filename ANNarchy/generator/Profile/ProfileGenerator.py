@@ -168,20 +168,24 @@ class ProfileGenerator(object):
         # CPU_time_container
         for proj in Global._projections:    # compute sum
             name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"Proj%(id)s - compute sum");
+            set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
 """ % { 'id': proj.id, 'num_op': self._num_ops, 'off': rc }
             rc+= 1
 
         for pop in Global._populations:     # neural update
             name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"%(name)s - neural update");
+            set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
 """ % { 'name': pop.name, 'num_op': self._num_ops, 'off': rc }
             rc+= 1
             if pop.neuron_type.type == "spike":
                 name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"%(name)s - spike gathering");
+                set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
 """ % { 'name': pop.name, 'num_op': self._num_ops, 'off': rc }
                 rc+= 1
 
         for proj in Global._projections:    # update synapses
             name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"Proj%(id)s - update synapses");
+            set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
 """ % { 'id': proj.id, 'num_op': self._num_ops, 'off': rc }
             rc+= 1
 
