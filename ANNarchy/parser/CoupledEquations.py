@@ -92,7 +92,7 @@ class CoupledEquations(object):
 
         # replace the variables by their future value
         for name, expression in expression_list.iteritems():
-            for n in name:
+            for n in self.names:
                 expression = re.sub(r'([^\w]+)'+n+r'([^\w]+)', r'\1_'+n+r'\2', expression)
             expression = expression.replace('_t_gradient_', '(_'+name+' - '+name+')')
             expression_list[name] = expression
@@ -108,8 +108,7 @@ class CoupledEquations(object):
                 transformations = (standard_transformations + (convert_xor,))
             )
             equations[name] = analysed
-
-            
+          
         try:
             solution = solve(equations.values(), new_vars.keys())
         except:
@@ -135,7 +134,6 @@ class CoupledEquations(object):
                     variable['cpp'] = cpp_eq
                     variable['switch'] = switch
             
-        
         return self.variables
 
 
