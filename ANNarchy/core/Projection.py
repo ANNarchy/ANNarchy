@@ -420,20 +420,20 @@ class Projection(object):
             value = list(value)
         if isinstance(value, list):
             if len(value) == len(self.post_ranks):
-                for n in self.post_ranks:
-                    if not len(value[n]) == self.cyInstance.nb_synapses(n):
-                        Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(n))+ ' synapses.')
+                for idx, n in enumerate(self.post_ranks):
+                    if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
+                        Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
                         exit(0)
-                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value[n])
+                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value[idx])
             else:
                 Global._error('The projection has ' + self.size + ' post-synaptic neurons.')
         elif isinstance(value, RandomDistribution):
-            for n in self.post_ranks:
-                getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value.get_values(self.cyInstance.nb_synapses(n)))
+            for idx, n in enumerate(self.post_ranks):
+                getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value.get_values(self.cyInstance.nb_synapses(idx)))
         else: # a single value
             if attribute in self.synapse.description['local']:
-                for n in self.post_ranks:
-                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(n, value*np.ones(self.cyInstance.nb_synapses(n)))
+                for idx, n in enumerate(self.post_ranks):
+                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
             else:
                 getattr(self.cyInstance, 'set_'+attribute)(value*np.ones(len(self.post_ranks)))
 
