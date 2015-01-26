@@ -95,7 +95,7 @@ class CoupledEquations(object):
             for n in self.names:
                 expression = re.sub(r'([^\w]+)'+n+r'([^\w]+)', r'\1_'+n+r'\2', expression)
             expression = expression.replace('_t_gradient_', '(_'+name+' - '+name+')')
-            expression_list[name] = expression
+            expression_list[name] = expression + '-' + name
 
             new_var = Symbol('_'+name)
             self.local_dict['_'+name] = new_var
@@ -121,7 +121,7 @@ class CoupledEquations(object):
 
             # Generate the code
             cpp_eq = 'double _' + new_vars[var] + ' = ' + ccode(sol) + ';'
-            switch =  ccode(self.local_dict[new_vars[var]] ) + ' = _' + new_vars[var] + ';'
+            switch =  ccode(self.local_dict[new_vars[var]] ) + ' += _' + new_vars[var] + ';'
 
             # Replace untouched variables with their original name
             for prev, new in self.untouched.iteritems():
