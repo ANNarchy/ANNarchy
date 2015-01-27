@@ -600,129 +600,185 @@ openmp_profile_body=\
  *  Preinitialize Profiling class
  */
 Profiling::Profiling() {
-	Profiling_time_CPU_count=0;
-	Profiling_cycles_CPU_count=0;
-	Profiling_thread_count=0;
-	Profiling_overall_count=1;
-	thread_count=0;
-	core_count=0;
+    Profiling_time_CPU_count=0;
+    Profiling_cycles_CPU_count=0;
+    Profiling_thread_count=0;
+    Profiling_overall_count=1;
+    thread_count=0;
+    core_count=0;
 
-	Profil=1;
+    Profil=1;
 
-	Prof_time_CPU=NULL;
+    Prof_time_CPU=NULL;
     Prof_cycles_CPU=NULL;
     Prof_thread_statistic=NULL;
     Prof_general=NULL;
-	Generaltext="";
+    Generaltext="";
 
-	// initialize PAPI
-	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
-		exit(1);
+    // initialize PAPI
+    if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
+        exit(1);
 
-	// initialize time units, common profiling unit is s, this are transforming 
-	// units for command-line output
-	time_units.push_back(std::pair<std::string, double>("us ", 1.0E6));
-	time_units.push_back(std::pair<std::string, double>("ms ", 1.0E3));
-	time_units.push_back(std::pair<std::string, double>("s ", 1.0));
-	
-	// default output in secconds
-	used_time_unit = TimeUnits::SECS;
+    // initialize time units, common profiling unit is s, this are transforming
+    // units for command-line output
+    time_units.push_back(std::pair<std::string, double>("us ", 1.0E6));
+    time_units.push_back(std::pair<std::string, double>("ms ", 1.0E3));
+    time_units.push_back(std::pair<std::string, double>("s ", 1.0));
+
+    // default output in secconds
+    used_time_unit = TimeUnits::SECS;
 }
 
 /*
  *  Destruct Profiling class
  */
 Profiling::~Profiling() {
-	if(Prof_time_CPU!=NULL){
-	    for(int i=0;i<Profiling_time_CPU_count+1;i++)//+1->Messfehler
-	    {
-	        delete[] Prof_time_CPU[i].time.maxarray;
-	        delete[] Prof_time_CPU[i].time.minarray;
-	    }
-		delete[] Prof_time_CPU;
-	}
-	if(Prof_cycles_CPU!=NULL){
-	    for(int i=0;i<Profiling_cycles_CPU_count+1;i++)//+1-->Messfehler
-	    {
-	        delete[] Prof_cycles_CPU[i].time.maxarray;
-	        delete[] Prof_cycles_CPU[i].time.minarray;
-	    }
-	    delete[] Prof_cycles_CPU;
-	}
-	if(Prof_general!=NULL)
-	    delete[] Prof_general;
-	if(Prof_thread_statistic!=NULL){
-	    for(int i=0;i<Profiling_thread_count;i++)
-	    {
-	        for(int j=0;j<thread_count;j++)
-	        {
-	            delete[] Prof_thread_statistic[i].thread[j].core;
-	        }
-	        delete[] Prof_thread_statistic[i].thread;
-	    }
-		delete[] Prof_thread_statistic;
-	}
+    //Delete existing Profiling Arrays
+    if(Prof_time_CPU!=NULL) {
+        for(int i=0;i<Profiling_time_CPU_count+1;i++) //+1->Messfehler
+        { 
+            delete [] Prof_time_CPU[i].time.maxarray;
+            delete [] Prof_time_CPU[i].time.minarray;
+        }
+        delete[] Prof_time_CPU;
+    }
+
+    if(Prof_cycles_CPU!=NULL){
+        for(int i=0;i<Profiling_cycles_CPU_count+1;i++)//+1-->Messfehler
+        {
+            delete [] Prof_cycles_CPU[i].time.maxarray;
+            delete [] Prof_cycles_CPU[i].time.minarray;
+        }
+        delete [] Prof_cycles_CPU;
+    }
+
+    if(Prof_general!=NULL)
+        delete[] Prof_general;
+
+    if(Prof_thread_statistic!=NULL) {
+        for(int i=0;i<Profiling_thread_count;i++)
+        {
+            for(int j=0;j<thread_count;j++)
+            {
+                delete [] Prof_thread_statistic[i].thread[j].core;
+            }
+            delete [] Prof_thread_statistic[i].thread;
+        }
+        delete [] Prof_thread_statistic;
+    }
 }
 
 /*
  *  Init
  */
 void Profiling::init(int extended) {
-	if( Profil ) {
+    if( Profil ) {
+        //Delete preexisting Profiling Arrays
+        if(Prof_time_CPU!=NULL){
+            for(int i=0;i<Profiling_time_CPU_count+1;i++)//+1->Messfehler
+            {
+                delete[] Prof_time_CPU[i].time.maxarray;
+                delete[] Prof_time_CPU[i].time.minarray;
+            }
+            delete[] Prof_time_CPU;
+        }
+        if(Prof_cycles_CPU!=NULL){
+            for(int i=0;i<Profiling_cycles_CPU_count+1;i++)//+1-->Messfehler
+            {
+                delete[] Prof_cycles_CPU[i].time.maxarray;
+                delete[] Prof_cycles_CPU[i].time.minarray;
+            }
+            delete[] Prof_cycles_CPU;
+        }
 
-		// TODO: delete pre-existing elements
-
+        if(Prof_general!=NULL)
+            delete[] Prof_general;
+    
 %(init)s
-
-		//Profiling Array allocate
-		Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
-		Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
-		Prof_general= new Profiling_general[Profiling_overall_count+1];
+    
+        //Profiling Array allocate
+        Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
+        Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
+        Prof_general= new Profiling_general[Profiling_overall_count+1];
     
 %(init2)s
-    
-		//additional initializations
-		if (extended & 0x01)
-			init_thread();
-		if (extended & 0x02)
-			init_trash();
-	}
-}
-
-void Profiling::init_thread() {
-	//Profiling thread-Array allocate
-	const PAPI_hw_info_t *hwinfo = NULL;
-	hwinfo=PAPI_get_hardware_info();
-
-	if (core_count==0) core_count=hwinfo->totalcpus;
-
-	Prof_thread_statistic= new Profiling_thread_statistic[Profiling_thread_count];
-	for(int i=0;i<Profiling_thread_count;i++) {
-		Prof_thread_statistic[i].thread=new Profiling_thread_statistic_core[thread_count];
-		for(int j=0;j<thread_count;j++) {
-			Prof_thread_statistic[i].thread[j].core=new Profiling_thread_statistic_unit[core_count];
-		}
-	}
-}
-
-void Profiling::init_trash() {
-    for(int i=0;i<Profiling_time_CPU_count+1;i++) { //+1-->Messfehler
-        Prof_time_CPU[i].time.maxarray=new double[Prof_time_CPU[i].time.maxac];
-        for(int j=0;j<Prof_time_CPU[i].time.maxac;j++)Prof_time_CPU[i].time.maxarray[j]=FLT_MIN;
-        Prof_time_CPU[i].time.minarray=new double[Prof_time_CPU[i].time.minac];
-        for(int j=0;j<Prof_time_CPU[i].time.minac;j++)Prof_time_CPU[i].time.minarray[j]=FLT_MAX;
+        //additional initializations
+        if ((extended & INIT_THREAD)==INIT_THREAD)
+            init_thread();
+        if ((extended & INIT_OUTLIER)==INIT_OUTLIER)
+            init_outlier();
     }
-    
-    for(int i=0;i<Profiling_cycles_CPU_count+1;i++) { //+1-->Messfehler
-        Prof_cycles_CPU[i].time.maxarray=new double[Prof_cycles_CPU[i].time.maxac];
-        for(int j=0;j<Prof_cycles_CPU[i].time.maxac;j++)Prof_cycles_CPU[i].time.maxarray[j]=FLT_MIN;
-        Prof_cycles_CPU[i].time.minarray=new double[Prof_cycles_CPU[i].time.minac];
-        for(int j=0;j<Prof_cycles_CPU[i].time.minac;j++)Prof_cycles_CPU[i].time.minarray[j]=FLT_MAX;
+}
+
+void Profiling::init_thread()
+{
+    if(Profil){
+
+        //Determinate core count of the System
+        if (core_count==0) {
+            const PAPI_hw_info_t *hwinfo = NULL;
+            if ((hwinfo = PAPI_get_hardware_info()) != NULL){
+                core_count=hwinfo->totalcpus;
+            } else {
+                core_count=4;
+                std::cout << "no hardware information retrieved from PAPI, assume hard coded number of cores: " << core_count << std::endl;
+            }
+        }
+        //Delete preexisting thread-Arrays
+        if(Prof_thread_statistic!=NULL){
+            for(int i=0;i<Profiling_thread_count;i++)
+            {
+                for(int j=0;j<thread_count;j++)
+                {
+                    delete[] Prof_thread_statistic[i].thread[j].core;
+                }
+                delete[] Prof_thread_statistic[i].thread;
+            }
+            delete[] Prof_thread_statistic;
+        }
+        //Profiling thread-Array allocate
+        Prof_thread_statistic= new Profiling_thread_statistic[Profiling_thread_count];
+    	for(int i=0;i<Profiling_thread_count;i++) 
+    	{
+    		Prof_thread_statistic[i].thread=new Profiling_thread_statistic_core[thread_count];
+    		for(int j=0;j<thread_count;j++) 
+    		{
+    			Prof_thread_statistic[i].thread[j].core=new Profiling_thread_statistic_unit[core_count];
+    		}
+    	}
+    }
+}
+
+void Profiling::init_outlier()
+{
+    if(Profil){
+        //Profiling outlier-System arrays allocate
+        for(int i=0;i<Profiling_time_CPU_count+1;i++)//+1-->Messfehler
+        {
+            Prof_time_CPU[i].time.maxarray=new double[Prof_time_CPU[i].time.maxac+1];
+            for(int j=0;j<=Prof_time_CPU[i].time.maxac;j++)
+                Prof_time_CPU[i].time.maxarray[j]=FLT_MIN;
+            
+            Prof_time_CPU[i].time.minarray=new double[Prof_time_CPU[i].time.minac+1];
+            for(int j=0;j<=Prof_time_CPU[i].time.minac;j++)
+                Prof_time_CPU[i].time.minarray[j]=FLT_MAX;
+        }
+        
+        for(int i=0;i<Profiling_cycles_CPU_count+1;i++)//+1-->Messfehler
+        {
+            Prof_cycles_CPU[i].time.maxarray=new double[Prof_cycles_CPU[i].time.maxac+1];
+            for(int j=0;j<=Prof_cycles_CPU[i].time.maxac;j++)
+                Prof_cycles_CPU[i].time.maxarray[j]=FLT_MIN;
+
+            Prof_cycles_CPU[i].time.minarray=new double[Prof_cycles_CPU[i].time.minac+1];
+            for(int j=0;j<=Prof_cycles_CPU[i].time.minac;j++)
+                Prof_cycles_CPU[i].time.minarray[j]=FLT_MAX;
+        }
     }
 }
 
 /*
- *   CPU Cycles
+ *   Error Messurement
  */
 void Profiling::error_CPU_time_prof()
 {
@@ -776,43 +832,42 @@ void Profiling::evaluate_CPU_time_prof( int number)
     Prof_time_CPU[number].time.summ+=dt_ms;
     Prof_time_CPU[number].time.count++;
     Prof_time_CPU[number].time.summsqr+=square(dt_ms);
-    (dt_ms<Prof_time_CPU[number].time.min)?(Prof_time_CPU[number].time.min=dt_ms):1;
-    (Prof_time_CPU[number].time.max<dt_ms)?(Prof_time_CPU[number].time.max=dt_ms):1;//min/max
+    //(dt_ms<Prof_time_CPU[number].time.min)?(Prof_time_CPU[number].time.min=dt_ms):1;
+    //(Prof_time_CPU[number].time.max<dt_ms)?(Prof_time_CPU[number].time.max=dt_ms):1;//min/max
 
-	if (Prof_time_CPU[number].time.maxac){
-		if(Prof_time_CPU[number].time.maxarray[0]<dt_ms){
-			if (Prof_time_CPU[number].time.maxac==1)
-				Prof_time_CPU[number].time.maxarray[0]=dt_ms;
-			for(int i=1;i<Prof_time_CPU[number].time.maxac;i++){
-				if(Prof_time_CPU[number].time.maxarray[i]<dt_ms)
-					if(i==Prof_time_CPU[number].time.maxac-1)
-						Prof_time_CPU[number].time.maxarray[i]=dt_ms;
-					else
-						Prof_time_CPU[number].time.maxarray[i-1]=Prof_time_CPU[number].time.maxarray[i];
-				else{
-					Prof_time_CPU[number].time.maxarray[i-1]=dt_ms;
-					break;
-				}
-			}
-		}
-	}
-	if (Prof_time_CPU[number].time.minac){
-		if(Prof_time_CPU[number].time.minarray[0]>dt_ms){
-			if (Prof_time_CPU[number].time.minac==1)
-				Prof_time_CPU[number].time.minarray[0]=dt_ms;
-			for(int i=1;i<Prof_time_CPU[number].time.minac;i++){
-				if(Prof_time_CPU[number].time.minarray[i]>dt_ms)
-					if(i==Prof_time_CPU[number].time.minac-1)
-						Prof_time_CPU[number].time.minarray[i]=dt_ms;
-					else
-						Prof_time_CPU[number].time.minarray[i-1]=Prof_time_CPU[number].time.minarray[i];
-				else{
-					Prof_time_CPU[number].time.minarray[i-1]=dt_ms;
-					break;
-				}
-			}
-		}
-	}
+    //Outlier-System Max calculation
+    if(Prof_time_CPU[number].time.maxarray[0]<dt_ms){
+        if (Prof_time_CPU[number].time.maxac==0)
+            Prof_time_CPU[number].time.maxarray[0]=dt_ms;
+        for(int i=1;i<=Prof_time_CPU[number].time.maxac;i++){
+            if(Prof_time_CPU[number].time.maxarray[i]<dt_ms)
+                if(i==Prof_time_CPU[number].time.maxac)
+                    Prof_time_CPU[number].time.maxarray[i]=dt_ms;
+                else
+                    Prof_time_CPU[number].time.maxarray[i-1]=Prof_time_CPU[number].time.maxarray[i];
+            else{
+                Prof_time_CPU[number].time.maxarray[i-1]=dt_ms;
+                break;
+            }
+        }
+    }
+
+    //Outlier-System Min calculation
+    if(Prof_time_CPU[number].time.minarray[0]>dt_ms){
+        if (Prof_time_CPU[number].time.minac==0)
+            Prof_time_CPU[number].time.minarray[0]=dt_ms;
+        for(int i=1;i<=Prof_time_CPU[number].time.minac;i++){
+            if(Prof_time_CPU[number].time.minarray[i]>dt_ms)
+            if(i==Prof_time_CPU[number].time.minac)
+                    Prof_time_CPU[number].time.minarray[i]=dt_ms;
+                else
+                    Prof_time_CPU[number].time.minarray[i-1]=Prof_time_CPU[number].time.minarray[i];
+            else{
+                Prof_time_CPU[number].time.minarray[i-1]=dt_ms;
+                break;
+            }
+        }
+    }
 
 	// storing data
 	if (Prof_time_CPU[number].storeRawData) {
@@ -854,41 +909,41 @@ void Profiling::evaluate_CPU_cycles_prof( int number)
     Prof_cycles_CPU[number].time.summ+=dt;
     Prof_cycles_CPU[number].time.count++;
     Prof_cycles_CPU[number].time.summsqr+=square(dt);
-    (dt<Prof_cycles_CPU[number].time.min)?(Prof_cycles_CPU[number].time.min=dt):1;
-    (Prof_cycles_CPU[number].time.max<dt)?(Prof_cycles_CPU[number].time.max=dt):1;//min/max
+    //(dt<Prof_cycles_CPU[number].time.min)?(Prof_cycles_CPU[number].time.min=dt):1;
+    //(Prof_cycles_CPU[number].time.max<dt)?(Prof_cycles_CPU[number].time.max=dt):1;//min/max
 
-	if (Prof_cycles_CPU[number].time.maxac){
-		if(Prof_cycles_CPU[number].time.maxarray[0]<dt){
-			if (Prof_cycles_CPU[number].time.maxac==1)
-				Prof_cycles_CPU[number].time.maxarray[0]=dt;
-			for(int i=1;i<Prof_cycles_CPU[number].time.maxac;i++){
-				if(Prof_cycles_CPU[number].time.maxarray[i]<dt)
-					if(i==Prof_cycles_CPU[number].time.maxac-1)
-						Prof_cycles_CPU[number].time.maxarray[i]=dt;
-					else
-						Prof_cycles_CPU[number].time.maxarray[i-1]=Prof_cycles_CPU[number].time.maxarray[i];
-				else{
-					Prof_cycles_CPU[number].time.maxarray[i-1]=dt;
-					break;
-				}
+    //Outlier-System Max calculation
+	if(Prof_cycles_CPU[number].time.maxarray[0]<dt){
+		if (Prof_cycles_CPU[number].time.maxac==0)
+			Prof_cycles_CPU[number].time.maxarray[0]=dt;
+
+		for(int i=1;i<=Prof_cycles_CPU[number].time.maxac;i++){
+			if(Prof_cycles_CPU[number].time.maxarray[i]<dt)
+				if(i==Prof_cycles_CPU[number].time.maxac)
+					Prof_cycles_CPU[number].time.maxarray[i]=dt;
+				else
+					Prof_cycles_CPU[number].time.maxarray[i-1]=Prof_cycles_CPU[number].time.maxarray[i];
+			else{
+				Prof_cycles_CPU[number].time.maxarray[i-1]=dt;
+				break;
 			}
 		}
 	}
 
-	if (Prof_cycles_CPU[number].time.minac){
-		if(Prof_cycles_CPU[number].time.minarray[0]>dt){
-			if (Prof_cycles_CPU[number].time.minac==1)
-				Prof_cycles_CPU[number].time.minarray[0]=dt;
-			for(int i=1;i<Prof_cycles_CPU[number].time.minac;i++){
-				if(Prof_cycles_CPU[number].time.minarray[i]>dt)
-					if(i==Prof_cycles_CPU[number].time.minac-1)
-						Prof_cycles_CPU[number].time.minarray[i]=dt;
-					else
-						Prof_cycles_CPU[number].time.minarray[i-1]=Prof_cycles_CPU[number].time.minarray[i];
-				else{
-					Prof_cycles_CPU[number].time.minarray[i-1]=dt;
-					break;
-				}
+    //Outlier-System Min calculation
+	if(Prof_cycles_CPU[number].time.minarray[0]>dt){
+		if (Prof_cycles_CPU[number].time.minac==0)
+			Prof_cycles_CPU[number].time.minarray[0]=dt;
+
+		for(int i=1;i<=Prof_cycles_CPU[number].time.minac;i++){
+			if(Prof_cycles_CPU[number].time.minarray[i]>dt)
+				if(i==Prof_cycles_CPU[number].time.minac)
+					Prof_cycles_CPU[number].time.minarray[i]=dt;
+				else
+					Prof_cycles_CPU[number].time.minarray[i-1]=Prof_cycles_CPU[number].time.minarray[i];
+			else{
+				Prof_cycles_CPU[number].time.minarray[i-1]=dt;
+				break;
 			}
 		}
 	}
@@ -905,27 +960,27 @@ void Profiling::evaluate_CPU_cycles_prof( int number)
  */
 void Profiling::start_overall_time_prof(int number)
 {
-  if(Profil){
-    Prof_general[number].start = PAPI_get_real_usec();    
-  }
+    if(Profil){
+        Prof_general[number].start = PAPI_get_real_usec();    
+    }
 }
     
 void Profiling::stop_overall_time_prof(int number,int directevaluate)
 {
-  if(Profil) {
-    Prof_general[number].stop = PAPI_get_real_usec();
-
-	if (directevaluate) {
-		evaluate_overall_time_prof(number);
-	}
-  }
+    if(Profil) {
+        Prof_general[number].stop = PAPI_get_real_usec();
+        
+        if (directevaluate)
+            evaluate_overall_time_prof(number);
+    }
 }
 
 void Profiling::evaluate_overall_time_prof(int number)
 {
-  if(Profil){
-    Prof_general[number].CPU_summ=((double)(Prof_general[number].stop-Prof_general[number].start))/1000.0/1000.0;//s
-  }
+    if (Profil) {
+        // [hdin] quickfix: added a '+=' to overcome a problem regarding multiple calls of ANNarchy::run
+        Prof_general[number].CPU_summ +=((double)(Prof_general[number].stop-Prof_general[number].start))/1000.0/1000.0;//s
+    }
 }
 
 /*
@@ -944,6 +999,7 @@ void Profiling::reset_overall_time_prof( int number )
 {
     Prof_general[number].CPU_summ=0;//s
 }
+
 void Profiling::reset_CPU_time_prof(int number)
 {
 	Prof_time_CPU[number].calculated=0;
@@ -951,9 +1007,12 @@ void Profiling::reset_CPU_time_prof(int number)
     Prof_time_CPU[number].time.count=0;
     Prof_time_CPU[number].time.summ=0;
     Prof_time_CPU[number].time.summsqr=0;
-    Prof_time_CPU[number].time.min=FLT_MAX;
-    Prof_time_CPU[number].time.max=FLT_MIN;
+    //Prof_time_CPU[number].time.min=FLT_MAX;
+    //Prof_time_CPU[number].time.max=FLT_MIN;
+    for(int j=0;j<=Prof_time_CPU[number].time.maxac;j++)Prof_time_CPU[number].time.maxarray[j]=FLT_MIN;
+    for(int j=0;j<=Prof_time_CPU[number].time.minac;j++)Prof_time_CPU[number].time.minarray[j]=FLT_MAX;
 }
+
 void Profiling::reset_CPU_cycles_prof(int number)
 {
 	Prof_cycles_CPU[number].calculated=0;
@@ -961,9 +1020,12 @@ void Profiling::reset_CPU_cycles_prof(int number)
     Prof_cycles_CPU[number].time.count=0;
     Prof_cycles_CPU[number].time.summ=0;
     Prof_cycles_CPU[number].time.summsqr=0;
-    Prof_cycles_CPU[number].time.min=FLT_MAX;
-    Prof_cycles_CPU[number].time.max=FLT_MIN;
+    //Prof_cycles_CPU[number].time.min=FLT_MAX;
+    //Prof_cycles_CPU[number].time.max=FLT_MIN;
+    for(int j=0;j<=Prof_cycles_CPU[number].time.maxac;j++)Prof_cycles_CPU[number].time.maxarray[j]=FLT_MIN;
+    for(int j=0;j<=Prof_cycles_CPU[number].time.minac;j++)Prof_cycles_CPU[number].time.minarray[j]=FLT_MAX;
 }
+
 void Profiling::reset_thread_statistic(int number)
 {
     for(int i=0;i<thread_count;i++)
@@ -976,9 +1038,9 @@ void Profiling::reset_thread_statistic(int number)
 }
 
 /*
-	GET
-		return: Average
-*/
+ *    GET
+ *        return: Average
+ */
 double Profiling::get_CPU_time_prof( int number){
 	evaluate_calc(1,number);
 	evaluate_recalc(1,number);
@@ -1020,7 +1082,7 @@ void Profiling::evaluate_calc(int sec, int number)
     for(int i=0;i<Profiling_time_CPU_count+1;i++){//+1 for calc error-stuff
 		if ((!Prof_time_CPU[i].calculated)&&((!sec)||((sec==1)&&(number=i)))){
 	        if (Prof_time_CPU[i].time.maxac){
-	            for(int j=0;j<Prof_time_CPU[i].time.maxac;j++){
+	            for(int j=1;j<=Prof_time_CPU[i].time.maxac;j++){
 	                Prof_time_CPU[i].time.summ-=Prof_time_CPU[i].time.maxarray[j];
 	                Prof_time_CPU[i].time.count--;
 	                Prof_time_CPU[i].time.summsqr-=square(Prof_time_CPU[i].time.maxarray[j]);
@@ -1028,13 +1090,15 @@ void Profiling::evaluate_calc(int sec, int number)
 	        }
 
 	        if (Prof_time_CPU[i].time.minac){
-	            for(int j=0;j<Prof_time_CPU[i].time.minac;j++){
+	            for(int j=1;j<=Prof_time_CPU[i].time.minac;j++){
 	                Prof_time_CPU[i].time.summ-=Prof_time_CPU[i].time.minarray[j];
 	                Prof_time_CPU[i].time.count--;
 	                Prof_time_CPU[i].time.summsqr-=square(Prof_time_CPU[i].time.minarray[j]);
 	            }
 	        }
 
+            Prof_time_CPU[i].time.min=Prof_time_CPU[i].time.minarray[0];
+            Prof_time_CPU[i].time.max=Prof_time_CPU[i].time.maxarray[0];
 	        Prof_time_CPU[i].time.avg=Prof_time_CPU[i].time.summ/Prof_time_CPU[i].time.count;
 	        Prof_time_CPU[i].time.standard=sqrt(Prof_time_CPU[i].time.summsqr/Prof_time_CPU[i].time.count-square(Prof_time_CPU[i].time.avg));
 	        Prof_time_CPU[i].time.prozent_CPU=100.0*Prof_time_CPU[i].time.summ/Prof_general[Prof_time_CPU[i].overall_time].CPU_summ;
@@ -1046,19 +1110,22 @@ void Profiling::evaluate_calc(int sec, int number)
     for(int i=0;i<Profiling_cycles_CPU_count+1;i++){//+1 for calc error-stuff
 		if ((!Prof_cycles_CPU[i].calculated)&&((!sec)||((sec==2)&&(number=i)))){
 	        if (Prof_cycles_CPU[i].time.maxac){
-	            for(int j=0;j<Prof_cycles_CPU[i].time.maxac;j++){
+	            for(int j=1;j<=Prof_cycles_CPU[i].time.maxac;j++){
 	                Prof_cycles_CPU[i].time.summ-=Prof_cycles_CPU[i].time.maxarray[j];
 	                Prof_cycles_CPU[i].time.count--;
 	                Prof_cycles_CPU[i].time.summsqr-=square(Prof_cycles_CPU[i].time.maxarray[j]);
 	            }
 	        }
 	        if (Prof_cycles_CPU[i].time.minac){
-	            for(int j=0;j<Prof_cycles_CPU[i].time.minac;j++){
+	            for(int j=1;j<=Prof_cycles_CPU[i].time.minac;j++){
 	                Prof_cycles_CPU[i].time.summ-=Prof_cycles_CPU[i].time.minarray[j];
 	                Prof_cycles_CPU[i].time.count--;
 	                Prof_cycles_CPU[i].time.summsqr-=square(Prof_cycles_CPU[i].time.minarray[j]);
 	            }
 	        }
+	        
+            Prof_cycles_CPU[i].time.min=Prof_cycles_CPU[i].time.minarray[0];
+            Prof_cycles_CPU[i].time.max=Prof_cycles_CPU[i].time.maxarray[0];
 	        Prof_cycles_CPU[i].time.avg=Prof_cycles_CPU[i].time.summ/Prof_cycles_CPU[i].time.count;
 	        Prof_cycles_CPU[i].time.standard=sqrt(Prof_cycles_CPU[i].time.summsqr/Prof_cycles_CPU[i].time.count-square(Prof_cycles_CPU[i].time.avg));
 	        Prof_cycles_CPU[i].time.prozent_CPU=0;//100.0*Prof_cycles_CPU[i].time.summ/Prof_general.CPU_cycles;
@@ -1093,14 +1160,14 @@ void Profiling::evaluate_recalc(int sec,int number) {
 	for(int i=0;i<Profiling_time_CPU_count+1;i++){//+1 for calc error-stuff
 		if ((!Prof_time_CPU[i].calculated)&&((!sec)||((sec==1)&&(number=i)))){
 			if (Prof_time_CPU[i].time.maxac){
-				for(int j=0;j<Prof_time_CPU[i].time.maxac;j++){
+				for(int j=1;j<=Prof_time_CPU[i].time.maxac;j++){
 					Prof_time_CPU[i].time.summ+=Prof_time_CPU[i].time.maxarray[j];
 					Prof_time_CPU[i].time.count++;
 					Prof_time_CPU[i].time.summsqr+=square(Prof_time_CPU[i].time.maxarray[j]);
 				}
 			}
 			if (Prof_time_CPU[i].time.minac){
-				for(int j=0;j<Prof_time_CPU[i].time.minac;j++){
+				for(int j=1;j<=Prof_time_CPU[i].time.minac;j++){
 					Prof_time_CPU[i].time.summ+=Prof_time_CPU[i].time.minarray[j];
 					Prof_time_CPU[i].time.count++;
 					Prof_time_CPU[i].time.summsqr+=square(Prof_time_CPU[i].time.minarray[j]);
@@ -1112,14 +1179,14 @@ void Profiling::evaluate_recalc(int sec,int number) {
 	for(int i=0;i<Profiling_cycles_CPU_count+1;i++){//+1 for calc error-stuff
 		if ((!Prof_cycles_CPU[i].calculated)&&((!sec)||((sec==2)&&(number=i)))){
 			if (Prof_cycles_CPU[i].time.maxac){
-				for(int j=0;j<Prof_cycles_CPU[i].time.maxac;j++){
+				for(int j=1;j<=Prof_cycles_CPU[i].time.maxac;j++){
 					Prof_cycles_CPU[i].time.summ+=Prof_cycles_CPU[i].time.maxarray[j];
 					Prof_cycles_CPU[i].time.count++;
 					Prof_cycles_CPU[i].time.summsqr+=square(Prof_cycles_CPU[i].time.maxarray[j]);
 				}
 			}
 			if (Prof_cycles_CPU[i].time.minac){
-				for(int j=0;j<Prof_cycles_CPU[i].time.minac;j++){
+				for(int j=1;j<=Prof_cycles_CPU[i].time.minac;j++){
 					Prof_cycles_CPU[i].time.summ+=Prof_cycles_CPU[i].time.minarray[j];
 					Prof_cycles_CPU[i].time.count++;
 					Prof_cycles_CPU[i].time.summsqr+=square(Prof_cycles_CPU[i].time.minarray[j]);
@@ -1134,6 +1201,7 @@ void Profiling::evaluate_recalc(int sec,int number) {
 	}
 }
 
+//Print to Console
 void Profiling::evaluate_disp() {
     if ( used_time_unit == TimeUnits::SECS ) { std::cout.precision(8); } else { std::cout.precision(4); }
     
@@ -1203,6 +1271,8 @@ void Profiling::evaluate_disp() {
     std::cout << std::endl;
 }
 
+//Print to file
+//return 0: no error
 int Profiling::evaluate_file(const char * filename)
 {
     std::ofstream fp;

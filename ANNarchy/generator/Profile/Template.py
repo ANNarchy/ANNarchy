@@ -7,7 +7,7 @@ int rc;
     'init': """
     //initialize profiler
     profiler = new Profiling();
-    profiler->init(0);
+    profiler->init(); // call with default arguments
     std::cout << "Profile " << omp_get_max_threads() << std::endl;
     """,
     'step_pre': """  rc=0;

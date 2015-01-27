@@ -151,15 +151,9 @@ class ProfileGenerator(object):
         """
         generate Profiling.cpp
         """
-        num_threads = 6        #TODO: replace
+        num_threads = 12  #TODO: replace
         
         # count initialization
-        count = """    set_CPU_time_number( %(num_op)s * %(num_thread)s );
-        set_overall_number( %(num_thread)s );
-""" % { 'num_op': self._num_ops,
-        'num_thread': num_threads,
-       }
-
         name = ""   # performance container
         add = ""    # additional tags
         rc = 0
@@ -214,13 +208,20 @@ class ProfileGenerator(object):
         #
         # complete initialization listing
         init = """
-    // setup counter
-%(count)s
-""" % { 'count': count }
+        // setup counter
+        set_CPU_time_number( %(num_op)s * %(num_thread)s );
+        set_overall_number( %(num_thread)s );
+""" % { 'num_op': self._num_ops,
+        'num_thread': num_threads,
+       }
 
         init2 = """
     for ( int i = 0; i < %(num_threads)s; i++ )
     {
+        // outlier
+        set_CPU_time_hight_outlier_count(i, 0);
+        set_CPU_time_low_outlier_count(i, 0);
+    
         // set names
 %(name)s
 

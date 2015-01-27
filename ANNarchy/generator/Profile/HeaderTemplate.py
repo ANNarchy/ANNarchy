@@ -187,12 +187,15 @@ openmp_profile_header=\
 #define square(x) (x*x)
 #define checkstring(x) ((x.find(":")!=std::string::npos)||(x.find("#")!=std::string::npos)||(x.find("\\n")!=std::string::npos))
 
+#define INIT_THREAD 1
+#define INIT_OUTLIER 2
+
 class Profiling {
     
-    public:
-        Profiling();
+public:
+    Profiling();
 
-        ~Profiling();
+    ~Profiling();
 
     /*use following functions only befor the init function to set how many measurement units of each type you want to use*/
     void set_CPU_time_number(  int number){Profiling_time_CPU_count=number;}
@@ -203,18 +206,20 @@ class Profiling {
     /*use following function only befor the init thread function to set how many treads you want to use maximal in thread statistic measurements*/
     void set_max_thread_number(int number){thread_count=number;}
 
-    /*use following functions only befor the init trash function*/
-    void set_CPU_time_hight_trash_count(  int number,int count){Prof_time_CPU[number].time.maxac=count;}
-    void set_CPU_time_low_trash_count(  int number,int count){Prof_time_CPU[number].time.minac=count;}
-    void set_CPU_cycles_hight_trash_count(  int number,int count){Prof_time_CPU[number].time.maxac=count;}
-    void set_CPU_cycles_low_trash_count(  int number,int count){Prof_time_CPU[number].time.minac=count;}
-
     //Aufruf direkt nach allen set Number's
     //param extended: set Bit 0x01:execute init thread 
     //                  set Bit 0x02:execute init trash
-    void init(int extended=3);
+    void init(int extended= INIT_THREAD | INIT_OUTLIER);
     void init_thread();
-    void init_trash();
+
+    /*use following functions to control the outlier-System, only befor the init outlier function and after the init function*/
+    void set_CPU_time_hight_outlier_count(  int number,int count){if(Profil) Prof_time_CPU[number].time.maxac=count;}
+    void set_CPU_time_low_outlier_count(  int number,int count){if(Profil) Prof_time_CPU[number].time.minac=count;}
+    void set_CPU_cycles_hight_outlier_count(  int number,int count){if(Profil) Prof_time_CPU[number].time.maxac=count;}
+    void set_CPU_cycles_low_outlier_count(  int number,int count){if(Profil) Prof_time_CPU[number].time.minac=count;}
+
+    /*init the outlier System*/
+    void init_outlier();
 
     //Funktionen um alle Profiling Aktionen an(Standart)/ab zuschalten(betrifft !ALLE! start/stop/evaluate)->Messung Gesammtzeit ohne Profiling Wartepausen
     void set_profiling_off(){Profil=0;}
