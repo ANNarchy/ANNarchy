@@ -319,7 +319,7 @@ struct ProjStruct%(id_proj)s{
             if event_based:
                 pre_event += """
                 // Event-based variables should not be updated when the postsynaptic neuron fires.
-            if(!pop%(id_post)s.spike[proj%(id_proj)s.post_rank[i]]){
+            if(!pop%(id_post)s.spiked[proj%(id_proj)s.post_rank[i]]){
 %(pre_event)s
 %(learning)s
             }
@@ -476,7 +476,7 @@ struct ProjStruct%(id_proj)s{
                     'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
                 )
                 code = code.replace(
-                    'pop%(id_pre)s.spike['%{'id_pre': proj.pre.id}, 
+                    'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
                     'pop%(id_pre)s._delayed_spike[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
                 )
             else: # Uniform delays
@@ -485,7 +485,7 @@ struct ProjStruct%(id_proj)s{
                     'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                 )
                 code = code.replace(
-                    'pop%(id_pre)s.spike['%{'id_pre': proj.pre.id}, 
+                    'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
                     'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                 )
 
