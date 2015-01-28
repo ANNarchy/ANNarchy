@@ -446,7 +446,7 @@ def _process_neuron_equations(neuron):
     code = ""
 
     # Extract parameters and variables
-    parameters = extract_parameters(neuron.parameters)
+    parameters = extract_parameters(neuron.parameters, neuron.extra_values)
     variables = extract_variables(neuron.equations)
     variable_names = [var['name'] for var in variables]
     attributes, local_var, global_var = get_attributes(parameters, variables)
@@ -632,20 +632,20 @@ def _analyse_equation(eq, local_dict, tex_dict):
         try:
             left = _analyse_part(left[:-1], local_dict, tex_dict)
         except:
-            _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+            _warning('can not transform the left side of ' + eq+' to LaTeX, you have to it by hand...')
             left = left[:-1]
         operator = " = " + left +  " " + op + (" (" if op != '+' else '')
     else:
         try:
             left = _analyse_part(left, local_dict, tex_dict)
         except:
-            _warning('can not transform the left side of ' + var['eq']+' to LaTeX, you have to it by hand...')
+            _warning('can not transform the left side of ' + eq+' to LaTeX, you have to it by hand...')
         operator = " = "
     try:
         right = _analyse_part(eq.split('=')[1], local_dict, tex_dict)
     except:
-        _warning('can not transform the right side of ' + var['eq']+' to LaTeX, you have to it by hand...')
-        right = var['eq'].split('=')[1]
+        _warning('can not transform the right side of ' + eq+' to LaTeX, you have to it by hand...')
+        right = eq.split('=')[1]
 
     return left + operator + right + (" )" if operator.endswith('(') else "")
 
@@ -661,7 +661,7 @@ def _analyse_part(expr, local_dict, tex_dict):
 
     # Extract if/then/else
     if 'else:' in expr:
-        condition = re.findall(r'if(.*?):', expr)[0]
+        condition = re.findall(r'if(.*?):', expr)[0].replace(')and(', ')&&(')
         then = re.findall(':(.*?)else:', expr)[0]
         else_st = expr.split('else:')[1]
         return "\\begin{cases}" + regular_expr(then) + "\qquad \\text{if} \quad " + regular_expr(condition) + "\\\\ "+ regular_expr(else_st) +" \qquad \\text{otherwise.} \end{cases}"

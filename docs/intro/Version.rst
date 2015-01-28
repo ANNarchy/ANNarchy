@@ -9,6 +9,9 @@ Changelog
 
 * Automatic reporting is added.
 * Several bug fixes.
+* The distinction between Rate- and SpikeNeuron objects is deprecated, use Neuron instead.
+* The distinction between Rate- and SpikeSynapse objects is deprecated, use Synapse instead.
+
 
 **4.3.3:**
 
