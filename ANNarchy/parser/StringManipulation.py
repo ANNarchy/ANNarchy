@@ -175,7 +175,7 @@ def process_equations(equations):
                 equation = definition.strip() # there are no constraints
                 constraint = '' 
         # Split the equation around operators = += -= *= /=, but not ==
-        split_operators = re.findall('([\s\w\+\-\*\/]+)=([^=])', equation)
+        split_operators = re.findall('([\s\w\+\-\*\/\)]+)=([^=])', equation)
         if len(split_operators) == 1: # definition of a new variable
             # Retrieve the name
             eq = split_operators[0][0]

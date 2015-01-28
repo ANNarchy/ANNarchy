@@ -297,6 +297,8 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
             tmp = tmp[tmp != r_post]
         r = tmp
         size_pre = tmp.size
+        if size_pre == 0:
+            continue
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
@@ -348,6 +350,8 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
             if (tmp == r_post).any(): # the post index is in the list
                 tmp[tmp==r_post] = indices[number]
         r = list(np.sort(tmp))
+        if len(r) == 0:
+            continue
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
@@ -408,6 +412,8 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         # List of pre ranks
         r = sorted(rk_mat[r_post])
         size_pre = len(rk_mat[r_post])
+        if size_pre == 0:
+            continue
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
