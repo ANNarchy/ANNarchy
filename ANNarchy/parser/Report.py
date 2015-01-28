@@ -446,7 +446,7 @@ def _process_neuron_equations(neuron):
     code = ""
 
     # Extract parameters and variables
-    parameters = extract_parameters(neuron.parameters)
+    parameters = extract_parameters(neuron.parameters, neuron.extra_values)
     variables = extract_variables(neuron.equations)
     variable_names = [var['name'] for var in variables]
     attributes, local_var, global_var = get_attributes(parameters, variables)
