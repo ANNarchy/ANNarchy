@@ -341,19 +341,20 @@ struct ProjStruct%(id_proj)s{
             pre_array = "pop%(id_pre)s.spiked" % ids
 
         # No need for openmp if less than 10 neurons
-        omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
 
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
     if (pop%(id_post)s._active){
+        std::vector< std::pair<int, int> > proj%(id_proj)s_inv_post;
         for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
             rk_j = %(pre_array)s[_idx_j];
-            int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
-            std::vector< std::pair<int, int> > inv_post = proj%(id_proj)s.inv_rank[rk_j];
+            proj%(id_proj)s_inv_post = proj%(id_proj)s.inv_rank[rk_j];
+            nb_post = proj%(id_proj)s_inv_post.size();
             %(omp_code)s
             for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
-                i = inv_post[_idx_i].first;
-                j = inv_post[_idx_i].second;
+                i = proj%(id_proj)s_inv_post[_idx_i].first;
+                j = proj%(id_proj)s_inv_post[_idx_i].second;
 %(exact)s
                 %(psp)s
 %(pre_event)s
