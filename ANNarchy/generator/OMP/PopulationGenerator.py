@@ -169,7 +169,13 @@ struct PopStruct%(id)s{
             else:
                 return ""
 
+        if pop.neuron_type.type == 'rate':
+            return self.update_rate_neuron(pop)
+        else:
+            return self.update_spike_neuron(pop)
 
+
+    def update_rate_neuron(self, pop):
         # Neural update
         from ..Utils import generate_equation_code
         code = ""
@@ -198,43 +204,78 @@ struct PopStruct%(id)s{
             pGen = ProfileGenerator(Global._populations, Global._projections)
             code = pGen.annotate_update_neuron_omp(code)
 
-        # Spike emission, as following step
-        if pop.neuron_type.type == 'spike':
-            # Process the condition
-            cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
-            reset = ""; refrac = ""
-            # reset equations
-            for eq in pop.neuron_type.description['spike']['spike_reset']:
-                reset += """
+        # finish code
+        return """
+    if(pop%(id)s._active){
+%(code)s
+    } // active
+""" % {'id': pop.id, 'code': code }
+
+
+    def update_spike_neuron(self, pop):
+        # Neural update
+        from ..Utils import generate_equation_code
+        code = ""
+
+        # Global variables
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id}
+        if eqs.strip() != "":
+            code += """
+    // Updating the global variables of population %(id)s (%(name)s)
+%(eqs)s
+""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
+
+        # Local variables, evaluated in parallel
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+        code += """
+        // Updating the local variables of population %(id)s (%(name)s)
+        pop%(id)s.spiked.clear();
+        #pragma omp parallel for firstprivate(dt)
+        for(int i = 0; i < %(size)s; i++){
+%(eqs)s
+""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs}
+
+        # if profiling enabled, annotate with profiling code
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+            code = pGen.annotate_update_neuron_omp(code)
+
+        # Process the condition
+        cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
+        reset = ""; refrac = ""
+        # reset equations
+        for eq in pop.neuron_type.description['spike']['spike_reset']:
+            reset += """
                 %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id}}
-                if not 'unless_refractory' in eq['constraint']:
-                    refrac += """
+            if not 'unless_refractory' in eq['constraint']:
+                refrac += """
                 %(refrac)s
 """ % {'refrac': eq['cpp'] % {'id': pop.id} }
 
-            # Is there a refractory period?
-            if pop.neuron_type.refractory or pop.refractory:
-                refrac_period = """if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
+        # Is there a refractory period?
+        if pop.neuron_type.refractory or pop.refractory:
+            refrac_period = """if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
 %(refrac)s
                 pop%(id)s.refractory_remaining[i]--;
             }
             else """ %  {'id': pop.id, 'refrac': refrac}
-                refrac_inc = "pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];" %  {'id': pop.id}
-            else:
-                refrac_period = ""
-                refrac_inc = ""
+            refrac_inc = "pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];" %  {'id': pop.id}
+        else:
+            refrac_period = ""
+            refrac_inc = ""
 
-            # Main code
-            spike_gather = """
-        // Gather spikes for population %(id)s (%(name)s)
-        pop%(id)s.spiked.clear();
-        for(int i = 0; i < %(size)s; i++){
+        # Main code
+        spike_gather = """
             %(refrac_period)sif(%(condition)s){ // Emit a spike
 %(reset)s        
-                pop%(id)s.spiked.push_back(i);
-                if(pop%(id)s.record_spike){
-                    pop%(id)s.recorded_spike[i].push_back(t);
+                #pragma omp critical
+                {
+                    pop%(id)s.spiked.push_back(i);
+                    if(pop%(id)s.record_spike){
+                        pop%(id)s.recorded_spike[i].push_back(t);
+                    }
                 }
                 pop%(id)s.last_spike[i] = t;
                 %(refrac_inc)s
@@ -242,23 +283,20 @@ struct PopStruct%(id)s{
         }
 """% {'id': pop.id, 'name': pop.name, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac_period': refrac_period, 'refrac_inc': refrac_inc} 
 
-            # if profiling enabled, annotate with profiling code
-            if Global.config['profiling']:
-                from ..Profile.ProfileGenerator import ProfileGenerator
-                pGen = ProfileGenerator(Global._populations, Global._projections)
-                spike_gather = pGen.annotate_spike_propagation_omp(spike_gather)
+        # if profiling enabled, annotate with profiling code
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+            spike_gather = pGen.annotate_spike_propagation_omp(spike_gather)
 
-            code += spike_gather
+        code += spike_gather
 
         # finish code
-        code = """
+        return """
     if(pop%(id)s._active){
 %(code)s
     } // active
 """ % {'id': pop.id, 'code': code }
-
-        # End spike region
-        return code
 
 
     def delay_code(self, pop):
