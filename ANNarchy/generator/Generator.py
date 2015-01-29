@@ -280,32 +280,28 @@ clean:
             with open('Makefile', 'w') as wfile:
                 wfile.write(src)
                 
+            verbose = "> compile_stdout.log 2> compile_stderr.log" if not Global.config["verbose"] else ""
+
             # Start the compilation
-            try:
-                if Global.config['paradigm'] == "cuda":
-                    from .CudaCheck import CudaCheck
-                    cu_version = CudaCheck().version()
+            if Global.config['paradigm'] == "cuda":
+                from .CudaCheck import CudaCheck
+                cu_version = CudaCheck().version()
 
-                    if cu_version >= (3,0):
-                        print "Build with cuda 3.x"
-                        subprocess.check_output("make cuda_35 -j4 ", 
-                                                 shell=True)
-                    else:
-                        print "Build with cuda 2.x"
-                        subprocess.check_output("make cuda_20 -j4 ", 
-                                                 shell=True)                    
-                elif Global.config['paradigm'] == "openmp":
-                    subprocess.check_output("make openmp -j4 ", 
-                                            shell=True)
+                if cu_version >= (3,0):
+                    print "Build with cuda 3.x"
+                    make_process = subprocess.Popen("make cuda_35 -j4 "+ verbose, shell=True)
                 else:
-                    Global._warning("unknown paradigm '"+Global.config['paradigm']+"': set default openmp")
-                    subprocess.check_output("make openmp -j4 ", 
-                                            shell=True)
-                    
-                subprocess.check_output("make -j4 > compile_stdout.log 2> compile_stderr.log", 
-                                        shell=True)
+                    print "Build with cuda 2.x"
+                    make_process = subprocess.Popen("make cuda_20 -j4 "+ verbose, shell=True)
 
-            except subprocess.CalledProcessError:
+            elif Global.config['paradigm'] == "openmp":
+                make_process = subprocess.Popen("make openmp -j4 " + verbose, shell=True)
+
+            else:
+                Global._warning("unknown paradigm '"+Global.config['paradigm']+"': set default openmp")
+                make_process = subprocess.Popen("make openmp -j4 " + verbose, shell=True)
+
+            if make_process.wait() != 0:
                 with open('compile_stderr.log', 'r') as rfile:
                     msg = rfile.read()
                 Global._print(msg)
