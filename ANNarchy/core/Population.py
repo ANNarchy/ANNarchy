@@ -584,6 +584,11 @@ class Population(object):
                     ranks = [self.rank_from_coordinates((x, y)) for x in coords[0] for y in coords[1]]
                 elif self.dimension == 3:
                     ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for z in coords[2]]
+                elif self.dimension == 4:
+                    ranks = [self.rank_from_coordinates((x, y, z, k)) for x in coords[0] for y in coords[1] for z in coords[2] for k in coords[3]]
+                else:
+                    Global._error("Slicing is implemented only for population with 4 dimensions at maximum", self.geometry)
+                    return None
                 if not max(ranks) < self.size:
                     Global._error("Indices do not match the geometry of the population", self.geometry)
                     return 
