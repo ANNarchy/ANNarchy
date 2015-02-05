@@ -351,7 +351,7 @@ struct ProjStruct%(id_proj)s{
             rk_j = %(pre_array)s[_idx_j];
             proj%(id_proj)s_inv_post = proj%(id_proj)s.inv_rank[rk_j];
             nb_post = proj%(id_proj)s_inv_post.size();
-            %(omp_code)s
+            //%(omp_code)s
             for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
                 i = proj%(id_proj)s_inv_post[_idx_i].first;
                 j = proj%(id_proj)s_inv_post[_idx_i].second;
