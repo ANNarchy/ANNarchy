@@ -351,7 +351,7 @@ struct ProjStruct%(id_proj)s{
             rk_j = %(pre_array)s[_idx_j];
             proj%(id_proj)s_inv_post = proj%(id_proj)s.inv_rank[rk_j];
             nb_post = proj%(id_proj)s_inv_post.size();
-            %(omp_code)s
+            //%(omp_code)s
             for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
                 i = proj%(id_proj)s_inv_post[_idx_i].first;
                 j = proj%(id_proj)s_inv_post[_idx_i].second;
@@ -495,15 +495,16 @@ struct ProjStruct%(id_proj)s{
             code = self._prof_gen.annotate_update_synapse_omp(code)
 
         # finish the code block
-        code = """
+        if code != "":
+            return """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning && pop%(id_post)s._active){
 %(code)s
     } // active
 """ % { 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target,
         'id_proj': proj.id, 'id_post': proj.post.id, 'code': code }
-
-        return code
+        else:
+            return ""
 
     def init_random_distributions(self, proj):
         # Is it a specific population?
