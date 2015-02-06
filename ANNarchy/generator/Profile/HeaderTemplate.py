@@ -189,7 +189,7 @@ openmp_profile_header=\
 
 #define INIT_THREAD 1
 #define INIT_OUTLIER 2
-
+#define INIT_PAPI_EVENTS 4
 class Profiling {
     
 public:
@@ -199,6 +199,7 @@ public:
 
     /*use following functions only befor the init function to set how many measurement units of each type you want to use*/
     void set_CPU_time_number(  int number){Profiling_time_CPU_count=number;}
+    void set_total_cache_miss_number(  int number){Profiling_total_cache_miss_count=number;}
     void set_CPU_cycles_number(int number){Profiling_cycles_CPU_count=number;}
     void set_thread_statistic_number(int number){Profiling_thread_count=number;}
     void set_overall_number(int number){Profiling_overall_count=number;}
@@ -209,8 +210,9 @@ public:
     //Aufruf direkt nach allen set Number's
     //param extended: set Bit 0x01:execute init thread 
     //                  set Bit 0x02:execute init trash
-    void init(int extended= INIT_THREAD | INIT_OUTLIER);
+    void init(int extended= INIT_THREAD | INIT_OUTLIER | INIT_PAPI_EVENTS);
     void init_thread();
+    void init_papi_events();
 
     /*use following functions to control the outlier-System, only befor the init outlier function and after the init function*/
     void set_CPU_time_hight_outlier_count(  int number,int count){if(Profil) Prof_time_CPU[number].time.maxac=count;}
@@ -231,11 +233,13 @@ public:
     void set_CPU_time_name(  int number,std::string name){Prof_time_CPU[number].name=name;}
     void set_CPU_cycles_name(int number,std::string name){Prof_cycles_CPU[number].name=name;}
     void set_thread_statistic_name(int number,std::string name){Prof_thread_statistic[number].name=name;}
+    void set_total_cache_miss_name(  int number,std::string name){Prof_cache_miss[number].name=name;}
 
     //set additional for output in files ( syntax depends on the evaluator )
     void set_CPU_time_additional(  int number,std::string additonal){Prof_time_CPU[number].additonal=additonal;}
     void set_CPU_cycles_additional(int number,std::string additonal){Prof_cycles_CPU[number].additonal=additonal;}
     void set_thread_statistic_additional(int number,std::string additonal){Prof_thread_statistic[number].additonal=additonal;}
+    void set_total_cache_miss_additional(int number,std::string additional){Prof_cache_miss[number].additional=additional;}
 
     //set related overall time
     void set_CPU_time_related_time(  int number,int overallnumber){Prof_time_CPU[number].overall_time=overallnumber;}
@@ -251,6 +255,9 @@ public:
     void stop_CPU_time_prof( int number,int directevaluate=1);
     void stop_overall_time_prof(int number=0,int directevaluate=1);
     void stop_CPU_cycles_prof( int number,int directevaluate=1);
+
+    void start_total_cache_miss( int number );
+    void stop_total_cache_miss( int number );
 
     //use this functions only if directevaluate=0 in the corresponding stop function
     void evaluate_CPU_time_prof( int number);
@@ -331,7 +338,7 @@ private:
 
         long_long start,stop;
 
-        bool storeRawData=false;
+        bool storeRawData=true;
     };
 
     struct Profiling_thread_statistic_core{
@@ -339,8 +346,8 @@ private:
     };
 
     struct Profiling_thread_statistic{
-           std::string name="";
-           std::string additonal="";
+       std::string name="";
+       std::string additonal="";
         Profiling_thread_statistic_core *thread;
         int used_threads=0;
     };
@@ -351,9 +358,25 @@ private:
         long_long start,stop;
     };
 
+    struct Profiling_cache_miss {
+        std::string name="";
+        std::string additional="";
+        
+        long_long L1 = 0;
+        long_long L2 = 0;
+        long_long L3 = 0;
+        int n=0;
+
+        bool storeRawData=true;
+        std::vector<long_long> rawL1;
+        std::vector<long_long> rawL2;
+        std::vector<long_long> rawL3;
+    };
+
     int Profiling_time_CPU_count=0;
     int Profiling_cycles_CPU_count=0;
     int Profiling_thread_count=0;
+    int Profiling_total_cache_miss_count=0;
     int Profiling_overall_count=1;
     int thread_count=0;
     int core_count=0;
@@ -365,6 +388,7 @@ private:
     Profiling_time *Prof_cycles_CPU;
     Profiling_thread_statistic *Prof_thread_statistic;
     Profiling_general *Prof_general;
+    Profiling_cache_miss* Prof_cache_miss;
     std::string Generaltext="";
 
     void evaluate_calc(int sec=0, int number=0);
@@ -375,6 +399,9 @@ private:
     // [hdin] time unit handling
     std::vector< std::pair<std::string, double> > time_units;   ///< used time units: unit name and rescale factor
     int used_time_unit; ///< chose time unit (default TimeUnit::SECS)
+
+    // PAPI event sets
+    int total_cache_miss; // L1 - L3 cache if available
 
     double compAdjustedMeanV1(std::vector<double> data) {
         if ( data.empty() )

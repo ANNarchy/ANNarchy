@@ -700,6 +700,7 @@ void Profiling::init(int extended) {
         Prof_time_CPU= new Profiling_time[Profiling_time_CPU_count+1];
         Prof_cycles_CPU= new Profiling_time[Profiling_cycles_CPU_count+1];
         Prof_general= new Profiling_general[Profiling_overall_count+1];
+		Prof_cache_miss = new Profiling_cache_miss[Profiling_total_cache_miss_count+1];
     
 %(init2)s
         //additional initializations
@@ -707,6 +708,8 @@ void Profiling::init(int extended) {
             init_thread();
         if ((extended & INIT_OUTLIER)==INIT_OUTLIER)
             init_outlier();
+		if ((extended & INIT_PAPI_EVENTS)==INIT_PAPI_EVENTS)
+        	init_papi_events();
     }
 }
 
@@ -775,6 +778,35 @@ void Profiling::init_outlier()
                 Prof_cycles_CPU[i].time.minarray[j]=FLT_MAX;
         }
     }
+}
+
+void check_papi_error(int err, std::string func = std::string()) {
+	std::cout << "Call of '" << func << "' lead to error: " << err << std::endl;
+}
+
+void Profiling::init_papi_events() {
+	int err = PAPI_NULL;
+
+	// default, no events attached
+	total_cache_miss = PAPI_NULL;
+
+	// try to initialize events
+	err = PAPI_create_eventset(&total_cache_miss);
+	if ( err != PAPI_OK ) {
+		check_papi_error(err);
+	} else {
+		err = PAPI_add_event(total_cache_miss, PAPI_L1_TCM);
+		if ( err != PAPI_OK )
+			check_papi_error(err, "PAPI_add_event: PAPI_L1_TCM");
+
+		err = PAPI_add_event(total_cache_miss, PAPI_L2_TCM);
+		if ( err != PAPI_OK )
+			check_papi_error(err, "PAPI_add_event: PAPI_L2_TCM");
+
+		err = PAPI_add_event(total_cache_miss, PAPI_L3_TCM);
+		if ( err != PAPI_OK )
+			check_papi_error(err, "PAPI_add_event: PAPI_L3_TCM");
+	}
 }
 
 /*
@@ -981,6 +1013,39 @@ void Profiling::evaluate_overall_time_prof(int number)
         // [hdin] quickfix: added a '+=' to overcome a problem regarding multiple calls of ANNarchy::run
         Prof_general[number].CPU_summ +=((double)(Prof_general[number].stop-Prof_general[number].start))/1000.0/1000.0;//s
     }
+}
+
+/**
+ *	Cache statistics
+ */
+void Profiling::start_total_cache_miss( int number ) {
+	int err = PAPI_NULL;
+
+	err = PAPI_start(total_cache_miss);
+	if (err != PAPI_OK)
+		check_papi_error(err);
+}
+
+void Profiling::stop_total_cache_miss( int number ) {
+	long_long values[3];
+	int err = PAPI_NULL;
+
+	err = PAPI_stop(total_cache_miss, values);
+	if (err != PAPI_OK)
+		check_papi_error(err);
+
+	// add up mean incremental
+	Prof_cache_miss[number].n += 1;
+	Prof_cache_miss[number].L1 += (values[0] - Prof_cache_miss[number].L1) / Prof_cache_miss[number].n;
+	Prof_cache_miss[number].L2 += (values[1] - Prof_cache_miss[number].L2) / Prof_cache_miss[number].n;
+	Prof_cache_miss[number].L3 += (values[2] - Prof_cache_miss[number].L3) / Prof_cache_miss[number].n;
+
+	// store if necessary
+	if ( Prof_cache_miss[number].storeRawData ) {
+		Prof_cache_miss[number].rawL1.push_back(values[0]);
+		Prof_cache_miss[number].rawL2.push_back(values[1]);
+		Prof_cache_miss[number].rawL3.push_back(values[2]);
+	}
 }
 
 /*
@@ -1390,15 +1455,29 @@ int Profiling::evaluate_file(const char * filename)
             fp<< std::endl;
         }
 
-        // [hdin] write out raw data to different files
-        for(int i=0;i<Profiling_time_CPU_count;i++){
-            if ( Prof_time_CPU[i].time.count == 0 || !Prof_time_CPU[i].storeRawData )
-                continue;
-            
-            std::ofstream outfile(Prof_time_CPU[i].name+"_"+Prof_time_CPU[i].additonal+".csv", std::ios::out | std::ios::trunc);
-            std::ostream_iterator<double> oi(outfile, ",\\n");
-            copy(Prof_time_CPU[i].time.rawData.begin(), Prof_time_CPU[i].time.rawData.end(), oi);
-        }
+    // [hdin] write out raw data to different files
+    for(int i=0;i<Profiling_time_CPU_count;i++){
+        if ( Prof_time_CPU[i].time.count == 0 || !Prof_time_CPU[i].storeRawData )
+            continue;
+        
+        std::ofstream outfile(Prof_time_CPU[i].name+"_"+Prof_time_CPU[i].additonal+".csv", std::ios::out | std::ios::trunc);
+        std::ostream_iterator<double> oi(outfile, ",\\n");
+        copy(Prof_time_CPU[i].time.rawData.begin(), Prof_time_CPU[i].time.rawData.end(), oi);
+    }
+
+    for(int i=0;i<Profiling_total_cache_miss_count;i++){
+        if ( !Prof_cache_miss[i].storeRawData )
+            continue;
+        
+        std::ofstream outfile(Prof_cache_miss[i].name+"_"+Prof_cache_miss[i].additional+".csv", std::ios::out | std::ios::trunc);
+        std::ostream_iterator<double> oi(outfile, ",\\n");
+        copy(Prof_cache_miss[i].rawL1.begin(), Prof_cache_miss[i].rawL1.end(), oi);
+        outfile<<std::endl;
+        copy(Prof_cache_miss[i].rawL2.begin(), Prof_cache_miss[i].rawL2.end(), oi);
+        outfile<<std::endl;
+        copy(Prof_cache_miss[i].rawL3.begin(), Prof_cache_miss[i].rawL3.end(), oi);
+    }
+
 	fp.close();
 	return 0;
 }
