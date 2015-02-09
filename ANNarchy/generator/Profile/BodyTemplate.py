@@ -1021,6 +1021,10 @@ void Profiling::evaluate_overall_time_prof(int number)
 void Profiling::start_total_cache_miss( int number ) {
 	int err = PAPI_NULL;
 
+	err = PAPI_reset(total_cache_miss);
+	if (err != PAPI_OK)
+		check_papi_error(err);
+
 	err = PAPI_start(total_cache_miss);
 	if (err != PAPI_OK)
 		check_papi_error(err);
