@@ -61,7 +61,45 @@ except:
 # Perform the installation
 ################################################
 print('Installing ANNarchy on your system')
-setup(  name='ANNarchy',
+
+if sys.platform.startswith("linux"):
+
+    setup(  name='ANNarchy',
+            version='4.3.4',
+            license='GPLv2 or later',
+            platforms='GNU/Linux',
+            description='Artificial Neural Networks architect',
+            long_description='ANNarchy (Artificial Neural Networks architect) is a simulator for distributed rate-coded or spiking neural networks. The core of the library is written in C++ and distributed using openMP. It provides an interface in Python for the definition of the networks.',
+            author='Julien Vitay and Helge Uelo Dinkelbach',
+            author_email='julien.vitay@informatik.tu-chemnitz.de',
+            url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
+            packages=find_packages(),
+            package_data={'ANNarchy': ['core/cython_ext/*.pxd']},
+            ext_modules = cythonize(
+                [   "ANNarchy/core/cython_ext/Connector.pyx", 
+                    "ANNarchy/core/cython_ext/Coordinates.pyx",
+                    "ANNarchy/core/cython_ext/Transformations.pyx"]
+            ),
+            include_dirs=[numpy.get_include()],
+            zip_safe = False
+    )
+
+else:
+    #   11.02.2015 (hd)
+    #
+    #   On darwin-based platforms, the distutils package on python 2.x does not work properly. Building of the ext_modules does not link to clang++ instead the 
+    #   C compiler is used. As we include e. g. vector classes this is not correct.
+    #
+    #   As a solution we cythonize *.pyx and compile the resulting *.cpp to the corresponding shared libraries from hand. Afterwords the created libraries are
+    #   copied.
+    #
+    cwd = os.getcwd()
+    os.chdir(cwd+"/ANNarchy/core/cython_ext")
+    os.system("make clean && make")
+    os.chdir(cwd)
+
+    # setup ANNarchy
+    setup(  name='ANNarchy',
         version='4.3.4',
         license='GPLv2 or later',
         platforms='GNU/Linux',
@@ -71,13 +109,7 @@ setup(  name='ANNarchy',
         author_email='julien.vitay@informatik.tu-chemnitz.de',
         url='http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php',
         packages=find_packages(),
-        package_data={'ANNarchy': ['core/cython_ext/*.pxd']},
-        ext_modules = cythonize(
-            [   "ANNarchy/core/cython_ext/Connector.pyx", 
-                "ANNarchy/core/cython_ext/Coordinates.pyx",
-                "ANNarchy/core/cython_ext/Transformations.pyx"]
-        ),
+        package_data={'ANNarchy': ['core/cython_ext/*.pxd','core/cython_ext/*.so']},
         include_dirs=[numpy.get_include()],
-        zip_safe = False
+        zip_safe = False,
 )
-
