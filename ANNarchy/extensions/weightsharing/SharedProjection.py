@@ -211,10 +211,8 @@ class SharedProjection(Projection):
             convolve_code, sum_code = self._generate_bank_code()
 
         # Generate the code
-        if Global.config['num_threads'] > 1:
-            self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
-        else:
-            self._generate_seq(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+        self._generate_seq(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+        self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
 
         # Finish building the synapses
         self._create()
