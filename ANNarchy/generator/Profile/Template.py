@@ -18,13 +18,16 @@ int rc;
     'run_post': """// after
     std::cout << "Profile " << omp_get_max_threads() << std::endl;
     profiler->stop_overall_time_prof(omp_get_max_threads()-1);
-    profiler->evaluate(1,1);
+    profiler->evaluate(0,1);
     """,
     #
     # Operations
     'compute_psp': {
-            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );""",
-            'after' : """profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );
+            'before' : """profiler->start_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );
+        profiler->start_total_cache_miss( (omp_get_max_threads()-1) * %(num_ops)s + rc );
+    """,
+            'after' : """profiler->stop_total_cache_miss( (omp_get_max_threads()-1) * %(num_ops)s + rc );
+        profiler->stop_CPU_time_prof( (omp_get_max_threads()-1) * %(num_ops)s + rc );
         rc++;"""
     },
     'update_synapse': {

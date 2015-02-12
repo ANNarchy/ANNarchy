@@ -163,6 +163,7 @@ class ProfileGenerator(object):
         for proj in Global._projections:    # compute sum
             name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"Proj%(id)s - compute sum");
             set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
+            set_total_cache_miss_name( i*%(num_op)s+%(off)s,"Proj%(id)s - compute sum - cache miss");
 """ % { 'id': proj.id, 'num_op': self._num_ops, 'off': rc }
             rc+= 1
 
@@ -188,6 +189,7 @@ class ProfileGenerator(object):
         # CPU_time_additional strings
         for proj in Global._projections:    # compute sum
             add += """        set_CPU_time_additional( i*%(num_op)s+%(off)s, s);
+        set_total_cache_miss_additional( i*%(num_op)s+%(off)s, s);
 """ % { 'num_op': self._num_ops, 'off': rc }
             rc+= 1
 
@@ -210,6 +212,7 @@ class ProfileGenerator(object):
         init = """
         // setup counter
         set_CPU_time_number( %(num_op)s * %(num_thread)s );
+        set_total_cache_miss_number( %(num_op)s * %(num_thread)s );
         set_overall_number( %(num_thread)s );
 """ % { 'num_op': self._num_ops,
         'num_thread': num_threads,
