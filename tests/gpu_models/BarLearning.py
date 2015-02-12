@@ -108,7 +108,7 @@ class Viewer(object):
         self.rv_vis = pg.ImageItem()
         box.addItem(self.rv_vis)
         
-	self.count = 0
+        self.count = 0
         self.win.show()
         
 
@@ -116,13 +116,13 @@ class Viewer(object):
         # Simulate for 50 ms with a new input
         set_input()
         simulate(50)
-	self.count += 1
+        self.count += 1
 
         # Refresh the GUI
         self.input_vis.setImage(Input.r)
         self.feature_vis.setImage(Feature.r)
         
-	if self.count == 100:
+	    if self.count == 100:
             self.rv_vis.setImage(Input_Feature.receptive_fields())
             self.count = 0
 
@@ -140,7 +140,7 @@ if __name__=='__main__':
 
     config = {
         'device': 1,
-	Input: { 'num_threads': 32, 'stream': 0 },
+        Input: { 'num_threads': 32, 'stream': 0 },
         Feature: { 'num_threads': 32, 'stream': 1 },
         Input_Feature: { 'num_threads': 192, 'stream': 0 },
         Feature_Feature: { 'num_threads': 96, 'stream': 1 }

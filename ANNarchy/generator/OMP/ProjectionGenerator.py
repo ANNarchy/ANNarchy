@@ -268,7 +268,7 @@ struct ProjStruct%(id_proj)s{
         pre_event = ""
         pre_event_list = []
         learning = ""
-        psp = ""
+        psp = ""; psp_bounds = ""
         for eq in proj.synapse.description['pre_spike']:
             if eq['name'] == 'w':
                 learning = """
@@ -278,9 +278,18 @@ struct ProjStruct%(id_proj)s{
 """ % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids}
             elif eq['name'] == 'g_target':
                 psp = eq['cpp'].split('=')[1]
+                for key, val in eq['bounds'].iteritems():
+                    try:
+                        value = str(float(val))
+                    except:
+                        value = "proj%(id_proj)s.%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse.description['global'] else '[i][j]'}
+                    psp_bounds += """
+                if (pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] %(op)s %(val)s)
+                    pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] = %(val)s;
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'op': "<" if key == 'min' else '>', 'val': value }
             else:
                 pre_event_list.append(eq['cpp'])
-
+        
         # Is the summation event-based or psp-based?
         event_based = True
         psp_sum = None
@@ -294,6 +303,7 @@ struct ProjStruct%(id_proj)s{
         else:
             psp_code = """pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += %(psp)s
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'psp': psp % ids}
+
 
         # Exact integration
         has_exact = False
@@ -358,12 +368,13 @@ struct ProjStruct%(id_proj)s{
                 j = proj%(id_proj)s_inv_post[_idx_i].second;
 %(exact)s
                 %(psp)s
+                %(psp_bounds)s
 %(pre_event)s
             }
         }
     } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
-    'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
+    'pre_event': pre_event, 'psp': psp_code , 'psp_bounds': psp_bounds, 'omp_code': omp_code,
     'exact': exact_code }
 
         # Not even-driven summation of psp
