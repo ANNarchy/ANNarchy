@@ -169,15 +169,15 @@ struct ProjStruct%(id_proj)s{
                     'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                 )
         # No need for openmp if less than 10 neurons
-        omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        omp_code = '#pragma omp parallel for private(sum) schedule(static, 1)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
         
         # Generate the code depending on the operation
         if proj.synapse.operation == 'sum': # normal summation
             code+= """
         %(omp_code)s
-        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++) {
             sum = 0.0;
-            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++) {
                 sum += %(psp)s
             }
             pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
