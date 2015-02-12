@@ -213,6 +213,7 @@ class SharedProjection(Projection):
         # Generate the code
         self._generate_seq(filter_definition, filter_pyx_definition, convolve_code, sum_code)
         self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+        self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
 
         # Finish building the synapses
         self._create()
@@ -853,6 +854,99 @@ class SharedProjection(Projection):
     ################################
     ### Code generation
     ################################
+    def _generate_seq(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
+
+        # C++ header
+        self.generator['seq']['header_proj_struct'] = """
+// Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
+struct ProjStruct%(id_proj)s{
+
+    std::vector<int> post_rank ;
+    std::vector< std::vector<int> > pre_coords ;
+
+%(filter)s
+
+};  
+""" % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target, 
+        'filter': filter_definition}
+
+        # PYX header
+        self.generator['seq']['pyx_proj_struct'] = """
+    # Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
+    cdef struct ProjStruct%(id_proj)s :
+        vector[int] post_rank
+        vector[vector[int]] pre_coords
+        %(filter)s
+""" % {'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target, 
+        'filter': filter_pyx_definition}
+
+        # Pyx class
+        proj_class = """
+# Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
+cdef class proj%(id_proj)s_wrapper :
+    def __cinit__(self, weights, coords):
+        proj%(id_proj)s.post_rank = list(range(%(size_post)s))
+        proj%(id_proj)s.pre_coords = coords""" + ("""
+        proj%(id_proj)s.w = weights""" if kernel else "" )+ """
+
+    property size:
+        def __get__(self):
+            return %(size_post)s
+""" + ( """
+    def nb_synapses(self, int n):
+        return %(size_filter)s
+""" if kernel else """
+    def nb_synapses(self, int n):
+        return 0
+""") + """
+
+    def post_rank(self):
+        return proj%(id_proj)s.post_rank
+    def pre_rank(self, int n):
+        return proj%(id_proj)s.pre_coords[n]
+
+""" 
+        if kernel: # not needed for max pooling
+            proj_class += """
+    # Kernel
+    def get_w(self):
+        return proj%(id_proj)s.w
+    def set_w(self, value):
+        proj%(id_proj)s.w = value
+
+"""
+        self.generator['seq']['pyx_proj_class'] = proj_class % { 
+            'id_proj': self.id, 'target': self.target, 
+            'name_pre': self.pre.name, 
+            'name_post': self.post.name, 
+            'size_post': self.post.size,
+            'size_filter': self.weights.size if kernel else 0,
+        }
+
+        # No need to initialize anything (no recordable variable, no learning)
+        self.generator['seq']['body_proj_init'] = " "
+
+        # Compute sum
+        wsum =  """
+    // Shared proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
+    %(copy_filter)s
+    std::vector<int> coord_%(id_proj)s;
+
+    for(int i = 0; i < %(size_post)s; i++){
+        coord_%(id_proj)s = proj%(id_proj)s.pre_coords[i];
+""" + convolve_code + """
+        pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
+    }
+""" 
+        # Copy the filter
+        copy_filter = filter_definition.replace('w', 'proj%(id_proj)s_w = proj%(id_proj)s.w')% {'id_proj': self.id}
+
+        self.generator['seq']['body_compute_psp'] = wsum % {'id_proj': self.id, 
+            'target': self.target,  
+            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
+            'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
+            'copy_filter': copy_filter
+        }
 
     def _generate_omp(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
 
@@ -951,99 +1045,18 @@ cdef class proj%(id_proj)s_wrapper :
             'copy_filter': copy_filter, 'omp_copy_filter': omp_copy_filter
           }
 
-    def _generate_seq(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
+    def _generate_cuda(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
 
         # C++ header
-        self.generator['seq']['header_proj_struct'] = """
-// Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-struct ProjStruct%(id_proj)s{
-
-    std::vector<int> post_rank ;
-    std::vector< std::vector<int> > pre_coords ;
-
-%(filter)s
-
-};  
-""" % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target, 
-        'filter': filter_definition}
+        self.generator['cuda']['header_proj_struct'] = ""
 
         # PYX header
-        self.generator['seq']['pyx_proj_struct'] = """
-    # Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-    cdef struct ProjStruct%(id_proj)s :
-        vector[int] post_rank
-        vector[vector[int]] pre_coords
-        %(filter)s
-""" % {'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target, 
-        'filter': filter_pyx_definition}
+        self.generator['cuda']['pyx_proj_struct'] = ""
 
         # Pyx class
-        proj_class = """
-# Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-cdef class proj%(id_proj)s_wrapper :
-    def __cinit__(self, weights, coords):
-        proj%(id_proj)s.post_rank = list(range(%(size_post)s))
-        proj%(id_proj)s.pre_coords = coords""" + ("""
-        proj%(id_proj)s.w = weights""" if kernel else "" )+ """
+        self.generator['cuda']['pyx_proj_class'] = ""
 
-    property size:
-        def __get__(self):
-            return %(size_post)s
-""" + ( """
-    def nb_synapses(self, int n):
-        return %(size_filter)s
-""" if kernel else """
-    def nb_synapses(self, int n):
-        return 0
-""") + """
-
-    def post_rank(self):
-        return proj%(id_proj)s.post_rank
-    def pre_rank(self, int n):
-        return proj%(id_proj)s.pre_coords[n]
-
-""" 
-        if kernel: # not needed for max pooling
-            proj_class += """
-    # Kernel
-    def get_w(self):
-        return proj%(id_proj)s.w
-    def set_w(self, value):
-        proj%(id_proj)s.w = value
-
-"""
-        self.generator['seq']['pyx_proj_class'] = proj_class % { 
-            'id_proj': self.id, 'target': self.target, 
-            'name_pre': self.pre.name, 
-            'name_post': self.post.name, 
-            'size_post': self.post.size,
-            'size_filter': self.weights.size if kernel else 0,
-        }
-
-        # No need to initialize anything (no recordable variable, no learning)
-        self.generator['seq']['body_proj_init'] = " "
-
-        # Compute sum
-        wsum =  """
-    // Shared proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
-    %(copy_filter)s
-    std::vector<int> coord_%(id_proj)s;
-
-    for(int i = 0; i < %(size_post)s; i++){
-        coord_%(id_proj)s = proj%(id_proj)s.pre_coords[i];
-""" + convolve_code + """
-        pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
-    }
-""" 
-        # Copy the filter
-        copy_filter = filter_definition.replace('w', 'proj%(id_proj)s_w = proj%(id_proj)s.w')% {'id_proj': self.id}
-
-        self.generator['seq']['body_compute_psp'] = wsum % {'id_proj': self.id, 
-            'target': self.target,  
-            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
-            'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
-            'copy_filter': copy_filter
-        }
+        self.generator['cuda']['body_compute_psp'] = ""
 
     def _generate_copy(self):
 

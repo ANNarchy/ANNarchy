@@ -37,16 +37,8 @@ class ProjectionGenerator(object):
 #######################################################################
     def header_struct(self, proj):
         # Is it a specific projection?
-        if Global.config['paradigm']=="openmp":
-            if Global.config['num_threads'] == 1:
-                if proj.generator['seq']['header_proj_struct']:
-                    return proj.generator['seq']['header_proj_struct']
-            else:
-                if proj.generator['omp']['header_proj_struct']:
-                    return proj.generator['omp']['header_proj_struct']
-        else:
-            if proj.generator['cuda']['header_proj_struct']:
-                return proj.generator['cuda']['header_proj_struct']
+        if proj.generator['omp']['header_proj_struct']:
+            return proj.generator['omp']['header_proj_struct']
 
         # create the code for non-specific projections
         code = """
@@ -556,16 +548,8 @@ struct ProjStruct%(id_proj)s{
     def init_projection(self, proj):
 
         # Is it a specific projection?
-        if Global.config['paradigm']=="openmp":
-            if Global.config['num_threads'] == 1:
-                if proj.generator['seq']['body_proj_init']:
-                    return proj.generator['seq']['body_proj_init']
-            else:
-                if proj.generator['omp']['body_proj_init']:
-                    return proj.generator['omp']['body_proj_init']
-        else:
-            if proj.generator['cuda']['body_proj_init']:
-                return proj.generator['cuda']['body_proj_init']
+        if proj.generator['omp']['body_proj_init']:
+            return proj.generator['omp']['body_proj_init']
 
         # Learning by default
         code = """
@@ -678,16 +662,8 @@ struct ProjStruct%(id_proj)s{
 
     def pyx_struct(self, proj):
         # Is it a specific projection?
-        if Global.config['paradigm']=="openmp":
-            if Global.config['num_threads'] == 1:
-                if proj.generator['seq']['pyx_proj_struct']:
-                    return proj.generator['seq']['pyx_proj_struct']
-            else:
-                if proj.generator['omp']['pyx_proj_struct']:
-                    return proj.generator['omp']['pyx_proj_struct']
-        else:
-            if proj.generator['cuda']['pyx_proj_struct']:
-                return proj.generator['cuda']['pyx_proj_struct']
+        if proj.generator['omp']['pyx_proj_struct']:
+            return proj.generator['omp']['pyx_proj_struct']
 
         # create the code for non-specific projections
         code = """
