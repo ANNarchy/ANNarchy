@@ -486,9 +486,15 @@ def analyse_synapse(synapse):
     # Translate the psp code if any
     if 'raw_psp' in description.keys():                
         psp = {'eq' : description['raw_psp'].strip() }
+        # Extract global operations
+        eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description, pattern)
+        description['pre_global_operations'] += global_ops['pre']
+        description['post_global_operations'] += global_ops['post']
         # Replace pre- and post_synaptic variables
-        eq = psp['eq']
         eq, untouched, dependencies = extract_prepost('psp', eq, description, pattern)
+        for name, val in untouched_globs.iteritems():
+            if not name in untouched.keys():
+                untouched[name] = val
         # Extract if-then-else statements
         eq, condition = extract_ite('psp', eq, description, split=False)
         # Analyse the equation

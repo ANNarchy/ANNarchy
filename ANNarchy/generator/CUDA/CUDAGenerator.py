@@ -53,6 +53,9 @@ class CUDAGenerator(object):
 
     def generate(self):
 
+        if Global.config['verbose']:
+            print('\nGenerate code for CUDA ...')
+
         # Propagte the global operations needed by the projections to the corresponding populations.
         self.propagate_global_ops()
 
