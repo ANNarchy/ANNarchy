@@ -152,7 +152,7 @@ struct ProjStruct%(id_proj)s{
 
         # Retrieve the psp code
         if not 'psp' in  proj.synapse.description.keys(): # default
-            psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+            psp = """proj%(id_proj)s.w[i][j] * proj%(id_proj)s_pre_r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
         else: # custom psp
             psp = (proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% {'id_proj' : proj.id})
 
@@ -169,13 +169,15 @@ struct ProjStruct%(id_proj)s{
                     'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                 )
         # No need for openmp if less than 10 neurons
-        omp_code = '#pragma omp parallel for private(sum) schedule(static, 1)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        omp_code = '#pragma omp parallel for private(sum) firstprivate(proj%(id_proj)s_pre_r, nb_post) schedule(dynamic)'% {'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
         
         # Generate the code depending on the operation
         if proj.synapse.operation == 'sum': # normal summation
             code+= """
+        std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;
+        nb_post = proj%(id_proj)s.post_rank.size();
         %(omp_code)s
-        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++) {
+        for(int i = 0; i < nb_post; i++) {
             sum = 0.0;
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++) {
                 sum += %(psp)s
