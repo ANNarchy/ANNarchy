@@ -392,14 +392,9 @@ clean:
     def code_generation(self, cpp_stand_alone, profile_enabled, clean):
         """ Code generation dependent on paradigm """
         if Global.config['paradigm'] == "openmp":
-            if Global.config['num_threads'] > 1:
-                from .OMP.OMPGenerator import OMPGenerator
-                generator = OMPGenerator(self.populations, self.projections)
-                generator.generate()
-            else:
-                from .Seq.SeqGenerator import SeqGenerator
-                generator = SeqGenerator(self.populations, self.projections)
-                generator.generate()
+            from .OMP.OMPGenerator import OMPGenerator
+            generator = OMPGenerator(self.populations, self.projections)
+            generator.generate()
         else: # CUDA
             from .CUDA.CUDAGenerator import CUDAGenerator
             generator = CUDAGenerator(self.populations, self.projections)
