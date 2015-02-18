@@ -291,6 +291,9 @@ def step():
     """
     if _network:      
         _network.pyx_step()
+    else:
+        _error('simulate(): the network is not compiled yet.')
+        return 0.0
 
 ################################
 ## Learning flags
