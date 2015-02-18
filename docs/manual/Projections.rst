@@ -244,4 +244,4 @@ If the delay is not a multiple of the simulation time step (``dt = 1.0`` by defa
 
 .. warning::
 
-    As of version 4.1.3, synaptic delays are only enabled for rate-coded networks. Synaptic delays for spiking networks will be possible in a future release.
+    Only the pre-synaptic firing of a rate-coded neuron or the spiking time of a spiking neuron can be accessed with a delay. 
