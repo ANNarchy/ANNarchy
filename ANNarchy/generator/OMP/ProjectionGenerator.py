@@ -149,28 +149,51 @@ struct ProjStruct%(id_proj)s{
 
     def computesum_rate(self, proj):
         code = ""    
+        ids = {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
         # Retrieve the psp code
-        if not 'psp' in  proj.synapse.description.keys(): # default
-            psp = """proj%(id_proj)s.w[i][j] * proj%(id_proj)s_pre_r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-        else: # custom psp
-            psp = (proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% {'id_proj' : proj.id}).replace('pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 'proj%(id_proj)s_pre_r[' %{'id_proj': proj.id})
+        if Global.config['num_threads'] == 1: # No need to copy the pre-synaptic firing rates
+            if not 'psp' in  proj.synapse.description.keys(): # default
+                psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];""" % ids
+            else: # custom psp
+                psp = (proj.synapse.description['psp']['cpp'] % ids).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% ids)
+                            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj.uniform_delay == -1 : # Non-uniform delays
+                    psp = psp.replace(
+                        'pop%(id_pre)s.r['% ids, 
+                        'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['% ids
+                    )
+                else: # Uniform delays
+                    psp = psp.replace(
+                        'pop%(id_pre)s.r['% ids, 
+                        'pop%(id_pre)s._delayed_r[%(delay)s][' % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
+                    )
+            omp_code = ""
+            pre_copy = ""
 
-        # Take delays into account if any
-        if proj.max_delay > 1:
-            if proj.uniform_delay == -1 : # Non-uniform delays
-                psp = psp.replace(
-                    'proj%(id_proj)s_pre_r['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
-                )
-                pre_copy = ""
-                omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)'% {'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-            else: # Uniform delays
-                pre_copy = 'std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s._delayed_r[%(delay)s];'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
-                omp_code = '#pragma omp parallel for private(sum) firstprivate(proj%(id_proj)s_pre_r, nb_post) schedule(dynamic)'% {'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-        else:
-            pre_copy = "std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;"%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
-            omp_code = '#pragma omp parallel for private(sum) firstprivate(proj%(id_proj)s_pre_r, nb_post) schedule(dynamic)'% {'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else: # OMP: make a local copy of pre.r for each thread
+            if not 'psp' in  proj.synapse.description.keys(): # default
+                psp = """proj%(id_proj)s.w[i][j] * proj%(id_proj)s_pre_r[proj%(id_proj)s.pre_rank[i][j]];""" % ids
+            else: # custom psp
+                psp = (proj.synapse.description['psp']['cpp'] % ids)
+                psp = psp.replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% ids)
+                psp = psp.replace('pop%(id_pre)s.r['% ids, 'proj%(id_proj)s_pre_r[' % ids)
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj.uniform_delay == -1 : # Non-uniform delays
+                    psp = psp.replace(
+                        'proj%(id_proj)s_pre_r['% ids, 
+                        'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['% ids
+                    )
+                    pre_copy = ""
+                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)'% ids if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+                else: # Uniform delays
+                    pre_copy = 'std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s._delayed_r[%(delay)s];'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
+                    omp_code = '#pragma omp parallel for private(sum) firstprivate(proj%(id_proj)s_pre_r, nb_post) schedule(dynamic)'% ids if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            else:
+                pre_copy = "std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;" % ids
+                omp_code = '#pragma omp parallel for private(sum) firstprivate(proj%(id_proj)s_pre_r, nb_post) schedule(dynamic)'% ids if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
         
         # Generate the code depending on the operation
         if proj.synapse.operation == 'sum': # normal summation
@@ -365,7 +388,10 @@ struct ProjStruct%(id_proj)s{
             pre_array = "pop%(id_pre)s.spiked" % ids
 
         # No need for openmp if less than 10 neurons
-        omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        if Global.config['num_threads']>1:
+            omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
 
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
@@ -392,7 +418,10 @@ struct ProjStruct%(id_proj)s{
 
         # Not even-driven summation of psp
         if 'psp' in  proj.synapse.description.keys(): # not event-based
-            omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            if Global.config['num_threads']>1:
+                omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            else:
+                omp_code = ""
             psp_sum = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. sum of psp
     if (pop%(id_post)s._active){
@@ -443,8 +472,10 @@ struct ProjStruct%(id_proj)s{
 
         # Generate the code
         if post_code != "":
-            omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-
+            if Global.config['num_threads']>1:
+                omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            else:
+                omp_code = ""
             code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning && pop%(id_post)s._active){
@@ -474,7 +505,10 @@ struct ProjStruct%(id_proj)s{
 
         # Generate the code
         if local_eq.strip() != '' or global_eq.strip() != '' :
-            omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            if Global.config['num_threads']>1:
+                omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            else:
+                omp_code = ""
             code+= """
         %(omp)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
@@ -1131,7 +1165,10 @@ cdef class proj%(id)s_wrapper :
 
 
         # OMP
-        omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        if Global.config['num_threads']>1:
+            omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
 
         creating = """
     // proj%(id_proj)s creating: %(eq)s
@@ -1183,13 +1220,16 @@ cdef class proj%(id)s_wrapper :
         if pruning_structure['rd']:
             proba_init += "\n        " +  pruning_structure['rd']['template'] + ' rd(' + pruning_structure['rd']['args'] + ');'
 
-        omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        if Global.config['num_threads']>1:
+            omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
 
         pruning = """
     // proj%(id_proj)s pruning: %(eq)s
     if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
         %(proba_init)s
-        %(omp_code)s
+        //%(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){

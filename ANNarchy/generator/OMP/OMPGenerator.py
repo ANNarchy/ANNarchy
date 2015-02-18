@@ -78,13 +78,17 @@ class OMPGenerator(object):
         # Custom functions
         custom_func = self.header_custom_functions()
 
+        # Include OMP
+        include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
+
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
-            'custom_func': custom_func
+            'custom_func': custom_func,
+            'include_omp': include_omp
         }
 
     def header_struct_pop(self):
@@ -192,6 +196,9 @@ class OMPGenerator(object):
         # Early stopping
         run_until = self.body_run_until()
 
+        # Number threads
+        number_threads = "omp_set_num_threads(threads);" if Global.config['num_threads'] > 1 else ""
+
         #Profiling
         from ..Profile.Template import profile_generator_omp_template
         prof_include = "" if not Global.config["profiling"] else profile_generator_omp_template['include']
@@ -222,6 +229,7 @@ class OMPGenerator(object):
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
             'record' : record,
+            'set_number_threads' : number_threads,
             'prof_include': prof_include,
             'prof_init': prof_init,
             'prof_step_pre': prof_step_pre,

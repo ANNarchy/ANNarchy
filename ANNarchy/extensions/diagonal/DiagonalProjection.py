@@ -160,8 +160,11 @@ cdef class proj%(id_proj)s_wrapper :
     if(pop%(id_post)s._active){
         int proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f, proj%(id_proj)s_start;
         std::vector<double> proj%(id_proj)s_w = proj%(id_proj)s.w;
-        std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;
-        #pragma omp parallel for private(sum, proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f, proj%(id_proj)s_start) firstprivate(proj%(id_proj)s_w, proj%(id_proj)s_pre_r)
+        std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;"""
+        if Global.config['num_threads'] > 1:
+            wsum += """
+        #pragma omp parallel for private(sum, proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f, proj%(id_proj)s_start) firstprivate(proj%(id_proj)s_w, proj%(id_proj)s_pre_r)"""
+        wsum += """
         for(int idx = 0; idx < %(dim_post_1)s; idx++){
             sum = 0.0;
             proj%(id_proj)s_start = (idx %(inc0)s %(offset)s ) ;

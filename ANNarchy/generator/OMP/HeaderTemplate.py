@@ -8,11 +8,11 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <omp.h>
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
 #include <random>
+%(include_omp)s
 
 /*
  * Built-in functions

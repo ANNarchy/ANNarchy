@@ -138,6 +138,6 @@ void setDt(double dt_) { dt=dt_;}
 */
 void setNumberThreads(int threads)
 {
-    omp_set_num_threads(threads);
+    %(set_number_threads)s
 }
 '''

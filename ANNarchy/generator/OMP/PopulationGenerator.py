@@ -190,13 +190,14 @@ struct PopStruct%(id)s{
 
         # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         code += """
         // Updating the local variables of population %(id)s (%(name)s)
-        #pragma omp parallel for firstprivate(dt)
+        %(omp_code)s
         for(int i = 0; i < %(size)s; i++){
 %(eqs)s
         }
-""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs}
+""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs, 'omp_code': omp_code}
 
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
@@ -227,13 +228,14 @@ struct PopStruct%(id)s{
 
         # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         code += """
         // Updating the local variables of population %(id)s (%(name)s)
         pop%(id)s.spiked.clear();
-        #pragma omp parallel for firstprivate(dt)
+        %(omp_code)s
         for(int i = 0; i < %(size)s; i++){
 %(eqs)s
-""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs}
+""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs, 'omp_code': omp_code}
 
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:

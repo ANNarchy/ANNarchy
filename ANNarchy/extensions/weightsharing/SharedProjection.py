@@ -1024,8 +1024,11 @@ cdef class proj%(id_proj)s_wrapper :
         wsum =  """
     // Shared proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
     %(copy_filter)s
-    std::vector<int> coord_%(id_proj)s;
-    #pragma omp parallel for private(sum, rk_pre, coord_%(id_proj)s) %(omp_copy_filter)s
+    std::vector<int> coord_%(id_proj)s;"""
+    if Global.config['num_threads'] > 1:
+        wsum += """
+    #pragma omp parallel for private(sum, rk_pre, coord_%(id_proj)s) %(omp_copy_filter)s"""
+    wsum += """
     for(int i = 0; i < %(size_post)s; i++){
         coord_%(id_proj)s = proj%(id_proj)s.pre_coords[i];
 """ + convolve_code + """
@@ -1110,8 +1113,11 @@ cdef class proj%(id_proj)s_wrapper :
         self.generator['omp']['body_proj_init'] = ""
 
         # OMP code
-        omp_code = '#pragma omp parallel for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
-
+        if Global.config['num_threads'] > 1:
+            omp_code = '#pragma omp parallel for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
+            
         # PSP
         psp = self.synapse.description['psp']['cpp'].replace('%(id_proj)s', '%(id)s').replace('rk_pre', 'proj%(id)s.pre_rank[i][j]').replace(';', '') % {'id' : self.projection.id, 'id_post': self.post.id, 'id_pre': self.pre.id}
             
