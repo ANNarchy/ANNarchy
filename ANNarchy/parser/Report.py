@@ -152,13 +152,14 @@ footer = """
 ### Main method
 ##################################
 
-def report(filename="./report.tex"):
+def report(filename="./report.tex", standalone=True):
     """ Generates a .tex file describing the network according to: 
     Nordlie E, Gewaltig M-O, Plesser HE (2009). Towards Reproducible Descriptions of Neuronal Network Models. PLoS Comput Biol 5(8): e1000456.
 
     **Parameters:**
 
     * *filename*: name of the .tex file where the report will be written (default: "./report.tex")
+    * *standalone*: tells if the generated file should be directly compilable or only includable (default: True) 
     """
 
     # stdout
@@ -180,8 +181,9 @@ def report(filename="./report.tex"):
     proj_parameters = _generate_projection_parameters()
 
     with open(filename, 'w') as wfile:
-        wfile.write(header)
-        wfile.write(preamble)
+        if standalone:
+            wfile.write(header)
+            wfile.write(preamble)
         wfile.write(summary)
         wfile.write(populations)
         wfile.write(projections)
@@ -189,7 +191,8 @@ def report(filename="./report.tex"):
         wfile.write(synapse_models)
         wfile.write(pop_parameters)
         wfile.write(proj_parameters)
-        wfile.write(footer)
+        if standalone:
+            wfile.write(footer)
 
 ##################################
 ### Process major fields
@@ -658,13 +661,19 @@ def _analyse_part(expr, local_dict, tex_dict):
             transformations = (standard_transformations + (convert_xor,)) 
             )
         return latex(analysed, symbol_names = tex_dict, mul_symbol="dot")
+    
+    def _condition(condition):
+        condition = condition.replace('and', ' & ')
+        condition = condition.replace('or', ' | ')
+        return regular_expr(condition)
 
     # Extract if/then/else
     if 'else:' in expr:
-        condition = re.findall(r'if(.*?):', expr)[0].replace(')and(', ')&&(')
+        condition = re.findall(r'if(.*?):', expr)[0]
+        condition_expr = _condition(condition)
         then = re.findall(':(.*?)else:', expr)[0]
         else_st = expr.split('else:')[1]
-        return "\\begin{cases}" + regular_expr(then) + "\qquad \\text{if} \quad " + regular_expr(condition) + "\\\\ "+ regular_expr(else_st) +" \qquad \\text{otherwise.} \end{cases}"
+        return "\\begin{cases}" + regular_expr(then) + "\qquad \\text{if} \quad " + condition_expr + "\\\\ "+ regular_expr(else_st) +" \qquad \\text{otherwise.} \end{cases}"
     
     # return the transformed equation
     return regular_expr(expr)
