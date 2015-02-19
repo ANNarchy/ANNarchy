@@ -282,6 +282,8 @@ def analyse_synapse(synapse):
 
     if synapse.psp:
         description['raw_psp'] = synapse.psp
+    elif synapse.type == 'rate':
+        description['raw_psp'] = "w*pre.r"
 
     if synapse.type == 'spike': # Additionally store pre_spike and post_spike
         description['raw_pre_spike'] = synapse.pre_spike
@@ -492,6 +494,8 @@ def analyse_synapse(synapse):
         description['post_global_operations'] += global_ops['post']
         # Replace pre- and post_synaptic variables
         eq, untouched, dependencies = extract_prepost('psp', eq, description, pattern)
+        description['dependencies']['pre'] += dependencies['pre']
+        description['dependencies']['post'] += dependencies['post']
         for name, val in untouched_globs.iteritems():
             if not name in untouched.keys():
                 untouched[name] = val

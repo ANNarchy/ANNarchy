@@ -54,8 +54,7 @@ void initialize(double _dt, long int seed) {
     }
     
 %(random_dist_init)s
-%(delay_init)s
-%(spike_init)s
+%(pop_init)s
 %(projection_init)s
 %(globalops_init)s
 }

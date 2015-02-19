@@ -126,10 +126,15 @@ struct PopStruct%(id)s{
         if pop.max_delay > 1:
             if pop.neuron_type.type == "rate":
                 code += """
-    // Delays for rate-coded population
-    std::deque< std::vector<double> > _delayed_r;
-"""
-            else:
+    // Delayed variables"""
+                for var in pop.delayed_variables:
+                    if var in pop.neuron_type.description['local']:
+                        code += """
+    std::deque< std::vector<double> > _delayed_%(var)s; """ % {'var': var}
+                    else:
+                        code += """
+    std::deque< double > _delayed_%(var)s; """ % {'var': var}
+            else: # Spiking networks should only exchange spikes
                 code += """
     // Delays for spike population
     std::deque< std::vector<int> > _delayed_spike;
@@ -314,12 +319,16 @@ struct PopStruct%(id)s{
         if pop.neuron_type.type == 'rate':
             code += """
     // Enqueuing outputs of pop%(id)s (%(name)s)
-    if ( pop%(id)s._active ) {
-        pop%(id)s._delayed_r.push_front(pop%(id)s.r);
-        pop%(id)s._delayed_r.pop_back();
-    }
-""" % {'id': pop.id, 'name' : pop.name }
+    if ( pop%(id)s._active ) {""" % {'id': pop.id, 'name' : pop.name }
 
+            for var in pop.delayed_variables:
+                code += """
+        pop%(id)s._delayed_%(var)s.push_front(pop%(id)s.%(var)s);
+        pop%(id)s._delayed_%(var)s.pop_back();""" % {'id': pop.id, 'var' : var}
+
+            code += """
+    }
+""" 
         else:
             code += """
     // Enqueuing outputs of pop%(id)s (%(name)s)
@@ -355,19 +364,27 @@ struct PopStruct%(id)s{
         return code
 
     def init_delay(self, pop):
-        code = "    // Delays from pop%(id)s (%(name)s)\n" % {'id': pop.id, 'name': pop.name}
-
+        code = """
+    // Delayed variables
+"""
         # Is it a specific population?
         if pop.generator['omp']['body_delay_init']:
             code += pop.generator['omp']['body_delay_init'] %{'id': pop.id, 'delay': pop.max_delay}
             return code
 
         if pop.neuron_type.type == 'rate':
-            code += """    pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
-""" % {'id': pop.id, 'delay': pop.max_delay}
+            for var in pop.delayed_variables:
+                if var in pop.neuron_type.description['local']:
+                    code += """
+    pop%(id)s._delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0)); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+                else:
+                    code += """
+    pop%(id)s._delayed_%(var)s = std::deque< double >(%(delay)s, 0.0); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+
+
         else: # SPIKE
-            code += """    pop%(id)s._delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
-""" % {'id': pop.id, 'delay': pop.max_delay}
+            code += """
+    pop%(id)s._delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); """ % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 
@@ -439,6 +456,10 @@ struct PopStruct%(id)s{
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
 """ % {'id': pop.id}
+
+        # Delays
+        if pop.max_delay > 1:
+            code += self.init_delay(pop)
 
         return code
 

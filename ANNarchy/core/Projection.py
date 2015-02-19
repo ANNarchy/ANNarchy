@@ -152,7 +152,7 @@ class Projection(object):
             # No synapse attached assume default synapse based on
             # presynaptic population.
             if self.pre.neuron_type.type == 'rate':
-                self.synapse = Synapse(equations = "")
+                self.synapse = Synapse(psp = "w*pre.r")
             else:
                 self.synapse = Synapse(equations = "", pre_spike="g_target += w", post_spike="")
         elif inspect.isclass(synapse):

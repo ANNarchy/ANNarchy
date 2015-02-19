@@ -39,6 +39,7 @@ class OMPGenerator(object):
         # Analyse the populations
         for pop in self.populations:
             pop.global_operations = pop.neuron_type.description['global_operations']
+            pop.delayed_variables = []
 
         # Propagate the global operations from the projections to the populations
         for proj in self.projections:
@@ -57,10 +58,14 @@ class OMPGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
+            if proj._synapses.max_delay > 1:
+                for var in proj.synapse.description['dependencies']['pre']:
+                    proj.pre.delayed_variables.append(var)
 
         # Make sure the operations are declared only once
         for pop in self.populations:
             pop.global_operations = list(np.unique(np.array(pop.global_operations)))
+            pop.delayed_variables = list(set(pop.delayed_variables))
 
 
 
@@ -160,9 +165,6 @@ class OMPGenerator(object):
         rd_init_code = self.body_init_randomdistributions()
         rd_update_code = self.body_update_randomdistributions()
 
-        # Initialize delayed arrays
-        delay_init = self.body_init_delay()
-
         # Initialize populations
         pop_init = self.body_init_population()
 
@@ -221,9 +223,8 @@ class OMPGenerator(object):
             'update_synapse' : update_synapse,
             'random_dist_init' : rd_init_code,
             'random_dist_update' : rd_update_code,
-            'delay_init' : delay_init,
             'delay_code' : delay_code,
-            'spike_init' : pop_init,
+            'pop_init' : pop_init,
             'projection_init' : projection_init,
             'globalops_init' : globalops_init,
             'post_event' : post_event,
