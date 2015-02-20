@@ -274,10 +274,11 @@ struct PopStruct%(id)s{
             refrac_inc = ""
 
         # Main code
+        omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         spike_gather = """
             %(refrac_period)sif(%(condition)s){ // Emit a spike
 %(reset)s        
-                #pragma omp critical
+                %(omp_critical_code)s
                 {
                     pop%(id)s.spiked.push_back(i);
                     if(pop%(id)s.record_spike){
@@ -288,7 +289,10 @@ struct PopStruct%(id)s{
                 %(refrac_inc)s
             }
         }
-"""% {'id': pop.id, 'name': pop.name, 'size': pop.size, 'condition' : cond, 'reset': reset, 'refrac_period': refrac_period, 'refrac_inc': refrac_inc} 
+"""% {  'id': pop.id, 'name': pop.name, 'size': pop.size, 
+        'condition' : cond, 'reset': reset, 
+        'refrac_period': refrac_period, 'refrac_inc': refrac_inc,
+        'omp_critical_code': omp_critical_code} 
 
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
