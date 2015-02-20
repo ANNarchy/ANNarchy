@@ -90,6 +90,10 @@ struct PopStruct%(id)s{
     int size;
     bool _active;
 
+    // Record parameter
+    int record_period;
+    long int record_offset;
+
     // Global parameter cut
     double  cut ;
 
@@ -118,9 +122,12 @@ struct PopStruct%(id)s{
     pop%(id)s.isi = std::vector< double >(pop%(id)s.size, 10000.0);
     pop%(id)s.support = std::vector< double >(pop%(id)s.size, 10000.0);
 """
+
+        omp_code = "" # #pragma omp parallel for
+
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of Spike2Rate population %(id)s
-    #pragma omp parallel for
+    %(omp_code)s
     for(int i = 0; i < pop%(id)s.size; i++){
         // Increase when spiking
         if (pop%(id_pre)s.last_spike[i] == t-1){
@@ -140,7 +147,7 @@ struct PopStruct%(id)s{
         
         pop%(id)s.r[i] += dt*(1000.0/pop%(id)s.scaling/pop%(id)s.support[i]/dt - pop%(id)s.r[i])/pop%(id)s.smooth;
     }
-"""  % {'id' : self.id, 'id_pre': self.population.id}
+"""  % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
 
 
 
@@ -169,6 +176,10 @@ struct PopStruct%(id)s{
     int size;
     bool _active;
 
+    // Record parameter
+    int record_period;
+    long int record_offset;
+
     // Global parameter window
     double  window ;
 
@@ -192,10 +203,12 @@ struct PopStruct%(id)s{
         self.generator['omp']['body_spike_init'] = """ 
     pop%(id)s.last_spikes = std::vector< std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
 """
+        omp_code = "" # #pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)
+
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of Spike2Rate population %(id)s
     int pop%(id)s_nb, pop%(id)s_out;
-    #pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)
+    %(omp_code)s
     for(int i = 0; i < pop%(id)s.size; i++){
         // Increase when spiking
         if (pop%(id_pre)s.last_spike[i] == t-1){
@@ -218,7 +231,7 @@ struct PopStruct%(id)s{
 
         pop%(id)s.r[i] += dt*(1000.0/pop%(id)s.scaling / pop%(id)s.window * double(pop%(id)s_nb) - pop%(id)s.r[i] ) / pop%(id)s.smooth;
     }
-"""  % {'id' : self.id, 'id_pre': self.population.id}
+"""  % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
 
 
     def _create_adaptive(self):
@@ -246,6 +259,10 @@ struct PopStruct%(id)s{
     int size;
     bool _active;
 
+    // Record parameter
+    int record_period;
+    long int record_offset;
+
     // Local parameter window
     double  window ;
     std::vector< double >  ad_window ;
@@ -268,6 +285,8 @@ struct PopStruct%(id)s{
 """ % {'id' : self.id}
 
 
+        omp_code = "" # #pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)
+
         self.generator['omp']['body_spike_init'] = """ 
     pop%(id)s.last_spikes = std::vector< std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
     pop%(id)s.ad_window = std::vector< double >(pop%(id)s.size, pop%(id)s.window);
@@ -276,7 +295,7 @@ struct PopStruct%(id)s{
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of Spike2Rate population %(id)s
     int pop%(id)s_nb, pop%(id)s_out;
-    #pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)
+    %(omp_code)s
     for(int i = 0; i < pop%(id)s.size; i++){
         // Increase when spiking
         if (pop%(id_pre)s.last_spike[i] == t-1){
@@ -309,7 +328,7 @@ struct PopStruct%(id)s{
             std::cout << pop%(id)s.ad_window[i] << " " << pop%(id)s.isi[i] << std::endl;
 
     }
-"""  % {'id' : self.id, 'id_pre': self.population.id}
+"""  % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
 
 
 class Rate2SpikePopulation(Population):
@@ -362,11 +381,13 @@ class Rate2SpikePopulation(Population):
             ) 
         )
 
+        omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+
         # Generate the code
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of population %(id)s (Rate2SpikePopulation)
-    if pop%(id)s._active{}
-        #pragma omp parallel for
+    if(pop%(id)s._active){
+        %(omp_code)s
         for(int i = 0; i < pop%(id)s.size; i++){
 
             pop%(id)s.rates[i] = pop%(id_pre)s.r[i] * pop%(id)s.scaling;
@@ -377,20 +398,17 @@ class Rate2SpikePopulation(Population):
                 pop%(id)s.refractory_remaining[i]--;
             }
             else if(pop%(id)s.rates[i] > pop%(id)s.rand_0[i]*1000.0/dt){
+                #pragma omp critical
+                {
+                    pop%(id)s.spiked.push_back(i);
+                    if(pop%(id)s.record_spike){
+                        pop%(id)s.recorded_spike[i].push_back(t);
+                    }
+                }
                 pop%(id)s.last_spike[i] = t;
                 pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
             }
         }
-        // Gather spikes
-        pop%(id)s.spiked.clear();
-        for(int i=0; i< pop%(id)s.size; i++){
-            if(pop%(id)s.spike[i]){
-                pop%(id)s.spiked.push_back(i);
-                if(pop%(id)s.record_spike){
-                    pop%(id)s.recorded_spike[i].push_back(t);
-                }
-            }
-        }
     }
-""" % {'id' : self.id, 'id_pre': self.population.id}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
 

@@ -885,6 +885,7 @@ class Projection(object):
             from ANNarchy.core.cython_ext.Connector import CSR
         except:
             _error('ANNarchy was not successfully installed.')
+            exit(0)
         csr = CSR()
 
         # Find offsets
