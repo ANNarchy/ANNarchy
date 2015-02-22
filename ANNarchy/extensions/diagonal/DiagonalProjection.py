@@ -61,7 +61,7 @@ class DiagonalProjection(Projection):
 
     def connect_gaussian(self, amp, sigma, min_val, max_distance=0.0):
         """
-        Creates the diagonal connection pattern by computing the Gaussian weights online.
+        Creates the diagonal connection pattern for 4D populations and Gaussian filter..
 
         *Parameters*:
                 
@@ -86,16 +86,21 @@ class DiagonalProjection(Projection):
         self.sigma_w = self.sigma * (self.post.geometry[2] - self.post.geometry[2]%2 )
         self.sigma_h = self.sigma * (self.post.geometry[3] - self.post.geometry[3]%2 )
 
-        for post2 in xrange(self.post.geometry[2]):
-            for post3 in xrange(self.post.geometry[3]):
-                for pre0 in xrange(self.pre.geometry[0]):
-                    for pre1 in xrange(self.pre.geometry[1]):
-                        for pre2 in xrange(self.pre.geometry[2]):
-                            for pre3 in xrange(self.pre.geometry[3]):                                    
-                                dist_w = (post2 - (pre0+pre2) + self.offset_w)
-                                dist_h = (post3 - (pre1+pre3) + self.offset_h)
-                                val = self.amp * np.exp(- (dist_w*dist_w/self.sigma_w/self.sigma_w + dist_h*dist_h/self.sigma_h/self.sigma_h) )
-                                self.weights[(dist_w, dist_h)] = val
+        # for post2 in xrange(self.post.geometry[2]):
+        #     for post3 in xrange(self.post.geometry[3]):
+        #         for pre0 in xrange(self.pre.geometry[0]):
+        #             for pre1 in xrange(self.pre.geometry[1]):
+        #                 for pre2 in xrange(self.pre.geometry[2]):
+        #                     for pre3 in xrange(self.pre.geometry[3]):                                    
+        #                         dist_w = (post2 - (pre0+pre2) + self.offset_w)
+        #                         dist_h = (post3 - (pre1+pre3) + self.offset_h)
+        #                         val = self.amp * np.exp(- (dist_w*dist_w/self.sigma_w/self.sigma_w + dist_h*dist_h/self.sigma_h/self.sigma_h) )
+        #                         self.weights[(dist_w, dist_h)] = val
+
+        for dist_w in xrange(int(self.offset_w) - self.pre.geometry[0] - self.pre.geometry[2], int(self.offset_w) + self.post.geometry[2]):
+            for dist_h in xrange(int(self.offset_h) - self.pre.geometry[1] - self.pre.geometry[3], int(self.offset_h) + self.post.geometry[3]):
+                val = self.amp * np.exp(- (dist_w*dist_w/self.sigma_w/self.sigma_w + dist_h*dist_h/self.sigma_h/self.sigma_h) )
+                self.weights[(dist_w, dist_h)] = val
 
 
         # Generate the code
