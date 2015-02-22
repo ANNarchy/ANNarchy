@@ -75,15 +75,32 @@ class DiagonalProjection(Projection):
         self.sigma = sigma
         self.min_val = min_val
         self.max_distance = max_distance
-        self.weights = []
+        self.weights = {}
 
-        # Generate the code
-        if self.pre.dimension == 4 and self.post.dimension == 4:
-            self._generate_omp_2d_gaussian()
-        else:
-            Global._error('The diagonal projection only works when both populations have 2 or 4 dimensions.')
+        if not(self.pre.dimension == 4 and self.post.dimension == 4):
+            Global._error('The diagonal projection only works when both populations have 4 dimensions.')
             exit(0)
 
+        self.offset_w = (self.pre.geometry[0]-(self.pre.geometry[0]%2))/2.0
+        self.offset_h = (self.pre.geometry[1]-(self.pre.geometry[1]%2))/2.0
+        self.sigma_w = self.sigma * (self.post.geometry[2] - self.post.geometry[2]%2 )
+        self.sigma_h = self.sigma * (self.post.geometry[3] - self.post.geometry[3]%2 )
+
+        for post2 in xrange(self.post.geometry[2]):
+            for post3 in xrange(self.post.geometry[3]):
+                for pre0 in xrange(self.pre.geometry[0]):
+                    for pre1 in xrange(self.pre.geometry[1]):
+                        for pre2 in xrange(self.pre.geometry[2]):
+                            for pre3 in xrange(self.pre.geometry[3]):                                    
+                                dist_w = (post2 - (pre0+pre2) + self.offset_w)
+                                dist_h = (post3 - (pre1+pre3) + self.offset_h)
+                                val = self.amp * np.exp(- (dist_w*dist_w/self.sigma_w/self.sigma_w + dist_h*dist_h/self.sigma_h/self.sigma_h) )
+                                self.weights[(dist_w, dist_h)] = val
+
+
+        # Generate the code
+        self._generate_omp_2d_gaussian()
+        
         # create a fake CSR object
         self._create()
         return self
@@ -263,7 +280,7 @@ cdef class proj%(id_proj)s_wrapper :
 struct ProjStruct%(id_proj)s{
 
     std::vector<int> post_rank ;
-    std::vector<std::vector<double> > w ;
+    std::map<std::pair<int, int>, double > w ;
 
 };  
 """ % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target}
@@ -273,7 +290,7 @@ struct ProjStruct%(id_proj)s{
     # Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
     cdef struct ProjStruct%(id_proj)s :
         vector[int] post_rank
-        vector[vector[double]] w
+        map[pair[int, int], double] w
 """ % {'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target}
 
         # Pyx class
@@ -320,7 +337,7 @@ cdef class proj%(id_proj)s_wrapper :
 
         if Global.config['num_threads'] > 1:
             wsum += """
-        #pragma omp parallel"""
+        #pragma omp parallel for"""
     
         wsum += """
         for(int post2 = 0; post2 < %(postdim2)s; post2++){
@@ -330,12 +347,11 @@ cdef class proj%(id_proj)s_wrapper :
                     for(int pre1 = 0; pre1 < %(predim1)s; pre1++){
                         for(int pre2 = 0; pre2 < %(predim2)s; pre2++){
                             for(int pre3 = 0; pre3 < %(predim3)s; pre3++){
-                                double dist_w = pow(post2 - (pre0+pre2) + %(offset_w)s, 2);
-                                double dist_h = pow(post3 - (pre1+pre3) + %(offset_h)s, 2);
-                                double val = %(amp)s * exp(- (dist_w/%(sigma_w)s/%(sigma_w)s + dist_h/%(sigma_h)s/%(sigma_h)s ) );
+                                int dist_w = post2 - (pre0+pre2) + %(offset_w)s;
+                                int dist_h = post3 - (pre1+pre3) + %(offset_h)s;
+                                double val = proj%(id_proj)s.w[std::pair<int, int>(dist_w, dist_h)];
                                 if(val > %(min_val)s%(wgd)s){
-                                    int rk_pre = pre3 + %(predim3)s * (pre2 + %(predim2)s*(pre1 + %(predim1)s * (pre0)));
-                                    sum += val * pop%(id_pre)s.r[rk_pre];
+                                    sum += val * pop%(id_pre)s.r[pre3 + %(predim3)s * (pre2 + %(predim2)s*(pre1 + %(predim1)s * pre0))];
                                 }
                             }
                         }
@@ -353,13 +369,9 @@ cdef class proj%(id_proj)s_wrapper :
     }// active
 """ 
 
-        sigma_w = self.sigma * (self.post.geometry[2] - self.post.geometry[2]%2 )
-        sigma_h = self.sigma * (self.post.geometry[3] - self.post.geometry[3]%2 )
-        offset_w = (self.pre.geometry[0]-(self.pre.geometry[0]%2))/2.0
-        offset_h = (self.pre.geometry[1]-(self.pre.geometry[1]%2))/2.0
 
         if self.max_distance != 0.0:
-            wgd = "&& dist_w < %(mgd)s*%(mgd)s && dist_h < %(mgd)s*%(mgd)s" % {'mgd': self.max_distance}
+            wgd = "&& abs(dist_w) < %(mgd)s && abs(dist_h) < %(mgd)s" % {'mgd': self.max_distance}
         else:
             wgd=""
 
@@ -370,6 +382,6 @@ cdef class proj%(id_proj)s_wrapper :
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'predim0': self.pre.geometry[0], 'predim1': self.pre.geometry[1], 'predim2': self.pre.geometry[2], 'predim3': self.pre.geometry[3], 
             'postdim0': self.post.geometry[0], 'postdim1': self.post.geometry[1], 'postdim2': self.post.geometry[2], 'postdim3': self.post.geometry[3], 
-            'offset_w': offset_w, 'offset_h': offset_h,
-            'amp': self.amp, 'sigma_w': sigma_w, 'sigma_h': sigma_h, 'min_val': self.min_val, 'wgd': wgd
+            'offset_w': self.offset_w, 'offset_h': self.offset_h,
+            'amp': self.amp, 'sigma_w': self.sigma_w, 'sigma_h': self.sigma_h, 'min_val': self.min_val, 'wgd': wgd
           }

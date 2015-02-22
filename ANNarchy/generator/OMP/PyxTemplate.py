@@ -1,6 +1,7 @@
 pyx_template = '''# cython: embedsignature=True
 from cpython.exc cimport PyErr_CheckSignals
 from libcpp.vector cimport vector
+from libcpp.map cimport map, pair
 from libcpp cimport bool
 import numpy as np
 cimport numpy as np
