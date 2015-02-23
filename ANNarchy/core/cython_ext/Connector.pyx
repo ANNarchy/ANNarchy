@@ -376,7 +376,8 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     cdef int r_post, r_pre, size_pre
     cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
-    cdef list rk_mat, pre_r
+    cdef list pre_r
+    cdef dict rk_mat
     cdef vector[int] r
     cdef vector[double] w, d
     
@@ -389,7 +390,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         pre_ranks = pre.ranks
     else:
         pre_ranks = range(pre.size)
-    
+
     # Create the projection data as CSR
     projection = CSR()
     
@@ -397,7 +398,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     indices = np.array(post_ranks)
 
     # Build the backward matrix
-    rk_mat = [ [] for i in xrange(post.size)]
+    rk_mat = {i: [] for i in post_ranks}
     for r_pre in pre_ranks:
         indices = np.random.permutation(indices)
         tmp = indices[:number]

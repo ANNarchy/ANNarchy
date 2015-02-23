@@ -658,7 +658,7 @@ class Projection(object):
             allow_self_connections = True
 
         if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-            _error('gaussian connector is only possible on whole populations, not PopulationViews.')
+            Global._error('gaussian connector is only possible on whole populations, not PopulationViews.')
             exit(0)
 
 
@@ -690,7 +690,7 @@ class Projection(object):
             allow_self_connections = True
 
         if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-            _error('DoG connector is only possible on whole populations, not PopulationViews.')
+            Global._error('DoG connector is only possible on whole populations, not PopulationViews.')
             exit(0)
 
         self.connector_name = "Difference-of-Gaussian"
@@ -745,6 +745,10 @@ class Projection(object):
         """
         if self.pre!=self.post:
             allow_self_connections = True
+
+        if number > self.pre.size:
+            Global._error('connect_fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population.')
+            exit(0)
         
         self.connector_name = "Random Convergent"
         self.connector_description = "Random Convergent %(number)s $\\rightarrow$ 1, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
@@ -774,6 +778,10 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
         
+        if number > self.pre.size:
+            Global._error('connect_fixed_number_post: the number of post-synaptic neurons exceeds the size of the population.')
+            exit(0)
+
         self.connector_name = "Random Divergent"
         self.connector_description = "Random Divergent 1 $\\rightarrow$ %(number)s, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
 
@@ -817,7 +825,7 @@ class Projection(object):
         try:
             from ANNarchy.core.cython_ext.Connector import CSR
         except:
-            _error('ANNarchy was not successfully installed.')
+            Global._error('ANNarchy was not successfully installed.')
         csr = CSR()
 
         if isinstance(weights, list):
@@ -884,7 +892,7 @@ class Projection(object):
         try:
             from ANNarchy.core.cython_ext.Connector import CSR
         except:
-            _error('ANNarchy was not successfully installed.')
+            Global._error('ANNarchy was not successfully installed.')
             exit(0)
         csr = CSR()
 
@@ -929,7 +937,7 @@ class Projection(object):
         try:
             from ANNarchy.core.cython_ext.Connector import CSR
         except:
-            _error('ANNarchy was not successfully installed.')
+            Global._error('ANNarchy was not successfully installed.')
         csr = CSR()
 
         # Load the data        
@@ -937,7 +945,7 @@ class Projection(object):
         try:
             data = _load_data(filename)
         except:
-            _error('Unable to load the data', filename, 'into the projection.')
+            Global._error('Unable to load the data', filename, 'into the projection.')
             exit(0)
 
         # Load the CSR object
@@ -952,7 +960,7 @@ class Projection(object):
             csr.max_delay = data['max_delay']
             csr.uniform_delay = data['uniform_delay']
         except:
-            _error('Unable to load the data', filename, 'into the projection.')
+            Global._error('Unable to load the data', filename, 'into the projection.')
             exit(0)
 
         # Store the synapses
@@ -1099,7 +1107,7 @@ class Projection(object):
                 preranks = self.cyInstance.pre_rank(idx)
                 w = self.cyInstance.get_dendrite_w(idx)
             except:
-                _error('The connectivity matrix can only be accessed after compilation')
+                Global._error('The connectivity matrix can only be accessed after compilation')
                 return []
             res[rank, preranks] = w
         return res
