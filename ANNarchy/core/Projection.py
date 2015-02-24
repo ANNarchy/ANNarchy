@@ -289,6 +289,9 @@ class Projection(object):
 
             * **pos**: can be either the rank or the coordinates of the postsynaptic neuron
         """
+        if not self.initialized:
+            Global._error('dendrites can only be accessed after compilation.')
+            exit(0)
         if isinstance(pos, int):
             rank = pos
         else:

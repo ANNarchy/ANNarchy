@@ -257,7 +257,7 @@ To avoid accidental memory fills, ANNarchy forces the user to define which posts
 
 .. code-block:: python
 
-    dendrite = proj.dendrite[12]
+    dendrite = proj.dendrite(12)
     dendrite.start_record(['w'])
     simulate(1000.0)
     data = dendrite.get_record()
