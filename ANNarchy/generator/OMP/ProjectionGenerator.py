@@ -693,6 +693,13 @@ struct ProjStruct%(id_proj)s{
         # Initialize variables
         for var in proj.synapse.description['variables']:
             if var['name'] == 'w':
+                code += """
+    // Local variable %(name)s (only the record methods)
+    proj%(id)s.record_%(name)s = std::vector<int>();
+    proj%(id)s.record_period_%(name)s = std::vector<int>();
+    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype']}
                 continue
             if var['name'] in proj.synapse.description['local']:
                 init = 0.0 if var['ctype'] == 'double' else 0
@@ -702,7 +709,7 @@ struct ProjStruct%(id_proj)s{
     proj%(id)s.record_%(name)s = std::vector<int>();
     proj%(id)s.record_period_%(name)s = std::vector<int>();
     proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
@@ -761,8 +768,9 @@ struct ProjStruct%(id_proj)s{
         for var in proj.synapse.description['variables']:
             code += """
     for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
+        int rk = proj%(id)s.record_%(name)s[i];
         if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
-            proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
+            proj%(id)s.recorded_%(name)s[rk].push_back(proj%(id)s.%(name)s[rk]) ;
     }
 """ % {'id': proj.id, 'name': var['name'], 'modulo': '%'}
         return code

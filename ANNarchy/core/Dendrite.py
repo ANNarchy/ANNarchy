@@ -289,7 +289,7 @@ class Dendrite(object):
         
         for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank, int(period/Global.config['dt']), Global.get_current_step())
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.idx, int(period/Global.config['dt']), Global.get_current_step())
                     
             except :
                 Global._error('start: '+ var + ' is not a recordable variable.')
@@ -323,7 +323,7 @@ class Dendrite(object):
         
         for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.post_rank)
+                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.idx)
 
             except:
                 Global._error('stop: ' + var + ' is not a recordable variable.')
@@ -350,7 +350,7 @@ class Dendrite(object):
         
         for var in _variable:
             try:
-                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.post_rank)
+                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.idx)
             except:
                 Global._error('pause: ' + var + ' is not a recordable variable.')
                 return
@@ -380,7 +380,7 @@ class Dendrite(object):
         
         for var in _variable:            
             try:
-                getattr(self.proj.cyInstance, 'start_record_'+var)(self.post_rank, int(self.proj.recorded_variables[self.post_rank][var]['period']/Global.config['dt']), Global.get_current_step())
+                getattr(self.proj.cyInstance, 'start_record_'+var)(self.idx, int(self.proj.recorded_variables[self.post_rank][var]['period']/Global.config['dt']), Global.get_current_step())
             except:
                 Global._error('resume:: ' + var + ' is not a recordable variable.')
                 return
@@ -414,7 +414,7 @@ class Dendrite(object):
                 continue
 
             try:                    
-                data = getattr(self.proj.cyInstance, 'get_recorded_'+var)(self.post_rank)
+                data = getattr(self.proj.cyInstance, 'get_recorded_'+var)(self.idx)
             except Exception, e:
                 Global._error('get: ' + var + ' is not a recordable variable.')
                 return
