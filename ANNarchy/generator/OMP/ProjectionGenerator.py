@@ -509,14 +509,19 @@ struct ProjStruct%(id_proj)s{
             if var['method'] == 'exact':
                 has_exact = True
                 post_code += """
-                    %(exact)s
+                // Exact integration
+                %(exact)s
 """ % {'exact': var['cpp'] %{'id_proj' : proj.id}}
         if has_exact:
             post_code += """
-                    proj%(id_proj)s._last_event[i][j] = t;
+                // Update the last event for the synapse
+                proj%(id_proj)s._last_event[i][j] = t;
 """ % {'id_proj' : proj.id, 'exact': var['cpp']}
 
         # Gather the equations
+        post_code += """
+                // Post-spike events
+"""
         for eq in proj.synapse.description['post_spike']:
             post_code += ' ' * 16 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
 
