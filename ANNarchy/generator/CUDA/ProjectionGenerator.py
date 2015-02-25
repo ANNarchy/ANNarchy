@@ -163,11 +163,8 @@ struct ProjStruct%(id_proj)s{
         """
         code = ""
 
-        # Retrieve the psp code
-        if not 'psp' in  proj.synapse.description.keys(): # default
-            psp = "r[pre_rank[i]] * w[i];"
-        else: # custom psp
-            psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+        psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+        psp = psp.replace('rk_pre', 'rank_pre[j]')
 
         from .cuBodyTemplate import psp_kernel
         body_code = psp_kernel % { 'id': proj.id,
@@ -177,7 +174,7 @@ struct ProjStruct%(id_proj)s{
                                    'psp': psp
                                   }
 
-        header_code = """void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s );
+        header_code = """void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* pre_rank, int* nb_synapses, int *offsets, double *pre_r, double* w, double *sum_%(target)s );
 """ % { 'id': proj.id,
         'pre': proj.pre.id,
         'post': proj.post.id,
@@ -251,20 +248,14 @@ struct ProjStruct%(id_proj)s{
             var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
 
         # replace pre- and postsynaptic global operations / variable accesses
-        if  (proj.pre.id !=  proj.post.id):
-            for pre_var in pre_dependencies:
-                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
-            for g_op in pre_global_ops:
-                par += """, double pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
-            for post_var in post_dependencies:
-                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.post.id, 'name': post_var}
-            for g_op in post_global_ops:
-                old = """, double pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': g_op}
-        else:
-            for pre_var in list(set(pre_dependencies + post_dependencies)):
-                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
-            for g_op in list(set(pre_global_ops+post_global_ops)):
-                par += """, double pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
+        for pre_var in pre_dependencies:
+            var += """, double* pre_%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
+        for g_op in pre_global_ops:
+            par += """, double pre_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
+        for post_var in post_dependencies:
+            var += """, double* post_%(name)s""" % { 'id': proj.post.id, 'name': post_var}
+        for g_op in post_global_ops:
+            old = """, double post_%(name)s""" % { 'id': proj.post.id, 'name': g_op}
              
         # random variables
         for rd in proj.synapse.description['random_distributions']:
@@ -317,17 +308,10 @@ struct ProjStruct%(id_proj)s{
         for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
             local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
             
-        if (proj.pre.id == proj.post.id):
-            for var in list(set(pre_dependencies + post_dependencies)):
-                if var in pre_dependencies:
-                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
-                else:
-                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
-        else:
-            for pre_var in pre_dependencies:
-                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
-            for post_var in post_dependencies:
-                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+        for pre_var in pre_dependencies:
+            local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
+        for post_var in post_dependencies:
+            local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
 
         glob = ""
         for g_op in pre_global_ops:

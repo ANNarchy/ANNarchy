@@ -45,8 +45,8 @@ pattern_omp = {
 }
 pattern_cuda = {
     # Populations
-    'pop_prefix': 'pop%(id)s',
-    'pop_sep': '.',
+    'pop_prefix': '',
+    'pop_sep': '',
     'pop_index': '[i]',
     'pop_globalindex': '',
     'pop_sum': '_sum_',
@@ -55,8 +55,8 @@ pattern_cuda = {
     'proj_sep': '',
     'proj_index': '[j]',
     'proj_globalindex': '[i]',
-    'proj_preprefix': 'pop%(id_pre)s_',
-    'proj_postprefix': 'pop%(id_post)s_',
+    'proj_preprefix': 'pre_',
+    'proj_postprefix': 'post_',
     'proj_preindex': '[rk_pre]',
     'proj_postindex': '[rk_post]',
 }

@@ -176,18 +176,18 @@ syn_kernel_call =\
 
 psp_kernel=\
 """
-__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* pre_rank, int *nb_synapses, int* offsets, double *r, double* w, double *sum_%(target)s ) {
+__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* rank_pre, int *nb_synapses, int* offsets, double *pre_r, double* w, double *sum_%(target)s ) {
     unsigned int tid = threadIdx.x;
-    unsigned int i = tid+offsets[blockIdx.x];
+    unsigned int j = tid+offsets[blockIdx.x];
 
     extern double __shared__ sdata[];
     double localSum = 0.0;
 
-    while(i < nb_synapses[blockIdx.x]+offsets[blockIdx.x])
+    while(j < nb_synapses[blockIdx.x]+offsets[blockIdx.x])
     {
         localSum += %(psp)s
 
-        i+= blockDim.x;
+        j+= blockDim.x;
     }
 
     sdata[tid] = localSum;
