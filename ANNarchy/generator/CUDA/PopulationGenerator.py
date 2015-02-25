@@ -220,7 +220,6 @@ struct PopStruct%(id)s{
 
         # Local variables
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
-        loc_eqs = loc_eqs.replace("pop"+str(pop.id)+".", "")
 
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in pop.neuron_type.description['random_distributions']:
