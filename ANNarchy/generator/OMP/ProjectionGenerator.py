@@ -347,8 +347,7 @@ struct ProjStruct%(id_proj)s{
         psp = ""; psp_bounds = ""
         for eq in proj.synapse.description['pre_spike']:
             if eq['name'] == 'w':
-                learning = """
-                    if(proj%(id_proj)s._learning){
+                learning = """                    if(proj%(id_proj)s._learning){
                         %(eq)s 
                     }
 """ % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids}
@@ -388,12 +387,14 @@ struct ProjStruct%(id_proj)s{
             if var['method'] == 'exact':
                 has_exact = True
                 exact_code += """
-            %(exact)s
+                // Exact integration of synaptic variables
+                %(exact)s
 """ % {'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id}}
         if has_exact:
                 event_based = False # to avoid the if not post.spike
                 exact_code += """
-            proj%(id_proj)s._last_event[i][j] = t;
+                // Update the last event for the synapse 
+                proj%(id_proj)s._last_event[i][j] = t;
 """ % {'id_proj' : proj.id, 'exact': var['cpp']}
 
             
@@ -401,20 +402,27 @@ struct ProjStruct%(id_proj)s{
         if len(pre_event_list) > 0: # There are other variables to update than g_target
             code = ""
             for eq in pre_event_list:
-                code += ' ' * 12 + eq % {'id_proj' : proj.id} + '\n'
+                code += ' ' * 20 + eq % {'id_proj' : proj.id} + '\n'
 
             if event_based:
                 pre_event += """
                 // Event-based variables should not be updated when the postsynaptic neuron fires.
-            if(!pop%(id_post)s.spiked[proj%(id_proj)s.post_rank[i]]){
+                if(pop%(id_post)s.last_spike[proj%(id_proj)s.post_rank[i]] != t-1){
+                    // Pre-spike events
 %(pre_event)s
+                    // Plasticity of w can be disabled
 %(learning)s
-            }
+                }
 """% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
             else:
                 pre_event += """
+                // Pre-spike events with exact integration should always be evaluated...
+                {
+                    // Pre-spike events
 %(pre_event)s
+                    // Plasticity of w can be disabled
 %(learning)s
+                }
 """% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
 
         # Take delays into account if any
@@ -443,9 +451,11 @@ struct ProjStruct%(id_proj)s{
             nb_post = proj%(id_proj)s_inv_post.size();
             //%(omp_code)s
             for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+                // Retrieve the correct indices
                 i = proj%(id_proj)s_inv_post[_idx_i].first;
                 j = proj%(id_proj)s_inv_post[_idx_i].second;
 %(exact)s
+                // Increase the post-synaptic conductance
                 %(psp)s
                 %(psp_bounds)s
 %(pre_event)s
@@ -549,6 +559,7 @@ struct ProjStruct%(id_proj)s{
                 omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
             else:
                 omp_code = ""
+
             code+= """
         %(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
