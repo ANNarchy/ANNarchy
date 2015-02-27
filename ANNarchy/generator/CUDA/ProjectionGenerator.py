@@ -174,9 +174,8 @@ struct ProjStruct%(id_proj)s{
                                    'psp': psp
                                   }
 
-        header_code = """void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* pre_rank, int* nb_synapses, int *offsets, double *pre_r, double* w, double *sum_%(target)s );
-""" % { 'id': proj.id,
-        'pre': proj.pre.id,
+        header_code = """__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* pre_rank, int* nb_synapses, int *offsets, double *pre_r, double* w, double *sum_%(target)s );
+""" % { 'pre': proj.pre.id,
         'post': proj.post.id,
         'target': proj.target,
       }
@@ -296,11 +295,11 @@ struct ProjStruct%(id_proj)s{
                                'post': proj.post.id,
                              }
 
-        header = """void Proj%(id)s_step(cudaStream_t stream, int size, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
-    """ % { 'id': proj.id,
-            'var': var,
-            'par': par
-          }
+        header = """__global__ void cuProj%(id)s_step(int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
+""" % { 'id': proj.id,
+        'var': var,
+        'par': par
+      }
         
         #
         # calling entity

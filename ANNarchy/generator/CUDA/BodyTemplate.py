@@ -1,14 +1,85 @@
 body_template = '''
+#ifdef __CUDA_ARCH__
+/***********************************************************************************/
+/*                                                                                 */
+/*                                                                                 */
+/*          DEVICE - code                                                          */
+/*                                                                                 */
+/*                                                                                 */
+/***********************************************************************************/
+#include <curand_kernel.h>
+
+%(kernel_config)s
+
+/****************************************
+ * init random states                   *
+ ****************************************/
+__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed )
+{
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if( tid < N )
+    {
+        curand_init( seed, tid, 0, &states[ tid ] );
+    }
+}
+
+/****************************************
+ * inline functions                     *
+ ****************************************/
+__device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
+__device__ __forceinline__ double negative( double x ) { return x<0.0? x : 0.0; }
+__device__ __forceinline__ double clip(double x, double a, double b) { return x<a? a : (x>b? b :x); }
+
+/****************************************
+ * custom functions                     *
+ ****************************************/
+%(custom_func)s
+
+/****************************************
+ * updating neural variables            *
+ ****************************************/
+%(pop_kernel)s
+ 
+/****************************************
+ * weighted sum kernels                 *
+ ****************************************/
+%(psp_kernel)s
+
+/****************************************
+ * update synapses kernel               *
+ ****************************************/
+%(syn_kernel)s
+
+/****************************************
+ * global operations kernel             *
+ ****************************************/
+%(glob_ops_kernel)s
+
+#else
 #include "ANNarchy.h"
-#include "cuANNarchy.h"
 #include <math.h>
 
 // cuda specific header
 #include <cuda_runtime_api.h>
 #include <curand.h>
+#include <float.h>
 
+/***********************************************************************************/
+/*                                                                                 */
+/*                                                                                 */
+/*          HOST - code                                                            */
+/*                                                                                 */
+/*                                                                                 */
+/***********************************************************************************/
+__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed );
 
-#define _STREAMING
+void init_curand_states( int N, curandState* states, unsigned long seed ) {
+    int numThreads = 64;
+    int numBlocks = ceil (double(N) / double(numThreads));
+
+    rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
+}
 
 /*
  * Internal data
@@ -27,9 +98,9 @@ template<typename T>
 std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
 {
     std::vector<T> flatIdx = std::vector<T>();
-    typename std::vector<std::vector<T> >::iterator it = in.begin();
+    typename std::vector<std::vector<T> >::iterator it;
 
-    for ( it; it != in.end(); it++)
+    for ( it = in.begin(); it != in.end(); it++)
     {
         flatIdx.push_back(it->size());
     }
@@ -41,10 +112,10 @@ template<typename T>
 std::vector<int> flattenOff(std::vector<std::vector<T> > in)
 {
     std::vector<T> flatOff = std::vector<T>();
-    typename std::vector<std::vector<T> >::iterator it = in.begin();
+    typename std::vector<std::vector<T> >::iterator it;
 
     int t = 0;
-    for ( it; it != in.end(); it++)
+    for ( it = in.begin(); it != in.end(); it++)
     {
         flatOff.push_back(t);
         t+= it->size();
@@ -57,9 +128,9 @@ template<typename T>
 std::vector<T> flattenArray(std::vector<std::vector<T> > in) 
 {
     std::vector<T> flatVec = std::vector<T>();
-    typename std::vector<std::vector<T> >::iterator it = in.begin();
+    typename std::vector<std::vector<T> >::iterator it;
 
-    for ( it; it != in.end(); it++)
+    for ( it = in.begin(); it != in.end(); it++)
     {
         flatVec.insert(flatVec.end(), it->begin(), it->end());
     }
@@ -71,10 +142,10 @@ template<typename T>
 std::vector<std::vector<T> > deFlattenArray(std::vector<T> in, std::vector<int> idx) 
 {
     std::vector<std::vector<T> > deFlatVec = std::vector<std::vector<T> >();
-    std::vector<int>::iterator it = idx.begin();
+    std::vector<int>::iterator it;
 
     int t=0;
-    for ( it; it != idx.end(); it++)
+    for ( it = idx.begin(); it != idx.end(); it++)
     {
         std::vector<T> tmp = std::vector<T>(in.begin()+t, in.begin()+t+*it);
         t += *it;
@@ -148,15 +219,15 @@ void initialize(double _dt, long seed) {
     stream_setup();
 }
 
+%(kernel_def)s
+
 // Step method. Generated by ANNarchy. (analog to step() in OMP)
 void single_step()
 {
-    int numThreads=0, numBlocks=0;
 
     ////////////////////////////////
     // Presynaptic events
     ////////////////////////////////
-    double start, sum;
 %(compute_sums)s
     cudaDeviceSynchronize();
 
@@ -211,4 +282,5 @@ long int getTime() {return t;}
 void setTime(long int t_) { t=t_;}
 double getDt() { return dt;}
 void setDt(double dt_) { dt=dt_;}
+#endif
 '''

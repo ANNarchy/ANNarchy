@@ -25,6 +25,7 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
     rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
 }
 
+
 /****************************************
  * inline functions                     *
  ****************************************/
@@ -111,8 +112,8 @@ pop_kernel_call =\
 """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
-        Pop%(id)s_step(/* default arguments */
-              pop%(id)s.stream, dt
+        cuPop%(id)s_step<<<1, 32>>>(/* default arguments */
+              dt
               /* population targets */
               %(tar)s
               /* kernel gpu arrays */
@@ -165,8 +166,9 @@ syn_kernel_call =\
     // Updating the variables of projection %(id)s
     if ( proj%(id)s._learning && pop%(id)s._active )
     {
-        Proj%(id)s_step(/* kernel config */
-                  proj%(id)s.stream, proj%(id)s.post_rank.size(), proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
+        cuProj%(id)s_step<<<1,32>>>(
+		  /* ranks and offsets */
+                  proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
                   /* kernel gpu arrays */
                   %(local)s
                   /* kernel constants */
@@ -233,7 +235,7 @@ psp_kernel_call =\
 """
     // proj%(id)s: pop%(pre)s -> pop%(post)s
     if ( pop%(post)s._active ) {
-        Pop%(pre)s_Pop%(post)s_%(target)s_psp( proj%(id)s.stream, pop%(post)s.size,
+        cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<1,32>>>(
                        /* ranks and offsets */
                        proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
                        /* computation data */
