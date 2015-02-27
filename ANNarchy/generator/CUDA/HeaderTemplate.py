@@ -7,7 +7,6 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <omp.h>
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
@@ -66,12 +65,6 @@ void setTime(long int t_) ;
 
 double getDt() ;
 void setDt(double dt_);
-
-/*
- * Number of threads
- *
-*/
-void setNumThreads(int threads);
 
 #endif
 """

@@ -211,13 +211,4 @@ long int getTime() {return t;}
 void setTime(long int t_) { t=t_;}
 double getDt() { return dt;}
 void setDt(double dt_) { dt=dt_;}
-
-/*
- * Number of threads
- *
-*/
-void setNumThreads(int threads)
-{
-    omp_set_num_threads(threads);
-}
 '''
