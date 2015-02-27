@@ -247,28 +247,29 @@ proj_basic_data =\
 """
     // Initialize device memory for proj%(id)s
 
-        // post_rank
-        cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+    // post_rank
+    cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
 
-        // nb_synapses
-        proj%(id)s.flat_idx = flattenIdx<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.data(), proj%(id)s.flat_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
-        proj%(id)s.overallSynapses = 0;
-        for ( auto it = proj%(id)s.flat_idx.begin(); it != proj%(id)s.flat_idx.end(); it++)
-            proj%(id)s.overallSynapses += *it;
+    // nb_synapses
+    proj%(id)s.flat_idx = flattenIdx<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.data(), proj%(id)s.flat_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
+    proj%(id)s.overallSynapses = 0;
+    std::vector<int>::iterator it%(id)s;
+    for ( it%(id)s = proj%(id)s.flat_idx.begin(); it%(id)s != proj%(id)s.flat_idx.end(); it%(id)s++)
+        proj%(id)s.overallSynapses += *it%(id)s;
 
-        // off_synapses
-        proj%(id)s.flat_off = flattenOff<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.data(), proj%(id)s.flat_off.size() * sizeof(int), cudaMemcpyHostToDevice);
+    // off_synapses
+    proj%(id)s.flat_off = flattenOff<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.data(), proj%(id)s.flat_off.size() * sizeof(int), cudaMemcpyHostToDevice);
 
-        // pre_rank
-        auto flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_pre_rank.clear();
+    // pre_rank
+    std::vector<int> flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+    flat_proj%(id)s_pre_rank.clear();
 
 """
 

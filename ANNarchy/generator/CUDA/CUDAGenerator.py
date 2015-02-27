@@ -601,7 +601,7 @@ class CUDAGenerator(object):
         // %(name)s: local
         if ( proj%(id)s.%(name)s_dirty )
         {
-            auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+            std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
             cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
             flat_proj%(id)s_%(name)s.clear();
         }
@@ -643,7 +643,7 @@ class CUDAGenerator(object):
 
         code += """
     // set active cuda device
-    auto status = cudaSetDevice(%(id)s);
+    cudaError_t status = cudaSetDevice(%(id)s);
     if ( status != cudaSuccess )
         std::cerr << "Error on setting cuda device ... " << std::endl;
 
@@ -673,7 +673,7 @@ class CUDAGenerator(object):
                 if attr['name'] in proj.synapse.description['local']:
                     code += """
         // %(name)s
-        auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+        std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
         cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s));
         cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
         flat_proj%(id)s_%(name)s.clear();
