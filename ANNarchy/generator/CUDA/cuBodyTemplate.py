@@ -98,21 +98,15 @@ __global__ void cuPop%(id)s_step(double dt%(tar)s%(var)s%(par)s)
 %(local_eqs)s
     }
 }
-
-// host calls device kernel for population %(id)s
-void Pop%(id)s_step(cudaStream_t stream, double dt%(tar)s%(var)s%(par)s)
-{
-    int nb = ceil ( double(%(pop_size)s) / (double)pop%(id)s );
-
-    cuPop%(id)s_step<<<nb, pop%(id)s, 0, stream>>>(dt%(tar2)s%(var2)s%(par2)s);
-}
 """
 
 pop_kernel_call =\
 """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
-        cuPop%(id)s_step<<<1, 32>>>(/* default arguments */
+        int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
+
+        cuPop%(id)s_step<<<nb, __pop%(id)s__>>>(/* default arguments */
               dt
               /* population targets */
               %(tar)s
@@ -152,27 +146,20 @@ __global__ void cuProj%(id)s_step( /* default params */
         j += blockDim.x;
     }
 }
-
-// host calls device kernel for population %(id)s
-void Proj%(id)s_step(cudaStream_t stream, int size, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s)
-{
-
-    cuProj%(id)s_step<<<size, pop%(pre)s_pop%(post)s_%(target)s, 0, stream>>>(post_rank, pre_rank, nb_synapses, offsets, dt%(var2)s%(par2)s);
-}
 """
 
 syn_kernel_call =\
 """
     // Updating the variables of projection %(id)s
-    if ( proj%(id)s._learning && pop%(id)s._active )
+    if ( proj%(id)s._learning && pop%(post)s._active )
     {
-        cuProj%(id)s_step<<<1,32>>>(
-		  /* ranks and offsets */
-                  proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
-                  /* kernel gpu arrays */
-                  %(local)s
-                  /* kernel constants */
-                  %(glob)s);
+        cuProj%(id)s_step<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id)s.stream>>>(
+            /* ranks and offsets */
+            proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses, dt
+            /* kernel gpu arrays */
+            %(local)s
+            /* kernel constants */
+            %(glob)s);
     }
 """
 
@@ -223,19 +210,15 @@ __global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* rank_pre, int *nb_
     }
 
 }
-
-void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s ) {
-    int sharedMemSize = pop%(pre)s_pop%(post)s_%(target)s * 64;
-
-    cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<size, pop%(pre)s_pop%(post)s_%(target)s, sharedMemSize, stream >>>( pre_rank, nb_synapses, offsets, r, w, sum_%(target)s );
-}
 """
 
 psp_kernel_call =\
 """
     // proj%(id)s: pop%(pre)s -> pop%(post)s
     if ( pop%(post)s._active ) {
-        cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<1,32>>>(
+        int sharedMemSize = __pop%(pre)s_pop%(post)s_%(target)s__ * 64;
+
+        cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, sharedMemSize>>>(
                        /* ranks and offsets */
                        proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
                        /* computation data */

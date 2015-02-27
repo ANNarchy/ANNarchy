@@ -684,7 +684,7 @@ class CUDAGenerator(object):
             if pop in cu_config.keys():
                 num_threads = cu_config[pop]['num_threads']
 
-            code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
+            code+= """#define __pop%(id)s__ %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
 
         code += "\n// Population config\n"
         for proj in self.projections:
@@ -692,7 +692,7 @@ class CUDAGenerator(object):
             if proj in cu_config.keys():
                 num_threads = cu_config[proj]['num_threads']
 
-            code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
+            code+= """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
 
         pop_assign = "    // populations\n"
         for pop in self.populations:

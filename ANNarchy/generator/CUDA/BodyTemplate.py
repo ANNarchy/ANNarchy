@@ -9,8 +9,6 @@ body_template = '''
 /***********************************************************************************/
 #include <curand_kernel.h>
 
-%(kernel_config)s
-
 /****************************************
  * init random states                   *
  ****************************************/
@@ -72,6 +70,10 @@ __device__ __forceinline__ double clip(double x, double a, double b) { return x<
 /*                                                                                 */
 /*                                                                                 */
 /***********************************************************************************/
+// kernel config
+%(kernel_config)s
+
+// RNG
 __global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed );
 
 void init_curand_states( int N, curandState* states, unsigned long seed ) {

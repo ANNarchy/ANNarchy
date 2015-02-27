@@ -328,7 +328,8 @@ struct ProjStruct%(id_proj)s{
                                    'post': proj.post.id,
                                    'pre': proj.pre.id,
                                    'local': local,
-                                   'glob': glob
+                                   'glob': glob,
+                                   'target': proj.target
                                  }
 
         return body, header, call
