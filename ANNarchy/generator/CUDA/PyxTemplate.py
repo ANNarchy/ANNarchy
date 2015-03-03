@@ -67,7 +67,4 @@ def set_dt(double dt):
 def get_dt():
     return getDt()
 
-# Set number of threads
-def set_number_threads(int n):
-    setNumThreads(n)
 '''

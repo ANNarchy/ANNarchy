@@ -258,14 +258,12 @@ omp:
 # CC 2.0 (Tesla)
 cuda_20:
 \tcython build/ANNarchyCore.pyx --cplus
-\tnvcc -gencode arch=compute_20,code=compute_20 %(gpu_flags)s -c build/cuANNarchy.cu -Xcompiler -fPIC -o build/cuANNarchy.o
-\tg++ -fPIC -shared %(cpu_flags)s -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp build/cuANNarchy.o -lcudart -lcurand %(libs)s -o ANNarchyCore.so
+\tnvcc -gencode arch=compute_20,code=compute_20 %(gpu_flags)s -I/usr/include/python2.7 build/*.cu build/*.cpp -lpython2.7 -Xcompiler -fPIC -shared -o ANNarchyCore.so
 
 # CC 3.5 (Keplar)
 cuda_35:
 \tcython build/ANNarchyCore.pyx --cplus
-\tnvcc -gencode arch=compute_35,code=compute_35 %(gpu_flags)s -c build/cuANNarchy.cu -Xcompiler -fPIC -o build/cuANNarchy.o
-\tg++ -fPIC -shared %(cpu_flags)s -fpermissive -std=c++0x -I. -I/usr/include/python2.7 -fopenmp build/*.cpp build/cuANNarchy.o -lcudart -lcurand %(libs)s -o ANNarchyCore.so
+\tnvcc -gencode arch=compute_35,code=compute_35 %(gpu_flags)s -I/usr/include/python2.7 build/*.cu build/*.cpp -lpython2.7 -Xcompiler -fPIC -shared -o ANNarchyCore.so
 
 clean:
 \trm -rf build/*.o

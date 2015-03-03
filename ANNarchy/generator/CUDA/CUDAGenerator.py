@@ -64,7 +64,7 @@ class CUDAGenerator(object):
             ofile.write(self.generate_header())
             
         # Generate cpp and cuda code for the analysed pops and projs
-        with open(Global.annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
+        with open(Global.annarchy_dir+'/generate/ANNarchy.cu', 'w') as ofile:
             ofile.write(self.generate_body())
 
         # Generate cython code for the analysed pops and projs
@@ -228,33 +228,10 @@ class CUDAGenerator(object):
 
         #TODO: Profiling
 
-        # Generate cuda header code for the analysed pops and projs
-        from .cuBodyTemplate import cu_header_template
-        cuda_header = cu_header_template % {
-            'neuron': update_neuron_header,
-            'compute_sum': compute_sums_header,
-            'synapse': update_synapse_header,
-            'glob_ops': glob_ops_header
-        }
-        with open(Global.annarchy_dir+'/generate/cuANNarchy.h', 'w') as ofile:
-            ofile.write(cuda_header)
-
-        # Generate cuda code for the analysed pops and projs
-        from .cuBodyTemplate import cu_body_template
-        cuda_body = cu_body_template % {
-            'kernel_config': threads_per_kernel,
-            'pop_kernel': update_neuron_body,
-            'psp_kernel': compute_sums_body,
-            'syn_kernel': update_synapse_body,
-            'glob_ops_kernel': glob_ops_body,
-            'custom_func': custom_func
-        }
-        with open(Global.annarchy_dir+'/generate/cuANNarchy.cu', 'w') as ofile:
-            ofile.write(cuda_body)
-
         # Generate cpp code for the analysed pops and projs
         from .BodyTemplate import body_template
         return body_template % {
+            # host stuff
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
             'run_until': run_until,
@@ -275,6 +252,15 @@ class CUDAGenerator(object):
             'device_init': device_init,
             'host_device_transfer': host_device_transfer,
             'device_host_transfer': device_host_transfer,
+            'kernel_def': update_neuron_header + compute_sums_header + update_synapse_header,
+            
+            #device stuff
+            'kernel_config': threads_per_kernel,
+            'pop_kernel': update_neuron_body,
+            'psp_kernel': compute_sums_body,
+            'syn_kernel': update_synapse_body,
+            'glob_ops_kernel': glob_ops_body,
+            'custom_func': custom_func            
         }
 
     def body_update_neuron(self):
@@ -601,7 +587,7 @@ class CUDAGenerator(object):
         // %(name)s: local
         if ( proj%(id)s.%(name)s_dirty )
         {
-            auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+            std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
             cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
             flat_proj%(id)s_%(name)s.clear();
         }
@@ -643,7 +629,7 @@ class CUDAGenerator(object):
 
         code += """
     // set active cuda device
-    auto status = cudaSetDevice(%(id)s);
+    cudaError_t status = cudaSetDevice(%(id)s);
     if ( status != cudaSuccess )
         std::cerr << "Error on setting cuda device ... " << std::endl;
 
@@ -673,7 +659,7 @@ class CUDAGenerator(object):
                 if attr['name'] in proj.synapse.description['local']:
                     code += """
         // %(name)s
-        auto flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+        std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
         cudaMalloc((void**)&proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s));
         cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
         flat_proj%(id)s_%(name)s.clear();
@@ -698,7 +684,7 @@ class CUDAGenerator(object):
             if pop in cu_config.keys():
                 num_threads = cu_config[pop]['num_threads']
 
-            code+= """#define pop%(id)s %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
+            code+= """#define __pop%(id)s__ %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
 
         code += "\n// Population config\n"
         for proj in self.projections:
@@ -706,7 +692,7 @@ class CUDAGenerator(object):
             if proj in cu_config.keys():
                 num_threads = cu_config[proj]['num_threads']
 
-            code+= """#define pop%(pre)s_pop%(post)s_%(target)s %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
+            code+= """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
 
         pop_assign = "    // populations\n"
         for pop in self.populations:

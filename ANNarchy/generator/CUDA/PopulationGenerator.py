@@ -263,7 +263,7 @@ struct PopStruct%(id)s{
         #
         # create kernel prototypes
         header += """
-void Pop%(id)s_step( cudaStream_t stream, double dt%(tar)s%(var)s%(par)s );
+__global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 """ % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
 
         #

@@ -25,6 +25,7 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
     rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
 }
 
+
 /****************************************
  * inline functions                     *
  ****************************************/
@@ -97,22 +98,16 @@ __global__ void cuPop%(id)s_step(double dt%(tar)s%(var)s%(par)s)
 %(local_eqs)s
     }
 }
-
-// host calls device kernel for population %(id)s
-void Pop%(id)s_step(cudaStream_t stream, double dt%(tar)s%(var)s%(par)s)
-{
-    int nb = ceil ( double(%(pop_size)s) / (double)pop%(id)s );
-
-    cuPop%(id)s_step<<<nb, pop%(id)s, 0, stream>>>(dt%(tar2)s%(var2)s%(par2)s);
-}
 """
 
 pop_kernel_call =\
 """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
-        Pop%(id)s_step(/* default arguments */
-              pop%(id)s.stream, dt
+        int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
+
+        cuPop%(id)s_step<<<nb, __pop%(id)s__>>>(/* default arguments */
+              dt
               /* population targets */
               %(tar)s
               /* kernel gpu arrays */
@@ -151,26 +146,20 @@ __global__ void cuProj%(id)s_step( /* default params */
         j += blockDim.x;
     }
 }
-
-// host calls device kernel for population %(id)s
-void Proj%(id)s_step(cudaStream_t stream, int size, int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s)
-{
-
-    cuProj%(id)s_step<<<size, pop%(pre)s_pop%(post)s_%(target)s, 0, stream>>>(post_rank, pre_rank, nb_synapses, offsets, dt%(var2)s%(par2)s);
-}
 """
 
 syn_kernel_call =\
 """
     // Updating the variables of projection %(id)s
-    if ( proj%(id)s._learning && pop%(id)s._active )
+    if ( proj%(id)s._learning && pop%(post)s._active )
     {
-        Proj%(id)s_step(/* kernel config */
-                  proj%(id)s.stream, proj%(id)s.post_rank.size(), proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_off_synapses, proj%(id)s.gpu_nb_synapses, dt
-                  /* kernel gpu arrays */
-                  %(local)s
-                  /* kernel constants */
-                  %(glob)s);
+        cuProj%(id)s_step<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id)s.stream>>>(
+            /* ranks and offsets */
+            proj%(id)s.gpu_post_rank, proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses, dt
+            /* kernel gpu arrays */
+            %(local)s
+            /* kernel constants */
+            %(glob)s);
     }
 """
 
@@ -221,19 +210,15 @@ __global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* rank_pre, int *nb_
     }
 
 }
-
-void Pop%(pre)s_Pop%(post)s_%(target)s_psp( cudaStream_t stream, int size, int* pre_rank, int* nb_synapses, int *offsets, double *r, double* w, double *sum_%(target)s ) {
-    int sharedMemSize = pop%(pre)s_pop%(post)s_%(target)s * 64;
-
-    cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<size, pop%(pre)s_pop%(post)s_%(target)s, sharedMemSize, stream >>>( pre_rank, nb_synapses, offsets, r, w, sum_%(target)s );
-}
 """
 
 psp_kernel_call =\
 """
     // proj%(id)s: pop%(pre)s -> pop%(post)s
     if ( pop%(post)s._active ) {
-        Pop%(pre)s_Pop%(post)s_%(target)s_psp( proj%(id)s.stream, pop%(post)s.size,
+        int sharedMemSize = __pop%(pre)s_pop%(post)s_%(target)s__ * 64;
+
+        cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, sharedMemSize>>>(
                        /* ranks and offsets */
                        proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
                        /* computation data */
@@ -247,28 +232,29 @@ proj_basic_data =\
 """
     // Initialize device memory for proj%(id)s
 
-        // post_rank
-        cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+    // post_rank
+    cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
 
-        // nb_synapses
-        proj%(id)s.flat_idx = flattenIdx<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.data(), proj%(id)s.flat_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
-        proj%(id)s.overallSynapses = 0;
-        for ( auto it = proj%(id)s.flat_idx.begin(); it != proj%(id)s.flat_idx.end(); it++)
-            proj%(id)s.overallSynapses += *it;
+    // nb_synapses
+    proj%(id)s.flat_idx = flattenIdx<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.data(), proj%(id)s.flat_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
+    proj%(id)s.overallSynapses = 0;
+    std::vector<int>::iterator it%(id)s;
+    for ( it%(id)s = proj%(id)s.flat_idx.begin(); it%(id)s != proj%(id)s.flat_idx.end(); it%(id)s++)
+        proj%(id)s.overallSynapses += *it%(id)s;
 
-        // off_synapses
-        proj%(id)s.flat_off = flattenOff<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.data(), proj%(id)s.flat_off.size() * sizeof(int), cudaMemcpyHostToDevice);
+    // off_synapses
+    proj%(id)s.flat_off = flattenOff<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.data(), proj%(id)s.flat_off.size() * sizeof(int), cudaMemcpyHostToDevice);
 
-        // pre_rank
-        auto flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
-        cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
-        cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
-        flat_proj%(id)s_pre_rank.clear();
+    // pre_rank
+    std::vector<int> flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+    flat_proj%(id)s_pre_rank.clear();
 
 """
 

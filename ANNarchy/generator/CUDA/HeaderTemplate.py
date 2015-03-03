@@ -7,11 +7,9 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <omp.h>
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
-#include <random>
 
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
@@ -33,8 +31,6 @@ header_template = """#ifndef __ANNARCHY_H__
 */
 extern double dt;
 extern long int t;
-extern std::vector< std::mt19937 >  rng;
-
 
 /*
  * Declaration of the populations
@@ -69,12 +65,6 @@ void setTime(long int t_) ;
 
 double getDt() ;
 void setDt(double dt_);
-
-/*
- * Number of threads
- *
-*/
-void setNumThreads(int threads);
 
 #endif
 """
