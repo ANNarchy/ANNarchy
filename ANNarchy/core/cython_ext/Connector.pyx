@@ -249,6 +249,8 @@ def one_to_one(pre, post, weights, delays, shift):
 
     else:
         for r_post in post_ranks:
+            if r_post >= pre.size:
+                break
             # List of pre ranks
             r = vector[int](1, r_post)
             # Get the weights and delays
