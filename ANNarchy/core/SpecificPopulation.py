@@ -275,7 +275,8 @@ cdef class pop%(id)s_wrapper :
     cpdef set_spike_times(self, value):
         pop%(id)s.spike_times = value
 """
-
+        # Copy for sequential
+        self.generator['seq'] = self.generator['omp']
         
     def _instantiate(self, module):
         # Create the Cython instance 
