@@ -76,7 +76,7 @@ Weights smaller than ``limit * abs(amp_pos - amp_neg)`` are not created and self
 
 .. code-block:: python
 
-    proj.connect_gaussian(amp_pos=1.0, sigma_pos=0.2, amp_neg=0.3, sigma_neg=0.7, limit=0.001) 
+    proj.connect_dog(amp_pos=1.0, sigma_pos=0.2, amp_neg=0.3, sigma_neg=0.7, limit=0.001) 
     
 
 The following figure shows the example of a neuron of coordinates (10, 10) in the postsynaptic population, which is connected through the **gaussian** (left) and **dog** (right) projections to a population of geometry 30*30. The X and Y axis denote the coordinates of the presynaptic neurons, while the Z axis is the weight value.

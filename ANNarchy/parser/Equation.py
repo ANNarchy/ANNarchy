@@ -513,7 +513,7 @@ class Equation(object):
     def dependencies(self):
         deps = []
         for att in self.attributes:
-            if self.local_dict[att] in self.analysed:
+            if self.local_dict[att] in self.analysed.atoms():
                 deps.append(att)
         return deps
         
