@@ -177,7 +177,6 @@ struct PopStruct%(id)s{
     long int record_offset;
 
     // Spiking population
-    std::vector<bool> spike;
     std::deque< std::vector<int> > _delayed_spike;
     std::vector<long int> last_spike;
     std::vector<int> spiked;
@@ -191,8 +190,7 @@ struct PopStruct%(id)s{
 }; 
 """
         self.generator['omp']['body_spike_init'] = """  
-    pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
-    pop%(id)s.spiked = std::vector<int>(0, 0);
+    pop%(id)s.spiked = std::vector<int>();
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.next_spike = std::vector<double>(pop%(id)s.size, -10000.0);
     for(int i=0; i< pop%(id)s.size; i++){
@@ -206,13 +204,17 @@ struct PopStruct%(id)s{
         pop%(id)s.recorded_spike.push_back(std::vector<long int>());
 """
 
+        self.generator['omp']['body_delay_init'] = """
+    pop%(id)s._delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); 
+""" 
+
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of SpikeArray population %(id)s
     if(pop%(id)s._active){
         pop%(id)s.spiked.clear();
         for(int i = 0; i < pop%(id)s.size; i++){
             // Emit spike 
-            if( (t >= (long int)(pop%(id)s.next_spike[i]/dt)) && (t < (long int)(pop%(id)s.next_spike[i]/dt) +1 ) ){
+            if( t == (long int)(pop%(id)s.next_spike[i]/dt) ){
                 pop%(id)s.last_spike[i] = t;
                 pop%(id)s.idx_next_spike[i]++ ;
                 if(pop%(id)s.idx_next_spike[i] < pop%(id)s.spike_times[i].size())

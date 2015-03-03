@@ -79,11 +79,7 @@ print('Installing ANNarchy on your system')
 if sys.platform.startswith("linux"):
 
     setup(  name='ANNarchy',
-<<<<<<< HEAD
-            version='4.3.5',
-=======
             version='4.4.0',
->>>>>>> develop
             license='GPLv2 or later',
             platforms='GNU/Linux',
             description='Artificial Neural Networks architect',

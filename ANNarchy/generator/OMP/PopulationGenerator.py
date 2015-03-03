@@ -406,6 +406,8 @@ struct PopStruct%(id)s{
         # Is it a specific population?
         if pop.generator['omp']['body_spike_init']:
             code += pop.generator['omp']['body_spike_init'] %{'id': pop.id}
+            if pop.max_delay > 1:
+                code += self.init_delay(pop)
             return code
 
         # Parameters

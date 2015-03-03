@@ -48,6 +48,6 @@ plot(dt*np.arange(tstop/dt), data['v']['data'][0])
 xlabel('Time (ms)')
 ylabel('Vm (mV)')
 ylim([-66.0, -61.0])
-title('simpleNetwork')
+title('IF_cond_exp')
 show()
 
