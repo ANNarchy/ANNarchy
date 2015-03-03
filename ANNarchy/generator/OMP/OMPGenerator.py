@@ -16,19 +16,21 @@ class OMPGenerator(object):
         self.projgen = ProjectionGenerator()
 
     def generate(self):
+        if Global.config['verbose']:
+            print('\nGenerate code for OpenMP ...')
 
         # Propagte the global operations needed by the projections to the corresponding populations.
         self.propagate_global_ops()
 
-        # Generate header code for the analysed pops and projs  
+        # Generate header code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self.generate_header())
             
-        # Generate cpp code for the analysed pops and projs  
+        # Generate cpp code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
             ofile.write(self.generate_body())
-            
-        # Generate cython code for the analysed pops and projs  
+
+        # Generate cython code for the analysed pops and projs
         with open(Global.annarchy_dir+'/generate/ANNarchyCore.pyx', 'w') as ofile:
             ofile.write(self.generate_pyx())
 
@@ -37,6 +39,7 @@ class OMPGenerator(object):
         # Analyse the populations
         for pop in self.populations:
             pop.global_operations = pop.neuron_type.description['global_operations']
+            pop.delayed_variables = []
 
         # Propagate the global operations from the projections to the populations
         for proj in self.projections:
@@ -55,12 +58,14 @@ class OMPGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
+            if proj._synapses.max_delay > 1:
+                for var in proj.synapse.description['dependencies']['pre']:
+                    proj.pre.delayed_variables.append(var)
 
         # Make sure the operations are declared only once
         for pop in self.populations:
             pop.global_operations = list(np.unique(np.array(pop.global_operations)))
-
-
+            pop.delayed_variables = list(set(pop.delayed_variables))
 
 
 
@@ -78,13 +83,17 @@ class OMPGenerator(object):
         # Custom functions
         custom_func = self.header_custom_functions()
 
+        # Include OMP
+        include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
+
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
-            'custom_func': custom_func
+            'custom_func': custom_func,
+            'include_omp': include_omp
         }
 
     def header_struct_pop(self):
@@ -129,7 +138,6 @@ class OMPGenerator(object):
 ############## BODY ###################################################
 #######################################################################
     def generate_body(self):
-
         # struct declaration for each population
         pop_ptr = ""
         for pop in self.populations:
@@ -156,9 +164,6 @@ class OMPGenerator(object):
         # Initialize random distributions
         rd_init_code = self.body_init_randomdistributions()
         rd_update_code = self.body_update_randomdistributions()
-
-        # Initialize delayed arrays
-        delay_init = self.body_init_delay()
 
         # Initialize populations
         pop_init = self.body_init_population()
@@ -193,7 +198,18 @@ class OMPGenerator(object):
         # Early stopping
         run_until = self.body_run_until()
 
+        # Number threads
+        number_threads = "omp_set_num_threads(threads);" if Global.config['num_threads'] > 1 else ""
 
+        #Profiling
+        from ..Profile.Template import profile_generator_omp_template
+        prof_include = "" if not Global.config["profiling"] else profile_generator_omp_template['include']
+        prof_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
+        prof_step_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['step_pre']
+        prof_run_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
+        prof_run_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
+
+        # Generate cpp code for the analysed pops and projs
         from .BodyTemplate import body_template
         return body_template % {
             'pop_ptr': pop_ptr,
@@ -207,14 +223,19 @@ class OMPGenerator(object):
             'update_synapse' : update_synapse,
             'random_dist_init' : rd_init_code,
             'random_dist_update' : rd_update_code,
-            'delay_init' : delay_init,
             'delay_code' : delay_code,
-            'spike_init' : pop_init,
+            'pop_init' : pop_init,
             'projection_init' : projection_init,
             'globalops_init' : globalops_init,
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
-            'record' : record
+            'record' : record,
+            'set_number_threads' : number_threads,
+            'prof_include': prof_include,
+            'prof_init': prof_init,
+            'prof_step_pre': prof_step_pre,
+            'prof_run_pre': prof_run_pre,
+            'prof_run_post': prof_run_post
         }
 
     def body_update_neuron(self):
@@ -274,9 +295,9 @@ class OMPGenerator(object):
 
 
     def body_structural_plasticity(self):
-
         # Pruning if any
-        pruning=""; creating=""
+        pruning=""
+        creating=""
         if Global.config['structural_plasticity'] :
             for proj in self.projections:
                 if 'pruning' in proj.synapse.description.keys():
@@ -291,13 +312,12 @@ class OMPGenerator(object):
     // Initialize random distribution objects
 """
         for pop in self.populations:
-            code += self.popgen.init_randomdistributions(pop)
+            code += self.popgen.init_random_distributions(pop)
 
         for proj in self.projections:
-            code += self.projgen.init_randomdistributions(proj)
+            code += self.projgen.init_random_distributions(proj)
 
         return code
-
 
     def body_init_globalops(self):
         code = """

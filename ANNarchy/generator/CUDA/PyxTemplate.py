@@ -1,5 +1,5 @@
 pyx_template = '''# cython: embedsignature=True
-from cpython.exc cimport PyErr_CheckSignals
+
 from libcpp.vector cimport vector
 from libcpp cimport bool
 import numpy as np
@@ -21,8 +21,7 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(double, long)
-    void run(int nbSteps)
-    int run_until(int steps, vector[int] populations, bool or_and)
+    void run(int nbSteps) 
     void step()
     
     # Time
@@ -32,6 +31,10 @@ cdef extern from "ANNarchy.h":
     # dt
     double getDt()
     void setDt(double dt_)
+
+    # Number of threads
+    void setNumThreads(int)
+
 
 # Population wrappers
 %(pop_class)s
@@ -45,26 +48,12 @@ def pyx_create(double dt, long seed):
 
 # Simulation for the given numer of steps
 def pyx_run(int nb_steps):
-    cdef int nb, rest
-    if nb_steps < 1000:
-        run(nb_steps)
-    else:
-        nb = int(nb_steps/1000)
-        rest = nb_steps %% 1000
-        for i in range(nb):
-            run(1000)
-            PyErr_CheckSignals()
-        run(rest)
-
-# Simulation for the given number of steps except if a criterion is reached
-def pyx_run_until(int nb_steps, list populations, bool mode):
-    cdef int nb
-    nb = run_until(nb_steps, populations, mode)
-    return nb
+    run(nb_steps)
 
 # Simulate for one step
 def pyx_step():
-    step()
+    run(1)    # directly calling step, would bypass memory transfers ...
+    #step()
 
 # Access time
 def set_time(t):

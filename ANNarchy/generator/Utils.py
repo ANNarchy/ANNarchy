@@ -1,4 +1,6 @@
-
+from ..parser.SingleAnalysis import pattern_omp, pattern_cuda
+from ..core.Global import config
+ 
 def sort_odes(desc, locality='local'):
     pre_odes = []
     odes = []
@@ -34,6 +36,12 @@ def sort_odes(desc, locality='local'):
 
 def generate_equation_code(id, desc, locality='local', obj='pop'):
     
+    # Find the paradigm OMP or CUDA
+    if config['paradigm'] == 'openmp':
+        pattern = pattern_omp
+    else:
+        pattern = pattern_cuda
+    
     # Separate ODEs from the pre- and post- equations
     pre_odes, odes, post_odes = sort_odes(desc, locality)
     
@@ -60,35 +68,18 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
         'cpp': param['cpp'] }
             # Min-Max bounds
             for bound, val in param['bounds'].iteritems():
-                # Bound min
-                if bound == 'min':
-                    if obj == 'pop':
-                        code += """
-            if(pop%(id)s.%(var)s[i] < %(val)s)
-                pop%(id)s.%(var)s[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                    else:
-                        code += """
-            if(proj%(id)s.%(var)s[i][j] < %(val)s)
-                proj%(id)s.%(var)s[i][j] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
+                if bound == "init":
+                    continue
 
-                # Bound max 
-                if bound == 'max':
-                    if obj == 'pop':
-                        code += """
-            if(pop%(id)s.%(var)s[i] > %(val)s)
-                pop%(id)s.%(var)s[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                    else:
-                        code += """
-            if(proj%(id)s.%(var)s[i][j] > %(val)s)
-                proj%(id)s.%(var)s[i][j] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
+                code += """
+        if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+            %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+""" % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
+       'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
+       'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
+       'var' : param['name'], 'val' : val, 'id': id, 
+       'operator': '<' if bound=='min' else '>'
+       }
 
     #################
     # ODE equations
@@ -137,38 +128,21 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
             %(switch)s 
 """ % { 'comment': '// '+param['eq'],
         'switch' : param['switch']}
-    
-        # Min-Max bounds
-        for param in odes: 
+
+            # Min-Max bounds
             for bound, val in param['bounds'].iteritems():
-                # Bound min
-                if bound == 'min':
-                    if obj == 'pop':
-                        code += """
-            if(pop%(id)s.%(var)s[i] < %(val)s)
-                pop%(id)s.%(var)s[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                    else:
-                        code += """
-            if(proj%(id)s.%(var)s[i][j] < %(val)s)
-                proj%(id)s.%(var)s[i][j] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                # Bound max 
-                if bound == 'max':
-                    if obj == 'pop':
-                        code += """
-            if(pop%(id)s.%(var)s[i] > %(val)s)
-                pop%(id)s.%(var)s[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                    else:
-                        code += """
-            if(proj%(id)s.%(var)s[i][j] > %(val)s)
-                proj%(id)s.%(var)s[i][j] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
+                if bound == "init":
+                    continue
+
+                code += """
+        if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+            %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+""" % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
+       'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
+       'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
+       'var' : param['name'], 'val' : val, 'id': id, 
+       'operator': '<' if bound=='min' else '>'
+       }
 
     #######################
     # Post-ODE equations
@@ -185,35 +159,20 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
             %(cpp)s
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
+
             # Min-Max bounds
             for bound, val in param['bounds'].iteritems():
-                # Bound min
-                if bound == 'min':
-                    if obj == 'pop':
-                        code += """
-            if(pop%(id)s.%(var)s[i] < %(val)s)
-                pop%(id)s.%(var)s[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                    else:
-                        code += """
-            if(proj%(id)s.%(var)s[i][j] < %(val)s)
-                proj%(id)s.%(var)s[i][j] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                # Bound max 
-                if bound == 'max':
-                    if obj == 'pop':
-                        code += """
-            if(pop%(id)s.%(var)s[i] > %(val)s)
-                pop%(id)s.%(var)s[i] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
-                    else:
-                        code += """
-            if(proj%(id)s.%(var)s[i][j] > %(val)s)
-                proj%(id)s.%(var)s[i][j] = %(val)s;
-""" % {'var' : param['name'], 'val' : val,
-        'id': id}
+                if bound == "init":
+                    continue
+
+                code += """
+        if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+            %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+""" % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
+       'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
+       'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
+       'var' : param['name'], 'val' : val, 'id': id, 
+       'operator': '<' if bound=='min' else '>'
+       }
 
     return code

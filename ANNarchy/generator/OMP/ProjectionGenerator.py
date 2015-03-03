@@ -1,8 +1,36 @@
+"""
+
+    ProjectionGenerator.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
 import ANNarchy.core.Global as Global
 
-import numpy as np
-
 class ProjectionGenerator(object):
+
+    def __init__(self):
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            self._prof_gen = ProfileGenerator(Global._populations, Global._projections)
+        else:
+            self._prof_gen = None
 
 #######################################################################
 ############## HEADER #################################################
@@ -11,13 +39,17 @@ class ProjectionGenerator(object):
         # Is it a specific projection?
         if proj.generator['omp']['header_proj_struct']:
             return proj.generator['omp']['header_proj_struct']
-            
+
+        # create the code for non-specific projections
         code = """
 // %(pre_name)s -> %(post_name)s
 struct ProjStruct%(id_proj)s{
+    // number of dendrites
     int size;
+
     // Learning flag
     bool _learning;
+
     // Connectivity
     std::vector<int> post_rank ;
     std::vector< std::vector< int > > pre_rank ;
@@ -38,6 +70,7 @@ struct ProjStruct%(id_proj)s{
                 code += """
     std::vector<std::vector<long> > _last_event;
 """
+
         # Delays
         if proj.max_delay > 1 and proj.uniform_delay == -1:
             code +="""
@@ -58,13 +91,13 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
     // Local parameter %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
+    std::vector< std::vector< %(type)s > > %(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
     // Global parameter %(name)s
-    std::vector<%(type)s>  %(name)s ;
+    std::vector<%(type)s>  %(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Variables
@@ -72,17 +105,17 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
     // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s ;
-    std::vector< int > record_%(name)s ;
-    std::vector< int > record_period_%(name)s ;
-    std::vector< long int > record_offset_%(name)s ;
+    std::vector< std::vector< %(type)s > > %(name)s;
+    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s;
+    std::vector< int > record_%(name)s;
+    std::vector< int > record_period_%(name)s;
+    std::vector< long int > record_offset_%(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
     // Global variable %(name)s
-    std::vector<%(type)s>  %(name)s ;
+    std::vector<%(type)s>  %(name)s;
     std::vector< std::vector< %(type)s > > recorded_%(name)s ;
     std::vector< int > record_%(name)s ;
     std::vector< int > record_period_%(name)s ;
@@ -116,106 +149,190 @@ struct ProjStruct%(id_proj)s{
 
     def computesum_rate(self, proj):
         code = ""    
+        ids = {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
         # Retrieve the psp code
-        if not 'psp' in  proj.synapse.description.keys(): # default
-            psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[proj%(id_proj)s.pre_rank[i][j]];""" % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-        else: # custom psp
-            psp = (proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}).replace('rk_pre', 'proj%(id_proj)s.pre_rank[i][j]'% {'id_proj' : proj.id})
+        if Global.config['num_threads'] == 1 or proj.post.size <= Global.OMP_MIN_NB_NEURONS: # No need to copy the pre-synaptic firing rates
+            if not 'psp' in  proj.synapse.description.keys(): # default
+                psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[rk_pre];""" % ids
+            else: # custom psp
+                psp = (proj.synapse.description['psp']['cpp'] % ids)
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj.uniform_delay == -1 : # Non-uniform delays
+                    for var in proj.pre.delayed_variables:
+                        if var in proj.pre.neuron_type.description['local']:
+                            psp = psp.replace(
+                                'pop%(id_pre)s.%(var)s[rk_pre]'% dict({'var': var}.items() + ids.items()), 
+                                'pop%(id_pre)s._delayed_%(var)s[proj%(id_proj)s.delay[i][j]-1][rk_pre]'% dict({'var': var}.items() + ids.items())
+                            )
+                        else:
+                            psp = psp.replace(
+                                'pop%(id_pre)s.%(var)s[rk_pre]'% dict({'var': var}.items() + ids.items()), 
+                                'pop%(id_pre)s._delayed_%(var)s[proj%(id_proj)s.delay[i][j]-1]'% dict({'var': var}.items() + ids.items())
+                            )
 
-        # Take delays into account if any
-        if proj.max_delay > 1:
-            if proj.uniform_delay == -1 : # Non-uniform delays
-                psp = psp.replace(
-                    'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
-                )
-            else: # Uniform delays
-                psp = psp.replace(
-                    'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
-                )
-        # No need for openmp if less than 10 neurons
-        omp_code = '#pragma omp parallel for private(sum)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+                else: # Uniform delays
+                    for var in proj.pre.delayed_variables:
+                        if var in proj.pre.neuron_type.description['local']:
+                            psp = psp.replace(
+                                'pop%(id_pre)s.%(var)s[rk_pre]'% dict({'var': var}.items() + ids.items()), 
+                                'pop%(id_pre)s._delayed_%(var)s[%(delay)s][rk_pre]' % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
+                            )
+                        else:
+                            psp = psp.replace(
+                                'pop%(id_pre)s.%(var)s[rk_pre]'% dict({'var': var}.items() + ids.items()), 
+                                'pop%(id_pre)s._delayed_%(var)s[%(delay)s]' % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
+                            )
 
+            psp = psp.replace('[rk_pre]', '[proj%(id_proj)s.pre_rank[i][j]]'% ids)
+            omp_code = ""
+            pre_copy = ""
+
+        else: # OMP: make a local copy of pre.r for each thread
+            if not 'psp' in  proj.synapse.description.keys(): # default
+                psp = """proj%(id_proj)s.w[i][j] * pop%(id_pre)s.r[rk_pre];""" % ids
+            else: # custom psp
+                psp = (proj.synapse.description['psp']['cpp'] % ids)
+            # Take delays into account if any
+            if proj.max_delay > 1:
+                if proj.uniform_delay == -1 : # Non-uniform delays
+                    for var in list(set(proj.synapse.description['dependencies']['pre'])):
+                        if var in proj.pre.neuron_type.description['local']:
+                            psp = psp.replace('pop%(id_pre)s.%(var)s[rk_pre]'% {'id_pre': proj.pre.id, 'var': var}, 'pop%(id_pre)s._delayed_%(var)s[proj%(id_proj)s.delay[i][j]-1][rk_pre]' % {'id_pre': proj.pre.id, 'id_proj' : proj.id, 'var': var})
+                        else:
+                            Global._error('The psp accesses a global variable with a non-uniform delay!')
+                            Global._print(proj.synapse.description['psp']['eq'])
+                            exit(0)
+                    pre_copy = ""
+                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)'% ids 
+                else: # Uniform delays
+                    pre_copy = ""; omp_code = "#pragma omp parallel for private(sum) firstprivate("
+                    for var in list(set(proj.synapse.description['dependencies']['pre'])):
+                        if var in proj.pre.neuron_type.description['local']:
+                            pre_copy += """        std::vector<double> proj%(id_proj)s_pre_%(var)s = pop%(id_pre)s._delayed_%(var)s[%(delay)s];\n""" %{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
+                            psp = psp.replace('pop%(id_pre)s.%(var)s[rk_pre]'% {'id_pre': proj.pre.id, 'var': var}, 'proj%(id_proj)s_pre_%(var)s[rk_pre]' % {'id_proj': proj.id, 'var': var})
+                        else:
+                            pre_copy += """        double proj%(id_proj)s_pre_%(var)s = pop%(id_pre)s._delayed_%(var)s[%(delay)s];\n""" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
+                            psp = psp.replace('pop%(id_pre)s.%(var)s[rk_pre]'% {'id_pre': proj.pre.id, 'var': var}, 'proj%(id_proj)s_pre_%(var)s' % {'id_proj': proj.id, 'var': var})
+
+                        omp_code += 'proj%(id_proj)s_pre_%(var)s, ' % {'id_proj': proj.id, 'var': var}
+
+                    omp_code += "nb_post) schedule(dynamic)"
+            else:
+                pre_copy = ""; omp_code = "#pragma omp parallel for private(sum) firstprivate("
+                for var in list(set(proj.synapse.description['dependencies']['pre'])):
+                    if var in proj.pre.neuron_type.description['local']:
+                        pre_copy += """        std::vector<double> proj%(id_proj)s_pre_%(var)s = pop%(id_pre)s.%(var)s;\n""" %{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
+                        psp = psp.replace('pop%(id_pre)s.%(var)s[rk_pre]'% {'id_pre': proj.pre.id, 'var': var}, 'proj%(id_proj)s_pre_%(var)s[rk_pre]' % {'id_proj': proj.id, 'var': var})
+                    else:
+                        pre_copy += """        double proj%(id_proj)s_pre_%(var)s = pop%(id_pre)s.%(var)s;\n""" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
+                        psp = psp.replace('pop%(id_pre)s.%(var)s[rk_pre]'% {'id_pre': proj.pre.id, 'var': var}, 'proj%(id_proj)s_pre_%(var)s' % {'id_proj': proj.id, 'var': var})
+
+                    omp_code += 'proj%(id_proj)s_pre_%(var)s, ' % {'id_proj': proj.id, 'var': var}
+
+                omp_code += "nb_post) schedule(dynamic)"
+            # Modify the index
+            psp = psp.replace('[rk_pre]', '[proj%(id_proj)s.pre_rank[i][j]]'% ids)
+        
         # Generate the code depending on the operation
         if proj.synapse.operation == 'sum': # normal summation
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = sum
-    if (pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            sum += %(psp)s
+%(pre_copy)s
+        nb_post = proj%(id_proj)s.post_rank.size();
+        %(omp_code)s
+        for(int i = 0; i < nb_post; i++) {
+            sum = 0.0;
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++) {
+                sum += %(psp)s
+            }
+            pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
+"""%{ 'id_proj' : proj.id, 'target': proj.target, 
+      'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+      'name_post': proj.post.name, 'name_pre': proj.pre.name, 
+      'psp': psp, 
+      'omp_code': omp_code,
+      'pre_copy': pre_copy
     }
-    } // active
-"""%{'id_proj' : proj.id, 'target': proj.target, 
-    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-    'psp': psp, 'omp_code': omp_code}
 
         elif proj.synapse.operation == 'max': # max pooling
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = max
-    if (pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        int j= 0;
-        sum = %(psp)s ;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            if(%(psp)s > sum){
-                sum = %(psp)s ;
+        %(pre_copy)s
+        nb_post = proj%(id_proj)s.post_rank.size();
+        %(omp_code)s
+        for(int i = 0; i < nb_post; i++){
+            int j = 0;
+            sum = %(psp)s ;
+            for(int j = 1; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                if(%(psp)s > sum){
+                    sum = %(psp)s ;
+                }
             }
+            pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
-    }
-    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
-    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+     'psp': psp.replace(';', ''), 'omp_code': omp_code,
+     'pre_copy': pre_copy}
 
         elif proj.synapse.operation == 'min': # max pooling
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = min
-    if (pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        int j= 0;
-        sum = %(psp)s ;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            if(%(psp)s < sum){
-                sum = %(psp)s ;
+        %(pre_copy)s
+        nb_post = proj%(id_proj)s.post_rank.size();
+        %(omp_code)s
+        for(int i = 0; i < nb_post; i++){
+            int j= 0;
+            sum = %(psp)s ;
+            for(int j = 1; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                if(%(psp)s < sum){
+                    sum = %(psp)s ;
+                }
             }
+            pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
-    }
-    } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 
     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+    'psp': psp.replace(';', ''), 'omp_code': omp_code,
+     'pre_copy': pre_copy}
 
         elif proj.synapse.operation == 'mean': # max pooling
             code+= """
+        %(pre_copy)s
+        nb_post = proj%(id_proj)s.post_rank.size();
+        %(omp_code)s
+        for(int i = 0; i < nb_post; i++){
+            sum = 0.0 ;
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                sum += %(psp)s ;
+            }
+            pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum / (double)(proj%(id_proj)s.pre_rank[i].size());
+        }
+"""%{ 'id_proj' : proj.id, 'target': proj.target,
+      'id_post': proj.post.id, 'id_pre': proj.pre.id,
+      'psp': psp.replace(';', ''), 'omp_code': omp_code,
+      'pre_copy': pre_copy }
+
+        # Profiling code
+        if Global.config['profiling']:
+            from ..Profile.ProfileGenerator import ProfileGenerator
+            pGen = ProfileGenerator(Global._populations, Global._projections)
+
+        # annotate code
+        if self._prof_gen:
+            code = self._prof_gen.annotate_computesum_rate_omp(code)
+
+        # finish the code
+        code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
     if (pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0 ;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            sum += %(psp)s ;
-        }
-        pop%(id_post)s._sum_%(target)s[proj%(id_proj)s.post_rank[i]] += sum / (double)(proj%(id_proj)s.pre_rank[i].size());
-    }
+%(code)s
     } // active
-"""%{'id_proj' : proj.id, 'target': proj.target, 
-    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-    'psp': psp.replace(';', ''), 'omp_code': omp_code}
+        """ % {'id_proj' : proj.id, 'target': proj.target,
+               'name_post': proj.post.name, 'name_pre': proj.pre.name,
+               'id_post': proj.post.id,
+               'code': code,
+               }
 
         return code
 
@@ -227,19 +344,27 @@ struct ProjStruct%(id_proj)s{
         pre_event = ""
         pre_event_list = []
         learning = ""
-        psp = ""
+        psp = ""; psp_bounds = ""
         for eq in proj.synapse.description['pre_spike']:
             if eq['name'] == 'w':
-                learning = """
-                    if(proj%(id_proj)s._learning){
+                learning = """                    if(proj%(id_proj)s._learning){
                         %(eq)s 
                     }
 """ % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids}
             elif eq['name'] == 'g_target':
                 psp = eq['cpp'].split('=')[1]
+                for key, val in eq['bounds'].iteritems():
+                    try:
+                        value = str(float(val))
+                    except:
+                        value = "proj%(id_proj)s.%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse.description['global'] else '[i][j]'}
+                    psp_bounds += """
+                if (pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] %(op)s %(val)s)
+                    pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] = %(val)s;
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'op': "<" if key == 'min' else '>', 'val': value }
             else:
                 pre_event_list.append(eq['cpp'])
-
+        
         # Is the summation event-based or psp-based?
         event_based = True
         psp_sum = None
@@ -254,6 +379,7 @@ struct ProjStruct%(id_proj)s{
             psp_code = """pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += %(psp)s
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'psp': psp % ids}
 
+
         # Exact integration
         has_exact = False
         exact_code = ''
@@ -261,12 +387,14 @@ struct ProjStruct%(id_proj)s{
             if var['method'] == 'exact':
                 has_exact = True
                 exact_code += """
-            %(exact)s
+                // Exact integration of synaptic variables
+                %(exact)s
 """ % {'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id}}
         if has_exact:
                 event_based = False # to avoid the if not post.spike
                 exact_code += """
-            proj%(id_proj)s._last_event[i][j] = t;
+                // Update the last event for the synapse 
+                proj%(id_proj)s._last_event[i][j] = t;
 """ % {'id_proj' : proj.id, 'exact': var['cpp']}
 
             
@@ -274,20 +402,27 @@ struct ProjStruct%(id_proj)s{
         if len(pre_event_list) > 0: # There are other variables to update than g_target
             code = ""
             for eq in pre_event_list:
-                code += ' ' * 12 + eq % {'id_proj' : proj.id} + '\n'
+                code += ' ' * 20 + eq % {'id_proj' : proj.id} + '\n'
 
             if event_based:
                 pre_event += """
                 // Event-based variables should not be updated when the postsynaptic neuron fires.
-            if(!pop%(id_post)s.spiked[proj%(id_proj)s.post_rank[i]]){
+                if(pop%(id_post)s.last_spike[proj%(id_proj)s.post_rank[i]] != t-1){
+                    // Pre-spike events
 %(pre_event)s
+                    // Plasticity of w can be disabled
 %(learning)s
-            }
+                }
 """% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
             else:
                 pre_event += """
+                // Pre-spike events with exact integration should always be evaluated...
+                {
+                    // Pre-spike events
 %(pre_event)s
+                    // Plasticity of w can be disabled
 %(learning)s
+                }
 """% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
 
         # Take delays into account if any
@@ -301,32 +436,44 @@ struct ProjStruct%(id_proj)s{
             pre_array = "pop%(id_pre)s.spiked" % ids
 
         # No need for openmp if less than 10 neurons
-        omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        if Global.config['num_threads']>1:
+            omp_code = """//#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
 
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
     if (pop%(id_post)s._active){
+        std::vector< std::pair<int, int> > proj%(id_proj)s_inv_post;
+        // Iterate over all incoming spikes
         for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
             rk_j = %(pre_array)s[_idx_j];
-            int nb_post = proj%(id_proj)s.inv_rank[rk_j].size();
-            std::vector< std::pair<int, int> > inv_post = proj%(id_proj)s.inv_rank[rk_j];
+            proj%(id_proj)s_inv_post = proj%(id_proj)s.inv_rank[rk_j];
+            nb_post = proj%(id_proj)s_inv_post.size();
+            // Iterate over connected post neurons
             %(omp_code)s
             for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
-                i = inv_post[_idx_i].first;
-                j = inv_post[_idx_i].second;
-    %(exact)s
+                // Retrieve the correct indices
+                i = proj%(id_proj)s_inv_post[_idx_i].first;
+                j = proj%(id_proj)s_inv_post[_idx_i].second;
+%(exact)s
+                // Increase the post-synaptic conductance
                 %(psp)s
-    %(pre_event)s
+                %(psp_bounds)s
+%(pre_event)s
             }
         }
     } // active
 """%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
-    'pre_event': pre_event, 'psp': psp_code , 'omp_code': omp_code,
-    'exact': exact_code}
+    'pre_event': pre_event, 'psp': psp_code , 'psp_bounds': psp_bounds, 'omp_code': omp_code,
+    'exact': exact_code }
 
         # Not even-driven summation of psp
         if 'psp' in  proj.synapse.description.keys(): # not event-based
-            omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            if Global.config['num_threads']>1:
+                omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            else:
+                omp_code = ""
             psp_sum = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. sum of psp
     if (pop%(id_post)s._active){
@@ -345,6 +492,9 @@ struct ProjStruct%(id_proj)s{
 
             code += psp_sum
 
+        # annotate code
+        if self._prof_gen:
+            code = self._prof_gen.annotate_computesum_spiking_omp(code)
 
         return code
 
@@ -361,21 +511,28 @@ struct ProjStruct%(id_proj)s{
             if var['method'] == 'exact':
                 has_exact = True
                 post_code += """
-                    %(exact)s
+                // Exact integration
+                %(exact)s
 """ % {'exact': var['cpp'] %{'id_proj' : proj.id}}
         if has_exact:
             post_code += """
-                    proj%(id_proj)s._last_event[i][j] = t;
+                // Update the last event for the synapse
+                proj%(id_proj)s._last_event[i][j] = t;
 """ % {'id_proj' : proj.id, 'exact': var['cpp']}
 
         # Gather the equations
+        post_code += """
+                // Post-spike events
+"""
         for eq in proj.synapse.description['post_spike']:
             post_code += ' ' * 16 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
 
         # Generate the code
         if post_code != "":
-            omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-
+            if Global.config['num_threads']>1:
+                omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            else:
+                omp_code = ""
             code += """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     if(proj%(id_proj)s._learning && pop%(id_post)s._active){
@@ -396,7 +553,7 @@ struct ProjStruct%(id_proj)s{
     def update_synapse(self, proj):
         code = ""
         from ..Utils import generate_equation_code
-        
+
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
@@ -405,16 +562,18 @@ struct ProjStruct%(id_proj)s{
 
         # Generate the code
         if local_eq.strip() != '' or global_eq.strip() != '' :
-            omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            if Global.config['num_threads']>1:
+                omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            else:
+                omp_code = ""
+
             code+= """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    if(proj%(id_proj)s._learning && pop%(id_post)s._active){
-        %(omp)s
+        %(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
 %(global)s
-"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'omp': omp_code}
- 
+"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'omp_code': omp_code}
+
             if local_eq.strip() != "": 
                 code+= """
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
@@ -425,33 +584,60 @@ struct ProjStruct%(id_proj)s{
 
             code += """
         }
-    }
 """
 
         # Take delays into account if any
         if proj.max_delay > 1:
             if proj.uniform_delay == -1 : # Non-uniform delays
-                code = code.replace(
-                    'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
-                )
+                for var in list(set(proj.synapse.description['dependencies']['pre'])):
+                    if var in proj.pre.neuron_type.description['local']:
+                        code = code.replace(
+                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
+                            'pop%(id_pre)s._delayed_%(var)s[proj%(id_proj)s.delay[i][j]-1][rk_pre]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
+                        )
+                    else:
+                        code = code.replace(
+                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
+                            'pop%(id_pre)s._delayed_%(var)s[proj%(id_proj)s.delay[i][j]-1]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
+                        )
                 code = code.replace(
                     'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
                     'pop%(id_pre)s._delayed_spike[proj%(id_proj)s.delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
                 )
             else: # Uniform delays
-                code = code.replace(
-                    'pop%(id_pre)s.r['%{'id_pre': proj.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
-                )
+                for var in list(set(proj.synapse.description['dependencies']['pre'])):
+                    if var in proj.pre.neuron_type.description['local']:
+                        code = code.replace(
+                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
+                            'pop%(id_pre)s._delayed_%(var)s[%(delay)s][rk_pre]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var, 'delay': str(proj.uniform_delay-1)}
+                        )
+                    else:
+                        code = code.replace(
+                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
+                            'pop%(id_pre)s._delayed_%(var)s[%(delay)s]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var, 'delay': str(proj.uniform_delay-1)}
+                        )
                 code = code.replace(
                     'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
                     'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
                 )
 
-        return code
+        # profiling annotation
+        if self._prof_gen:
+            code = self._prof_gen.annotate_update_synapse_omp(code)
 
-    def init_randomdistributions(self, proj):
+        # finish the code block
+        if code != "":
+            return """
+    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
+    if(proj%(id_proj)s._learning && pop%(id_post)s._active){
+%(code)s
+    } // active
+""" % { 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target,
+        'id_proj': proj.id, 'id_post': proj.post.id, 'code': code }
+        else:
+            return ""
+
+    def init_random_distributions(self, proj):
         # Is it a specific population?
         if proj.generator['omp']['body_random_dist_init']:
             return proj.generator['omp']['body_random_dist_init'] %{'id_proj': proj.id}
@@ -501,8 +687,8 @@ struct ProjStruct%(id_proj)s{
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
     /////////////////////////////////////////
     proj%(id_proj)s._learning = true;
-""" % { 'id_proj': proj.id, 'target': proj.target, 
-        'id_post': proj.post.id, 'id_pre': proj.pre.id, 
+""" % { 'id_proj': proj.id, 'target': proj.target,
+        'id_post': proj.post.id, 'id_pre': proj.pre.id,
         'name_post': proj.post.name, 'name_pre': proj.pre.name}
 
         # Initialize parameters
@@ -525,6 +711,13 @@ struct ProjStruct%(id_proj)s{
         # Initialize variables
         for var in proj.synapse.description['variables']:
             if var['name'] == 'w':
+                code += """
+    // Local variable %(name)s (only the record methods)
+    proj%(id)s.record_%(name)s = std::vector<int>();
+    proj%(id)s.record_period_%(name)s = std::vector<int>();
+    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
+""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype']}
                 continue
             if var['name'] in proj.synapse.description['local']:
                 init = 0.0 if var['ctype'] == 'double' else 0
@@ -534,7 +727,7 @@ struct ProjStruct%(id_proj)s{
     proj%(id)s.record_%(name)s = std::vector<int>();
     proj%(id)s.record_period_%(name)s = std::vector<int>();
     proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
+    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
@@ -591,10 +784,11 @@ struct ProjStruct%(id_proj)s{
     def record(self, proj):
         code = ""
         for var in proj.synapse.description['variables']:
-                code += """
+            code += """
     for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
+        int rk = proj%(id)s.record_%(name)s[i];
         if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
-            proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
+            proj%(id)s.recorded_%(name)s[rk].push_back(proj%(id)s.%(name)s[rk]) ;
     }
 """ % {'id': proj.id, 'name': var['name'], 'modulo': '%'}
         return code
@@ -605,10 +799,11 @@ struct ProjStruct%(id_proj)s{
 #######################################################################
 
     def pyx_struct(self, proj):
-       # Is it a specific projection?
+        # Is it a specific projection?
         if proj.generator['omp']['pyx_proj_struct']:
             return proj.generator['omp']['pyx_proj_struct']
 
+        # create the code for non-specific projections
         code = """
     cdef struct ProjStruct%(id_proj)s :
         int size
@@ -616,7 +811,7 @@ struct ProjStruct%(id_proj)s{
         vector[int] post_rank
         vector[vector[int]] pre_rank
 """         
-            
+
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
@@ -637,7 +832,7 @@ struct ProjStruct%(id_proj)s{
             if var['name'] in proj.synapse.description['local']:
                 code += """
         # Local parameter %(name)s
-        vector[vector[%(type)s]] %(name)s 
+        vector[vector[%(type)s]] %(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
@@ -703,7 +898,6 @@ struct ProjStruct%(id_proj)s{
         # Finalize the code
         return code % {'id_proj': proj.id}
 
-
     def pyx_wrapper(self, proj):
 
         # Is it a specific population?
@@ -719,13 +913,13 @@ cdef class proj%(id)s_wrapper :
         cdef CSR syn = synapses
         cdef int size = syn.size
         cdef int nb_post = syn.post_rank.size()
-        
+
         proj%(id)s.size = size
         proj%(id)s.post_rank = syn.post_rank
         proj%(id)s.pre_rank = syn.pre_rank
         proj%(id)s.w = syn.w
 """% {'id': proj.id}
-            
+
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
@@ -1051,7 +1245,10 @@ cdef class proj%(id)s_wrapper :
 
 
         # OMP
-        omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        if Global.config['num_threads']>1:
+            omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
 
         creating = """
     // proj%(id_proj)s creating: %(eq)s
@@ -1103,13 +1300,16 @@ cdef class proj%(id)s_wrapper :
         if pruning_structure['rd']:
             proba_init += "\n        " +  pruning_structure['rd']['template'] + ' rd(' + pruning_structure['rd']['args'] + ');'
 
-        omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        if Global.config['num_threads']>1:
+            omp_code = '#pragma omp parallel for' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
 
         pruning = """
     // proj%(id_proj)s pruning: %(eq)s
     if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
         %(proba_init)s
-        %(omp_code)s
+        //%(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
             rk_post = proj%(id_proj)s.post_rank[i];
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){

@@ -45,18 +45,20 @@ pattern_omp = {
 }
 pattern_cuda = {
     # Populations
-    'pop_prefix': 'pop%(id)s',
-    'pop_sep': '.',
+    'pop_prefix': '',
+    'pop_sep': '',
     'pop_index': '[i]',
     'pop_globalindex': '',
-    'pop_sum': 'sum_',
+    'pop_sum': '_sum_',
     # Projections
-    'proj_prefix': 'proj%(id_proj)s',
-    'proj_sep': '.',
-    'proj_index': '[i][j]',
+    'proj_prefix': '',
+    'proj_sep': '',
+    'proj_index': '[j]',
     'proj_globalindex': '[i]',
-    'proj_preprefix': 'pop%(id_pre)s',
-    'proj_postprefix': 'pop%(id_post)s',
+    'proj_preprefix': 'pre_',
+    'proj_postprefix': 'post_',
+    'proj_preindex': '[rk_pre]',
+    'proj_postindex': '[rk_post]',
 }
 
 def analyse_neuron(neuron):
@@ -64,10 +66,10 @@ def analyse_neuron(neuron):
     concurrent_odes = []
 
     # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'cuda':
-        pattern = pattern_cuda
-    else:
+    if config['paradigm'] == 'openmp':
         pattern = pattern_omp
+    else:
+        pattern = pattern_cuda
 
     # Store basic information
     description = {
@@ -264,10 +266,10 @@ def analyse_synapse(synapse):
     concurrent_odes = []
  
     # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'cuda':
-        pattern = pattern_cuda
+    if config['paradigm'] == 'openmp':
+        pattern = pattern_omp
     else:
-        pattern = pattern_omp  
+        pattern = pattern_cuda  
 
     # Store basic information
     description = {
@@ -280,6 +282,8 @@ def analyse_synapse(synapse):
 
     if synapse.psp:
         description['raw_psp'] = synapse.psp
+    elif synapse.type == 'rate':
+        description['raw_psp'] = "w*pre.r"
 
     if synapse.type == 'spike': # Additionally store pre_spike and post_spike
         description['raw_pre_spike'] = synapse.pre_spike
@@ -412,7 +416,7 @@ def analyse_synapse(synapse):
                                       index=pattern['proj_index'],
                                       global_index=pattern['proj_globalindex'])
                 variable['bounds']['min'] = translator.parse().replace(';', '')
-
+                
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
                 translator = Equation(variable['name'], variable['bounds']['max'], 
@@ -490,6 +494,8 @@ def analyse_synapse(synapse):
         description['post_global_operations'] += global_ops['post']
         # Replace pre- and post_synaptic variables
         eq, untouched, dependencies = extract_prepost('psp', eq, description, pattern)
+        description['dependencies']['pre'] += dependencies['pre']
+        description['dependencies']['post'] += dependencies['post']
         for name, val in untouched_globs.iteritems():
             if not name in untouched.keys():
                 untouched[name] = val

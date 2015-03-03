@@ -58,13 +58,19 @@ config = dict(
     'paradigm': "openmp",
     'method': "explicit",
     'seed': -1,
-    'structural_plasticity': False
+    'structural_plasticity': False,
+    'profiling': False
    }
+)
+
+cuda_config = dict(
+    {
+     'device': 0
+    }
 )
 
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 10
-
 
 # Authorized keywork for attributes
 authorized_keywords = [
@@ -136,6 +142,25 @@ def setup(**keyValueArgs):
 
         if key == 'seed':
             np.random.seed(keyValueArgs[key])
+
+def set_cuda_config(config):
+    """
+    setup cuda config, whereas the config is a dictionary containing the device id where to compute on (default 0) 
+    and for each population and projection an amount of threads. If not specified, we assume 32 threads for 
+    populations and 192 threads for projections. ATTENTION: need to be set before compilation.
+
+    Example:
+
+    config = { 'device': 0, Input: 64, Output: 32, Input_Output: 64 }
+    set_cuda_config(config)
+    compile()
+
+    Warning:
+
+    setting this config, will overwrite completely existing configurations.
+    """
+    global cuda_config
+    cuda_config = config
     
 def reset(populations=True, projections=False, synapses = False):
     """
@@ -266,6 +291,9 @@ def step():
     """
     if _network:      
         _network.pyx_step()
+    else:
+        _error('simulate(): the network is not compiled yet.')
+        return 0.0
 
 ################################
 ## Learning flags

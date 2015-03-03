@@ -27,6 +27,10 @@ Changelog
 
 **4.3.1:** 
 
+* CUDA implementation for rate-coded networks with small restrictions.
+
+**4.3.1:** 
+
 * Weight-sharing for convolutions and pooling.
 * Possibility to create projections using a dense connection matrix or data saved in a file.
 * A seed can be defined for the random number generators.

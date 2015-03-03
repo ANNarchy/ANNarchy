@@ -3,7 +3,6 @@ header_template = """#ifndef __ANNARCHY_H__
 
 #include <string>
 #include <vector>
-#include <map>
 #include <deque>
 #include <iostream>
 #include <sstream>
@@ -11,21 +10,9 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
-#include <random>
 
-/*
- * Built-in functions
- *
- */
-#define positive(x) (x>0.0? x : 0.0)
-#define negative(x) (x<0.0? x : 0.0)
-#define clip(x, a, b) (x<a? a : (x>b? b :x))
-
-/*
- * Custom functions
- *
- */
-%(custom_func)s
+#include <cuda_runtime_api.h>
+#include <curand_kernel.h>
 
 /*
  * Structures for the populations
@@ -38,15 +25,12 @@ header_template = """#ifndef __ANNARCHY_H__
  */
 %(proj_struct)s
 
-
 /*
  * Internal data
  *
 */
 extern double dt;
 extern long int t;
-extern std::mt19937  rng;
-
 
 /*
  * Declaration of the populations
@@ -65,11 +49,9 @@ extern std::mt19937  rng;
  *
 */
 
-void initialize(double _dt, long int seed) ;
+void initialize(double _dt, long seed) ;
 
 void run(int nbSteps);
-
-int run_until(int steps, std::vector<int> populations, bool or_and);
 
 void step();
 
