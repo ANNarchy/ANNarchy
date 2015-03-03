@@ -340,7 +340,7 @@ class OMPGenerator(object):
         from .GlobalOperationTemplate import global_operation_templates
         code = ""
         for op in list(set(ops)):
-            code += global_operation_templates[op]
+            code += global_operation_templates[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
 
         return code
 

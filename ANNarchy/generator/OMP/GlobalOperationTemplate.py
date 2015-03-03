@@ -32,7 +32,7 @@ double min_value(const double* array, int n)
 double mean_value(const double* array, int n)
 {
     double sum = 0.0;
-    #pragma omp parallel for reduction(+:sum)
+    %(omp)s#pragma omp parallel for reduction(+:sum)
     for(int i=0; i<n; i++)
     {
         sum += array[i];
@@ -45,7 +45,7 @@ double mean_value(const double* array, int n)
 double norm1_value(const double* array, int n)
 {
     double sum = 0.0;
-    #pragma omp parallel for reduction(+:sum)
+    %(omp)s#pragma omp parallel for reduction(+:sum)
     for(int i=0; i<n; i++)
     {
         sum += fabs(array[i]);
@@ -59,7 +59,7 @@ double norm1_value(const double* array, int n)
 double norm2_value(const double* array, int n)
 {
     double sum = 0.0;
-    #pragma omp parallel for reduction(+:sum)
+    %(omp)s#pragma omp parallel for reduction(+:sum)
     for(int i=0; i<n; i++)
     {
         sum += pow(array[i], 2.0);
