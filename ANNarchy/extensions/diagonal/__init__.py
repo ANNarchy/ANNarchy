@@ -1,1 +1,1 @@
-from DiagonalProjection import DiagonalProjection
+from .DiagonalProjection import DiagonalProjection

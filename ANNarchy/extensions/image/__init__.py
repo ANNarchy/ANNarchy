@@ -1,1 +1,1 @@
-from ImagePopulation import ImagePopulation, VideoPopulation
+from .ImagePopulation import ImagePopulation, VideoPopulation

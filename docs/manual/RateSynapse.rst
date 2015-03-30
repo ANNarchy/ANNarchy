@@ -125,7 +125,7 @@ Using the global operations, such a learning rule is trivial to implement:
 
 
 Defining the post-synaptic potential (psp)
------------------------------------------
+-------------------------------------------
 
 The argument ``psp`` of a ``Synapse`` object represents the post-synaptic potential evoked by the pre-synaptic neuron. This value is actually summed by the post-synaptic neuron over all other synapses of the same projection in ``sum(target)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
 
@@ -158,7 +158,7 @@ No further modification has to be done in the post-synaptic neuron, this value w
 
 
 Defining the post-synaptic operation
---------------------------------------
+----------------------------------------
 
 By default, a post-synaptic neuron calling ``sum(target)`` will compute the sum over all incoming synapses of their defined ``psp``:
 

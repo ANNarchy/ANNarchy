@@ -14,14 +14,14 @@ The default spiking synapse in ANNarchy is equivalent to:
 .. code-block:: python
 
     DefaultSynapse = Synapse(
-        parameters = "",
+        parameters = "w=0.0",
         equations = "",
         pre_spike = """
             g_target += w
         """     
     ) 
 
-The only thing it does is to increase the conductance ``g_target`` of the post-synaptic neuron (for example ``g_exc`` if the target is ``exc``) every time a pre-syanptic spike arrives at the synapse, proportionally to the synaptic efficiency ``w`` of the synapse. 
+The only thing it does is to increase the conductance ``g_target`` of the post-synaptic neuron (for example ``g_exc`` if the target is ``exc``) every time a pre-syanptic spike arrives at the synapse, proportionally to the synaptic efficiency ``w`` of the synapse. Note that ``w`` is implicitely defined in all synapses, you will never never needto define it.
 
 You can override this default behavior by providing a new ``Synapse`` object when building a ``Projection``. For example, you may want to implement a "fatigue" mechanism for the synapse, transciently reducing the synaptic efficiency when the pre-synaptic neuron fires too strongly. One solution would be to decrease a synaptic variable everytime a pre-synaptic spike  is received and increase the post-synaptic conductance proportionally to this value. When no spike is received, this ``trace`` variable should slowly return to its maximal value.
 
@@ -41,7 +41,7 @@ You can override this default behavior by providing a new ``Synapse`` object whe
         """     
     ) 
    
-Each time a pre-synaptic spike occurs, the post-synaptic conductance is increased from ``w*trace``. As the baseline of ``trace`` is 1.0 (as defined in ``equations``), this means that a "fresh" synapse will use the full synaptic efficiency. However, after each pre-synaptic spike, trace is decreased from ``dec = 0.05``, meaning that the "real" synaptic efficiency can go down to 0.0 (the minimal value of trace) if the pre-synaptic neuron fires too much.
+Each time a pre-synaptic spike occurs, the post-synaptic conductance is increased from ``w*trace``. As the baseline of ``trace`` is 1.0 (as defined in ``equations``), this means that a "fresh" synapse will use the full synaptic efficiency. However, after each pre-synaptic spike, trace is decreased from ``dec = 0.05``, meaning that the "real" synaptic efficiency can go down to 0.0 (the minimal value of trace) if the pre-synaptic neuron fires too often.
 
 It is important here to restrict ``trace`` to positive values with the flags ``min=0.0``, as it could otherwise transform an excitatory synapse into an inhibitory one...
 
@@ -53,7 +53,7 @@ It is important here to restrict ``trace`` to positive values with the flags ``m
 Synaptic plasticity
 ==========================
 
-In spiking networks, there are usually two ways to implement synaptic plasticity (see the entry on STDP at `Scholarpedia <http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity>`_):
+In spiking networks, there are usually two ways to implement event-driven synaptic plasticity (see the entry on STDP at `Scholarpedia <http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity>`_):
 
 * by using the difference in spike times between the pre- and post-synaptic neurons;
 * by using online implementations.
@@ -161,10 +161,41 @@ The variables ``Apre`` and ``Apost`` are exponentially decreasing traces of pre-
 
 The effect of this online version is globally the same as the spike timing dependent version, except that the history of pre- and post-synaptic spikes is fully contained in the variables ``Apre`` and ``Apost``.
 
-The ``exact`` keyword allows exact integration of the variables ``Apre`` and ``Apost``. This means the equations are not updated at each time step, but only when a pre- or post-synaptic spike occurs at the synapse. This is only possible because the two variables follow linear forst-order ODEs. The exact integration method allows to spare a lot of computations if the number of spikes is not too high in the network.
+The ``exact`` keyword allows exact integration of the variables ``Apre`` and ``Apost``. This means the equations are not updated at each time step, but only when a pre- or post-synaptic spike occurs at the synapse. This is only possible because the two variables follow linear first-order ODEs. The exact integration method allows to spare a lot of computations if the number of spikes is not too high in the network.
 
 
 Continuous synaptic transmission
 =================================
 
-TODO: ``psp`` argument.
+In some cases, synaptic transmission cannot be described in an event-driven framework. Synapses using the NMDA neurotransmitter are for example often modeled as non-linear synapses. Non-linear synapses can require the post-synaptic conductance to be a sum of synapse-specific variables, as for rate-coded neurons, and not simply incremented when a pre-synaptic spike occurs. NMDA synapses can be represented by two variables :math:`x(t)` and :math:`g(t)` following first-order ODEs:
+
+.. math::
+    
+    \begin{aligned}
+    \tau \cdot \frac{dx(t)}{dt} &= - x(t) \\
+    \tau \cdot \frac{dg(t)}{dt} &= - g(t) +  x(t) \cdot (1 - g(t))
+    \end{aligned}
+
+When a pre-synaptic spike occurs, :math:`x(t)` is incremented by the weight :math:`w(t)`. However, it does not influence directly the post-synaptic neuron, as the output of a synapse is the signal :math:`g(t)`. The post-synaptic conductance is defined at each time :math:`t` as the sum over all synapses of the same type of their variable :math:`g(t)`:
+
+.. math::
+
+    g_\text{exc}(t) = \sum_{i=1}^{N_\text{exc}} g_i (t)
+
+
+Such a synapse could be implemented the following way::
+
+    NMDA = Synapse(
+        parameters = """
+        tau = 10.0 : postsynaptic
+        """,
+        equations = """
+        tau * dx/dt = -x
+        tau * dg/dt = -g +  x * (1 -g)
+        """, 
+        pre_spike = "x += w",
+        psp = "g"
+    )
+
+
+The synapse defines a ``psp`` argument which means that the output of this synapse is non-linear and the post-synaptic conductance should be summed over this value (``g`` in this case). It is not possible to use the exact integration scheme for such non-linear synapses. 
