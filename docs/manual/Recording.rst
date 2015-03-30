@@ -253,7 +253,7 @@ Synaptic variables
 
 Recording of synaptic variables such as weights ``w`` during learning is also possible. However, it can very easily lead to important memory consumption. Let's suppose we have a network composed of two populations of 1000 neurons each, fully connected: each neuron of the second population receives 1000 synapses. This makes a total of 1 million synapses for the projection and, supposing the weights ``w`` use the double floating precision, requires 4 MB of memory. If you record ``w`` during a simulation of 1 second (1000 steps, with ``dt=1.0``), the total added memory consumption would already be around 4GB.
 
-To avoid accidental memory fills, ANNarchy forces the user to define which postsynaptic neuron should be recorded. Global methods on projections do not work: only methods local to a dendrite (i.e a postsynaptic neuron) do. These methods have the same name and meaning as for populations:
+To avoid accidental memory fills, ANNarchy forces the user to define which post-synaptic neuron should be recorded. Global methods on projections do not work: only methods local to a dendrite (i.e a post-synaptic neuron) do. These methods have the same name and meaning as for populations:
 
 .. code-block:: python
 

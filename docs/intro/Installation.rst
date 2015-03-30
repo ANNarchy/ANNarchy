@@ -2,7 +2,7 @@
 Installation of ANNarchy
 *************************
 
-ANNarchy is designed to run on GNU/Linux. It relies mostly on a C++ compiler, Cython (C for Python extension) and Python (NumPy, Sympy) libraries. Installation on MacOS is theoretically possible, but not tested yet. Installation on Windows is not yet possible.
+ANNarchy is designed to run on GNU/Linux and OSX. It relies mostly on a C++ compiler, Cython (C for Python extension) and Python (NumPy, Sympy) libraries. Installation on Windows is not yet possible.
 
 Download
 ===========
@@ -13,12 +13,11 @@ The source code of ANNarchy can be downloaded on Bitbucket::
 
 As ANNarchy is under heavy development, you should update the repository regularly::
 
-    git pull
+    git pull origin master
 
 Installation on GNU/Linux systems
 =============================================
    
-
 Dependencies
 --------------------
 
@@ -41,7 +40,7 @@ Additionally, the following packages are optional but strongly recommended:
     
 For CUDA:
 
-    * the CUDA-SDK available on the official website: https://developer.nvidia.com/cuda-downloads (we recommend to use at least to SDK version >6.x)
+    * the CUDA-SDK is available on the official website: https://developer.nvidia.com/cuda-downloads (we recommend to use at least a SDK version > 6.x)
     
 The version requirement on Sympy is rather new (as of May 2014) and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
 
@@ -66,6 +65,16 @@ The version requirement on Sympy is rather new (as of May 2014) and may not be a
 Installation
 ---------------
 
+Installation of ANNarchy is possible through one of the three following methods: 
+
+**Local installation in home directory** 
+
+If you want to install ANNarchy in your home directory, type::
+
+    user@Machine:~/annarchy-4.0$ python setup.py install --user
+    
+The ANNarchy egg will be installed in ``$HOME/.local/lib/python2.7/site-packages/`` (at least on Debian systems) and automatically added to your ``PYTHONPATH``.
+
 
 **Global installation**
 
@@ -75,19 +84,6 @@ If you have superuser permissions, you can install ANNarchy in ``/usr/local`` by
     
 This simply installs a Python egg in ``/usr/local/lib/python2.7/dist-packages/`` (replace '2.7' with your Python version). 
 
-.. note::
-
-    Sometimes the detection of cuda fails during not set environment variables. In this case try:
-    
-        sudo env "PATH=$PATH" "LIBRARY_PATH=$LIBRARY_PATH" python setup.py ...
-
-**Installation in home directory** 
-
-If you want to install ANNarchy in your home directory, type::
-
-    user@Machine:~/annarchy-4.0$ python setup.py install --user
-    
-The ANNarchy egg will be installed in ``$HOME/.local/lib/python2.7/site-packages/`` (at least on Debian systems) and automatically added to your ``PYTHONPATH``.
         
 **Specific installation**
 
@@ -100,36 +96,16 @@ Again, replace '2.7' with your Python version. If this directory does not exist,
     user@Machine:~/annarchy-4.0$ python setup.py install --prefix=/path/to/repertory
     
 
+.. note::
+
+    Sometimes the detection of CUDA fails during installation as some environment variables are not set. In this case try::
     
-.. Installation on Windows systems
-.. ============================================
+        sudo env "PATH=$PATH" "LIBRARY_PATH=$LIBRARY_PATH" python setup.py ...
 
-.. As usual, dependencies are much more complicated to satisfy on Windows systems than on GNU/Linux. We detail here a procedure which *should* lead to a successful installation. But we recommend to use ANNarchy on UNIX systems.
 
-.. Dependencies
-.. ---------------------
+Installation on OSX systems
+============================
 
-.. **C++ compiler** 
+.. note::
 
-.. ANNarchy needs a C++ compiler adapted to your platform. It has been successfully tested on 32 and 64 architectures with the `Microsoft Visual C++ 2012 Express <http://www.microsoft.com/visualstudio/eng/products/visual-studio-2010-express>`_ compiler, available for free (as in beer). Other versions of the compiler should work, but it has not been tested yet.
-
-.. `MinGW (Minimalist GNU for Windows) <http://www.mingw.org/>`_ is another option, as it is a Windows implementation of the GNU gcc compiler, but has not been tested yet. Same story for the Intel C compiler (theoretically better than the other ones, but expensive).
-
-.. In this case you need to attach an argument to the install command:
-
-..    > python setup.py install --compiler=mingw32
-    
-.. **Cython**
-
-.. Cython is available either as source on www.cython.org or as python package through easy_install::
-
-..     > easy_install cython
-
-.. Installation
-.. ---------------
-
-.. Once all dependencies are satisfied, simply unpack ANNarchy's source code somewhere, and type::
-
-..    > python setup.py install
-
-.. in the top-level directory.
+    Installation should be similar to Linux. ANNarchy should be able to use clang instead of gcc. Beware that OpenMP is not available by default on OSX...

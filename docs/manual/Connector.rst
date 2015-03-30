@@ -10,7 +10,7 @@ For further detailed information about these connectors, please refer to the lib
 connect_all_to_all
 -------------------------
 
-*All* neurons of the postsynaptic population form connections with *all* neurons of the presynaptic population (dense connectivity). Self-connections are avoided by default, but the parameter ``allow_self_connections`` can be set to ``True``:
+*All* neurons of the post-synaptic population form connections with *all* neurons of the pre-synaptic population (dense connectivity). Self-connections are avoided by default, but the parameter ``allow_self_connections`` can be set to ``True``:
 
 .. code-block:: python
 
@@ -25,7 +25,7 @@ The ``weights`` and ``delays`` arguments accept both single float values (all sy
 connect_one_to_one
 ------------------------
 
-A neuron of the postsynaptic population forms a connection with only *one* neuron of the presynaptic population, the one having exactly the same rank. The two populations must have the same geometry:
+A neuron of the post-synaptic population forms a connection with only *one* neuron of the pre-synaptic population, the one having exactly the same rank. The two populations must have the same geometry:
 
 .. code-block:: python
 
@@ -43,13 +43,13 @@ Below is a graphical representation of the difference between **all_to_all** and
 connect_gaussian
 ------------------
 
-A neuron of the postsynaptic population forms a connection with a limited region of the presynaptic population, centered around the neuron with the same normalized position. Weight values are initialized using a Gaussian function, with a maximal value ``amp`` for the neuron of same position and decreasing with distance (standard deviation ``sigma``):
+A neuron of the post-synaptic population forms a connection with a limited region of the pre-synaptic population, centered around the neuron with the same normalized position. Weight values are initialized using a Gaussian function, with a maximal value ``amp`` for the neuron of same position and decreasing with distance (standard deviation ``sigma``):
 
 .. math:: 
 
     w(x, y) = A \cdot \exp(-\frac{1}{2}\frac{(x-x_c)^2+(y-y_c)^2}{\sigma^2})
     
-where :math:`(x, y)` is the position of the presynaptic neuron (normalized to :math:`[0, 1]^d`) and :math:`(x_c, y_c)` is the position of the postsynaptic neuron (normalized to :math:`[0, 1]^d`). A = amp, sigma = :math:`\sigma`.
+where :math:`(x, y)` is the position of the pre-synaptic neuron (normalized to :math:`[0, 1]^d`) and :math:`(x_c, y_c)` is the position of the post-synaptic neuron (normalized to :math:`[0, 1]^d`). A = amp, sigma = :math:`\sigma`.
 
 In order to void creating useless synapses, the parameter ``limit`` can be set to restrict the creation of synapses to the cases where the value of the weight would be superior to ``limit*abs(amp)``. Default is 0.01 (1%).
 
@@ -79,7 +79,7 @@ Weights smaller than ``limit * abs(amp_pos - amp_neg)`` are not created and self
     proj.connect_dog(amp_pos=1.0, sigma_pos=0.2, amp_neg=0.3, sigma_neg=0.7, limit=0.001) 
     
 
-The following figure shows the example of a neuron of coordinates (10, 10) in the postsynaptic population, which is connected through the **gaussian** (left) and **dog** (right) projections to a population of geometry 30*30. The X and Y axis denote the coordinates of the presynaptic neurons, while the Z axis is the weight value.
+The following figure shows the example of a neuron of coordinates (10, 10) in the post-synaptic population, which is connected through the **gaussian** (left) and **dog** (right) projections to a population of geometry 30*30. The X and Y axis denote the coordinates of the pre-synaptic neurons, while the Z axis is the weight value.
 
 .. image:: ../_static/gaussiandog.*
     :align: center
@@ -89,7 +89,7 @@ The following figure shows the example of a neuron of coordinates (10, 10) in th
 connect_fixed_number_pre
 -----------------------------
 
-Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. It may happen that two postsynaptic neurons are connected to the same presynaptic neuron and that some presynaptic neurons are connected to nothing:
+Each neuron in the post-synaptic population receives connections from a fixed number of neurons of the pre-synaptic population chosen randomly. It may happen that two post-synaptic neurons are connected to the same pre-synaptic neuron and that some pre-synaptic neurons are connected to nothing:
 
 .. code-block:: python
 
@@ -100,13 +100,13 @@ Each neuron in the postsynaptic population receives connections from a fixed num
 connect_fixed_number_post
 -----------------------------
 
-Each neuron in the presynaptic population sends a connection to a fixed number of neurons of the postsynaptic population chosen randomly. It may happen that two presynaptic neurons are connected to the same postsynaptic neuron and that some postsynaptic neurons receive no connection at all:
+Each neuron in the pre-synaptic population sends a connection to a fixed number of neurons of the post-synaptic population chosen randomly. It may happen that two pre-synaptic neurons are connected to the same post-synaptic neuron and that some post-synaptic neurons receive no connection at all:
 
 .. code-block:: python
 
     proj.connect_fixed_number_post(number = 20, weights=1.0) 
 
-The following figure shows the **fixed_number_pre** (left) and **fixed_number_post** projections between two populations of 4 neurons, with ``number=2``. In **fixed_number_pre**, each postsynaptic neuron receives exactly 2 connections, while in **fixed_number_post**, each presynaptic neuron send exactly two connections:
+The following figure shows the **fixed_number_pre** (left) and **fixed_number_post** projections between two populations of 4 neurons, with ``number=2``. In **fixed_number_pre**, each post-synaptic neuron receives exactly 2 connections, while in **fixed_number_post**, each pre-synaptic neuron send exactly two connections:
 
 .. image:: ../_static/fixed_number.*
     :align: center
@@ -116,7 +116,7 @@ The following figure shows the **fixed_number_pre** (left) and **fixed_number_po
 connect_fixed_probability
 -------------------------------
 
-For each postsynaptic neuron, there is a fixed probability that it forms a connection with a neuron of the presynaptic population. It is basically a **all_to_all** projection, except some synapses are not created, making the projection sparser:  
+For each post-synaptic neuron, there is a fixed probability that it forms a connection with a neuron of the pre-synaptic population. It is basically a **all_to_all** projection, except some synapses are not created, making the projection sparser:  
 
 .. code-block:: python
 
@@ -152,7 +152,7 @@ User-defined patterns
 
 This section describes the creation of user-specific connection patterns in ANNarchy, if the available patterns are not enough. A connection pattern is simply implemented as a method returning a ``CSR`` (compressed sparse-row) object containing all the necessary information to create the synapses. 
 
-A connector method must take on the first position the presynaptic population (or a subset of it) and on the second one the postsynaptic population. Other arguments are free, but should be passed when creating the projection.
+A connector method must take on the first position the pre-synaptic population (or a subset of it) and on the second one the post-synaptic population. Other arguments are free, but should be passed when creating the projection.
 
 .. code-block:: python
 

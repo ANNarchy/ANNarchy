@@ -2,9 +2,9 @@
 Rate-coded synapses
 *******************************
 
-As for neurons, you can define the synaptic behavior using a ``Synapse`` object. Although the description is local to a synapse, the same ODE will be applied to all synapses of a given Projection from one population to another. The same vocabulary as for neurons is accessible (constants, functions, conditional statements), except that the synapse must distinguish presynaptic and postsynaptic parameters/variables. 
+As for neurons, you can define the synaptic behavior using a ``Synapse`` object. Although the description is local to a synapse, the same ODE will be applied to all synapses of a given Projection from one population to another. The same vocabulary as for neurons is accessible (constants, functions, conditional statements), except that the synapse must distinguish pre-synaptic and post-synaptic parameters/variables. 
 
-Like ``r`` for a rate-coded neuron, one variable is critical for a rate-coded synapse:
+Like ``r`` for a rate-coded neuron, one variable is special for a rate-coded synapse:
 
 * ``w`` represents the synaptic efficiency (or the weight of the connection). If an ODE is defined for this variable, this will implement a learning rule. If none is provided, the synapse is non-plastic.
 
@@ -41,7 +41,7 @@ could be implemented this way:
         """
     )
     
-Note that in most cases, it would be equivalent to define the increment directly:
+Note that it is equivalent to define the increment directly if you want to apply the explicit Euler method:
 
 .. code-block:: python 
 
@@ -70,7 +70,7 @@ The same vocabulary as for rate-coded neurons applies. Custom functions can also
 Neuron-specific variables
 -----------------------------------
 
-A synapse needs to access neural variables both at the pre- and post-synaptic levels.  For the presynaptic neuron, biologically realistic synapses should only need its firing rate, but in some cases it may be useful to access other variables as well.
+A synapse needs to access neural variables both at the pre- and post-synaptic levels.  For the pre-synaptic neuron, biologically realistic synapses should only need its firing rate, but in some cases it may be useful to access other variables as well.
 
 In order to use neural variables in a synaptic variable, you have to prefix them with ``pre.`` or ``post.``. For example: 
 
@@ -80,15 +80,15 @@ In order to use neural variables in a synaptic variable, you have to prefix them
     
 ANNarchy will check before the compilation that the pre- or post-synaptic neuron types indeed define such variables.
 
-.. warning::
+.. note::
 
-    Only ``pre.r`` takes delays into account. Trying to access other presynaptic variables will return their value at the current simulation step.
+    If the projection uses delays, all pre-synaptic variables used in the synapse model will be delayed.
 
 
 Global operations
 -----------------
 
-Some learning rules require global information about the pre- or post-synaptic population, which is not local to the synapse, such as the mean or maximal activity in the presynaptic population. This information can be accessed at the synapse-level. The special functions:
+Some learning rules require global information about the pre- or post-synaptic population, which is not local to the synapse, such as the mean or maximal activity in the pre-synaptic population. This information can be accessed at the synapse-level. The special functions:
 
 * ``min(v)`` for the minimum: :math:`\min_i v_i`,
 * ``max(v)`` for the maximum: :math:`\max_i v_i`,
@@ -124,18 +124,18 @@ Using the global operations, such a learning rule is trivial to implement:
     * They can only be applied to a single variable, not a combination or function of them.
 
 
-Defining the postsynaptic potential (psp)
+Defining the post-synaptic potential (psp)
 -----------------------------------------
 
-The argument ``psp`` of a ``Synapse`` object represents the postsynaptic potential evoked by the presynaptic neuron. This value is actually summed by the postsynaptic neuron over all other synapses of the same projection in ``sum(target)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
+The argument ``psp`` of a ``Synapse`` object represents the post-synaptic potential evoked by the pre-synaptic neuron. This value is actually summed by the post-synaptic neuron over all other synapses of the same projection in ``sum(target)``. If not defined, it will simply represent the product between the pre-synaptic firing rate (``pre.r``) and the weight value (``w``).
 
-The postsynaptic potential of a single synapse is by default:
+The post-synaptic potential of a single synapse is by default:
 
 .. code-block:: python
 
     psp = w * pre.r
     
-where ``pre.r`` is the presynaptic firing rate, but you may want to override this behaviour in certain cases. 
+where ``pre.r`` is the pre-synaptic firing rate, but you may want to override this behaviour in certain cases. 
 
 For example, you may want to model a non-linear synapse with a logarithmic term:
 
@@ -153,7 +153,7 @@ In this case, you can just modify the ``psp`` argument of the synapse:
         """
     )
 
-No further modification has to be done in the postsynaptic neuron, this value will be summed over all presynaptic neurons automatically when using ``sum(target)``.
+No further modification has to be done in the post-synaptic neuron, this value will be summed over all pre-synaptic neurons automatically when using ``sum(target)``.
 
 
 

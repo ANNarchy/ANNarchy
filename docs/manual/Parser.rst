@@ -42,7 +42,7 @@ By default, a neural parameter will be unique to each neuron (i.e. each neuron i
     
 In this case, there will be only only one instance of the ``eta`` parameter for the whole population. ``eta`` is called a **global** parameter, in opposition to **local** parameters which are the default.
 
-The same is true for synapses, whose parameters are unique to each synapse in a given projection. If the ``postsynaptic`` flag is passed, the parameter will be common to all synapses of a postsynaptic neuron. 
+The same is true for synapses, whose parameters are unique to each synapse in a given projection. If the ``post-synaptic`` flag is passed, the parameter will be common to all synapses of a post-synaptic neuron. 
     
 **Type of the variable**
 
@@ -106,9 +106,9 @@ In practice, ODEs are transformed using Sympy into the last form (only the gradi
 Constraints
 ____________
 
-**Locality and type***
+**Locality and type**
 
-Like the parameters, variables also accept the ``population`` and ``postsynaptic`` to define the local/global character of the variable, as well as the ``int`` or ``bool`` flags for their type. 
+Like the parameters, variables also accept the ``population`` and ``post-synaptic`` to define the local/global character of the variable, as well as the ``int`` or ``bool`` flags for their type. 
 
 **Initial value**
 
@@ -167,8 +167,8 @@ The available numerical methods are described in :doc:`NumericalMethods`.
 * *min*: minimum allowed value  (unset by default)
 * *max*: maximum allowed value (unset by default)
 * *population*: the attribute is equal for all neurons in a population.
-* *postsynaptic*: the attribute is equal for all synapses of a postsynaptic neuron.
-* *explicit*, *implicit*, *semiimplicit*, *exponential*, *midpoint*: the numerical method to be used. 
+* *post-synaptic*: the attribute is equal for all synapses of a post-synaptic neuron.
+* *explicit*, *implicit*, *exponential*, *midpoint*, *exact*: the numerical method to be used. 
 
 Allowed vocabulary
 ___________________

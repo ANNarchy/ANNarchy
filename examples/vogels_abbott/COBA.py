@@ -21,8 +21,8 @@ COBA = Neuron(
     equations="""
         tau * dv/dt = (El - v) + g_exc * (Erev_exc - v) + g_inh * (Erev_inh - v ) + I
 
-        tau_exc * dg_exc/dt = - g_exc 
-        tau_inh * dg_inh/dt = - g_inh 
+        tau_exc * dg_exc/dt = - g_exc
+        tau_inh * dg_inh/dt = - g_inh
     """,
     spike = "v > Vt",
     reset = "v = Vr",

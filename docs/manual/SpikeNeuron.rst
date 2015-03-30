@@ -42,13 +42,9 @@ This neural model can be defined in ANNarchy by:
         equations="""
             tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
         """,
-        spike = """
-            v > T
-        """,
-        reset = """
-            v = Er
-        """,
-        refractory = 1.0
+        spike = "v > T",
+        reset = "v = Er",
+        refractory = 5.0
     )
 
 As for rate-coded neurons, the parameters are defined in the ``parameters`` description, here globally for the population. ``equations`` contains the description of the ODE followed by the membrane potential. The additional information to provide is:
@@ -57,14 +53,14 @@ As for rate-coded neurons, the parameters are defined in the ``parameters`` desc
   
 * ``reset`` : the modifications to the neuron's variables after a spike is emitted (typically, clamping the membrane potential to its reset potential).
 
+* ``refractory``: optionally a refractory period in ms.
+
 Spike condition
 ----------------
 
 The spike condition is a single constraint definition. You may use the different available comparison operators (>, <,  ==, etc) on a **single** neuron variable, using as many parameters as you want.
 
-The use of assignment statements or full ODEs will lead to an error. Furthermore the decision variable of the condition needs to be placed alone on the **left** side.
-
-Example: 
+The use of assignment statements or ODEs will lead to an error. Conditional statements can be used. Example: 
 
 .. code-block:: python
 
@@ -73,11 +69,12 @@ Example:
         T = -45.0 
     """,
     equations="""
+        prev_v = v
         noise = Uniform (-5.0, 5.0)
-        ...
+        tau*dv/dt = E - v + g_exc
     """,
     spike = """
-        v > T + noise
+        (v > T + noise) and (prev_v < T + noise)
     """
 
 Reset
@@ -117,11 +114,11 @@ The dynamics of the conductance can be specified after its usage in the membrane
             tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
             g_exc = 0.0
         """,
-        spike = """ ... """,
-        reset = """ ... """
+        spike = " ... ",
+        reset = " ... "
     )
 
-Incoming spikes increase ``g_exc`` and can provoke a postsynaptic spike at the next step, but leave no trace beyond.
+Incoming spikes increase ``g_exc`` and can provoke a post-synaptic spike at the next step, but leave no trace beyond that point.
 
 * Most models however use **exponentially decaying synapses**, where the conductance decays with a short time constant after a spike is received. This behavior should be explicitely specified in the neuron's equations: 
 
@@ -133,15 +130,11 @@ Incoming spikes increase ``g_exc`` and can provoke a postsynaptic spike at the n
             tau * dv/dt = (Er - v) + g_exc *(Ee- v) : init = 0.0
             tau_exc * dg_exc/dt = - g_exc
         """,
-        spike = """ ... """,
-        reset = """ ... """
+        spike = " ... ",
+        reset = " ... "
     )
 
 ``g_exc`` is increased by incoming spikes, and slowly decays back to 0.0 until the next spikes arrive.
-
-.. note::
-
-    The conductance's dynamics should be placed **after** updating the membrane potential, otherwise the value of ``g_exc`` would be already scaled down. 
 
 Refractory period
 -----------------
@@ -161,16 +154,16 @@ The refractory period in milliseconds is specified by the ``refractory`` paramet
         refractory = 5.0
     )
 
-If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 consecutive steps after a spike is emitted, in addition to the step where the spike was emitted. The equations will be evaluated normally, so ``g_exc`` will not "miss" incoming spikes during this period, only ``v`` will be stuck to ``c`` and ``u`` incremented 6 times altogether. 
+If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 consecutive steps after a spike is emitted. The equations will be evaluated normally, so ``g_exc`` will not "miss" incoming spikes during this period, only ``v`` will be stuck to ``c`` and ``u`` incremented 5 times altogether. 
 
 ``refractory`` becomes an attribute of a spiking ``Population`` object, so it can be set specifically for a population even when omitted in the neuron definition:
 
 .. code-block:: python
 
     LIF = Neuron (
-        parameters = """ ... """,
-        equations = """ ... """,
-        spike = """ ... """,
+        parameters = " ... ",
+        equations = " ... ",
+        spike = " ... ",
         reset = """ 
             v = c
             u += d
@@ -182,7 +175,7 @@ If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 con
 
 It can be either a single value, a ``RandomDistribution`` object or a Numpy array of the same size/geometry as the population.
 
-If you want only a subpart of the ``reset`` statements to be executed during the refractory period, you can use the ``unless_refractory`` flag. Statements flagged with ``unless_refractory`` will only be executed once just after a spike is emitted, but not during the refractory period. In the example above, it would indeed make more sense to define ``u`` as non-refractory, as the increment should be executed only once:
+If you want only a subpart of the ``reset`` statements to be executed during the refractory period, you can use the ``unless_refractory`` flag. Statements flagged with ``unless_refractory`` will only be executed once just after a spike is emitted, but not during the refractory period. In the example above, it would indeed make more sense to define ``u`` as non-refractory, as the increment should be executed only once after each spike:
 
 .. code-block:: python
 

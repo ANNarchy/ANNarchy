@@ -5,6 +5,21 @@ ANNarchy versions
 Changelog
 ==========
 
+**4.4.0:**
+
+* Experimental support for CUDA backend for rate-coded networks.
+* Any pre-synaptic vriable can be delayed if used in the synapse.
+* ``g_target`` can efine min/max flags. 
+* Support for MacOS X.
+* Parallel performance for OpenMP and spiking networks improved.
+* Sequential code (1T) does not use OMP.
+* psp argument can use global operations and global variables.
+* Added ``connect_from_sparse()`` method.
+
+**4.3.5:**
+
+* Small bug fixes.
+
 **4.3.4:**
 
 * Automatic reporting is added.

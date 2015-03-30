@@ -9,6 +9,8 @@ This section provides a step-by-step description of some sample models provided 
     * :doc:`example/BarLearning`: an implementation of the bar learning problem, illustrating the synaptic plasticity in rate-coded networks. 
     
     * :doc:`example/Izhikevich`: an implementation of the simple pulse-coupled network described in (Izhikevich, 2003). It shows how to build a simple spiking network without synaptic plasticity.
+
+    * :doc:`example/VogelsAbbott`: an implementation of the balanced network described in (Vogels and Abbott, 2005). It shows how to build a simple spiking network using integrate-and-fire neurons and sparse connectivity.
     
     * :doc:`example/STDP`: an example using spike-timing dependent plasticity (STDP).
       
@@ -25,4 +27,5 @@ Other undocumented examples include:
     example/NeuralField.rst
     example/BarLearning.rst
     example/Izhikevich.rst
+    example/VogelsAbbott.rst
     example/STDP.rst

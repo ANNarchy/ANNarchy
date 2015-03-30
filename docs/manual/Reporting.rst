@@ -64,10 +64,10 @@ The report is generated based entirely on the Python script. For it to make sens
     Oja = Synapse(
         parameters = """
             eta = 10.0 
-            tau = 10.0 : postsynaptic
+            tau = 10.0 : post-synaptic
         """,
         equations = """
-            tau * dalpha/dt + alpha = pos(post.r - 1.0) : postsynaptic
+            tau * dalpha/dt + alpha = pos(post.r - 1.0) : post-synaptic
             eta * dw/dt = pre.r * post.r - alpha * post.r^2 * w : min=0.0
         """, 
         name="Oja learning rule",

@@ -77,16 +77,16 @@ Both feedforward (``Input`` :math:`\rightarrow` ``Feature``) and lateral (``Feat
                 
     \tau \frac{dw_{ij}}{dt} &= r_{i} * r_{j} - \alpha * r_{j}^{2} * w_{ij}
         
-where :math:`\alpha` is a parameter defining the strength of the regularization, :math:`r_i` is the presynaptic firing rate and :math:`r_j` the postsynaptic one. The implementation of this synapse type is straightforward:
+where :math:`\alpha` is a parameter defining the strength of the regularization, :math:`r_i` is the pre-synaptic firing rate and :math:`r_j` the post-synaptic one. The implementation of this synapse type is straightforward:
         
 
 .. code-block:: python
 
     Oja = RateSynapse(
         parameters=""" 
-            tau = 2000.0 : postsynaptic
-            alpha = 8.0 : postsynaptic
-            min_w = 0.0 : postsynaptic
+            tau = 2000.0 : post-synaptic
+            alpha = 8.0 : post-synaptic
+            min_w = 0.0 : post-synaptic
         """,
         equations="""
             tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w : min=min_w

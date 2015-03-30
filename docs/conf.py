@@ -49,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'ANNarchy'
-copyright = u'2014, Julien Vitay and Helge Ülo Dinkelbach'
+copyright = u'2014, Julien Vitay, Helge Ülo Dinkelbach and Fred Hamker'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -103,7 +103,6 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if not on_rtd:  # only import and set the theme if we're building docs locally
     # The theme to use for HTML and HTML Help pages.  See the documentation for
     # a list of builtin themes.
-    
     html_theme_path = ["_themes", ]
     html_theme = "sphinx_rtd_theme"
     #html_theme_options = {'sticky_navigation' : False}

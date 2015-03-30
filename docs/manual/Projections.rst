@@ -18,15 +18,15 @@ Once the populations are created, one can connect them by creating ``Projection`
         synapse = Oja
    )
                          
-* ``pre`` is either the name of the presynaptic population or the corresponding *Population* object.
+* ``pre`` is either the name of the pre-synaptic population or the corresponding *Population* object.
 
-* ``post`` is either the name of the postsynaptic population or the corresponding *Population* object.
+* ``post`` is either the name of the post-synaptic population or the corresponding *Population* object.
 
 * ``target`` is the type of the connection. 
 
 .. warning::
 
-    The postsynaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
+    The post-synaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
     
 * ``synapse`` is an optional argument requiring a *Synapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
   
@@ -75,8 +75,8 @@ Let's suppose the ``Oja`` synapse is used to create the Projection ``proj`` (spi
 
     Oja = Synapse(
         parameters= """   
-            tau = 5000.0 : postsynaptic
-            alpha = 8.0 : postsynaptic
+            tau = 5000.0 : post-synaptic
+            alpha = 8.0 : post-synaptic
         """,
         equations = """
             tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w
@@ -88,7 +88,7 @@ Let's suppose the ``Oja`` synapse is used to create the Projection ``proj`` (spi
 Global attributes
 ------------------    
 
-The global parameters and variables of a projection (i.e. defined with the ``postsynaptic`` flag) can be accessed directly through attributes:
+The global parameters and variables of a projection (i.e. defined with the ``post-synaptic`` flag) can be accessed directly through attributes:
 
 .. code-block:: python
 
@@ -102,9 +102,9 @@ The global parameters and variables of a projection (i.e. defined with the ``pos
             5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
             5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.])
             
-Contrary to population attributes, there is one value per postsynaptic neuron for global parameters. You can change these values, either before or after compilation, by providing:
+Contrary to population attributes, there is one value per post-synaptic neuron for global parameters. You can change these values, either before or after compilation, by providing:
 
-* a single value, which will be the same for all postsynaptic neurons.
+* a single value, which will be the same for all post-synaptic neurons.
 
 * a list of values, with the same size as the number of neurons receiving synapses (for some sparse connectivity patterns, it may not be the same as the size of the population, so no multidimensional array is accepted).
 
@@ -141,14 +141,14 @@ The second index addresses the pre-synaptic neurons. If the connection is sparse
 
 **At the post-synaptic level**
 
-The local parameters and variables of a projection (synapse-specific) should better be accessed through the **Dendrite** object, which gathers for a single postsynaptic neuron all synapses belonging to the projection. 
+The local parameters and variables of a projection (synapse-specific) should better be accessed through the **Dendrite** object, which gathers for a single post-synaptic neuron all synapses belonging to the projection. 
 
 .. warning::
 
     As projections are only instantiated after the call to ``compile()``, local attributes of a Projection are only available then. Trying to access them before compilation will lead to an error!
     
 
-Each dendrite stores the parameters and variables of the corresponding synapses as attributes, as populations do for neurons. You can loop over all postsynaptic neurons receiving synapses with the ``dendrites`` iterator:
+Each dendrite stores the parameters and variables of the corresponding synapses as attributes, as populations do for neurons. You can loop over all post-synaptic neurons receiving synapses with the ``dendrites`` iterator:
 
 .. code-block:: python
 
@@ -159,7 +159,7 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
         print dendrite.alpha
         print dendrite.w
         
-``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered postsynaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a list (``dendrite.w``).
+``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered post-synaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a list (``dendrite.w``).
 
 .. note::
 
@@ -174,7 +174,7 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
             print dendrite.alpha
             print dendrite.w
         
-You can also access the dendrites individually, either by specifying the rank of the postsynaptic neuron:
+You can also access the dendrites individually, either by specifying the rank of the post-synaptic neuron:
 
 .. code-block:: python
 

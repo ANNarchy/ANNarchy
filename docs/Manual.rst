@@ -9,7 +9,6 @@ The following sections describes the underlying structure of ANNarchy and how to
 
     manual/Network.rst
     manual/Parser.rst
-    manual/NumericalMethods.rst
     manual/RateNeuron.rst
     manual/SpikeNeuron.rst
     manual/RateSynapse.rst
@@ -18,6 +17,7 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/Projections.rst
     manual/Connector.rst
     manual/Simulation.rst
+    manual/NumericalMethods.rst
     manual/Recording.rst
     manual/StructuralPlasticity.rst
     manual/ConvolutionalNetworks.rst

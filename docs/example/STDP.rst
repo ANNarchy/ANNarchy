@@ -25,7 +25,7 @@ where ``v`` is the membrane potential (in mV), :math:`\tau_m` its time constant 
 
 A spike is emitted whenever the membrane potential exceeds the threshold :math:`vt` (-54 mV), after what it is reset to :math:`vr`.
 
-Synapses are modelled with an exponential decay function: when a presynaptic spike arrives, the excitatory conductance :math:`g_\text{exc}` is increased from the value of the corresponding weight, otherwise it progressively decays to 0 using:
+Synapses are modelled with an exponential decay function: when a pre-synaptic spike arrives, the excitatory conductance :math:`g_\text{exc}` is increased from the value of the corresponding weight, otherwise it progressively decays to 0 using:
 
 .. math::
 
@@ -71,7 +71,7 @@ As described in the section :doc:`../manual/SpikeSynapse`, the STDP learning rul
 
     \tau_\text{post} * \frac{dA_\text{post}}{dt} = - A_\text{post}
 
-When a postsynaptic spike occurs, the synaptic efficiency is increased from :math:`A_\text{pre}` (LTP), while when a pre-synaptic spike occurs, it is decreased from :math:`A_\text{post}`. 
+When a post-synaptic spike occurs, the synaptic efficiency is increased from :math:`A_\text{pre}` (LTP), while when a pre-synaptic spike occurs, it is decreased from :math:`A_\text{post}`. 
 
 Using the notations of the Brian example and the corresponding parameter values, we can define the following synapse type:
 
@@ -79,11 +79,11 @@ Using the notations of the Brian example and the corresponding parameter values,
 
     STDP = Synapse(
         parameters="""
-            tau_pre = 20.0 : postsynaptic
-            tau_post = 20.0 : postsynaptic
-            cApre = 0.01 : postsynaptic
-            cApost = -0.0105 : postsynaptic
-            wmax = 0.01 : postsynaptic
+            tau_pre = 20.0 : post-synaptic
+            tau_post = 20.0 : post-synaptic
+            cApre = 0.01 : post-synaptic
+            cApost = -0.0105 : post-synaptic
+            wmax = 0.01 : post-synaptic
         """,
         equations = """
             tau_pre * dApre/dt = -Apre : exact 
@@ -100,7 +100,7 @@ Using the notations of the Brian example and the corresponding parameter values,
         """
     )
 
-The parameters are flagged with ``postsynaptic`` as they have he same value for all synapses (this reduces considerably the needed memory space). 
+The parameters are flagged with ``post-synaptic`` as they have he same value for all synapses (this reduces considerably the needed memory space). 
 
 **When a pre-synaptic spike occurs:**
 

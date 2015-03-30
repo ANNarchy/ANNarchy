@@ -61,9 +61,9 @@ After an initial period of simulation, one could add new synapses between strong
 
 .. code-block:: python
 
-    # For all postsynaptic neurons
+    # For all post-synaptic neurons
     for post in xrange(pop2.size):
-        # For all presynaptic neurons
+        # For all pre-synaptic neurons
         for pre in xrange(pop1.size):
             # If the neurons are not connected yet
             if not pre in proj[post].ranks:
@@ -134,7 +134,7 @@ The creation of a synapse must be described by a boolean expression:
         creating = "pre.mean_r * post.mean_r > 0.7 : proba = 0.5, w = 1.0"
     )
 
-The condition can make use of any pre- or post-synaptic variable, but NOT synaptic variables, as they obviously do not exist yet. Global parameters (defined with the ``postsynaptic`` flag) can nevertheless be used. 
+The condition can make use of any pre- or post-synaptic variable, but NOT synaptic variables, as they obviously do not exist yet. Global parameters (defined with the ``post-synaptic`` flag) can nevertheless be used. 
 
 Several flags can be passed to the expression: 
 
@@ -171,7 +171,7 @@ Synaptic pruning also rely on a boolean expression:
 .. code-block:: python 
 
     PruningSynapse = Synapse(
-        parameters = " T = 100000 : int, postsynaptic ",
+        parameters = " T = 100000 : int, post-synaptic ",
         equations = """
             age = if pre.r * post.r > 0.0 : 
                     0

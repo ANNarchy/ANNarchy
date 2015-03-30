@@ -31,7 +31,7 @@ Spiking neurons model the dynamics of biological neurons by neglecting the spati
      
 where :math:`V(t)` denotes the membrane potential of the neuron, :math:`V_m` its equilibrium potential (the potential the cell would have if no current is injected), :math:`I(t)` the total current injected through the membrane, :math:`\tau` the time constant of the membrane, :math:`R` the resistance of the membrane, :math:`V_{th}` the threshold potential for the emission of a spike and :math:`V_{\text{reset}}` the reset potential after the emission.
 
-The ordinary differential equation (ODE) which governs the evolution of the membrane potential is usually discretized using the Euler or Runge-Kutta methods, with a time step of 1 ms or less. When the membrane potential exceeds the threshold, a spike is emitted and sent to all neurons forming synapses with it, thereby increasing the input current :math:`I(t)` for a brief period of time depending on the synapse type. The input current due to synaptic activation is usually a weighted sum of post-synaptic currents (modelled as a Dirac, exponentially decaying or alpha function of the time elapsed since the presynaptic neuron has spiked):
+The ordinary differential equation (ODE) which governs the evolution of the membrane potential is usually discretized using the Euler or Runge-Kutta methods, with a time step of 1 ms or less. When the membrane potential exceeds the threshold, a spike is emitted and sent to all neurons forming synapses with it, thereby increasing the input current :math:`I(t)` for a brief period of time depending on the synapse type. The input current due to synaptic activation is usually a weighted sum of post-synaptic currents (modelled as a Dirac, exponentially decaying or alpha function of the time elapsed since the pre-synaptic neuron has spiked):
 
 .. math::
 
@@ -46,23 +46,23 @@ The instantaneous firing rate of a neuron is updated through:
 
 .. math::
 
-    \tau \frac{d \text{mp}(t)}{dt} &= ( B - \text{mp}(t)) + I(t) \\ 
+    \tau \frac{dv(t)}{dt} &= ( B - v(t)) + I(t) \\ 
            
-    \text{rate}(t) & = f( \text{mp}(t) )
+    r(t) & = f( v(t) )
     
-where :math:`\tau` is the time constant of the neuron, :math:`\text{mp}(t)` its membrane potential, :math:`B` its baseline, :math:`\text{rate}(t)` its instantaneous firing rate, :math:`f(\cdot)` a transfer function and :math:`I(t)` the weighted sum of its inputs:
+where :math:`\tau` is the time constant of the neuron, :math:`v(t)` its membrane potential, :math:`B` its baseline, :math:`r(t)` its instantaneous firing rate, :math:`f(\cdot)` a transfer function and :math:`I(t)` the weighted sum of its inputs:
 
 .. math::
 
-    I(t) = \sum_{i=1}^{N_{\text{synapses}}} w_i (t) \cdot \text{rate}_i (t - d)
+    I(t) = \sum_{i=1}^{N_{\text{synapses}}} w_i (t) \cdot r_i (t - d)
 
 
-Mean-firing rate networks require much more intercommunication between neurons than spiking neurons, because the weighted sum has to be computed at every time step for all incoming synapses. In spiking networks, the weighted sum can be only updated when some presynaptic emits a spike, which is a relatively rare event. 
+Mean-firing rate networks require much more intercommunication between neurons than spiking neurons, because the weighted sum has to be computed at every time step for all incoming synapses. In spiking networks, the weighted sum can be only updated when some pre-synaptic emits a spike, which is a relatively rare event. 
 
 Goal of the ANNarchy simulator
 =======================================
 
-The goal of ANNarchy is to provide a simulator that is equally optimized for both types of networks and could even allow for mixtures of the two frameworks. Computations are for the moment distributed using openMP, but a CUDA version allowing parallel processing on graphics processing units will appear soon.
+The goal of ANNarchy is to provide a simulator that is equally optimized for both types of networks and allows for mixtures of the two frameworks (hybrid networks). Computations are for the moment distributed using either OpenMP on shared memory CPU-based systems or CUDA on GPU-based systems. 
 
 It is particularly intended for cognitive modeling, where emphasis is put on the global function performed by a network of heterogeneous populations rather than local interactions within a population. It is designed to integrate easily external libraries (either in Python or C++) linking the network to real-time applications such as webcams, virtual reality environments or robots, as simulations are not expected to have a fixed duration, contrary to other simulators.
 

@@ -102,7 +102,7 @@ The second neuron we need is a bit more complex, as it is governed by an ODE and
         """
     )
     
-``tau`` is a population-wise parameter, whose value will be the same for all neuron of the population. ``noise`` is a random number generator. ``mp`` is the membrane potential, whose dynamics are governed by a first-order linear ODE, integrating the sums of excitatory and inhibitory inputs with noise. As explained in the section :doc:`../manual/RateNeuron`, ``sum(exc)`` retrieves the weighted sum of presynaptic firing rates for the synapses having the connection type ``exc``, here the one_to_one connections between ``Input`` and ``Focus``. ``sum(inh)`` does the same for ``inh`` type connections, here the lateral connections within ``focus``.
+``tau`` is a population-wise parameter, whose value will be the same for all neuron of the population. ``noise`` is a random number generator. ``mp`` is the membrane potential, whose dynamics are governed by a first-order linear ODE, integrating the sums of excitatory and inhibitory inputs with noise. As explained in the section :doc:`../manual/RateNeuron`, ``sum(exc)`` retrieves the weighted sum of pre-synaptic firing rates for the synapses having the connection type ``exc``, here the one_to_one connections between ``Input`` and ``Focus``. ``sum(inh)`` does the same for ``inh`` type connections, here the lateral connections within ``focus``.
 
 ``r`` is defined by a piecewise linear function ``clip`` of ``mp``, making sure that it is bounded between 0.0 and 1.0. The function is built-in in ANNarchy. One could also have used a series of conditional statements with the same effect::
 

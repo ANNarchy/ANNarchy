@@ -22,9 +22,9 @@ Different numerical methods are available:
 
 * Explicit Euler ``'explicit'``
 * Implicit Euler ``'implicit'``
-* Semi-implicit Euler ``'semiimplicit'``
 * Exponential Euler ``'exponential'``
 * Midpoint ``'midpoint'``
+* Exact ``'exact'``
   
 Each method has advantages/drawbacks in term of numerical error, stability and computational cost.  
 
@@ -111,36 +111,6 @@ what gives something like:
 ANNarchy relies on Sympy to solve this system of equations and generate the update rule.
 
 
-Semi-implicit Euler method
-==========================
-
-If the ODEs are not linear, the Sympy solver may not come to a satisfyable solution for the implicit method: some non-linear functions may not be inversible, the uniqueness of the solution may not be guaranteed, some inverse functions have no equivalent in the C math library, etc.
-
-In this case, ANNarchy will switch automatically to the semi-implicit (or hybrid) method, as defined in:
-
-    **Izhikevich E. M.** (2010). Hybrid Spiking Models. *Phil. Trans. R. Soc. A 368:5061-5070*
-
-Let's consider a single quadratic ODE: 
-
-.. math::
-
-    \frac{dx(t)}{dt} = a \cdot x(t)^2 + b \cdot x(t) + c 
-
-Using the implicit method would require to solve a quadratic polynome of :math:`x(t+h)`, which generally admits two solutions. ANNarchy can not know which one is the correct one.
-
-The semi-implicit method will estimate the derivative at time :math:`t + h` for the linear part of the ODE, but at time :math:`t` for the non-linear part:
-
-.. math::
-
-    \frac{x(t+h) - x(t)}{h} = a \cdot x(t)^2 + b \cdot x(t + h) + c
-
-so we obtain a much simpler although stable update rule: 
-
-
-.. math::
-
-    x(t+h) = x(t) + \frac{h}{1 - h \cdot b} \cdot ( a \cdot x(t)^2 + b \cdot x(t) + c )
-
 Exponential Euler
 =================
 
@@ -202,3 +172,47 @@ The midpoint method is a Runge-Kutta method of order 2. It estimates the derivat
 
     y(t+h) = y(t) + h \cdot g(x(t) + k_x \cdot \frac{h}{2}, y(t) +  k_y \cdot \frac{h}{2})
 
+
+Exact
+======
+
+Exact integration is only available for spiking synapses with variables following linear first-order dynamics. Let's consider the following STDP synapse (see :doc:`SpikeSynapse` for explanations)::
+
+    STDP = Synapse(
+        parameters = """
+            tau_pre = 10.0 : post-synaptic
+            tau_post = 10.0 : post-synaptic
+        """,
+        equations = """
+            tau_pre * dApre/dt = - Apre : exact
+            tau_post * dApost/dt = - Apost : exact
+        """,
+        pre_spike = """
+            g_target += w
+            Apre += cApre 
+            w = clip(w + Apost, 0.0 , 1.0)
+        """,                  
+        post_spike = """
+            Apost += cApost
+            w = clip(w + Apre, 0.0 , 1.0)
+        """      
+    ) 
+
+The value of ``Apost`` and ``Apre`` is only needed when a pre- or post-synaptic spike occurs at the synapse, so there is no need to integrate the corresponding equations between two such events. First-order linear ODEs have the nice property that their analytical solution is easy to obtain. Let's consider an equation of the form:
+
+.. math::
+
+    \tau  \frac{dv}{dt} = E - v
+
+If :math:`v` has the value :math:`V_0` at time :math:`t`,, its value at time :math:`t + \Delta t` is given by:
+
+.. math::
+
+    v(t + \Delta t) = V_0 \cdot \exp(-\frac{\Delta t}\tau}) 
+
+
+
+
+.. note::
+
+    If the synapse defines a ``psp`` argument (synaptic transmission is not event-driven), it is not possible to use exact integration.
