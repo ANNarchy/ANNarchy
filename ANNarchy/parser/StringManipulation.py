@@ -194,6 +194,6 @@ def process_equations(equations):
             variables[-1]['eq'] += ' ' + equation.strip()
             variables[-1]['constraint'] += constraint
         else:
-            print 'Error: only one assignement operator is allowed per equation.'
+            _print('Error: only one assignement operator is allowed per equation.')
             exit(0)
     return variables 

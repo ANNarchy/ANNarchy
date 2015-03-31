@@ -438,10 +438,6 @@ class SharedProjection(Projection):
                             coords[rk] = [i, j, k, l]
                             rk += 1
 
-        # print self.dim_pre
-        # print idx_range
-        # print coords
-
         # Save the result
         self.pre_coordinates = coords
 

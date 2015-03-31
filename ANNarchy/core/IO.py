@@ -36,7 +36,7 @@ def load_parameter(in_file):
     try:
         from lxml import etree 
     except:
-        print 'lxml is not installed. Unable to save in xml format.'
+        Global._print('lxml is not installed. Unable to save in xml format.')
         return
     par = {}
     damaged_pars = []   # for printout
@@ -99,11 +99,6 @@ def load_parameter(in_file):
                 damaged_pars.append(name)
             else:
                 par[name] = value
-        
-        #if len(damaged_pars) > 0:
-        #    print 'damaged parameters:'
-        #    for d_par in damaged_pars:
-        #        print '-',d_par
              
     return par
     
@@ -311,7 +306,7 @@ def _load_proj_data(proj, desc):
             try:
                 getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
             except Exception, e:
-                print e
+                Global._print(e)
                 Global._error('Can not set attribute ' + var + ' in the projection.')
                 return
 

@@ -1,4 +1,4 @@
-from ANNarchy.core.Global import get_population
+from ANNarchy.core.Global import get_population, _print
 from Custom import *
 import numpy
 
@@ -8,9 +8,9 @@ class PerformanceMeasurement:
         try:
             import ANNarchyCython
         except exceptions.ImportError:
-            print 'Found no ANNarchyCython library ...'
+            _print('Found no ANNarchyCython library ...')
         else:
-            print 'Inited profiler.'
+            _print('Inited profiler.')
             self._profile_instance = ANNarchyCython.pyProfile()
             self._network = ANNarchyCython.pyNetwork()
         

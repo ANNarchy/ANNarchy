@@ -140,7 +140,7 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
         with open(Global.annarchy_dir+'/release', 'r') as f:
             prev_release = f.read().strip()
             if parse_version(prev_release) < parse_version(ANNarchy.__release__):
-                print 'ANNarchy has been updated, recompiling...'
+                Global._print('ANNarchy has been updated, recompiling...')
                 clean = True
     else:
         clean = True
@@ -299,16 +299,16 @@ clean:
             cu_version = CudaCheck().version()
 
             if cu_version >= (3,0):
-                print "Build with cuda 3.x"
+                Global._print("Using CUDA 3.x")
                 make_process = subprocess.Popen("make cuda_35 -j4 "+ verbose, shell=True)
             else:
-                print "Build with cuda 2.x"
+                Global._print("Using CUDA 2.x")
                 make_process = subprocess.Popen("make cuda_20 -j4 "+ verbose, shell=True)
 
         elif (Global.config['paradigm']=="openmp" and Global.config['num_threads']>1):
         
             if sys.platform == "darwin":
-                Global._warning("OpenMP is not supported on Mac Os yet")
+                Global._warning("OpenMP is not supported on Mac OS yet")
                 exit(0)
             else:
                 make_process = subprocess.Popen("make omp " + verbose, shell=True)

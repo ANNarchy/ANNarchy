@@ -66,7 +66,7 @@ class RateProfile(Profile):
         """
         Profiles the provided simulation loop
         """
-        print self._threads
+        Global._print(self._threads)
         for thread in self._threads:
             Global._network.set_num_threads(thread)
         
@@ -90,17 +90,17 @@ class RateProfile(Profile):
                 tmp.analyse_data()
 
     def print_data(self):
-        print 'overall:'
-        print '    mean:', self._net_data.mean()
-        print '    min: ', self._net_data.min()
-        print '    max: ', self._net_data.max()
+        Global._print('overall:')
+        Global._print('    mean:', self._net_data.mean())
+        Global._print('    min: ', self._net_data.min())
+        Global._print('    max: ', self._net_data.max())
         
         for name, data in self._pop_data.iteritems():
-            print name,'(sum):'
+            Global._print(name,'(sum):')
             
-            print '    mean:', data['sum'].mean()
-            print '    min: ', data['sum'].min()
-            print '    max: ', data['sum'].max()
+            Global._print('    mean:', data['sum'].mean())
+            Global._print('    min: ', data['sum'].min())
+            Global._print('    max: ', data['sum'].max())
         
     def visualize_data(self, error_bar = False):
         """

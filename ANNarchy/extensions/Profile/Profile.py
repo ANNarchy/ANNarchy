@@ -48,9 +48,9 @@ class Profile:
         try:
             import ANNarchyCython
         except exceptions.ImportError:
-            print 'Error on Profile'
+            Global._print('Error on Profile')
         else:
-            print 'Inited profiler.'
+            Global._print('Inited profiler.')
             self._profile_instance = ANNarchyCython.pyProfile()
             self._network = ANNarchyCython.pyNetwork()
         
@@ -83,7 +83,7 @@ class Profile:
                                                 'global' : DataLog(self._threads, self._num_trials, 'global')
                                               }
             else:
-                print 'TODO: ...'
+                Global._print('TODO: ...')
         else:
             self._net_data = DataLog(self._threads, self._num_trials,'overall')
             

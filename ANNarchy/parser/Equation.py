@@ -160,7 +160,7 @@ class Equation(object):
                 transformations = (standard_transformations + (convert_xor,)) 
             )
         except Exception, e:
-            print e
+            _print(e)
             _error('Can not analyse the expression :' +  str(expression))
             exit(0)
         else:

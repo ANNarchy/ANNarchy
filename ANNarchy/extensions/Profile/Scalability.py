@@ -70,14 +70,14 @@ class Scalability:
             
         if debug:
             for name, data in self._data.iteritems():
-                print name+'(raw):'
-                print data.raw_data()
+                Global._print(name+'(raw):')
+                Global._print(data.raw_data())
                 
-                print name+'(speedup):'
-                print self._speedup[name]
+                Global._print(name+'(speedup):')
+                Global._print(self._speedup[name])
     
-                print name+'(efficiency):'
-                print self._efficiency[name]
+                Global._print(name+'(efficiency):')
+                Global._print(self._efficiency[name])
             
     def visualize_data(self):
         """

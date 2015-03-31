@@ -399,7 +399,7 @@ class Population(object):
             else:
                 return getattr(self.cyInstance, 'get_'+attribute)()
         except Exception, e:
-            print e
+            Global._print(e)
             Global._error('Error: the variable ' +  attribute +  ' does not exist in this population.')
         
     def _set_cython_attribute(self, attribute, value):
@@ -424,7 +424,7 @@ class Population(object):
             else:
                 getattr(self.cyInstance, 'set_'+attribute)(value)
         except Exception, e:
-            print e
+            Global._print(e)
             Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have the right size.')
         
     def __len__(self):
@@ -524,12 +524,12 @@ class Population(object):
         For instance, if you want to iterate over all neurons of a population:
         
         >>> for neur in pop.neurons:
-        ...     print neur.r
+        ...     neur.r = 0.0
             
         Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:
         
         >>> for neur in pop:
-        ...     print neur.r               
+        ...     neur.r = 0.0              
         """
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)

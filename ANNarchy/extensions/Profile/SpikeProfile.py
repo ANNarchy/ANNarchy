@@ -66,7 +66,7 @@ class SpikeProfile(Profile):
         """
         Profiles the provided simulation loop
         """
-        print self._threads
+        Global._print(self._threads)
         for thread in self._threads:
             Global._network.set_num_threads(thread)
         
@@ -90,35 +90,35 @@ class SpikeProfile(Profile):
                 tmp.analyse_data()
 
     def print_data(self):
-        print 'overall:'
-        print '    mean:', self._net_data.mean()
-        print '    min: ', self._net_data.min()
-        print '    max: ', self._net_data.max()
+        Global._print('overall:')
+        Global._print('    mean:', self._net_data.mean())
+        Global._print('    min: ', self._net_data.min())
+        Global._print('    max: ', self._net_data.max())
 
         for name, data in self._pop_data.iteritems():
-            print name,'(conductance):'
+            Global._print(name,'(conductance):')
              
-            print '    mean:', data['cond'].mean()
-            print '    min: ', data['cond'].min()
-            print '    max: ', data['cond'].max()
+            Global._print('    mean:', data['cond'].mean())
+            Global._print('    min: ', data['cond'].min())
+            Global._print('    max: ', data['cond'].max())
 
-            print name,'(spike delivery):'
+            Global._print(name,'(spike delivery):')
              
-            print '    mean:', data['del'].mean()
-            print '    min: ', data['del'].min()
-            print '    max: ', data['del'].max()
+            Global._print('    mean:', data['del'].mean())
+            Global._print('    min: ', data['del'].min())
+            Global._print('    max: ', data['del'].max())
 
-            print name,'(pre event eval):'
+            Global._print(name,'(pre event eval):')
              
-            print '    mean:', data['pre'].mean()
-            print '    min: ', data['pre'].min()
-            print '    max: ', data['pre'].max()
+            Global._print('    mean:', data['pre'].mean())
+            Global._print('    min: ', data['pre'].min())
+            Global._print('    max: ', data['pre'].max())
 
-            print name,'(post event eval):'
+            Global._print(name,'(post event eval):')
              
-            print '    mean:', data['post'].mean()
-            print '    min: ', data['post'].min()
-            print '    max: ', data['post'].max()
+            Global._print('    mean:', data['post'].mean())
+            Global._print('    min: ', data['post'].min())
+            Global._print('    max: ', data['post'].max())
         
     def visualize_data(self, error_bar = False):
         """

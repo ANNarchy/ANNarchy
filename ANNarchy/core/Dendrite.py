@@ -242,7 +242,7 @@ class Dendrite(object):
         try:
             self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
         except Exception, e:
-            print e
+            Global._print(e)
     
     def prune_synapse(self, rank):
         """
