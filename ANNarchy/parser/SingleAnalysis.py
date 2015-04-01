@@ -158,7 +158,7 @@ def analyse_neuron(neuron):
         eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description, pattern)
 
         # Add the untouched variables to the global list
-        for name, val in untouched_globs.iteritems():
+        for name, val in untouched_globs.items():
             if not untouched.has_key(name):
                 untouched[name] = val
         description['global_operations'] += global_ops
@@ -224,7 +224,7 @@ def analyse_neuron(neuron):
             switch = code[1]
 
         # Replace untouched variables with their original name
-        for prev, new in untouched.iteritems():
+        for prev, new in untouched.items():
             if prev.startswith('g_'):
                 cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, ' ' + cpp_eq).strip()
                 if switch:
@@ -391,10 +391,10 @@ def analyse_synapse(synapse):
         eq, condition = extract_ite(variable['name'], eq, description)
         
         # Add the untouched variables to the global list
-        for name, val in untouched_globs.iteritems():
+        for name, val in untouched_globs.items():
             if not untouched.has_key(name):
                 untouched[name] = val
-        for name, val in untouched_var.iteritems():
+        for name, val in untouched_var.items():
             if not untouched.has_key(name):
                 untouched[name] = val
                 
@@ -458,7 +458,7 @@ def analyse_synapse(synapse):
             switch = code[1]
 
         # Replace untouched variables with their original name
-        for prev, new in untouched.iteritems():
+        for prev, new in untouched.items():
             cpp_eq = cpp_eq.replace(prev, new)
 
         # Replace local functions
@@ -496,7 +496,7 @@ def analyse_synapse(synapse):
         eq, untouched, dependencies = extract_prepost('psp', eq, description, pattern)
         description['dependencies']['pre'] += dependencies['pre']
         description['dependencies']['post'] += dependencies['post']
-        for name, val in untouched_globs.iteritems():
+        for name, val in untouched_globs.items():
             if not name in untouched.keys():
                 untouched[name] = val
         # Extract if-then-else statements
@@ -522,7 +522,7 @@ def analyse_synapse(synapse):
                                   split=False)
 
         # Replace untouched variables with their original name
-        for prev, new in untouched.iteritems():
+        for prev, new in untouched.items():
             code = code.replace(prev, new) 
 
         # Store the result

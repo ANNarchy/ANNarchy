@@ -52,7 +52,7 @@ def load_parameter(in_file):
             doc = etree.parse(file)
             
         except IOError:
-            print('Error: file \'',file,'\' not found.')
+            Global._print('Error: file \'', file, '\' not found.')
             continue
         
         matches = doc.findall('parameter')
@@ -62,7 +62,7 @@ def load_parameter(in_file):
     
             #TODO: allways correct ???
             if len(childs) != 2:
-                print('Error: to much tags in parameter')
+                Global._print('Error: to much tags in parameter')
     
             name=None
             value=None
@@ -90,12 +90,12 @@ def load_parameter(in_file):
                     print('Error: unexpected xml-tag', child.tag)
             
             if name == None:
-                print('Error: no name in parameter set.')
+                Global._print('Error: no name in parameter set.')
             elif value == None:
-                print('Error: no value in parameter set.')
+                Global._print('Error: no value in parameter set.')
                 damaged_pars.append(name)
             elif name in par.keys():
-                print("Error: parameter",name,"already exists.")
+                Global._print("Error: parameter",name,"already exists.")
                 damaged_pars.append(name)
             else:
                 par[name] = value
@@ -112,7 +112,7 @@ def _save_data(filename, data):
     
     if not path == '':
         if not os.path.isdir(path):
-            print('creating folder', path)
+            Global._print('creating folder', path)
             os.mkdir(path)
     
     extension = os.path.splitext(fname)[1]
@@ -133,8 +133,8 @@ def _save_data(filename, data):
             try:
                 cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                print('Error while saving in gzipped binary format.')
-                print(e)
+                Global._print('Error while saving in gzipped binary format.')
+                Global._print(e)
                 return
         
     else:
@@ -144,8 +144,8 @@ def _save_data(filename, data):
             try:
                 cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                print('Error while saving in text format.')
-                print(e)
+                Global._print('Error while saving in text format.')
+                Global._print(e)
                 return
         return
     
@@ -202,8 +202,8 @@ def _load_data(filename):
             with gzip.open(filename, mode = 'rb') as r_file:
                 desc = cPickle.load(r_file)
         except Exception as e:
-            print('Unable to read the file ' + filename)
-            print(e)
+            Global._print('Unable to read the file ' + filename)
+            Global._print(e)
             return desc
 
     else:
@@ -211,8 +211,8 @@ def _load_data(filename):
             with open(filename, mode = 'r') as r_file:
                 desc = cPickle.load(r_file)
         except Exception as e:
-            print('Unable to read the file ' + filename)
-            print(e)
+            Global._print('Unable to read the file ' + filename)
+            Global._print(e)
             return desc
     return desc
 

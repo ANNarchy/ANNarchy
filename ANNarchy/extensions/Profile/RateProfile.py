@@ -56,7 +56,7 @@ class RateProfile(Profile):
         if self._net_data:
             self._net_data[thread, trial] = self._average_net( begin, end )
         
-        for name, data in self._pop_data.iteritems():
+        for name, data in self._pop_data.items():
             data['sum'][thread, trial] = self._average_sum(name, begin, end, remove_outlier)
             data['step'][thread, trial] = self._average_step(name, begin, end, remove_outlier)
             data['local'][thread, trial] = self._average_local(name, begin, end, remove_outlier)
@@ -95,7 +95,7 @@ class RateProfile(Profile):
         Global._print('    min: ', self._net_data.min())
         Global._print('    max: ', self._net_data.max())
         
-        for name, data in self._pop_data.iteritems():
+        for name, data in self._pop_data.items():
             Global._print(name,'(sum):')
             
             Global._print('    mean:', data['sum'].mean())
@@ -117,7 +117,7 @@ class RateProfile(Profile):
         col_array = ['r','g','b','c','w']
         
         x_scale = np.array([i for i in xrange(len(self._threads))])
-        for k,v in self._threads.iteritems():
+        for k,v in self._threads.items():
             x_scale[v] = k
 
                 
@@ -146,7 +146,7 @@ class RateProfile(Profile):
 
         #
         # plot the population data
-        for name, data in self._pop_data.iteritems():
+        for name, data in self._pop_data.items():
             col_iter2 = iter(col_array)
             
             tmp = pg.GraphicsWindow(title="raw data: "+name)
@@ -162,7 +162,7 @@ class RateProfile(Profile):
             plt_data = data['sum']._data
             x_scale = [i for i in xrange(plt_data.shape[0])]
             thread_num = np.array([i for i in xrange(len(self._threads))])
-            for k,v in self._threads.iteritems():
+            for k,v in self._threads.items():
                 thread_num[v] = k
                          
             tmp_plot = tmp.addPlot(title = "sum", axisItems = {'bottom': IntAxis('bottom') })
@@ -294,7 +294,7 @@ class RateProfile(Profile):
             self._net_data.save_to_file(out_file)
             
         empty_row = np.zeros((self._num_trials,1))
-        for name, data in self._pop_data.iteritems():
+        for name, data in self._pop_data.items():
             if self._name == None:
                 out_file = self._folder+'/'+time+'_profile_name.csv'
             else:

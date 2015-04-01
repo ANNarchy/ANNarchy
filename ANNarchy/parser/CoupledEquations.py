@@ -79,7 +79,7 @@ class CoupledEquations(object):
         new_vars = {}
 
         # Pre-processing to replace the gradient
-        for name, expression in self.expression_list.iteritems():
+        for name, expression in self.expression_list.items():
             # transform the expression to suppress =
             if '=' in expression:
                 expression = expression.replace('=', '- (')
@@ -91,7 +91,7 @@ class CoupledEquations(object):
             expression_list[name] = expression
 
         # replace the variables by their future value
-        for name, expression in expression_list.iteritems():
+        for name, expression in expression_list.items():
             for n in self.names:
                 expression = re.sub(r'([^\w]+)'+n+r'([^\w]+)', r'\1_'+n+r'\2', expression)
             expression = expression.replace('_t_gradient_', '(_'+name+' - '+name+')')
@@ -102,7 +102,7 @@ class CoupledEquations(object):
             new_vars[new_var] = name
 
 
-        for name, expression in expression_list.iteritems():
+        for name, expression in expression_list.items():
             analysed = parse_expr(expression,
                 local_dict = self.local_dict,
                 transformations = (standard_transformations + (convert_xor,))
@@ -115,7 +115,7 @@ class CoupledEquations(object):
             _error('The multiple ODEs can not be solved together using the implicit Euler method.')
             exit(0)
 
-        for var, sol in solution.iteritems():
+        for var, sol in solution.items():
             # simplify the solution
             sol  = collect( sol, self.local_dict['dt'])
 
@@ -124,7 +124,7 @@ class CoupledEquations(object):
             switch =  ccode(self.local_dict[new_vars[var]] ) + ' += _' + new_vars[var] + ';'
 
             # Replace untouched variables with their original name
-            for prev, new in self.untouched.iteritems():
+            for prev, new in self.untouched.items():
                 cpp_eq = re.sub(prev, new, cpp_eq)
                 switch = re.sub(prev, new, switch)
 
@@ -145,7 +145,7 @@ class CoupledEquations(object):
         evaluations = {}
 
         # Pre-processing to replace the gradient
-        for name, expression in self.expression_list.iteritems():
+        for name, expression in self.expression_list.items():
             # transform the expression to suppress =
             if '=' in expression:
                 expression = expression.replace('=', '- (')
@@ -157,7 +157,7 @@ class CoupledEquations(object):
             self.local_dict['_gradient_'+name] = Symbol('_gradient_'+name)
             expression_list[name] = expression
 
-        for name, expression in expression_list.iteritems():
+        for name, expression in expression_list.items():
             analysed = parse_expr(expression,
                 local_dict = self.local_dict,
                 transformations = (standard_transformations + (convert_xor,))
@@ -168,19 +168,19 @@ class CoupledEquations(object):
 
         # Compute the k = f(x, t)
         ks = {}
-        for name, evaluation in evaluations.iteritems():
+        for name, evaluation in evaluations.items():
             ks[name] = 'double _k_' + name + ' = ' + ccode(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k)
         tmp_dict = {}
-        for name, val in self.local_dict.iteritems():
+        for name, val in self.local_dict.items():
             tmp_dict[name] = val
-        for name, evaluation in evaluations.iteritems():
+        for name, evaluation in evaluations.items():
             tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k_' + name + ' )')
 
         # Compute the new values _x_new = f(x + dt/2*_k)
         news = {}
-        for name, expression in expression_list.iteritems():
+        for name, expression in expression_list.items():
             tmp_analysed = parse_expr(expression,
                 local_dict = tmp_dict,
                 transformations = (standard_transformations + (convert_xor,))
@@ -190,7 +190,7 @@ class CoupledEquations(object):
 
         # Compute the switches
         switches = {}
-        for name, expression in expression_list.iteritems():
+        for name, expression in expression_list.items():
             switches[name] = ccode(self.local_dict[name]) + ' += dt * _' + name + ' ;'
 
         # Store the generated code in the variables
@@ -200,7 +200,7 @@ class CoupledEquations(object):
             switch = switches[name]
 
             # Replace untouched variables with their original name
-            for prev, new in self.untouched.iteritems():
+            for prev, new in self.untouched.items():
                 k = re.sub(prev, new, k)
                 n = re.sub(prev, new, n)
                 switch = re.sub(prev, new, switch)

@@ -214,7 +214,7 @@ class Projection(object):
         """ 
         Method used after compilation to initialize the attributes.
         """
-        for name, val in self.init.iteritems():
+        for name, val in self.init.items():
             if not name in ['w']:
                 self.__setattr__(name, val)
 
@@ -487,7 +487,7 @@ class Projection(object):
             Global._error('The projection '+self.name+' has no variable called ' + name)
             return
             
-        for key, val in value.iteritems():
+        for key, val in value.items():
             if val == '': # a flag
                 try:
                     self.synapse.description['variables'][rk_var]['flags'].index(key)

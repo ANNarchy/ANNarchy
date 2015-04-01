@@ -104,7 +104,7 @@ cdef class CSR:
                 doubletons.pop(single)
 
         # Gather the info
-        for rk, indices in doubletons.iteritems():
+        for rk, indices in doubletons.items():
             # Store the different infos
             ranks.clear()
             weights.clear()

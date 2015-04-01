@@ -362,7 +362,7 @@ def start_record(to_record, period = {}):
     global _recorded_populations
     _recorded_populations = to_record
 
-    for pop, variables in to_record.iteritems():
+    for pop, variables in to_record.items():
         # get name and object
         pop_obj = pop if not isinstance(pop, str) else get_population(pop)
         pop_name = pop if isinstance(pop, str) else pop.name
@@ -408,7 +408,7 @@ def get_record(to_record=None, reshape=False):
 
     data = {}
     
-    for pop, variables in to_record.iteritems():
+    for pop, variables in to_record.items():
         if not isinstance(pop, str):
             pop_object = pop
         else:
@@ -429,7 +429,7 @@ def stop_record(to_record=None):
     """
     if not to_record:
         to_record = _recorded_populations
-    for pop, variables in to_record.iteritems():
+    for pop, variables in to_record.items():
         if not isinstance(pop, str):
             pop.stop_record(variables)
         else:
@@ -446,7 +446,7 @@ def pause_record(to_record=None):
     """
     if not to_record:
         to_record = _recorded_populations
-    for pop, variables in to_record.iteritems():
+    for pop, variables in to_record.items():
         if not isinstance(pop, str):
             pop.pause_record(variables)
         else:
@@ -463,7 +463,7 @@ def resume_record(to_record=None):
     """
     if not to_record:
         to_record = _recorded_populations
-    for pop, variables in to_record.iteritems():
+    for pop, variables in to_record.items():
         if not isinstance(pop, str):
             pop.resume_record(variables)
         else:

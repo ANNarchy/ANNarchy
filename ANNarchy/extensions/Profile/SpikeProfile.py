@@ -29,9 +29,9 @@ from math import ceil, floor, sqrt
 from ANNarchy.core import Global
 from ANNarchy import *
 
-from DataLog import DataLog
-from Custom import IntAxis
-from Profile import Profile
+from .DataLog import DataLog
+from .Custom import IntAxis
+from .Profile import Profile
 
 class SpikeProfile(Profile):
     """
@@ -56,7 +56,7 @@ class SpikeProfile(Profile):
         if self._net_data:
             self._net_data[thread, trial] = self._average_net( begin, end )
 
-        for name, data in self._pop_data.iteritems():
+        for name, data in self._pop_data.items():
             data['cond'][thread, trial] = self._average_conductance(name, begin, end)
             data['del'][thread, trial] = self._average_spike_delivery(name, begin, end)
             data['pre'][thread, trial] = self._average_pre_event(name, begin, end)
@@ -95,7 +95,7 @@ class SpikeProfile(Profile):
         Global._print('    min: ', self._net_data.min())
         Global._print('    max: ', self._net_data.max())
 
-        for name, data in self._pop_data.iteritems():
+        for name, data in self._pop_data.items():
             Global._print(name,'(conductance):')
              
             Global._print('    mean:', data['cond'].mean())
@@ -135,7 +135,7 @@ class SpikeProfile(Profile):
         col_array = ['r','g','b','c','w']
         
         x_scale = np.array([i for i in xrange(len(self._threads))])
-        for k,v in self._threads.iteritems():
+        for k,v in self._threads.items():
             x_scale[v] = k
 
                 
@@ -166,7 +166,7 @@ class SpikeProfile(Profile):
 
         #
         # plot the population data
-        for name, data in self._pop_data.iteritems():
+        for name, data in self._pop_data.items():
             col_iter2 = iter(col_array)
              
             tmp = pg.GraphicsWindow(title="raw data: "+name)
@@ -182,7 +182,7 @@ class SpikeProfile(Profile):
             plt_data = data['cond']._data
             x_scale = [i for i in xrange(plt_data.shape[0])]
             thread_num = np.array([i for i in xrange(len(self._threads))])
-            for k,v in self._threads.iteritems():
+            for k,v in self._threads.items():
                 thread_num[v] = k
                           
             tmp_plot = tmp.addPlot(title = "conductance", axisItems = {'bottom': IntAxis('bottom') })
@@ -316,7 +316,7 @@ class SpikeProfile(Profile):
         #     self._net_data.save_to_file(out_file)
         #     
         # empty_row = np.zeros((self._num_trials,1))
-        # for name, data in self._pop_data.iteritems():
+        # for name, data in self._pop_data.items():
         #     if self._name == None:
         #         out_file = self._folder+'/'+time+'_profile_name.csv'
         #     else:

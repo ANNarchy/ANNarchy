@@ -67,7 +67,7 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
             # Min-Max bounds
-            for bound, val in param['bounds'].iteritems():
+            for bound, val in param['bounds'].items():
                 if bound == "init":
                     continue
 
@@ -130,7 +130,7 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
         'switch' : param['switch']}
 
             # Min-Max bounds
-            for bound, val in param['bounds'].iteritems():
+            for bound, val in param['bounds'].items():
                 if bound == "init":
                     continue
 
@@ -161,7 +161,7 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
         'cpp': param['cpp'] }
 
             # Min-Max bounds
-            for bound, val in param['bounds'].iteritems():
+            for bound, val in param['bounds'].items():
                 if bound == "init":
                     continue
 

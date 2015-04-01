@@ -467,7 +467,7 @@ def _process_neuron_equations(neuron):
         local_dict[att] = Symbol(_latexify_name(att, variable_names))
 
     tex_dict = {}
-    for key, val in local_dict.iteritems():
+    for key, val in local_dict.items():
         tex_dict[val] = str(val)
 
     for var in variables:
@@ -543,7 +543,7 @@ def _process_synapse_equations(synapse):
         local_dict[att] = Symbol(_latexify_name(att, variable_names))
 
     tex_dict = {}
-    for key, val in local_dict.iteritems():
+    for key, val in local_dict.items():
         tex_dict[val] = str(val)
 
 

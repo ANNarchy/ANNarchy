@@ -26,8 +26,8 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 from pyqtgraph.Qt import QtCore, QtGui
 
-from DataLog import DataLog
-from Custom import IntAxis
+from .DataLog import DataLog
+from .Custom import IntAxis
 
 class Scalability:
     """
@@ -54,7 +54,7 @@ class Scalability:
         self._speedup = {}
         self._efficiency = {}
         
-        for name, data in self._data.iteritems():
+        for name, data in self._data.items():
         
             tmp = deepcopy(data.raw_data())
             for c in range(tmp.shape[1]):
@@ -69,7 +69,7 @@ class Scalability:
             self._efficiency[name] = tmp2
             
         if debug:
-            for name, data in self._data.iteritems():
+            for name, data in self._data.items():
                 Global._print(name+'(raw):')
                 Global._print(data.raw_data())
                 
@@ -147,7 +147,7 @@ class Scalability:
 
         save_data = {}
 
-        for name, data in self._data.iteritems():
+        for name, data in self._data.items():
             save_data['parameter'] = [ x for x in self._par_scale.keys() ]
             save_data['threads'] = self._thread_scale
             save_data[name] = data.raw_data()

@@ -550,7 +550,7 @@ def extract_structural_plasticity(statement, description, pattern):
     code = translator.parse()
 
     # Replace untouched variables with their original name
-    for prev, new in untouched.iteritems():
+    for prev, new in untouched.items():
         code = code.replace(prev, new) 
 
     # Add new dependencies

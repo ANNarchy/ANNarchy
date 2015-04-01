@@ -353,7 +353,7 @@ struct ProjStruct%(id_proj)s{
 """ % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids}
             elif eq['name'] == 'g_target':
                 psp = eq['cpp'].split('=')[1]
-                for key, val in eq['bounds'].iteritems():
+                for key, val in eq['bounds'].items():
                     try:
                         value = str(float(val))
                     except:

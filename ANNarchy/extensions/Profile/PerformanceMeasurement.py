@@ -1,5 +1,5 @@
 from ANNarchy.core.Global import get_population, _print
-from Custom import *
+from .Custom import *
 import numpy
 
 class PerformanceMeasurement:

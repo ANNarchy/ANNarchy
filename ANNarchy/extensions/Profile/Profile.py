@@ -27,10 +27,10 @@ import pyqtgraph as pg
 from math import ceil, floor, sqrt
 
 from ANNarchy.core import Global
-from ANNarchy import *
+from ANNarchy import * # what?
 
-from DataLog import DataLog
-from Custom import IntAxis
+from .DataLog import DataLog
+from .Custom import IntAxis
 
 class Profile:
     """

@@ -1,1 +1,1 @@
-from CudaCheck import CudaCheck
+from .CudaCheck import CudaCheck

@@ -446,7 +446,7 @@ class Population(object):
             
             set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
         """
-        for name, value in values.iteritems():
+        for name, value in values.items():
             self.__setattr__(name, value)
         
     def get(self, name):
@@ -942,7 +942,7 @@ class Population(object):
             Global._error('The population '+self.name+' has no variable called ' + name)
             return
             
-        for key, val in value.iteritems():
+        for key, val in value.items():
             if val == '': # a flag
                 try:
                     self.neuron_type.description['variables'][rk_var]['flags'].index(key)
