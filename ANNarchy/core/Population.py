@@ -314,7 +314,7 @@ class Population(object):
             if isinstance(self.neuron_type.description['refractory'], str): # a global variable
                 try:
                     self.refractory = eval('self.'+self.neuron_type.description['refractory'])
-                except Exception, e:
+                except Exception as e:
                     Global._print(e, self.neuron_type.description['refractory'])
                     Global._error('The initialization for the refractory period is not valid.')
                     exit(0)
@@ -347,7 +347,7 @@ class Population(object):
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
-        if not hasattr(self, 'initialized'): # Before the end of the constructor
+        if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
@@ -367,7 +367,7 @@ class Population(object):
         
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
-        if not hasattr(self, 'initialized'): # Before the end of the constructor
+        if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
@@ -398,7 +398,7 @@ class Population(object):
                 return getattr(self.cyInstance, 'get_'+attribute)().reshape(self.geometry)
             else:
                 return getattr(self.cyInstance, 'get_'+attribute)()
-        except Exception, e:
+        except Exception as e:
             Global._print(e)
             Global._error('Error: the variable ' +  attribute +  ' does not exist in this population.')
         
@@ -423,7 +423,7 @@ class Population(object):
                     getattr(self.cyInstance, 'set_'+attribute)(value * np.ones( self.size ))
             else:
                 getattr(self.cyInstance, 'set_'+attribute)(value)
-        except Exception, e:
+        except Exception as e:
             Global._print(e)
             Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have the right size.')
         

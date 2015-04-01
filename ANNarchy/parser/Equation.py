@@ -159,7 +159,7 @@ class Equation(object):
                 local_dict = local_dict,
                 transformations = (standard_transformations + (convert_xor,)) 
             )
-        except Exception, e:
+        except Exception as e:
             _print(e)
             _error('Can not analyse the expression :' +  str(expression))
             exit(0)

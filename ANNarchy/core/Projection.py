@@ -379,7 +379,7 @@ class Projection(object):
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
-        if not hasattr(self, 'initialized'): # Before the end of the constructor
+        if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
@@ -393,7 +393,7 @@ class Projection(object):
         
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
-        if not hasattr(self, 'initialized'): # Before the end of the constructor
+        if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
@@ -1146,7 +1146,7 @@ class Projection(object):
             for var in attributes:
                 try:
                     dendrite_desc[var] = getattr(self.cyInstance, 'get_dendrite_'+var)(d) 
-                except Exception, e:
+                except Exception as e:
                     Global._error('Can not save the attribute ' + var + ' in the projection.')    
             # Add pre-synaptic ranks and delays
             dendrite_desc['rank'] = self.cyInstance.pre_rank(d)

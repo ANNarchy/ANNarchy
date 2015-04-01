@@ -241,7 +241,7 @@ class Dendrite(object):
 
         try:
             self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
-        except Exception, e:
+        except Exception as e:
             Global._print(e)
     
     def prune_synapse(self, rank):
@@ -415,7 +415,7 @@ class Dendrite(object):
 
             try:                    
                 data = getattr(self.proj.cyInstance, 'get_recorded_'+var)(self.idx)
-            except Exception, e:
+            except Exception as e:
                 Global._error('get: ' + var + ' is not a recordable variable.')
                 return
 
