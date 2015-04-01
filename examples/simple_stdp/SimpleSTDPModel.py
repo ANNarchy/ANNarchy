@@ -65,7 +65,7 @@ if __name__ == '__main__':
     Output.start_record ('spike')
 
     # Start the simulation
-    print 'Start the simulation'
+    print('Start the simulation')
     simulate(duration, measure_time=True)
 
     # Retrieve the recordings
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     output_spikes = Output.get_record()['spike']
 
     # Compute the mean firing rates during the simulation
-    print 'Mean firing rate in the input population: ', np.mean([len(neur) *1000.0/duration for neur in input_spikes['data']])
-    print 'Mean firing rate of the output neuron: ', len(output_spikes['data'][0]) *1000.0/duration
+    print('Mean firing rate in the input population: ' + str(np.mean([len(neur) *1000.0/duration for neur in input_spikes['data']]) ))
+    print('Mean firing rate of the output neuron: ' + str(len(output_spikes['data'][0]) *1000.0/duration ))
 
     # Compute the instantaneous firing rate of the output neuron
     output_rate = smoothed_rate(output_spikes, 100.0)

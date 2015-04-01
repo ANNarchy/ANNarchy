@@ -21,8 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """    
-from __future__ import print_function
-
 import sys, os
 import time
 from math import ceil
@@ -198,7 +196,7 @@ def get_population(name):
         if pop.name == name:
             return pop
         
-    print("Error: no population",name,"found.")
+    _error("the population", name, "does not exist.")
     return None
     
 def add_function(function):
@@ -241,7 +239,7 @@ def simulate(duration, measure_time = False):
             tstart = time.time() 
         _network.pyx_run(nb_steps)
         if measure_time:
-            print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+            _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     else:
         _error('simulate(): the network is not compiled yet.')
         return
@@ -278,7 +276,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
         nb = _network.pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
-            print('Simulating', nb/config['dt']/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+            _print('Simulating', nb/config['dt']/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
         return sim_time
     else:
         _error('simulate(): the network is not compiled yet.')
@@ -480,12 +478,7 @@ def _print(*var_text):
     text = ''
     for var in var_text:
         text += str(var) + ' '
-        
-    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-        p = print        
-        p(text)
-    else:
-        print(text)
+    print(text)
 
 def _debug(*var_text):
     """
@@ -497,12 +490,7 @@ def _debug(*var_text):
     text = ''
     for var in var_text:
         text += str(var) + ' '
-        
-    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-        p = print        
-        p(text)
-    else:
-        print(text)
+    print(text)
         
 def _warning(*var_text):
     """
@@ -512,11 +500,7 @@ def _warning(*var_text):
     for var in var_text:
         text += str(var) + ' '
     if not config['suppress_warnings']:
-        if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-            p = print        
-            p(text)
-        else:
-            print(text)
+        print(text)
         
 def _error(*var_text):
     """
@@ -524,11 +508,6 @@ def _error(*var_text):
     """
     text = 'ERROR: '
     for var in var_text:
-        text += str(var) + ' '
-    
-    if sys.version_info[:2] >= (2, 6) and sys.version_info[:2] < (3, 0):
-        p = print        
-        p(text)
-    else:
-        print(text)
+        text += str(var) + ' '    
+    print(text)
 

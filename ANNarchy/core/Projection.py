@@ -1008,10 +1008,12 @@ class Projection(object):
                 'size': self.size,
                 'nb_synapses': sum([self.cyInstance.nb_synapses(n) for n in range(self.size)])
             }
-
-        import cPickle
+        try:
+            import cPickle as pickle # Python2
+        except:
+            import pickle # Python3
         with open(filename, 'wb') as wfile:
-            cPickle.dump(data, wfile, protocol=cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(data, wfile, protocol=pickle.HIGHEST_PROTOCOL)
 
     def _save_connectivity_as_csv(self):
         """
@@ -1167,7 +1169,7 @@ class Projection(object):
 
         * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
 
-        * Otherwise, the data will be pickled into a simple binary text file using cPickle.
+        * Otherwise, the data will be pickled into a simple binary text file using pickle.
         
         *Parameter*:
         

@@ -83,7 +83,7 @@ P.stop_record()
 # ###########################################
 spikes = raster_plot(data['spike'])
 rates = population_rate(data['spike'], 5.0)
-print len(spikes), 'spikes.'
+print('Total number of spikes: ' + str(len(spikes)))
 
 from pylab import *
 subplot(211)

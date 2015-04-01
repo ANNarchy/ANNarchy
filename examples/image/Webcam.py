@@ -37,7 +37,7 @@ try:
     from pyqtgraph.Qt import QtGui, QtCore
     import pyqtgraph as pg
 except:
-    print 'PyQtGraph is not installed, can not visualize the network.'
+    print('PyQtGraph is not installed, can not visualize the network.')
     exit(0)
 
 # Wrapping class    
@@ -82,7 +82,7 @@ class Viewer(object):
         fps = 1.0 / (now - self.lastUpdate)
         self.lastUpdate = now
         self.avgFps = self.avgFps * 0.8 + fps * 0.2
-        print self.avgFps
+        print(self.avgFps)
         
     def run(self):
         

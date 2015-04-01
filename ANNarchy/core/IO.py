@@ -23,7 +23,10 @@
 """
 from ANNarchy.core import Global 
 import os
-import cPickle
+try:
+    import cPickle as pickle # Python2
+except:
+    import pickle # Python3
 
 def load_parameter(in_file):
     """
@@ -131,7 +134,7 @@ def _save_data(filename, data):
             return
         with gzip.open(filename, mode = 'wb') as w_file:
             try:
-                cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
+                pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
                 Global._print('Error while saving in gzipped binary format.')
                 Global._print(e)
@@ -142,7 +145,7 @@ def _save_data(filename, data):
         # save in Pythons pickle format
         with open(filename, mode = 'w') as w_file:
             try:
-                cPickle.dump(data, w_file, protocol=cPickle.HIGHEST_PROTOCOL)
+                pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
                 Global._print('Error while saving in text format.')
                 Global._print(e)
@@ -200,7 +203,7 @@ def _load_data(filename):
             return desc
         try:
             with gzip.open(filename, mode = 'rb') as r_file:
-                desc = cPickle.load(r_file)
+                desc = pickle.load(r_file)
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
             Global._print(e)
@@ -209,7 +212,7 @@ def _load_data(filename):
     else:
         try:
             with open(filename, mode = 'r') as r_file:
-                desc = cPickle.load(r_file)
+                desc = pickle.load(r_file)
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
             Global._print(e)

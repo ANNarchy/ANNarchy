@@ -74,7 +74,7 @@ try:
     from pyqtgraph.Qt import QtGui, QtCore
     import pyqtgraph as pg
 except:
-    print 'PyQtGraph is not installed, can not visualize the network.'
+    print('PyQtGraph is not installed, can not visualize the network.')
     exit(0)
     
 class Viewer(object):

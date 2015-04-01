@@ -1024,7 +1024,7 @@ class Population(object):
 
         * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
 
-        * Otherwise, the data will be pickled into a simple binary text file using cPickle.
+        * Otherwise, the data will be pickled into a simple binary text file using pickle.
         
         *Parameter*:
         

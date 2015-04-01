@@ -13,6 +13,7 @@ from .parser.Report import report
 from .models import *
 from .extensions import *
 
+# Cython modules
 try:
     from .core.cython_ext.Connector import CSR
 except:

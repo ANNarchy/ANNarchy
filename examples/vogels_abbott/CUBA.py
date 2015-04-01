@@ -60,7 +60,7 @@ P.stop_record()
 # Make plots
 ###########################################
 spikes = raster_plot(data['spike'])
-print 'Mean firing rate in the population:', len(spikes) / 4000., 'Hz'
+print('Mean firing rate in the population: ' + str(len(spikes) / 4000.) + 'Hz')
 
 from pylab import *
 plot(dt*spikes[:, 0], spikes[:, 1], '.k', markersize=0.5)

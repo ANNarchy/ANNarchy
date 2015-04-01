@@ -55,7 +55,7 @@ try:
     import pyqtgraph as pg 
     import pyqtgraph.opengl as gl
 except:
-    print 'PyQtGraph is not installed on your system, can not visualize the network.'
+    print('PyQtGraph is not installed on your system, can not visualize the network.')
     exit(0)
 
 class GLViewer(object):
