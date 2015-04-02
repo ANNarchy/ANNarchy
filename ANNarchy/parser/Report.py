@@ -42,25 +42,25 @@ header = """
 """
 
 preamble = """
-\documentclass{article}
-\usepackage[margin=1in]{geometry} 
-\usepackage{tabularx}  
-\usepackage{multirow}  
-\usepackage{colortbl} 
+\\documentclass{article}
+\\usepackage[margin=1in]{geometry} 
+\\usepackage{tabularx}  
+\\usepackage{multirow}  
+\\usepackage{colortbl} 
 
-\usepackage[fleqn]{amsmath} 
-\setlength{\mathindent}{0em}
-\usepackage{mathpazo}
-\usepackage[scaled=.95]{helvet}
-\\renewcommand\\familydefault{\sfdefault}
+\\usepackage[fleqn]{amsmath} 
+\\setlength{\\mathindent}{0em}
+\\usepackage{mathpazo}
+\\usepackage[scaled=.95]{helvet}
+\\renewcommand\\familydefault{\\sfdefault}
 
 \\renewcommand\\arraystretch{1.2}  
-\pagestyle{empty}
+\\pagestyle{empty}
 
 \\newcommand{\hdr}[3]{
-    \multicolumn{#1}{|l|}{
-        \color{white}\cellcolor[gray]{0.0}
-        \\textbf{\makebox[0pt]{#2}\hspace{0.5\linewidth}\makebox[0pt][c]{#3}}
+    \\multicolumn{#1}{|l|}{
+        \\color{white}\\cellcolor[gray]{0.0}
+        \\textbf{\makebox[0pt]{#2}\\hspace{0.5\\linewidth}\\makebox[0pt][c]{#3}}
     }
 }
 
@@ -69,8 +69,8 @@ preamble = """
 
 summary_template="""
 \\noindent
-\\begin{tabularx}{\linewidth}{|l|X|}\hline
-\hdr{2}{A}{Model Summary}\\\\ \\hline
+\\begin{tabularx}{\\linewidth}{|l|X|}\\hline
+\\hdr{2}{A}{Model Summary}\\\\ \\hline
 \\textbf{Populations}     & %(population_names)s \\\\ \\hline
 \\textbf{Topology}        & --- \\\\ \\hline
 \\textbf{Connectivity}    & %(connectivity)s \\\\ \\hline
@@ -80,72 +80,72 @@ summary_template="""
 \\textbf{Plasticity}      & %(synapse_models)s\\\\ \\hline
 \\textbf{Input}           & --- \\\\ \\hline
 \\textbf{Measurements}    & --- \\\\ \\hline
-\end{tabularx}
+\\end{tabularx}
 
 \\vspace{2ex}
 """
 
 populations_template = """
 \\noindent
-\\begin{tabularx}{\linewidth}{|l|l|X|}\hline
-\hdr{3}{B}{Populations}\\\\ \\hline
+\\begin{tabularx}{\\linewidth}{|l|l|X|}\\hline
+\\hdr{3}{B}{Populations}\\\\ \\hline
     \\textbf{Name}   & \\textbf{Elements} & \\textbf{Size} \\\\ \\hline
 %(populations_description)s
-\end{tabularx}
+\\end{tabularx}
 
 \\vspace{2ex}
 """
 
 connectivity_template = """
 \\noindent
-\\begin{tabularx}{\linewidth}{|l|l|l|X|X|}\hline
-\hdr{5}{C}{Connectivity}\\\\ \\hline
+\\begin{tabularx}{\\linewidth}{|l|l|l|X|X|}\\hline
+\\hdr{5}{C}{Connectivity}\\\\ \\hline
 \\textbf{Source} & \\textbf{Destination} & \\textbf{Target} & \\textbf{Synapse} & \\textbf{Pattern} \\\\ \\hline
 %(projections_description)s
-\end{tabularx}
+\\end{tabularx}
 
 \\vspace{2ex}
 """
 
 popparameters_template = """
 \\noindent
-\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|p{0.15\linewidth}|X|}\hline
+\\begin{tabularx}{\\linewidth}{|p{0.15\\linewidth}|p{0.15\\linewidth}|X|}\\hline
 %(firstpopulation)s
 \\textbf{Population} & \\textbf{Parameter} & \\textbf{Value}   \\\\ \\hline
 %(parameters)s
-\end{tabularx}
+\\end{tabularx}
 
 \\vspace{2ex}
 """
 
 projparameters_template = """
 \\noindent
-\\begin{tabularx}{\linewidth}{|p{0.25\linewidth}|p{0.15\linewidth}|X|}\hline
+\\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|p{0.15\\linewidth}|X|}\\hline
 %(firstprojection)s
 \\textbf{Projection} & \\textbf{Parameter} & \\textbf{Value}   \\\\ \\hline
 %(parameters)s
-\end{tabularx}
+\\end{tabularx}
 
 \\vspace{2ex}
 """
 
 footer = """
-\\noindent\\begin{tabularx}{\linewidth}{|l|X|}\hline
-\hdr{2}{H}{Input}\\\\ \\hline
+\\noindent\\begin{tabularx}{\\linewidth}{|l|X|}\\hline
+\\hdr{2}{H}{Input}\\\\ \\hline
 \\textbf{Type} & \\textbf{Description} \\\\ \\hline
 ---
 \\\\ \\hline
-\end{tabularx}
+\\end{tabularx}
 
 \\vspace{2ex}
 
-\\noindent\\begin{tabularx}{\linewidth}{|X|}\hline
-\hdr{1}{I}{Measurements}\\\\ \\hline
+\\noindent\\begin{tabularx}{\\linewidth}{|X|}\\hline
+\\hdr{1}{I}{Measurements}\\\\ \\hline
 ---
 \\\\ \\hline
-\end{tabularx}
+\\end{tabularx}
 
-\end{document}
+\\end{document}
 """
 
 ##################################
@@ -321,18 +321,18 @@ def _generate_projection_parameters():
 def _generate_neuron_models():
     neurons = ""
 
-    firstneuron = "\hdr{2}{D}{Neuron Models}\\\\ \\hline"
+    firstneuron = "\\hdr{2}{D}{Neuron Models}\\\\ \\hline"
 
     neuron_tpl = """
 \\noindent
-\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
+\\begin{tabularx}{\\linewidth}{|p{0.15\\linewidth}|X|}\\hline
 %(firstneuron)s
 \\textbf{Name} & %(name)s \\\\ \\hline
 \\textbf{Type} & %(description)s\\\\ \\hline
 \\textbf{%(equation_type)s} &
 %(variables)s 
 \\\\ \\hline
-\end{tabularx}
+\\end{tabularx}
 \\vspace{2ex}
 """
     for idx, neuron in enumerate(_neurons):
@@ -367,11 +367,11 @@ def _generate_synapse_models():
     firstsynapse = ""
     synapses = ""
 
-    firstsynapse = "\hdr{2}{E}{Synapse Models}\\\\ \\hline"
+    firstsynapse = "\\hdr{2}{E}{Synapse Models}\\\\ \\hline"
 
     synapse_tpl = """
 \\noindent
-\\begin{tabularx}{\linewidth}{|p{0.15\linewidth}|X|}\hline
+\\begin{tabularx}{\\linewidth}{|p{0.15\\linewidth}|X|}\\hline
 %(firstsynapse)s
 \\textbf{Name} & %(name)s \\\\ \\hline
 \\textbf{Type} & %(description)s\\\\ \\hline
@@ -379,7 +379,7 @@ def _generate_synapse_models():
 %(variables)s
 %(preevent)s
 %(postevent)s
-\end{tabularx}
+\\end{tabularx}
 \\vspace{2ex}
 """
     for idx, synapse in enumerate(_synapses):
@@ -500,19 +500,19 @@ def _process_neuron_equations(neuron):
     # Reset
     spike_code += """
     \\begin{enumerate}
-        \item Emit a spike at time $t^*$"""
+        \\item Emit a spike at time $t^*$"""
     
     reset_vars = extract_spike_variable(neuron.description, pattern_omp)['spike_reset']
     for var in reset_vars:
         eq = var['eq']
         spike_code += """
-        \item $""" + _analyse_equation(eq, local_dict, tex_dict) + "$"
+        \\item $""" + _analyse_equation(eq, local_dict, tex_dict) + "$"
 
         if 'unless_refractory' in var['constraint']:
             spike_code += " (not during the refractory period)."
 
     spike_code += """
-    \end{enumerate}"""
+    \\end{enumerate}"""
 
     return code, spike_code
 

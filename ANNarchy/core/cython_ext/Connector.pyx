@@ -172,11 +172,11 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
-        post_ranks = range(post.size)
+        post_ranks = list(range(post.size))
     if hasattr(pre, 'ranks'): # PopulationView
         pre_ranks = pre.ranks
     else:
-        pre_ranks = range(pre.size)
+        pre_ranks = list(range(pre.size))
 
     # Create the projection data as CSR
     projection = CSR()
@@ -224,13 +224,13 @@ def one_to_one(pre, post, weights, delays, shift):
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
-        post_ranks = range(post.size)
+        post_ranks = list(range(post.size))
 
     if shift:
         if hasattr(pre, 'ranks'): # PopulationView
             pre_ranks = pre.ranks
         else:
-            pre_ranks = range(pre.size)
+            pre_ranks = list(range(pre.size))
         offset = min(post_ranks) - min(pre_ranks)
     else:
         offset = 0
@@ -279,7 +279,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
-        post_ranks = range(post.size)
+        post_ranks = list(range(post.size))
 
     if hasattr(pre, 'ranks'): # PopulationView
         pre_ranks = np.array(pre.ranks)
@@ -332,11 +332,11 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
-        post_ranks = range(post.size)
+        post_ranks = list(range(post.size))
     if hasattr(pre, 'ranks'): # PopulationView
         pre_ranks = pre.ranks
     else:
-        pre_ranks = range(pre.size)
+        pre_ranks = list(range(pre.size))
 
     # Create the projection data as CSR
     projection = CSR()
@@ -387,11 +387,11 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     if hasattr(post, 'ranks'): # PopulationView
         post_ranks = post.ranks
     else: # Plain population
-        post_ranks = range(post.size)
+        post_ranks = list(range(post.size))
     if hasattr(pre, 'ranks'): # PopulationView
         pre_ranks = pre.ranks
     else:
-        pre_ranks = range(pre.size)
+        pre_ranks = list(range(pre.size))
 
     # Create the projection data as CSR
     projection = CSR()
@@ -407,7 +407,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         if not allow_self_connections:
             if (tmp == r_pre).any(): # the post index is in the list
                 tmp[tmp==r_pre] = indices[number] # pick the next one
-        for i in xrange(number):
+        for i in list(range(number)):
             rk_mat[tmp[i]].append(r_pre)
 
     # Create the dendrites
@@ -469,7 +469,7 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
     
     # Create the projection data as CSR
     projection = CSR()
-    for post in xrange(post_size):
+    for post in list(range(post_size)):
         ranks = []
         values = []
         if post_dim == 1:
@@ -480,7 +480,7 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
             post_coord = Coordinates.get_normalized_3d_coord(post, post_geometry)
         else:
             post_coord = Coordinates.get_normalized_coord(post, post_geometry)
-        for pre in xrange(pre_size):
+        for pre in list(range(pre_size)):
             if not allow_self_connections and pre==post:
                 continue
             if pre_dim == 1:
@@ -543,7 +543,7 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
     
     # Create the projection data as CSR
     projection = CSR()
-    for post in xrange(post_size):
+    for post in list(range(post_size)):
         ranks = []
         values = []
         if post_dim == 1:
@@ -554,7 +554,7 @@ def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos,
             post_coord = Coordinates.get_normalized_3d_coord(post, post_geometry)
         else:
             post_coord = Coordinates.get_normalized_coord(post, post_geometry)
-        for pre in xrange(pre_size):
+        for pre in list(range(pre_size)):
             if not allow_self_connections and pre==post:
                 continue
             if pre_dim == 1:

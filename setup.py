@@ -24,11 +24,10 @@ except:
 # sympy
 try:
     import sympy
-    
     if parse_version(sympy.__version__) > parse_version('0.7.4'):
         print('Checking for sympy... OK')
     else:
-        print 'Sympy', sympy.__version__, 'is not sufficient, expected >= 0.7.4' 
+        print('Sympy ' + str(sympy.__version__) + ' is not sufficient, expected >= 0.7.4' )
         exit(0)
 except:
     print('Checking for sympy... NO')

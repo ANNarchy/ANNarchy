@@ -402,7 +402,7 @@ def extract_spike_variable(description, pattern):
     raw_spike_code = translator.parse()
     
     reset_desc = []
-    if description.has_key('raw_reset') and description['raw_reset']:
+    if 'raw_reset' in description.keys() and description['raw_reset']:
         reset_desc = process_equations(description['raw_reset'])
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'], 

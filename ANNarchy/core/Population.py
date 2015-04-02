@@ -729,7 +729,7 @@ class Population(object):
         """
         _variable = []
         if variable == None:
-            _variable = self.recorded_variables.keys()
+            _variable = list(self.recorded_variables.keys())
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
@@ -747,6 +747,7 @@ class Population(object):
                 Global._error('stop: ' + var + 'is not a recordable variable.')
                 return
 
+        for var in _variable:
             del self.recorded_variables[var]
 
     def pause_record(self, variable=None):
@@ -857,7 +858,7 @@ class Population(object):
         
         _variable = []
         if variable == None:
-            _variable = self.recorded_variables.keys()
+            _variable = list(self.recorded_variables.keys())
         elif isinstance(variable, str):
             _variable.append(variable)
         elif isinstance(variable, list):
