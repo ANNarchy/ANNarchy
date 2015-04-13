@@ -538,6 +538,10 @@ struct ProjStruct%(id_proj)s{
     if(proj%(id_proj)s._learning && pop%(id_post)s._active){
         for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
             i = pop%(id_post)s.spiked[_idx_i];
+            // Test if the post neuron has connections in this projection (PopulationView)
+            if(std::find(proj%(id_proj)s.post_rank.begin(), proj%(id_proj)s.post_rank.end(), i) == proj%(id_proj)s.post_rank.end())
+                continue;
+            // Iterate over all synapse to this neuron
             %(omp_code)s 
             for(j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
 %(post_event)s
