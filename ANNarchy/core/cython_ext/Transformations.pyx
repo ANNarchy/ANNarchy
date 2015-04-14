@@ -5,6 +5,21 @@ cimport numpy as np
 
 import ANNarchy
 
+cpdef np.ndarray raster_plot(list data):
+    """
+    Transforms recorded spikes into a (N, 2) array to easily display the raster plot.
+    """
+    cdef int N, n, t
+    cdef np.ndarray res
+    cdef list d
+    N = len(data)
+    d = []
+    for n in xrange(N):
+        for t in data[n]:
+            d.append([t, n])
+    res = np.array(d)
+    return res
+
 cpdef np.ndarray smoothed_rate(dict data, float smooth):
     """ Takes the recorded spikes of a population and returns a smoothed firing rate.
 
