@@ -6,6 +6,8 @@ from libcpp cimport bool
 import numpy as np
 cimport numpy as np
 
+import random
+
 from libc.math cimport exp, fabs, ceil
 
 import ANNarchy
@@ -323,7 +325,6 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     cdef CSR projection
     cdef double weight
     cdef int r_post, r_pre, size_pre
-    cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
     cdef vector[int] r
     cdef vector[double] w, d
@@ -340,20 +341,15 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
 
     # Create the projection data as CSR
     projection = CSR()
-    
-    # Array to permute
-    indices = np.array(pre_ranks)
 
     for r_post in post_ranks:
         # List of pre ranks
-        indices = np.random.permutation(indices)
-        tmp = indices[:number]
-        if not allow_self_connections:
-            if (tmp == r_post).any(): # the post index is in the list
-                tmp[tmp==r_post] = indices[number]
-        r = list(np.sort(tmp))
+        r = random.sample(pre_ranks, number)
         if len(r) == 0:
             continue
+        if not allow_self_connections:
+            if r_post in list(r): # the post index is in the list
+                r.remove(r_post)
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
@@ -376,9 +372,8 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     cdef CSR projection
     cdef double weight
     cdef int r_post, r_pre, size_pre
-    cdef np.ndarray indices, tmp
     cdef list pre_ranks, post_ranks
-    cdef list pre_r
+    cdef list pre_r, tmp
     cdef dict rk_mat
     cdef vector[int] r
     cdef vector[double] w, d
@@ -396,25 +391,22 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     # Create the projection data as CSR
     projection = CSR()
     
-    # Array to permute
-    indices = np.array(post_ranks)
 
     # Build the backward matrix
     rk_mat = {i: [] for i in post_ranks}
     for r_pre in pre_ranks:
-        indices = np.random.permutation(indices)
-        tmp = indices[:number]
+        tmp = random.sample(post_ranks, number)
         if not allow_self_connections:
-            if (tmp == r_pre).any(): # the post index is in the list
-                tmp[tmp==r_pre] = indices[number] # pick the next one
+            if r_pre in tmp: # the post index is in the list
+                tmp.remove(r_pre)
         for i in list(range(number)):
             rk_mat[tmp[i]].append(r_pre)
 
     # Create the dendrites
     for r_post in post_ranks:
         # List of pre ranks
-        r = sorted(rk_mat[r_post])
-        size_pre = len(rk_mat[r_post])
+        r = rk_mat[r_post]
+        size_pre = len(r)
         if size_pre == 0:
             continue
         # Weights
