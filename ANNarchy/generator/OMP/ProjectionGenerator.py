@@ -345,6 +345,7 @@ struct ProjStruct%(id_proj)s{
         pre_event_list = []
         learning = ""
         psp = ""; psp_bounds = ""
+
         for eq in proj.synapse.description['pre_spike']:
             if eq['name'] == 'w':
                 learning = """                    if(proj%(id_proj)s._learning){
@@ -364,7 +365,7 @@ struct ProjStruct%(id_proj)s{
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'op': "<" if key == 'min' else '>', 'val': value }
             else:
                 pre_event_list.append(eq['cpp'])
-        
+
         # Is the summation event-based or psp-based?
         event_based = True
         psp_sum = None
@@ -399,10 +400,10 @@ struct ProjStruct%(id_proj)s{
 
             
         # Other event-driven variables
-        if len(pre_event_list) > 0: # There are other variables to update than g_target
+        if len(pre_event_list) > 0 or learning != "": # There are other variables to update than g_target
             code = ""
             for eq in pre_event_list:
-                code += ' ' * 20 + eq % {'id_proj' : proj.id} + '\n'
+                code += ' ' * 20 + eq % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
 
             if event_based:
                 pre_event += """
