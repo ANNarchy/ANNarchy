@@ -552,7 +552,7 @@ def analyse_synapse(synapse):
                                       sep=pattern['proj_sep'],
                                       index=pattern['proj_index'],
                                       global_index=pattern['proj_globalindex'], 
-                                      split=False)
+                                      split=True)
             # Store the result
             variable['cpp'] = code # the C++ equation
 

@@ -422,13 +422,13 @@ def extract_pre_spike_variable(description, pattern):
     for var in process_equations(description['raw_pre_spike']):
         # Get its name
         name = var['name']
-        raw_eq = var['eq']
+        eq = var['eq']
 
         # Process the flags if any
         bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, raw_eq, description)
+        #eq, condition = extract_ite(name, raw_eq, description)
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq ,
@@ -444,13 +444,13 @@ def extract_post_spike_variable(description, pattern):
     for var in process_equations(description['raw_post_spike']):
         # Get its name
         name = var['name']
-        raw_eq = var['eq']
+        eq = var['eq']
 
         # Process the flags if any
         bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(name, raw_eq, description)
+        #eq, condition = extract_ite(name, raw_eq, description)
 
         post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : eq,
                                 'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
