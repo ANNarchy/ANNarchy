@@ -60,7 +60,7 @@ compile()
 # Simulation
 # ###########################################
 print 'Start simulation'
-P.start_record(['spike', 'v'])
+P.start_record(['spike'])
 simulate(simtime, measure_time=True)
 data = P.get_record()
 

@@ -671,7 +671,7 @@ class Population(object):
     ################################
     ## Recording
     ################################
-    def start_record(self, variable, period = None):
+    def start_record(self, variable, period = None, ranks='all'):
         """
         Start recording neural variables.
         
@@ -679,12 +679,16 @@ class Population(object):
             
             * **variable**: single variable name or list of variable names.  
 
-            * **period**: delay between two recording (default: dt).
+            * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable.
+
+            * **ranks**: list of ranks of the neurons to record (default: 'all').
 
         Example::
 
             pop1.start_record('r')
-            pop2.start_record(['mp', 'r'])      
+            pop2.start_record(['mp', 'r'], period=10.0)  
+            pop3.start_record(['spike'])    
+            pop4.start_record(['r'], ranks=range(10, 100))      
         """
         if not period:
             period = Global.config['dt']
@@ -706,7 +710,7 @@ class Population(object):
                 Global._error('start: ' + var, 'is not a recordable variable of the population.')
                 return
 
-            self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1], 'period': period}
+            self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1], 'period': period, 'ranks': ranks}
 
             try:
                 getattr(self.cyInstance, 'start_record_'+var)()

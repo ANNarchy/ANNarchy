@@ -96,7 +96,7 @@ compile()
 # ###########################################
 print 'Start simulation'
 if record:
-    P.start_record(['spike', 'v'])
+    P.start_record(['spike'])
 simulate(simtime, measure_time=True)
 if record:
     data = P.get_record()
