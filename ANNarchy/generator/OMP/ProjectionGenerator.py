@@ -348,10 +348,14 @@ struct ProjStruct%(id_proj)s{
 
         for eq in proj.synapse.description['pre_spike']:
             if eq['name'] == 'w':
+                bounds = ""                
+                for line in get_bounds(eq).splitlines():
+                    bounds += ' ' * 24 + line % ids + '\n'
                 learning = """                    if(proj%(id_proj)s._learning){
                         %(eq)s 
+%(bounds)s
                     }
-""" % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids}
+""" % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids, 'bounds': bounds % ids}
             elif eq['name'] == 'g_target':
                 psp = eq['cpp'].split('=')[1]
                 for key, val in eq['bounds'].items():
@@ -364,7 +368,7 @@ struct ProjStruct%(id_proj)s{
                     pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] = %(val)s;
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'op': "<" if key == 'min' else '>', 'val': value }
             else:
-                pre_event_list.append(eq['cpp'])
+                pre_event_list.append(eq)
 
         # Is the summation event-based or psp-based?
         event_based = True
@@ -403,7 +407,10 @@ struct ProjStruct%(id_proj)s{
         if len(pre_event_list) > 0 or learning != "": # There are other variables to update than g_target
             code = ""
             for eq in pre_event_list:
-                code += ' ' * 20 + eq % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
+                code += ' ' * 20 + eq['cpp'] % ids + '\n'
+                for line in get_bounds(eq).splitlines():
+                    code += ' ' * 20 + line % ids + '\n'
+
 
             if event_based:
                 pre_event += """
@@ -527,6 +534,8 @@ struct ProjStruct%(id_proj)s{
 """
         for eq in proj.synapse.description['post_spike']:
             post_code += ' ' * 16 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
+            for line in get_bounds(eq).splitlines():
+                post_code += ' ' * 16 + line % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
 
         # Generate the code
         if post_code != "":
@@ -1333,3 +1342,25 @@ cdef class proj%(id)s_wrapper :
         }
         
         return pruning
+
+######################################
+### Code generation
+######################################
+def get_bounds(param):
+    "Analyses the bounds of a variable and returns the corresponding code."
+    from ...parser.SingleAnalysis import pattern_omp as pattern
+    code = ""
+    # Min-Max bounds
+    for bound, val in param['bounds'].items():
+        if bound == "init":
+            continue
+
+        code += """if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+""" % {'obj': pattern['proj_prefix'],
+       'sep': pattern['proj_sep'],
+       'index': pattern['proj_index'],
+       'var' : param['name'], 'val' : val, 'id': id, 
+       'operator': '<' if bound=='min' else '>'
+       }
+    return code

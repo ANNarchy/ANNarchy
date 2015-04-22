@@ -51,7 +51,7 @@ data = pop.get_record()
 spikes = data['spike']['data'][0]
 v = data['v']['data'][0]
 w = data['w']['data'][0]
-if spikes.any():
+if len(spikes)>0:
     v[spikes] = 20.0
 
 # Plot the activity

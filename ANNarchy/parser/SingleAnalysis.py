@@ -556,6 +556,31 @@ def analyse_synapse(synapse):
             # Store the result
             variable['cpp'] = code # the C++ equation
 
+            # Process the bounds
+            if 'min' in variable['bounds'].keys():
+                if isinstance(variable['bounds']['min'], str):
+                    translator = Equation(variable['name'], variable['bounds']['min'], 
+                                          description, 
+                                          type = 'return',
+                                          untouched = untouched.keys(),
+                                          prefix=pattern['proj_prefix'],
+                                          sep=pattern['proj_sep'],
+                                          index=pattern['proj_index'],
+                                          global_index=pattern['proj_globalindex'])
+                    variable['bounds']['min'] = translator.parse().replace(';', '')
+                    
+            if 'max' in variable['bounds'].keys():
+                if isinstance(variable['bounds']['max'], str):
+                    translator = Equation(variable['name'], variable['bounds']['max'], 
+                                          description, 
+                                          type = 'return',
+                                          untouched = untouched.keys(),
+                                          prefix=pattern['proj_prefix'],
+                                          sep=pattern['proj_sep'],
+                                          index=pattern['proj_index'],
+                                          global_index=pattern['proj_globalindex'])
+                    variable['bounds']['max'] = translator.parse().replace(';', '')
+
     # Structural plasticity
     if synapse.pruning:
         description['pruning'] = extract_structural_plasticity(synapse.pruning, description, pattern)
