@@ -3,11 +3,11 @@ from time import time
 from pylab import *
 
 # ###########################################
-# Ćonfiguration
+# Configuration
 # ###########################################
 setup(dt=0.1)
 record = True
-plot = true
+plot_all = True
 
 # ###########################################
 # Parameters
@@ -96,7 +96,7 @@ compile()
 # ###########################################
 print 'Start simulation'
 if record:
-    P.start_record(['spike'])
+    P.start_record('spike', ranks=range(Nrec))
 simulate(simtime, measure_time=True)
 if record:
     data = P.get_record()
@@ -106,14 +106,13 @@ if record:
 # ###########################################
 if record:
     spikes = raster_plot(data['spike'])
-    print 'Mean firing rate:', len(spikes)/float(N)*1000./simtime, 'Hz'
-    if plot:
+    print 'Mean firing rate:', len(spikes)/float(Nrec)*1000./simtime, 'Hz'
+    if plot_all:
         plot(0.1*spikes[:, 0], spikes[:, 1], '.')
-        ylim(0, Nrec)
         show()
 
 # Histogram of the weights after learning
-if plot:
+if plot_all:
     weights=[]
     for i in xrange(Nrec):
         ws = ee.dendrite(i).w

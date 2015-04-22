@@ -30,7 +30,7 @@ import sys
 # Configuration
 # ###########################################
 record = True
-plot = True
+plot_all = True
 
 N_vp      = 1     # number of virtual processes to use
 base_seed = 10000  # increase in intervals of at least 2*n_vp+1
@@ -167,12 +167,12 @@ if record:
     N_rec_local_E = sum(nest.GetStatus(nodes_E[:N_rec], 'local'))
     rate_ex= events[0]/simtime*1000.0/N_rec_local_E
     print("Excitatory rate   : %.2f Hz" % rate_ex)
-    if plot:
+    if plot_all:
         nest.raster_plot.from_device(spikes, hist=True)
         pylab.show()
 
 # weights of excitatory connections
-if plot:
+if plot_all:
   w = nest.GetStatus(nest.GetConnections(nodes_E[:N_rec],
     synapse_model='excitatory-plastic'),
     'weight')

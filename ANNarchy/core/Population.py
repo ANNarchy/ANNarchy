@@ -704,6 +704,9 @@ class Population(object):
         # set period and offset
         self.cyInstance.set_record_period( int(period/Global.config['dt']), Global.get_current_step() )
 
+        # set ranks
+        self.cyInstance.set_record_ranks( [-1] if ranks=='all' else ranks )
+
         # start recording of variables
         for var in _variable:
             if not var in self.variables + ['spike']:
@@ -895,7 +898,8 @@ class Population(object):
                     'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
                     'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
                     'data' : np.array(var_data).T if not var == 'spike' else var_data,
-                    'period' : self.recorded_variables[var]['period']
+                    'period' : self.recorded_variables[var]['period'],
+                    'ranks' : self.recorded_variables[var]['ranks']
                 }
             else:
                 if not var == 'spike':
@@ -906,7 +910,8 @@ class Population(object):
                         'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
                         'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
                         'data' : np.transpose(mat1, tuple( range(1, self.dimension+1)+[0])),
-                        'period' : self.recorded_variables[var]['period']
+                        'period' : self.recorded_variables[var]['period'],
+                        'ranks' : self.recorded_variables[var]['ranks']
                         }
                 else:
                     Global._error("reshape=true is invalid for get_record('spike')")

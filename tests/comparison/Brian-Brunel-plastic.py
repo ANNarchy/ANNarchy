@@ -9,7 +9,7 @@ set_global_preferences(usecodegen=True)
 #set_global_preferences(openmp=True)
 
 record = True
-plot = True
+plot_all = True
 
 # ###########################################
 # Network parameters
@@ -110,7 +110,7 @@ if record:
 # ###########################################
 # Make plots
 # ###########################################
-if plot:
+if plot_all:
     if record:
         raster_plot(sm, ms=2.)
         show()

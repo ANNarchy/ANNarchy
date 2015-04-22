@@ -61,6 +61,7 @@ struct PopStruct%(id)s{
     // Record parameter
     int record_period;
     long int record_offset;
+    std::vector<int> record_ranks;
 """
 
         # Parameters
@@ -281,9 +282,6 @@ struct PopStruct%(id)s{
                 %(omp_critical_code)s
                 {
                     pop%(id)s.spiked.push_back(i);
-                    if(pop%(id)s.record_spike){
-                        pop%(id)s.recorded_spike[i].push_back(t);
-                    }
                 }
                 pop%(id)s.last_spike[i] = t;
                 %(refrac_inc)s
@@ -401,6 +399,7 @@ struct PopStruct%(id)s{
     pop%(id)s._active = true;
     pop%(id)s.record_period = 1;
     pop%(id)s.record_offset = 0;
+    pop%(id)s.record_ranks = std::vector<int>(1, -1);
 """ % {'id': pop.id}
 
         # Is it a specific population?
@@ -455,9 +454,7 @@ struct PopStruct%(id)s{
     // Spiking neuron
     pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
     pop%(id)s.record_spike = false;
-    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
-    for(int i = 0; i < pop%(id)s.size; i++)
-        pop%(id)s.recorded_spike.push_back(std::vector<long int>());
+    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
@@ -506,10 +503,46 @@ struct PopStruct%(id)s{
 
         code = ""
         for var in pop.neuron_type.description['variables']:
-            code += """
-    if(pop%(id)s.record_%(name)s && ( (t - pop%(id)s.record_offset) %(mod)s pop%(id)s.record_period == 0 ) )
-        pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
+            if var['name'] in pop.neuron_type.description['local']:
+                code += """
+    if(pop%(id)s.record_%(name)s && ( (t - pop%(id)s.record_offset) %(mod)s pop%(id)s.record_period == 0 ) ){
+        if(pop%(id)s.record_ranks[0]==-1){ // Record everything
+            pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
+        }
+        else{
+            std::vector<%(type)s> tmp = std::vector<%(type)s>();
+            for(int i=0; i<pop%(id)s.record_ranks.size(); i++){
+                tmp.push_back(pop%(id)s.%(name)s[pop%(id)s.record_ranks[i]]);
+            }
+            pop%(id)s.recorded_%(name)s.push_back(tmp) ;
+            tmp.clear();
+        }
+    }
 """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name'], 'mod': '%' }
+            else:
+                code += """
+    if(pop%(id)s.record_%(name)s && ( (t - pop%(id)s.record_offset) %(mod)s pop%(id)s.record_period == 0 ) ){
+        pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
+    }
+""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name'], 'mod': '%' }
+
+        # Special case for spike
+        if pop.neuron_type.type == 'spike':
+            code += """
+    // Recording spikes
+    if(pop%(id)s.record_spike){
+        for(int i=0; i<pop%(id)s.spiked.size(); i++){
+            if(pop%(id)s.record_ranks[0]==-1){ // Record everything
+                pop%(id)s.recorded_spike[pop%(id)s.spiked[i]].push_back(t);
+            }
+            else{
+                if(std::find(pop%(id)s.record_ranks.begin(), pop%(id)s.record_ranks.end(), pop%(id)s.spiked[i]) != pop%(id)s.record_ranks.end()){
+                    pop%(id)s.recorded_spike[pop%(id)s.spiked[i]].push_back(t);
+                }
+            }
+        }
+    }
+""" % {'id': pop.id}
 
         return code
 
@@ -613,6 +646,7 @@ struct PopStruct%(id)s{
         # Record parameter
         long int record_offset
         int record_period
+        vector[int] record_ranks
 """
 
         # Parameters
@@ -715,6 +749,8 @@ cdef class pop%(id)s_wrapper :
     cpdef set_record_period( self, int period, long int t ):
         pop%(id)s.record_period = period
         pop%(id)s.record_offset = t
+    cpdef set_record_ranks( self, list ranks ):
+        pop%(id)s.record_ranks = ranks
 """ % {'id': pop.id}
 
         # Parameters
