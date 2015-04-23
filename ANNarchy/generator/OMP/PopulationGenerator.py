@@ -795,11 +795,12 @@ cdef class pop%(id)s_wrapper :
     def stop_record_%(name)s(self):
         pop%(id)s.record_%(name)s = False
     def get_record_%(name)s(self):
-        cdef vector[vector[%(type)s]] tmp = pop%(id)s.recorded_%(name)s
-        for i in xrange(tmp.size()):
+        return pop%(id)s.recorded_%(name)s
+    def clear_record_%(name)s(self):
+        cdef int i
+        for i in xrange(pop%(id)s.recorded_%(name)s.size()):
             pop%(id)s.recorded_%(name)s[i].clear()
         pop%(id)s.recorded_%(name)s.clear()
-        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -814,9 +815,9 @@ cdef class pop%(id)s_wrapper :
     def stop_record_%(name)s(self):
         pop%(id)s.record_%(name)s = False
     def get_record_%(name)s(self):
-        cdef vector[%(type)s] tmp = pop%(id)s.recorded_%(name)s
+        return pop%(id)s.recorded_%(name)s
+    def clear_record_%(name)s(self):
         pop%(id)s.recorded_%(name)s.clear()
-        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
         return code

@@ -389,6 +389,10 @@ clean:
         if Global.config['num_threads'] > 1:
             cython_module.set_number_threads(Global.config['num_threads'])
 
+        # Start the monitors
+        for monitor in Global._monitors:
+            monitor._init_monitoring()
+
     def code_generation(self, cpp_stand_alone, profile_enabled, clean):
         """ Code generation dependent on paradigm """
         if Global.config['paradigm'] == "openmp":

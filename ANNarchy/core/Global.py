@@ -26,12 +26,13 @@ import time
 from math import ceil
 import numpy as np
 
-# Dictionaries of  instances
+# Dictionaries of instances
 _populations = []       # created populations
 _projections = []       # created projections
 _functions = []         # created functions
 _neurons = []           # created neurons
 _synapses = []          # created synapses
+_monitors = []          # created monitors
 
 # Global Cython instance
 _network = None
@@ -326,13 +327,30 @@ def disable_learning(projections=None):
 ## Time
 ################################
 def get_time():
-    return _network.get_time()/config['dt']
+    try:
+        t = _network.get_time()/config['dt']
+    except:
+        t = 0.0
+    return t
+
 def set_time(t):
-    return _network.set_time(int(t*config['dt']))
+    try:
+        _network.set_time(int(t*config['dt']))
+    except:
+        _warning('Time can only be set when the network is compiled.')
 def get_current_step():
-    return _network.get_time()
+    try:
+        t = _network.get_time()
+    except:
+        t = 0
+    return t
+
 def set_current_step(t):
-    return _network.set_time(int(t))
+    try:
+        _network.set_time(int(t))
+    except:
+        _warning('Time can only be set when the network is compiled.')
+
 def dt():
     return config['dt']
 

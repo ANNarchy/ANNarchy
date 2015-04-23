@@ -885,6 +885,7 @@ class Population(object):
         
             try:
                 var_data = getattr(self.cyInstance, 'get_record_'+var)()
+                getattr(self.cyInstance, 'clear_record_'+name)()
             except:
                 Global._error('get: ' + var + 'is not a recordable variable.')
                 return {}
