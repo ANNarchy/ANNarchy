@@ -62,6 +62,38 @@ extern std::mt19937  rng;
  */
 %(proj_ptr)s
 
+
+/*
+ * Recorders
+ *
+ */
+class PopulationRecorder
+{
+public:
+    PopulationRecorder(std::vector<int> ranks, int period, long int offset){
+        this->ranks = ranks;
+        this->period = period;
+        this->offset = offset;
+        if(this->ranks.size() ==1 && this->ranks[0]==-1) // All neurons should be recorded
+            this->partial = false;
+        else
+            this->partial = true;
+    };
+
+    virtual void record() {std::cout << "recording" << std::endl;};
+
+    // Attributes
+    bool partial;
+    std::vector<int> ranks;
+    int period;
+    long int offset;
+
+};
+%(pop_record_classes)s
+
+extern std::vector<PopulationRecorder*> recorders;
+void addRecorder(PopulationRecorder* recorder);
+
 /*
  * Simulation methods
  *

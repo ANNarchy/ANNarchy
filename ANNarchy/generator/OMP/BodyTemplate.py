@@ -9,6 +9,7 @@ body_template = '''
 double dt;
 long int t;
 std::mt19937  rng;
+std::vector<PopulationRecorder*> recorders;
 
 // Populations
 %(pop_ptr)s
@@ -18,6 +19,11 @@ std::mt19937  rng;
 
 // Global operations
 %(glops_def)s
+
+// Recorders 
+void addRecorder(PopulationRecorder* recorder){
+    recorders.push_back(recorder);
+}
 
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
@@ -113,7 +119,9 @@ void step()
     ////////////////////////////////
     // Recording
     ////////////////////////////////
-%(record)s
+    for(int i=0; i < recorders.size(); i++){
+        recorders[i]->record();
+    }
 
     ////////////////////////////////
     // Increase internal time

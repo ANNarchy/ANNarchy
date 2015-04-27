@@ -21,11 +21,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-import ANNarchy.core.Global as Global
+import Global
 
-from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core.Random import RandomDistribution
-from ANNarchy.core.Neuron import IndividualNeuron
+from .PopulationView import PopulationView
+from .Random import RandomDistribution
+from .Neuron import IndividualNeuron
 
 import numpy as np
 import copy, inspect
@@ -296,7 +296,7 @@ class Population(object):
         }
 
         # Recorded variables
-        self.recorded_variables = {}
+        self._monitor = None
         
     def _instantiate(self, module):
         # Create the Cython instance 
@@ -690,36 +690,11 @@ class Population(object):
             pop3.start_record(['spike'])    
             pop4.start_record(['r'], ranks=range(10, 100))      
         """
-        if not period:
-            period = Global.config['dt']
-        _variable = []
-        
-        if isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
+        from .Record import Monitor
+        if ranks == 'all':
+            self._monitor = Monitor(self, variable, period=period)
         else:
-            print('Error: variable must be either a string or list of strings.')
-        
-        # set period and offset
-        self.cyInstance.set_record_period( int(period/Global.config['dt']), Global.get_current_step() )
-
-        # set ranks
-        self.cyInstance.set_record_ranks( [-1] if ranks=='all' else ranks )
-
-        # start recording of variables
-        for var in _variable:
-            if not var in self.variables + ['spike']:
-                Global._error('start: ' + var, 'is not a recordable variable of the population.')
-                return
-
-            self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1], 'period': period, 'ranks': ranks}
-
-            try:
-                getattr(self.cyInstance, 'start_record_'+var)()
-            except:
-                Global._error(var + 'is not a recordable variable.')
-                return
+            self._monitor = Monitor(PopulationView(self, ranks), variable, period=period)
 
     def stop_record(self, variable=None):
         """
@@ -734,28 +709,9 @@ class Population(object):
             pop1.stop_record('r')
             pop2.stop_record(['mp', 'r'])  
         """
-        _variable = []
-        if variable == None:
-            _variable = list(self.recorded_variables.keys())
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')       
-        
-        for var in _variable:
-            if not var in self.recorded_variables.keys():
-                Global._warning(var, 'was not recording.')
-                continue
-            try:
-                getattr(self.cyInstance, 'stop_record_'+var)()
-            except:
-                Global._error('stop: ' + var + 'is not a recordable variable.')
-                return
-
-        for var in _variable:
-            del self.recorded_variables[var]
+        if self._monitor:
+            self._monitor.stop()
+            self._monitor = None
 
     def pause_record(self, variable=None):
         """
@@ -770,34 +726,8 @@ class Population(object):
             pop1.pause_record('r')
             pop2.pause_record(['mp', 'r'])  
         """
-        _variable = []
-        if variable == None:
-            _variable = self.recorded_variables
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')       
-        
-        for var in _variable:
-            if not var in self.recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
-                continue
-            
-            try:
-                getattr(self.cyInstance, 'stop_record_'+var)()
-
-            except:
-                Global._error('pause: ' + var + 'is not a recordable variable.')
-                return
-
-            self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
-            self.recorded_variables[var]['start'].append(-1)
-            self.recorded_variables[var]['stop'].append(-1)
-
-            if Global.config['verbose']:
-                print('pause record of', var, '(', self.name, ')')
+        if self._monitor:
+            self._monitor.pause()
 
     def resume_record(self, variable=None):
         """
@@ -812,36 +742,8 @@ class Population(object):
             pop1.resume_record('r')
             pop2.resume_record(['mp', 'r'])        
         """
-        _variable = []
-        
-        if variable == None:
-            _variable = self.recorded_variables
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')
-        
-        for var in _variable:
-            if not var in self.recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
-                continue
-            
-            # set period and offset
-            self.cyInstance.set_record_period( int(self.recorded_variables[var]['period']/Global.config['dt']), Global.get_current_step() )
-
-            try:
-                getattr(self.cyInstance, 'start_record_'+var)()
-
-            except:
-                Global._error('resume: ' + var + 'is not a recordable variable.')
-                return
-
-            self.recorded_variables[var]['start'][-1] = Global.get_current_step()
-            
-            if Global.config['verbose']:
-                Global._print('resume record of', var, '(' , self.name, ')')
+        if self._monitor:
+            self._monitor.resume()
 
     def get_record(self, variable=None, reshape=False):
         """
@@ -862,64 +764,44 @@ class Population(object):
         * **variable**: single variable name or list of variable names. If no argument provided, all currently recorded data are returned.  
         * **reshape**: by default this functions returns the data as a 2D matrix (number of neurons * time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
-        
-        _variable = []
-        if variable == None:
-            _variable = list(self.recorded_variables.keys())
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
+        if variable:
+            if not isinstance(variable, list):
+                variables = [variable]
+            else:
+                variables = variable
         else:
-            print('Error: variable must be either a string or list of strings.')
+            variables = self._monitor.variables
+
+        if self._monitor:
+            var_data = self._monitor.get(variables, force_dict=True)
+            var_times = self._monitor.times(variables)
+        else:
+            return {}
 
         data = {}
-
-        for var in _variable:
-            if not var in self.variables + ['spike']:
-                Global._warning(var, 'is not a recordable variable of the population.')
-                continue
-            if not var in self.recorded_variables.keys():
-                Global._warning(var, 'was not recording.')
-                continue
         
-            try:
-                var_data = getattr(self.cyInstance, 'get_record_'+var)()
-                getattr(self.cyInstance, 'clear_record_'+name)()
-            except:
-                Global._error('get: ' + var + 'is not a recordable variable.')
-                return {}
-
-            if self.recorded_variables[var]['stop'][-1] == -1:
-                self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
-
-
+        for var in variables: 
             if not reshape:
                 data[var] = {
-                    'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
-                    'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
-                    'data' : np.array(var_data).T if not var == 'spike' else var_data,
-                    'period' : self.recorded_variables[var]['period'],
-                    'ranks' : self.recorded_variables[var]['ranks']
+                    'start': var_times[var]['start'] if len(var_times[var]['start']) >1 else var_times[var]['start'][0],
+                    'stop' : var_times[var]['stop'] if len(var_times[var]['stop']) >1 else var_times[var]['stop'][0] ,
+                    'data' : np.array(var_data[var]).T if not var == 'spike' else var_data[var].values(),
+                    'period' : self._monitor.period,
+                    'ranks' : self._monitor.ranks
                 }
             else:
                 if not var == 'spike':
-                    var_data = np.array(var_data)
                     mat1 = var_data.reshape((var_data.shape[0],)+self.geometry)
-
                     data[var] = {
-                        'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
-                        'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
+                        'start': var_times[var]['start'] if len(var_times[var]['start']) >1 else var_times[var]['start'][0],
+                        'stop' : var_times[var]['stop'] if len(var_times[var]['stop']) >1 else var_times[var]['stop'][0] ,
                         'data' : np.transpose(mat1, tuple( range(1, self.dimension+1)+[0])),
-                        'period' : self.recorded_variables[var]['period'],
-                        'ranks' : self.recorded_variables[var]['ranks']
+                        'period' : self._monitor.period,
+                        'ranks' : self._monitor.ranks
                         }
                 else:
                     Global._error("reshape=true is invalid for get_record('spike')")
-
-
-            self.recorded_variables[var]['start'] = [Global.get_current_step()]
-            self.recorded_variables[var]['stop'] = [-1]
+                    exit(0)
 
         return data
 

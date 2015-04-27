@@ -90,10 +90,6 @@ struct PopStruct%(id)s{
     int size;
     bool _active;
 
-    // Record parameter
-    int record_period;
-    long int record_offset;
-
     // Global parameter cut
     double  cut ;
 
@@ -105,8 +101,6 @@ struct PopStruct%(id)s{
 
     // Local variable r
     std::vector< double > r ;
-    std::vector< std::vector< double > > recorded_r ;
-    bool record_r ;
 
     // Store the last spike
     std::vector< long int > last_spike;
@@ -178,10 +172,6 @@ struct PopStruct%(id)s{
     int size;
     bool _active;
 
-    // Record parameter
-    int record_period;
-    long int record_offset;
-
     // Global parameter window
     double  window ;
 
@@ -193,8 +183,6 @@ struct PopStruct%(id)s{
 
     // Local variable r
     std::vector< double > r ;
-    std::vector< std::vector< double > > recorded_r ;
-    bool record_r ;
 
     // Store the last spikes
     std::vector< std::vector<long int> > last_spikes;
@@ -262,10 +250,6 @@ struct PopStruct%(id)s{
     // Number of neurons
     int size;
     bool _active;
-
-    // Record parameter
-    int record_period;
-    long int record_offset;
 
     // Local parameter window
     double  window ;
@@ -407,9 +391,6 @@ class Rate2SpikePopulation(Population):
                 #pragma omp critical
                 {
                     pop%(id)s.spiked.push_back(i);
-                    if(pop%(id)s.record_spike){
-                        pop%(id)s.recorded_spike[i].push_back(t);
-                    }
                 }
                 pop%(id)s.last_spike[i] = t;
                 pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];

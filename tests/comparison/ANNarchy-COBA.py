@@ -74,7 +74,6 @@ compile()
 P.start_record('spike')
 simulate(duration, measure_time=True)
 data = P.get_record()
-P.stop_record()
 
 
 # ###########################################
@@ -83,9 +82,8 @@ P.stop_record()
 spikes = raster_plot(data['spike'])
 print 'Number of spikes:', len(spikes)
 
-#print data['spike']['data'][0]
-# from pylab import *
-# plot(0.1*spikes[:, 0], spikes[:, 1], '.k')
-# xlabel('Time (ms)')
-# ylabel('Neuron index')
-# show()
+from pylab import *
+plot(0.1*spikes[:, 0], spikes[:, 1], '.k')
+xlabel('Time (ms)')
+ylabel('Neuron index')
+show()

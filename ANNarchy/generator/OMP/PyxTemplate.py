@@ -15,6 +15,15 @@ cdef extern from "ANNarchy.h":
 %(pop_struct)s
 %(proj_struct)s
 
+    # Monitors
+    cdef cppclass PopulationRecorder:
+        PopulationRecorder(vector[int], int, long) except +
+        vector[int] ranks
+        int period
+        long offset
+
+    void addRecorder(PopulationRecorder*)
+%(pop_monitor_struct)s
 
     # Instances
 %(pop_ptr)s
@@ -44,11 +53,31 @@ cdef extern from "ANNarchy.h":
 # Projection wrappers
 %(proj_class)s
 
+# Monitor wrappers
+cdef class PopulationRecorder_wrapper:
+    cdef PopulationRecorder *thisptr
+    def __cinit__(self, list ranks, int period, long offset):
+        pass
+    property ranks:
+        def __get__(self): return self.thisptr.ranks
+        def __set__(self, val): self.thisptr.ranks = val
+    property period:
+        def __get__(self): return self.thisptr.period
+        def __set__(self, val): self.thisptr.period = val
+    property offset:
+        def __get__(self): return self.thisptr.offset
+        def __set__(self, val): self.thisptr.offset = val
+
+def add_recorder(PopulationRecorder_wrapper recorder):
+    addRecorder(recorder.thisptr)
+
+%(pop_monitor_wrapper)s
+
 # Initialize the network
 def pyx_create(double dt, long seed):
     initialize(dt, seed)
 
-# Simulation for the given numer of steps
+# Simulation for the given number of steps
 def pyx_run(int nb_steps):
     cdef int nb, rest
     if nb_steps < 1000:

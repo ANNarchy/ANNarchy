@@ -68,7 +68,7 @@ data = P.get_record()
 # Data analysis
 # ###########################################
 spikes = raster_plot(data['spike'])
-print 'Mean firing rate:', len(spikes)/float(N)*1000./simtime, 'Hz'
+print 'Mean firing rate:', len(spikes)/float(Nrec)*1000./simtime, 'Hz'
 from pylab import *
 plot(0.1*spikes[:, 0], spikes[:, 1], '.')
 show()

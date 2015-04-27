@@ -86,6 +86,9 @@ class OMPGenerator(object):
         # Include OMP
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
+        # Population recorders
+        pop_record_classes = self.header_recorder_classes()
+
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
@@ -93,7 +96,8 @@ class OMPGenerator(object):
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
             'custom_func': custom_func,
-            'include_omp': include_omp
+            'include_omp': include_omp,
+            'pop_record_classes': pop_record_classes
         }
 
     def header_struct_pop(self):
@@ -131,6 +135,13 @@ class OMPGenerator(object):
         from ANNarchy.parser.Extraction import extract_functions
         for func in Global._functions:
             code +=  extract_functions(func, local_global=True)[0]['cpp'] + '\n'
+
+        return code
+
+    def header_recorder_classes(self):
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.recorder_class(pop)  
 
         return code
 
@@ -192,9 +203,6 @@ class OMPGenerator(object):
         # Structural plasticity
         structural_plasticity = self.body_structural_plasticity()
 
-        # Record
-        record = self.body_record()
-
         # Early stopping
         run_until = self.body_run_until()
 
@@ -229,7 +237,6 @@ class OMPGenerator(object):
             'globalops_init' : globalops_init,
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
-            'record' : record,
             'set_number_threads' : number_threads,
             'prof_include': prof_include,
             'prof_init': prof_init,
@@ -455,18 +462,25 @@ class OMPGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.pyx_struct_proj()
 
+        # struct declaration for each monitor
+        pop_monitor_struct = self.pyx_struct_pop_monitor()
+
         # Cython wrappers for the populations
         pop_class = self.pyx_wrapper_pop()
 
         # Cython wrappers for the projections
         proj_class = self.pyx_wrapper_proj()
 
+        # Cython wrappers for the monitors
+        pop_monitor_class = self.pyx_wrapper_pop_monitor()
+
 
         from .PyxTemplate import pyx_template
         return pyx_template % {
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
-            'pop_class' : pop_class, 'proj_class': proj_class
+            'pop_class' : pop_class, 'proj_class': proj_class,
+            'pop_monitor_struct': pop_monitor_struct, 'pop_monitor_wrapper': pop_monitor_class
         }
 
     def pyx_struct_pop(self):
@@ -496,6 +510,12 @@ class OMPGenerator(object):
 }
         return proj_struct, proj_ptr
 
+    def pyx_struct_pop_monitor(self):
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.pyx_monitor_struct(pop)
+        return code
+
     def pyx_wrapper_pop(self):
         # Cython wrappers for the populations
         code = ""
@@ -508,4 +528,11 @@ class OMPGenerator(object):
         code = ""
         for proj in self.projections:
             code += self.projgen.pyx_wrapper(proj)
+        return code
+
+    def pyx_wrapper_pop_monitor(self):
+        # Cython wrappers for the populations monitors
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.pyx_monitor_wrapper(pop)
         return code

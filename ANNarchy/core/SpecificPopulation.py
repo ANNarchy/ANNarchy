@@ -172,16 +172,10 @@ struct PopStruct%(id)s{
     int size;
     bool _active;
 
-    // Record parameter
-    int record_period;
-    long int record_offset;
-
     // Spiking population
     std::deque< std::vector<int> > _delayed_spike;
     std::vector<long int> last_spike;
     std::vector<int> spiked;
-    bool record_spike;
-    std::vector<std::vector<long> > recorded_spike;
 
     // Local parameter spike_times
     std::vector< std::vector< double > > spike_times ;
@@ -198,10 +192,6 @@ struct PopStruct%(id)s{
             pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][0];  
     }
     pop%(id)s.idx_next_spike = std::vector<int>(pop%(id)s.size, 0);
-    pop%(id)s.record_spike = false;
-    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
-    for(int i = 0; i < pop%(id)s.size; i++)
-        pop%(id)s.recorded_spike.push_back(std::vector<long int>());
 """
 
         self.generator['omp']['body_delay_init'] = """
@@ -220,9 +210,6 @@ struct PopStruct%(id)s{
                 if(pop%(id)s.idx_next_spike[i] < pop%(id)s.spike_times[i].size())
                     pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][pop%(id)s.idx_next_spike[i]];
                 pop%(id)s.spiked.push_back(i);
-                if(pop%(id)s.record_spike){
-                    pop%(id)s.recorded_spike[i].push_back(t);
-                }
             }
         }
     }
@@ -231,13 +218,6 @@ struct PopStruct%(id)s{
     cdef struct PopStruct%(id)s :
         int size
         bool _active
-
-        # Record parameter
-        int record_period
-        long int record_offset
-
-        bool record_spike
-        vector[vector[long]] recorded_spike
 
         # Local parameter spike_times
         vector[vector[double]] spike_times 
@@ -254,22 +234,6 @@ cdef class pop%(id)s_wrapper :
 
     def activate(self, bool val):
         pop%(id)s._active = val
-
-    # Spiking neuron
-    def start_record_spike(self):
-        pop%(id)s.record_spike = True
-    def stop_record_spike(self):
-        pop%(id)s.record_spike = False
-    def get_record_spike(self):
-        cdef vector[vector[long]] tmp = pop%(id)s.recorded_spike
-        for i in xrange(self.size):
-            pop%(id)s.recorded_spike[i].clear()
-        return tmp
-
-    # Record parameter
-    cpdef set_record_period( self, int period, long int t ):
-        pop%(id)s.record_period = period
-        pop%(id)s.record_offset = t
 
     # Local parameter spike_times
     cpdef get_spike_times(self):
