@@ -176,11 +176,7 @@ public:
         this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
                 recording_code += """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            cudaMemcpy(pop%(id)s.gpu_%(name)s, pop%(id)s.%(name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            for(int i=0; i<pop%(id)s.size; i++){
-                std::cout << pop%(id)s.%(name)s[i] << " " ;
-            }
-            std::cout << std::endl;
+            cudaMemcpy(pop%(id)s.%(name)s.data(), pop%(id)s.gpu_%(name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
             if(!this->partial)
                 this->%(name)s.push_back(pop%(id)s.%(name)s); 
             else{

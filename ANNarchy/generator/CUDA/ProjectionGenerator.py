@@ -169,7 +169,7 @@ public:
         this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
                 recording_code += """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+            //this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
         }""" % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
