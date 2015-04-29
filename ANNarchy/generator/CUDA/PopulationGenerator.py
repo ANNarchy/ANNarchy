@@ -234,7 +234,7 @@ public:
 
         return tpl_code % {'id': pop.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 
-        
+
 #######################################################################
 ############## BODY ###################################################
 #######################################################################
@@ -742,3 +742,60 @@ cdef class pop%(id)s_wrapper :
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
         return code
+        
+    def pyx_monitor_struct(self, pop):
+        tpl_code = """
+    # Population %(id)s (%(name)s) : Monitor
+    cdef cppclass PopRecorder%(id)s (Monitor):
+        PopRecorder%(id)s(vector[int], int, long) except +    
+"""
+        for var in pop.neuron_type.description['variables']:
+            if var['name'] in pop.neuron_type.description['local']:
+                tpl_code += """
+        vector[vector[%(type)s]] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+            elif var['name'] in pop.neuron_type.description['global']:
+                tpl_code += """
+        vector[%(type)s] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+
+        if pop.neuron_type.type == 'spike':
+                tpl_code += """
+        map[int, vector[long]] spike
+        bool record_spike""" 
+
+        return tpl_code % {'id' : pop.id, 'name': pop.name}
+
+    def pyx_monitor_wrapper(self, pop):
+        tpl_code = """
+# Population Monitor wrapper
+cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
+    def __cinit__(self, list ranks, int period, long offset):
+        self.thisptr = new PopRecorder%(id)s(ranks, period, offset)
+"""
+
+        for var in pop.neuron_type.description['variables']:
+            tpl_code += """
+    property %(name)s:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).%(name)s = val 
+    property record_%(name)s:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_%(name)s
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_%(name)s = val 
+    def clear_%(name)s(self):
+        (<PopRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : pop.id, 'name': var['name']}
+
+        if pop.neuron_type.type == 'spike':
+            tpl_code += """
+    property spike:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).spike
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).spike = val 
+    property record_spike:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_spike
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val 
+    def clear_spike(self):
+        (<PopRecorder%(id)s *>self.thisptr).spike.clear()""" % {'id' : pop.id}
+
+
+        return tpl_code % {'id' : pop.id, 'name': pop.name}
+

@@ -677,3 +677,47 @@ cdef class proj%(id)s_wrapper :
             Global._error('structural plasticity is not supported yet on CUDA ...')
 
         return code
+
+#######################################################################
+############## Recording ##############################################
+#######################################################################
+
+    def pyx_monitor_struct(self, proj):
+        tpl_code = """
+    # Projection %(id)s : Monitor
+    cdef cppclass ProjRecorder%(id)s (Monitor):
+        ProjRecorder%(id)s(vector[int], int, long) except +    
+"""
+        for var in proj.synapse.description['variables']:
+            if var['name'] in proj.synapse.description['local']:
+                tpl_code += """
+        vector[vector[%(type)s]] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+            elif var['name'] in proj.synapse.description['global']:
+                tpl_code += """
+        vector[%(type)s] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+
+
+        return tpl_code % {'id' : proj.id}
+
+    def pyx_monitor_wrapper(self, proj):
+        tpl_code = """
+# Projection Monitor wrapper
+cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
+    def __cinit__(self, list ranks, int period, long offset):
+        self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
+"""
+
+        for var in proj.synapse.description['variables']:
+            tpl_code += """
+    property %(name)s:
+        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val 
+    property record_%(name)s:
+        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s = val 
+    def clear_%(name)s(self):
+        (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : proj.id, 'name': var['name']}
+
+        return tpl_code % {'id' : proj.id}

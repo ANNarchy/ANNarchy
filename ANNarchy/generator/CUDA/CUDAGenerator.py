@@ -158,7 +158,7 @@ class CUDAGenerator(object):
             code += self.projgen.recorder_class(proj)  
 
         return code
-        
+
 #######################################################################
 ############## BODY ###################################################
 #######################################################################
@@ -489,11 +489,17 @@ class CUDAGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.pyx_struct_proj()
 
+        # struct declaration for each monitor
+        monitor_struct = self.pyx_struct_monitor()
+
         # Cython wrappers for the populations
         pop_class = self.pyx_wrapper_pop()
 
         # Cython wrappers for the projections
         proj_class = self.pyx_wrapper_proj()
+
+        # Cython wrappers for the monitors
+        monitor_class = self.pyx_wrapper_monitor()
 
 
         from .PyxTemplate import pyx_template
@@ -543,7 +549,24 @@ class CUDAGenerator(object):
         for proj in self.projections:
             code += self.projgen.pyx_wrapper(proj)
         return code
+        
+    # Monitors
+    def pyx_struct_monitor(self):
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.pyx_monitor_struct(pop)
+        for proj in self.projections:
+            code += self.projgen.pyx_monitor_struct(proj)
+        return code
 
+    def pyx_wrapper_monitor(self):
+        # Cython wrappers for the populations monitors
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.pyx_monitor_wrapper(pop)
+        for proj in self.projections:
+            code += self.projgen.pyx_monitor_wrapper(proj)
+        return code
 
 #######################################################################
 ############## HOST - DEVICE ##########################################

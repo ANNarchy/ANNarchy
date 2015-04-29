@@ -395,18 +395,6 @@ class OMPGenerator(object):
             code += self.popgen.update_globalops(pop)
         return code
 
-    def body_record(self):
-        code = ""
-        # Populations
-        for pop in self.populations:
-           code += self.popgen.record(pop)
-
-        # Projections
-        for proj in self.projections:
-           code += self.projgen.record(proj)
-
-        return code
-
     def body_run_until(self):
         # Check if it is useful to generate anything at all
         for pop in self.populations:
@@ -512,14 +500,6 @@ class OMPGenerator(object):
 }
         return proj_struct, proj_ptr
 
-    def pyx_struct_monitor(self):
-        code = ""
-        for pop in self.populations:
-            code += self.popgen.pyx_monitor_struct(pop)
-        for proj in self.projections:
-            code += self.projgen.pyx_monitor_struct(proj)
-        return code
-
     def pyx_wrapper_pop(self):
         # Cython wrappers for the populations
         code = ""
@@ -532,6 +512,15 @@ class OMPGenerator(object):
         code = ""
         for proj in self.projections:
             code += self.projgen.pyx_wrapper(proj)
+        return code
+
+    # Monitors
+    def pyx_struct_monitor(self):
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.pyx_monitor_struct(pop)
+        for proj in self.projections:
+            code += self.projgen.pyx_monitor_struct(proj)
         return code
 
     def pyx_wrapper_monitor(self):
