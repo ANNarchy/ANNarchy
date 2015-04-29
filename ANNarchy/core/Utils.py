@@ -5,7 +5,10 @@ import ANNarchy.core.Global as Global
 # Plotting methods
 ######################
 def raster_plot(data):
-    """ Transforms recorded spikes to display easily a raster plot for a spiking population.
+    """ 
+    **Deprecated!!**
+
+    Transforms recorded spikes to display easily a raster plot for a spiking population.
 
     It returns a (N, 2) Numpy array where each spike (first index) is represented by the corresponding time (first column) and the neuron index (second column).  It can be very easily plotted, for example with matplotlib::
 
@@ -19,12 +22,15 @@ def raster_plot(data):
 
     * **data**: the dictionary returned by the get_record() method for the population. 
     """
+    Global._warning("raster_plot() is deprecated, use a Monitor instead.")
     import ANNarchy.core.cython_ext.Transformations as Transformations
     return Transformations.raster_plot(data['data'])
     #return np.array([ [t, neuron] for neuron in range(len(data['data'])) for t in data['data'][neuron] ] )
 
 def histogram(data, binsize=Global.config['dt']):
     """
+    **Deprecated!!**
+
     Returns for each recorded simulation step the number of spikes occuring in the population.
 
     *Parameters*:
@@ -32,6 +38,7 @@ def histogram(data, binsize=Global.config['dt']):
     * **data**: the dictionary returned by the get_record() method for the population. 
     * **binsize**: the duration in milliseconds where spikes are averaged (default: dt). 
     """
+    Global._warning("histogram() is deprecated, use a Monitor instead.")
     if isinstance(data['start'], int): # only one recording
         duration = data['stop'] - data['start']
     else:
@@ -48,7 +55,10 @@ def histogram(data, binsize=Global.config['dt']):
     return np.array(spikes)
 
 def smoothed_rate(data, smooth=0.0):
-    """ Takes the recorded spikes of a population and returns a smoothed firing rate.
+    """ 
+    **Deprecated!!**
+
+    Takes the recorded spikes of a population and returns a smoothed firing rate.
 
     *Parameters*:
 
@@ -56,11 +66,15 @@ def smoothed_rate(data, smooth=0.0):
 
     * **smooth**: the smoothing time constant (default: 0 ms, not smoothed)
     """
+    Global._warning("smoothed_rate() is deprecated, use a Monitor instead.")
     import ANNarchy.core.cython_ext.Transformations as Transformations
     return Transformations.smoothed_rate(data, smooth)
 
 def population_rate(data, smooth=Global.config['dt']):
-    """ Takes the recorded spikes of a population and returns a smoothed firing rate for the whole population.
+    """ 
+    **Deprecated!!**
+
+    Takes the recorded spikes of a population and returns a smoothed firing rate for the whole population.
 
     *Parameters*:
 
@@ -68,6 +82,7 @@ def population_rate(data, smooth=Global.config['dt']):
 
     * **smooth**: the smoothing time constant (default: dt)
     """
+    Global._warning("population_rate() is deprecated, use a Monitor instead.")
     import ANNarchy.core.cython_ext.Transformations as Transformations
     return Transformations.population_rate(data, smooth)
 

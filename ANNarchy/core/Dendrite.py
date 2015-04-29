@@ -267,6 +267,8 @@ class Dendrite(object):
     #########################   
     def start_record(self, variable, period=None):
         """
+        **Deprecated!!**
+
         Starts recording the given variables.
         
         **Parameter**:
@@ -275,167 +277,63 @@ class Dendrite(object):
 
         * period of recording in milliseconds.     
         """
-        if not period:
-            period = Global.config['dt']
+        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
+        self.proj.recorded_variables[self.post_rank] = Monitor(self, variable, period)
 
-        _variable = []
-        
-        if isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            Global._error('variable must be either a string or list of strings.')
-        
-        for var in _variable:            
-            try:
-                getattr(self.proj.cyInstance, 'start_record_'+var)(self.idx, int(period/Global.config['dt']), Global.get_current_step())
-                    
-            except :
-                Global._error('start: '+ var + ' is not a recordable variable.')
-
-
-            if not self.post_rank in self.proj.recorded_variables.keys():
-                self.proj.recorded_variables[self.post_rank] = {}
-            
-            self.proj.recorded_variables[self.post_rank][var]= {'start': [Global.get_current_step()], 'stop': [-1], 'period': period}
-
-            if Global.config['verbose']:
-                print('start recording of', var, '(', self.proj.name, ')')
 
     def stop_record(self, variable=None):
         """
+        **Deprecated!!**
+
         Stops recording the defined variables.
 
         *Parameter*:
             
         * **variable**: single variable name or list of variable names. If no argument is provided all recordings will stop.
         """
-        _variable = []
-        if variable == None:
-            _variable = self.proj.recorded_variables[self.post_rank].keys() 
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            Global._error('variable must be either a string or list of strings.'  )     
-        
-        for var in _variable:            
-            try:
-                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.idx)
-
-            except:
-                Global._error('stop: ' + var + ' is not a recordable variable.')
-
-            del self.proj.recorded_variables[self.post_rank][var]
+        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
+        self.proj.recorded_variables[self.post_rank].stop(variable)
 
     def pause_record(self, variable=None):
         """
+        **Deprecated!!**
+
         Pause in recording the defined variables.
 
         *Parameter*:
             
         * **variable**: single variable name or list of variable names. If no argument is provided all records will stop.
         """
-        _variable = []
-        if variable == None:
-            _variable = self.proj.recorded_variables[self.post_rank].keys() 
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            Global._error('variable must be either a string or list of strings.')       
-        
-        for var in _variable:
-            try:
-                getattr(self.proj.cyInstance, 'stop_record_'+var)(self.idx)
-            except:
-                Global._error('pause: ' + var + ' is not a recordable variable.')
-                return
-
-            self.proj.recorded_variables[self.post_rank][var]['stop'][-1] = Global.get_current_step()
-            self.proj.recorded_variables[self.post_rank][var]['start'].append(-1)
-            self.proj.recorded_variables[self.post_rank][var]['stop'].append(-1)
+        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
+        self.proj.recorded_variables[self.post_rank].pause(variable)
 
     def resume_record(self, variable=None):
         """
+        **Deprecated!!**
+
         Resume recording the previous defined variables.
         
         *Parameter*:
             
         * **variable**: single variable name or list of variable names.        
         """
-        _variable = []
-        
-        if variable == None:
-            _variable = self.proj.recorded_variables[self.post_rank].keys() 
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            Global._error('variable must be either a string or list of strings.')
-        
-        for var in _variable:            
-            try:
-                getattr(self.proj.cyInstance, 'start_record_'+var)(self.idx, int(self.proj.recorded_variables[self.post_rank][var]['period']/Global.config['dt']), Global.get_current_step())
-            except:
-                Global._error('resume:: ' + var + ' is not a recordable variable.')
-                return
-
-            self.proj.recorded_variables[self.post_rank][var]['start'][-1] = Global.get_current_step()
+        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
+        self.proj.recorded_variables[self.post_rank].resume(variable)
                 
     def get_record(self, variable=None):
         """
+        **Deprecated!!**
+        
         Returns the recorded data as one matrix or a dictionary if more then one variable is requested. 
         The first dimension is the neuron index, the last dimension represents the number of simulation steps.
         
         *Parameter*:
             
         * **variable**: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
-        """        
-        _variable = []
-        if variable == None:
-            _variable = self.proj.recorded_variables[self.post_rank].keys() 
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            Global._error('variable must be either a string or list of strings.')
+        """ 
+        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
         
-        data_dict = {}
-        
-        for var in _variable:
-            if not var in self.proj.recorded_variables[self.post_rank]:
-                Global._warning(var, 'was not recording.')
-                continue
-
-            try:                    
-                data = getattr(self.proj.cyInstance, 'get_recorded_'+var)(self.idx)
-            except Exception as e:
-                Global._error('get: ' + var + ' is not a recordable variable.')
-                return
-
-            if self.proj.recorded_variables[self.post_rank][var]['stop'][-1] == -1:
-                self.proj.recorded_variables[self.post_rank][var]['stop'][-1] = Global.get_current_step()
-
-
-            data_dict[var] = {  
-                'start': self.proj.recorded_variables[self.post_rank][var]['start'] \
-                        if len(self.proj.recorded_variables[self.post_rank][var]['start']) > 1 \
-                        else self.proj.recorded_variables[self.post_rank][var]['start'][0],
-                'stop' : self.proj.recorded_variables[self.post_rank][var]['stop'] \
-                        if len(self.proj.recorded_variables[self.post_rank][var]['stop']) > 1 \
-                        else self.proj.recorded_variables[self.post_rank][var]['stop'][0] ,
-                'data' : data,
-                'period': self.proj.recorded_variables[self.post_rank][var]['period']
-            }
-
-            self.proj.recorded_variables[self.post_rank][var]['start'] = [Global.get_current_step()]
-            self.proj.recorded_variables[self.post_rank][var]['stop'] = [-1]
+        data_dict = self.proj.recorded_variables[self.post_rank].get(variable)
             
         return data_dict          
     

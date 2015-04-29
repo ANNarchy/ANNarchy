@@ -372,11 +372,13 @@ class Rate2SpikePopulation(Population):
         )
 
         omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+        omp_critical = "#pragma omp critical" if Global.config['num_threads'] > 1 else ""
 
         # Generate the code
         self.generator['omp']['body_update_neuron'] = """ 
     // Updating the local variables of population %(id)s (Rate2SpikePopulation)
     if(pop%(id)s._active){
+        pop%(id)s.spiked.clear();
         %(omp_code)s
         for(int i = 0; i < pop%(id)s.size; i++){
 
@@ -388,7 +390,7 @@ class Rate2SpikePopulation(Population):
                 pop%(id)s.refractory_remaining[i]--;
             }
             else if(pop%(id)s.rates[i] > pop%(id)s.rand_0[i]*1000.0/dt){
-                #pragma omp critical
+                %(omp_critical)s
                 {
                     pop%(id)s.spiked.push_back(i);
                 }
@@ -397,5 +399,5 @@ class Rate2SpikePopulation(Population):
             }
         }
     }
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical}
 

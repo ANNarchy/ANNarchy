@@ -9,7 +9,7 @@ body_template = '''
 double dt;
 long int t;
 std::mt19937  rng;
-std::vector<PopulationRecorder*> recorders;
+std::vector<Monitor*> recorders;
 
 // Populations
 %(pop_ptr)s
@@ -21,8 +21,16 @@ std::vector<PopulationRecorder*> recorders;
 %(glops_def)s
 
 // Recorders 
-void addRecorder(PopulationRecorder* recorder){
+void addRecorder(Monitor* recorder){
     recorders.push_back(recorder);
+}
+void removeRecorder(Monitor* recorder){
+    for(int i=0; i<recorders.size(); i++){
+        if(recorders[i] == recorder){
+            recorders.erase(recorders.begin()+i);
+            break;
+        }
+    }
 }
 
 // Simulate the network for the given number of steps

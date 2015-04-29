@@ -52,19 +52,18 @@ compile()
 # ###########################################
 # Simulate
 # ###########################################
-P.start_record('spike')
+m = Monitor(P, ['spike'])
 simulate(1000.0, measure_time=True)
-data = P.get_record()
-P.stop_record()
+data = m.get()
 
 # ###########################################
 # Make plots
 # ###########################################
-spikes = raster_plot(data['spike'])
-print('Mean firing rate in the population: ' + str(len(spikes) / 4000.) + 'Hz')
+t, n = m.raster_plot(data['spike'])
+print('Mean firing rate in the population: ' + str(len(t) / 4000.) + 'Hz')
 
 from pylab import *
-plot(dt*spikes[:, 0], spikes[:, 1], '.k', markersize=0.5)
+plot(t, n, '.', markersize=0.5)
 xlabel('Time (ms)')
 ylabel('# neuron')
 show()

@@ -64,7 +64,7 @@ pop.V = -50.0
 
 compile()
 
-pop.start_record(['spike', 'V', 'n', 'm', 'h'])
+m = Monitor(pop, ['spike', 'V', 'n', 'm', 'h'])
 
 # Preparation
 simulate(100.0)
@@ -75,25 +75,25 @@ simulate(1.0)
 pop.I = 0.0
 simulate(100.0)
 
-data = pop.get_record()
+data = m.get()
 
 tstart = int(90.0/dt)
 tstop  = int(120.0/dt)
 
 from pylab import *
 subplot(2,2,1)
-plot(90.0 + dt*np.arange(tstop-tstart), data['V']['data'][0, tstart:tstop])
+plot(90.0 + dt*np.arange(tstop-tstart), data['V'][tstart:tstop, 0])
 title('V')
 subplot(2,2,2)
-plot(90.0 + dt*np.arange(tstop-tstart), data['n']['data'][0, tstart:tstop])
+plot(90.0 + dt*np.arange(tstop-tstart), data['n'][tstart:tstop, 0])
 title('n')
 ylim((0.0, 1.0))
 subplot(2,2,3)
-plot(90.0 + dt*np.arange(tstop-tstart), data['m']['data'][0, tstart:tstop])
+plot(90.0 + dt*np.arange(tstop-tstart), data['m'][tstart:tstop, 0])
 title('m')
 ylim((0.0, 1.0))
 subplot(2,2,4)
-plot(90.0 + dt*np.arange(tstop-tstart), data['h']['data'][0, tstart:tstop])
+plot(90.0 + dt*np.arange(tstop-tstart), data['h'][tstart:tstop, 0])
 title('h')
 ylim((0.0, 1.0))
 show()

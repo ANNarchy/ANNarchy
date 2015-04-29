@@ -673,6 +673,8 @@ class Population(object):
     ################################
     def start_record(self, variable, period = None, ranks='all'):
         """
+        **Deprecated!!**
+        
         Start recording neural variables.
         
         Parameter:
@@ -690,31 +692,32 @@ class Population(object):
             pop3.start_record(['spike'])    
             pop4.start_record(['r'], ranks=range(10, 100))      
         """
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         from .Record import Monitor
         if ranks == 'all':
             self._monitor = Monitor(self, variable, period=period)
         else:
             self._monitor = Monitor(PopulationView(self, ranks), variable, period=period)
 
-    def stop_record(self, variable=None):
+    def stop_record(self):
         """
-        Stops recording the previously defined variables.
+        **Deprecated!!**
 
-        Parameter:
-            
-        * **variable**: single variable name or list of variable names. If no argument is provided, all recordings will stop.
+        Stops recording all the previously defined variables.
 
         Example::
 
-            pop1.stop_record('r')
-            pop2.stop_record(['mp', 'r'])  
+            pop1.stop_record()
         """
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if self._monitor:
             self._monitor.stop()
             self._monitor = None
 
     def pause_record(self, variable=None):
         """
+        **Deprecated!!**
+
         Pauses the recording of variables (can be resumed later with resume_record()).
 
         *Parameter*:
@@ -726,11 +729,14 @@ class Population(object):
             pop1.pause_record('r')
             pop2.pause_record(['mp', 'r'])  
         """
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if self._monitor:
-            self._monitor.pause()
+            self._monitor.pause(variable)
 
     def resume_record(self, variable=None):
         """
+        **Deprecated!!**
+
         Resume recording the previous defined variables.
         
         *Parameter*:
@@ -742,11 +748,14 @@ class Population(object):
             pop1.resume_record('r')
             pop2.resume_record(['mp', 'r'])        
         """
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if self._monitor:
-            self._monitor.resume()
+            self._monitor.resume(variable)
 
     def get_record(self, variable=None, reshape=False):
         """
+        **Deprecated!!**
+
         Returns the recorded data as a nested dictionary. The first key corresponds to the variable name if several were recorded.
 
         The second keys correspond to:
@@ -764,6 +773,7 @@ class Population(object):
         * **variable**: single variable name or list of variable names. If no argument provided, all currently recorded data are returned.  
         * **reshape**: by default this functions returns the data as a 2D matrix (number of neurons * time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if variable:
             if not isinstance(variable, list):
                 variables = [variable]
@@ -779,7 +789,7 @@ class Population(object):
             return {}
 
         data = {}
-        
+
         for var in variables: 
             if not reshape:
                 data[var] = {

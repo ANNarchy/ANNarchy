@@ -143,11 +143,11 @@ struct PopStruct%(id)s{
 
     def recorder_class(self, pop):
         tpl_code = """
-class PopRecorder%(id)s : public PopulationRecorder
+class PopRecorder%(id)s : public Monitor
 {
 public:
     PopRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : PopulationRecorder(ranks, period, offset)
+        : Monitor(ranks, period, offset)
     {
 %(init_code)s
     };
@@ -788,7 +788,7 @@ cdef class pop%(id)s_wrapper :
     def pyx_monitor_struct(self, pop):
         tpl_code = """
     # Population %(id)s (%(name)s) : Monitor
-    cdef cppclass PopRecorder%(id)s (PopulationRecorder):
+    cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, long) except +    
 """
         for var in pop.neuron_type.description['variables']:
@@ -811,7 +811,7 @@ cdef class pop%(id)s_wrapper :
     def pyx_monitor_wrapper(self, pop):
         tpl_code = """
 # Population Monitor wrapper
-cdef class PopRecorder%(id)s_wrapper(PopulationRecorder_wrapper):
+cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
     def __cinit__(self, list ranks, int period, long offset):
         self.thisptr = new PopRecorder%(id)s(ranks, period, offset)
 """

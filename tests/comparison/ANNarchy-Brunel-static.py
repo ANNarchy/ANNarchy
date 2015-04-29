@@ -60,15 +60,14 @@ compile()
 # Simulation
 # ###########################################
 print 'Start simulation'
-P.start_record(['spike'], ranks=range(Nrec))
+m = Monitor(P[:Nrec], 'spike')
 simulate(simtime, measure_time=True)
-data = P.get_record()
 
 # ###########################################
 # Data analysis
 # ###########################################
-spikes = raster_plot(data['spike'])
-print 'Mean firing rate:', len(spikes)/float(Nrec)*1000./simtime, 'Hz'
+t, n = m.raster_plot()
+print 'Mean firing rate:', len(t)/float(Nrec)*1000./simtime, 'Hz'
 from pylab import *
-plot(0.1*spikes[:, 0], spikes[:, 1], '.')
+plot(t, n, '.')
 show()

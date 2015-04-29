@@ -96,19 +96,19 @@ compile()
 # ###########################################
 print 'Start simulation'
 if record:
-    P.start_record('spike', ranks=range(Nrec))
+    m = Monitor(P[:Nrec], 'spike')
 simulate(simtime, measure_time=True)
 if record:
-    data = P.get_record()
+    data = m.get()
 
 # ###########################################
 # Data analysis
 # ###########################################
 if record:
-    spikes = raster_plot(data['spike'])
-    print 'Mean firing rate:', len(spikes)/float(Nrec)*1000./simtime, 'Hz'
+    t, n = m.raster_plot(data['spike'])
+    print 'Mean firing rate:', len(t)/float(Nrec)*1000./simtime, 'Hz'
     if plot_all:
-        plot(0.1*spikes[:, 0], spikes[:, 1], '.')
+        plot(t, n, '.')
         show()
 
 # Histogram of the weights after learning

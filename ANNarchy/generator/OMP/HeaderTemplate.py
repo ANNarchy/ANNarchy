@@ -67,10 +67,10 @@ extern std::mt19937  rng;
  * Recorders
  *
  */
-class PopulationRecorder
+class Monitor
 {
 public:
-    PopulationRecorder(std::vector<int> ranks, int period, long int offset){
+    Monitor(std::vector<int> ranks, int period, long int offset){
         this->ranks = ranks;
         this->period = period;
         this->offset = offset;
@@ -89,10 +89,11 @@ public:
     long int offset;
 
 };
-%(pop_record_classes)s
+%(record_classes)s
 
-extern std::vector<PopulationRecorder*> recorders;
-void addRecorder(PopulationRecorder* recorder);
+extern std::vector<Monitor*> recorders;
+void addRecorder(Monitor* recorder);
+void removeRecorder(Monitor* recorder);
 
 /*
  * Simulation methods

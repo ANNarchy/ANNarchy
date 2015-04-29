@@ -24,6 +24,7 @@
 from . import Global
 from .Population import Population
 from .PopulationView import PopulationView
+from .Dendrite import Dendrite
 
 import numpy as np
 
@@ -49,7 +50,6 @@ class Monitor(object):
             m = Monitor(pop1, ['v', 'spike'], period=10.0, ranks=range(:100))
 
         """
-
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
 
@@ -85,7 +85,7 @@ class Monitor(object):
         if isinstance(self.object, (Population, PopulationView)):
             self._start_population()
         elif isinstance(self.object, Dendrite):
-            _error('Recording projections is not implemented yet')
+            self._start_dendrite()
 
     def _start_population(self):
         "Creates the C++ object and starts the recording for a population."
@@ -97,6 +97,23 @@ class Monitor(object):
 
         # Create the wrapper
         self.cyInstance = getattr(Global._network, 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, int(self.period/Global.config['dt']), Global.get_current_step())
+        Global._network.add_recorder(self.cyInstance)
+
+        for var in self.variables:
+            self._add_variable(var)
+
+        # Start recordings if enabled
+        if self._start:
+            self.start()
+
+    def _start_dendrite(self):
+        "Creates the C++ object and starts the recording for a dendrite."
+
+        self.ranks = self.object.post_rank
+        self.idx = self.object.idx
+
+        # Create the wrapper
+        self.cyInstance = getattr(Global._network, 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], int(self.period/Global.config['dt']), Global.get_current_step())
         Global._network.add_recorder(self.cyInstance)
 
         for var in self.variables:
@@ -158,14 +175,17 @@ class Monitor(object):
 
     def stop(self):
         "Stops the recordings."
-        # Start recording the variables
+        # Stop and clear the variables
         for var in self.variables:
             try:
                 setattr(self.cyInstance, 'record_'+var, False)
+                getattr(self.cyInstance, 'clear_'+var)()
             except:
                 Global._warning('Monitor:' + var + 'can not be recorded.')
         self.variables = []
         self._recorded_variables = {}
+        Global._network.remove_recorder(self.cyInstance)
+        self.cyInstance = None
 
 
     def get(self, variables=None, keep=False, force_dict=False):
@@ -174,7 +194,7 @@ class Monitor(object):
 
         If a single variable name is provided, the recorded values for this variable are directly returned. If a list is provided or the argument left empty, a dictionary with all recorded variables is returned. 
 
-        The ``spike`` variable of a population will be returned as a list of lists, where the ranks of the neurons which fired at each step are returned.
+        The ``spike`` variable of a population will be returned as a dictionary of lists, where the spike times (in steps) for each recorded neurons are returned.
 
         *Parameters*:
         
@@ -187,14 +207,14 @@ class Monitor(object):
             if isinstance(self.object, (Population, PopulationView)):
                 return self._get_population(self.object, name, keep)
             elif isinstance(self.object, Dendrite):
-                _error('Recording projections is not implemented yet')
-                exit(0)
+                return self._get_dendrite(self.object, name, keep)
 
         if variables:
             if not isinstance(variables, list):
                 variables = [variables]
         else:
             variables = self.variables
+            force_dict = True
 
         data = {}
         for var in variables:
@@ -212,6 +232,27 @@ class Monitor(object):
         else:
             return data
 
+
+    def _get_population(self, pop, name, keep):   
+        try: 
+            data = getattr(self.cyInstance, name)
+            if not keep:
+                getattr(self.cyInstance, 'clear_' + name)()
+        except:
+            data = []
+        if name is not 'spike':
+            return np.array(data)
+        else:
+            return data
+
+    def _get_dendrite(self, proj, name, keep):   
+        try: 
+            data = getattr(self.cyInstance, name)
+            if not keep:
+                getattr(self.cyInstance, 'clear_' + name)()
+        except:
+            data = []
+        return np.array(data)
 
     def times(self, variables=None):
         """ Returns the start and stop times of the recorded variables.
@@ -233,15 +274,236 @@ class Monitor(object):
             t[var] = copy.deepcopy(self._recorded_variables[var])
         return t
 
+    ###############################
+    ### Spike visualisation stuff
+    ###############################
 
-    def _get_population(self, pop, name, keep):   
-        try: 
-            data = getattr(self.cyInstance, name)
-            if not keep:
-                getattr(self.cyInstance, 'clear_' + name)()
-        except:
-            data = []
-        if name is not 'spike':
-            return np.array(data)
+    def raster_plot(self, spikes=None):
+        """ Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
+        
+        *Parameters*:
+        
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+
+        Example::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            spike_times, spike_ranks = m.raster_plot()
+            plot(spike_times, spike_ranks, '.')
+
+        or::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            spikes = m.get('spike')
+            spike_times, spike_ranks = m.raster_plot(spikes)
+            plot(spike_times, spike_ranks, '.')
+
+        """
+        times = []; ranks=[]
+        if not 'spike' in self.variables:
+            Global._error('Monitor: spike was not recorded')
+            exit(0)
+
+        # Get data
+        if not spikes:
+            data = self.get('spike')
         else:
-            return data
+            if 'spike' in spikes.keys():
+                data = spikes['spike']
+            else:
+                data = spikes
+
+        # Compute raster
+        for n in data.keys():
+            for t in data[n]:
+                times.append(t)
+                ranks.append(n)
+
+        return Global.dt()* np.array(times), np.array(ranks)
+
+    def histogram(self, spikes=None, bins=None):
+        """ Returns a histogram for the recorded spikes in the population.
+        
+        *Parameters*:
+        
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+
+        * **bins**: the bin size in ms (default: dt).
+
+        Example::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            histo = m.histogram()
+            plot(histo)
+
+        or::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            spikes = m.get('spike')
+            histo = m.histogram(spikes)
+            plot(histo)
+
+        """
+        if not 'spike' in self.variables:
+            Global._error('Monitor: spike was not recorded')
+            exit(0)
+
+        # Get data
+        if not spikes:
+            data = self.get('spike')
+        else:
+            if 'spike' in spikes.keys():
+                data = spikes['spike']
+            else:
+                data = spikes
+
+        if not bins:
+            bins =  Global.config['dt']
+
+        # Compute the duration of the recordings
+        duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
+        
+        # Number of neurons
+        nb_neurons = self.object.size
+
+        # Number of bins
+        nb_bins = int(duration*Global.config['dt']/bins)
+        
+        # Initialize histogram
+        histo = [0 for t in xrange(nb_bins)]
+    
+        # Compute histogram
+        for neuron in range(nb_neurons):
+            for t in data[neuron]:
+                histo[int(t/float(bins/Global.config['dt']))] += 1
+    
+        return np.array(histo)
+
+    def mean_fr(self, spikes=None, bins=None):
+        """ Computes the mean firing rate in the population during the recordings.
+        
+        *Parameters*:
+        
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+
+        Example::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            fr = m.mean_fr()
+
+        or::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            spikes = m.get('spike')
+            fr = m.mean_fr(spikes)
+
+        """
+        if not 'spike' in self.variables:
+            Global._error('Monitor: spike was not recorded')
+            exit(0)
+
+        # Get data
+        if not spikes:
+            data = self.get('spike')
+        else:
+            if 'spike' in spikes.keys():
+                data = spikes['spike']
+            else:
+                data = spikes
+
+        # Compute the duration of the recordings
+        duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
+        
+        # Number of neurons
+        nb_neurons = self.object.size
+
+        # Compute fr
+        fr = 0
+        for neuron in range(nb_neurons):
+            fr += len(data[neuron])
+    
+        return fr/float(nb_neurons)/duration/Global.dt()*1000.0
+
+
+
+    def smoothed_rate(self, spikes=None, smooth=0.):
+        """ Computes the smoothed firing rate of the recorded spiking neurons.
+        
+        *Parameters*:
+        
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+
+        Example::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            r = m.smoothed_rate(smooth=100.)
+
+        """
+        if not 'spike' in self.variables:
+            Global._error('Monitor: spike was not recorded')
+            exit(0)
+
+        # Get data
+        if not spikes:
+            data = self.get('spike')
+        else:
+            if 'spike' in spikes.keys():
+                data = spikes['spike']
+            else:
+                data = spikes
+
+        import ANNarchy.core.cython_ext.Transformations as Transformations
+        return Transformations.smoothed_rate(
+            {
+                'data': data.values(), 
+                'start': self._recorded_variables['spike']['start'][-1], 
+                'stop': self._recorded_variables['spike']['stop'][-1]
+            }, 
+            smooth
+        )
+
+    def population_rate(self, spikes=None, smooth=0.):
+        """ Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
+        
+        This method is fatser than calling ``smoothed_rate`` and averaging.
+
+        *Parameters*:
+        
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+
+        Example::
+
+            m = Monitor(P[:1000], 'spike')
+            simulate(1000.0)
+            r = m.population_rate(smooth=100.)
+
+        """
+        if not 'spike' in self.variables:
+            Global._error('Monitor: spike was not recorded')
+            exit(0)
+
+        # Get data
+        if not spikes:
+            data = self.get('spike')
+        else:
+            if 'spike' in spikes.keys():
+                data = spikes['spike']
+            else:
+                data = spikes
+
+        import ANNarchy.core.cython_ext.Transformations as Transformations
+        return Transformations.population_rate(
+            {
+                'data': data.values(), 
+                'start': self._recorded_variables['spike']['start'][-1], 
+                'stop': self._recorded_variables['spike']['stop'][-1]
+            }, 
+            smooth
+        )
