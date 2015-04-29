@@ -138,7 +138,54 @@ struct ProjStruct%(id_proj)s{
 """ 
         return code % {'id_proj': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
 
+    def recorder_class(self, proj):
+        tpl_code = """
+class ProjRecorder%(id)s : public Monitor
+{
+public:
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
+        : Monitor(ranks, period, offset)
+    {
+%(init_code)s
+    };
+    virtual void record() {
+%(recording_code)s
+    };
+%(struct_code)s
+};
+""" 
+        init_code = ""
+        recording_code = ""
+        struct_code = ""
 
+        for var in proj.synapse.description['variables']:
+            if var['name'] in proj.synapse.description['local']:
+                struct_code += """
+    // Local variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
+                init_code += """
+        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
+                recording_code += """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+        }""" % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+
+            elif var['name'] in proj.synapse.description['global']:
+                struct_code += """
+    // Global variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
+                init_code += """
+        this->%(name)s = std::vector< %(type)s >();
+        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
+                recording_code += """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            // Do something
+        } """ % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+        
+        return tpl_code % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 
 #######################################################################
 ############## BODY ###################################################
