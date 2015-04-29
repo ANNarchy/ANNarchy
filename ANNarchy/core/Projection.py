@@ -32,77 +32,6 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.Report import _process_random
 
-# Template for specific population bypassing code generation.
-# The id of the population should be let free with %(id)s
-proj_generator_template = {
-    'omp': {
-        # C++ struct to encapsulate all data
-        # Example:
-        # struct ProjStruct%(id_proj)s{
-        #     // Number of dendrites
-        #     int size;
-        #     // Connectivity
-        #     std::vector<int> post_rank ;
-        #     std::vector< std::vector< int > > pre_rank ;
-        #     std::vector< std::vector< int > > delay ;
-        #    
-        #     // Local parameter w
-        #     std::vector< std::vector< double > > w ;
-        # }; 
-        'header_proj_struct' : None,
-
-        # Initilaize the projection
-        # Example:
-        # 
-        #    TODO:
-        'body_proj_init': None,
-
-        # Updates the random numbers
-        # Example:
-        #   TODO
-        'body_random_dist_update': None,
-
-        # Initializes the random numbers
-        # Example:
-        #   TODO
-        'body_random_dist_init': None,
-
-        # Updates the synapse variables
-        # Example:
-        # 
-        #    TODO:
-        'body_update_synapse': None,
-
-        # compute the postsynaptic potential
-        # Example:
-        # 
-        #    TODO:
-        'body_compute_psp': None,
-        
-        # Export of the C++ struct to Cython (must have an indent of 4)
-        # Example:
-        # 
-        #    TODO:
-        'pyx_proj_struct': None,
-        
-        # Wrapper class in Cython (no indentation)
-        # Example:
-        # 
-        #    TODO:
-        'pyx_proj_class': None,
-    },
-    'cuda': {
-        'header_proj_struct' : None,
-        'body_proj_init': None,
-        'body_random_dist_update': None,
-        'body_random_dist_init': None,
-        'body_update_synapse': None,
-        'body_compute_psp': None,
-        'pyx_proj_struct': None,
-        'pyx_proj_class': None,
-    }
-}
-
 class Projection(object):
     """
     Represents all synapses of the same type between two populations.
@@ -161,6 +90,7 @@ class Projection(object):
             self.synapse = copy.deepcopy(synapse)
 
         self.synapse._analyse()
+        from ANNarchy.generator.Templates import proj_generator_template
         self.generator = copy.deepcopy(proj_generator_template)
 
         # Create a default name

@@ -1,4 +1,5 @@
-from ANNarchy.core.Population import Population, pop_generator_template
+from ANNarchy.core.Population import Population
+from ANNarchy.generator.Templates import pop_generator_template
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 import numpy as np
