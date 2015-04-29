@@ -21,7 +21,6 @@
     
 """
 import ANNarchy.core.Global as Global
-
 import numpy as np
 
 class Dendrite(object):
@@ -271,54 +270,43 @@ class Dendrite(object):
 
         Starts recording the given variables.
         
-        **Parameter**:
+        *Parameter*:
             
         * **variable**: single variable name or list of variable names.   
 
-        * period of recording in milliseconds.     
+        * **period**:  period of recording in milliseconds.     
         """
         Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
+        from .Record import Monitor
         self.proj.recorded_variables[self.post_rank] = Monitor(self, variable, period)
 
 
-    def stop_record(self, variable=None):
+    def stop_record(self):
         """
         **Deprecated!!**
 
         Stops recording the defined variables.
-
-        *Parameter*:
-            
-        * **variable**: single variable name or list of variable names. If no argument is provided all recordings will stop.
         """
         Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-        self.proj.recorded_variables[self.post_rank].stop(variable)
+        self.proj.recorded_variables[self.post_rank].stop()
 
-    def pause_record(self, variable=None):
+    def pause_record(self):
         """
         **Deprecated!!**
 
         Pause in recording the defined variables.
-
-        *Parameter*:
-            
-        * **variable**: single variable name or list of variable names. If no argument is provided all records will stop.
         """
         Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-        self.proj.recorded_variables[self.post_rank].pause(variable)
+        self.proj.recorded_variables[self.post_rank].pause()
 
-    def resume_record(self, variable=None):
+    def resume_record(self):
         """
         **Deprecated!!**
 
-        Resume recording the previous defined variables.
-        
-        *Parameter*:
-            
-        * **variable**: single variable name or list of variable names.        
+        Resume recording the previous defined variables.       
         """
         Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-        self.proj.recorded_variables[self.post_rank].resume(variable)
+        self.proj.recorded_variables[self.post_rank].resume()
                 
     def get_record(self, variable=None):
         """
@@ -329,7 +317,7 @@ class Dendrite(object):
         
         *Parameter*:
             
-        * **variable**: single variable name or list of variable names. If no argument provided, the remaining recorded data is returned.  
+        * **variable**: single variable name or list of variable names. If no argument provided, all recorded data is returned.  
         """ 
         Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
         

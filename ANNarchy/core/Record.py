@@ -52,6 +52,7 @@ class Monitor(object):
         """
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
+        self.cyInstance = None
 
         # Variables to record
         if not isinstance(variables, list):
@@ -61,9 +62,9 @@ class Monitor(object):
 
         # Period
         if not period:
-            self.period = Global.config['dt']
+            self._period = Global.config['dt']
         else:
-            self.period = float(period)
+            self._period = float(period)
 
         # Start
         self._start = start
@@ -73,6 +74,20 @@ class Monitor(object):
         Global._monitors.append(self)
         if Global._compiled: # Already compiled
             self._init_monitoring()
+
+    # Extend the period attribute
+    @property 
+    def period(self):
+        if not self.cyInstance:
+            return self._period
+        else:
+            return self.cyInstance.period * Global.config['dt']
+    @period.setter
+    def period(self, val):
+        if not self.cyInstance:
+            self._period = val
+        else:
+            self.cyInstance.period = int(val/Global.config['dt'])
 
     def _add_variable(self, var):
         if not var in self.variables:
@@ -96,7 +111,7 @@ class Monitor(object):
             self.ranks = [-1]
 
         # Create the wrapper
-        self.cyInstance = getattr(Global._network, 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, int(self.period/Global.config['dt']), Global.get_current_step())
+        self.cyInstance = getattr(Global._network, 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, int(self._period/Global.config['dt']), Global.get_current_step())
         Global._network.add_recorder(self.cyInstance)
 
         for var in self.variables:
@@ -113,7 +128,7 @@ class Monitor(object):
         self.idx = self.object.idx
 
         # Create the wrapper
-        self.cyInstance = getattr(Global._network, 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], int(self.period/Global.config['dt']), Global.get_current_step())
+        self.cyInstance = getattr(Global._network, 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], int(self._period/Global.config['dt']), Global.get_current_step())
         Global._network.add_recorder(self.cyInstance)
 
         for var in self.variables:
@@ -143,8 +158,8 @@ class Monitor(object):
             variables = self.variables
 
         if period:
-            self.period = period
-            self.cyInstance.period = int(self.period/Global.config['dt'])
+            self._period = period
+            self.cyInstance.period = int(self._period/Global.config['dt'])
             self.cyInstance.offset = Global.get_current_step()
 
         for var in variables:

@@ -774,6 +774,9 @@ class Population(object):
         * **reshape**: by default this functions returns the data as a 2D matrix (number of neurons * time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
         Global._warning("recording from a Population is deprecated, use a Monitor instead.")
+        if not self._monitor:
+            Global._error('get_record(): there is currently no recording.')
+            exit(0)
         if variable:
             if not isinstance(variable, list):
                 variables = [variable]
