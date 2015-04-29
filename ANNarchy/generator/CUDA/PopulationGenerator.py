@@ -176,6 +176,11 @@ public:
         this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
                 recording_code += """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            cudaMemcpy(pop%(id)s.gpu_%(name)s, pop%(id)s.%(name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            for(int i=0; i<pop%(id)s.size; i++){
+                std::cout << pop%(id)s.%(name)s[i] << " " ;
+            }
+            std::cout << std::endl;
             if(!this->partial)
                 this->%(name)s.push_back(pop%(id)s.%(name)s); 
             else{
@@ -197,40 +202,40 @@ public:
         this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
                 recording_code += """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(pop%(id)s.%(name)s); 
+            this->%(name)s.push_back(pop%(id)s.gpu_%(name)s); 
         } """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
         
-        if pop.neuron_type.type == 'spike':
-            struct_code += """
-    // Local variable %(name)s
-    std::map<int, std::vector< long int > > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : 'long int', 'name': 'spike'}
-            init_code += """
-        this->spike = std::map<int,  std::vector< long int > >();
-        if(!this->partial){
-            for(int i=0; i<pop%(id)s.size; i++) {
-                this->spike[i]=std::vector<long int>();
-            }
-        }
-        else{
-            for(int i=0; i<this->ranks.size(); i++) {
-                this->spike[this->ranks[i]]=std::vector<long int>();
-            }
-        }
-        this->record_spike = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
-            recording_code += """
-        if(this->record_spike){
-            for(int i=0; i<pop%(id)s.spiked.size(); i++){
-                if(!this->partial){
-                    this->spike[pop%(id)s.spiked[i]].push_back(t);
-                }
-                else{
-                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                        this->spike[pop%(id)s.spiked[i]].push_back(t);
-                    }
-                }
-            }
-        }""" % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
+#        if pop.neuron_type.type == 'spike':
+#            struct_code += """
+#    // Local variable %(name)s
+#    std::map<int, std::vector< long int > > %(name)s ;
+#    bool record_%(name)s ; """ % {'type' : 'long int', 'name': 'spike'}
+#            init_code += """
+#        this->spike = std::map<int,  std::vector< long int > >();
+#        if(!this->partial){
+#            for(int i=0; i<pop%(id)s.size; i++) {
+#                this->spike[i]=std::vector<long int>();
+#            }
+#        }
+#        else{
+#            for(int i=0; i<this->ranks.size(); i++) {
+#                this->spike[this->ranks[i]]=std::vector<long int>();
+#            }
+#        }
+#        this->record_spike = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
+#            recording_code += """
+#        if(this->record_spike){
+#            for(int i=0; i<pop%(id)s.spiked.size(); i++){
+#                if(!this->partial){
+#                    this->spike[pop%(id)s.spiked[i]].push_back(t);
+#                }
+#                else{
+#                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
+#                        this->spike[pop%(id)s.spiked[i]].push_back(t);
+#                    }
+#                }
+#            }
+#        }""" % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
 
         return tpl_code % {'id': pop.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 

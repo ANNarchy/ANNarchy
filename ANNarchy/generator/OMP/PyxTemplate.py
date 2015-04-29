@@ -17,7 +17,6 @@ cdef extern from "ANNarchy.h":
 
     # Monitors
     cdef cppclass Monitor:
-        Monitor(vector[int], int, long) except +
         vector[int] ranks
         int period
         long offset
