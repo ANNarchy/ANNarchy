@@ -506,7 +506,8 @@ class CUDAGenerator(object):
         return pyx_template % {
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
-            'pop_class' : pop_class, 'proj_class': proj_class
+            'pop_class' : pop_class, 'proj_class': proj_class,
+            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class
         }
 
     def pyx_struct_pop(self):
