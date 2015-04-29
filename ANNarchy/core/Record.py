@@ -78,6 +78,7 @@ class Monitor(object):
     # Extend the period attribute
     @property 
     def period(self):
+        "Period of recording in ms"
         if not self.cyInstance:
             return self._period
         else:
@@ -111,7 +112,9 @@ class Monitor(object):
             self.ranks = [-1]
 
         # Create the wrapper
-        self.cyInstance = getattr(Global._network, 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, int(self._period/Global.config['dt']), Global.get_current_step())
+        period = int(self._period/Global.config['dt'])
+        offset = Global.get_current_step() % period
+        self.cyInstance = getattr(Global._network, 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, offset)
         Global._network.add_recorder(self.cyInstance)
 
         for var in self.variables:
@@ -128,7 +131,9 @@ class Monitor(object):
         self.idx = self.object.idx
 
         # Create the wrapper
-        self.cyInstance = getattr(Global._network, 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], int(self._period/Global.config['dt']), Global.get_current_step())
+        period = int(self._period/Global.config['dt'])
+        offset = Global.get_current_step() % period
+        self.cyInstance = getattr(Global._network, 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], period, offset)
         Global._network.add_recorder(self.cyInstance)
 
         for var in self.variables:
