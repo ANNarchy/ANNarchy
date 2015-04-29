@@ -9,7 +9,6 @@ body_template = '''
 double dt;
 long int t;
 std::mt19937  rng;
-std::vector<Monitor*> recorders;
 
 // Populations
 %(pop_ptr)s
@@ -21,6 +20,7 @@ std::vector<Monitor*> recorders;
 %(glops_def)s
 
 // Recorders 
+std::vector<Monitor*> recorders;
 void addRecorder(Monitor* recorder){
     recorders.push_back(recorder);
 }

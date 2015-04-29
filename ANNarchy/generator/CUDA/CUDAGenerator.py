@@ -112,12 +112,16 @@ class CUDAGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.header_struct_proj()
 
+        # Population recorders
+        record_classes = self.header_recorder_classes()
+
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
+            'record_classes': record_classes
         }
 
     def header_struct_pop(self):
@@ -146,6 +150,15 @@ class CUDAGenerator(object):
 
         return proj_struct, proj_ptr
 
+    def header_recorder_classes(self):
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.recorder_class(pop)  
+        for proj in self.projections:
+            code += self.projgen.recorder_class(proj)  
+
+        return code
+        
 #######################################################################
 ############## BODY ###################################################
 #######################################################################

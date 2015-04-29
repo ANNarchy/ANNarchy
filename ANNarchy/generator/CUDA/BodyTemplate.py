@@ -90,6 +90,20 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
 double dt;
 long int t;
 
+// Recorders 
+std::vector<Monitor*> recorders;
+void addRecorder(Monitor* recorder){
+    recorders.push_back(recorder);
+}
+void removeRecorder(Monitor* recorder){
+    for(int i=0; i<recorders.size(); i++){
+        if(recorders[i] == recorder){
+            recorders.erase(recorders.begin()+i);
+            break;
+        }
+    }
+}
+
 // Populations
 %(pop_ptr)s
 
@@ -266,6 +280,9 @@ void single_step()
     ////////////////////////////////
     // Recording
     ////////////////////////////////
+    for(int i=0; i < recorders.size(); i++){
+        recorders[i]->record();
+    }
     
 
     ////////////////////////////////
