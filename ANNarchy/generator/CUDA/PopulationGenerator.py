@@ -60,13 +60,6 @@ struct PopStruct%(id)s{
             Global._error("Spike coded neurons are not supported on GPUs yet ... ")
             exit(0)
 
-        # Record
-        code+="""
-    // Record parameter
-    int record_period;
-    long int record_offset;
-"""
-
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             if var['name'] in pop.neuron_type.description['local']:
@@ -91,8 +84,6 @@ struct PopStruct%(id)s{
     std::vector< %(type)s > %(name)s ;
     %(type)s *gpu_%(name)s;
     bool %(name)s_dirty;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -101,8 +92,6 @@ struct PopStruct%(id)s{
     %(type)s  %(name)s ;
     %(type)s *gpu_%(name)s;
     bool %(name)s_dirty;
-    std::vector< %(type)s > recorded_%(name)s ;
-    bool record_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Arrays for the presynaptic sums
@@ -383,8 +372,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
     // Population %(id)s
     /////////////////////////////
     pop%(id)s._active = true;
-    pop%(id)s.record_period = 1;
-    pop%(id)s.record_offset = 0;
 """ % {'id': pop.id}
 
         # Is it a specific population?
@@ -415,16 +402,12 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
                 code += """
     // Local variable %(name)s
     pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
-    pop%(id)s.recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
-    pop%(id)s.record_%(name)s = false;
 """ %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             else: # global
                 code += """
     // Global variable %(name)s
     pop%(id)s.%(name)s = %(init)s;
-    pop%(id)s.recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
-    pop%(id)s.record_%(name)s = false;
 """ %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Targets
@@ -437,10 +420,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             code += """
     // Spiking neuron
     pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
-    pop%(id)s.record_spike = false;
-    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >();
-    for(int i = 0; i < pop%(id)s.size; i++)
-        pop%(id)s.recorded_spike.push_back(std::vector<long int>());
     pop%(id)s.spiked = std::vector<int>(0, 0);
     pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
     pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
@@ -474,26 +453,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 %(call)s
     cudaFree(tmp);
 """ % { 'call': call}
-
-        return code
-
-    def record(self, pop):
-        """
-        Implementation note:
-
-        * maybe the performance of this step can be enhanced with asynchronous copy mechanism. Otherwise this will limit for sure the performance ...
-        """
-        # Is it a specific population?
-        if pop.generator['cuda']['body_record']:
-            return pop.generator['cuda']['body_record'] %{'id': pop.id}
-
-        code = ""
-        for var in pop.neuron_type.description['variables']:
-            code += """
-    if(pop%(id)s.record_%(name)s && ( (t - pop%(id)s.record_offset) %(mod)s pop%(id)s.record_period == 0 ) ) {
-        cudaMemcpy(pop%(id)s.gpu_%(name)s, pop%(id)s.%(name)s.data(), pop%(id)s.size * sizeof(double), cudaMemcpyHostToDevice);
-        pop%(id)s.recorded_%(name)s.push_back(pop%(id)s.%(name)s) ;
-    }""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name'], 'mod': '%' }
 
         return code
 
@@ -585,8 +544,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         # Local variable %(name)s
         vector[%(type)s] %(name)s
         bool %(name)s_dirty
-        vector[vector[%(type)s]] recorded_%(name)s
-        bool record_%(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -594,8 +551,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         # Global variable %(name)s
         %(type)s  %(name)s
         bool %(name)s_dirty
-        vector[%(type)s] recorded_%(name)s
-        bool record_%(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Arrays for the presynaptic sums of rate-coded neurons
@@ -644,14 +599,6 @@ cdef class pop%(id)s_wrapper :
             Global._error("Spiking neurons are not supported yet on GPUs ...")
             exit(0)
 
-        # Record parameter
-        code += """
-    # Record parameter
-    cpdef set_record_period( self, int period, long int t ):
-        pop%(id)s.record_period = period
-        pop%(id)s.record_offset = t
-""" % {'id': pop.id}
-
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             if var['name'] in pop.neuron_type.description['local']:
@@ -693,16 +640,6 @@ cdef class pop%(id)s_wrapper :
     cpdef set_single_%(name)s(self, int rank, value):
         pop%(id)s.%(name)s[rank] = value
         pop%(id)s.%(name)s_dirty = True
-    def start_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = True
-    def stop_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = False
-    def get_record_%(name)s(self):
-        cdef vector[vector[%(type)s]] tmp = pop%(id)s.recorded_%(name)s
-        for i in xrange(tmp.size()):
-            pop%(id)s.recorded_%(name)s[i].clear()
-        pop%(id)s.recorded_%(name)s.clear()
-        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
             elif var['name'] in pop.neuron_type.description['global']:
@@ -712,14 +649,6 @@ cdef class pop%(id)s_wrapper :
         return pop%(id)s.%(name)s
     cpdef set_%(name)s(self, %(type)s value):
         pop%(id)s.%(name)s = value
-    def start_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = True
-    def stop_record_%(name)s(self):
-        pop%(id)s.record_%(name)s = False
-    def get_record_%(name)s(self):
-        cdef vector[%(type)s] tmp = pop%(id)s.recorded_%(name)s
-        pop%(id)s.recorded_%(name)s.clear()
-        return tmp
 """ % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
 
         return code

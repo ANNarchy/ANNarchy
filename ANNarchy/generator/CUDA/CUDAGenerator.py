@@ -208,9 +208,6 @@ class CUDAGenerator(object):
         # Structural plasticity
         structural_plasticity = self.body_structural_plasticity()
 
-        # Record
-        record = self.body_record()
-
         # Early stopping
         run_until = self.body_run_until()
 
@@ -247,7 +244,6 @@ class CUDAGenerator(object):
             'globalops_init' : globalops_init,
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
-            'record' : record,
             'stream_setup': stream_setup,
             'device_init': device_init,
             'host_device_transfer': host_device_transfer,
@@ -409,18 +405,6 @@ class CUDAGenerator(object):
         code = ""
         for pop in self.populations:
             code += self.popgen.update_globalops(pop)
-        return code
-
-    def body_record(self):
-        code = ""
-        # Populations
-        for pop in self.populations:
-           code += self.popgen.record(pop)
-
-        # Projections
-        for proj in self.projections:
-           code += self.projgen.record(proj)
-
         return code
 
     def body_run_until(self):

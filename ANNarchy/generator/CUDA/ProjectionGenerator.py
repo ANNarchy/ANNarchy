@@ -108,10 +108,6 @@ struct ProjStruct%(id_proj)s{
                 code += """
     // Local variable %(name)s
     std::vector< std::vector< %(type)s > > %(name)s;
-    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s;
-    std::vector< int > record_%(name)s;
-    std::vector< int > record_period_%(name)s;
-    std::vector< long int > record_offset_%(name)s;
     %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -120,10 +116,6 @@ struct ProjStruct%(id_proj)s{
                 code += """
     // Global variable %(name)s
     std::vector<%(type)s>  %(name)s;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    std::vector< int > record_%(name)s ;
-    std::vector< int > record_period_%(name)s ;
-    std::vector< long int > record_offset_%(name)s ;
     %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;
 """ % {'type' : var['ctype'], 'name': var['name']}
@@ -395,20 +387,12 @@ struct ProjStruct%(id_proj)s{
                 code += """
     // Local variable %(name)s
     proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size(), std::vector< std::vector< %(type)s > >());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Global variable %(name)s
     proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Spiking neurons have aditional data
@@ -434,18 +418,6 @@ struct ProjStruct%(id_proj)s{
 
         return code
 
-    def record(self, proj):
-        code = ""
-        for var in proj.synapse.description['variables']:
-            Global._warning("Recording of synaptic variables is not supported on GPUs ... ")
-
-#            code += """
-#    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
-#        if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
-#            proj%(id)s.recorded_%(name)s[i].push_back(proj%(id)s.%(name)s[i]) ;
-#    }
-#""" % {'id': proj.id, 'name': var['name'], 'modulo': '%'}
-        return code
 
 #######################################################################
 ############## PYX ####################################################
@@ -501,16 +473,12 @@ struct ProjStruct%(id_proj)s{
                 code += """
         # Local variable %(name)s
         vector[vector[%(type)s]] %(name)s 
-        #vector[vector[vector[%(type)s]]] recorded_%(name)s 
-        #vector[int] record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
         # Global variable %(name)s
         vector[%(type)s]  %(name)s 
-        #vector[vector[%(type)s]] recorded_%(name)s
-        #vector[int] record_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Structural plasticity
@@ -642,21 +610,6 @@ cdef class proj%(id)s_wrapper :
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
         proj%(id)s.%(name)s_dirty = True        
-    def start_record_%(name)s(self, int rank, int period, long int offset):
-        if not rank in list(proj%(id)s.record_%(name)s):
-            proj%(id)s.record_%(name)s.push_back(rank)
-            proj%(id)s.record_period_%(name)s.push_back(period)
-            proj%(id)s.record_offset_%(name)s.push_back(offset)
-    def stop_record_%(name)s(self, int rank):
-        cdef list tmp_record = list(proj%(id)s.record_%(name)s)
-        cdef int idx = tmp_record.index(rank)
-        proj%(id)s.record_%(name)s.erase(proj%(id)s.record_%(name)s.begin() + idx)
-        proj%(id)s.record_period_%(name)s.erase(proj%(id)s.record_period_%(name)s.begin() + idx)
-        proj%(id)s.record_offset_%(name)s.erase(proj%(id)s.record_offset_%(name)s.begin() + idx)
-    def get_recorded_%(name)s(self, int rank):
-        cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
-        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
-        return data
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
             elif var['name'] in proj.synapse.description['global']:
