@@ -39,36 +39,37 @@ from optparse import OptionGroup
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
 extra_libs = []
  
-def _folder_management(profile_enabled, clean):
+def _folder_management(annarchy_dir, profile_enabled, clean):
     """
     ANNarchy is provided as a python package. For compilation a local folder
     'annarchy' is created in the current working directory.
     
     *Parameter*:
     
+    * annarchy_dir : subdirectory
     * *profile_enabled*: copy needed data for profile extension
     """
         
     # Verbose
     if Global.config['verbose']:
-        Global._print("Create 'annarchy' subdirectory.")
+        Global._print("Create subdirectory.")
 
     if clean or profile_enabled:
-        shutil.rmtree(Global.annarchy_dir, True)
+        shutil.rmtree(annarchy_dir, True)
 
-    if not os.path.exists(Global.annarchy_dir):    
-        os.mkdir(Global.annarchy_dir)
-        os.mkdir(Global.annarchy_dir+'/build')
+    if not os.path.exists(annarchy_dir):    
+        os.mkdir(annarchy_dir)
+        os.mkdir(annarchy_dir+'/build')
         
     # Create the generate subfolder
-    shutil.rmtree(Global.annarchy_dir+'/generate', True)
-    os.mkdir(Global.annarchy_dir+'/generate')
+    shutil.rmtree(annarchy_dir+'/generate', True)
+    os.mkdir(annarchy_dir+'/generate')
 
     # Save current ANNarchy version
-    with open(Global.annarchy_dir+'/release', 'w') as f:
+    with open(annarchy_dir+'/release', 'w') as f:
         f.write(ANNarchy.__release__)
 
-    sys.path.append(Global.annarchy_dir)
+    sys.path.append(annarchy_dir)
 
 def setup_parser():
     # override the error behavior of OptionParser,
@@ -95,14 +96,16 @@ def setup_parser():
 
     return parser
 
-def compile(clean=False, populations=None, projections=None, cpp_stand_alone=False, debug_build=False, profile_enabled = False):
+def compile(directory='annarchy', clean=False, populations=None, projections=None, cpp_stand_alone=False, debug_build=False, profile_enabled = False):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
     
     *Parameters*:
 
+    * **directory**: name of the subdirectory where the code will be generated and compiled.
     * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
+    * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
 
     The following arguments are for internal use only:
@@ -134,10 +137,13 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
     if projections == None: # Default network
         projections = Global._projections
 
+    # Compiling directory
+    annarchy_dir = os.getcwd() + '/' + directory
+
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
     from pkg_resources import parse_version
-    if os.path.isfile(Global.annarchy_dir+'/release'):
-        with open(Global.annarchy_dir+'/release', 'r') as f:
+    if os.path.isfile(annarchy_dir+'/release'):
+        with open(annarchy_dir+'/release', 'r') as f:
             prev_release = f.read().strip()
             if parse_version(prev_release) < parse_version(ANNarchy.__release__):
                 Global._print('ANNarchy has been updated, recompiling...')
@@ -146,20 +152,21 @@ def compile(clean=False, populations=None, projections=None, cpp_stand_alone=Fal
         clean = True
 
     # Manage the compilation subfolder
-    _folder_management(profile_enabled, clean)
+    _folder_management(annarchy_dir, profile_enabled, clean)
     
     # Create a Generator object
-    generator = Generator(clean, cpp_stand_alone, debug_build, profile_enabled, 
+    generator = Generator(annarchy_dir, clean, cpp_stand_alone, debug_build, profile_enabled, 
                  populations, projections)
     generator.generate()
     
 class Generator(object):
     " Main class to generate C++ code efficiently"
       
-    def __init__(self, clean, cpp_stand_alone, debug_build, profile_enabled, 
+    def __init__(self, annarchy_dir, clean, cpp_stand_alone, debug_build, profile_enabled, 
                  populations, projections): 
         
         # Store arguments
+        self.annarchy_dir = annarchy_dir
         self.clean = clean
         self.cpp_stand_alone = cpp_stand_alone
         self.debug_build = debug_build
@@ -180,7 +187,7 @@ class Generator(object):
         changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
-        if changed or not os.path.isfile(Global.annarchy_dir+'/ANNarchyCore.so'):
+        if changed or not os.path.isfile(self.annarchy_dir+'/ANNarchyCore.so'):
             self.compilation()
 
             # Return to the current directory
@@ -195,19 +202,19 @@ class Generator(object):
         " Copy the generated files in the build/ folder if needed."
         changed = False
         if clean:
-            for file in os.listdir(Global.annarchy_dir+'/generate'):
-                shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
-                            Global.annarchy_dir+'/build/'+file # dest
+            for file in os.listdir(self.annarchy_dir+'/generate'):
+                shutil.copy(self.annarchy_dir+'/generate/'+file, # src
+                            self.annarchy_dir+'/build/'+file # dest
                 )
             changed = True
         else: # only the ones which have changed
             import filecmp
-            for file in os.listdir(Global.annarchy_dir+'/generate'):
-                if  not os.path.isfile(Global.annarchy_dir+'/build/'+file) or \
-                    not filecmp.cmp( Global.annarchy_dir+'/generate/'+file, 
-                                    Global.annarchy_dir+'/build/'+file) :
-                    shutil.copy(Global.annarchy_dir+'/generate/'+file, # src
-                                Global.annarchy_dir+'/build/'+file # dest
+            for file in os.listdir(self.annarchy_dir+'/generate'):
+                if  not os.path.isfile(self.annarchy_dir+'/build/'+file) or \
+                    not filecmp.cmp( self.annarchy_dir+'/generate/'+file, 
+                                    self.annarchy_dir+'/build/'+file) :
+                    shutil.copy(self.annarchy_dir+'/generate/'+file, # src
+                                self.annarchy_dir+'/build/'+file # dest
                     )
                     changed = True
         return changed
@@ -244,7 +251,7 @@ class Generator(object):
         numpy_include = np.get_include()
 
         # switch to build-directory
-        os.chdir(Global.annarchy_dir)
+        os.chdir(self.annarchy_dir)
 
         # create Makefiles dependent on target platform
         if sys.platform.startswith('linux'): # Linux systems
@@ -397,16 +404,16 @@ clean:
         """ Code generation dependent on paradigm """
         if Global.config['paradigm'] == "openmp":
             from .OMP.OMPGenerator import OMPGenerator
-            generator = OMPGenerator(self.populations, self.projections)
+            generator = OMPGenerator(self.annarchy_dir, self.populations, self.projections)
             generator.generate()
         else: # CUDA
             from .CUDA.CUDAGenerator import CUDAGenerator
-            generator = CUDAGenerator(self.populations, self.projections)
+            generator = CUDAGenerator(self.annarchy_dir, self.populations, self.projections)
             generator.generate()
 
         if self.profile_enabled:
             from .Profile.ProfileGenerator import ProfileGenerator
-            prof_generator = ProfileGenerator(self.populations, self.projections)
+            prof_generator = ProfileGenerator(self.annarchy_dir, self.populations, self.projections)
             prof_generator.generate()
 
     def check_structure(self):

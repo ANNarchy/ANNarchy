@@ -37,9 +37,6 @@ _monitors = []          # created monitors
 # Global Cython instance
 _network = None
 
-# Path to the annarchy working directory
-annarchy_dir = os.getcwd() + '/annarchy'
-
 # Flag to tell if the network has already been compiled
 _compiled = False   # I know it's evil
 def set_compiled(): # called by the generator

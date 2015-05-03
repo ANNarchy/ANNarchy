@@ -7,8 +7,9 @@ import numpy as np
 
 class OMPGenerator(object):
 
-    def __init__(self, populations, projections):
+    def __init__(self, annarchy_dir, populations, projections):
         
+        self.annarchy_dir = annarchy_dir
         self.populations = populations
         self.projections = projections
 
@@ -23,15 +24,15 @@ class OMPGenerator(object):
         self.propagate_global_ops()
 
         # Generate header code for the analysed pops and projs
-        with open(Global.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self.generate_header())
             
         # Generate cpp code for the analysed pops and projs
-        with open(Global.annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
             ofile.write(self.generate_body())
 
         # Generate cython code for the analysed pops and projs
-        with open(Global.annarchy_dir+'/generate/ANNarchyCore.pyx', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/ANNarchyCore.pyx', 'w') as ofile:
             ofile.write(self.generate_pyx())
 
     def propagate_global_ops(self):

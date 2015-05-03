@@ -5,8 +5,9 @@ class ProfileGenerator(object):
     """
     Extent the generated code by profiling annotations.
     """
-    def __init__(self, populations, projections):
+    def __init__(self, annarchy_dir, populations, projections):
         
+        self.annarchy_dir = annarchy_dir
         self._populations = populations
         self._projections = projections
         self._num_ops = 0
@@ -17,11 +18,11 @@ class ProfileGenerator(object):
         Generate Profiling class code, called from Generator instance.
         """
         # Generate header for profiling
-        with open(Global.annarchy_dir+'/generate/Profiling.h', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/Profiling.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
         # Generate cpp for profiling
-        with open(Global.annarchy_dir+'/generate/Profiling.cpp', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/Profiling.cpp', 'w') as ofile:
             ofile.write(self._generate_body())
 
     def get_num_ops(self):
