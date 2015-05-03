@@ -483,10 +483,11 @@ public:
             pre_array = "pop%(id_pre)s.spiked" % ids
 
         # No need for openmp if less than 10 neurons
+        omp_code = ""
         if Global.config['num_threads']>1:
-            omp_code = """//#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-        else:
-            omp_code = ""
+            if proj.post.size > Global.OMP_MIN_NB_NEURONS and (len(pre_event_list) > 0 or learning != ""):
+                omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id}  
+            
 
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
