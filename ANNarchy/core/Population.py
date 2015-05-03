@@ -92,7 +92,7 @@ class Population(object):
         self.stop_condition = stop_condition
 
         # Attribute a name if not provided
-        self.id = len(Global._populations)
+        self.id = len(Global._network['populations'])
         self.class_name = 'pop'+str(self.id)
         
         if name:
@@ -101,7 +101,7 @@ class Population(object):
             self.name = self.class_name
                 
         # Add the population to the global variable
-        Global._populations.append(self)
+        Global._network['populations'].append(self)
         
         # Get a list of parameters and variables
         self.parameters = []

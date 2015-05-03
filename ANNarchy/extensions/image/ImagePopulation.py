@@ -79,7 +79,7 @@ class ImagePopulation(Population):
         if self.dimension == 2 or self.geometry[2] == 1:
             im=im.convert("L")
         # Set the rate of the population
-        if not Global._compiled:
+        if not Global._network['compiled']:
             self.r = (np.array(im))/255.
         else:
             self.cyInstance.set_r(np.array(im).reshape(self.size)/255.)

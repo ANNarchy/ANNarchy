@@ -473,7 +473,7 @@ class CUDAGenerator(object):
         """
         ATTENTION: the same as OMPGenerator.header_custom_func
         """
-        if len(Global._functions) == 0:
+        if len(Global._network['functions']) == 0:
             return ""
 
         Global._error("Not implemented yet: custom functions for GPGPU kernel ...")

@@ -132,10 +132,10 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     clean = options.clean # enforce rebuild
 
     if populations == None: # Default network
-        populations = Global._populations
+        populations = Global._network['populations']
 
     if projections == None: # Default network
-        projections = Global._projections
+        projections = Global._network['projections']
 
     # Compiling directory
     annarchy_dir = os.getcwd() + '/' + directory
@@ -193,7 +193,7 @@ class Generator(object):
             # Return to the current directory
             os.chdir('..')
                 
-        Global.set_compiled()
+        Global._network['compiled'] = True
         
         # Create the Python objects                
         self.instantiate()    
@@ -349,8 +349,7 @@ clean:
 
         # Import the Cython library
         cython_module = __import__('ANNarchyCore')
-        global _network
-        Global._network = cython_module
+        Global._network['instance'] = cython_module
 
         # Bind the py extensions to the corresponding python objects
         for pop in self.populations:
@@ -397,7 +396,7 @@ clean:
             cython_module.set_number_threads(Global.config['num_threads'])
 
         # Start the monitors
-        for monitor in Global._monitors:
+        for monitor in Global._network['monitors']:
             monitor._init_monitoring()
 
     def code_generation(self, cpp_stand_alone, profile_enabled, clean):

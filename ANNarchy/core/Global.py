@@ -26,22 +26,17 @@ import time
 from math import ceil
 import numpy as np
 
-# Dictionaries of instances
-_populations = []       # created populations
-_projections = []       # created projections
-_functions = []         # created functions
-_neurons = []           # created neurons
-_synapses = []          # created synapses
-_monitors = []          # created monitors
-
-# Global Cython instance
-_network = None
-
-# Flag to tell if the network has already been compiled
-_compiled = False   # I know it's evil
-def set_compiled(): # called by the generator
-    global _compiled
-    _compiled = True
+# Data for the magic network
+_network = {
+    'populations': [],
+    'projections': [],
+    'functions': [],
+    'neurons': [],
+    'synapses': [],
+    'monitors': [],
+    'instance': None,
+    'compiled': False
+}
 
 # Configuration
 config = dict(
@@ -66,7 +61,7 @@ cuda_config = dict(
 )
 
 # Minimum number of neurons to apply OMP parallel regions
-OMP_MIN_NB_NEURONS = 10
+OMP_MIN_NB_NEURONS = 100
 
 # Authorized keywork for attributes
 authorized_keywords = [
@@ -169,14 +164,14 @@ def reset(populations=True, projections=False, synapses = False):
     * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
-        for pop in _populations:
+        for pop in _network['populations']:
             pop.reset()
             
     if projections:
-        for proj in _projections:
+        for proj in _network['projections']:
             proj.reset(synapses)
 
-    _network.set_time(0)
+    _network['instance'].set_time(0)
         
 def get_population(name):
     """
@@ -190,7 +185,7 @@ def get_population(name):
     
     * The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for pop in _populations:
+    for pop in _network['populations']:
         if pop.name == name:
             return pop
         
@@ -217,7 +212,7 @@ def add_function(function):
     
     Please refer to the manual to know the allowed mathematical functions.
     """  
-    _functions.append(function)
+    _network['functions'].append(function)
     
 def simulate(duration, measure_time = False):
     """
@@ -232,10 +227,10 @@ def simulate(duration, measure_time = False):
     """
     nb_steps = ceil(float(duration) / config['dt'])
 
-    if _network:      
+    if _network['instance']:      
         if measure_time:
             tstart = time.time() 
-        _network.pyx_run(nb_steps)
+        _network['instance'].pyx_run(nb_steps)
         if measure_time:
             _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     else:
@@ -268,10 +263,10 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     nb_steps = ceil(float(max_duration) / config['dt'])
     if not isinstance(population, list):
         population = [population]
-    if _network:      
+    if _network['instance']:      
         if measure_time:
             tstart = time.time() 
-        nb = _network.pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
+        nb = _network['instance'].pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
             _print('Simulating', nb/config['dt']/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
@@ -285,8 +280,8 @@ def step():
     Performs a single simulation step (duration = ``dt``). 
 
     """
-    if _network:      
-        _network.pyx_step()
+    if _network['instance']:      
+        _network['instance'].pyx_step()
     else:
         _error('simulate(): the network is not compiled yet.')
         return 0.0
@@ -303,7 +298,7 @@ def enable_learning(projections=None):
     * **projections**: the projections whose learning should be enabled. By default, all the existing projections are enabled.
     """
     if not projections:
-        projections = _projections
+        projections = _network['projections']
     for proj in projections:
         proj.enable_learning()
         
@@ -316,7 +311,7 @@ def disable_learning(projections=None):
     * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
     """
     if not projections:
-        projections = _projections
+        projections = _network['projections']
     for proj in projections:
         proj.disable_learning()
     
@@ -325,26 +320,26 @@ def disable_learning(projections=None):
 ################################
 def get_time():
     try:
-        t = _network.get_time()/config['dt']
+        t = _network['instance'].get_time()/config['dt']
     except:
         t = 0.0
     return t
 
 def set_time(t):
     try:
-        _network.set_time(int(t*config['dt']))
+        _network['instance'].set_time(int(t*config['dt']))
     except:
         _warning('Time can only be set when the network is compiled.')
 def get_current_step():
     try:
-        t = _network.get_time()
+        t = _network['instance'].get_time()
     except:
         t = 0
     return t
 
 def set_current_step(t):
     try:
-        _network.set_time(int(t))
+        _network['instance'].set_time(int(t))
     except:
         _warning('Time can only be set when the network is compiled.')
 
