@@ -5,11 +5,19 @@ ANNarchy versions
 Changelog
 ==========
 
+**4.4.1:**
+
+* Recording goes through the ``Monitor`` object. Old recording methods are depreciated. 
+* Variables updated in pre-spike or post-spike (spiking synapse) can now define min/max bounds
+* Bug when using conditionals in pre-spike and post-spike
+* Bug when using t_pre and t_post
+* Speed-up of connect_fixed_number_pre/post. 
+
 **4.4.0:**
 
 * Experimental support for CUDA backend for rate-coded networks.
 * Any pre-synaptic vriable can be delayed if used in the synapse.
-* ``g_target`` can efine min/max flags. 
+* ``g_target`` can define min/max flags. 
 * Support for MacOS X.
 * Parallel performance for OpenMP and spiking networks improved.
 * Sequential code (1T) does not use OMP.
