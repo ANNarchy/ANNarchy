@@ -14,10 +14,11 @@ This section provides a step-by-step description of some sample models provided 
     
     * :doc:`example/STDP`: an example using spike-timing dependent plasticity (STDP).
       
-Other undocumented examples include: 
+Other examples include: 
 
     * ``examples/pyNN``: reproduction of several basic examples provided in the documentation of PyNN and Brian. They show mainly how to use the standard spiking neuron models.
     * ``examples/refractoriness``: shows the effect of the refractory period on network behavior.
+    * ``examples/hybrid``: shows how to use hybrid populations (rate-coded and spiking).
     * ``examples/image``: shows how to use the ``ImagePopulation`` and ``VideoPopulation`` classes of the ``image`` extension to clamp directly images and video streams into a rate-coded network.
     * ``examples/hodgkin_huxley``: shows how to define a Hodgkin-Huxley neuron.
 

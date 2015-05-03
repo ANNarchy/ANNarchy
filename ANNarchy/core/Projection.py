@@ -742,7 +742,7 @@ class Projection(object):
 
         return self
 
-    def connect_from_matrix(self, weights, delays=0.0):
+    def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
         """
         Builds a connection pattern according to a dense connectivity matrix.
 
@@ -754,6 +754,7 @@ class Projection(object):
 
         * **weights**: a matrix or list of lists representing the weights. If a value is None, the synapse will not be created.
         * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0. 
+        * **pre_post**: states which index is first. By default, the first dimension is related to the post-synaptic population. If ``pre_post`` is True, the first dimension is the pre-synaptic population.
         """
         try:
             from ANNarchy.core.cython_ext.Connector import CSR
@@ -776,25 +777,42 @@ class Projection(object):
                 Global._error('connect_from_matrix: You must provide a dense 2D matrix.')
                 exit(0)
 
+        if pre_post: # if the user prefers pre as the first index...
+            weights = weights.T
+            if isinstance(delays, np.ndarray):
+                delays = delays.T
+
         shape = weights.shape
         if shape != (self.post.size, self.pre.size):
-            Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
+            if not pre_post:
+                Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
+            else:
+                Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.pre.size, self.post.size)))
             exit(0)
 
         for i in range(self.post.size):
-            rk = []
+            if isinstance(self.post, PopulationView):
+                rk_post = self.post.ranks[i]
+            else:
+                rk_post = i
+            r = []
             w = []
             d = []
-            for idx, val in enumerate(list(weights[i, :])):
+            for j in range(self.pre.size):
+                val = weights[i, j]
                 if val != None:
-                    rk.append(idx)
+                    if isinstance(self.pre, PopulationView):
+                        rk_pre = self.pre.ranks[j]
+                    else:
+                        rk_pre = j
+                    r.append(rk_pre)
                     w.append(val) 
                     if not uniform_delay:
-                        d.append(delays[i,idx])   
+                        d.append(delays[i,j])   
             if uniform_delay:        
                 d.append(delays)
-            if len(rk) > 0:
-                csr.add(i, rk, w, d)
+            if len(r) > 0:
+                csr.add(rk_post, r, w, d)
 
         # Store the synapses
         self.connector_name = "Connectivity matrix"
@@ -805,6 +823,8 @@ class Projection(object):
     def connect_from_sparse(self, weights, delays=0.0):
         """
         Builds a connectivity pattern using a Scipy sparse matrix for the weights and (optionally) delays.
+
+        Warning: a sparse matrix has pre-synaptic ranks as first dimension, 
 
         *Parameters*:
 
@@ -830,11 +850,11 @@ class Projection(object):
         csr = CSR()
 
         # Find offsets
-        if hasattr(self.pre, 'ranks'):
+        if isinstance(self.pre, PopulationView):
             offset_pre = self.pre.ranks[0]
         else:
             offset_pre = 0
-        if hasattr(self.post, 'ranks'):
+        if isinstance(self.post, PopulationView):
             offset_post = self.post.ranks[0]
         else:
             offset_post = 0
@@ -843,7 +863,7 @@ class Projection(object):
         W = csc_matrix(weights)
         W.sort_indices()
         (pre, post) = W.shape
-        for idx_post in xrange(post):
+        for idx_post in range(post):
             pre_rank = W.getcol(idx_post).indices
             w = W.getcol(idx_post).data
             csr.add(idx_post + offset_post, pre_rank + offset_pre, w, [float(delays)])

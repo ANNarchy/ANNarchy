@@ -165,8 +165,8 @@ We must first compile the network::
 
 For this simulation, we will record the spiking activity in both populations::
 
-    start_record ({ Input:  'spike', 
-                    Output: 'spike' } )   
+    Mi = Monitor(Input, 'spike') 
+    Mo = Monitor(Output, 'spike')   
 
 We can then simulate for 100 seconds (100000 milliseconds)::
 
@@ -174,17 +174,16 @@ We can then simulate for 100 seconds (100000 milliseconds)::
 
 The recorded data is retrieved through ``get_record()``::
 
-    data = get_record()
-    input_spikes = data[Input]['spike']
-    output_spikes = data[Output]['spike']
+    input_spikes = Mi.get('spike')
+    output_spikes = Mo.get('spike')
 
-Using the utility function ``smoothed_rate()`` (see :doc:`../API/Utilities`) we can compute the mean firing rate of the output neuron, smoothed using a sliding window of 100 ms::
+Using the utility function ``smoothed_rate()`` of the monitors (see :doc:`../API/Monitor`) we can compute the mean firing rate of the output neuron, smoothed using a sliding window of 100 ms::
 
-    output_rate = smoothed_rate(output_spikes, 100.0)
+    output_rate = Mo.smoothed_rate(output_spikes, 100.0)
 
-The synaptic weights with the 1000 inputs after learning is simply retrieved with::
+The synaptic weights with the 1000 inputs after learning are simply retrieved with::
 
-    rf_post = proj.dendrite(0).w
+    weights = proj.w[0]
 
 Finally, Matplotlib is used to reproduce the output of the Brian example::
 

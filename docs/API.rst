@@ -16,6 +16,7 @@ This chapter provides documentation for the different methods and classes define
     API/SpecificPopulation.rst
     API/Projections.rst
     API/Dendrite.rst
+    API/Monitor.rst
     API/RandomDistribution.rst
     API/Utilities.rst
     API/Hybrid.rst
