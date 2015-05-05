@@ -130,10 +130,10 @@ class ProfileGenerator(object):
         """
         Determine the number of operations need to be profiled
         """
-        for proj in Global._network['projections']:
+        for proj in Global._network[0]['projections']:
             self._num_ops += 2 # compute_sum, update_synapse
 
-        for pop in Global._network['populations']:
+        for pop in Global._network[0]['populations']:
             self._num_ops += 1 # update_neuron
             if pop.neuron_type.type == "spike":
                 self._num_ops += 1 # spike propagation
@@ -161,14 +161,14 @@ class ProfileGenerator(object):
 
         #
         # CPU_time_container
-        for proj in Global._network['projections']:    # compute sum
+        for proj in Global._network[0]['projections']:    # compute sum
             name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"Proj%(id)s - compute sum");
             set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
             set_total_cache_miss_name( i*%(num_op)s+%(off)s,"Proj%(id)s - compute sum - cache miss");
 """ % { 'id': proj.id, 'num_op': self._num_ops, 'off': rc }
             rc+= 1
 
-        for pop in Global._network['populations']:     # neural update
+        for pop in Global._network[0]['populations']:     # neural update
             name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"%(name)s - neural update");
             set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
 """ % { 'name': pop.name, 'num_op': self._num_ops, 'off': rc }
@@ -179,7 +179,7 @@ class ProfileGenerator(object):
 """ % { 'name': pop.name, 'num_op': self._num_ops, 'off': rc }
                 rc+= 1
 
-        for proj in Global._network['projections']:    # update synapses
+        for proj in Global._network[0]['projections']:    # update synapses
             name += """        set_CPU_time_name( i*%(num_op)s+%(off)s,"Proj%(id)s - update synapses");
             set_CPU_time_related_time( i*%(num_op)s+%(off)s, i );
 """ % { 'id': proj.id, 'num_op': self._num_ops, 'off': rc }
@@ -188,13 +188,13 @@ class ProfileGenerator(object):
         rc = 0
         #
         # CPU_time_additional strings
-        for proj in Global._network['projections']:    # compute sum
+        for proj in Global._network[0]['projections']:    # compute sum
             add += """        set_CPU_time_additional( i*%(num_op)s+%(off)s, s);
         set_total_cache_miss_additional( i*%(num_op)s+%(off)s, s);
 """ % { 'num_op': self._num_ops, 'off': rc }
             rc+= 1
 
-        for pop in Global._network['populations']:     # neural update
+        for pop in Global._network[0]['populations']:     # neural update
             add += """        set_CPU_time_additional( i*%(num_op)s+%(off)s, s);
 """ % { 'num_op': self._num_ops, 'off': rc }
             rc+= 1
@@ -203,7 +203,7 @@ class ProfileGenerator(object):
 """ % { 'num_op': self._num_ops, 'off': rc }
                 rc+= 1
 
-        for proj in Global._network['projections']:    # update synapses
+        for proj in Global._network[0]['projections']:    # update synapses
             add += """        set_CPU_time_additional( i*%(num_op)s+%(off)s, s);
 """ % { 'num_op': self._num_ops, 'off': rc }
             rc+= 1

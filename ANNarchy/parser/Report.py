@@ -201,22 +201,22 @@ def report(filename="./report.tex", standalone=True):
 def _generate_summary():
     "part A"
 
-    population_names = str(len(_network['populations'])) + ': ' 
+    population_names = str(len(_network[0]['populations'])) + ': ' 
     connectivity = ""
     neuron_models = ""
     synapse_models = ""
 
-    for pop in _network['populations']:
+    for pop in _network[0]['populations']:
         # population name
         population_names += pop_name(pop.name) + ", "
-    for neur in _network['neurons']:
+    for neur in _network[0]['neurons']:
         neuron_models += neur.name + ', '
     population_names = population_names[:-2] # suppress the last ,
     neuron_models = neuron_models[:-2] # suppress the last ,
 
     list_connectivity = []
     list_synapse_models = []
-    for proj in _network['projections']:
+    for proj in _network[0]['projections']:
         list_connectivity.append(proj.connector_name)
         if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
             list_synapse_models.append(proj.synapse.name)
@@ -251,7 +251,7 @@ def _generate_populations():
     pop_tpl = """
     %(pop_name)s             & %(neuron_type)s        & $N_\\text{%(pop_name)s}$ = %(size)s  \\\\ \\hline
 """
-    for pop in _network['populations']:
+    for pop in _network[0]['populations']:
         txt += pop_tpl % {'pop_name': pop_name(pop.name), 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
 
     return populations_template % {'populations_description': txt}
@@ -261,7 +261,7 @@ def _generate_population_parameters():
     pop_tpl = """
     %(name)s             & $%(param)s$        & %(value)s  \\\\ \\hline
 """
-    for rk, pop in enumerate(_network['populations']):
+    for rk, pop in enumerate(_network[0]['populations']):
         parameters = ""
         for idx, param in enumerate(pop.parameters):
             val = pop.init[param]
@@ -279,7 +279,7 @@ def _generate_projections():
     %(pre)s & %(post)s & %(target)s & %(synapse)s &
     %(description)s \\\\ \\hline
 """        
-    for proj in _network['projections']:
+    for proj in _network[0]['projections']:
         if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
             name = proj.synapse.name
         else:
@@ -298,7 +298,7 @@ def _generate_projection_parameters():
     %(name)s & $%(param)s$        & %(value)s  \\\\ \\hline
 """
     first = True
-    for rk, proj in enumerate(_network['projections']):
+    for rk, proj in enumerate(_network[0]['projections']):
         parameters = ""
         for idx, param in enumerate(proj.parameters):
             if param == 'w':
@@ -335,7 +335,7 @@ def _generate_neuron_models():
 \\end{tabularx}
 \\vspace{2ex}
 """
-    for idx, neuron in enumerate(_network['neurons']):
+    for idx, neuron in enumerate(_network[0]['neurons']):
         # Generate the code for the equations
         eqs, spike_txt = _process_neuron_equations(neuron)
 
@@ -382,7 +382,7 @@ def _generate_synapse_models():
 \\end{tabularx}
 \\vspace{2ex}
 """
-    for idx, synapse in enumerate(_network['synapses']):
+    for idx, synapse in enumerate(_network[0]['synapses']):
         # Generate the code for the equations
         psp, eqs, pre_desc, post_desc = _process_synapse_equations(synapse)
 

@@ -28,7 +28,7 @@ class ProjectionGenerator(object):
     def __init__(self):
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            self._prof_gen = ProfileGenerator(Global._network['populations'], Global._network['projections'])
+            self._prof_gen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
         else:
             self._prof_gen = None
 
@@ -355,7 +355,7 @@ public:
         # Profiling code
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._network['populations'], Global._network['projections'])
+            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
 
         # annotate code
         if self._prof_gen:

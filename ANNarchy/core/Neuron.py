@@ -58,9 +58,9 @@ class Neuron(object):
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
-            _network['neurons'].append(self)
+            _network[0]['neurons'].append(self)
         elif len(self._instantiated) == 0: # First instantiated of the class
-            _network['neurons'].append(self)
+            _network[0]['neurons'].append(self)
 
         if name:
             self.name = name

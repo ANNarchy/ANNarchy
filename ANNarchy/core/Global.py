@@ -27,7 +27,8 @@ from math import ceil
 import numpy as np
 
 # Data for the magic network
-_network = {
+_network = [
+    {
     'populations': [],
     'projections': [],
     'functions': [],
@@ -36,7 +37,8 @@ _network = {
     'monitors': [],
     'instance': None,
     'compiled': False
-}
+    }
+]
 
 # Configuration
 config = dict(
@@ -164,14 +166,14 @@ def reset(populations=True, projections=False, synapses = False):
     * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
-        for pop in _network['populations']:
+        for pop in _network[0]['populations']:
             pop.reset()
             
     if projections:
-        for proj in _network['projections']:
+        for proj in _network[0]['projections']:
             proj.reset(synapses)
 
-    _network['instance'].set_time(0)
+    _network[0]['instance'].set_time(0)
         
 def get_population(name):
     """
@@ -185,7 +187,7 @@ def get_population(name):
     
     * The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for pop in _network['populations']:
+    for pop in _network[0]['populations']:
         if pop.name == name:
             return pop
         
@@ -212,7 +214,7 @@ def add_function(function):
     
     Please refer to the manual to know the allowed mathematical functions.
     """  
-    _network['functions'].append(function)
+    _network[0]['functions'].append(function)
     
 def simulate(duration, measure_time = False):
     """
@@ -227,10 +229,10 @@ def simulate(duration, measure_time = False):
     """
     nb_steps = ceil(float(duration) / config['dt'])
 
-    if _network['instance']:      
+    if _network[0]['instance']:      
         if measure_time:
             tstart = time.time() 
-        _network['instance'].pyx_run(nb_steps)
+        _network[0]['instance'].pyx_run(nb_steps)
         if measure_time:
             _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     else:
@@ -263,10 +265,10 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     nb_steps = ceil(float(max_duration) / config['dt'])
     if not isinstance(population, list):
         population = [population]
-    if _network['instance']:      
+    if _network[0]['instance']:      
         if measure_time:
             tstart = time.time() 
-        nb = _network['instance'].pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
+        nb = _network[0]['instance'].pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
             _print('Simulating', nb/config['dt']/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
@@ -280,8 +282,8 @@ def step():
     Performs a single simulation step (duration = ``dt``). 
 
     """
-    if _network['instance']:      
-        _network['instance'].pyx_step()
+    if _network[0]['instance']:      
+        _network[0]['instance'].pyx_step()
     else:
         _error('simulate(): the network is not compiled yet.')
         return 0.0
@@ -298,7 +300,7 @@ def enable_learning(projections=None):
     * **projections**: the projections whose learning should be enabled. By default, all the existing projections are enabled.
     """
     if not projections:
-        projections = _network['projections']
+        projections = _network[0]['projections']
     for proj in projections:
         proj.enable_learning()
         
@@ -311,7 +313,7 @@ def disable_learning(projections=None):
     * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
     """
     if not projections:
-        projections = _network['projections']
+        projections = _network[0]['projections']
     for proj in projections:
         proj.disable_learning()
     
@@ -320,26 +322,26 @@ def disable_learning(projections=None):
 ################################
 def get_time():
     try:
-        t = _network['instance'].get_time()/config['dt']
+        t = _network[0]['instance'].get_time()/config['dt']
     except:
         t = 0.0
     return t
 
 def set_time(t):
     try:
-        _network['instance'].set_time(int(t*config['dt']))
+        _network[0]['instance'].set_time(int(t*config['dt']))
     except:
         _warning('Time can only be set when the network is compiled.')
 def get_current_step():
     try:
-        t = _network['instance'].get_time()
+        t = _network[0]['instance'].get_time()
     except:
         t = 0
     return t
 
 def set_current_step(t):
     try:
-        _network['instance'].set_time(int(t))
+        _network[0]['instance'].set_time(int(t))
     except:
         _warning('Time can only be set when the network is compiled.')
 

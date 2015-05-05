@@ -284,7 +284,7 @@ public:
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._network['populations'], Global._network['projections'])
+            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
             code = pGen.annotate_update_neuron_omp(code)
 
         # finish code
@@ -322,7 +322,7 @@ public:
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._network['populations'], Global._network['projections'])
+            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
             code = pGen.annotate_update_neuron_omp(code)
 
         # Process the condition
@@ -371,7 +371,7 @@ public:
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._network['populations'], Global._network['projections'])
+            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
             spike_gather = pGen.annotate_spike_propagation_omp(spike_gather)
 
         code += spike_gather

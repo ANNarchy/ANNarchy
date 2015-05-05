@@ -71,8 +71,8 @@ class Monitor(object):
         self._recorded_variables = {}
 
         # Add the population to the global variable
-        Global._network['monitors'].append(self)
-        if Global._network['compiled']: # Already compiled
+        Global._network[0]['monitors'].append(self)
+        if Global._network[0]['compiled']: # Already compiled
             self._init_monitoring()
 
     # Extend the period attribute
@@ -114,8 +114,8 @@ class Monitor(object):
         # Create the wrapper
         period = int(self._period/Global.config['dt'])
         offset = Global.get_current_step() % period
-        self.cyInstance = getattr(Global._network['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, offset)
-        Global._network['instance'].add_recorder(self.cyInstance)
+        self.cyInstance = getattr(Global._network[0]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, offset)
+        Global._network[0]['instance'].add_recorder(self.cyInstance)
 
         for var in self.variables:
             self._add_variable(var)
@@ -133,8 +133,8 @@ class Monitor(object):
         # Create the wrapper
         period = int(self._period/Global.config['dt'])
         offset = Global.get_current_step() % period
-        self.cyInstance = getattr(Global._network['instance'], 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], period, offset)
-        Global._network['instance'].add_recorder(self.cyInstance)
+        self.cyInstance = getattr(Global._network[0]['instance'], 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], period, offset)
+        Global._network[0]['instance'].add_recorder(self.cyInstance)
 
         for var in self.variables:
             self._add_variable(var)
@@ -204,7 +204,7 @@ class Monitor(object):
                 Global._warning('Monitor:' + var + 'can not be recorded.')
         self.variables = []
         self._recorded_variables = {}
-        Global._network['instance'].remove_recorder(self.cyInstance)
+        Global._network[0]['instance'].remove_recorder(self.cyInstance)
         self.cyInstance = None
 
 

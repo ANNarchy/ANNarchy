@@ -73,9 +73,9 @@ class Synapse(object):
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
-            _network['synapses'].append(self)
+            _network[0]['synapses'].append(self)
         elif len(self._instantiated) == 0: # First instantiated of the class
-            _network['synapses'].append(self)
+            _network[0]['synapses'].append(self)
 
         if name:
             self.name = name

@@ -57,14 +57,14 @@ class Projection(object):
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object 
         if isinstance(pre, str):
-            for pop in Global._network['populations']:
+            for pop in Global._network[0]['populations']:
                 if pop.name == pre:
                     self.pre = pop
         else:
             self.pre = pre
                                  
         if isinstance(post, str):
-            for pop in Global._network['populations']:
+            for pop in Global._network[0]['populations']:
                 if pop.name == post:
                     self.post = pop
         else:
@@ -94,7 +94,7 @@ class Projection(object):
         self.generator = copy.deepcopy(proj_generator_template)
 
         # Create a default name
-        self.id = len(Global._network['projections'])
+        self.id = len(Global._network[0]['projections'])
         self.name = 'proj'+str(self.id)
             
         self._connector = None
@@ -114,7 +114,7 @@ class Projection(object):
         self.attributes = self.parameters + self.variables 
         
         # Add the population to the global variable
-        Global._network['projections'].append(self)
+        Global._network[0]['projections'].append(self)
 
         # Finalize initialization
         self.initialized = False
@@ -1172,7 +1172,7 @@ class Projection(object):
         """
         if not period:
             period = Global.config['dt']
-        if not Global._network['compiled']:
+        if not Global._network[0]['compiled']:
             Global._error('Can not start pruning if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1191,7 +1191,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
         """
-        if not Global._network['compiled']:
+        if not Global._network[0]['compiled']:
             Global._error('Can not stop pruning if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1216,7 +1216,7 @@ class Projection(object):
         """
         if not period:
             period = Global.config['dt']
-        if not Global._network['compiled']:
+        if not Global._network[0]['compiled']:
             Global._error('Can not start creating if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1235,7 +1235,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
         """
-        if not Global._network['compiled']:
+        if not Global._network[0]['compiled']:
             Global._error('Can not stop creating if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
