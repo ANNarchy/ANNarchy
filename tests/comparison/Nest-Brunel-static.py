@@ -1,12 +1,23 @@
+import sys
 import nest
 import nest.raster_plot
+
+# ###########################################
+# Configuration
+# ###########################################
+nest.SetKernelStatus({"resolution": 0.1})
+if len(sys.argv) > 1:
+    nb_threads = sys.argv[1]
+else:
+    nb_threads = 1
+nest.SetKernelStatus({"local_num_threads": int(nb_threads)})
 
 # ###########################################
 # Parameters 
 # ###########################################
 J_ex  = 0.1 # excitatory weight
 J_in  = -0.5 # inhibitory weight
-p_rate = 20000. # external Poisson rate
+p_rate = 20.0 # external Poisson rate
 simtime = 100. # simulation time
 Nrec = 1000 # number of neurons to record from
  
@@ -25,6 +36,7 @@ nest.SetDefaults("spike_detector",{"withtime": True, "withgid": True})
 # ###########################################
 nodes_ex = nest.Create("iaf_psc_delta", 10000) 
 nodes_in = nest.Create("iaf_psc_delta", 2500)
+parrots = nest.Create("parrot_neuron", 12500)
 noise = nest.Create("poisson_generator")
 espikes = nest.Create("spike_detector")
 
@@ -39,7 +51,8 @@ nest.CopyModel("static_synapse_hom_wd", "inhibitory", {"weight":J_in, "delay":1.
 # ###########################################
 nest.Connect(nodes_ex, nodes_ex+nodes_in, {"rule": 'fixed_indegree', "indegree": 1000}, "excitatory")
 nest.Connect(nodes_in, nodes_ex+nodes_in, {"rule": 'fixed_indegree', "indegree": 250}, "inhibitory")
-nest.Connect(noise, nodes_ex+nodes_in, 'all_to_all', "excitatory")
+nest.Connect(noise, parrots, 'all_to_all')
+nest.Connect(parrots, nodes_ex+nodes_in, {"rule": 'fixed_indegree', "indegree": 1000}, "excitatory")
 nest.Connect(nodes_ex[:Nrec], espikes, 'all_to_all')
 
 # ###########################################
