@@ -33,7 +33,7 @@ class Monitor(object):
     Monitoring class allowing to record easily variables from Population, PopulationView and Dendrite objects.
     """
     
-    def __init__(self, obj, variables=[], period=None, start=True):
+    def __init__(self, obj, variables=[], period=None, start=True, net_id=0):
         """        
         *Parameters*:
         
@@ -53,6 +53,7 @@ class Monitor(object):
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
         self.cyInstance = None
+        self.net_id = 0
 
         # Variables to record
         if not isinstance(variables, list):
@@ -71,8 +72,8 @@ class Monitor(object):
         self._recorded_variables = {}
 
         # Add the population to the global variable
-        Global._network[0]['monitors'].append(self)
-        if Global._network[0]['compiled']: # Already compiled
+        Global._network[self.net_id]['monitors'].append(self)
+        if Global._network[self.net_id]['compiled']: # Already compiled
             self._init_monitoring()
 
     # Extend the period attribute
@@ -114,8 +115,8 @@ class Monitor(object):
         # Create the wrapper
         period = int(self._period/Global.config['dt'])
         offset = Global.get_current_step() % period
-        self.cyInstance = getattr(Global._network[0]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, offset)
-        Global._network[0]['instance'].add_recorder(self.cyInstance)
+        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, offset)
+        Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
         for var in self.variables:
             self._add_variable(var)
@@ -133,8 +134,8 @@ class Monitor(object):
         # Create the wrapper
         period = int(self._period/Global.config['dt'])
         offset = Global.get_current_step() % period
-        self.cyInstance = getattr(Global._network[0]['instance'], 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], period, offset)
-        Global._network[0]['instance'].add_recorder(self.cyInstance)
+        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], period, offset)
+        Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
         for var in self.variables:
             self._add_variable(var)

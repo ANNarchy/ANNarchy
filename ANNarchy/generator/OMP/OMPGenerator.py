@@ -129,12 +129,12 @@ class OMPGenerator(object):
 
     def header_custom_functions(self):
 
-        if len(Global._network[0]['functions']) == 0:
+        if len(Global._objects['functions']) == 0:
             return ""
 
         code = ""
         from ANNarchy.parser.Extraction import extract_functions
-        for func in Global._network[0]['functions']:
+        for func in Global._objects['functions']:
             code +=  extract_functions(func, local_global=True)[0]['cpp'] + '\n'
 
         return code

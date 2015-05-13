@@ -96,7 +96,7 @@ def setup_parser():
 
     return parser
 
-def compile(directory='annarchy', clean=False, populations=None, projections=None, cpp_stand_alone=False, debug_build=False, profile_enabled = False):
+def compile(directory='annarchy', clean=False, populations=None, projections=None, cpp_stand_alone=False, debug_build=False, profile_enabled = False, net_id=0):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
     
@@ -132,10 +132,10 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     clean = options.clean # enforce rebuild
 
     if populations == None: # Default network
-        populations = Global._network[0]['populations']
+        populations = Global._network[net_id]['populations']
 
     if projections == None: # Default network
-        projections = Global._network[0]['projections']
+        projections = Global._network[net_id]['projections']
 
     # Compiling directory
     annarchy_dir = os.getcwd() + '/' + directory
@@ -156,14 +156,14 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     
     # Create a Generator object
     generator = Generator(annarchy_dir, clean, cpp_stand_alone, debug_build, profile_enabled, 
-                 populations, projections)
+                 populations, projections, net_id)
     generator.generate()
     
 class Generator(object):
     " Main class to generate C++ code efficiently"
       
     def __init__(self, annarchy_dir, clean, cpp_stand_alone, debug_build, profile_enabled, 
-                 populations, projections): 
+                 populations, projections, net_id): 
         
         # Store arguments
         self.annarchy_dir = annarchy_dir
@@ -173,6 +173,7 @@ class Generator(object):
         self.profile_enabled = profile_enabled
         self.populations = populations
         self.projections = projections
+        self.net_id = net_id
         
     def generate(self):
         " Method to generate the C++ code."
@@ -193,7 +194,7 @@ class Generator(object):
             # Return to the current directory
             os.chdir('..')
                 
-        Global._network[0]['compiled'] = True
+        Global._network[self.net_id]['compiled'] = True
         
         # Create the Python objects                
         self.instantiate()    
@@ -349,7 +350,7 @@ clean:
 
         # Import the Cython library
         cython_module = __import__('ANNarchyCore')
-        Global._network[0]['instance'] = cython_module
+        Global._network[self.net_id]['instance'] = cython_module
 
         # Bind the py extensions to the corresponding python objects
         for pop in self.populations:
@@ -396,7 +397,7 @@ clean:
             cython_module.set_number_threads(Global.config['num_threads'])
 
         # Start the monitors
-        for monitor in Global._network[0]['monitors']:
+        for monitor in Global._network[self.net_id]['monitors']:
             monitor._init_monitoring()
 
     def code_generation(self, cpp_stand_alone, profile_enabled, clean):

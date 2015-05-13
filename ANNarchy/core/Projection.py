@@ -1172,7 +1172,7 @@ class Projection(object):
         """
         if not period:
             period = Global.config['dt']
-        if not Global._network[0]['compiled']:
+        if not self.cyInstance:
             Global._error('Can not start pruning if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1191,7 +1191,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
         """
-        if not Global._network[0]['compiled']:
+        if not self.cyInstance:
             Global._error('Can not stop pruning if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1216,7 +1216,7 @@ class Projection(object):
         """
         if not period:
             period = Global.config['dt']
-        if not Global._network[0]['compiled']:
+        if not self.cyInstance:
             Global._error('Can not start creating if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1235,7 +1235,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
         """
-        if not Global._network[0]['compiled']:
+        if not self.cyInstance:
             Global._error('Can not stop creating if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:

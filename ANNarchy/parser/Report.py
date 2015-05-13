@@ -1,4 +1,4 @@
-from ANNarchy.core.Global import _network, _warning, _error, _print
+from ANNarchy.core.Global import _network, _objects, _warning, _error, _print
 from ANNarchy.core.Random import RandomDistribution
 from .Extraction import *
 from .SingleAnalysis import pattern_omp
@@ -152,7 +152,7 @@ footer = """
 ### Main method
 ##################################
 
-def report(filename="./report.tex", standalone=True):
+def report(filename="./report.tex", standalone=True, net_id=0):
     """ Generates a .tex file describing the network according to: 
     Nordlie E, Gewaltig M-O, Plesser HE (2009). Towards Reproducible Descriptions of Neuronal Network Models. PLoS Comput Biol 5(8): e1000456.
 
@@ -160,25 +160,26 @@ def report(filename="./report.tex", standalone=True):
 
     * *filename*: name of the .tex file where the report will be written (default: "./report.tex")
     * *standalone*: tells if the generated file should be directly compilable or only includable (default: True) 
+    * *net_id*: id of the network to be used for reporting (default: 0, everything that was declared) 
     """
 
     # stdout
     _print('Generating report in', filename)
 
     # Generate the summary
-    summary = _generate_summary()
+    summary = _generate_summary(net_id)
     # Generate the populations
-    populations = _generate_populations()
+    populations = _generate_populations(net_id)
     # Generate the populations
-    projections = _generate_projections()
+    projections = _generate_projections(net_id)
     # Generate the neuron models
-    neuron_models = _generate_neuron_models()
+    neuron_models = _generate_neuron_models(net_id)
     # Generate the synapse models
-    synapse_models = _generate_synapse_models()
+    synapse_models = _generate_synapse_models(net_id)
     # Generate the population parameters
-    pop_parameters = _generate_population_parameters()
+    pop_parameters = _generate_population_parameters(net_id)
     # Generate the population parameters
-    proj_parameters = _generate_projection_parameters()
+    proj_parameters = _generate_projection_parameters(net_id)
 
     with open(filename, 'w') as wfile:
         if standalone:
@@ -198,25 +199,25 @@ def report(filename="./report.tex", standalone=True):
 ### Process major fields
 ##################################
 
-def _generate_summary():
+def _generate_summary(net_id):
     "part A"
 
-    population_names = str(len(_network[0]['populations'])) + ': ' 
+    population_names = str(len(_network[net_id]['populations'])) + ': ' 
     connectivity = ""
     neuron_models = ""
     synapse_models = ""
 
-    for pop in _network[0]['populations']:
+    for pop in _network[net_id]['populations']:
         # population name
         population_names += pop_name(pop.name) + ", "
-    for neur in _network[0]['neurons']:
+    for neur in _objects['neurons']:
         neuron_models += neur.name + ', '
     population_names = population_names[:-2] # suppress the last ,
     neuron_models = neuron_models[:-2] # suppress the last ,
 
     list_connectivity = []
     list_synapse_models = []
-    for proj in _network[0]['projections']:
+    for proj in _network[net_id]['projections']:
         list_connectivity.append(proj.connector_name)
         if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
             list_synapse_models.append(proj.synapse.name)
@@ -237,7 +238,7 @@ def _generate_summary():
     }
     return txt
 
-def _generate_populations():
+def _generate_populations(net_id):
     def format_size(pop):
         size = str(pop.size)
         if pop.dimension >1:
@@ -251,17 +252,17 @@ def _generate_populations():
     pop_tpl = """
     %(pop_name)s             & %(neuron_type)s        & $N_\\text{%(pop_name)s}$ = %(size)s  \\\\ \\hline
 """
-    for pop in _network[0]['populations']:
+    for pop in _network[net_id]['populations']:
         txt += pop_tpl % {'pop_name': pop_name(pop.name), 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
 
     return populations_template % {'populations_description': txt}
 
-def _generate_population_parameters():
+def _generate_population_parameters(net_id):
     txt = ""
     pop_tpl = """
     %(name)s             & $%(param)s$        & %(value)s  \\\\ \\hline
 """
-    for rk, pop in enumerate(_network[0]['populations']):
+    for rk, pop in enumerate(_network[net_id]['populations']):
         parameters = ""
         for idx, param in enumerate(pop.parameters):
             val = pop.init[param]
@@ -273,13 +274,13 @@ def _generate_population_parameters():
 
     return txt
 
-def _generate_projections():
+def _generate_projections(net_id):
     txt = ""
     proj_tpl = """
     %(pre)s & %(post)s & %(target)s & %(synapse)s &
     %(description)s \\\\ \\hline
 """        
-    for proj in _network[0]['projections']:
+    for proj in _network[net_id]['projections']:
         if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
             name = proj.synapse.name
         else:
@@ -292,13 +293,13 @@ def _generate_projections():
 
 
 
-def _generate_projection_parameters():
+def _generate_projection_parameters(net_id):
     txt = ""
     proj_tpl = """
     %(name)s & $%(param)s$        & %(value)s  \\\\ \\hline
 """
     first = True
-    for rk, proj in enumerate(_network[0]['projections']):
+    for rk, proj in enumerate(_network[net_id]['projections']):
         parameters = ""
         for idx, param in enumerate(proj.parameters):
             if param == 'w':
@@ -318,7 +319,7 @@ def _generate_projection_parameters():
 
     return txt
 
-def _generate_neuron_models():
+def _generate_neuron_models(net_id):
     neurons = ""
 
     firstneuron = "\\hdr{2}{D}{Neuron Models}\\\\ \\hline"
@@ -335,7 +336,7 @@ def _generate_neuron_models():
 \\end{tabularx}
 \\vspace{2ex}
 """
-    for idx, neuron in enumerate(_network[0]['neurons']):
+    for idx, neuron in enumerate(_objects['neurons']):
         # Generate the code for the equations
         eqs, spike_txt = _process_neuron_equations(neuron)
 
@@ -363,7 +364,7 @@ def _generate_neuron_models():
 
     return neurons
 
-def _generate_synapse_models():
+def _generate_synapse_models(net_id):
     firstsynapse = ""
     synapses = ""
 
@@ -382,7 +383,7 @@ def _generate_synapse_models():
 \\end{tabularx}
 \\vspace{2ex}
 """
-    for idx, synapse in enumerate(_network[0]['synapses']):
+    for idx, synapse in enumerate(_objects['synapses']):
         # Generate the code for the equations
         psp, eqs, pre_desc, post_desc = _process_synapse_equations(synapse)
 

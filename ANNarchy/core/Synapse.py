@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _error, _warning, _network
+from ANNarchy.core.Global import _error, _warning, _network, _objects
 from ANNarchy.parser.SingleAnalysis import analyse_synapse
 
         
@@ -73,9 +73,9 @@ class Synapse(object):
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
-            _network[0]['synapses'].append(self)
+            _objects['synapses'].append(self)
         elif len(self._instantiated) == 0: # First instantiated of the class
-            _network[0]['synapses'].append(self)
+            _objects['synapses'].append(self)
 
         if name:
             self.name = name

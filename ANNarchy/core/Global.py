@@ -26,14 +26,18 @@ import time
 from math import ceil
 import numpy as np
 
-# Data for the magic network
+# High-level structures
+_objects = {
+    'functions': [],
+    'neurons': [],
+    'synapses': [],    
+}
+
+# Data for the different networks
 _network = [
     {
     'populations': [],
     'projections': [],
-    'functions': [],
-    'neurons': [],
-    'synapses': [],
     'monitors': [],
     'instance': None,
     'compiled': False
@@ -56,6 +60,7 @@ config = dict(
    }
 )
 
+# Configuration for CUDA
 cuda_config = dict(
     {
      'device': 0
@@ -155,7 +160,7 @@ def set_cuda_config(config):
     global cuda_config
     cuda_config = config
     
-def reset(populations=True, projections=False, synapses = False):
+def reset(populations=True, projections=False, synapses = False, net_id=0):
     """
     Reinitialises the network to its state before the call to compile.
 
@@ -166,16 +171,16 @@ def reset(populations=True, projections=False, synapses = False):
     * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
-        for pop in _network[0]['populations']:
+        for pop in _network[net_id]['populations']:
             pop.reset()
             
     if projections:
-        for proj in _network[0]['projections']:
+        for proj in _network[net_id]['projections']:
             proj.reset(synapses)
 
-    _network[0]['instance'].set_time(0)
+    _network[net_id]['instance'].set_time(0)
         
-def get_population(name):
+def get_population(name, net_id=0):
     """
     Returns the population with the given *name*.
     
@@ -187,11 +192,11 @@ def get_population(name):
     
     * The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for pop in _network[0]['populations']:
+    for pop in _network[net_id]['populations']:
         if pop.name == name:
             return pop
         
-    _error("the population", name, "does not exist.")
+    _error("get_population(): the population", name, "does not exist.")
     return None
     
 def add_function(function):
@@ -214,9 +219,9 @@ def add_function(function):
     
     Please refer to the manual to know the allowed mathematical functions.
     """  
-    _network[0]['functions'].append(function)
+    _objects['functions'].append(function)
     
-def simulate(duration, measure_time = False):
+def simulate(duration, measure_time = False, net_id=0):
     """
     Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
 
@@ -229,17 +234,17 @@ def simulate(duration, measure_time = False):
     """
     nb_steps = ceil(float(duration) / config['dt'])
 
-    if _network[0]['instance']:      
+    if _network[net_id]['instance']:      
         if measure_time:
             tstart = time.time() 
-        _network[0]['instance'].pyx_run(nb_steps)
+        _network[net_id]['instance'].pyx_run(nb_steps)
         if measure_time:
             _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     else:
         _error('simulate(): the network is not compiled yet.')
         return
     
-def simulate_until(max_duration, population, operator='and', measure_time = False):
+def simulate_until(max_duration, population, operator='and', measure_time = False, net_id=0):
     """
     Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
 
@@ -265,10 +270,10 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     nb_steps = ceil(float(max_duration) / config['dt'])
     if not isinstance(population, list):
         population = [population]
-    if _network[0]['instance']:      
+    if _network[net_id]['instance']:      
         if measure_time:
             tstart = time.time() 
-        nb = _network[0]['instance'].pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
+        nb = _network[net_id]['instance'].pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
         sim_time = float(nb) / config['dt']
         if measure_time:
             _print('Simulating', nb/config['dt']/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
@@ -277,13 +282,13 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
         _error('simulate(): the network is not compiled yet.')
         return 0.0
 
-def step():
+def step(net_id=0):
     """
     Performs a single simulation step (duration = ``dt``). 
 
     """
-    if _network[0]['instance']:      
-        _network[0]['instance'].pyx_step()
+    if _network[net_id]['instance']:      
+        _network[net_id]['instance'].pyx_step()
     else:
         _error('simulate(): the network is not compiled yet.')
         return 0.0
@@ -291,7 +296,7 @@ def step():
 ################################
 ## Learning flags
 ################################
-def enable_learning(projections=None):
+def enable_learning(projections=None, net_id=0):
     """
     Enables learning for all projections.
     
@@ -300,11 +305,11 @@ def enable_learning(projections=None):
     * **projections**: the projections whose learning should be enabled. By default, all the existing projections are enabled.
     """
     if not projections:
-        projections = _network[0]['projections']
+        projections = _network[net_id]['projections']
     for proj in projections:
         proj.enable_learning()
         
-def disable_learning(projections=None):
+def disable_learning(projections=None, net_id=0):
     """
     Disables learning for all projections.
     
@@ -313,35 +318,36 @@ def disable_learning(projections=None):
     * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
     """
     if not projections:
-        projections = _network[0]['projections']
+        projections = _network[net_id]['projections']
     for proj in projections:
         proj.disable_learning()
     
 ################################
 ## Time
 ################################
-def get_time():
+def get_time(net_id=0):
     try:
-        t = _network[0]['instance'].get_time()/config['dt']
+        t = _network[net_id]['instance'].get_time()/config['dt']
     except:
         t = 0.0
     return t
 
-def set_time(t):
+def set_time(t, net_id=0):
     try:
-        _network[0]['instance'].set_time(int(t*config['dt']))
+        _network[net_id]['instance'].set_time(int(t*config['dt']))
     except:
         _warning('Time can only be set when the network is compiled.')
-def get_current_step():
+
+def get_current_step(net_id=0):
     try:
-        t = _network[0]['instance'].get_time()
+        t = _network[net_id]['instance'].get_time()
     except:
         t = 0
     return t
 
-def set_current_step(t):
+def set_current_step(t, net_id=0):
     try:
-        _network[0]['instance'].set_time(int(t))
+        _network[net_id]['instance'].set_time(int(t))
     except:
         _warning('Time can only be set when the network is compiled.')
 
@@ -369,6 +375,7 @@ def start_record(to_record, period = {}):
         }
         start_record(to_record)
     """
+    _warning('Recording through global methods is deprecated. Use the Monitor object instead.')
     global _recorded_populations
     _recorded_populations = to_record
 
@@ -413,6 +420,7 @@ def get_record(to_record=None, reshape=False):
         data = get_record()
         
     """   
+    _warning('Recording through global methods is deprecated. Use the Monitor object instead.')
     if not to_record:
         to_record = _recorded_populations
 
@@ -437,6 +445,7 @@ def stop_record(to_record=None):
     
     * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.stop_record(). When omitted, the dictionary provided in the last call to start_record() is used.
     """
+    _warning('Recording through global methods is deprecated. Use the Monitor object instead.')
     if not to_record:
         to_record = _recorded_populations
     for pop, variables in to_record.items():
@@ -454,6 +463,7 @@ def pause_record(to_record=None):
     
     * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.pause_record(). When omitted, the dictionary provided in the last call to start_record() is used.
     """
+    _warning('Recording through global methods is deprecated. Use the Monitor object instead.')
     if not to_record:
         to_record = _recorded_populations
     for pop, variables in to_record.items():
@@ -471,6 +481,7 @@ def resume_record(to_record=None):
     
     * **to_record**: a dictionary with population objects (or names) as keys and variable names as values (either a single string or a list of strings). For more details check Population.resume_record(). When omitted, the dictionary provided in the last call to start_record() is used.
     """
+    _warning('Recording through global methods is deprecated. Use the Monitor object instead.')
     if not to_record:
         to_record = _recorded_populations
     for pop, variables in to_record.items():
