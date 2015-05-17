@@ -11,13 +11,13 @@ class Network(object):
     """ 
     A network gathers already defined populations and projections to be run independently.
     """
-    def __init__(self, magic=False):
+    def __init__(self, everything=False):
         """
         *Parameters:*
-        * **magic**: defines if all existing populations and projections should be automatically added (default: false)
+        * **everything**: defines if all existing populations and projections should be automatically added (default: false)
         """
         self.id = len(Global._network)
-        self.magic = magic
+        self.everything = everything
         Global._network.append(
             {
             'populations': [],
@@ -30,7 +30,7 @@ class Network(object):
         self.populations = []
         self.projections = []
         self.monitors = []
-        if magic:
+        if everything:
             self.add(Global._network[0]['populations'])
             self.add(Global._network[0]['projections'])
             self.add(Global._network[0]['monitors'])
@@ -140,18 +140,7 @@ class Network(object):
         * **directory**: name of the subdirectory where the code will be generated and compiled.
         * **silent**: defines if the "Compiling... OK" should be printed.
         """
-        if True:#not self.magic: # Complete compilation
-            Generator.compile(directory=directory, silent=silent, net_id=self.id)
-        else:
-            if not Global._network[0]['compiled']: # Compile the magic network
-                Generator.compile(directory=directory, silent=silent, net_id=0)
-            subdir = 'annarchy/net'+str(self.id)+'/'
-            try:
-                os.makedirs(subdir)
-            except:
-                pass # directory already existed
-            shutil.copy('annarchy/ANNarchyCore0.so', subdir)
-            Generator._instantiate(net_id=self.id, single=False)
+        Generator.compile(directory=directory, silent=silent, net_id=self.id)
 
     def simulate(self, duration):
         "Simulates the network for the given duration in ms."
@@ -164,7 +153,13 @@ def parallel_run(method, networks=None, number=0, measure_time=False, sequential
 
     If the ``networks`` argument is provided as a list of Network objects, the given method will be executed for each of these networks.
 
-    If ``number`` is given instead, the same number of magic networks will be created and the method is applied. The method returns in this case a list of networks.
+    If ``number`` is given instead, the same number of magic networks will be created and the method is applied. 
+
+    **Returns**:
+
+    * If ``networks`` is used, a list of the values returned by ``method``.
+
+    * If ``number`` is used, the list of created networks is returned first, then the list of values returned by ``method``.
 
     *Parameters*:
 
