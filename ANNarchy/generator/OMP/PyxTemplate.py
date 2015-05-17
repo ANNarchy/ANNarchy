@@ -31,7 +31,7 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(double, long)
-    void run(int nbSteps)
+    void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
     void step()
     
@@ -82,13 +82,16 @@ def pyx_create(double dt, long seed):
 # Simulation for the given number of steps
 def pyx_run(int nb_steps):
     cdef int nb, rest
-    if nb_steps < 1000:
-        run(nb_steps)
+    cdef int batch = 1000
+    if nb_steps < batch:
+        with nogil:
+            run(nb_steps)
     else:
-        nb = int(nb_steps/1000)
-        rest = nb_steps %% 1000
+        nb = int(nb_steps/batch)
+        rest = nb_steps %% batch
         for i in range(nb):
-            run(1000)
+            with nogil:
+                run(batch)
             PyErr_CheckSignals()
         run(rest)
 

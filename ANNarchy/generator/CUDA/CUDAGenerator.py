@@ -43,8 +43,9 @@ import numpy as np
 
 class CUDAGenerator(object):
 
-    def __init__(self, annarchy_dir, populations, projections):
+    def __init__(self, annarchy_dir, populations, projections, net_id):
 
+        self.net_id = net_id
         self.annarchy_dir = annarchy_dir
         self.populations = populations
         self.projections = projections
@@ -69,7 +70,7 @@ class CUDAGenerator(object):
             ofile.write(self.generate_body())
 
         # Generate cython code for the analysed pops and projs
-        with open(self.annarchy_dir+'/generate/ANNarchyCore.pyx', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/ANNarchyCore'+str(self.net_id)+'.pyx', 'w') as ofile:
             ofile.write(self.generate_pyx())
 
     def propagate_global_ops(self):

@@ -51,7 +51,7 @@ config = dict(
     'verbose': False,
     'show_time': False,
     'suppress_warnings': False,
-    'num_threads': None,
+    'num_threads': 1,
     'paradigm': "openmp",
     'method': "explicit",
     'seed': -1,

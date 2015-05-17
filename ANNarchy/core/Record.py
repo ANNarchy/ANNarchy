@@ -53,7 +53,7 @@ class Monitor(object):
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
         self.cyInstance = None
-        self.net_id = 0
+        self.net_id = net_id
 
         # Variables to record
         if not isinstance(variables, list):
@@ -72,6 +72,7 @@ class Monitor(object):
         self._recorded_variables = {}
 
         # Add the population to the global variable
+        self.id = len(Global._network[self.net_id]['monitors'])
         Global._network[self.net_id]['monitors'].append(self)
         if Global._network[self.net_id]['compiled']: # Already compiled
             self._init_monitoring()

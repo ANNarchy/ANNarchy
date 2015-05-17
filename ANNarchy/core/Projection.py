@@ -181,6 +181,38 @@ class Projection(object):
         # Delete the _synapses array, not needed anymore
         del self._synapses
         self._synapses = None
+    
+    def _store_csr(self, csr):
+        "Stores the CSR object created by the connector method."
+        if self._synapses:
+            del self._synapses
+        self._synapses = csr
+        self.max_delay = self._synapses.get_max_delay()
+        self.uniform_delay = self._synapses.get_uniform_delay()
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+
+    def _get_csr(self):
+        "Returns the CSR object used for creating the projection, even if it was erased by compile()"
+        if self._synapses:
+            return self._synapses
+
+        try:
+            from ANNarchy.core.cython_ext.Connector import CSR
+        except:
+            Global._error('CSR: ANNarchy was not successfully installed.')
+            exit(0)
+        csr = CSR()   
+        for idx, rk_post in enumerate(self.post_ranks):
+            if self.uniform_delay:
+                delay = [self.max_delay]
+            else:
+                delay = [self.max_delay] # TODO: real delay!
+            csr.add(rk_post, self.cyInstance.pre_rank(idx), self.cyInstance.get_dendrite_w(idx), delay)
+
+        return csr  
 
     ################################
     ## Dendrite access
@@ -516,16 +548,7 @@ class Projection(object):
     
     ################################
     ## Connector methods
-    ################################
-    
-    def _store_csr(self, csr):
-        self._synapses = csr
-        self.max_delay = self._synapses.get_max_delay()
-        self.uniform_delay = self._synapses.get_uniform_delay()
-        if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
-        else:
-            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+    ################################   
 
     def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None):
         """
