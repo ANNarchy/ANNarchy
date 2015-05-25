@@ -1,9 +1,34 @@
+"""
+
+    PopulationTemplate.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
 # Definition of a population as a c-like struct, divided
 # into two groups: rate or spike
 # 
 # Parameters:
+#
 #    id: id of the population
 #    additional: neuron specific definitions
+#    accessors: set of functions to export population data to python
 header_struct = {
     'rate' :
 """
@@ -22,9 +47,9 @@ struct PopStruct%(id)s{
     std::vector<int> record_ranks;
 
     // Access functions used by cython wrapper
-int get_size() { return size; }
-bool is_active() { return _active; }
-bool set_active(bool val) { _active = val; }
+    int get_size() { return size; }
+    bool is_active() { return _active; }
+    bool set_active(bool val) { _active = val; }
 
     // Record
     void set_record_period(int period, long int t) { record_period = period; record_offset = t; }
@@ -59,9 +84,9 @@ struct PopStruct%(id)s{
     std::vector<int> record_ranks;
 
     // Access functions used by cython wrapper
-int get_size() { return size; }
-bool is_active() { return _active; }
-bool set_active(bool val) { _active = val; }
+    int get_size() { return size; }
+    bool is_active() { return _active; }
+    bool set_active(bool val) { _active = val; }
 
     // Record
     void set_record_period(int period, long int t) { record_period = period; record_offset = t; }
@@ -73,6 +98,13 @@ bool set_active(bool val) { _active = val; }
 """
 }
 
+# c like definition of parameter members, whereas 'local' is used if values can vary across neurons,
+# consequently 'global' is used if values are common to all neurons.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...)
+#    name: name of the variable
 parameter_decl = {
     'local':
 """
@@ -86,6 +118,13 @@ parameter_decl = {
 """    
 }
 
+# c like definition of accessors for parameter members, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...)
+#    name: name of the variable
 parameter_acc = {
     'local':
 """
@@ -103,23 +142,14 @@ parameter_acc = {
 """
 }
 
-variable_decl = {
-    'local':
-"""
-    // Local variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    bool record_%(name)s ;
-""",
-    'global':
-"""
-    // Global variable %(name)s
-    %(type)s  %(name)s ;
-    std::vector< %(type)s > recorded_%(name)s ;
-    bool record_%(name)s ;
-"""
-}
-
+# export of accessors for parameter members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
 parameter_cpp_export = {
     'local':
 """
@@ -137,6 +167,15 @@ parameter_cpp_export = {
 """
 }
 
+# export of accessors for parameter members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons. Functions marked as cpdef
+# can be accessed from python as well as cython. Local parameters allows access to single as well as all values.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
 parameter_pyx_wrapper = {
     'local':
 """
@@ -160,6 +199,59 @@ parameter_pyx_wrapper = {
 """
 }
 
+# Initialization of parameters due to the init_population method.
+#
+# Parameters:
+#
+#    name: name of the variable
+#    init: initial value
+parameter_cpp_init = {
+    'local':
+"""
+    // Local parameter %(name)s
+    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
+""",
+    'global':
+"""
+    // Global parameter %(name)s
+    pop%(id)s.%(name)s = %(init)s;
+"""
+}
+
+# c like definition of accessors for variable members, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons. As variables
+# change over time, values can be recorded.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...)
+#    name: name of the variable
+variable_decl = {
+    'local':
+"""
+    // Local variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
+    bool record_%(name)s ;
+""",
+    'global':
+"""
+    // Global variable %(name)s
+    %(type)s  %(name)s ;
+    std::vector< %(type)s > recorded_%(name)s ;
+    bool record_%(name)s ;
+"""
+}
+
+# c like definition of accessors for variable members, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons. As variables
+# change over time, values can be recorded. By default recording is disabled, so we need functions
+# to start, stop and get recorded values.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...)
+#    name: name of the variable
 variable_acc = {
     'local':
 """
@@ -185,6 +277,14 @@ variable_acc = {
 """
 }
 
+# export of accessors for variable members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
 variable_cpp_export = {
     'local':
 """
@@ -210,6 +310,15 @@ variable_cpp_export = {
 """
 }
 
+# export of accessors for variable members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons. Functions marked as cpdef
+# can be accessed from python as well as cython. Local parameters allows access to single as well as all values.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
 variable_pyx_wrapper = {
     'local':
 """
@@ -247,4 +356,50 @@ variable_pyx_wrapper = {
         pop%(id)s.clear_recorded_%(name)s()
         return tmp
 """
+}
+
+# Initialization of parameters due to the init_population method.
+#
+# Parameters:
+#
+#    name: name of the variable
+#    init: initial value
+variable_cpp_init = {
+    'local':
+"""
+    // Local variable %(name)s
+    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
+    pop%(id)s.recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
+    pop%(id)s.record_%(name)s = false;
+""",
+    'global':
+"""
+    // Global variable %(name)s
+    pop%(id)s.%(name)s = %(init)s;
+    pop%(id)s.recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
+    pop%(id)s.record_%(name)s = false;
+"""
+}
+
+# Rate respectively spiking models require partly special variables or have different operations.
+# This dictionary contain these unique initializations.
+#
+# Parameters (may differ):
+#
+#     id: id of the population
+#     target: target name (e. g. FF, LAT ...)
+model_specific_init = {
+    'spike_event':
+"""
+    // Spiking event and refractory
+    pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
+    pop%(id)s.record_spike = false;
+    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
+    pop%(id)s.spiked = std::vector<int>(0, 0);
+    pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
+    pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
+""",
+    'rate_psp':
+"""
+    pop%(id)s._sum_%(target)s = std::vector<double>(pop%(id)s.size, 0.0);"""
 }

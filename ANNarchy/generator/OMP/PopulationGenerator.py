@@ -35,7 +35,7 @@ class PopulationGenerator(object):
 
         Used templates:
 
-            header_struct, parameter_decl, variable_decl
+            header_struct, parameter_decl, parameter_acc, variable_decl, variable_acc
         """
         # Is it a specific population?
         if pop.generator['omp']['header_pop_struct']:
@@ -380,52 +380,28 @@ class PopulationGenerator(object):
         for var in pop.neuron_type.description['parameters']:
             init = 0.0 if var['ctype'] == 'double' else 0
             if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local parameter %(name)s
-    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                code += PopTemplate.parameter_cpp_init['local'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             else: # global
-                code += """
-    // Global parameter %(name)s
-    pop%(id)s.%(name)s = %(init)s;
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                code += PopTemplate.parameter_cpp_init['global'] %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             init = 0.0 if var['ctype'] == 'double' else 0
             if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local variable %(name)s
-    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
-    pop%(id)s.recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
-    pop%(id)s.record_%(name)s = false;
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                code += PopTemplate.variable_cpp_init['local'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
             else: # global
-                code += """
-    // Global variable %(name)s
-    pop%(id)s.%(name)s = %(init)s;
-    pop%(id)s.recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
-    pop%(id)s.record_%(name)s = false;
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                code += PopTemplate.variable_cpp_init['global'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Targets
         if pop.neuron_type.type == 'rate':
             for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
-                code += """
-    pop%(id)s._sum_%(target)s = std::vector<double>(pop%(id)s.size, 0.0);""" %{'id': pop.id, 'target': target}
+                code += PopTemplate.model_specific_init['rate_psp'] % {'id': pop.id, 'target': target}
 
+        # Spike event and refractory
         if pop.neuron_type.type == 'spike':
-            code += """
-    // Spiking neuron
-    pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
-    pop%(id)s.record_spike = false;
-    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
-    pop%(id)s.spiked = std::vector<int>(0, 0);
-    pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
-    pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
-""" % {'id': pop.id}
+            code += PopTemplate.model_specific_init['spike_event'] % {'id': pop.id}
 
         # Delays
         if pop.max_delay > 1:
