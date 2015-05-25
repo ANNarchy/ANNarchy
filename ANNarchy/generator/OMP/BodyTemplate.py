@@ -53,8 +53,8 @@ void initialize(double _dt, long int seed) {
         rng = std::mt19937(seed);
     }
     
-%(random_dist_init)s
 %(pop_init)s
+%(random_dist_init)s
 %(projection_init)s
 %(globalops_init)s
 }
