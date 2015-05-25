@@ -31,7 +31,11 @@
 #    accessors: set of functions to export population data to python
 header_struct = {
     'rate' :
-"""
+"""#pragma once
+
+extern double dt;
+extern long int t;
+
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
@@ -57,10 +61,22 @@ struct PopStruct%(id)s{
 
     // Neuron specific
 %(accessor)s
+
+    void init_population() {
+%(init)s
+    }
+    
+    void update() {
+%(update)s
+    }
 };
 """,
     'spike':
-"""
+"""#pragma once
+
+extern double dt;
+extern long int t;
+
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
@@ -94,6 +110,14 @@ struct PopStruct%(id)s{
 
     // Neuron specific
 %(accessor)s
+
+    void init_population() {
+%(init)s
+    }
+
+    void update() {
+%(update)s
+    }
 };
 """
 }
@@ -208,13 +232,13 @@ parameter_pyx_wrapper = {
 parameter_cpp_init = {
     'local':
 """
-    // Local parameter %(name)s
-    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
+        // Local parameter %(name)s
+        %(name)s = std::vector<%(type)s>(size, %(init)s);
 """,
     'global':
 """
-    // Global parameter %(name)s
-    pop%(id)s.%(name)s = %(init)s;
+        // Global parameter %(name)s
+        %(name)s = %(init)s;
 """
 }
 
@@ -367,17 +391,17 @@ variable_pyx_wrapper = {
 variable_cpp_init = {
     'local':
 """
-    // Local variable %(name)s
-    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
-    pop%(id)s.recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
-    pop%(id)s.record_%(name)s = false;
+        // Local variable %(name)s
+        %(name)s = std::vector<%(type)s>(size, %(init)s);
+        recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
+        record_%(name)s = false;
 """,
     'global':
 """
-    // Global variable %(name)s
-    pop%(id)s.%(name)s = %(init)s;
-    pop%(id)s.recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
-    pop%(id)s.record_%(name)s = false;
+        // Global variable %(name)s
+        %(name)s = %(init)s;
+        recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
+        record_%(name)s = false;
 """
 }
 
@@ -391,15 +415,16 @@ variable_cpp_init = {
 model_specific_init = {
     'spike_event':
 """
-    // Spiking event and refractory
-    pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
-    pop%(id)s.record_spike = false;
-    pop%(id)s.recorded_spike = std::vector<std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
-    pop%(id)s.spiked = std::vector<int>(0, 0);
-    pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
-    pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
+        // Spiking event and refractory
+        refractory = std::vector<int>(size, 0);
+        record_spike = false;
+        recorded_spike = std::vector<std::vector<long int> >(size, std::vector<long int>());
+        spiked = std::vector<int>(0, 0);
+        last_spike = std::vector<long int>(size, -10000L);
+        refractory_remaining = std::vector<int>(size, 0);
 """,
     'rate_psp':
 """
-    pop%(id)s._sum_%(target)s = std::vector<double>(pop%(id)s.size, 0.0);"""
+        // Post-synaptic potential
+        _sum_%(target)s = std::vector<double>(size, 0.0);"""
 }

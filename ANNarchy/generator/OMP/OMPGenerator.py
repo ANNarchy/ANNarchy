@@ -100,9 +100,16 @@ class OMPGenerator(object):
         # struct declaration for each population
         pop_struct = ""
         pop_ptr = ""
+
         for pop in self.populations:
-            # Header struct
-            pop_struct += self.popgen.header_struct(pop)      
+            # Header struct, store it in single file
+            decl = self.popgen.header_struct(pop)
+            with open(Global.annarchy_dir+'/generate/'+pop.name+'.hpp', 'w') as ofile:
+                ofile.write(decl)
+
+            # Include directive
+            pop_struct += """#include "%(name)s.hpp"\n""" % { 'name': pop.name }
+
             # Extern pointer
             pop_ptr += """extern PopStruct%(id)s pop%(id)s;
 """% {'id': pop.id}
@@ -241,7 +248,9 @@ class OMPGenerator(object):
     def body_update_neuron(self):
         code = ""
         for pop in self.populations:
-            code  += self.popgen.update_neuron(pop)
+            code  += """    pop%(id)s.update();
+""" % { 'id': pop.id }
+    #self.popgen.update_neuron(pop)
 
         return code
 
@@ -353,11 +362,15 @@ class OMPGenerator(object):
         return code
 
     def body_init_population(self):
+        """
+        Generate PopStruct::init_population() calls for the initialize() function. 
+        """
         code = """
     // Initialize populations
 """
         for pop in self.populations:
-            code += self.popgen.init_population(pop)
+            code += """    pop%(id)s.init_population();
+""" % { 'id': pop.id }
 
         return code
 

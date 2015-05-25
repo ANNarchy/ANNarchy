@@ -119,7 +119,15 @@ class PopulationGenerator(object):
             for func in pop.neuron_type.description['functions']:
                 code += ' '*4 + func['cpp'] + '\n'
 
-        return base_template % { 'id': pop.id, 'additional': code, 'accessor': accessors }
+        init = self.init_population(pop)
+        update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+
+        return base_template % { 'id': pop.id, 
+                                 'additional': code, 
+                                 'accessor': accessors, 
+                                 'init': init,
+                                 'update': update 
+                                }
 
 #######################################################################
 ############## BODY ###################################################
@@ -344,30 +352,27 @@ class PopulationGenerator(object):
             for var in pop.delayed_variables:
                 if var in pop.neuron_type.description['local']:
                     code += """
-    pop%(id)s._delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0)); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0)); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
                 else:
                     code += """
-    pop%(id)s._delayed_%(var)s = std::deque< double >(%(delay)s, 0.0); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
 
 
         else: # SPIKE
             code += """
-    pop%(id)s._delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); """ % {'id': pop.id, 'delay': pop.max_delay}
+    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); """ % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 
     def init_population(self, pop):
         # active is true by default
         code = """
-    /////////////////////////////
-    // Population %(id)s
-    /////////////////////////////
-    pop%(id)s.size = %(size)s;
-    pop%(id)s._active = true;
-    pop%(id)s.record_period = 1;
-    pop%(id)s.record_offset = 0;
-    pop%(id)s.record_ranks = std::vector<int>(1, -1);
-""" % {'id': pop.id, 'size': pop.size }
+        size = %(size)s;
+        _active = true;
+        record_period = 1;
+        record_offset = 0;
+        record_ranks = std::vector<int>(1, -1);
+""" % { 'id': pop.id, 'size': pop.size }
 
         # Is it a specific population?
         if pop.generator['omp']['body_spike_init']:
