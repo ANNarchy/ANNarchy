@@ -22,6 +22,7 @@
 
 """
 import ANNarchy.core.Global as Global
+import PopulationTemplate as PopTemplate
 
 class PopulationGenerator(object):
 
@@ -31,70 +32,36 @@ class PopulationGenerator(object):
     def header_struct(self, pop):
         """
         Generate the c-style struct definition for a population object.
+
+        Used templates:
+
+            header_struct, parameter_decl, variable_decl
         """
         # Is it a specific population?
         if pop.generator['omp']['header_pop_struct']:
             return pop.generator['omp']['header_pop_struct'] % {'id': pop.id}
 
-        # Generate the structure for the population.
-        code = """
-struct PopStruct%(id)s{
-    // Number of neurons
-    int size;
-    // Active
-    bool _active;
-"""
-        # Spiking neurons have aditional data
-        if pop.neuron_type.type == 'spike':
-            code += """
-    // Spiking population
-    std::vector<long int> last_spike;
-    std::vector<int> spiked;
-    std::vector<int> refractory;
-    std::vector<int> refractory_remaining;
-    bool record_spike;
-    std::vector<std::vector<long> > recorded_spike;
-"""
+        # Pick basic template based on neuron type
+        base_template = PopTemplate.header_struct[pop.neuron_type.type]
 
-        # Record
-        code+="""
-    // Record parameter
-    int record_period;
-    long int record_offset;
-    std::vector<int> record_ranks;
-"""
+        # Generate 'additional' data, based on parser output
+        code = ""
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local parameter %(name)s
-    std::vector< %(type)s > %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.parameter_decl['local'] % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-    // Global parameter %(name)s
-    %(type)s  %(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.parameter_decl['global'] % {'type' : var['ctype'], 'name': var['name']}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    bool record_%(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.variable_decl['local'] % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-    // Global variable %(name)s
-    %(type)s  %(name)s ;
-    std::vector< %(type)s > recorded_%(name)s ;
-    bool record_%(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.variable_decl['global'] % {'type' : var['ctype'], 'name': var['name']}
 
         # Arrays for the presynaptic sums
         code += """
@@ -122,7 +89,6 @@ struct PopStruct%(id)s{
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
-
         # Delays
         if pop.max_delay > 1:
             if pop.neuron_type.type == "rate":
@@ -149,11 +115,7 @@ struct PopStruct%(id)s{
             for func in pop.neuron_type.description['functions']:
                 code += ' '*4 + func['cpp'] + '\n'
 
-        # Finish the structure
-        code += """
-};
-"""
-        return code % {'id': pop.id}
+        return base_template % { 'id': pop.id, 'additional': code }
 
 #######################################################################
 ############## BODY ###################################################
@@ -632,6 +594,10 @@ struct PopStruct%(id)s{
     cdef struct PopStruct%(id)s :
         int size
         bool _active
+
+        #PROTO
+        vector[double] get_r()
+        double get_single_r(int)
 """
         # Spiking neurons have aditional data
         if pop.neuron_type.type == 'spike':
@@ -713,6 +679,13 @@ cdef class pop%(id)s_wrapper :
     property size:
         def __get__(self):
             return pop%(id)s.size
+
+    # PROTO
+    cpdef get_r2(self):
+        return pop%(id)s.get_r()
+
+    cpdef get_single_r2(self, int rk):
+        return pop%(id)s.get_single_r(rk)
 """ % {'id': pop.id}
 
         # Activate population
