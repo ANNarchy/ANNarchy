@@ -121,8 +121,16 @@ class OMPGenerator(object):
         proj_struct = ""
         proj_ptr = ""
         for proj in self.projections:
-            # Header struct
-            proj_struct += self.projgen.header_struct(proj)
+            name = """proj%(id)s.hpp""" % { 'id': proj.id }
+
+            # Header struct, store it in single file
+            decl = self.projgen.header_struct(proj)
+            with open(Global.annarchy_dir+'/generate/'+name, 'w') as ofile:
+                ofile.write(decl)
+
+            # Include directive
+            proj_struct += """#include "%(name)s"\n""" % { 'name': name }
+
             # Extern pointer
             proj_ptr += """extern ProjStruct%(id_proj)s proj%(id_proj)s;
 """% {'id_proj': proj.id}
@@ -268,11 +276,10 @@ class OMPGenerator(object):
             if proj.generator['omp']['body_compute_psp']:
                 code += proj.generator['omp']['body_compute_psp'] 
                 continue
-            # Call the right generator depending on type
-            if proj.synapse.type == 'rate':
-                code += self.projgen.computesum_rate(proj)
-            else:
-                code += self.projgen.computesum_spiking(proj)
+
+            # Call the comput_psp method
+            code += """    proj%(id)s.compute_psp();
+""" % { 'id' : proj.id }
 
         return code
 
@@ -298,7 +305,8 @@ class OMPGenerator(object):
         code = ""
         # Iterate over all synapses 
         for proj in self.projections:
-            code += self.projgen.update_synapse(proj)
+            code += """    proj%(id)s.update_synapse();
+""" % { 'id' : proj.id };
 
         return code
 
@@ -379,7 +387,8 @@ class OMPGenerator(object):
     // Initialize projections
 """
         for proj in self.projections:
-            code += self.projgen.init_projection(proj)
+            code += """    proj%(id)s.init_projection();
+""" % { 'id' : proj.id };
 
         return code
         

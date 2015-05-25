@@ -22,6 +22,7 @@
 
 """
 import ANNarchy.core.Global as Global
+import ProjectionTemplate as ProjTemplate
 
 class ProjectionGenerator(object):
 
@@ -41,19 +42,7 @@ class ProjectionGenerator(object):
             return proj.generator['omp']['header_proj_struct']
 
         # create the code for non-specific projections
-        code = """
-// %(pre_name)s -> %(post_name)s
-struct ProjStruct%(id_proj)s{
-    // number of dendrites
-    int size;
-
-    // Learning flag
-    bool _learning;
-
-    // Connectivity
-    std::vector<int> post_rank ;
-    std::vector< std::vector< int > > pre_rank ;
-"""
+        code = ""
 
         # Spiking neurons have aditional data
         if proj.synapse.type == 'spike':
@@ -134,12 +123,29 @@ struct ProjStruct%(id_proj)s{
         if Global.config['structural_plasticity']:
             code += self.header_structural_plasticity(proj)
 
-        # Finish the structure
-        code += """
-};    
-""" 
-        return code % {'id_proj': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
+        init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
+        if proj.synapse.type == 'rate':
+            psp_prefix = "int nb_post;\ndouble sum;"
+            psp = self.computesum_rate(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+        else:
+            psp_prefix = "int nb_post, i, j, rk_j;"
+            psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+
+        update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+
+        return ProjTemplate.header_struct_template % { 'id_proj': proj.id,
+                                                       'pre_name': proj.pre.name,
+                                                       'pre_id': proj.pre.id,
+                                                       'post_name': proj.post.name,
+                                                       'post_id': proj.post.id,
+                                                       'target': proj.target,
+                                                       'code': code,
+                                                       'init': init,
+                                                       'psp_prefix': psp_prefix,
+                                                       'psp': psp,
+                                                       'update': update
+                                                     }
 
 
 #######################################################################
@@ -697,9 +703,6 @@ struct ProjStruct%(id_proj)s{
 
         # Learning by default
         code = """
-    /////////////////////////////////////////
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    /////////////////////////////////////////
     proj%(id_proj)s._learning = true;
 """ % { 'id_proj': proj.id, 'target': proj.target,
         'id_post': proj.post.id, 'id_pre': proj.pre.id,
