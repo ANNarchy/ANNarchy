@@ -415,9 +415,12 @@ clean:
                     exit(0)
 
 
-def _instantiate(net_id, single=True):
+def _instantiate(net_id, import_id=-1):
     """ After every is compiled, actually create the Cython objects and 
         bind them to the Python ones."""
+
+    if import_id < 0:
+        import_id = net_id
 
     if Global.config['verbose']:
         Global._print('Building network ...')
@@ -425,11 +428,7 @@ def _instantiate(net_id, single=True):
     # Import the Cython library
     try:
         #cython_module = __import__('ANNarchyCore'+str(base_net))
-        if single:
-            cython_module = imp.load_dynamic('ANNarchyCore'+str(net_id), 'annarchy/ANNarchyCore'+str(net_id)+'.so')
-        else:
-            sys.path.append('annarchy/net'+str(net_id))
-            cython_module = imp.load_dynamic('ANNarchyCore0', 'annarchy/net'+str(net_id)+'/ANNarchyCore0.so')
+        cython_module = imp.load_dynamic('ANNarchyCore'+str(import_id), 'annarchy/ANNarchyCore'+str(import_id)+'.so')
     except Exception as e:
         Global._print(e)
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')

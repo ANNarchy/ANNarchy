@@ -6,6 +6,7 @@ import Global
 import ANNarchy.generator.Generator as Generator
 
 import os, shutil, sys
+import numpy as np
 
 class Network(object):
     """ 
@@ -153,41 +154,45 @@ def parallel_run(method, networks=None, number=0, measure_time=False, sequential
 
     If the ``networks`` argument is provided as a list of Network objects, the given method will be executed for each of these networks.
 
-    If ``number`` is given instead, the same number of magic networks will be created and the method is applied. 
+    If ``number`` is given instead, the same number of networks will be created and the method is applied. 
 
     **Returns**:
 
-    * If ``networks`` is used, a list of the values returned by ``method``.
+    * a list of the values returned by ``method``.
 
-    * If ``number`` is used, the list of created networks is returned first, then the list of values returned by ``method``.
+    If ``number`` is used, the created networks are not returned, you should return what you need to analyse.
 
     *Parameters*:
 
-    * **method**: a Python method which will be executed for each network. This function must accept a Network object as a first argument.
+    * **method**: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
     * **networks**: a list of networks to simulate in parallel.
     * **measure_time**: if the total simulation time should be printed out. 
-    * **sequential**: runs the networks sequentially instead of in parallel. 
+    * **sequential**: if True, runs the simulations sequentially instead of in parallel (default: False). 
     """
     # Check inputs
     if not networks and number < 1:
         Global._error('parallel_run(): the networks or number arguments must be set.')
         return []
-    if not networks: # The magic network will run N times
-        networks = []
-        for i in range(number):
-            net = Network(True)
-            net.compile(silent=True)
-            networks.append(net)
-    if not isinstance(networks, list):
-        Global._error('parallel_run(): the networks argument must be a list.')
-        return []
+
     import types
     if not isinstance(method, types.FunctionType):
         Global._error('parallel_run(): the method argument must be a method.')
         return []
 
-    # Number of networks
-    nb_nets = len(networks)
+    if not networks: # The magic network will run N times
+        return _parallel_multi(method, number, measure_time, sequential)
+
+    if not isinstance(networks, list):
+        Global._error('parallel_run(): the networks argument must be a list.')
+        return []
+
+    # Simulate the different networks
+    return _parallel_networks(method, networks, measure_time, sequential)
+
+def _parallel_networks(method, networks, measure_time, sequential):
+    " Method when different networks are provided"
+    import multiprocessing
+    from multiprocessing.dummy import Pool
 
     # Time measurement    
     from time import time
@@ -196,27 +201,28 @@ def parallel_run(method, networks=None, number=0, measure_time=False, sequential
 
     # Simulation
     if not sequential:
-        from multiprocessing.dummy import Pool
-        pool = Pool(nb_nets)
+        pool = Pool(multiprocessing.cpu_count())
         try:
-            results = pool.map(method, networks)
-        except:
+            results = pool.map(_only_run_method, [(idx, method, net) for idx, net in enumerate(networks)])
+        except Exception as e:
+            Global._print(e)
             Global._error('parallel_run(): running multiple networks failed.')
             return []
         pool.close()
         pool.join()
     else:
         results = []
-        for net in networks:
+        for idx, net in enumerate(networks):
             try:
-                results.append(method(net))
-            except:
+                results.append(method(idx, net))
+            except Exception as e:
+                Global._print(e)
                 Global._error('parallel_run(): running network ' + str(net.id) + ' failed.')
                 return []
 
     # Time measurement
     if measure_time:
-        msg = 'Running ' + str(nb_nets) + ' networks'
+        msg = 'Running ' + str(len(networks)) + ' networks'
         if not sequential:
             msg += ' in parallel '
         else:
@@ -224,6 +230,64 @@ def parallel_run(method, networks=None, number=0, measure_time=False, sequential
         msg += 'took: ' + str(time()-ts)
         Global._print(msg)
 
-    if number > 0:
-        return networks, results
     return results
+
+
+def _parallel_multi(method, number, measure_time, sequential):
+    "Method when the same network must be simulated multiple times."
+    import multiprocessing
+    from multiprocessing import Pool
+
+    # Time measurement    
+    from time import time
+    if measure_time:
+        ts = time()
+
+    # Simulation
+    if not sequential:
+        try:
+            pool = Pool(multiprocessing.cpu_count())
+            results = pool.map(_create_and_run_method, [(n, method) for n in range(number)] )
+            pool.close()
+            pool.join()
+        except Exception as e:
+            Global._print(e)
+            Global._error('parallel_run(): running ' + str(number) + ' networks failed.')
+            return []
+    else:
+        results = []
+        try:
+            for n in range(number):
+                results.append(_create_and_run_method((n, method)))
+        except Exception as e:
+            Global._print(e)
+            Global._error('parallel_run(): running ' + str(number) + ' networks failed.')
+            return []
+
+    # Time measurement
+    if measure_time:
+        msg = 'Running ' + str(number) + ' networks'
+        if not sequential:
+            msg += ' in parallel '
+        else:
+            msg += ' sequentially '
+        msg += 'took: ' + str(time()-ts)
+        Global._print(msg)
+        
+    return results
+
+def _create_and_run_method(args):
+    "method called to wrap the user-defined method"
+    n, method = args
+    net = Network(True)
+    np.random.seed() # TODO: if seed is declared
+    Generator._instantiate(net.id, 0)
+    res = method(n, net)
+    del net
+    return res
+
+def _only_run_method(args):
+    "method called to wrap the user-defined method"
+    n, method, net = args
+    res = method(n, net)
+    return res
