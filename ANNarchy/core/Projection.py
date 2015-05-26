@@ -122,7 +122,7 @@ class Projection(object):
         # Cython instance
         self.cyInstance = None
 
-        # CSR object
+        # Connectivity
         self._synapses = None
 
         # Recorded variables
@@ -133,36 +133,17 @@ class Projection(object):
         self.connector_description = "Specific"
 
     def _instantiate(self, module):
-
+        "Instantiates the projection after compilation."
         self._connect(module)
-
         self.initialized = True  
-
-        #self._init_attributes()
 
     def _init_attributes(self):
         """ 
-        Method used after compilation to initialize the attributes.
+        Method used after compilation to initialize the attributes. Called by Generator._instantiate
         """
         for name, val in self.init.items():
             if not name in ['w']:
                 self.__setattr__(name, val)
-
-    def reset(self, synapses=False):
-        """
-        Resets all parameters and variables to the value they had before the call to compile.
-
-        *Parameters*:
-
-        * **synapses**: if True, the connections will also be erased (default: False).
-
-        .. note::
-
-            Not implemented yet...
-        """
-        self._init_attributes()
-        if synapses:
-            Global._warning('not implemented yet...')
     
     def _connect(self, module):
         """
@@ -214,6 +195,23 @@ class Projection(object):
 
         return csr  
 
+
+    def reset(self, synapses=False):
+        """
+        Resets all parameters and variables to the value they had before the call to compile.
+
+        *Parameters*:
+
+        * **synapses**: if True, the connections will also be erased (default: False).
+
+        .. note::
+
+            Not implemented yet...
+        """
+        self._init_attributes()
+        if synapses:
+            Global._warning('not implemented yet...')
+            
     ################################
     ## Dendrite access
     ################################   
