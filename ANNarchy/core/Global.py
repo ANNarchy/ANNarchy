@@ -143,19 +143,19 @@ def setup(**keyValueArgs):
 
 def set_cuda_config(config):
     """
-    setup cuda config, whereas the config is a dictionary containing the device id where to compute on (default 0) 
-    and for each population and projection an amount of threads. If not specified, we assume 32 threads for 
-    populations and 192 threads for projections. ATTENTION: need to be set before compilation.
+    Sets the CUDA configuration, where config is a dictionary containing the device id where to compute on (default 0) 
+    and for each population and projection a number of threads. If not specified, we assume 32 threads for 
+    populations and 192 threads for projections. ATTENTION: this need to be set before compilation.
 
-    Example:
+    Example::
 
-    config = { 'device': 0, Input: 64, Output: 32, Input_Output: 64 }
-    set_cuda_config(config)
-    compile()
+        config = { 'device': 0, Input: 64, Output: 32, Input_Output: 64 }
+        set_cuda_config(config)
+        compile()
 
-    Warning:
+    .. warning::
 
-    setting this config, will overwrite completely existing configurations.
+        Setting this configuration will overwrite completely existing configurations.
     """
     global cuda_config
     cuda_config = config
