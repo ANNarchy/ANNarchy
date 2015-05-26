@@ -130,7 +130,7 @@ class OMPGenerator(object):
 
             # Header struct, store it in single file
             decl = self.projgen.header_struct(proj)
-            with open(Global.annarchy_dir+'/generate/'+name, 'w') as ofile:
+            with open(self.annarchy_dir+'/generate/'+name, 'w') as ofile:
                 ofile.write(decl)
 
             # Include directive
