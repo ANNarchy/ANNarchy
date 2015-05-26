@@ -75,33 +75,16 @@ class ProjectionGenerator(object):
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
+        accessor = ""
         # Parameters
         for var in proj.synapse.description['parameters']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    // Local parameter %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    // Global parameter %(name)s
-    std::vector<%(type)s>  %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+            accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
 
         # Variables
         for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    // Global variable %(name)s
-    std::vector<%(type)s>  %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+            accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
 
         # Local functions
         if len(proj.synapse.description['functions'])>0:
@@ -133,6 +116,7 @@ class ProjectionGenerator(object):
                                                        'post_id': proj.post.id,
                                                        'target': proj.target,
                                                        'code': code,
+                                                       'accessor': accessor,
                                                        'init': init,
                                                        'psp_prefix': psp_prefix,
                                                        'psp': psp,
@@ -837,10 +821,15 @@ public:
         # create the code for non-specific projections
         code = """
     cdef struct ProjStruct%(id_proj)s :
-        int size
         bool _learning
-        vector[int] post_rank
-        vector[vector[int]] pre_rank
+
+        int get_size()
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_rank()
+        int nb_synapses(int)
+        void set_size(int)
+        void set_post_rank(vector[int])
+        void set_pre_rank(vector[vector[int]])
 """         
 
         # Exact integration
@@ -860,31 +849,11 @@ public:
 """
         # Parameters
         for var in proj.synapse.description['parameters']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-        # Local parameter %(name)s
-        vector[vector[%(type)s]] %(name)s
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-        # Global parameter %(name)s
-        vector[%(type)s]  %(name)s 
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
         # Variables
         for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-        # Local variable %(name)s
-        vector[vector[%(type)s]] %(name)s 
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-        # Global variable %(name)s
-        vector[%(type)s]  %(name)s
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Structural plasticity
         if Global.config['structural_plasticity']:
@@ -937,10 +906,10 @@ cdef class proj%(id)s_wrapper :
         cdef int size = syn.size
         cdef int nb_post = syn.post_rank.size()
 
-        proj%(id)s.size = size
-        proj%(id)s.post_rank = syn.post_rank
-        proj%(id)s.pre_rank = syn.pre_rank
-        proj%(id)s.w = syn.w
+        proj%(id)s.set_size( size )
+        proj%(id)s.set_post_rank( syn.post_rank )
+        proj%(id)s.set_pre_rank( syn.pre_rank )
+        proj%(id)s.set_w(syn.w)
 """% {'id': proj.id}
 
         # Exact integration
@@ -963,21 +932,20 @@ cdef class proj%(id)s_wrapper :
 
         # Size property
         code += """
-
     property size:
         def __get__(self):
-            return proj%(id)s.size
+            return proj%(id)s.get_size()
 
     def nb_synapses(self, int n):
-        return proj%(id)s.pre_rank[n].size()
+        return proj%(id)s.nb_synapses(n)
 
     def _set_learning(self, bool l):
         proj%(id)s._learning = l
 
     def post_rank(self):
-        return proj%(id)s.post_rank
+        return proj%(id)s.get_post_rank()
     def pre_rank(self, int n):
-        return proj%(id)s.pre_rank[n]
+        return proj%(id)s.get_pre_rank()[n]
 """ % {'id': proj.id}
 
         # Delays
@@ -991,67 +959,11 @@ cdef class proj%(id)s_wrapper :
 
         # Parameters
         for var in proj.synapse.description['parameters']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    # Local parameter %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
-        proj%(id)s.%(name)s[rank] = value
-    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
-        return proj%(id)s.%(name)s[rank_post][rank_pre]
-    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
-        proj%(id)s.%(name)s[rank_post][rank_pre] = value
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    # Global parameter %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, %(type)s value):
-        proj%(id)s.%(name)s[rank] = value
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+            code += ProjTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
 
         # Variables
         for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    # Local variable %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
-        proj%(id)s.%(name)s[rank] = value
-    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
-        return proj%(id)s.%(name)s[rank_post][rank_pre]
-    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
-        proj%(id)s.%(name)s[rank_post][rank_pre] = value
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    # Global variable %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, %(type)s value):
-        proj%(id)s.%(name)s[rank] = value
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+            code += ProjTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
          # Structural plasticity
         if Global.config['structural_plasticity']:
