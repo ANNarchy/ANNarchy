@@ -134,7 +134,7 @@ class Network(object):
         return None
 
     def compile(self, directory='annarchy', silent=False):
-        """Compiles the network.
+        """ Compiles the network.
 
         *Parameters*:
 
@@ -143,10 +143,88 @@ class Network(object):
         """
         Generator.compile(directory=directory, silent=silent, net_id=self.id)
 
-    def simulate(self, duration):
-        "Simulates the network for the given duration in ms."
-        Global.simulate(duration, net_id=self.id)
+    def simulate(self, duration, measure_time = False):
+        """   Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
 
+            simulate(1000.0)
+
+        *Parameters*:
+
+        * **duration**: the duration in milliseconds.
+        * **measure_time**: defines whether the simulation time should be printed (default=False).
+            Global.simulate(duration, net_id=self.id)
+        """
+        Global.simulate(duration, measure_time, self.id)
+    
+    def simulate_until(max_duration, population, operator='and', measure_time = False):
+        """
+        Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
+
+        One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
+
+        Example::
+
+            pop1 = Population( ..., stop_condition = "r > 1.0 : any")
+            compile()
+            simulate_until(max_duration=1000.0. population=pop1)
+
+        *Parameters*:
+
+        * **duration**: the maximum duration of the simulation in milliseconds.
+        * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+        * **operator**: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
+        * **measure_time**: defines whether the simulation time should be printed (default=False).
+
+        *Returns*:
+
+        * the actual duration of the simulation in milliseconds.
+        """
+        Global.simulate_until(max_duration, population, operator, measure_time, self.id)
+    
+    def step():
+        """
+        Performs a single simulation step (duration = ``dt``). 
+        """
+        Global.step(self.id)
+
+
+    def reset(populations=True, projections=False, synapses = False):
+        """
+        Reinitialises the network to its state before the call to compile.
+
+        *Parameters*:
+
+        * **populations**: if True (default), the neural parameters and variables will be reset to their initial value.
+        * **projections**: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
+        * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
+        """
+        Global.reset(populations,  projections, synapses, self.id)
+
+    def get_time(net_id=0):
+        "Returns the current time in ms."
+        return Global.get_time(self.id)
+
+    def set_time(t, net_id=0):
+        """Sets the current time in ms.
+
+    .. warning::
+
+        Can be dangerous for some spiking models.
+    """
+        Global.set_time(t, self.id)
+
+    def get_current_step(net_id=0):
+        "Returns the current simulation step."
+        return Global.get_current_step(self.id)
+
+    def set_current_step(t, net_id=0):
+        """Sets the current simulation step.
+
+    .. warning::
+
+        Can be dangerous for some spiking models.
+    """
+        Global.set_current_step(t, self.id)
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False):
     """
