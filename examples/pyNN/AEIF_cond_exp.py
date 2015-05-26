@@ -37,7 +37,7 @@ pop.tau_w, pop.a, pop.b, pop.v_reset = 144.0,  4.0, 0.0805, -70.6
 compile()
 
 # Start recording
-pop.start_record(['spike', 'v', 'w'])
+m = Monitor(pop, ['spike', 'v', 'w'])
 
 # Add current of 1 nA and simulate
 simulate(20.0)
@@ -47,10 +47,10 @@ pop.i_offset = 0.0
 simulate(20.0)
 
 # Retrieve the results
-data = pop.get_record()
-spikes = data['spike']['data'][0]
-v = data['v']['data'][0]
-w = data['w']['data'][0]
+data = m.get()
+spikes = data['spike'][0]
+v = data['v'][:, 0]
+w = data['w'][:, 0]
 if len(spikes)>0:
     v[spikes] = 20.0
 

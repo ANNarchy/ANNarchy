@@ -2,164 +2,165 @@
 Recording 
 ***********************************
 
-Between two calls to ``simulate()``, all neural and synaptic variables can be accessed through the generated attributes (see :doc:`Populations` and :doc:`Projections`). The evolution of neural or synaptic variables during a simulation can be selectively recorded using either global or local methods.
+Between two calls to ``simulate()``, all neural and synaptic variables can be accessed through the generated attributes (see :doc:`Populations` and :doc:`Projections`). The evolution of neural or synaptic variables during a simulation can be selectively recorded using ``Monitor`` objects (see :doc:`../API/Monitor`).
 
-.. warning::
+The monitor object can be created at any time (before or after ``compile()``) to record any variable of a ``Population``, ``PopulationView`` or ``Dendrite``. It is not possible to record whole projections because it would fill the memory too quickly.
 
-    The value of each variable is stored for every simulation step in the RAM. For huge networks and long simulations, this can very rapidly fill up the available memory and lead to page defaults, thereby degrading strongly the performance. It is the user's responsability to record only the needed variables and to regularly save the values in a file.
+.. note::
+
+    The value of each variable is stored for every simulation step in the RAM. For huge networks and long simulations, this can very rapidly fill up the available memory and lead to cache defaults, thereby degrading strongly the performance. It is the user's responsability to record only the needed variables and to regularly save the values in a file.
+
 
 Neural variables
 ================
 
-Neural variables are the cheapest to record, as their size increases linearly with the network. There are two equivalent ways to record them: one is global (scope ``ANNarchy``), the other local to a population.
+The ``Monitor`` object takes four arguments: 
 
-Recording neural variables globally
------------------------------------
+* ``obj``: the object to monitor. It can be a population, a population view (a slice of a population or an individual neuron) or a dendrite (the synapses of a projection which reach a single post-synaptic neuron).
 
-To record neural variables in several populations (say ``r`` in ``pop1`` and ``r`` and ``mp`` in ``pop2``), the easiest way is to call the method ``start_record()`` with a dictionary taking the population (or its name) as key and a list of variable names as values:
+* ``variables``: a (list of) variable name(s) which should be recorded. They should be variables of the neuron/synapse model of the corresponding object. You can know which variables are recordable by checking the ``variables`` attribute of the object (``pop.variables`` or ``proj.variables``).
 
-.. code-block:: python
+* ``period``: the period in ms at which recordings should be made. By default, recording is done after each simulation step (``dt``), but this may be overkill in long simulations.
 
-    start_record(
-        {
-            pop1 : 'r',
-            pop2 : ['mp', 'r']
-        }
-    )
+* ``start``: boolean value stating if the recordings should start immediately after the creation of the monitor (default), or if it should be started later.
 
-After the call to this method, the value taken by these variables at each time step of the simulation will be stored internally, until the data is retrieved and flushed. It does not matter how many times you call ``simulate()``, the values are accumulated:
+Some examples::
 
-.. code-block:: python
+    m = Monitor(pop, 'r') # record r in all neurons of pop
+    m = Monitor(pop, ['r', 'v']) # record r and v of all neurons
+    m = Monitor(pop[:100], 'r', period=10.0) # record r in the first 100 neurons of pop, every 10 ms
+    m = Monitor(pop, 'r', start=False) # record r in all neurons, but do not start recording
 
-    simulate(500.0)
-    simulate(500.0)
+Starting the recordings
+------------------------
 
+If ``start`` is set to ``False``, recordings can be started later by calling the ``start()`` method::
 
-.. note::
+    m = Monitor(pop, 'r', start=False)
+    simulate(100.)
+    m.start()
+    simulate(100.)
 
-    **New in 4.3.2** : it is possible to add a ``period`` argument (in ms) to ``start_record()`` to record the variables only once every ``period`` ms. The next recording will be at the beginning of the next call to ``simulate()``. Values between two recordings are ignored. This can reduce a lot the memory usage of recordings.
+In this case, only the last 100 ms of the simulation will be recorded. Otherwise, recording would start immediately after the creation of the object.
 
-To retrieve the recorded values and free the corresponding memory, you can call the ``get_record()`` method:
+Pausing/resuming the recordings
+-------------------------------
 
-.. code-block:: python
+If you are interested in recording only specific periods of the simulation, you can ause and resume recordings::
 
-    data = get_record()
+    m = Monitor(pop, 'r')
+    simulate(100.)
+    m.pause()
+    simulate(1000.)
+    m.resume()
+    simulate(100.)
 
-When ``get_record()`` is called without arguments, the variables defined in the last call to ``start_record()`` will be retrieved. You can also provide a dictionnary to retrieve only certain variables:
+In this example, only the first and last 100 ms of the simulation are recorded.
 
-.. code-block:: python
+Retrieving the recordings
+--------------------------
 
-    data = get_record( { pop2 : 'r'} )
+The recorded values are obtained through the ``get()`` method. If no argument is passed, a dictionary is returned with one element per recorded variable. If the name of a variable is passed (for example ``get('r')``), the recorded values for this variable are directly returned::
+
+    m = Monitor(pop, ['r', 'v'])
+    simulate(100.)
+    data = get()
+    simulate(100.)
+    r = m.get('r')
+    v = m.get('v')
+
+In the example above, ``data`` is a dictionary with two keys ``'r'`` and ``'v'``, while ``r`` and ``v`` are directly the recorded arrays.
+
+The recorded values are Numpy arrays with two dimensions, the **first** one representing **time**, the **second** one representing the ranks of the recorded neurons.
+
+For example, the time course of the firing rate of the neuron of rank 15 is accessed through::
+
+    data['r'][:, 15]
+
+The firing rates of the whole population after 50 ms of simulation are accessed with::
+
+    data['r'][50, :]
+
 
 .. note::
     
-    Once you call ``get_record()``, the internal data is flushed, so calling it immediately afterwards will return an empty recording data. You need to simulate again in order to retrieve new values.
+    Once you call ``get()``, the internal data is erased, so calling it immediately afterwards will return an empty recording data. You need to simulate again in order to retrieve new values.
 
-The value returned by ``get_record()`` is a nested dictionary encapsulating, for each population and each variable, the values taken by this variable in all neurons over time. These values are represented as a Numpy array, the first index representing the rank of each neuron in the population, the second representing time (in terms of simulation steps, you should multiply by ``dt=1.0`` by default to obtain milliseconds)
+**Representation of time**
 
-.. code-block:: python
+The time indices are in simulation steps (integers), not in real time (ms). If ``dt`` is different from 1.0, this indices must be multiplied by ``dt()`` in order to plot real times::
 
-    >>> print data[pop2]['r']
-    {'stop': 1000, 'start': 0, 'data': array([[   1.        ,    0.89274342,   1.17316076, ...,    1.        ,
-             0.82065237,    1.        ],
-           [   1.        ,    0.88429849,   1.13928135, ...,    1.        ,
-             0.82075133,    1.        ],
-           [   1.        ,    0.88807153,   1.16923477, ...,    1.        ,
-             0.83248078,    1.        ],
-           ..., 
-           [   1.        ,    0.88650493,   1.1513879 , ...,    1.        ,
-             0.83375699,    1.        ],
-           [   1.        ,    0.88153033,   1.13768265, ...,    1.        ,
-             0.81927039,    1.        ],
-           [   1.        ,    0.88509407,   1.16253288, ...,    1.        ,
-             0.81227855,    1.        ]])}
-    >>> print data[pop2]['r']['data'].shape
-    (64, 1000)
+    setup(dt=0.1)
+    # ...
+    m = Monitor(pop, 'r')
+    simulate(100.)
+    r = m.get('r')
+    plot(dt()*np.arange(100), r[:, 15])
 
-In addition to the ``'data'`` Numpy array actually storing the values, ``'start'`` and ``'stop'`` allow to retrieve the simulation steps corresponding to the start and stop steps of the recordings.
+If recordings used the ``pause()`` and ``resume()`` methods, ``get()`` returns only one array with all recordings concatenated. You can access the steps at which the recording started or paused with the ``times()`` method::
 
-The ``'data'`` array can be used to directly plot the time course of the variable for all neurons:
+    m = Monitor(pop, 'r')
+    simulate(100.)
+    m.pause()
+    simulate(1000.)
+    m.resume()
+    simulate(100.)
+    r = m.get('r') # A (200, N) Numpy array
+    print m.times() # {'start': [0, 1100], 'stop': [100, 1200]}
 
-.. code-block:: python
-
-    from pylab import *
-    imshow(data[pop2]['r']['data'], aspect='auto')
-
-or for a single neuron:
-
-.. code-block:: python
-
-    from pylab import *
-    plot(data[pop2]['r']['data'][15, :])
-
-.. note::
-
-    By default, ``get_record()`` indexes the neurons of a population by their rank. If you want to manipulate coordinates instead of ranks, you can pass the ``reshape=True`` argument to ``get_record()``:
-
-    .. code-block:: python
-    
-        >>> data = get_record(reshape=True)
-        >>> print data[pop2]['r']['data'].shape
-        (8, 8, 1000)
-
-    The first indexes correspond to the population's geometry, the last one to time.
 
 Special case for spiking neurons
 --------------------------------
 
-Any variable defined in the neuron type can be recorded using this method. An exception for spiking neurons is the ``spike`` variable itself, which is never explicitely defined in the neuron type but can be recorded:
+Any variable defined in the neuron type can be recorded. An exception for spiking neurons is the ``spike`` variable itself, which is never explicitely defined in the neuron type but can be recorded:
 
 .. code-block:: python
 
-    start_record(
-        {
-            pop1 : 'spike',
-            pop2 : ['v', 'spike']
-        }
-    )
+    m = Monitor(pop, ['v', 'spike'])
 
 Unlike other variables, the binary value of ``spike`` is not recorded at each time step, which would lead to very sparse matrices, but only the times (in steps, not milliseconds) at which spikes actually occur.
 
-As each neuron fires differently (so each neuron will have recorded spikes of different lengths), ``get_record()`` in this case does not return a Numpy array, but a list of lists:
+As each neuron fires differently (so each neuron will have recorded spikes of different lengths), ``get()`` in this case does not return a Numpy array, but a dictionary associating to each recorded neuron a list of spike times:
 
 .. code-block:: python
 
-    >>> start_record({ pop1 : 'spike' })
-    >>> simulate(100.0)
-    >>> data = get_record()
-    >>> print data[pop1]['spike']['start']
-    0
-    >>> print data[pop1]['spike']['stop']
-    100
-    >>> print len(data[pop1]['spike']['data'])
-    64
-    >>> print data[pop1]['spike']['data'][0]
-    [23, 76, 98]
+    m = Monitor(pop, ['v', 'spike'])
+    simulate(100.0)
+    data = m.get('spike')
+    print data[0] # [23, 76, 98]
 
-In the example above, the neuron of rank ``0`` has spiked 3 times (at 23, 76 and 98 ms) during the first 100 ms of simulation (if ``dt = 1.0``).
+In the example above, the neuron of rank ``0`` has spiked 3 times (at t = 23, 76 and 98 ms if ``dt = 1.0``) during the first 100 ms of the simulation.
 
 **Raster plots**
 
-In order to easily display raster plots, the utility function ``raster_plot()`` is provided to transform this data into an easily plottable format:
+In order to easily display raster plots, the method ``raster_plot()`` is provided to transform this data into an easily plottable format::
 
+    spike_times, ranks = m.raster_plot(data)
+    plot(spike_times, ranks, '.')
 
-.. code-block:: python
-
-    spikes = raster_plot(data[pop1]['spike'])
-    plot(spikes[:,0], spikes[:,1], '.')
-
-The Numpy array returned by ``raster_plot()`` has two columns and N rows, where N is the total number of spikes emitted by the population during the simulation. The first column represent the time where a spike was emitted, while the second represents the rank of the neuron which fired.
+``raster_plot()`` returns two Numpy arrays, whose length is the total number of spikes emitted during the simulation. The first array contains the spike times (ín ms) while the second contains the ranks of the neurons who fired. They can be directly used t produce the raster plot with Matplotlib.
 
 An example of the use of ``raster_plot()`` can be seen in the :doc:`../example/Izhikevich` section.
 
+**Mean firing rate**
+
+The mean firing rate in the population can be easily calculated using the length of the arrays returned by ``raster_plot``::
+
+    N = 1000 # number of neurons
+    duration = 500. # duration of the simulation
+    data = m.get('spike')
+    spike_times, ranks = m.raster_plot(data)
+    print 'Mean firing rate:', len(spike_times)/float(N)/duration*1000., 'Hz.'
+
+For convenience, this value is returned by the ``mean_fr()`` method, which has access to the number of recorded neurons and the duration of the recordings::
+
+    print 'Mean firing rate:', m.mean_fr(data), 'Hz.'
+
 **Firing rates**
 
-Another utility function is the ``smoothed_rate()`` method. It allows to display the instantaneous firing rate of each neuron based on the ``spike`` recordings.
+Another useful method is ``smoothed_rate()``. It allows to display the instantaneous firing rate of each neuron based on the ``spike`` recordings::
 
-
-.. code-block:: python
-
-    rates = smoothed_rate(data[pop1]['spike'])
+    rates = m.smoothed_rate(data)
     imshow(rates, aspect='auto')
 
 For each neuron, it returns an array with the instantaneous firing rate during the whole simulation. The instantaneous firing rate is computed by inverting the *inter-spike interval* (ISI) between two consecutive spikes, and assigning it to all simulation steps between the two spikes. 
@@ -168,114 +169,54 @@ As this value can be quite fluctuating, a ``smooth`` argument in milliseconds ca
 
 .. code-block:: python
 
-    rates = smoothed_rate(data[pop1]['spike'], smooth=200.0)
+    rates = m.smoothed_rate(data, smooth=200.0)
     imshow(rates, aspect='auto')
 
-Stopping the recordings
------------------------
+A smoothed firing rate for the whole population is also accessible through ``population_rate()``::
 
-In some cases, the user may need recordings only in a subpart of the simulation (for example the first and last trials in a learning task). In order to save memory consumption and ease analysis, recording can be temporarily paused or defintely cancelled at any point.
+    fr = m.population_rate(data, smooth=200.0)
 
-To stop recording:
+**Histogram**
 
-.. code-block:: python
+``histogram()`` allows to count the spikes emitted in the whole population during successive bins of the recording duration::
 
-    >>> start_record({ pop1 : 'r', pop2 : 'r'})
-    >>> simulate(1000.0)
-    >>> stop_record()
-    >>> simulate(10000.0)
-    >>> data = get_record()
-    >>> print data[pop1]['r']['stop'] - data[pop1]['r']['start']
-    1000
+    histo = m.histogram(data, bins=1.0)
+    plot(histo)
 
-After calling ``stop_record()`` you need to call ``start_record()`` again with the same dictionary to allow for further recordings:
-
-
-.. code-block:: python
-
-    >>> start_record({ pop1 : 'r', pop2 : 'r'})
-    >>> simulate(1000.0)
-    >>> data_before = get_record()
-    >>> stop_record()
-    >>> simulate(10000.0)
-    >>> start_record({ pop1 : 'r', pop2 : 'r'})
-    >>> simulate(1000.0)
-    >>> data_after = get_record()
-    >>> stop_record()
-
-To avoid passing the dictionary multiple times and storing intermediate values, you can also use the ``pause_record()`` and ``resume_record()`` methods:
-
-
-.. code-block:: python
-
-    >>> start_record({ pop1 : 'r', pop2 : 'r'})
-    >>> simulate(1000.0)
-    >>> pause_record()
-    >>> simulate(10000.0)
-    >>> resume_record()
-    >>> simulate(1000.0)
-    >>> data = get_record()
-
-In this example, the first and last seconds of the simulation are recorded. The data returned by ``get_record()`` is the concatenation of the two recording sessions. However, the ``start`` and ``stop``  arguments are now lists of times, what allows to find back which part of the matrix belongs to which simulation:
-
-.. code-block:: python
-
-    >>> print data[pop1]['r']['start']
-    [0, 11000]
-    >>> print data[pop1]['r']['stop']
-    [1000, 12000]
-    >>> print data[pop1]['r']['data'].shape
-    (64, 2000)
-
-
-
-Recording neural variables locally
------------------------------------
-
-For convenience, the methods ``start_record()``, ``get_record()``, ``stop_record``, ``pause_record()`` and ``resume_record()`` are also available for a single population.
-
-* ``start_record()`` only requires a list of variables to record, not a dictionary.
-* The dictionary returned by ``get_record()`` starts directly with the recorded variables, not the population.
-  
-The other methods work as before. This allows a finer control on which populations should be recorded.
-
-
-.. code-block:: python
-
-    pop1.start_record(['r', 'mp'])
-    simulate(1000.0)
-    data = pop1.get_record()
-    pop1.stop_record()
+``bins`` represents the size of each bin, here 1 ms. By default, the bin size is ``dt``. 
 
 
 Synaptic variables
 ===================
 
-Recording of synaptic variables such as weights ``w`` during learning is also possible. However, it can very easily lead to important memory consumption. Let's suppose we have a network composed of two populations of 1000 neurons each, fully connected: each neuron of the second population receives 1000 synapses. This makes a total of 1 million synapses for the projection and, supposing the weights ``w`` use the double floating precision, requires 4 MB of memory. If you record ``w`` during a simulation of 1 second (1000 steps, with ``dt=1.0``), the total added memory consumption would already be around 4GB.
+Recording of synaptic variables such as weights ``w`` during learning is also possible using the monitor object. However, it can very easily lead to important memory consumption. Let's suppose we have a network composed of two populations of 1000 neurons each, fully connected: each neuron of the second population receives 1000 synapses. This makes a total of 1 million synapses for the projection and, supposing the weights ``w`` use the double floating precision, requires 4 MB of memory. If you record ``w`` during a simulation of 1 second (1000 steps, with ``dt=1.0``), the total added memory consumption would already be around 4GB.
 
-To avoid accidental memory fills, ANNarchy forces the user to define which post-synaptic neuron should be recorded. Global methods on projections do not work: only methods local to a dendrite (i.e a post-synaptic neuron) do. These methods have the same name and meaning as for populations:
+To avoid accidental memory fills, ANNarchy forces the user to define which post-synaptic neuron should be recorded. The corresponding dendrite should be simply passed to the monitor:
 
 .. code-block:: python
 
-    dendrite = proj.dendrite(12)
-    dendrite.start_record(['w'])
+    dendrite = proj.dendrite(12) # or simply proj[12]
+    m = Monitor(dendrite, 'w')
     simulate(1000.0)
-    data = dendrite.get_record()
-    dendrite.stop_record()
+    data = m.get('w')
+
+The ``Monitor`` object has the same ``start()``, ``pause()``, ``resume()`` and ``get()`` methods as for populations. ``get()`` returns also 2D Numpy arrays, the first index being time, the second being the index of the synapse. To know to which pre-synaptic neuron it corresponds, use the ``rank`` attribute of the dendrite::
+
+    dendrite.rank # [0, 3, 12, ..]
 
 .. note::
 
-    If you really need to record all weights of a projection, you can do it with the following code, but do not complain that the simulation becomes slow...
+    If you really need to record all weights of a projection, you can do it with the following code, but do not complain if the simulation becomes slow and the RAM is full...
 
     .. code-block:: python
 
+        monitors = []
         for dendrite in proj:
-            dendrite.start_record(['w'])
+            monitors.append(Monitor(dendrite, 'w'))
         simulate(1000.0)
         data = []
-        for dendrite in proj:
-            data.append(dendrite..get_record())
-            dendrite.stop_record()    
+        for monitor in monitors:
+            data.append(monitor.get('w'))
 
 
 

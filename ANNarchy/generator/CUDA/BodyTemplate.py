@@ -9,6 +9,9 @@ body_template = '''
 /***********************************************************************************/
 #include <curand_kernel.h>
 
+// global time step
+__constant__ long int t;
+
 /****************************************
  * init random states                   *
  ****************************************/
@@ -90,6 +93,20 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
 double dt;
 long int t;
 
+// Recorders 
+std::vector<Monitor*> recorders;
+void addRecorder(Monitor* recorder){
+    recorders.push_back(recorder);
+}
+void removeRecorder(Monitor* recorder){
+    for(int i=0; i<recorders.size(); i++){
+        if(recorders[i] == recorder){
+            recorders.erase(recorders.begin()+i);
+            break;
+        }
+    }
+}
+
 // Populations
 %(pop_ptr)s
 
@@ -116,11 +133,11 @@ std::vector<int> flattenOff(std::vector<std::vector<T> > in)
     std::vector<T> flatOff = std::vector<T>();
     typename std::vector<std::vector<T> >::iterator it;
 
-    int t = 0;
+    int currOffset = 0;
     for ( it = in.begin(); it != in.end(); it++)
     {
-        flatOff.push_back(t);
-        t+= it->size();
+        flatOff.push_back(currOffset);
+        currOffset += it->size();
     }
 
     return flatOff;
@@ -209,6 +226,7 @@ void initialize(double _dt, long seed) {
 
     dt = _dt;
     t = (long int)(0);
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));
 
 %(device_init)s
 %(random_dist_init)s
@@ -266,13 +284,17 @@ void single_step()
     ////////////////////////////////
     // Recording
     ////////////////////////////////
-%(record)s
-
+    for(int i=0; i < recorders.size(); i++){
+        recorders[i]->record();
+    }
+    
     ////////////////////////////////
     // Increase internal time
     ////////////////////////////////
-    t++;
-
+    t++;    // host side
+    // note: the first parameter is the name of the device variable
+    //       for earlier releases before CUDA4.1 this was a const char*
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
 }
 
 

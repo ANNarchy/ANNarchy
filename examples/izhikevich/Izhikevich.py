@@ -61,33 +61,33 @@ inh_inh = Projection(
 # Compile
 compile()
 
-# Start recording the spikes in the network to produce the raster plot
-Exc.start_record(['spike', 'v'])
-Inh.start_record('spike')
+# Start recording the spikes in the network to produce the plots
+Me = Monitor(Exc, ['spike', 'v'])
+Mi = Monitor(Inh, 'spike')
 
 # Simulate 1 second   
 simulate(1000.0, measure_time=True)
 
 # Retrieve the recordings
-exc_data = Exc.get_record()
-inh_data = Inh.get_record()
+exc_spikes = Me.get('spike')
+inh_spikes = Mi.get('spike')
 
 # Retrieve the spike timings
-spikes_exc = raster_plot(exc_data['spike'])
-spikes_inh = raster_plot(inh_data['spike'])
-spikes = np.concatenate((spikes_exc, spikes_inh + [0, 800]), axis=0)
+t_exc, ranks_exc = Me.raster_plot(exc_spikes)
+t_inh, ranks_inh = Mi.raster_plot(inh_spikes)
 
 # Number of spikes per step in the excitatory population
-fr_exc = histogram(exc_data['spike'])
+fr_exc = Me.histogram(exc_spikes)
 
 # Plot the results
 import pylab as plt
 # First plot: raster plot
 ax = plt.subplot(3,1,1)
-ax.plot(spikes[:, 0], spikes[:, 1], '.', markersize=1.0)
+ax.plot(t_exc, ranks_exc, 'b.', markersize=1.0)
+ax.plot(t_inh, ranks_inh+800, 'b.', markersize=1.0)
 # Second plot: membrane potential of a single excitatory cell
 ax = plt.subplot(3,1,2)
-ax.plot(exc_data['v']['data'][15, :]) # for example
+ax.plot(Me.get('v')[:, 15]) # for example
 # Third plot: number of spikes per step in the population.
 ax = plt.subplot(3,1,3)
 ax.plot(fr_exc)

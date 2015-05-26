@@ -45,19 +45,10 @@ struct PopStruct%(id)s{
 
 %(additional)s
 
-    // Record parameter
-    int record_period;
-    long int record_offset;
-    std::vector<int> record_ranks;
-
     // Access functions used by cython wrapper
     int get_size() { return size; }
     bool is_active() { return _active; }
     bool set_active(bool val) { _active = val; }
-
-    // Record
-    void set_record_period(int period, long int t) { record_period = period; record_offset = t; }
-    void set_record_ranks( std::vector<int> ranks) { record_ranks = ranks; }
 
     // Neuron specific
 %(accessor)s
@@ -94,19 +85,10 @@ struct PopStruct%(id)s{
     bool record_spike;
     std::vector<std::vector<long> > recorded_spike;
 
-    // Record parameter
-    int record_period;
-    long int record_offset;
-    std::vector<int> record_ranks;
-
     // Access functions used by cython wrapper
     int get_size() { return size; }
     bool is_active() { return _active; }
     bool set_active(bool val) { _active = val; }
-
-    // Record
-    void set_record_period(int period, long int t) { record_period = period; record_offset = t; }
-    void set_record_ranks( std::vector<int> ranks) { record_ranks = ranks; }
 
     // Neuron specific
 %(accessor)s
@@ -243,8 +225,7 @@ parameter_cpp_init = {
 }
 
 # c like definition of accessors for variable members, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons. As variables
-# change over time, values can be recorded.
+# across neurons, consequently 'global' is used if values are common to all neurons.
 #
 # Parameters:
 #
@@ -255,23 +236,16 @@ variable_decl = {
 """
     // Local variable %(name)s
     std::vector< %(type)s > %(name)s ;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    bool record_%(name)s ;
 """,
     'global':
 """
     // Global variable %(name)s
     %(type)s  %(name)s ;
-    std::vector< %(type)s > recorded_%(name)s ;
-    bool record_%(name)s ;
 """
 }
 
 # c like definition of accessors for variable members, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons. As variables
-# change over time, values can be recorded. By default recording is disabled, so we need functions
-# to start, stop and get recorded values.
-#
+# across neurons, consequently 'global' is used if values are common to all neurons.
 # Parameters:
 #
 #    type: data type of the variable (double, float, int ...)
@@ -284,20 +258,12 @@ variable_acc = {
     %(type)s get_single_%(name)s(int rk) { return %(name)s[rk]; }
     void set_%(name)s(std::vector< %(type)s > val) { %(name)s = val; }
     void set_single_%(name)s(int rk, %(type)s val) { %(name)s[rk] = val; }
-    std::vector< std::vector< %(type)s > > get_recorded_%(name)s() { return recorded_%(name)s; }
-    bool is_%(name)s_recorded() { return record_%(name)s; }
-    void set_record_%(name)s(bool val) { record_%(name)s = val; }
-    void clear_recorded_%(name)s() { recorded_%(name)s.clear(); }
 """,
     'global':
 """
     // Global variable %(name)s
     %(type)s get_%(name)s() { return %(name)s; }
     void set_%(name)s(%(type)s val) { %(name)s = val; }
-    std::vector<%(type)s> get_recorded_%(name)s() { return recorded_%(name)s; }
-    bool is_%(name)s_recorded() { return record_%(name)s; }
-    void set_record_%(name)s(bool val) { record_%(name)s = val; }
-    void clear_recorded_%(name)s() { recorded_%(name)s.clear(); }
 """
 }
 
@@ -317,20 +283,12 @@ variable_cpp_export = {
         %(type)s get_single_%(name)s(int rk)
         void set_%(name)s(vector[%(type)s])
         void set_single_%(name)s(int, %(type)s)
-        vector[vector[%(type)s]] get_recorded_%(name)s()
-        void set_record_%(name)s(bool)
-        bool is_%(name)s_recorded()
-        void clear_recorded_%(name)s()
 """,
     'global':
 """
         # Global variable %(name)s
         %(type)s  get_%(name)s()
         void set_%(name)s(%(type)s)
-        vector[%(type)s] get_recorded_%(name)s()
-        void set_record_%(name)s(bool)
-        bool is_%(name)s_recorded()
-        void clear_recorded_%(name)s()
 """
 }
 
@@ -355,14 +313,6 @@ variable_pyx_wrapper = {
         return pop%(id)s.get_single_%(name)s(rank)
     cpdef set_single_%(name)s(self, int rank, value):
         pop%(id)s.set_single_%(name)s(rank, value)
-    def start_record_%(name)s(self):
-        pop%(id)s.set_record_%(name)s(True)
-    def stop_record_%(name)s(self):
-        pop%(id)s.set_record_%(name)s(False)
-    def get_record_%(name)s(self):
-        cdef vector[vector[%(type)s]] tmp = pop%(id)s.get_recorded_%(name)s()
-        pop%(id)s.clear_recorded_%(name)s()
-        return tmp
 """,
     'global':
 """
@@ -371,14 +321,6 @@ variable_pyx_wrapper = {
         return pop%(id)s.get_%(name)s()
     cpdef set_%(name)s(self, %(type)s value):
         pop%(id)s.set_%(name)s(value)
-    def start_record_%(name)s(self):
-        pop%(id)s.set_record_%(name)s(True)
-    def stop_record_%(name)s(self):
-        pop%(id)s.set_record_%(name)s(False)
-    def get_record_%(name)s(self):
-        cdef vector[%(type)s] tmp = pop%(id)s.get_recorded_%(name)s()
-        pop%(id)s.clear_recorded_%(name)s()
-        return tmp
 """
 }
 
@@ -393,15 +335,11 @@ variable_cpp_init = {
 """
         // Local variable %(name)s
         %(name)s = std::vector<%(type)s>(size, %(init)s);
-        recorded_%(name)s = std::vector<std::vector<%(type)s> >(0, std::vector<%(type)s>(0,%(init)s));
-        record_%(name)s = false;
 """,
     'global':
 """
         // Global variable %(name)s
         %(name)s = %(init)s;
-        recorded_%(name)s = std::vector<%(type)s>(0, %(init)s);
-        record_%(name)s = false;
 """
 }
 
@@ -417,8 +355,6 @@ model_specific_init = {
 """
         // Spiking event and refractory
         refractory = std::vector<int>(size, 0);
-        record_spike = false;
-        recorded_spike = std::vector<std::vector<long int> >(size, std::vector<long int>());
         spiked = std::vector<int>(0, 0);
         last_spike = std::vector<long int>(size, -10000L);
         refractory_remaining = std::vector<int>(size, 0);

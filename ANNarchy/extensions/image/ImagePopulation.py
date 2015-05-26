@@ -79,7 +79,7 @@ class ImagePopulation(Population):
         if self.dimension == 2 or self.geometry[2] == 1:
             im=im.convert("L")
         # Set the rate of the population
-        if not Global._compiled:
+        if not Global._network[0]['compiled']:
             self.r = (np.array(im))/255.
         else:
             self.cyInstance.set_r(np.array(im).reshape(self.size)/255.)
@@ -187,9 +187,6 @@ protected:
 struct PopStruct%(id)s{
     int size;
     bool _active;
-    // Record parameter
-    int record_period;
-    long int record_offset;
     // Rate
     std::vector< double > r ;
     // Camera
@@ -213,8 +210,6 @@ struct PopStruct%(id)s{
     cdef struct PopStruct%(id)s  :
         int size
         bool _active
-        int record_period
-        long int record_offset
         vector[double] r
         void StartCamera(int id, int width, int height, int depth)
         void GrabImage()

@@ -43,8 +43,10 @@ import numpy as np
 
 class CUDAGenerator(object):
 
-    def __init__(self, populations, projections):
+    def __init__(self, annarchy_dir, populations, projections, net_id):
 
+        self.net_id = net_id
+        self.annarchy_dir = annarchy_dir
         self.populations = populations
         self.projections = projections
 
@@ -60,15 +62,15 @@ class CUDAGenerator(object):
         self.propagate_global_ops()
 
         # Generate header code for the analysed pops and projs
-        with open(Global.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self.generate_header())
             
         # Generate cpp and cuda code for the analysed pops and projs
-        with open(Global.annarchy_dir+'/generate/ANNarchy.cu', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/ANNarchy.cu', 'w') as ofile:
             ofile.write(self.generate_body())
 
         # Generate cython code for the analysed pops and projs
-        with open(Global.annarchy_dir+'/generate/ANNarchyCore.pyx', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/ANNarchyCore'+str(self.net_id)+'.pyx', 'w') as ofile:
             ofile.write(self.generate_pyx())
 
     def propagate_global_ops(self):
@@ -112,12 +114,16 @@ class CUDAGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.header_struct_proj()
 
+        # Population recorders
+        record_classes = self.header_recorder_classes()
+
         from .HeaderTemplate import header_template
         return header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
+            'record_classes': record_classes
         }
 
     def header_struct_pop(self):
@@ -145,6 +151,15 @@ class CUDAGenerator(object):
 """% {'id_proj': proj.id}
 
         return proj_struct, proj_ptr
+
+    def header_recorder_classes(self):
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.recorder_class(pop)  
+        for proj in self.projections:
+            code += self.projgen.recorder_class(proj)  
+
+        return code
 
 #######################################################################
 ############## BODY ###################################################
@@ -208,9 +223,6 @@ class CUDAGenerator(object):
         # Structural plasticity
         structural_plasticity = self.body_structural_plasticity()
 
-        # Record
-        record = self.body_record()
-
         # Early stopping
         run_until = self.body_run_until()
 
@@ -247,7 +259,6 @@ class CUDAGenerator(object):
             'globalops_init' : globalops_init,
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
-            'record' : record,
             'stream_setup': stream_setup,
             'device_init': device_init,
             'host_device_transfer': host_device_transfer,
@@ -411,18 +422,6 @@ class CUDAGenerator(object):
             code += self.popgen.update_globalops(pop)
         return code
 
-    def body_record(self):
-        code = ""
-        # Populations
-        for pop in self.populations:
-           code += self.popgen.record(pop)
-
-        # Projections
-        for proj in self.projections:
-           code += self.projgen.record(proj)
-
-        return code
-
     def body_run_until(self):
         #TODO: VALIDATE
 
@@ -475,7 +474,7 @@ class CUDAGenerator(object):
         """
         ATTENTION: the same as OMPGenerator.header_custom_func
         """
-        if len(Global._functions) == 0:
+        if len(Global._objects['functions']) == 0:
             return ""
 
         Global._error("Not implemented yet: custom functions for GPGPU kernel ...")
@@ -492,18 +491,25 @@ class CUDAGenerator(object):
         # struct declaration for each projection
         proj_struct, proj_ptr = self.pyx_struct_proj()
 
+        # struct declaration for each monitor
+        monitor_struct = self.pyx_struct_monitor()
+
         # Cython wrappers for the populations
         pop_class = self.pyx_wrapper_pop()
 
         # Cython wrappers for the projections
         proj_class = self.pyx_wrapper_proj()
 
+        # Cython wrappers for the monitors
+        monitor_class = self.pyx_wrapper_monitor()
+
 
         from .PyxTemplate import pyx_template
         return pyx_template % {
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
-            'pop_class' : pop_class, 'proj_class': proj_class
+            'pop_class' : pop_class, 'proj_class': proj_class,
+            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class
         }
 
     def pyx_struct_pop(self):
@@ -546,7 +552,24 @@ class CUDAGenerator(object):
         for proj in self.projections:
             code += self.projgen.pyx_wrapper(proj)
         return code
+        
+    # Monitors
+    def pyx_struct_monitor(self):
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.pyx_monitor_struct(pop)
+        for proj in self.projections:
+            code += self.projgen.pyx_monitor_struct(proj)
+        return code
 
+    def pyx_wrapper_monitor(self):
+        # Cython wrappers for the populations monitors
+        code = ""
+        for pop in self.populations:
+            code += self.popgen.pyx_monitor_wrapper(pop)
+        for proj in self.projections:
+            code += self.projgen.pyx_monitor_wrapper(proj)
+        return code
 
 #######################################################################
 ############## HOST - DEVICE ##########################################

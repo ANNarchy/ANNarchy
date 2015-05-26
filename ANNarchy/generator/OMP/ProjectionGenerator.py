@@ -29,7 +29,7 @@ class ProjectionGenerator(object):
     def __init__(self):
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            self._prof_gen = ProfileGenerator(Global._populations, Global._projections)
+            self._prof_gen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
         else:
             self._prof_gen = None
 
@@ -95,20 +95,12 @@ class ProjectionGenerator(object):
                 code += """
     // Local variable %(name)s
     std::vector< std::vector< %(type)s > > %(name)s;
-    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s;
-    std::vector< int > record_%(name)s;
-    std::vector< int > record_period_%(name)s;
-    std::vector< long int > record_offset_%(name)s;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
     // Global variable %(name)s
     std::vector<%(type)s>  %(name)s;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    std::vector< int > record_%(name)s ;
-    std::vector< int > record_period_%(name)s ;
-    std::vector< long int > record_offset_%(name)s ;
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Local functions
@@ -147,6 +139,54 @@ class ProjectionGenerator(object):
                                                        'update': update
                                                      }
 
+    def recorder_class(self, proj):
+        tpl_code = """
+class ProjRecorder%(id)s : public Monitor
+{
+public:
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
+        : Monitor(ranks, period, offset)
+    {
+%(init_code)s
+    };
+    virtual void record() {
+%(recording_code)s
+    };
+%(struct_code)s
+};
+""" 
+        init_code = ""
+        recording_code = ""
+        struct_code = ""
+
+        for var in proj.synapse.description['variables']:
+            if var['name'] in proj.synapse.description['local']:
+                struct_code += """
+    // Local variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
+                init_code += """
+        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
+                recording_code += """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+        }""" % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+
+            elif var['name'] in proj.synapse.description['global']:
+                struct_code += """
+    // Global variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
+                init_code += """
+        this->%(name)s = std::vector< %(type)s >();
+        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
+                recording_code += """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            // Do something
+        } """ % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+        
+        return tpl_code % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 
 #######################################################################
 ############## BODY ###################################################
@@ -322,7 +362,7 @@ class ProjectionGenerator(object):
         # Profiling code
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._populations, Global._projections)
+            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
 
         # annotate code
         if self._prof_gen:
@@ -450,10 +490,11 @@ class ProjectionGenerator(object):
             pre_array = "pop%(id_pre)s.spiked" % ids
 
         # No need for openmp if less than 10 neurons
+        omp_code = ""
         if Global.config['num_threads']>1:
-            omp_code = """//#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-        else:
-            omp_code = ""
+            if proj.post.size > Global.OMP_MIN_NB_NEURONS and (len(pre_event_list) > 0 or learning != ""):
+                omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id}  
+            
 
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
@@ -728,33 +769,18 @@ class ProjectionGenerator(object):
         # Initialize variables
         for var in proj.synapse.description['variables']:
             if var['name'] == 'w':
-                code += """
-    // Local variable %(name)s (only the record methods)
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype']}
                 continue
             if var['name'] in proj.synapse.description['local']:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Local variable %(name)s
     proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Global variable %(name)s
     proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Spiking neurons have aditional data
@@ -796,18 +822,6 @@ class ProjectionGenerator(object):
     proj%(id_proj)s._creating_offset = 0;
 """% {'id_proj': proj.id}
 
-        return code
-
-    def record(self, proj):
-        code = ""
-        for var in proj.synapse.description['variables']:
-            code += """
-    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
-        int rk = proj%(id)s.record_%(name)s[i];
-        if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
-            proj%(id)s.recorded_%(name)s[rk].push_back(proj%(id)s.%(name)s[rk]) ;
-    }
-""" % {'id': proj.id, 'name': var['name'], 'modulo': '%'}
         return code
 
 
@@ -864,20 +878,12 @@ class ProjectionGenerator(object):
                 code += """
         # Local variable %(name)s
         vector[vector[%(type)s]] %(name)s 
-        vector[vector[vector[%(type)s]]] recorded_%(name)s 
-        vector[int] record_%(name)s 
-        vector[int] record_period_%(name)s 
-        vector[long] record_offset_%(name)s 
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
         # Global variable %(name)s
-        vector[%(type)s]  %(name)s 
-        vector[vector[%(type)s]] recorded_%(name)s
-        vector[int] record_%(name)s 
-        vector[int] record_period_%(name)s 
-        vector[long] record_offset_%(name)s 
+        vector[%(type)s]  %(name)s
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Structural plasticity
@@ -1032,21 +1038,6 @@ cdef class proj%(id)s_wrapper :
         return proj%(id)s.%(name)s[rank_post][rank_pre]
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.%(name)s[rank_post][rank_pre] = value
-    def start_record_%(name)s(self, int rank, int period, long int offset):
-        if not rank in list(proj%(id)s.record_%(name)s):
-            proj%(id)s.record_%(name)s.push_back(rank)
-            proj%(id)s.record_period_%(name)s.push_back(period)
-            proj%(id)s.record_offset_%(name)s.push_back(offset)
-    def stop_record_%(name)s(self, int rank):
-        cdef list tmp_record = list(proj%(id)s.record_%(name)s)
-        cdef int idx = tmp_record.index(rank)
-        proj%(id)s.record_%(name)s.erase(proj%(id)s.record_%(name)s.begin() + idx)
-        proj%(id)s.record_period_%(name)s.erase(proj%(id)s.record_period_%(name)s.begin() + idx)
-        proj%(id)s.record_offset_%(name)s.erase(proj%(id)s.record_offset_%(name)s.begin() + idx)
-    def get_recorded_%(name)s(self, int rank):
-        cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
-        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
-        return data
 """ % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
 
             elif var['name'] in proj.synapse.description['global']:
@@ -1106,6 +1097,49 @@ cdef class proj%(id)s_wrapper :
         return code
 
 
+#######################################################################
+############## Recording ##############################################
+#######################################################################
+
+    def pyx_monitor_struct(self, proj):
+        tpl_code = """
+    # Projection %(id)s : Monitor
+    cdef cppclass ProjRecorder%(id)s (Monitor):
+        ProjRecorder%(id)s(vector[int], int, long) except +    
+"""
+        for var in proj.synapse.description['variables']:
+            if var['name'] in proj.synapse.description['local']:
+                tpl_code += """
+        vector[vector[%(type)s]] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+            elif var['name'] in proj.synapse.description['global']:
+                tpl_code += """
+        vector[%(type)s] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+
+
+        return tpl_code % {'id' : proj.id}
+
+    def pyx_monitor_wrapper(self, proj):
+        tpl_code = """
+# Projection Monitor wrapper
+cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
+    def __cinit__(self, list ranks, int period, long offset):
+        self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
+"""
+
+        for var in proj.synapse.description['variables']:
+            tpl_code += """
+    property %(name)s:
+        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val 
+    property record_%(name)s:
+        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s = val 
+    def clear_%(name)s(self):
+        (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : proj.id, 'name': var['name']}
+
+        return tpl_code % {'id' : proj.id}
 
 #######################################################################
 ############## Structural plasticity ##################################

@@ -12,8 +12,10 @@ Class Spike2RatePopulation
 ===============================
 
 .. autoclass:: ANNarchy.extensions.hybrid.Spike2RatePopulation
+   :members:
 
 Class Rate2SpikePopulation
 ===============================
 
 .. autoclass:: ANNarchy.extensions.hybrid.Rate2SpikePopulation
+   :members:

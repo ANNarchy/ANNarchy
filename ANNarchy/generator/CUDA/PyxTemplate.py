@@ -14,6 +14,15 @@ cdef extern from "ANNarchy.h":
 %(pop_struct)s
 %(proj_struct)s
 
+    # Monitors
+    cdef cppclass Monitor:
+        vector[int] ranks
+        int period
+        long offset
+
+    void addRecorder(Monitor*)
+    void removeRecorder(Monitor*)
+%(monitor_struct)s
 
     # Instances
 %(pop_ptr)s
@@ -41,6 +50,28 @@ cdef extern from "ANNarchy.h":
 
 # Projection wrappers
 %(proj_class)s
+
+# Monitor wrappers
+cdef class Monitor_wrapper:
+    cdef Monitor *thisptr
+    def __cinit__(self, list ranks, int period, long offset):
+        pass
+    property ranks:
+        def __get__(self): return self.thisptr.ranks
+        def __set__(self, val): self.thisptr.ranks = val
+    property period:
+        def __get__(self): return self.thisptr.period
+        def __set__(self, val): self.thisptr.period = val
+    property offset:
+        def __get__(self): return self.thisptr.offset
+        def __set__(self, val): self.thisptr.offset = val
+
+def add_recorder(Monitor_wrapper recorder):
+    addRecorder(recorder.thisptr)
+def remove_recorder(Monitor_wrapper recorder):
+    removeRecorder(recorder.thisptr)
+
+%(monitor_wrapper)s
 
 # Initialize the network
 def pyx_create(double dt, long seed):

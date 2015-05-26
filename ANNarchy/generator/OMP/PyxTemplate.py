@@ -15,6 +15,15 @@ cdef extern from "ANNarchy.h":
 %(pop_struct)s
 %(proj_struct)s
 
+    # Monitors
+    cdef cppclass Monitor:
+        vector[int] ranks
+        int period
+        long offset
+
+    void addRecorder(Monitor*)
+    void removeRecorder(Monitor*)
+%(monitor_struct)s
 
     # Instances
 %(pop_ptr)s
@@ -22,7 +31,7 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(double, long)
-    void run(int nbSteps)
+    void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
     void step()
     
@@ -44,20 +53,45 @@ cdef extern from "ANNarchy.h":
 # Projection wrappers
 %(proj_class)s
 
+# Monitor wrappers
+cdef class Monitor_wrapper:
+    cdef Monitor *thisptr
+    def __cinit__(self, list ranks, int period, long offset):
+        pass
+    property ranks:
+        def __get__(self): return self.thisptr.ranks
+        def __set__(self, val): self.thisptr.ranks = val
+    property period:
+        def __get__(self): return self.thisptr.period
+        def __set__(self, val): self.thisptr.period = val
+    property offset:
+        def __get__(self): return self.thisptr.offset
+        def __set__(self, val): self.thisptr.offset = val
+
+def add_recorder(Monitor_wrapper recorder):
+    addRecorder(recorder.thisptr)
+def remove_recorder(Monitor_wrapper recorder):
+    removeRecorder(recorder.thisptr)
+
+%(monitor_wrapper)s
+
 # Initialize the network
 def pyx_create(double dt, long seed):
     initialize(dt, seed)
 
-# Simulation for the given numer of steps
+# Simulation for the given number of steps
 def pyx_run(int nb_steps):
     cdef int nb, rest
-    if nb_steps < 1000:
-        run(nb_steps)
+    cdef int batch = 1000
+    if nb_steps < batch:
+        with nogil:
+            run(nb_steps)
     else:
-        nb = int(nb_steps/1000)
-        rest = nb_steps %% 1000
+        nb = int(nb_steps/batch)
+        rest = nb_steps %% batch
         for i in range(nb):
-            run(1000)
+            with nogil:
+                run(batch)
             PyErr_CheckSignals()
         run(rest)
 
