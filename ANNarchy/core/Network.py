@@ -148,7 +148,7 @@ class Network(object):
         Global.simulate(duration, net_id=self.id)
 
 
-def parallel_run(method, networks=None, number=0, measure_time=False, sequential=False):
+def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False):
     """
     Allows to run multiple networks in parallel using multiprocessing.
 
@@ -166,6 +166,7 @@ def parallel_run(method, networks=None, number=0, measure_time=False, sequential
 
     * **method**: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
     * **networks**: a list of networks to simulate in parallel.
+    * **max_processes**: maximal number of processes to start concurrently (default: the available number of cores on the machine).
     * **measure_time**: if the total simulation time should be printed out. 
     * **sequential**: if True, runs the simulations sequentially instead of in parallel (default: False). 
     """
@@ -180,16 +181,16 @@ def parallel_run(method, networks=None, number=0, measure_time=False, sequential
         return []
 
     if not networks: # The magic network will run N times
-        return _parallel_multi(method, number, measure_time, sequential)
+        return _parallel_multi(method, number, max_processes, measure_time, sequential)
 
     if not isinstance(networks, list):
         Global._error('parallel_run(): the networks argument must be a list.')
         return []
 
     # Simulate the different networks
-    return _parallel_networks(method, networks, measure_time, sequential)
+    return _parallel_networks(method, networks, max_processes, measure_time, sequential)
 
-def _parallel_networks(method, networks, measure_time, sequential):
+def _parallel_networks(method, networks, max_processes, measure_time, sequential):
     " Method when different networks are provided"
     import multiprocessing
     from multiprocessing.dummy import Pool
@@ -199,9 +200,13 @@ def _parallel_networks(method, networks, measure_time, sequential):
     if measure_time:
         ts = time()
 
+    # Number of processes to create
+    if max_processes < 0:
+        max_processes = multiprocessing.cpu_count()
+
     # Simulation
     if not sequential:
-        pool = Pool(multiprocessing.cpu_count())
+        pool = Pool(max_processes)
         try:
             results = pool.map(_only_run_method, [(idx, method, net) for idx, net in enumerate(networks)])
         except Exception as e:
@@ -233,7 +238,7 @@ def _parallel_networks(method, networks, measure_time, sequential):
     return results
 
 
-def _parallel_multi(method, number, measure_time, sequential):
+def _parallel_multi(method, number, max_processes, measure_time, sequential):
     "Method when the same network must be simulated multiple times."
     import multiprocessing
     from multiprocessing import Pool
@@ -243,10 +248,14 @@ def _parallel_multi(method, number, measure_time, sequential):
     if measure_time:
         ts = time()
 
+    # Number of processes to create
+    if max_processes < 0:
+        max_processes = multiprocessing.cpu_count()
+
     # Simulation
     if not sequential:
         try:
-            pool = Pool(multiprocessing.cpu_count())
+            pool = Pool(max_processes)
             results = pool.map(_create_and_run_method, [(n, method) for n in range(number)] )
             pool.close()
             pool.join()
