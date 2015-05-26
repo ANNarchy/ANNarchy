@@ -6,6 +6,7 @@ import Global
 import ANNarchy.generator.Generator as Generator
 
 import os, shutil, sys
+import numpy as np
 
 class Network(object):
     """ 
@@ -133,7 +134,7 @@ class Network(object):
         return None
 
     def compile(self, directory='annarchy', silent=False):
-        """Compiles the network.
+        """ Compiles the network.
 
         *Parameters*:
 
@@ -142,81 +143,169 @@ class Network(object):
         """
         Generator.compile(directory=directory, silent=silent, net_id=self.id)
 
-    def simulate(self, duration):
-        "Simulates the network for the given duration in ms."
-        Global.simulate(duration, net_id=self.id)
+    def simulate(self, duration, measure_time = False):
+        """   Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
+
+            simulate(1000.0)
+
+        *Parameters*:
+
+        * **duration**: the duration in milliseconds.
+        * **measure_time**: defines whether the simulation time should be printed (default=False).
+            Global.simulate(duration, net_id=self.id)
+        """
+        Global.simulate(duration, measure_time, self.id)
+    
+    def simulate_until(max_duration, population, operator='and', measure_time = False):
+        """
+        Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
+
+        One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
+
+        Example::
+
+            pop1 = Population( ..., stop_condition = "r > 1.0 : any")
+            compile()
+            simulate_until(max_duration=1000.0. population=pop1)
+
+        *Parameters*:
+
+        * **duration**: the maximum duration of the simulation in milliseconds.
+        * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+        * **operator**: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
+        * **measure_time**: defines whether the simulation time should be printed (default=False).
+
+        *Returns*:
+
+        * the actual duration of the simulation in milliseconds.
+        """
+        Global.simulate_until(max_duration, population, operator, measure_time, self.id)
+    
+    def step():
+        """
+        Performs a single simulation step (duration = ``dt``). 
+        """
+        Global.step(self.id)
 
 
-def parallel_run(method, networks=None, number=0, measure_time=False, sequential=False):
+    def reset(populations=True, projections=False, synapses = False):
+        """
+        Reinitialises the network to its state before the call to compile.
+
+        *Parameters*:
+
+        * **populations**: if True (default), the neural parameters and variables will be reset to their initial value.
+        * **projections**: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
+        * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
+        """
+        Global.reset(populations,  projections, synapses, self.id)
+
+    def get_time(net_id=0):
+        "Returns the current time in ms."
+        return Global.get_time(self.id)
+
+    def set_time(t, net_id=0):
+        """Sets the current time in ms.
+
+    .. warning::
+
+        Can be dangerous for some spiking models.
+    """
+        Global.set_time(t, self.id)
+
+    def get_current_step(net_id=0):
+        "Returns the current simulation step."
+        return Global.get_current_step(self.id)
+
+    def set_current_step(t, net_id=0):
+        """Sets the current simulation step.
+
+    .. warning::
+
+        Can be dangerous for some spiking models.
+    """
+        Global.set_current_step(t, self.id)
+
+def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False):
     """
     Allows to run multiple networks in parallel using multiprocessing.
 
     If the ``networks`` argument is provided as a list of Network objects, the given method will be executed for each of these networks.
 
-    If ``number`` is given instead, the same number of magic networks will be created and the method is applied. 
+    If ``number`` is given instead, the same number of networks will be created and the method is applied. 
 
     **Returns**:
 
-    * If ``networks`` is used, a list of the values returned by ``method``.
+    * a list of the values returned by ``method``.
 
-    * If ``number`` is used, the list of created networks is returned first, then the list of values returned by ``method``.
+    If ``number`` is used, the created networks are not returned, you should return what you need to analyse.
 
     *Parameters*:
 
-    * **method**: a Python method which will be executed for each network. This function must accept a Network object as a first argument.
+    * **method**: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
     * **networks**: a list of networks to simulate in parallel.
+    * **max_processes**: maximal number of processes to start concurrently (default: the available number of cores on the machine).
     * **measure_time**: if the total simulation time should be printed out. 
-    * **sequential**: runs the networks sequentially instead of in parallel. 
+    * **sequential**: if True, runs the simulations sequentially instead of in parallel (default: False). 
     """
     # Check inputs
     if not networks and number < 1:
         Global._error('parallel_run(): the networks or number arguments must be set.')
         return []
-    if not networks: # The magic network will run N times
-        networks = []
-        for i in range(number):
-            net = Network(True)
-            net.compile(silent=True)
-            networks.append(net)
-    if not isinstance(networks, list):
-        Global._error('parallel_run(): the networks argument must be a list.')
-        return []
+
     import types
     if not isinstance(method, types.FunctionType):
         Global._error('parallel_run(): the method argument must be a method.')
         return []
 
-    # Number of networks
-    nb_nets = len(networks)
+    if not networks: # The magic network will run N times
+        return _parallel_multi(method, number, max_processes, measure_time, sequential)
+
+    if not isinstance(networks, list):
+        Global._error('parallel_run(): the networks argument must be a list.')
+        return []
+
+    # Simulate the different networks
+    return _parallel_networks(method, networks, max_processes, measure_time, sequential)
+
+def _parallel_networks(method, networks, max_processes, measure_time, sequential):
+    " Method when different networks are provided"
+    import multiprocessing
+    from multiprocessing.dummy import Pool
 
     # Time measurement    
     from time import time
     if measure_time:
         ts = time()
 
+    # Number of processes to create
+    if max_processes < 0:
+        max_processes = multiprocessing.cpu_count()
+
     # Simulation
     if not sequential:
-        from multiprocessing.dummy import Pool
-        pool = Pool(nb_nets)
+        pool = Pool(max_processes)
         try:
-            results = pool.map(method, networks)
-        except:
+            results = pool.map(_only_run_method, [(idx, method, net) for idx, net in enumerate(networks)])
+        except Exception as e:
+            Global._print(e)
             Global._error('parallel_run(): running multiple networks failed.')
             return []
         pool.close()
         pool.join()
     else:
         results = []
-        for net in networks:
+        for idx, net in enumerate(networks):
             try:
-                results.append(method(net))
-            except:
+                results.append(method(idx, net))
+            except Exception as e:
+                Global._print(e)
                 Global._error('parallel_run(): running network ' + str(net.id) + ' failed.')
                 return []
 
     # Time measurement
     if measure_time:
-        msg = 'Running ' + str(nb_nets) + ' networks'
+        msg = 'Running ' + str(len(networks)) + ' networks'
         if not sequential:
             msg += ' in parallel '
         else:
@@ -224,6 +313,68 @@ def parallel_run(method, networks=None, number=0, measure_time=False, sequential
         msg += 'took: ' + str(time()-ts)
         Global._print(msg)
 
-    if number > 0:
-        return networks, results
     return results
+
+
+def _parallel_multi(method, number, max_processes, measure_time, sequential):
+    "Method when the same network must be simulated multiple times."
+    import multiprocessing
+    from multiprocessing import Pool
+
+    # Time measurement    
+    from time import time
+    if measure_time:
+        ts = time()
+
+    # Number of processes to create
+    if max_processes < 0:
+        max_processes = multiprocessing.cpu_count()
+
+    # Simulation
+    if not sequential:
+        try:
+            pool = Pool(max_processes)
+            results = pool.map(_create_and_run_method, [(n, method) for n in range(number)] )
+            pool.close()
+            pool.join()
+        except Exception as e:
+            Global._print(e)
+            Global._error('parallel_run(): running ' + str(number) + ' networks failed.')
+            return []
+    else:
+        results = []
+        try:
+            for n in range(number):
+                results.append(_create_and_run_method((n, method)))
+        except Exception as e:
+            Global._print(e)
+            Global._error('parallel_run(): running ' + str(number) + ' networks failed.')
+            return []
+
+    # Time measurement
+    if measure_time:
+        msg = 'Running ' + str(number) + ' networks'
+        if not sequential:
+            msg += ' in parallel '
+        else:
+            msg += ' sequentially '
+        msg += 'took: ' + str(time()-ts)
+        Global._print(msg)
+        
+    return results
+
+def _create_and_run_method(args):
+    "method called to wrap the user-defined method"
+    n, method = args
+    net = Network(True)
+    np.random.seed() # TODO: if seed is declared
+    Generator._instantiate(net.id, 0)
+    res = method(n, net)
+    del net
+    return res
+
+def _only_run_method(args):
+    "method called to wrap the user-defined method"
+    n, method, net = args
+    res = method(n, net)
+    return res

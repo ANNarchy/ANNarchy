@@ -49,7 +49,7 @@ net2 = Network(everything=True)
 net2.compile()
 
 # Method to be applied on each network
-def run_network(net):
+def run_network(idx, net):
     # Retrieve subpopulations
     P_local = net.get(P)
     Exc = P_local[:800]
@@ -65,17 +65,20 @@ def run_network(net):
     Inh.u = Inh.v * Inh.b
     # Simulate
     net.simulate(5000.)
+    # Recordings
+    t, n = net.get(M).raster_plot()
+    return t, n
 
 # Simulating using the created networks
 vals = parallel_run(method=run_network, networks=[net, net2], measure_time=True, sequential=True)
 vals = parallel_run(method=run_network, networks=[net, net2], measure_time=True)
 
 # Using just a number of networks to create
-nets, vals = parallel_run(method=run_network, number=2, measure_time=True)
+vals = parallel_run(method=run_network, number=2, measure_time=True)
 
 # Data analysis
-t, n = nets[0].get(M).raster_plot()
-t2, n2 = nets[1].get(M).raster_plot()
+t, n = vals[0]
+t2, n2 = vals[1]
 
 from pylab import *
 subplot(121)

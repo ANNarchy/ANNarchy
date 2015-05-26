@@ -921,7 +921,7 @@ cdef class proj%(id)s_wrapper :
             code += """
         proj%(id)s._last_event = vector[vector[long]](nb_post, vector[long]())
         for n in range(nb_post):
-            proj%(id)s._last_event[n] = vector[long](proj%(id)s.pre_rank[n].size(), -10000)
+            proj%(id)s._last_event[n] = vector[long](proj%(id)s.nb_synapses(n), -10000)
 """% {'id': proj.id}
 
         # Delays

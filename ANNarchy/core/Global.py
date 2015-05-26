@@ -104,7 +104,7 @@ def setup(**keyValueArgs):
 
     *Parameters*:
     
-    * **dt**: discretization time step (default: 1.0 ms).
+    * **dt**: simulation step size (default: 1.0 ms).
 
     * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     
@@ -143,19 +143,19 @@ def setup(**keyValueArgs):
 
 def set_cuda_config(config):
     """
-    setup cuda config, whereas the config is a dictionary containing the device id where to compute on (default 0) 
-    and for each population and projection an amount of threads. If not specified, we assume 32 threads for 
-    populations and 192 threads for projections. ATTENTION: need to be set before compilation.
+    Sets the CUDA configuration, where config is a dictionary containing the device id where to compute on (default 0) 
+    and for each population and projection a number of threads. If not specified, we assume 32 threads for 
+    populations and 192 threads for projections. ATTENTION: this need to be set before compilation.
 
-    Example:
+    Example::
 
-    config = { 'device': 0, Input: 64, Output: 32, Input_Output: 64 }
-    set_cuda_config(config)
-    compile()
+        config = { 'device': 0, Input: 64, Output: 32, Input_Output: 64 }
+        set_cuda_config(config)
+        compile()
 
-    Warning:
+    .. warning::
 
-    setting this config, will overwrite completely existing configurations.
+        Setting this configuration will overwrite completely existing configurations.
     """
     global cuda_config
     cuda_config = config
@@ -285,7 +285,6 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
 def step(net_id=0):
     """
     Performs a single simulation step (duration = ``dt``). 
-
     """
     if _network[net_id]['instance']:      
         _network[net_id]['instance'].pyx_step()
@@ -326,6 +325,7 @@ def disable_learning(projections=None, net_id=0):
 ## Time
 ################################
 def get_time(net_id=0):
+    "Returns the current time in ms."
     try:
         t = _network[net_id]['instance'].get_time()/config['dt']
     except:
@@ -333,12 +333,19 @@ def get_time(net_id=0):
     return t
 
 def set_time(t, net_id=0):
+    """Sets the current time in ms.
+
+    .. warning::
+
+        Can be dangerous for some spiking models.
+    """
     try:
         _network[net_id]['instance'].set_time(int(t*config['dt']))
     except:
         _warning('Time can only be set when the network is compiled.')
 
 def get_current_step(net_id=0):
+    "Returns the current simulation step."
     try:
         t = _network[net_id]['instance'].get_time()
     except:
@@ -346,12 +353,19 @@ def get_current_step(net_id=0):
     return t
 
 def set_current_step(t, net_id=0):
+    """Sets the current simulation step.
+
+    .. warning::
+
+        Can be dangerous for some spiking models.
+    """
     try:
         _network[net_id]['instance'].set_time(int(t))
     except:
         _warning('Time can only be set when the network is compiled.')
 
 def dt():
+    "Returns the simulation step size ``dt`` used in the simulation."
     return config['dt']
 
 ################################
