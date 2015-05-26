@@ -814,65 +814,56 @@ public:
 #######################################################################
 
     def pyx_struct(self, proj):
+        """
+        The python extension wrapper needs a definition of the corresponding
+        C object. The pyx_struct contains all methods, which should be accessible
+        by the python extension wrapper.
+
+        Templates:
+
+            attribute_cpp_export: normal accessors for variables/parameters
+            structural_plasticity: pruning, creating, calling method
+            delay, exact_integ: variables accessed by the wrapper
+
+        """
         # Is it a specific projection?
         if proj.generator['omp']['pyx_proj_struct']:
             return proj.generator['omp']['pyx_proj_struct']
 
-        # create the code for non-specific projections
-        code = """
-    cdef struct ProjStruct%(id_proj)s :
-        bool _learning
+        # Check for exact intgeration
+        has_exact = False
+        for var in proj.synapse.description['variables']:
+            if var['method'] == 'exact':
+                has_exact = True
+                break;
 
-        int get_size()
-        vector[int] get_post_rank()
-        vector[vector[int]] get_pre_rank()
-        int nb_synapses(int)
-        void set_size(int)
-        void set_post_rank(vector[int])
-        void set_pre_rank(vector[vector[int]])
-"""         
+        # Check if we need delay code
+        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'exact':
                 has_exact = True
-        if has_exact:
-            code += """
-        vector[vector[long]] _last_event
-"""% {'id': proj.id}
 
-        # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-        vector[vector[int]] delay
-"""
+        # Determine all export methods
+        export = ""
         # Parameters
         for var in proj.synapse.description['parameters']:
-            code += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
-
+            export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         # Variables
         for var in proj.synapse.description['variables']:
-            code += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Structural plasticity
+        structural_plasticity = ""
+        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
         if Global.config['structural_plasticity']:
-
             # Pruning in the synapse
             if 'pruning' in proj.synapse.description.keys():
-                code += """
-        # Pruning
-        bool _pruning
-        int _pruning_period
-        long _pruning_offset
-"""
+                structural_plasticity += sp_tpl['pruning']
             if 'creating' in proj.synapse.description.keys():
-                code += """
-        # Creating
-        bool _creating
-        int _creating_period
-        long _creating_offset
-"""
+                structural_plasticity += sp_tpl['creating']
 
             # Retrieve the names of extra attributes   
             extra_args = ""
@@ -880,115 +871,63 @@ public:
                 if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
                     extra_args += ', ' + var['ctype'] + ' ' +  var['name'] 
             # Generate the code
-            code += """
-        # Structural plasticity
-        int dendrite_index(int post, int pre)
-        void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s)
-        void removeSynapse(int post, int pre)
-""" % {'extra_args': extra_args}
+            structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
 
-        # Finalize the code
-        return code % {'id_proj': proj.id}
+        return ProjTemplate.pyx_struct % { 'id_proj': proj.id,
+                                           'exact': ProjTemplate.exact_integ['decl'] % {'id': proj.id} if has_exact else "",
+                                           'delay': ProjTemplate.delay['decl'] % {'id': proj.id} if has_delay else "",
+                                           'export': export,
+                                           'structural_plasticity': structural_plasticity
+                                          }
 
     def pyx_wrapper(self, proj):
+        """
+        Generates the python extension wrapper, which allows access from Python to the C module. There
+        are three optional parts (structural plasticity, non-uniform delays and exact integration of
+        synaptic events) which we need to handle seperatly. The rest of the variables/parameters is 
+        handled by the standard accessors.
 
+        Templates:
+
+            attribute_pyx_wrapper: normal accessors for variables/parameters
+            structural_plasticity: pruning, creating, calling method
+            delay, exact_integ: __cinit__ code
+
+        """
         # Is it a specific population?
         if proj.generator['omp']['pyx_proj_class']:
             return  proj.generator['omp']['pyx_proj_class'] 
 
-        # Init
-        code = """
-cdef class proj%(id)s_wrapper :
-
-    def __cinit__(self, synapses):
-
-        cdef CSR syn = synapses
-        cdef int size = syn.size
-        cdef int nb_post = syn.post_rank.size()
-
-        proj%(id)s.set_size( size )
-        proj%(id)s.set_post_rank( syn.post_rank )
-        proj%(id)s.set_pre_rank( syn.pre_rank )
-        proj%(id)s.set_w(syn.w)
-"""% {'id': proj.id}
-
-        # Exact integration
+        # Check for exact intgeration
         has_exact = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'exact':
                 has_exact = True
-        if has_exact:
-            code += """
-        proj%(id)s._last_event = vector[vector[long]](nb_post, vector[long]())
-        for n in range(nb_post):
-            proj%(id)s._last_event[n] = vector[long](proj%(id)s.nb_synapses(n), -10000)
-"""% {'id': proj.id}
+                break;
 
-        # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-        proj%(id)s.delay = syn.delay
-"""% {'id': proj.id}
+        # Check if we need delay code
+        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Size property
-        code += """
-    property size:
-        def __get__(self):
-            return proj%(id)s.get_size()
-
-    def nb_synapses(self, int n):
-        return proj%(id)s.nb_synapses(n)
-
-    def _set_learning(self, bool l):
-        proj%(id)s._learning = l
-
-    def post_rank(self):
-        return proj%(id)s.get_post_rank()
-    def pre_rank(self, int n):
-        return proj%(id)s.get_pre_rank()[n]
-""" % {'id': proj.id}
-
-        # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-    def get_delay(self):
-        return proj%(id)s.delay
-    def set_delay(self, value):
-        proj%(id)s.delay = value
-"""% {'id': proj.id}
-
-        # Parameters
+        # Determine all accessor methods
+        accessor = ""
+        pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
         for var in proj.synapse.description['parameters']:
-            code += ProjTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
-
-        # Variables
+            accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
         for var in proj.synapse.description['variables']:
-            code += ProjTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
+            accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
-         # Structural plasticity
+        # Structural plasticity
+        structural_plasticity = ""
+        sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
         if Global.config['structural_plasticity']:
             # Pruning in the synapse
             if 'pruning' in proj.synapse.description.keys():
-                code += """
-    # Pruning
-    def start_pruning(self, int period, long offset):
-        proj%(id)s._pruning = True
-        proj%(id)s._pruning_period = period
-        proj%(id)s._pruning_offset = offset
-    def stop_pruning(self):
-        proj%(id)s._pruning = False
-"""% {'id' : proj.id}
+                structural_plasticity += sp_tpl['pruning'] % {'id' : proj.id}
+
             # Creating in the synapse
             if 'creating' in proj.synapse.description.keys():
-                code += """
-    # Creating
-    def start_creating(self, int period, long offset):
-        proj%(id)s._creating = True
-        proj%(id)s._creating_period = period
-        proj%(id)s._creating_offset = offset
-    def stop_creating(self):
-        proj%(id)s._creating = False
-"""% {'id' : proj.id}
+                structural_plasticity += sp_tpl['creating'] % {'id' : proj.id}
+
             # Retrieve the names of extra attributes   
             extra_args = ""
             extra_values = ""
@@ -998,15 +937,15 @@ cdef class proj%(id)s_wrapper :
                     extra_values += ', ' +  var['name']       
 
             # Generate the code        
-            code += """
-    # Structural plasticity
-    def add_synapse(self, int post_rank, int pre_rank, double weight, int delay%(extra_args)s):
-        proj%(id)s.addSynapse(post_rank, pre_rank, weight, delay%(extra_values)s)
-    def remove_synapse(self, int post_rank, int pre_rank):
-        proj%(id)s.removeSynapse(post_rank, proj%(id)s.dendrite_index(post_rank, pre_rank))
-"""% {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
+            structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
 
-        return code
+        return ProjTemplate.pyx_wrapper % { 'id': proj.id,
+                                            'exact_init': ProjTemplate.exact_integ['cinit'] % {'id': proj.id} if has_exact else "",
+                                            'delay_init': ProjTemplate.delay['cinit'] % {'id': proj.id} if has_delay else "",
+                                            'delay_acc': ProjTemplate.delay['pyx_wrapper_acc'] % {'id': proj.id} if has_delay else "",
+                                            'accessor': accessor,
+                                            'structural_plasticity': structural_plasticity
+                                           }
 
 
 #######################################################################
