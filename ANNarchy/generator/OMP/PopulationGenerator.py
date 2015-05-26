@@ -50,22 +50,22 @@ class PopulationGenerator(object):
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.parameter_decl['local'] % {'type' : var['ctype'], 'name': var['name']}
-                accessors += PopTemplate.parameter_acc['local'] % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.attribute_decl['local'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+                accessors += PopTemplate.attribute_acc['local'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
             elif var['name'] in pop.neuron_type.description['global']:
-                code += PopTemplate.parameter_decl['global'] % {'type' : var['ctype'], 'name': var['name']}
-                accessors += PopTemplate.parameter_acc['global'] % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.attribute_decl['global'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+                accessors += PopTemplate.attribute_acc['global'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.variable_decl['local'] % {'type' : var['ctype'], 'name': var['name']}
-                accessors += PopTemplate.variable_acc['local'] % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.attribute_decl['local'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+                accessors += PopTemplate.attribute_acc['local'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
             elif var['name'] in pop.neuron_type.description['global']:
-                code += PopTemplate.variable_decl['global'] % {'type' : var['ctype'], 'name': var['name']}
-                accessors += PopTemplate.variable_acc['global'] % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.attribute_decl['global'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+                accessors += PopTemplate.attribute_acc['global'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Arrays for the presynaptic sums
         code += """
@@ -119,6 +119,7 @@ class PopulationGenerator(object):
             for func in pop.neuron_type.description['functions']:
                 code += ' '*4 + func['cpp'] + '\n'
 
+        # Implementation for init_population, update
         init = self.init_population(pop)
         update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
@@ -472,19 +473,17 @@ public:
         for var in pop.neuron_type.description['parameters']:
             init = 0.0 if var['ctype'] == 'double' else 0
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.parameter_cpp_init['local'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
+                code += PopTemplate.attribute_cpp_init['local'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
             else: # global
-                code += PopTemplate.parameter_cpp_init['global'] %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                code += PopTemplate.attribute_cpp_init['global'] %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             init = 0.0 if var['ctype'] == 'double' else 0
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.variable_cpp_init['local'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
+                code += PopTemplate.attribute_cpp_init['local'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
             else: # global
-                code += PopTemplate.variable_cpp_init['global'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+                code += PopTemplate.attribute_cpp_init['global'] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
 
         # Targets
         if pop.neuron_type.type == 'rate':
@@ -627,18 +626,16 @@ public:
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.parameter_cpp_export['local'] % {'type' : var['ctype'], 'name': var['name']}
-
+                code += PopTemplate.attribute_cpp_export['local'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
             elif var['name'] in pop.neuron_type.description['global']:
-                code += PopTemplate.parameter_cpp_export['global'] % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.attribute_cpp_export['global'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.variable_cpp_export['local'] % {'type' : var['ctype'], 'name': var['name']}
-
+                code += PopTemplate.attribute_cpp_export['local'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
             elif var['name'] in pop.neuron_type.description['global']:
-                code += PopTemplate.variable_cpp_export['global'] % {'type' : var['ctype'], 'name': var['name']}
+                code += PopTemplate.attribute_cpp_export['global'] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Arrays for the presynaptic sums of rate-coded neurons
         if pop.neuron_type.type == 'rate':
@@ -694,18 +691,16 @@ cdef class pop%(id)s_wrapper :
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.parameter_pyx_wrapper['local'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
-
+                code += PopTemplate.attribute_pyx_wrapper['local'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
             elif var['name'] in pop.neuron_type.description['global']:
-                code += PopTemplate.parameter_pyx_wrapper['global'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
+                code += PopTemplate.attribute_pyx_wrapper['global'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             if var['name'] in pop.neuron_type.description['local']:
-                code += PopTemplate.variable_pyx_wrapper['local'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
-
+                code += PopTemplate.attribute_pyx_wrapper['local'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
             elif var['name'] in pop.neuron_type.description['global']:
-                code += PopTemplate.variable_pyx_wrapper['global'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
+                code += PopTemplate.attribute_pyx_wrapper['global'] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
         return code
 

@@ -104,37 +104,39 @@ struct PopStruct%(id)s{
 """
 }
 
-# c like definition of parameter members, whereas 'local' is used if values can vary across neurons,
-# consequently 'global' is used if values are common to all neurons.
+# c like definition of neuron attributes, whereas 'local' is used if values can vary across
+# neurons, consequently 'global' is used if values are common to all neurons.
 #
 # Parameters:
 #
 #    type: data type of the variable (double, float, int ...)
 #    name: name of the variable
-parameter_decl = {
+#    attr_type: either 'variable' or 'parameter'
+attribute_decl = {
     'local':
 """
-    // Local parameter %(name)s
+    // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
 """,
     'global':
 """
-    // Global parameter %(name)s
+    // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
 """    
 }
 
-# c like definition of accessors for parameter members, whereas 'local' is used if values can vary
+# c like definition of accessors for neuron attributes, whereas 'local' is used if values can vary
 # across neurons, consequently 'global' is used if values are common to all neurons.
 #
 # Parameters:
 #
 #    type: data type of the variable (double, float, int ...)
 #    name: name of the variable
-parameter_acc = {
+#    attr_type: either 'variable' or 'parameter'
+attribute_acc = {
     'local':
 """
-    // Local parameter %(name)s
+    // Local %(attr_type)s %(name)s
     std::vector< %(type)s > get_%(name)s() { return %(name)s; }
     %(type)s get_single_%(name)s(int rk) { return %(name)s[rk]; }
     void set_%(name)s(std::vector< %(type)s > val) { %(name)s = val; }
@@ -142,7 +144,7 @@ parameter_acc = {
 """,
     'global':
 """
-    // Global parameter %(name)s
+    // Global %(attr_type)s %(name)s
     %(type)s get_%(name)s() { return %(name)s; }
     void set_%(name)s(%(type)s val) { %(name)s = val; }
 """
@@ -156,10 +158,11 @@ parameter_acc = {
 #    type: data type of the variable (double, float, int ...). One should check if cython can understand the
 #          used types ( e. g. vector[bool] would not work properly... )
 #    name: name of the variable
-parameter_cpp_export = {
+#    attr_type: either 'variable' or 'parameter'
+attribute_cpp_export = {
     'local':
 """
-        # Local parameter %(name)s
+        # Local %(attr_type)s %(name)s
         vector[%(type)s] get_%(name)s()
         %(type)s get_single_%(name)s(int rk)
         void set_%(name)s(vector[%(type)s])
@@ -167,7 +170,7 @@ parameter_cpp_export = {
 """,
     'global':
 """
-        # Global parameter %(name)s
+        # Global %(attr_type)s %(name)s
         %(type)s  get_%(name)s()
         void set_%(name)s(%(type)s)
 """
@@ -182,10 +185,11 @@ parameter_cpp_export = {
 #    type: data type of the variable (double, float, int ...). One should check if cython can understand the
 #          used types ( e. g. vector[bool] would not work properly... )
 #    name: name of the variable
-parameter_pyx_wrapper = {
+#    attr_type: either 'variable' or 'parameter'
+attribute_pyx_wrapper = {
     'local':
 """
-    # Local parameter %(name)s
+    # Local %(attr_type)s %(name)s
     cpdef np.ndarray get_%(name)s(self):
         return np.array(pop%(id)s.get_%(name)s())
     cpdef set_%(name)s(self, np.ndarray value):
@@ -197,7 +201,7 @@ parameter_pyx_wrapper = {
 """,
     'global':
 """
-    # Global parameter %(name)s
+    # Global %(attr_type)s %(name)s
     cpdef %(type)s get_%(name)s(self):
         return pop%(id)s.get_%(name)s()
     cpdef set_%(name)s(self, %(type)s value):
@@ -211,134 +215,15 @@ parameter_pyx_wrapper = {
 #
 #    name: name of the variable
 #    init: initial value
-parameter_cpp_init = {
+attribute_cpp_init = {
     'local':
 """
-        // Local parameter %(name)s
+        // Local %(attr_type)s %(name)s
         %(name)s = std::vector<%(type)s>(size, %(init)s);
 """,
     'global':
 """
-        // Global parameter %(name)s
-        %(name)s = %(init)s;
-"""
-}
-
-# c like definition of accessors for variable members, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons.
-#
-# Parameters:
-#
-#    type: data type of the variable (double, float, int ...)
-#    name: name of the variable
-variable_decl = {
-    'local':
-"""
-    // Local variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-""",
-    'global':
-"""
-    // Global variable %(name)s
-    %(type)s  %(name)s ;
-"""
-}
-
-# c like definition of accessors for variable members, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons.
-# Parameters:
-#
-#    type: data type of the variable (double, float, int ...)
-#    name: name of the variable
-variable_acc = {
-    'local':
-"""
-    // Local variable %(name)s
-    std::vector< %(type)s > get_%(name)s() { return %(name)s; }
-    %(type)s get_single_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector< %(type)s > val) { %(name)s = val; }
-    void set_single_%(name)s(int rk, %(type)s val) { %(name)s[rk] = val; }
-""",
-    'global':
-"""
-    // Global variable %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s(%(type)s val) { %(name)s = val; }
-"""
-}
-
-# export of accessors for variable members towards python, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons.
-#
-# Parameters:
-#
-#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
-#          used types ( e. g. vector[bool] would not work properly... )
-#    name: name of the variable
-variable_cpp_export = {
-    'local':
-"""
-        # Local variable %(name)s
-        vector[%(type)s] get_%(name)s()
-        %(type)s get_single_%(name)s(int rk)
-        void set_%(name)s(vector[%(type)s])
-        void set_single_%(name)s(int, %(type)s)
-""",
-    'global':
-"""
-        # Global variable %(name)s
-        %(type)s  get_%(name)s()
-        void set_%(name)s(%(type)s)
-"""
-}
-
-# export of accessors for variable members towards python, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons. Functions marked as cpdef
-# can be accessed from python as well as cython. Local parameters allows access to single as well as all values.
-#
-# Parameters:
-#
-#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
-#          used types ( e. g. vector[bool] would not work properly... )
-#    name: name of the variable
-variable_pyx_wrapper = {
-    'local':
-"""
-    # Local variable %(name)s
-    cpdef np.ndarray get_%(name)s(self):
-        return np.array(pop%(id)s.get_%(name)s())
-    cpdef set_%(name)s(self, np.ndarray value):
-        pop%(id)s.set_%(name)s(value)
-    cpdef %(type)s get_single_%(name)s(self, int rank):
-        return pop%(id)s.get_single_%(name)s(rank)
-    cpdef set_single_%(name)s(self, int rank, value):
-        pop%(id)s.set_single_%(name)s(rank, value)
-""",
-    'global':
-"""
-    # Global variable %(name)s
-    cpdef %(type)s get_%(name)s(self):
-        return pop%(id)s.get_%(name)s()
-    cpdef set_%(name)s(self, %(type)s value):
-        pop%(id)s.set_%(name)s(value)
-"""
-}
-
-# Initialization of parameters due to the init_population method.
-#
-# Parameters:
-#
-#    name: name of the variable
-#    init: initial value
-variable_cpp_init = {
-    'local':
-"""
-        // Local variable %(name)s
-        %(name)s = std::vector<%(type)s>(size, %(init)s);
-""",
-    'global':
-"""
-        // Global variable %(name)s
+        // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
 """
 }
