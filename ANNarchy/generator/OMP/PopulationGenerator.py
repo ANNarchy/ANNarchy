@@ -22,65 +22,49 @@
 
 """
 import ANNarchy.core.Global as Global
+import PopulationTemplate as PopTemplate
 
 class PopulationGenerator(object):
 
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
-    def header_struct(self, pop):
+    def header_struct(self, pop, annarchy_dir):
         """
         Generate the c-style struct definition for a population object.
+
+        Parameters:
+
+            pop: Population object
+            annarchy_dir: working directory
+
+        Returns:
+
+            (str, str): include directive, pointer definition
+
+        Templates:
+
+            header_struct, parameter_decl, parameter_acc, variable_decl, variable_acc
         """
         # Is it a specific population?
         if pop.generator['omp']['header_pop_struct']:
             return pop.generator['omp']['header_pop_struct'] % {'id': pop.id}
 
-        # Generate the structure for the population.
-        code = """
-struct PopStruct%(id)s{
-    // Number of neurons
-    int size;
-    // Active
-    bool _active;
-"""
-        # Spiking neurons have aditional data
-        if pop.neuron_type.type == 'spike':
-            code += """
-    // Spiking population
-    std::vector<long int> last_spike;
-    std::vector<int> spiked;
-    std::vector<int> refractory;
-    std::vector<int> refractory_remaining;
-"""
+        # Pick basic template based on neuron type
+        base_template = PopTemplate.header_struct[pop.neuron_type.type]
+
+        code = "" # member declarations
+        accessors = "" # export member functions
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local parameter %(name)s
-    std::vector< %(type)s > %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-    // Global parameter %(name)s
-    %(type)s  %(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += PopTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            accessors += PopTemplate.attribute_acc[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-    // Global variable %(name)s
-    %(type)s  %(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += PopTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            accessors += PopTemplate.attribute_acc[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Arrays for the presynaptic sums
         code += """
@@ -108,7 +92,6 @@ struct PopStruct%(id)s{
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
-
         # Delays
         if pop.max_delay > 1:
             if pop.neuron_type.type == "rate":
@@ -135,11 +118,27 @@ struct PopStruct%(id)s{
             for func in pop.neuron_type.description['functions']:
                 code += ' '*4 + func['cpp'] + '\n'
 
-        # Finish the structure
-        code += """
-};
-"""
-        return code % {'id': pop.id}
+        # Implementation for init_population, update
+        init = self.init_population(pop)
+        update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+
+        code = base_template % { 'id': pop.id,
+                                 'additional': code, 
+                                 'accessor': accessors, 
+                                 'init': init,
+                                 'update': update 
+                                }
+
+        # Store the complete header definition in a single file
+        with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
+            ofile.write(code)
+
+        # Include directive
+        pop_struct = """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id }
+        # Extern pointer
+        pop_ptr = """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id }
+
+        return pop_struct, pop_ptr
 
     def recorder_class(self, pop):
         tpl_code = """
@@ -454,26 +453,24 @@ public:
             for var in pop.delayed_variables:
                 if var in pop.neuron_type.description['local']:
                     code += """
-    pop%(id)s._delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0)); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0)); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
                 else:
                     code += """
-    pop%(id)s._delayed_%(var)s = std::deque< double >(%(delay)s, 0.0); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
 
 
         else: # SPIKE
             code += """
-    pop%(id)s._delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); """ % {'id': pop.id, 'delay': pop.max_delay}
+    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); """ % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 
     def init_population(self, pop):
         # active is true by default
         code = """
-    /////////////////////////////
-    // Population %(id)s
-    /////////////////////////////
-    pop%(id)s._active = true;
-""" % {'id': pop.id}
+        size = %(size)s;
+        _active = true;
+""" % { 'id': pop.id, 'size': pop.size }
 
         # Is it a specific population?
         if pop.generator['omp']['body_spike_init']:
@@ -485,47 +482,21 @@ public:
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local parameter %(name)s
-    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else: # global
-                code += """
-    // Global parameter %(name)s
-    pop%(id)s.%(name)s = %(init)s;
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+            code += PopTemplate.attribute_cpp_init[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             init = 0.0 if var['ctype'] == 'double' else 0
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    // Local variable %(name)s
-    pop%(id)s.%(name)s = std::vector<%(type)s>(pop%(id)s.size, %(init)s);
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-
-            else: # global
-                code += """
-    // Global variable %(name)s
-    pop%(id)s.%(name)s = %(init)s;
-""" %{'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+            code += PopTemplate.attribute_cpp_init[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
 
         # Targets
         if pop.neuron_type.type == 'rate':
             for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
-                code += """
-    pop%(id)s._sum_%(target)s = std::vector<double>(pop%(id)s.size, 0.0);""" %{'id': pop.id, 'target': target}
+                code += PopTemplate.model_specific_init['rate_psp'] % {'id': pop.id, 'target': target}
 
+        # Spike event and refractory
         if pop.neuron_type.type == 'spike':
-            code += """
-    // Spiking neuron
-    pop%(id)s.refractory = std::vector<int>(pop%(id)s.size, 0);
-    pop%(id)s.spiked = std::vector<int>(0, 0);
-    pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
-    pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
-""" % {'id': pop.id}
+            code += PopTemplate.model_specific_init['spike_event'] % {'id': pop.id}
 
         # Delays
         if pop.max_delay > 1:
@@ -647,8 +618,9 @@ public:
         code = """
     # Population %(id)s (%(name)s)
     cdef struct PopStruct%(id)s :
-        int size
-        bool _active
+        int get_size()
+        bool is_active()
+        void set_active(bool)
 """
         # Spiking neurons have additional data
         if pop.neuron_type.type == 'spike':
@@ -657,31 +629,11 @@ public:
 """
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-        # Local parameter %(name)s
-        vector[%(type)s] %(name)s
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-        # Global parameter %(name)s
-        %(type)s  %(name)s
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-        # Local variable %(name)s
-        vector[%(type)s] %(name)s
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-        # Global variable %(name)s
-        %(type)s  %(name)s
-""" % {'type' : var['ctype'], 'name': var['name']}
+            code += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Arrays for the presynaptic sums of rate-coded neurons
         if pop.neuron_type.type == 'rate':
@@ -706,7 +658,7 @@ public:
 cdef class pop%(id)s_wrapper :
 
     def __cinit__(self, size):
-        pop%(id)s.size = size
+        pass
 """% {'id': pop.id, 'name': pop.name}
 
         # Size property
@@ -714,14 +666,14 @@ cdef class pop%(id)s_wrapper :
 
     property size:
         def __get__(self):
-            return pop%(id)s.size
+            return pop%(id)s.get_size()
 """ % {'id': pop.id}
 
         # Activate population
         code += """
 
     def activate(self, bool val):
-        pop%(id)s._active = val
+        pop%(id)s.set_active( val )
 """ % {'id': pop.id}
 
         # Spiking neurons have aditional data
@@ -732,56 +684,15 @@ cdef class pop%(id)s_wrapper :
         return pop%(id)s.refractory
     cpdef set_refractory(self, np.ndarray value):
         pop%(id)s.refractory = value
-
 """ % {'id': pop.id}
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    # Local parameter %(name)s
-    cpdef np.ndarray get_%(name)s(self):
-        return np.array(pop%(id)s.%(name)s)
-    cpdef set_%(name)s(self, np.ndarray value):
-        pop%(id)s.%(name)s = value
-    cpdef %(type)s get_single_%(name)s(self, int rank):
-        return pop%(id)s.%(name)s[rank]
-    cpdef set_single_%(name)s(self, int rank, value):
-        pop%(id)s.%(name)s[rank] = value
-""" % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
-
-            elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-    # Global parameter %(name)s
-    cpdef %(type)s get_%(name)s(self):
-        return pop%(id)s.%(name)s
-    cpdef set_%(name)s(self, %(type)s value):
-        pop%(id)s.%(name)s = value
-""" % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
+            code += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
-            if var['name'] in pop.neuron_type.description['local']:
-                code += """
-    # Local variable %(name)s
-    cpdef np.ndarray get_%(name)s(self):
-        return np.array(pop%(id)s.%(name)s)
-    cpdef set_%(name)s(self, np.ndarray value):
-        pop%(id)s.%(name)s = value
-    cpdef %(type)s get_single_%(name)s(self, int rank):
-        return pop%(id)s.%(name)s[rank]
-    cpdef set_single_%(name)s(self, int rank, value):
-        pop%(id)s.%(name)s[rank] = value
-""" % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
-
-            elif var['name'] in pop.neuron_type.description['global']:
-                code += """
-    # Global variable %(name)s
-    cpdef %(type)s get_%(name)s(self):
-        return pop%(id)s.%(name)s
-    cpdef set_%(name)s(self, %(type)s value):
-        pop%(id)s.%(name)s = value
-""" % {'id' : pop.id, 'name': var['name'], 'type': var['ctype']}
+            code += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
         return code
 

@@ -105,12 +105,11 @@ class OMPGenerator(object):
         # struct declaration for each population
         pop_struct = ""
         pop_ptr = ""
+
         for pop in self.populations:
-            # Header struct
-            pop_struct += self.popgen.header_struct(pop)      
-            # Extern pointer
-            pop_ptr += """extern PopStruct%(id)s pop%(id)s;
-"""% {'id': pop.id}
+            struct, ptr = self.popgen.header_struct(pop, self.annarchy_dir)
+            pop_struct += struct
+            pop_ptr += ptr
 
         return pop_struct, pop_ptr
 
@@ -119,11 +118,9 @@ class OMPGenerator(object):
         proj_struct = ""
         proj_ptr = ""
         for proj in self.projections:
-            # Header struct
-            proj_struct += self.projgen.header_struct(proj)
-            # Extern pointer
-            proj_ptr += """extern ProjStruct%(id_proj)s proj%(id_proj)s;
-"""% {'id_proj': proj.id}
+            struct, ptr = self.projgen.header_struct(proj, self.annarchy_dir)
+            proj_struct += struct
+            proj_ptr += ptr
 
         return proj_struct, proj_ptr
 
@@ -251,7 +248,9 @@ class OMPGenerator(object):
     def body_update_neuron(self):
         code = ""
         for pop in self.populations:
-            code  += self.popgen.update_neuron(pop)
+            code  += """    pop%(id)s.update();
+""" % { 'id': pop.id }
+    #self.popgen.update_neuron(pop)
 
         return code
 
@@ -269,11 +268,10 @@ class OMPGenerator(object):
             if proj.generator['omp']['body_compute_psp']:
                 code += proj.generator['omp']['body_compute_psp'] 
                 continue
-            # Call the right generator depending on type
-            if proj.synapse.type == 'rate':
-                code += self.projgen.computesum_rate(proj)
-            else:
-                code += self.projgen.computesum_spiking(proj)
+
+            # Call the comput_psp method
+            code += """    proj%(id)s.compute_psp();
+""" % { 'id' : proj.id }
 
         return code
 
@@ -299,7 +297,8 @@ class OMPGenerator(object):
         code = ""
         # Iterate over all synapses 
         for proj in self.projections:
-            code += self.projgen.update_synapse(proj)
+            code += """    proj%(id)s.update_synapse();
+""" % { 'id' : proj.id };
 
         return code
 
@@ -363,11 +362,15 @@ class OMPGenerator(object):
         return code
 
     def body_init_population(self):
+        """
+        Generate PopStruct::init_population() calls for the initialize() function. 
+        """
         code = """
     // Initialize populations
 """
         for pop in self.populations:
-            code += self.popgen.init_population(pop)
+            code += """    pop%(id)s.init_population();
+""" % { 'id': pop.id }
 
         return code
 
@@ -376,7 +379,8 @@ class OMPGenerator(object):
     // Initialize projections
 """
         for proj in self.projections:
-            code += self.projgen.init_projection(proj)
+            code += """    proj%(id)s.init_projection();
+""" % { 'id' : proj.id };
 
         return code
         

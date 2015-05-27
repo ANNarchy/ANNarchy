@@ -213,13 +213,23 @@ def extract_parameters(description, extra_values={}):
         # Process constraint
         bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
 
+        # Determine locality
+        for f in ['population', 'postsynaptic']:
+            if f in flags:
+                locality = 'global'
+                break
+        else:
+            locality = 'local' 
+            
         # Store the result
         desc = {'name': name,
+                'locality': locality,
                 'eq': equation,
                 'bounds': bounds,
                 'flags' : flags,
                 'ctype' : ctype,
-                'init' : init}
+                'init' : init,
+                }
         parameters.append(desc)              
     return parameters
     
@@ -240,8 +250,17 @@ def extract_variables(description):
         # Process constraint
         bounds, flags, ctype, init = extract_boundsflags(constraint)
 
+        # Determine locality
+        for f in ['population', 'postsynaptic']:
+            if f in flags:
+                locality = 'global'
+                break
+        else:
+            locality = 'local' 
+
         # Store the result
         desc = {'name': name,
+                'locality': locality,
                 'eq': equation,
                 'bounds': bounds,
                 'flags' : flags,

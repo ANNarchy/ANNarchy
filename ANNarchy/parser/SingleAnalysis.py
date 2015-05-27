@@ -302,7 +302,9 @@ def analyse_synapse(synapse):
             break
     else:
         parameters.append(
-            {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0'}
+            #TODO: is this exception really needed? Maybe we could find
+            #      a better solution instead of the hard-coded 'w' ... [hdin: 26.05.2015]
+            {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'}
         )
 
     # Build lists of all attributes (param+var), which are local or global
