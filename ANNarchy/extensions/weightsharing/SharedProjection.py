@@ -858,6 +858,13 @@ struct ProjStruct%(id_proj)s{
 
 %(filter)s
 
+    void init_projection() {
+
+    }
+
+    void update_synapse() {
+
+    }
 };  
 """ % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target, 
         'filter': filter_definition}

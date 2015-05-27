@@ -23,6 +23,7 @@
 """
 import ANNarchy.core.Global as Global
 import PopulationTemplate as PopTemplate
+from ANNarchy import SpikeSourceArray
 
 class PopulationGenerator(object):
 
@@ -46,8 +47,13 @@ class PopulationGenerator(object):
 
             header_struct, parameter_decl, parameter_acc, variable_decl, variable_acc
         """
+        # SpikeSourceArrays need an additional delay,
+        # we now this value only at this point
+        if isinstance(pop, SpikeSourceArray):
+            code = pop.generator['omp']['header_pop_struct'] % { 'id': pop.id, 'size': pop.size, 'delay': pop.max_delay }
+
         # Is it a specific population?
-        if pop.generator['omp']['header_pop_struct']:
+        elif pop.generator['omp']['header_pop_struct']:
             code = pop.generator['omp']['header_pop_struct']
 
         else:

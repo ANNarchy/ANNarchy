@@ -166,7 +166,11 @@ class SpikeSourceArray(Population):
         self.init['spike_times'] = times
 
         # Generate the Code
-        self.generator['omp']['header_pop_struct'] = """
+        self.generator['omp']['header_pop_struct'] = """#pragma once
+
+extern long int t;
+extern double dt;
+
 // Spike array
 struct PopStruct%(id)s{
     // Number of neurons
@@ -182,39 +186,45 @@ struct PopStruct%(id)s{
     std::vector< std::vector< double > > spike_times ;
     std::vector< double >  next_spike ;
     std::vector< int > idx_next_spike;
-}; 
-"""
-        self.generator['omp']['body_spike_init'] = """  
-    pop%(id)s.spiked = std::vector<int>();
-    pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
-    pop%(id)s.next_spike = std::vector<double>(pop%(id)s.size, -10000.0);
-    for(int i=0; i< pop%(id)s.size; i++){
-        if(!pop%(id)s.spike_times[i].empty())
-            pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][0];  
+
+    int get_size() { return size; }
+
+    bool is_active() { return _active; }
+    void set_active(bool value) { _active = value; }
+
+    void init_population() {
+        size = %(size)s;
+
+        spiked = std::vector<int>();
+        last_spike = std::vector<long int>(size, -10000L);
+        next_spike = std::vector<double>(size, -10000.0);
+        for(int i=0; i< size; i++){
+            if(!spike_times[i].empty())
+                next_spike[i] = spike_times[i][0];
+        }
+        idx_next_spike = std::vector<int>(size, 0);
+        _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
     }
-    pop%(id)s.idx_next_spike = std::vector<int>(pop%(id)s.size, 0);
-"""
 
-        self.generator['omp']['body_delay_init'] = """
-    pop%(id)s._delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); 
-""" 
-
-        self.generator['omp']['body_update_neuron'] = """ 
-    // Updating the local variables of SpikeArray population %(id)s
-    if(pop%(id)s._active){
-        pop%(id)s.spiked.clear();
-        for(int i = 0; i < pop%(id)s.size; i++){
-            // Emit spike 
-            if( t == (long int)(pop%(id)s.next_spike[i]/dt) ){
-                pop%(id)s.last_spike[i] = t;
-                pop%(id)s.idx_next_spike[i]++ ;
-                if(pop%(id)s.idx_next_spike[i] < pop%(id)s.spike_times[i].size())
-                    pop%(id)s.next_spike[i] = pop%(id)s.spike_times[i][pop%(id)s.idx_next_spike[i]];
-                pop%(id)s.spiked.push_back(i);
+    void update() {
+        // Updating the local variables of SpikeArray population %(id)s
+        if(_active){
+            spiked.clear();
+            for(int i = 0; i < size; i++){
+                // Emit spike
+                if( t == (long int)(next_spike[i]/dt) ){
+                    last_spike[i] = t;
+                    idx_next_spike[i]++ ;
+                    if(idx_next_spike[i] < spike_times[i].size())
+                        next_spike[i] = spike_times[i][idx_next_spike[i]];
+                    spiked.push_back(i);
+                }
             }
         }
     }
-"""   
+};
+"""
+
         self.generator['omp']['pyx_pop_struct'] = """
     cdef struct PopStruct%(id)s :
         int size
@@ -223,6 +233,7 @@ struct PopStruct%(id)s{
         # Local parameter spike_times
         vector[vector[double]] spike_times 
 """
+
         self.generator['omp']['pyx_pop_class'] = """
 cdef class pop%(id)s_wrapper :
     def __cinit__(self, size, times):
