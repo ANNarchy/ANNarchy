@@ -10,12 +10,42 @@ import numpy as np
 
 class Network(object):
     """ 
-    A network gathers already defined populations and projections to be run independently.
+    A network gathers already defined populations, projections and monitors in order to run them independently.
+
+    This is particularly useful when varying single parameters of a network and comparing the results.
+
+    Only objects declared before the creation of the network can be used. Global methods such as ``simulate()`` must be used on the network object. The objects must be accessed through the ``get()`` method, as the original ones will not be simulated.
+
+    Each network must be individually compiled, but it does not matter if the original objects are also compiled.
+
+    Example::
+
+        pop1 = Population(100, Izhikevich)
+        pop2 = Population(100, Izhikevich)
+        proj = Projection(pop1, pop2, 'exc')
+        proj.connect_all_to_all(1.0)
+        m = Monitor(pop2, 'spike')
+
+        compile()
+
+        net = Network(True)
+        net.get(pop1).a = 0.02
+        net.compile()
+        net.simulate(1000.)
+
+        net2 = Network(True)
+        net2.get(pop1).a = 0.05
+        net2.compile()
+        net2.simulate(1000.)
+
+        t, n = net.get(M).raster_plot()
+        t2, n2 = net2.get(M).raster_plot()
     """
     def __init__(self, everything=False):
         """
         *Parameters:*
-        * **everything**: defines if all existing populations and projections should be automatically added (default: false)
+
+        * **everything**: defines if all existing populations and projections should be automatically added (default: False). 
         """
         self.id = len(Global._network)
         self.everything = everything
@@ -41,6 +71,7 @@ class Network(object):
         Adds a Population, Projection or Monitor to the network.
 
         *Parameters:*
+        
         * **objects**: A single object or a list to add to the network.
         """
         if isinstance(objects, list):
@@ -107,6 +138,7 @@ class Network(object):
         Returns the local Population, Projection or Monitor identical to the provided argument.
 
         *Parameters:*
+
         * **obj**: A single object.
 
         **Example**::

@@ -18,6 +18,7 @@ This chapter provides documentation for the different methods and classes define
     API/Dendrite.rst
     API/Monitor.rst
     API/RandomDistribution.rst
+    API/Network.rst
     API/Utilities.rst
     API/Hybrid.rst
     API/Weightsharing.rst

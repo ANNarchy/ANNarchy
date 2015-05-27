@@ -107,6 +107,7 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
+    * **silent**: defines if the "Compiling... OK" should be printed.
 
     The following arguments are for internal use only:
 
