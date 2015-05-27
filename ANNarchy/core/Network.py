@@ -91,7 +91,7 @@ class Network(object):
             proj.name = obj.name
             proj.init = obj.init
             # Copy the synapses if they are already created
-            proj._store_csr(obj._get_csr()) 
+            proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay)
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
             self.projections.append(proj)
