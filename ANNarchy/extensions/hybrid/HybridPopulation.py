@@ -132,6 +132,7 @@ struct PopStruct%(id)s{
     void set_single_r(int rk, double value) { r[rk] = value; }
 
     void init_population() {
+        size = %(size)s;
         last_spike = std::vector< long int >(size, -10000L);
         isi = std::vector< double >(size, 10000.0);
         support = std::vector< double >(size, 10000.0);
@@ -163,7 +164,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code }
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size }
 
     def _create_window(self):
 
@@ -230,6 +231,7 @@ struct PopStruct%(id)s{
     void set_single_r(int rk, double value) { r[rk] = value; }
 
     void init_population() {
+        size = %(size)s;
         last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
     }
 
@@ -263,7 +265,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
 
     def _create_adaptive(self):
 
@@ -334,6 +336,7 @@ struct PopStruct%(id)s{
     void set_single_r(int rk, double value) { r[rk] = value; }
 
     void init_population() {
+        size = %(size)s;
         last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
         ad_window = std::vector< double >(size, window);
         isi = std::vector< double >(size, 10000.0);
@@ -378,7 +381,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
 
 class Rate2SpikePopulation(Population):
     """
@@ -486,6 +489,7 @@ struct PopStruct1{
     void set_single_rates(int rk, double val) { rates[rk] = val; }
 
     void init_population() {
+        size = %(size)s;
         refractory = std::vector<int>(size, 0);
         spiked = std::vector<int>(0, 0);
         last_spike = std::vector<long int>(size, -10000L);
@@ -515,4 +519,4 @@ struct PopStruct1{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size }
