@@ -1,8 +1,31 @@
-from ANNarchy.generator.OMP.PopulationTemplate import attribute_pyx_wrapper
-header_struct_template = """#pragma once
+"""
 
-#include "%(pre_name)s.hpp"
-#include "%(post_name)s.hpp"
+    PopulationTemplate.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+from ANNarchy.generator.OMP.PopulationTemplate import attribute_pyx_wrapper
+header_struct = """#pragma once
+
+#include "pop%(pre_id)s.hpp"
+#include "pop%(post_id)s.hpp"
 
 extern PopStruct%(pre_id)s pop%(pre_id)s;
 extern PopStruct%(post_id)s pop%(post_id)s;
@@ -21,7 +44,9 @@ struct ProjStruct%(id_proj)s{
     std::vector<int> post_rank ;
     std::vector< std::vector< int > > pre_rank ;
 
-%(code)s
+%(delay)s
+%(exact)s
+%(decl)s
 
     void init_projection() {
 %(init)s
@@ -218,7 +243,65 @@ attribute_pyx_wrapper = {
 """
 }
 
+# Code templates for recorder class.
+#
+#    struct: base template
+#    local: codes for struct member, init and recording for local variables
+#    global: codes for struct member, init and recording for global variables
+record = {
+    'struct': """
+class ProjRecorder%(id)s : public Monitor
+{
+public:
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
+        : Monitor(ranks, period, offset)
+    {
+%(init_code)s
+    };
+    virtual void record() {
+%(recording_code)s
+    };
+%(struct_code)s
+};
+""",
+    'local': {
+        'struct': """
+    // Local variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+        }
+"""
+    },
+    'global': {
+        'struct': """
+    // Global variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< %(type)s >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            // Do something
+        }
+"""
+    }
+}
+
 delay = {
+    'header_struct': """
+    std::vector< std::vector< int > > delay ;
+""",
     'decl':
 """
         vector[vector[int]] delay
@@ -237,6 +320,9 @@ delay = {
 }
 
 exact_integ = {
+    'header_struct': """
+    std::vector<std::vector<long> > _last_event;
+""",
     'decl':
 """
         vector[vector[long]] _last_event
@@ -249,7 +335,79 @@ exact_integ = {
 """
 }
 
+# All code templates needed for structural plasticity.
 structural_plasticity = {
+    'header_struct': {
+        'header': """
+    // Structural plasticity
+    int dendrite_index(int post, int pre){
+        int idx = 0;
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] == pre){
+                idx = i;
+                break;
+            }
+        }
+        return idx;
+    }
+    void addSynapse(int post, int pre, double weight, int _delay=0%(extra_args)s){
+        // Find where to put the synapse
+        int idx = pre_rank[post].size();
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] > pre){
+                idx = i;
+                break;
+            }
+        }
+        pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
+        w[post].insert(w[post].begin() + idx, weight);
+        %(delay_code)s
+%(add_code)s
+%(spike_add)s
+%(rd_add)s
+    };
+    void removeSynapse(int post, int idx){
+        pre_rank[post].erase(pre_rank[post].begin() + idx);
+        w[post].erase(w[post].begin() + idx);
+%(remove_code)s
+%(spike_remove)s
+%(rd_remove)s
+    };
+""",
+        'pruning': """
+    // Pruning
+    bool _pruning;
+    int _pruning_period;
+    long int _pruning_offset;
+""",
+        'creating': """
+    // Creating
+    bool _creating;
+    int _creating_period;
+    long int _creating_offset;
+""",
+        'spiking_addcode': """
+        // Add the corresponding pair in inv_rank
+        int idx_post = 0;
+        for(int i=0; i<post_rank.size(); i++){
+            if(post_rank[i] == post){
+                idx_post = i;
+                break;
+            }
+        }
+        inv_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
+""",
+        'spiking_removecode': """
+        // Remove the corresponding pair in inv_rank
+        int pre = pre_rank[post][idx];
+        for(int i=0; i<inv_rank[pre].size(); i++){
+            if(inv_rank[pre][i].second == idx){
+                inv_rank[pre].erase(inv_rank[pre].begin() + i);
+                break;
+            }
+        }
+"""
+},
     'pyx_struct': {
         'pruning':
 """

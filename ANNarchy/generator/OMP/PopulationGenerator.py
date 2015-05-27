@@ -29,11 +29,20 @@ class PopulationGenerator(object):
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
-    def header_struct(self, pop):
+    def header_struct(self, pop, annarchy_dir):
         """
         Generate the c-style struct definition for a population object.
 
-        Used templates:
+        Parameters:
+
+            pop: Population object
+            annarchy_dir: working directory
+
+        Returns:
+
+            (str, str): include directive, pointer definition
+
+        Templates:
 
             header_struct, parameter_decl, parameter_acc, variable_decl, variable_acc
         """
@@ -113,12 +122,23 @@ class PopulationGenerator(object):
         init = self.init_population(pop)
         update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
-        return base_template % { 'id': pop.id, 
+        code = base_template % { 'id': pop.id,
                                  'additional': code, 
                                  'accessor': accessors, 
                                  'init': init,
                                  'update': update 
                                 }
+
+        # Store the complete header definition in a single file
+        with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
+            ofile.write(code)
+
+        # Include directive
+        pop_struct = """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id }
+        # Extern pointer
+        pop_ptr = """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id }
+
+        return pop_struct, pop_ptr
 
     def recorder_class(self, pop):
         tpl_code = """

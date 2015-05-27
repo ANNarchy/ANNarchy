@@ -107,17 +107,9 @@ class OMPGenerator(object):
         pop_ptr = ""
 
         for pop in self.populations:
-            # Header struct, store it in single file
-            decl = self.popgen.header_struct(pop)
-            with open(self.annarchy_dir+'/generate/'+pop.name+'.hpp', 'w') as ofile:
-                ofile.write(decl)
-
-            # Include directive
-            pop_struct += """#include "%(name)s.hpp"\n""" % { 'name': pop.name }
-
-            # Extern pointer
-            pop_ptr += """extern PopStruct%(id)s pop%(id)s;
-"""% {'id': pop.id}
+            struct, ptr = self.popgen.header_struct(pop, self.annarchy_dir)
+            pop_struct += struct
+            pop_ptr += ptr
 
         return pop_struct, pop_ptr
 
@@ -126,19 +118,9 @@ class OMPGenerator(object):
         proj_struct = ""
         proj_ptr = ""
         for proj in self.projections:
-            name = """proj%(id)s.hpp""" % { 'id': proj.id }
-
-            # Header struct, store it in single file
-            decl = self.projgen.header_struct(proj)
-            with open(self.annarchy_dir+'/generate/'+name, 'w') as ofile:
-                ofile.write(decl)
-
-            # Include directive
-            proj_struct += """#include "%(name)s"\n""" % { 'name': name }
-
-            # Extern pointer
-            proj_ptr += """extern ProjStruct%(id_proj)s proj%(id_proj)s;
-"""% {'id_proj': proj.id}
+            struct, ptr = self.projgen.header_struct(proj, self.annarchy_dir)
+            proj_struct += struct
+            proj_ptr += ptr
 
         return proj_struct, proj_ptr
 

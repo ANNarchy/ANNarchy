@@ -36,69 +36,83 @@ class ProjectionGenerator(object):
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
-    def header_struct(self, proj):
+    def header_struct(self, proj, annarchy_dir):
+        """
+        Generate and store the projection code in a single header file. The name is defined as
+        proj%(id)s.hpp.
+
+        Parameters:
+
+            proj: Projection object
+            annarchy_dir: working directory
+
+        Returns:
+
+            (str, str): include directive, pointer definition
+
+        Templates:
+
+            header_struct: basic template
+
+        """
         # Is it a specific projection?
         if proj.generator['omp']['header_proj_struct']:
             return proj.generator['omp']['header_proj_struct']
 
         # create the code for non-specific projections
-        code = ""
+        decl = ""
 
         # Spiking neurons have aditional data
         if proj.synapse.type == 'spike':
             # Inverse ranks
-            code += """
+            decl += """
     std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
 """            
-            # Exact integration
-            has_exact = False
-            for var in proj.synapse.description['variables']:
-                if var['method'] == 'exact':
-                    has_exact = True
-            if has_exact:
-                code += """
-    std::vector<std::vector<long> > _last_event;
-"""
+        # Exact integration
+        has_exact = False
+        for var in proj.synapse.description['variables']:
+            if var['method'] == 'exact':
+                has_exact = True
 
         # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-    std::vector< std::vector< int > > delay ;
-"""
+        has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Arrays for the random numbers
-        code += """
-    // Random numbers
-"""
-        for rd in proj.synapse.description['random_distributions']:
-            code += """    std::vector< std::vector<double> > %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
-
+        # Code for declarations and accessors
         accessor = ""
         # Parameters
         for var in proj.synapse.description['parameters']:
-            code += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+            decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
             accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
 
         # Variables
         for var in proj.synapse.description['variables']:
-            code += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+            decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
             accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+
+        # Arrays for the random numbers
+        decl += """
+    // Random numbers
+"""
+        for rd in proj.synapse.description['random_distributions']:
+            decl += """    std::vector< std::vector<double> > %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
         # Local functions
         if len(proj.synapse.description['functions'])>0:
-            code += """
+            decl += """
     // Local functions
 """
             for func in proj.synapse.description['functions']:
-                code += ' '*4 + func['cpp'] + '\n'
+                decl += ' '*4 + func['cpp'] + '\n'
 
         # Structural plasticity
         if Global.config['structural_plasticity']:
-            code += self.header_structural_plasticity(proj)
+            decl += self.header_structural_plasticity(proj)
 
+        # Definiton of synaptic equations, initialization
         init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+        update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
         if proj.synapse.type == 'rate':
             psp_prefix = "int nb_post;\ndouble sum;"
@@ -107,70 +121,51 @@ class ProjectionGenerator(object):
             psp_prefix = "int nb_post, i, j, rk_j;"
             psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
-        update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+        final_code = ProjTemplate.header_struct % { 'id_proj': proj.id,
+                                                    'pre_name': proj.pre.name,
+                                                    'pre_id': proj.pre.id,
+                                                    'post_name': proj.post.name,
+                                                    'post_id': proj.post.id,
+                                                    'target': proj.target,
+                                                    'exact': ProjTemplate.exact_integ['header_struct'] % {'id': proj.id} if has_exact else "",
+                                                    'delay': ProjTemplate.delay['header_struct'] % {'id': proj.id} if has_delay else "",
+                                                    'decl': decl,
+                                                    'accessor': accessor,
+                                                    'init': init,
+                                                    'psp_prefix': psp_prefix,
+                                                    'psp': psp,
+                                                    'update': update
+                                                 }
 
-        return ProjTemplate.header_struct_template % { 'id_proj': proj.id,
-                                                       'pre_name': proj.pre.name,
-                                                       'pre_id': proj.pre.id,
-                                                       'post_name': proj.post.name,
-                                                       'post_id': proj.post.id,
-                                                       'target': proj.target,
-                                                       'code': code,
-                                                       'accessor': accessor,
-                                                       'init': init,
-                                                       'psp_prefix': psp_prefix,
-                                                       'psp': psp,
-                                                       'update': update
-                                                     }
+        with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+            ofile.write(final_code)
+
+        # Include directive
+        proj_struct = """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id }
+        # Extern pointer
+        proj_ptr = """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id }
+
+        return proj_struct, proj_ptr
 
     def recorder_class(self, proj):
-        tpl_code = """
-class ProjRecorder%(id)s : public Monitor
-{
-public:
-    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset)
-    {
-%(init_code)s
-    };
-    virtual void record() {
-%(recording_code)s
-    };
-%(struct_code)s
-};
-""" 
+        """
+        Generate the code for the recorder object.
+
+        Templates:
+
+            record
+        """
+        tpl_code = ProjTemplate.record
         init_code = ""
         recording_code = ""
         struct_code = ""
 
         for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                struct_code += """
-    // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
-                init_code += """
-        this->%(name)s = std::vector< std::vector< %(type)s > >();
-        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
-                recording_code += """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
-        }""" % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+            struct_code += tpl_code[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
+            init_code += tpl_code[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
+            recording_code += tpl_code[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
 
-            elif var['name'] in proj.synapse.description['global']:
-                struct_code += """
-    // Global variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
-                init_code += """
-        this->%(name)s = std::vector< %(type)s >();
-        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
-                recording_code += """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            // Do something
-        } """ % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
-        
-        return tpl_code % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
+        return tpl_code['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 
 #######################################################################
 ############## BODY ###################################################
@@ -997,23 +992,25 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
 #######################################################################
 
     def header_structural_plasticity(self, proj):
+        """
+        Generate extension code for C header_struct: variable declaration, add and remove synapses.
+
+        Templates:
+
+            structural_plasticity: 'header_struct' field contains all relevant code templates
+
+        """
+        header_tpl = ProjTemplate.structural_plasticity['header_struct']
+
         code = ""
         # Pruning defined in the synapse
         if 'pruning' in proj.synapse.description.keys():
-            code += """
-    // Pruning
-    bool _pruning;
-    int _pruning_period;
-    long int _pruning_offset;
-"""
+            code += header_tpl['pruning']
+
         # Creating defined in the synapse
         if 'creating' in proj.synapse.description.keys():
-            code += """
-    // Creating
-    bool _creating;
-    int _creating_period;
-    long int _creating_offset;
-"""
+            code += header_tpl['creating']
+
         # Retrieve the names of extra attributes   
         extra_args = ""
         add_code = ""
@@ -1035,30 +1032,8 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
             delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
         
         # Spiking networks must update the inv_rank array
-        spiking_addcode = ""
-        spiking_removecode = ""
-        if proj.synapse.type == 'spike':
-            spiking_addcode = """
-        // Add the corresponding pair in inv_rank
-        int idx_post = 0;
-        for(int i=0; i<post_rank.size(); i++){
-            if(post_rank[i] == post){
-                idx_post = i;
-                break;
-            }
-        }
-        inv_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
-"""
-            spiking_removecode = """
-        // Remove the corresponding pair in inv_rank
-        int pre = pre_rank[post][idx];
-        for(int i=0; i<inv_rank[pre].size(); i++){
-            if(inv_rank[pre][i].second == idx){
-                inv_rank[pre].erase(inv_rank[pre].begin() + i);
-                break;
-            }
-        }
-"""
+        spiking_addcode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_addcode']
+        spiking_removecode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_removecode']
 
         # Randomdistributions
         rd_addcode = ""; rd_removecode = ""
@@ -1072,44 +1047,8 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
 """ % {'name': rd['name']}
             
 
-
         # Generate the code
-        code += """
-    // Structural plasticity
-    int dendrite_index(int post, int pre){
-        int idx = 0;
-        for(int i=0; i<pre_rank[post].size(); i++){
-            if(pre_rank[post][i] == pre){
-                idx = i;
-                break;
-            }
-        }
-        return idx;
-    }
-    void addSynapse(int post, int pre, double weight, int _delay=0%(extra_args)s){
-        // Find where to put the synapse
-        int idx = pre_rank[post].size();
-        for(int i=0; i<pre_rank[post].size(); i++){
-            if(pre_rank[post][i] > pre){
-                idx = i;
-                break;
-            }
-        }
-        pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
-        w[post].insert(w[post].begin() + idx, weight);
-        %(delay_code)s
-%(add_code)s
-%(spike_add)s
-%(rd_add)s
-    };
-    void removeSynapse(int post, int idx){
-        pre_rank[post].erase(pre_rank[post].begin() + idx);
-        w[post].erase(w[post].begin() + idx);
-%(remove_code)s  
-%(spike_remove)s
-%(rd_remove)s
-    };
-""" % { 'extra_args': extra_args, 'delay_code': delay_code, 
+        code += header_tpl['header'] % { 'extra_args': extra_args, 'delay_code': delay_code,
         'add_code': add_code, 'remove_code': remove_code,
         'spike_add': spiking_addcode, 'spike_remove': spiking_removecode,
         'rd_add': rd_addcode, 'rd_remove': rd_removecode
