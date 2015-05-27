@@ -2,11 +2,12 @@ ANNarchy (Artificial Neural Networks architect) is a parallel and hybrid simulat
 
 The latest source code is available at: 
 
-http://bitbucket.org/annarchy/annarchy
+[http://bitbucket.org/annarchy/annarchy](http://bitbucket.org/annarchy/annarchy)
 
 The documentation is available online at: 
 
-http://annarchy.readthedocs.org
+[http://annarchy.readthedocs.org](http://annarchy.readthedocs.org)
+
 
 **Authors**:
 
@@ -16,17 +17,22 @@ http://annarchy.readthedocs.org
 
 * Fred Hamker (fred.hamker@informatik.tu-chemnitz.de). 
 
+
 **Installation**:
 
 ANNarchy can be installed using one of the following commmands:
 
-* With administrator permissions::
+* With administrator permissions:
 
-    sudo python setup.py install
+~~~~
+sudo python setup.py install
+~~~~
 
-* In the home directory::
+* In the home directory:
 
-    python setup.py install --user
+~~~~
+python setup.py install --user
+~~~~
     
 * To install it in another repertory (e.g. `/path/to/repertory`):
 
