@@ -26,7 +26,7 @@ import math
 import copy, inspect
 
 from ANNarchy.core import Global
-from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Random import RandomDistribution, Uniform
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
@@ -165,10 +165,6 @@ class Projection(object):
 
         # Access the list of postsynaptic neurons
         self.post_ranks = self.cyInstance.post_rank()
-
-        # # Delete the _synapses array, not needed anymore
-        # del self._synapses
-        # self._synapses = None
     
     def _store_csr(self, csr):
         "Stores the CSR object created by the connector method."
@@ -194,6 +190,7 @@ class Projection(object):
         else:
             Global._print('Non-uniform delays are disabled for now!') # TODO
             exit(0)
+
         # Transmit the max delay to the pre pop
         if isinstance(self.pre, PopulationView):
             self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
@@ -768,13 +765,26 @@ class Projection(object):
 
         * **method**: method to call. The method **must** return a CSR object.
         * **args**: list of arguments needed by the function 
-        """
-        self._store_connectivity(method, args, validate=True)
+        """ 
+        # Invoke the method directly, we need the delays already....
+        synapses = method(self.pre, self.post, **args)
+        synapses.validate()
+
+        # Treat delays
+        if synapses.uniform_delay != -1: # uniform delay    
+            d = synapses.max_delay * Global.config['dt']
+        else:
+            d = Uniform(0., synapses.max_delay * Global.config['dt'])
+
+        self._store_connectivity(self._load_from_csr, (synapses, ), d)
 
         self.connector_name = "User-defined"
         self.connector_description = "User-defined"
 
         return self
+
+    def _load_from_csr(self, pre, post, synapses):
+        return synapses
 
     def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
         """
@@ -790,6 +800,15 @@ class Projection(object):
         * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0. 
         * **pre_post**: states which index is first. By default, the first dimension is related to the post-synaptic population. If ``pre_post`` is True, the first dimension is the pre-synaptic population.
         """
+
+        # Store the synapses
+        self.connector_name = "Connectivity matrix"
+        self.connector_description = "Connectivity matrix"
+        self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays)
+
+        return self
+
+    def _load_from_matrix(self, weights, delays, pre_post):
         csr = Connector.CSR()
 
         if isinstance(weights, list):
@@ -844,11 +863,7 @@ class Projection(object):
             if len(r) > 0:
                 csr.add(rk_post, r, w, d)
 
-        # Store the synapses
-        self.connector_name = "Connectivity matrix"
-        self.connector_description = "Connectivity matrix"
-        self._store_csr(csr)
-        return self
+        return csr
 
     def connect_from_sparse(self, weights, delays=0.0):
         """
@@ -871,6 +886,16 @@ class Projection(object):
             Global._error("only lil, csr and csc matrices are allowed for now.")
             exit(0)
 
+
+        # Store the synapses
+        self.connector_name = "Sparse connectivity matrix"
+        self.connector_description = "Sparse connectivity matrix"
+        self._store_connectivity(self._load_from_sparse, (weights, delays), delays)
+
+        return self
+
+    def _load_from_sparse(self, weights, delays):
+
         # Create an empty CSR object
         csr = Connector.CSR()
 
@@ -892,12 +917,8 @@ class Projection(object):
             pre_rank = W.getcol(idx_post).indices
             w = W.getcol(idx_post).data
             csr.add(idx_post + offset_post, pre_rank + offset_pre, w, [float(delays)])
-        
-        # Store the synapses
-        self.connector_name = "Sparse connectivity matrix"
-        self.connector_description = "Sparse connectivity matrix"
-        self._store_csr(csr)
-        return self
+
+        return csr        
 
     def connect_from_file(self, filename):
         """
@@ -940,7 +961,7 @@ class Projection(object):
         # Store the synapses
         self.connector_name = "From File"
         self.connector_description = "From File"
-        self._store_csr(csr)
+        self._store_connectivity(self._load_from_csr, (csr,), csr.max_delay)
         return self
 
     def save_connectivity(self, filename):

@@ -425,13 +425,14 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
 
     return projection
 
-def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, delays, limit, allow_self_connections):
+def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections):
     """ Cython implementation of the fixed_number_post pattern."""
 
     cdef CSR projection
     cdef float distance, value
     cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
     cdef tuple pre_coord, post_coord
+    cdef tuple pre_geometry, post_geometry
     cdef list ranks, values
 
     cdef vector[int] r
@@ -442,6 +443,8 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
     dt = Global.config['dt']
 
     # Population sizes
+    pre_geometry = pre_pop.geometry
+    post_geometry = post_pop.geometry
     if isinstance(pre_geometry, int):
         pre_size = pre_geometry
         pre_dim = 1
@@ -503,19 +506,22 @@ def gaussian(tuple pre_geometry, tuple post_geometry, float amp, float sigma, de
 
     return projection
 
-def dog(tuple pre_geometry, tuple post_geometry, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections):
+def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections):
     """ Cython implementation of the fixed_number_post pattern."""
 
     cdef CSR projection
     cdef float distance, value
     cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
     cdef tuple pre_coord, post_coord
+    cdef tuple pre_geometry, post_geometry
     cdef list ranks, values
 
     cdef vector[int] r
     cdef vector[double] w, d
 
     # Population sizes
+    pre_geometry = pre_pop.geometry
+    post_geometry = post_pop.geometry
     if isinstance(pre_geometry, int):
         pre_size = pre_geometry
         pre_dim = 1

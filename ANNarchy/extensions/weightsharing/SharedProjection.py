@@ -54,15 +54,15 @@ class SharedProjection(Projection):
         csr.uniform_delay = self.delays
         self.connector_name = "Shared weights"
         self.connector_description = "Shared weights"
-        self._store_csr(csr)
+        self._store_connectivity(self._load_from_csr, (csr, ), self.delays)
 
     
     def _connect(self, module):
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """        
-        if not self._synapses:
-            Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not instantiated.')
+        if not self._connection_method:
+            Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
             exit(0)
 
         # Create the Cython instance
@@ -71,10 +71,6 @@ class SharedProjection(Projection):
 
         # Define the list of postsynaptic neurons
         self.post_ranks = list(range(self.post.size))
-
-        # Delete the _synapses array, not needed anymore
-        del self._synapses
-        self._synapses = None
 
     def center(self, *args, **kwds):
         """ 
