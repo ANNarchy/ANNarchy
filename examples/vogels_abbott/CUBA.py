@@ -41,7 +41,7 @@ P.v = Uniform(-60.0, -50.0)
 we = 0.27 *60.0 / 10.0 # 0.7 * (Vmean - E_rev_exc) / gL (mV)
 wi = - 4.5 * 20.0 / 10.0 # 4.5 * (Vmean - E_rev_inh) / gL (mV)
 Ce = Projection(pre=Pe, post=P, target='exc')
-Ce.connect_fixed_probability(weights=we, probability=0.02)
+Ce.connect_fixed_probability(weights=we, probability=0.02, delays=10.)
 Ci = Projection(pre=Pi, post=P, target='inh')
 Ci.connect_fixed_probability(weights=wi, probability=0.02)
 

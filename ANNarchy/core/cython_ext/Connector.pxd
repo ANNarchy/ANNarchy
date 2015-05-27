@@ -4,7 +4,7 @@ from libcpp cimport bool
 
 cdef class CSR:
     """
-    Container for the ranks, weights and values of a projection.
+    Container for the ranks, weights and delays of a projection.
     """
     # Data
     cdef public vector[int] post_rank

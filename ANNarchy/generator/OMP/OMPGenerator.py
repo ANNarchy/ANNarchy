@@ -59,7 +59,7 @@ class OMPGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
-            if proj._synapses.max_delay > 1:
+            if proj.max_delay > 1:
                 for var in proj.synapse.description['dependencies']['pre']:
                     proj.pre.delayed_variables.append(var)
 

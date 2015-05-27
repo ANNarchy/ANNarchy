@@ -388,7 +388,7 @@ clean:
                     Global._error(term + ' is a reserved variable name')
                     exit(0)
             # Check the connector method has been called
-            if not proj._synapses:
+            if not proj._connection_method:
                 Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected. Call a connector method before compiling the network.')
                 exit(0)
 

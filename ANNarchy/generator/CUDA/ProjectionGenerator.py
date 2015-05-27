@@ -72,7 +72,7 @@ struct ProjStruct%(id_proj)s{
             exit(0)
 
         # Delays
-        if proj.max_delay > 1 and proj._synapses.uniform_delay == -1:
+        if proj.max_delay > 1 and proj.uniform_delay == -1:
             Global._error("only uniform delays are supported ...")
             exit(0)
 
