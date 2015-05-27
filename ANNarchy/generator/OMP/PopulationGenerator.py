@@ -48,54 +48,55 @@ class PopulationGenerator(object):
         """
         # Is it a specific population?
         if pop.generator['omp']['header_pop_struct']:
-            return pop.generator['omp']['header_pop_struct'] % {'id': pop.id}
+            code = pop.generator['omp']['header_pop_struct']
 
-        # Pick basic template based on neuron type
-        base_template = PopTemplate.header_struct[pop.neuron_type.type]
+        else:
+            # Pick basic template based on neuron type
+            base_template = PopTemplate.header_struct[pop.neuron_type.type]
 
-        code = "" # member declarations
-        accessors = "" # export member functions
+            code = "" # member declarations
+            accessors = "" # export member functions
 
-        # Parameters
-        for var in pop.neuron_type.description['parameters']:
-            code += PopTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
-            accessors += PopTemplate.attribute_acc[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            # Parameters
+            for var in pop.neuron_type.description['parameters']:
+                code += PopTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+                accessors += PopTemplate.attribute_acc[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
-        # Variables
-        for var in pop.neuron_type.description['variables']:
-            code += PopTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
-            accessors += PopTemplate.attribute_acc[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            # Variables
+            for var in pop.neuron_type.description['variables']:
+                code += PopTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+                accessors += PopTemplate.attribute_acc[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
-        # Arrays for the presynaptic sums
-        code += """
+            # Arrays for the presynaptic sums
+            code += """
     // Targets
 """
-        if pop.neuron_type.type == 'rate':
-            for target in list(set(pop.neuron_type.description['targets']+pop.targets)):
-                code += """    std::vector<double> _sum_%(target)s;
+            if pop.neuron_type.type == 'rate':
+                for target in list(set(pop.neuron_type.description['targets']+pop.targets)):
+                    code += """    std::vector<double> _sum_%(target)s;
 """ % {'target' : target}
 
-        # Global operations
-        code += """
+            # Global operations
+            code += """
     // Global operations
 """
-        for op in pop.global_operations:
-            code += """    double _%(op)s_%(var)s;
+            for op in pop.global_operations:
+                code += """    double _%(op)s_%(var)s;
 """ % {'op': op['function'], 'var': op['variable']}
 
-        # Arrays for the random numbers
-        code += """
+            # Arrays for the random numbers
+            code += """
     // Random numbers (STL implementation)
 """
-        for rd in pop.neuron_type.description['random_distributions']:
-            code += """    std::vector<double> %(rd_name)s;
+            for rd in pop.neuron_type.description['random_distributions']:
+                code += """    std::vector<double> %(rd_name)s;
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
-        # Delays
-        if pop.max_delay > 1:
-            if pop.neuron_type.type == "rate":
-                code += """
+            # Delays
+            if pop.max_delay > 1:
+                if pop.neuron_type.type == "rate":
+                    code += """
     // Delayed variables"""
                 for var in pop.delayed_variables:
                     if var in pop.neuron_type.description['local']:
@@ -104,30 +105,30 @@ class PopulationGenerator(object):
                     else:
                         code += """
     std::deque< double > _delayed_%(var)s; """ % {'var': var}
-            else: # Spiking networks should only exchange spikes
-                code += """
+                else: # Spiking networks should only exchange spikes
+                    code += """
     // Delays for spike population
     std::deque< std::vector<int> > _delayed_spike;
 """
 
-        # Local functions
-        if len(pop.neuron_type.description['functions'])>0:
-            code += """
+            # Local functions
+            if len(pop.neuron_type.description['functions'])>0:
+                code += """
     // Local functions
 """
-            for func in pop.neuron_type.description['functions']:
-                code += ' '*4 + func['cpp'] + '\n'
+                for func in pop.neuron_type.description['functions']:
+                    code += ' '*4 + func['cpp'] + '\n'
 
-        # Implementation for init_population, update
-        init = self.init_population(pop)
-        update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+            # Implementation for init_population, update
+            init = self.init_population(pop)
+            update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
-        code = base_template % { 'id': pop.id,
-                                 'additional': code, 
-                                 'accessor': accessors, 
-                                 'init': init,
-                                 'update': update 
-                                }
+            code = base_template % { 'id': pop.id,
+                                     'additional': code,
+                                     'accessor': accessors,
+                                     'init': init,
+                                     'update': update
+                                    }
 
         # Store the complete header definition in a single file
         with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
