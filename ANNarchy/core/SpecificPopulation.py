@@ -165,8 +165,41 @@ class SpikeSourceArray(Population):
 
         self.init['spike_times'] = times
 
+        # Skip the normal code generation process
+        self._specific = True
+
+        self.generator['omp']['pyx_pop_struct'] = """
+    cdef struct PopStruct%(id)s :
+        int size
+        bool _active
+
+        # Local parameter spike_times
+        vector[vector[double]] spike_times
+"""
+
+        self.generator['omp']['pyx_pop_class'] = """
+cdef class pop%(id)s_wrapper :
+    def __cinit__(self, size, times):
+        pop%(id)s.size = size
+        pop%(id)s.spike_times = times
+
+    property size:
+        def __get__(self):
+            return pop%(id)s.size
+
+    def activate(self, bool val):
+        pop%(id)s._active = val
+
+    # Local parameter spike_times
+    cpdef get_spike_times(self):
+        return pop%(id)s.spike_times
+    cpdef set_spike_times(self, value):
+        pop%(id)s.spike_times = value
+"""
+
+    def generate(self):
         # Generate the Code
-        self.generator['omp']['header_pop_struct'] = """#pragma once
+        code = """#pragma once
 
 extern long int t;
 extern double dt;
@@ -223,36 +256,9 @@ struct PopStruct%(id)s{
         }
     }
 };
-"""
+""" % { 'id': self.id, 'size': self.size, 'delay': self.max_delay }
 
-        self.generator['omp']['pyx_pop_struct'] = """
-    cdef struct PopStruct%(id)s :
-        int size
-        bool _active
-
-        # Local parameter spike_times
-        vector[vector[double]] spike_times 
-"""
-
-        self.generator['omp']['pyx_pop_class'] = """
-cdef class pop%(id)s_wrapper :
-    def __cinit__(self, size, times):
-        pop%(id)s.size = size
-        pop%(id)s.spike_times = times
-
-    property size:
-        def __get__(self):
-            return pop%(id)s.size
-
-    def activate(self, bool val):
-        pop%(id)s._active = val
-
-    # Local parameter spike_times
-    cpdef get_spike_times(self):
-        return pop%(id)s.spike_times
-    cpdef set_spike_times(self, value):
-        pop%(id)s.spike_times = value
-"""
+        return code
         
     def _instantiate(self, module):
         # Create the Cython instance 

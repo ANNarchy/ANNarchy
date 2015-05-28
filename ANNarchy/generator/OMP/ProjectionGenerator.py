@@ -142,12 +142,14 @@ class ProjectionGenerator(object):
         with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
             ofile.write(final_code)
 
-        # Include directive
-        proj_struct = """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id }
-        # Extern pointer
-        proj_ptr = """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id }
+        proj_desc = {
+            'include': """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id },
+            'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
+            'instance': """ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
+            'update': "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id }
+        }
 
-        return proj_struct, proj_ptr
+        return proj_desc
 
     def recorder_class(self, proj):
         """

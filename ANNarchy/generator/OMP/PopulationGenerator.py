@@ -49,12 +49,8 @@ class PopulationGenerator(object):
         """
         # SpikeSourceArrays need an additional delay,
         # we now this value only at this point
-        if isinstance(pop, SpikeSourceArray):
-            code = pop.generator['omp']['header_pop_struct'] % { 'id': pop.id, 'size': pop.size, 'delay': pop.max_delay }
-
-        # Is it a specific population?
-        elif pop.generator['omp']['header_pop_struct']:
-            code = pop.generator['omp']['header_pop_struct']
+        if pop._specific:
+            code = pop.generate()
 
         else:
             # Pick basic template based on neuron type
@@ -140,12 +136,16 @@ class PopulationGenerator(object):
         with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
             ofile.write(code)
 
-        # Include directive
-        pop_struct = """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id }
-        # Extern pointer
-        pop_ptr = """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id }
+        has_no_update = ( len(pop.neuron_type.description['variables']) == 0 and not pop._specific )
 
-        return pop_struct, pop_ptr
+        pop_desc = {
+            'include': """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id },
+            'extern': """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
+            'instance': """PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
+            'update': "" if has_no_update else """    pop%(id)s.update();\n""" % { 'id': pop.id }
+        }
+
+        return pop_desc
 
     def recorder_class(self, pop):
         tpl_code = """
