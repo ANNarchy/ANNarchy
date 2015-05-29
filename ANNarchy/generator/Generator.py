@@ -187,17 +187,14 @@ class Generator(object):
         self.check_structure()
 
         # Generate the code
-        self.code_generation(self.cpp_stand_alone, self.profile_enabled, 
-                                                        self.clean)
+        self.code_generation(self.cpp_stand_alone, self.profile_enabled, self.clean)
+
         # Copy the files if needed
         changed = self.copy_files(self.clean)
         
         # Perform compilation if something has changed
         if changed or not os.path.isfile(self.annarchy_dir+'/ANNarchyCore'+str(self.net_id)+'.so'):
             self.compilation()
-
-            # Return to the current directory
-            os.chdir('..')
                 
         Global._network[self.net_id]['compiled'] = True
         
@@ -208,21 +205,30 @@ class Generator(object):
         " Copy the generated files in the build/ folder if needed."
         changed = False
         if clean:
-            for file in os.listdir(self.annarchy_dir+'/generate'):
-                shutil.copy(self.annarchy_dir+'/generate/'+file, # src
-                            self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file # dest
+            for f in os.listdir(self.annarchy_dir+'/generate'):
+                shutil.copy(self.annarchy_dir+'/generate/'+f, # src
+                            self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f # dest
                 )
             changed = True
         else: # only the ones which have changed
             import filecmp
-            for file in os.listdir(self.annarchy_dir+'/generate'):
-                if  not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file) or \
-                    not filecmp.cmp( self.annarchy_dir+'/generate/'+file, 
-                                    self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file) :
-                    shutil.copy(self.annarchy_dir+'/generate/'+file, # src
-                                self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file # dest
+            for f in os.listdir(self.annarchy_dir+'/generate'):
+                if  not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
+                    not filecmp.cmp( self.annarchy_dir+'/generate/'+ f, 
+                                    self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) :
+                    shutil.copy(self.annarchy_dir+'/generate/'+f, # src
+                                self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +f # dest
                     )
                     changed = True
+            # Needs to check now if a file existed before in build/net but not in generate anymore
+            for f in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
+                extension = f.split('.')[-1]
+                if not extension in ['h', 'hpp', 'cpp', 'cu']: # ex: .o
+                    continue
+                if not os.path.isfile(self.annarchy_dir+'/generate/' + f):
+                    os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f)
+                    changed = True
+
         return changed
 
     def compilation(self):
@@ -345,6 +351,9 @@ clean:
             except:
                 pass
             exit(0)
+
+        # Return to the current directory
+        os.chdir('..')
 
         if not self.silent:
             Global._print('OK')
