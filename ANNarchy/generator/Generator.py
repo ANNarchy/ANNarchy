@@ -213,7 +213,7 @@ class Generator(object):
         else: # only the ones which have changed
             import filecmp
             for f in os.listdir(self.annarchy_dir+'/generate'):
-                if  not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
+                if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
                     not filecmp.cmp( self.annarchy_dir+'/generate/'+ f, 
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) :
                     shutil.copy(self.annarchy_dir+'/generate/'+f, # src
@@ -222,11 +222,15 @@ class Generator(object):
                     changed = True
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for f in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
-                extension = f.split('.')[-1]
+                basename, extension = f.split('.')
                 if not extension in ['h', 'hpp', 'cpp', 'cu']: # ex: .o
                     continue
                 if not os.path.isfile(self.annarchy_dir+'/generate/' + f):
+                    if f.startswith('ANNarchyCore'):
+                        continue
                     os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f)
+                    if os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o'):
+                        os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o')
                     changed = True
 
         return changed
