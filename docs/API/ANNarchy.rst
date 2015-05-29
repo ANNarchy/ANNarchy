@@ -7,7 +7,7 @@ This the main module of ANNarchy, which contains both Python Code and wrapping o
 Configuration and compilation
 =================================================
 
-Contrary to other simulators, ANNarchy is entirely based on code generation. It provides a set of first level functions to ensre the network is correctly created. Its **important** to call these functions in this order. 
+Contrary to other simulators, ANNarchy is entirely based on code generation. It provides a set of first level functions to ensre the network is correctly created. It is **important** to call these functions in the right order. 
 
 ANNarchy.setup()
 -------------------------------------------------
@@ -53,27 +53,9 @@ Learning
 
 .. autofunction:: ANNarchy.disable_learning
 
-Recordings
-===========
-
-
-.. autofunction:: ANNarchy.start_record
-
-
-.. autofunction:: ANNarchy.stop_record
-
-
-.. autofunction:: ANNarchy.get_record
-
-
-.. autofunction:: ANNarchy.pause_record
-
-
-.. autofunction:: ANNarchy.resume_record
 
 Saving/Loading
 ===============
-
 
 To save or load the network state you can use the following methods:
 
@@ -83,4 +65,13 @@ To save or load the network state you can use the following methods:
     
 Please note that these functions are only usable after the call to ``ANNarchy.compile()``.
 
+
+Access to simulation times
+===========================
+
+.. autofunction:: ANNarchy.get_time
+.. autofunction:: ANNarchy.set_time
+.. autofunction:: ANNarchy.get_current_step
+.. autofunction:: ANNarchy.set_current_step
+.. autofunction:: ANNarchy.dt
 

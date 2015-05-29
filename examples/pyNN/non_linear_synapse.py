@@ -42,15 +42,15 @@ proj = Projection(pre=input, post=neurons, target='exc', synapse=NMDA).connect_f
 compile()
 
 # Start recording
-neurons.start_record('v')
-proj[0].start_record('g')
+m = Monitor(neurons, 'v')
+w = Monitor(proj[0], 'g')
 
 # Simulate for 100 ms
 simulate(100.0)
 
 # Retrieve recordings
-v = neurons.get_record()['v']['data'][0, :]
-s = np.array(proj[0].get_record()['g']['data'])
+v = m.get('v')[:, 0]
+s = w.get('g')
 
 # Plot the recordings
 from pylab import *

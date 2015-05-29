@@ -21,155 +21,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     
 """
-import ANNarchy.core.Global as Global
+import Global
 
-from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core.Random import RandomDistribution
-from ANNarchy.core.Neuron import IndividualNeuron
+from .PopulationView import PopulationView
+from .Random import RandomDistribution
+from .Neuron import IndividualNeuron
 
 import numpy as np
 import copy, inspect
-
-# Template for specific population bypassing code generation.
-# The id of the population should be let free with %(id)s
-pop_generator_template = {
-    'omp': {
-        # C++ struct to encapsulate all data
-        # Example:
-        # struct PopStruct%(id)s{
-        #     // Number of neurons
-        #     int size;
-        #     // Local parameter baseline
-        #     std::vector< double > baseline ;
-        #     // Local variable r
-        #     std::vector< double > r ;
-        #     std::vector< std::vector< double > > recorded_r ;
-        #     bool record_r ;
-        #     // Targets
-        #     std::vector<double> sum_exc;
-        #     // Random numbers
-        #     std::vector<double> rand_0;
-        #     std::uniform_real_distribution<double> dist_rand_0;
-        # }; 
-        'header_pop_struct' : None,
-
-        # Initialize the random distribution objects
-        # Example:
-        # pop%(id)s.rand_0 = std::vector<double>(pop%(id)s.size, 0.0);
-        # pop%(id)s.dist_rand_0 = std::uniform_real_distribution<double>(-0.5, 0.5);
-        'body_random_dist_init': None,
-
-        # Initialize the delayed arrays. Needs the extra %(delay)s argument, which represents the maximum delay in the population.
-        # Example:
-        # pop%(id)s._delayed_r = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(pop%(id)s.size, 0.0));
-        'body_delay_init': None,
-
-        # Initialize spike-specific arrays. Does not need to overriden in most cases.
-        # Example:
-        # pop%(id)s.spike = std::vector<bool>(pop%(id)s.size, false);
-        # pop%(id)s.spiked = std::vector<int>(0, 0);
-        # pop%(id)s.last_spike = std::vector<long int>(pop%(id)s.size, -10000L);
-        # pop%(id)s.refractory_remaining = std::vector<int>(pop%(id)s.size, 0);
-        'body_spike_init': None,
-
-        # Initialize the global operations
-        # Example:
-        # pop%(id)s._mean_r = 0.0;
-        'body_globalops_init': None,
-
-        # Updates the random numbers
-        # Example:
-        # // RD of pop%(id)s
-        # #pragma omp parallel for
-        # for(int i = 0; i < pop%(id)s.size; i++)
-        # {
-        #     pop%(id)s.rand_0[i] = pop%(id)s.dist_rand_0(rng[omp_get_thread_num()]);
-        # }
-        'body_random_dist_update': None,
-
-        # Updates the neural variables
-        # Example:
-        # // Updating the local variables of population %(id)s
-        # #pragma omp parallel for
-        # for(int i = 0; i < pop%(id)s.size; i++){
-        #     pop1.mp[i] += dt*(-pop%(id)s.mp[i] + pop%(id)s.rand_0[i] + pop%(id)s.sum_exc[i] + pop%(id)s.sum_inh[i])/pop%(id)s.tau;
-        #     pop1.r[i] = clip(pop1.mp[i], 0.0, 1.0);
-        # }
-        'body_update_neuron': None,
-
-        # Delays variables
-        # Example:
-        # // Enqueuing outputs of pop%(id)s
-        # pop%(id)s._delayed_r.push_front(pop%(id)s.r);
-        # pop%(id)s._delayed_r.pop_back();
-        'body_delay_code': None,
-
-        # Computes global operations
-        # Example:
-        # pop%(id)s._mean_r = mean_value(pop%(id)s.r;
-        'body_update_globalops': None,
-
-        # Record the variables
-        # Example:
-        # if(pop%(id)s.record_r
-        #     pop%(id)s.recorded_r.push_back(pop%(id)s.r) ;
-        'body_record': None,
-
-        # Export of the C++ struct to Cython (must have an indent of 4)
-        # Example:
-        # cdef struct PopStruct%(id)s :
-        #     int size
-        #     # Global parameter tau
-        #     double  tau 
-        #     # Local variable r
-        #     vector[double] r 
-        #     vector[vector[double]] recorded_r 
-        #     bool record_r 
-        #     # Targets
-        #     vector[double] sum_exc
-        'pyx_pop_struct': None,
-
-        # Wrapper class in Cython (no indentation)
-        # Example:
-        # cdef class pop%(id)s_wrapper :
-        #     def __cinit__(self, size):
-        #         pop%(id)s.size = size
-        #         pop%(id)s.r = vector[double](size, 0.0)
-        #         pop%(id)s.sum_exc = vector[double](size, 0.0)
-        #     property size:
-        #         def __get__(self):
-        #             return pop%(id)s.size
-        #     # Global parameter tau
-        #     cpdef double get_tau(self):
-        #         return pop%(id)s.tau
-        #     cpdef set_tau(self, double value):
-        #         pop%(id)s.tau = value
-        #     # Local variable r
-        #     cpdef np.ndarray get_r(self):
-        #         return np.array(pop%(id)s.r)
-        #     cpdef set_r(self, np.ndarray value):
-        #         pop%(id)s.r = value
-        #     cpdef double get_single_r(self, int rank):
-        #         return pop%(id)s.r[rank]
-        #     cpdef set_single_r(self, int rank, double value):
-        #         pop%(id)s.r[rank] = value
-        'pyx_pop_class': None,
-    },
-    'cuda': {   # TODO
-        'header_pop_struct' : None,
-        'body_random_dist_init': None,
-        'body_delay_init': None,
-        'body_spike_init': None,
-        'body_globalops_init': None,
-        'body_random_dist_update': None,
-        'body_update_neuron': None,
-        'body_delay_code': None,
-        'body_update_globalops': None,
-        'body_record': None,
-        'pyx_pop_struct': None,
-        'pyx_pop_class': None,             
-    } 
-}
 
 class Population(object):
     """
@@ -226,13 +85,14 @@ class Population(object):
         else:
             self.neuron_type = copy.deepcopy(neuron)
         self.neuron_type._analyse()
+        from ANNarchy.generator.Templates import pop_generator_template
         self.generator = copy.deepcopy(pop_generator_template)
         
         # Store the stop condition
         self.stop_condition = stop_condition
 
         # Attribute a name if not provided
-        self.id = len(Global._populations)
+        self.id = len(Global._network[0]['populations'])
         self.class_name = 'pop'+str(self.id)
         
         if name:
@@ -241,7 +101,7 @@ class Population(object):
             self.name = self.class_name
                 
         # Add the population to the global variable
-        Global._populations.append(self)
+        Global._network[0]['populations'].append(self)
         
         # Get a list of parameters and variables
         self.parameters = []
@@ -296,7 +156,10 @@ class Population(object):
         }
 
         # Recorded variables
-        self.recorded_variables = {}
+        self._monitor = None
+
+        # Is overwritten by SpecificPopulations
+        self._specific = False
         
     def _instantiate(self, module):
         # Create the Cython instance 
@@ -673,6 +536,8 @@ class Population(object):
     ################################
     def start_record(self, variable, period = None, ranks='all'):
         """
+        **Deprecated!!**
+        
         Start recording neural variables.
         
         Parameter:
@@ -690,75 +555,32 @@ class Population(object):
             pop3.start_record(['spike'])    
             pop4.start_record(['r'], ranks=range(10, 100))      
         """
-        if not period:
-            period = Global.config['dt']
-        _variable = []
-        
-        if isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
+        from .Record import Monitor
+        if ranks == 'all':
+            self._monitor = Monitor(self, variable, period=period)
         else:
-            print('Error: variable must be either a string or list of strings.')
-        
-        # set period and offset
-        self.cyInstance.set_record_period( int(period/Global.config['dt']), Global.get_current_step() )
+            self._monitor = Monitor(PopulationView(self, ranks), variable, period=period)
 
-        # set ranks
-        self.cyInstance.set_record_ranks( [-1] if ranks=='all' else ranks )
-
-        # start recording of variables
-        for var in _variable:
-            if not var in self.variables + ['spike']:
-                Global._error('start: ' + var, 'is not a recordable variable of the population.')
-                return
-
-            self.recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [-1], 'period': period, 'ranks': ranks}
-
-            try:
-                getattr(self.cyInstance, 'start_record_'+var)()
-            except:
-                Global._error(var + 'is not a recordable variable.')
-                return
-
-    def stop_record(self, variable=None):
+    def stop_record(self):
         """
-        Stops recording the previously defined variables.
+        **Deprecated!!**
 
-        Parameter:
-            
-        * **variable**: single variable name or list of variable names. If no argument is provided, all recordings will stop.
+        Stops recording all the previously defined variables.
 
         Example::
 
-            pop1.stop_record('r')
-            pop2.stop_record(['mp', 'r'])  
+            pop1.stop_record()
         """
-        _variable = []
-        if variable == None:
-            _variable = list(self.recorded_variables.keys())
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')       
-        
-        for var in _variable:
-            if not var in self.recorded_variables.keys():
-                Global._warning(var, 'was not recording.')
-                continue
-            try:
-                getattr(self.cyInstance, 'stop_record_'+var)()
-            except:
-                Global._error('stop: ' + var + 'is not a recordable variable.')
-                return
-
-        for var in _variable:
-            del self.recorded_variables[var]
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
+        if self._monitor:
+            self._monitor.stop()
+            self._monitor = None
 
     def pause_record(self, variable=None):
         """
+        **Deprecated!!**
+
         Pauses the recording of variables (can be resumed later with resume_record()).
 
         *Parameter*:
@@ -770,37 +592,14 @@ class Population(object):
             pop1.pause_record('r')
             pop2.pause_record(['mp', 'r'])  
         """
-        _variable = []
-        if variable == None:
-            _variable = self.recorded_variables
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')       
-        
-        for var in _variable:
-            if not var in self.recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
-                continue
-            
-            try:
-                getattr(self.cyInstance, 'stop_record_'+var)()
-
-            except:
-                Global._error('pause: ' + var + 'is not a recordable variable.')
-                return
-
-            self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
-            self.recorded_variables[var]['start'].append(-1)
-            self.recorded_variables[var]['stop'].append(-1)
-
-            if Global.config['verbose']:
-                print('pause record of', var, '(', self.name, ')')
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
+        if self._monitor:
+            self._monitor.pause(variable)
 
     def resume_record(self, variable=None):
         """
+        **Deprecated!!**
+
         Resume recording the previous defined variables.
         
         *Parameter*:
@@ -812,39 +611,14 @@ class Population(object):
             pop1.resume_record('r')
             pop2.resume_record(['mp', 'r'])        
         """
-        _variable = []
-        
-        if variable == None:
-            _variable = self.recorded_variables
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
-        else:
-            print('Error: variable must be either a string or list of strings.')
-        
-        for var in _variable:
-            if not var in self.recorded_variables.keys():
-                print(var, 'is not a recordable variable of', self.name)
-                continue
-            
-            # set period and offset
-            self.cyInstance.set_record_period( int(self.recorded_variables[var]['period']/Global.config['dt']), Global.get_current_step() )
-
-            try:
-                getattr(self.cyInstance, 'start_record_'+var)()
-
-            except:
-                Global._error('resume: ' + var + 'is not a recordable variable.')
-                return
-
-            self.recorded_variables[var]['start'][-1] = Global.get_current_step()
-            
-            if Global.config['verbose']:
-                Global._print('resume record of', var, '(' , self.name, ')')
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
+        if self._monitor:
+            self._monitor.resume(variable)
 
     def get_record(self, variable=None, reshape=False):
         """
+        **Deprecated!!**
+
         Returns the recorded data as a nested dictionary. The first key corresponds to the variable name if several were recorded.
 
         The second keys correspond to:
@@ -862,63 +636,48 @@ class Population(object):
         * **variable**: single variable name or list of variable names. If no argument provided, all currently recorded data are returned.  
         * **reshape**: by default this functions returns the data as a 2D matrix (number of neurons * time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
-        
-        _variable = []
-        if variable == None:
-            _variable = list(self.recorded_variables.keys())
-        elif isinstance(variable, str):
-            _variable.append(variable)
-        elif isinstance(variable, list):
-            _variable = variable
+        Global._warning("recording from a Population is deprecated, use a Monitor instead.")
+        if not self._monitor:
+            Global._error('get_record(): there is currently no recording.')
+            exit(0)
+        if variable:
+            if not isinstance(variable, list):
+                variables = [variable]
+            else:
+                variables = variable
         else:
-            print('Error: variable must be either a string or list of strings.')
+            variables = self._monitor.variables
+
+        if self._monitor:
+            var_data = self._monitor.get(variables, force_dict=True)
+            var_times = self._monitor.times(variables)
+        else:
+            return {}
 
         data = {}
 
-        for var in _variable:
-            if not var in self.variables + ['spike']:
-                Global._warning(var, 'is not a recordable variable of the population.')
-                continue
-            if not var in self.recorded_variables.keys():
-                Global._warning(var, 'was not recording.')
-                continue
-        
-            try:
-                var_data = getattr(self.cyInstance, 'get_record_'+var)()
-            except:
-                Global._error('get: ' + var + 'is not a recordable variable.')
-                return {}
-
-            if self.recorded_variables[var]['stop'][-1] == -1:
-                self.recorded_variables[var]['stop'][-1] = Global.get_current_step()
-
-
+        for var in variables: 
             if not reshape:
                 data[var] = {
-                    'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
-                    'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
-                    'data' : np.array(var_data).T if not var == 'spike' else var_data,
-                    'period' : self.recorded_variables[var]['period'],
-                    'ranks' : self.recorded_variables[var]['ranks']
+                    'start': var_times[var]['start'] if len(var_times[var]['start']) >1 else var_times[var]['start'][0],
+                    'stop' : var_times[var]['stop'] if len(var_times[var]['stop']) >1 else var_times[var]['stop'][0] ,
+                    'data' : np.array(var_data[var]).T if not var == 'spike' else var_data[var].values(),
+                    'period' : self._monitor.period,
+                    'ranks' : self._monitor.ranks
                 }
             else:
                 if not var == 'spike':
-                    var_data = np.array(var_data)
                     mat1 = var_data.reshape((var_data.shape[0],)+self.geometry)
-
                     data[var] = {
-                        'start': self.recorded_variables[var]['start'] if len(self.recorded_variables[var]['start']) >1 else self.recorded_variables[var]['start'][0],
-                        'stop' : self.recorded_variables[var]['stop'] if len(self.recorded_variables[var]['stop']) >1 else self.recorded_variables[var]['stop'][0] ,
+                        'start': var_times[var]['start'] if len(var_times[var]['start']) >1 else var_times[var]['start'][0],
+                        'stop' : var_times[var]['stop'] if len(var_times[var]['stop']) >1 else var_times[var]['stop'][0] ,
                         'data' : np.transpose(mat1, tuple( range(1, self.dimension+1)+[0])),
-                        'period' : self.recorded_variables[var]['period'],
-                        'ranks' : self.recorded_variables[var]['ranks']
+                        'period' : self._monitor.period,
+                        'ranks' : self._monitor.ranks
                         }
                 else:
                     Global._error("reshape=true is invalid for get_record('spike')")
-
-
-            self.recorded_variables[var]['start'] = [Global.get_current_step()]
-            self.recorded_variables[var]['stop'] = [-1]
+                    exit(0)
 
         return data
 

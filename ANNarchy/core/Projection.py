@@ -26,82 +26,16 @@ import math
 import copy, inspect
 
 from ANNarchy.core import Global
-from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Random import RandomDistribution, Uniform
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.Report import _process_random
 
-# Template for specific population bypassing code generation.
-# The id of the population should be let free with %(id)s
-proj_generator_template = {
-    'omp': {
-        # C++ struct to encapsulate all data
-        # Example:
-        # struct ProjStruct%(id_proj)s{
-        #     // Number of dendrites
-        #     int size;
-        #     // Connectivity
-        #     std::vector<int> post_rank ;
-        #     std::vector< std::vector< int > > pre_rank ;
-        #     std::vector< std::vector< int > > delay ;
-        #    
-        #     // Local parameter w
-        #     std::vector< std::vector< double > > w ;
-        # }; 
-        'header_proj_struct' : None,
-
-        # Initilaize the projection
-        # Example:
-        # 
-        #    TODO:
-        'body_proj_init': None,
-
-        # Updates the random numbers
-        # Example:
-        #   TODO
-        'body_random_dist_update': None,
-
-        # Initializes the random numbers
-        # Example:
-        #   TODO
-        'body_random_dist_init': None,
-
-        # Updates the synapse variables
-        # Example:
-        # 
-        #    TODO:
-        'body_update_synapse': None,
-
-        # compute the postsynaptic potential
-        # Example:
-        # 
-        #    TODO:
-        'body_compute_psp': None,
-        
-        # Export of the C++ struct to Cython (must have an indent of 4)
-        # Example:
-        # 
-        #    TODO:
-        'pyx_proj_struct': None,
-        
-        # Wrapper class in Cython (no indentation)
-        # Example:
-        # 
-        #    TODO:
-        'pyx_proj_class': None,
-    },
-    'cuda': {
-        'header_proj_struct' : None,
-        'body_proj_init': None,
-        'body_random_dist_update': None,
-        'body_random_dist_init': None,
-        'body_update_synapse': None,
-        'body_compute_psp': None,
-        'pyx_proj_struct': None,
-        'pyx_proj_class': None,
-    }
-}
+try:
+    import ANNarchy.core.cython_ext.Connector as Connector
+except:
+    pass
 
 class Projection(object):
     """
@@ -128,14 +62,14 @@ class Projection(object):
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object 
         if isinstance(pre, str):
-            for pop in Global._populations:
+            for pop in Global._network[0]['populations']:
                 if pop.name == pre:
                     self.pre = pop
         else:
             self.pre = pre
                                  
         if isinstance(post, str):
-            for pop in Global._populations:
+            for pop in Global._network[0]['populations']:
                 if pop.name == post:
                     self.post = pop
         else:
@@ -161,13 +95,12 @@ class Projection(object):
             self.synapse = copy.deepcopy(synapse)
 
         self.synapse._analyse()
+        from ANNarchy.generator.Templates import proj_generator_template
         self.generator = copy.deepcopy(proj_generator_template)
 
         # Create a default name
-        self.id = len(Global._projections)
+        self.id = len(Global._network[0]['projections'])
         self.name = 'proj'+str(self.id)
-            
-        self._connector = None
 
         # Get a list of parameters and variables
         self.parameters = []
@@ -184,7 +117,7 @@ class Projection(object):
         self.attributes = self.parameters + self.variables 
         
         # Add the population to the global variable
-        Global._projections.append(self)
+        Global._network[0]['projections'].append(self)
 
         # Finalize initialization
         self.initialized = False
@@ -192,8 +125,12 @@ class Projection(object):
         # Cython instance
         self.cyInstance = None
 
-        # CSR object
+        # Connectivity
         self._synapses = None
+        self._connection_method = None
+        self._connection_args = None
+        self._connection_delay = None
+        self._connector = None
 
         # Recorded variables
         self.recorded_variables = {}
@@ -203,20 +140,83 @@ class Projection(object):
         self.connector_description = "Specific"
 
     def _instantiate(self, module):
-
+        "Instantiates the projection after compilation."
         self._connect(module)
-
         self.initialized = True  
-
-        #self._init_attributes()
 
     def _init_attributes(self):
         """ 
-        Method used after compilation to initialize the attributes.
+        Method used after compilation to initialize the attributes. Called by Generator._instantiate
         """
         for name, val in self.init.items():
             if not name in ['w']:
                 self.__setattr__(name, val)
+    
+    def _connect(self, module):
+        """
+        Builds up dendrites either from list or dictionary. Called by instantiate().
+        """        
+        if not self._connection_method:
+            Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+            exit(0)
+
+        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
+        self.cyInstance = proj(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+
+        # Access the list of postsynaptic neurons
+        self.post_ranks = self.cyInstance.post_rank()
+    
+    def _store_csr(self, csr):
+        "Stores the CSR object created by the connector method."
+        if self._synapses:
+            del self._synapses
+        self._synapses = csr
+        self.max_delay = self._synapses.get_max_delay()
+        self.uniform_delay = self._synapses.get_uniform_delay()
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+
+    def _store_connectivity(self, method, args, delay):
+        self._connection_method = method
+        self._connection_args = args
+        self._connection_delay = delay
+
+        # Analyse the delay
+        if isinstance(delay, (int, float)):
+            self.max_delay = int(delay/Global.config['dt'])
+            self.uniform_delay = int(delay/Global.config['dt'])
+        else:
+            Global._print('Non-uniform delays are disabled for now!') # TODO
+            exit(0)
+
+        # Transmit the max delay to the pre pop
+        if isinstance(self.pre, PopulationView):
+            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
+        else:
+            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+
+    def _get_csr(self):
+        "Returns the CSR object used for creating the projection, even if it was erased by compile()"
+        if self._synapses:
+            return self._synapses
+
+        try:
+            from ANNarchy.core.cython_ext.Connector import CSR
+        except:
+            Global._error('CSR: ANNarchy was not successfully installed.')
+            exit(0)
+        csr = CSR()   
+        for idx, rk_post in enumerate(self.post_ranks):
+            if self.uniform_delay:
+                delay = [self.max_delay]
+            else:
+                delay = [self.max_delay] # TODO: real delay!
+            csr.add(rk_post, self.cyInstance.pre_rank(idx), self.cyInstance.get_dendrite_w(idx), delay)
+
+        return csr  
+
 
     def reset(self, synapses=False):
         """
@@ -233,24 +233,6 @@ class Projection(object):
         self._init_attributes()
         if synapses:
             Global._warning('not implemented yet...')
-    
-    def _connect(self, module):
-        """
-        Builds up dendrites either from list or dictionary. Called by instantiate().
-        """        
-        if not self._synapses:
-            Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not instantiated.')
-            exit(0)
-
-        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
-        self.cyInstance = proj(self._synapses)
-
-        # Access the list of postsynaptic neurons
-        self.post_ranks = self._synapses.post_rank
-
-        # Delete the _synapses array, not needed anymore
-        del self._synapses
-        self._synapses = None
 
     ################################
     ## Dendrite access
@@ -586,16 +568,7 @@ class Projection(object):
     
     ################################
     ## Connector methods
-    ################################
-    
-    def _store_csr(self, csr):
-        self._synapses = csr
-        self.max_delay = self._synapses.get_max_delay()
-        self.uniform_delay = self._synapses.get_uniform_delay()
-        if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
-        else:
-            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+    ################################   
 
     def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None):
         """
@@ -618,8 +591,7 @@ class Projection(object):
         self.connector_name = "One-to-One"
         self.connector_description = "One-to-One, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
 
-        import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr(Connector.one_to_one(self.pre, self.post, weights, delays, shift))
+        self._store_connectivity(Connector.one_to_one, (weights, delays, shift), delays)
         return self
     
     def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
@@ -638,8 +610,7 @@ class Projection(object):
         self.connector_name = "All-to-All"
         self.connector_description = "All-to-All, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
 
-        import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr(Connector.all_to_all(self.pre, self.post, weights, delays, allow_self_connections))
+        self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections), delays)
         return self
 
     def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -668,8 +639,7 @@ class Projection(object):
         self.connector_name = "Gaussian"
         self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
-        import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr(Connector.gaussian(self.pre.geometry, self.post.geometry, amp, sigma, delays, limit, allow_self_connections))
+        self._store_connectivity(Connector.gaussian, (amp, sigma, delays, limit, allow_self_connections), delays)
         return self
     
     def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -699,8 +669,7 @@ class Projection(object):
         self.connector_name = "Difference-of-Gaussian"
         self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
 
-        import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr(Connector.dog(self.pre.geometry, self.post.geometry, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections))
+        self._store_connectivity(Connector.dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections), delays)
         return self
 
     def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
@@ -722,12 +691,10 @@ class Projection(object):
         if self.pre!=self.post:
             allow_self_connections = True
 
-
         self.connector_name = "Random"
         self.connector_description = "Random, sparseness %(proba)s, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays), 'proba': probability}
 
-        import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr(Connector.fixed_probability(self.pre, self.post, probability, weights, delays, allow_self_connections))
+        self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
         return self
 
     def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False):
@@ -756,8 +723,7 @@ class Projection(object):
         self.connector_name = "Random Convergent"
         self.connector_description = "Random Convergent %(number)s $\\rightarrow$ 1, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
 
-        import ANNarchy.core.cython_ext.Connector as Connector
-        self._store_csr(Connector.fixed_number_pre(self.pre, self.post, number, weights, delays, allow_self_connections))
+        self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections), delays)
 
         return self
             
@@ -788,8 +754,7 @@ class Projection(object):
         self.connector_name = "Random Divergent"
         self.connector_description = "Random Divergent 1 $\\rightarrow$ %(number)s, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
 
-        import ANNarchy.core.cython_ext.Connector as Connector 
-        self._store_csr(Connector.fixed_number_post(self.pre, self.post, number, weights, delays, allow_self_connections))
+        self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections), delays)
         return self
                 
     def connect_with_func(self, method, **args):
@@ -800,19 +765,28 @@ class Projection(object):
 
         * **method**: method to call. The method **must** return a CSR object.
         * **args**: list of arguments needed by the function 
-        """
-        self._connector = method
-        self._connector_params = args
-        synapses = self._connector(self.pre, self.post, **args)
+        """ 
+        # Invoke the method directly, we need the delays already....
+        synapses = method(self.pre, self.post, **args)
         synapses.validate()
-        self._store_csr(synapses)
+
+        # Treat delays
+        if synapses.uniform_delay != -1: # uniform delay    
+            d = synapses.max_delay * Global.config['dt']
+        else:
+            d = Uniform(0., synapses.max_delay * Global.config['dt'])
+
+        self._store_connectivity(self._load_from_csr, (synapses, ), d)
 
         self.connector_name = "User-defined"
         self.connector_description = "User-defined"
 
         return self
 
-    def connect_from_matrix(self, weights, delays=0.0):
+    def _load_from_csr(self, pre, post, synapses):
+        return synapses
+
+    def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
         """
         Builds a connection pattern according to a dense connectivity matrix.
 
@@ -824,12 +798,18 @@ class Projection(object):
 
         * **weights**: a matrix or list of lists representing the weights. If a value is None, the synapse will not be created.
         * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0. 
+        * **pre_post**: states which index is first. By default, the first dimension is related to the post-synaptic population. If ``pre_post`` is True, the first dimension is the pre-synaptic population.
         """
-        try:
-            from ANNarchy.core.cython_ext.Connector import CSR
-        except:
-            Global._error('ANNarchy was not successfully installed.')
-        csr = CSR()
+
+        # Store the synapses
+        self.connector_name = "Connectivity matrix"
+        self.connector_description = "Connectivity matrix"
+        self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays)
+
+        return self
+
+    def _load_from_matrix(self, pre, post, weights, delays, pre_post):
+        csr = Connector.CSR()
 
         if isinstance(weights, list):
             try:
@@ -846,35 +826,50 @@ class Projection(object):
                 Global._error('connect_from_matrix: You must provide a dense 2D matrix.')
                 exit(0)
 
+        if pre_post: # if the user prefers pre as the first index...
+            weights = weights.T
+            if isinstance(delays, np.ndarray):
+                delays = delays.T
+
         shape = weights.shape
         if shape != (self.post.size, self.pre.size):
-            Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
+            if not pre_post:
+                Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
+            else:
+                Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.pre.size, self.post.size)))
             exit(0)
 
         for i in range(self.post.size):
-            rk = []
+            if isinstance(self.post, PopulationView):
+                rk_post = self.post.ranks[i]
+            else:
+                rk_post = i
+            r = []
             w = []
             d = []
-            for idx, val in enumerate(list(weights[i, :])):
+            for j in range(self.pre.size):
+                val = weights[i, j]
                 if val != None:
-                    rk.append(idx)
+                    if isinstance(self.pre, PopulationView):
+                        rk_pre = self.pre.ranks[j]
+                    else:
+                        rk_pre = j
+                    r.append(rk_pre)
                     w.append(val) 
                     if not uniform_delay:
-                        d.append(delays[i,idx])   
+                        d.append(delays[i,j])   
             if uniform_delay:        
                 d.append(delays)
-            if len(rk) > 0:
-                csr.add(i, rk, w, d)
+            if len(r) > 0:
+                csr.add(rk_post, r, w, d)
 
-        # Store the synapses
-        self.connector_name = "Connectivity matrix"
-        self.connector_description = "Connectivity matrix"
-        self._store_csr(csr)
-        return self
+        return csr
 
     def connect_from_sparse(self, weights, delays=0.0):
         """
         Builds a connectivity pattern using a Scipy sparse matrix for the weights and (optionally) delays.
+
+        Warning: a sparse matrix has pre-synaptic ranks as first dimension, 
 
         *Parameters*:
 
@@ -891,20 +886,25 @@ class Projection(object):
             Global._error("only lil, csr and csc matrices are allowed for now.")
             exit(0)
 
+
+        # Store the synapses
+        self.connector_name = "Sparse connectivity matrix"
+        self.connector_description = "Sparse connectivity matrix"
+        self._store_connectivity(self._load_from_sparse, (weights, delays), delays)
+
+        return self
+
+    def _load_from_sparse(self, pre, post, weights, delays):
+
         # Create an empty CSR object
-        try:
-            from ANNarchy.core.cython_ext.Connector import CSR
-        except:
-            Global._error('ANNarchy was not successfully installed.')
-            exit(0)
-        csr = CSR()
+        csr = Connector.CSR()
 
         # Find offsets
-        if hasattr(self.pre, 'ranks'):
+        if isinstance(self.pre, PopulationView):
             offset_pre = self.pre.ranks[0]
         else:
             offset_pre = 0
-        if hasattr(self.post, 'ranks'):
+        if isinstance(self.post, PopulationView):
             offset_post = self.post.ranks[0]
         else:
             offset_post = 0
@@ -913,16 +913,12 @@ class Projection(object):
         W = csc_matrix(weights)
         W.sort_indices()
         (pre, post) = W.shape
-        for idx_post in xrange(post):
+        for idx_post in range(post):
             pre_rank = W.getcol(idx_post).indices
             w = W.getcol(idx_post).data
             csr.add(idx_post + offset_post, pre_rank + offset_pre, w, [float(delays)])
-        
-        # Store the synapses
-        self.connector_name = "Sparse connectivity matrix"
-        self.connector_description = "Sparse connectivity matrix"
-        self._store_csr(csr)
-        return self
+
+        return csr        
 
     def connect_from_file(self, filename):
         """
@@ -937,11 +933,7 @@ class Projection(object):
             Only the ranks, weights and delays are loaded, not the other variables.
         """
         # Create an empty CSR object
-        try:
-            from ANNarchy.core.cython_ext.Connector import CSR
-        except:
-            Global._error('ANNarchy was not successfully installed.')
-        csr = CSR()
+        csr = Connector.CSR()
 
         # Load the data        
         from ANNarchy.core.IO import _load_data
@@ -969,7 +961,7 @@ class Projection(object):
         # Store the synapses
         self.connector_name = "From File"
         self.connector_description = "From File"
-        self._store_csr(csr)
+        self._store_connectivity(self._load_from_csr, (csr,), csr.max_delay)
         return self
 
     def save_connectivity(self, filename):
@@ -987,16 +979,8 @@ class Projection(object):
         * **filename**: file where the data will be saved.
         """
         if not self.initialized:
-            data = {
-                'post_ranks': self._synapses.post_rank,
-                'pre_ranks': self._synapses.pre_rank,
-                'w': self._synapses.w,
-                'delay': self._synapses.delay,
-                'max_delay': self._synapses.max_delay,
-                'uniform_delay': self._synapses.uniform_delay,
-                'size': self._synapses.size,
-                'nb_synapses': self._synapses.nb_synapses,
-            }
+            Global._error('save_connectivity(): the network has not been compiled yet.')
+            return
         else:
             data = {
                 'post_ranks': self.post_ranks,
@@ -1222,7 +1206,7 @@ class Projection(object):
         """
         if not period:
             period = Global.config['dt']
-        if not Global._compiled:
+        if not self.cyInstance:
             Global._error('Can not start pruning if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1241,7 +1225,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
         """
-        if not Global._compiled:
+        if not self.cyInstance:
             Global._error('Can not stop pruning if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1266,7 +1250,7 @@ class Projection(object):
         """
         if not period:
             period = Global.config['dt']
-        if not Global._compiled:
+        if not self.cyInstance:
             Global._error('Can not start creating if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:
@@ -1285,7 +1269,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
         """
-        if not Global._compiled:
+        if not self.cyInstance:
             Global._error('Can not stop creating if the network is not compiled.')
             exit(0)
         if Global.config['structural_plasticity']:

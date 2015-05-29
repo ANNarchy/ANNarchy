@@ -68,7 +68,7 @@ class RateProfile(Profile):
         """
         Global._print(self._threads)
         for thread in self._threads:
-            Global._network.set_num_threads(thread)
+            Global._network[0]['instance'].set_num_threads(thread)
         
             for trial in xrange(self._num_trials):
                 func(steps)

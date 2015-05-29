@@ -71,7 +71,7 @@ There are two different equations for the neurons, so we need to define two ``Ra
 
 .. code-block:: python
 
-    InputNeuron = RateNeuron(   
+    InputNeuron = Neuron(   
         parameters="""
             baseline = 0.0
         """,
@@ -81,7 +81,7 @@ There are two different equations for the neurons, so we need to define two ``Ra
         """ 
     )
     
-``InputNeuron`` is here an instance of ``RateNeuron``, whose only parameter is ``baseline`` (initialized to 0.0, but it does not matter here). ``noise`` is a random number generator, taken from a uniform distribution between -0.5 and 0.5, whose value is randomly chosen at each computational step for each neuron. ``r``, the only required variable, is simply the positive part of the sum of ``baseline`` and ``noise``. ``pos()`` is a built-in function of ANNarchy returning the positive part of its argument.
+``InputNeuron`` is here an instance of ``Neuron``, whose only parameter is ``baseline`` (initialized to 0.0, but it does not matter here). ``noise`` is a random number generator, taken from a uniform distribution between -0.5 and 0.5, whose value is randomly chosen at each computational step for each neuron. ``r``, the only required variable, is simply the positive part of the sum of ``baseline`` and ``noise``. ``pos()`` is a built-in function of ANNarchy returning the positive part of its argument.
 
 
 
@@ -91,7 +91,7 @@ The second neuron we need is a bit more complex, as it is governed by an ODE and
 
 .. code-block:: python
 
-    NeuralFieldNeuron = RateNeuron(
+    NeuralFieldNeuron = Neuron(
         parameters=""" 
             tau = 10.0 : population
         """,

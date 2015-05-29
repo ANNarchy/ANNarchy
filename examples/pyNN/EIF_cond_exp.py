@@ -73,14 +73,14 @@ Ii = Projection(i_inh, Pi_input, 'exc').connect_one_to_one(weights=we)
 compile()
 
 # Simulate
-P.start_record(['spike'])
+m = Monitor(P, 'spike')
 simulate(500.0, measure_time=True)
 
 # Retrieve recordings
-data = P.get_record()
-spikes = raster_plot(data['spike'])
+data = m.get()
+t, n = m.raster_plot(data['spike'])
 
 # Plot
 from pylab import *
-plot(dt*spikes[:, 0], spikes[:, 1], '.')
+plot(t, n, '.')
 show()

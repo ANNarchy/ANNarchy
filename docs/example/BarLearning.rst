@@ -27,7 +27,7 @@ Defining the neurons
 
 .. code-block:: python
 
-    InputNeuron = RateNeuron(   
+    InputNeuron = Neuron(   
         parameters="""
             r = 0.0
         """
@@ -51,7 +51,7 @@ could be implemented as the following:
 
 .. code-block:: python
 
-    LeakyNeuron = RateNeuron(
+    LeakyNeuron = Neuron(
         parameters=""" 
             tau = 10.0 : population
         """,
@@ -82,7 +82,7 @@ where :math:`\alpha` is a parameter defining the strength of the regularization,
 
 .. code-block:: python
 
-    Oja = RateSynapse(
+    Oja = Synapse(
         parameters=""" 
             tau = 2000.0 : post-synaptic
             alpha = 8.0 : post-synaptic

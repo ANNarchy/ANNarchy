@@ -9,6 +9,9 @@ body_template = '''
 /***********************************************************************************/
 #include <curand_kernel.h>
 
+// global time step
+__constant__ long int t;
+
 /****************************************
  * init random states                   *
  ****************************************/
@@ -90,76 +93,32 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
 double dt;
 long int t;
 
+// Recorders 
+std::vector<Monitor*> recorders;
+void addRecorder(Monitor* recorder){
+    recorders.push_back(recorder);
+}
+void removeRecorder(Monitor* recorder){
+    for(int i=0; i<recorders.size(); i++){
+        if(recorders[i] == recorder){
+            recorders.erase(recorders.begin()+i);
+            break;
+        }
+    }
+}
+
 // Populations
 %(pop_ptr)s
 
 // Projections
 %(proj_ptr)s
 
-template<typename T>
-std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
-{
-    std::vector<T> flatIdx = std::vector<T>();
-    typename std::vector<std::vector<T> >::iterator it;
-
-    for ( it = in.begin(); it != in.end(); it++)
-    {
-        flatIdx.push_back(it->size());
-    }
-
-    return flatIdx;
-}
-
-template<typename T>
-std::vector<int> flattenOff(std::vector<std::vector<T> > in)
-{
-    std::vector<T> flatOff = std::vector<T>();
-    typename std::vector<std::vector<T> >::iterator it;
-
-    int t = 0;
-    for ( it = in.begin(); it != in.end(); it++)
-    {
-        flatOff.push_back(t);
-        t+= it->size();
-    }
-
-    return flatOff;
-}
-
-template<typename T> 
-std::vector<T> flattenArray(std::vector<std::vector<T> > in) 
-{
-    std::vector<T> flatVec = std::vector<T>();
-    typename std::vector<std::vector<T> >::iterator it;
-
-    for ( it = in.begin(); it != in.end(); it++)
-    {
-        flatVec.insert(flatVec.end(), it->begin(), it->end());
-    }
-
-    return flatVec;
-}
-
-template<typename T> 
-std::vector<std::vector<T> > deFlattenArray(std::vector<T> in, std::vector<int> idx) 
-{
-    std::vector<std::vector<T> > deFlatVec = std::vector<std::vector<T> >();
-    std::vector<int>::iterator it;
-
-    int t=0;
-    for ( it = idx.begin(); it != idx.end(); it++)
-    {
-        std::vector<T> tmp = std::vector<T>(in.begin()+t, in.begin()+t+*it);
-        t += *it;
-
-        deFlatVec.push_back(tmp);
-    }
-
-    return deFlatVec;
-}
-
+// Stream configuration (available for CC > 3.x devices)
+// NOTE: if the CC is lower then 3.x modification of stream
+//       parameter (4th arg) is automatically ignored by CUDA
 %(stream_setup)s
 
+// Helper function, to show progress
 void progress(int i, int nbSteps) {
     double tInMs = nbSteps * dt;
     if ( tInMs > 1000.0 )
@@ -209,6 +168,7 @@ void initialize(double _dt, long seed) {
 
     dt = _dt;
     t = (long int)(0);
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));
 
 %(device_init)s
 %(random_dist_init)s
@@ -266,13 +226,17 @@ void single_step()
     ////////////////////////////////
     // Recording
     ////////////////////////////////
-%(record)s
-
+    for(int i=0; i < recorders.size(); i++){
+        recorders[i]->record();
+    }
+    
     ////////////////////////////////
     // Increase internal time
     ////////////////////////////////
-    t++;
-
+    t++;    // host side
+    // note: the first parameter is the name of the device variable
+    //       for earlier releases before CUDA4.1 this was a const char*
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
 }
 
 

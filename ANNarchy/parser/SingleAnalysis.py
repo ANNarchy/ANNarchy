@@ -127,7 +127,7 @@ def analyse_neuron(neuron):
                     break
             if not found:
                 description['variables'].append(
-                    {'name': 'g_'+target, 'bounds': {}, 'ctype': 'double', 
+                    { 'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': 'double',
                         'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'}
                 )
                 description['attributes'].append('g_'+target)
@@ -302,7 +302,9 @@ def analyse_synapse(synapse):
             break
     else:
         parameters.append(
-            {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0'}
+            #TODO: is this exception really needed? Maybe we could find
+            #      a better solution instead of the hard-coded 'w' ... [hdin: 26.05.2015]
+            {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'}
         )
 
     # Build lists of all attributes (param+var), which are local or global

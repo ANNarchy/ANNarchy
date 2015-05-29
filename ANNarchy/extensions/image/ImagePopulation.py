@@ -57,7 +57,6 @@ class ImagePopulation(Population):
         # Create the population     
         Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0") )
 
-        
     def set_image(self, image_name):
         """ 
         Sets an image (.png, .jpg or whatever is supported by PIL) into the firing rate of the population.
@@ -79,7 +78,7 @@ class ImagePopulation(Population):
         if self.dimension == 2 or self.geometry[2] == 1:
             im=im.convert("L")
         # Set the rate of the population
-        if not Global._compiled:
+        if not Global._network[0]['compiled']:
             self.r = (np.array(im))/255.
         else:
             self.cyInstance.set_r(np.array(im).reshape(self.size)/255.)
@@ -132,8 +131,8 @@ class VideoPopulation(ImagePopulation):
         extra_libs.append('-lopencv_objdetect')
         extra_libs.append('-lopencv_video')
 
-                # Generate the code
-        self.generator['omp']['header_pop_struct'] = """ 
+        self._specific = True
+        self._code = """#pragma once
 #include <opencv2/opencv.hpp>
 using namespace cv;
 // VideoPopulation
@@ -187,9 +186,6 @@ protected:
 struct PopStruct%(id)s{
     int size;
     bool _active;
-    // Record parameter
-    int record_period;
-    long int record_offset;
     // Rate
     std::vector< double > r ;
     // Camera
@@ -205,6 +201,12 @@ struct PopStruct%(id)s{
             r = camera_->GrabImage();   
         }
     };
+
+    void init_population() {
+        _active = true;
+    }
+
+    void update() {}
 }; 
 """ % {'id': self.id}
 
@@ -213,8 +215,6 @@ struct PopStruct%(id)s{
     cdef struct PopStruct%(id)s  :
         int size
         bool _active
-        int record_period
-        long int record_offset
         vector[double] r
         void StartCamera(int id, int width, int height, int depth)
         void GrabImage()
@@ -252,6 +252,9 @@ cdef class pop%(id)s_wrapper :
     def grab_image(self):
         pop%(id)s.GrabImage()
 """ % {'id': self.id}
+
+    def generate(self):
+        return self._code
 
             
     def start_camera(self, camera_port=0):

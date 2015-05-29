@@ -38,13 +38,13 @@ connI = Projection(spike_sourceI, ifcell, 'inh').connect_all_to_all(weights=0.02
 compile()
 
 # Simulate
-ifcell.start_record(['spike', 'v'])
+m = Monitor(ifcell, ['spike', 'v'])
 simulate(tstop)
-data = ifcell.get_record()
+data = m.get()
 
 # Show the result
 from pylab import *
-plot(dt*np.arange(tstop/dt), data['v']['data'][0])
+plot(dt*np.arange(tstop/dt), data['v'][:, 0])
 xlabel('Time (ms)')
 ylabel('Vm (mV)')
 ylim([-66.0, -61.0])

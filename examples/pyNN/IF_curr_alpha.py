@@ -39,13 +39,13 @@ projection = Projection(input_population, output_population, 'exc').connect_all_
 compile()
 
 # Simulate
-output_population.start_record(['spike', 'v'])
+m = Monitor(output_population, ['spike', 'v'])
 simulate(tstop)
-data = output_population.get_record()
+data = m.get()
 
 # Plot the results
 from pylab import *
-plot(dt*np.arange(tstop/dt), data['v']['data'][0])
+plot(dt*np.arange(tstop/dt), data['v'][:, 0])
 xlabel('Time (ms)')
 ylabel('Vm (mV)')
 ylim([-66.0, -48.0])

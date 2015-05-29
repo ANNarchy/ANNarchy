@@ -56,14 +56,22 @@ class Spike2RatePopulation(Population):
             exit(0)
 
         if self.mode == 'window':
-            self._create_window()
+            self._code = self._create_window()
         elif self.mode == 'adaptive':
-            self._create_adaptive()
+            self._code = self._create_adaptive()
         elif self.mode == 'isi':
-            self._create_isi()
+            self._code = self._create_isi()
         else:
             Global._error('Spike2RatePopulation: Unknown method ' + self.mode)
             exit(0)
+
+        self._specific = True
+
+    def generate(self):
+        """
+        return the corresponding code template
+        """
+        return self._code
 
     def _create_isi(self):
 
@@ -83,16 +91,16 @@ class Spike2RatePopulation(Population):
         )
 
         # Generate specific code
+        omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+        code = """#pragma once
 
-        self.generator['omp']['header_pop_struct'] = """ 
+#include "pop%(id_pre)s.hpp"
+extern PopStruct%(id_pre)s pop%(id_pre)s;
+
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
     bool _active;
-
-    // Record parameter
-    int record_period;
-    long int record_offset;
 
     // Global parameter cut
     double  cut ;
@@ -105,53 +113,70 @@ struct PopStruct%(id)s{
 
     // Local variable r
     std::vector< double > r ;
-    std::vector< std::vector< double > > recorded_r ;
-    bool record_r ;
 
     // Store the last spike
     std::vector< long int > last_spike;
     std::vector< double > isi;
     std::vector< double > support;
-}; 
-""" % {'id' : self.id}
 
+    int get_size() { return size; }
+    void set_size(int value) { size = value; }
 
+    bool is_active() { return _active; }
+    void set_active(bool value) { _active = value; }
 
-        self.generator['omp']['body_spike_init'] = """ 
-    pop%(id)s.last_spike = std::vector< long int >(pop%(id)s.size, -10000L);
-    pop%(id)s.isi = std::vector< double >(pop%(id)s.size, 10000.0);
-    pop%(id)s.support = std::vector< double >(pop%(id)s.size, 10000.0);
-"""
+    double get_cut() { return cut; }
+    void set_cut(double value) { cut = value; }
 
-        omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+    double get_scaling() { return scaling; }
+    void set_scaling(double value) { scaling = value; }
 
-        self.generator['omp']['body_update_neuron'] = """ 
-    // Updating the local variables of Spike2Rate population %(id)s
-    if(pop%(id)s._active){
-        %(omp_code)s
-        for(int i = 0; i < pop%(id)s.size; i++){
-            // Increase when spiking
-            if (pop%(id_pre)s.last_spike[i] == t-1){
-               pop%(id)s.isi[i] = double(t-1 - pop%(id)s.last_spike[i]);
-               pop%(id)s.support[i] = double(t-1 - pop%(id)s.last_spike[i]);
-               pop%(id)s.last_spike[i] = t-1;
+    double get_smooth() { return smooth; }
+    void set_smooth(double value) { smooth = value; }
+
+    std::vector< double > get_r() { return r; }
+    void set_r(std::vector< double > value) { r = value; }
+    double get_single_r(int rk) { return r[rk]; }
+    void set_single_r(int rk, double value) { r[rk] = value; }
+
+    void init_population() {
+        size = %(size)s;
+        _active = true;
+
+        last_spike = std::vector< long int >(size, -10000L);
+        isi = std::vector< double >(size, 10000.0);
+        support = std::vector< double >(size, 10000.0);
+    }
+
+    void update() {
+        // Updating the local variables of Spike2Rate population %(id)s
+        if(_active){
+            %(omp_code)s
+            for(int i = 0; i < size; i++){
+                // Increase when spiking
+                if (pop%(id_pre)s.last_spike[i] == t-1){
+                   isi[i] = double(t-1 - last_spike[i]);
+                   support[i] = double(t-1 - last_spike[i]);
+                   last_spike[i] = t-1;
+                }
+                else if( double(t - last_spike[i]) <= isi[i]){
+                        // do nothing
+                }
+                else if( double(t - last_spike[i]) <= cut*isi[i]){
+                        support[i] += 1.0 ;
+                }
+                else{
+                    support[i] = 10000.0 ;
+                }
+
+                r[i] += dt*(1000.0/scaling/support[i]/dt - r[i])/smooth;
             }
-            else if( double(t - pop%(id)s.last_spike[i]) <= pop%(id)s.isi[i]){
-                    // do nothing
-            }
-            else if( double(t - pop%(id)s.last_spike[i]) <= pop%(id)s.cut*pop%(id)s.isi[i]){
-                    pop%(id)s.support[i] += 1.0 ;
-            }
-            else{
-                pop%(id)s.support[i] = 10000.0 ;    
-            }
-            
-            pop%(id)s.r[i] += dt*(1000.0/pop%(id)s.scaling/pop%(id)s.support[i]/dt - pop%(id)s.r[i])/pop%(id)s.smooth;
         }
     }
-"""  % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
+};
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size }
 
-
+        return code
 
     def _create_window(self):
 
@@ -171,16 +196,16 @@ struct PopStruct%(id)s{
         )
 
         # Generate specific code
+        omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+        code = """#pragma once
 
-        self.generator['omp']['header_pop_struct'] = """ 
+#include "pop%(id_pre)s.hpp"
+extern PopStruct%(id_pre)s pop%(id_pre)s;
+
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
     bool _active;
-
-    // Record parameter
-    int record_period;
-    long int record_offset;
 
     // Global parameter window
     double  window ;
@@ -193,50 +218,70 @@ struct PopStruct%(id)s{
 
     // Local variable r
     std::vector< double > r ;
-    std::vector< std::vector< double > > recorded_r ;
-    bool record_r ;
 
     // Store the last spikes
     std::vector< std::vector<long int> > last_spikes;
-}; 
-""" % {'id' : self.id}
 
+    int get_size() { return size; }
+    void set_size(int value) { size = value; }
 
-        self.generator['omp']['body_spike_init'] = """ 
-    pop%(id)s.last_spikes = std::vector< std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
-"""
-        omp_code = "#pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)" if Global.config['num_threads'] > 1 else ""
+    bool is_active() { return _active; }
+    void set_active(bool value) { _active = value; }
 
-        self.generator['omp']['body_update_neuron'] = """ 
-    // Updating the local variables of Spike2Rate population %(id)s
-    if(pop%(id)s._active){
-        int pop%(id)s_nb, pop%(id)s_out;
-        %(omp_code)s
-        for(int i = 0; i < pop%(id)s.size; i++){
-            // Increase when spiking
-            if (pop%(id_pre)s.last_spike[i] == t-1){
-               pop%(id)s.last_spikes[i].push_back(t-1);
-            }
-            pop%(id)s_nb = 0;
-            pop%(id)s_out = -1;
-            for(int j=0; j < pop%(id)s.last_spikes[i].size(); j++){
-                if(pop%(id)s.last_spikes[i][j] >= t -1 - (long int)(pop%(id)s.window/dt) ){
-                    pop%(id)s_nb++;
+    double get_window() { return window; }
+    void set_window(double value) { window = value; }
+
+    double get_scaling() { return scaling; }
+    void set_scaling(double value) { scaling = value; }
+
+    double get_smooth() { return smooth; }
+    void set_smooth(double value) { smooth = value; }
+
+    std::vector< double > get_r() { return r; }
+    void set_r(std::vector< double > value) { r = value; }
+    double get_single_r(int rk) { return r[rk]; }
+    void set_single_r(int rk, double value) { r[rk] = value; }
+
+    void init_population() {
+        size = %(size)s;
+        _active = true;
+
+        last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
+    }
+
+    void update() {
+        // Updating the local variables of Spike2Rate population %(id)s
+        if(_active){
+            int pop%(id)s_nb, pop%(id)s_out;
+            %(omp_code)s
+            for(int i = 0; i < size; i++){
+                // Increase when spiking
+                if (pop%(id_pre)s.last_spike[i] == t-1){
+                   last_spikes[i].push_back(t-1);
                 }
-                else{
-                    pop%(id)s_out = j;
+                pop%(id)s_nb = 0;
+                pop%(id)s_out = -1;
+                for(int j=0; j < last_spikes[i].size(); j++){
+                    if(last_spikes[i][j] >= t -1 - (long int)(window/dt) ){
+                        pop%(id)s_nb++;
+                    }
+                    else{
+                        pop%(id)s_out = j;
+                    }
                 }
-            }
 
-            if (pop%(id)s_out > -1){
-                pop%(id)s.last_spikes[i].erase(pop%(id)s.last_spikes[i].begin());
-            }
+                if (pop%(id)s_out > -1){
+                    last_spikes[i].erase(last_spikes[i].begin());
+                }
 
-            pop%(id)s.r[i] += dt*(1000.0/pop%(id)s.scaling / pop%(id)s.window * double(pop%(id)s_nb) - pop%(id)s.r[i] ) / pop%(id)s.smooth;
+                r[i] += dt*(1000.0/scaling / window * double(pop%(id)s_nb) - r[i] ) / smooth;
+            }
         }
     }
-"""  % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
+};
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
 
+        return code
 
     def _create_adaptive(self):
 
@@ -256,16 +301,16 @@ struct PopStruct%(id)s{
         )
 
         # Generate specific code
+        omp_code = "#pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)" if Global.config['num_threads'] > 1 else ""
+        code = """#pragma once
 
-        self.generator['omp']['header_pop_struct'] = """ 
+#include "pop%(id_pre)s.hpp"
+extern PopStruct%(id_pre)s pop%(id_pre)s;
+
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
     bool _active;
-
-    // Record parameter
-    int record_period;
-    long int record_offset;
 
     // Local parameter window
     double  window ;
@@ -285,57 +330,78 @@ struct PopStruct%(id)s{
     // Store the last spikes
     std::vector< std::vector<long int> > last_spikes;
     std::vector< double > isi;
-}; 
-""" % {'id' : self.id}
 
+    int get_size() { return size; }
+    void set_size(int value) { size = value; }
 
-        omp_code = "#pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)" if Global.config['num_threads'] > 1 else ""
+    bool is_active() { return _active; }
+    void set_active(bool value) { _active = value; }
 
-        self.generator['omp']['body_spike_init'] = """ 
-    pop%(id)s.last_spikes = std::vector< std::vector<long int> >(pop%(id)s.size, std::vector<long int>());
-    pop%(id)s.ad_window = std::vector< double >(pop%(id)s.size, pop%(id)s.window);
-    pop%(id)s.isi = std::vector< double >(pop%(id)s.size, 10000.0);
-"""
-        self.generator['omp']['body_update_neuron'] = """ 
-    // Updating the local variables of Spike2Rate population %(id)s
-    if(pop%(id)s._active){
-        int pop%(id)s_nb, pop%(id)s_out;
-        %(omp_code)s
-        for(int i = 0; i < pop%(id)s.size; i++){
-            // Increase when spiking
-            if (pop%(id_pre)s.last_spike[i] == t-1){
-                if(pop%(id)s.last_spikes[i].size() > 0)
-                    pop%(id)s.isi[i] = double(t-1 - pop%(id)s.last_spikes[i][pop%(id)s.last_spikes[i].size()-1]);
-                else
-                    pop%(id)s.isi[i] = 10000.0;
-                pop%(id)s.last_spikes[i].push_back(t-1);
-            }
-            pop%(id)s_nb = 0;
-            pop%(id)s_out = -1;
-            for(int j=0; j < pop%(id)s.last_spikes[i].size(); j++){
-                if(pop%(id)s.last_spikes[i][j] >= t -1 - (long int)(pop%(id)s.ad_window[i]/dt) ){
-                    pop%(id)s_nb++;
+    double get_window() { return window; }
+    void set_window(double value) { window = value; }
+
+    double get_scaling() { return scaling; }
+    void set_scaling(double value) { scaling = value; }
+
+    double get_smooth() { return smooth; }
+    void set_smooth(double value) { smooth = value; }
+
+    std::vector< double > get_r() { return r; }
+    void set_r(std::vector< double > value) { r = value; }
+    double get_single_r(int rk) { return r[rk]; }
+    void set_single_r(int rk, double value) { r[rk] = value; }
+
+    void init_population() {
+        size = %(size)s;
+        _active = true;
+
+        last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
+        ad_window = std::vector< double >(size, window);
+        isi = std::vector< double >(size, 10000.0);
+    }
+
+    void update() {
+        // Updating the local variables of Spike2Rate population %(id)s
+        if(_active){
+            int pop%(id)s_nb, pop%(id)s_out;
+            %(omp_code)s
+            for(int i = 0; i < size; i++){
+                // Increase when spiking
+                if (pop%(id_pre)s.last_spike[i] == t-1){
+                    if(last_spikes[i].size() > 0)
+                        isi[i] = double(t-1 - last_spikes[i][last_spikes[i].size()-1]);
+                    else
+                        isi[i] = 10000.0;
+                    last_spikes[i].push_back(t-1);
                 }
-                else{
-                    pop%(id)s_out = j;
+                pop%(id)s_nb = 0;
+                pop%(id)s_out = -1;
+                for(int j=0; j < last_spikes[i].size(); j++){
+                    if(last_spikes[i][j] >= t -1 - (long int)(ad_window[i]/dt) ){
+                        pop%(id)s_nb++;
+                    }
+                    else{
+                        pop%(id)s_out = j;
+                    }
                 }
+
+                if (pop%(id)s_out > -1){
+                    last_spikes[i].erase(last_spikes[i].begin(), last_spikes[i].begin()+pop%(id)s_out);
+                }
+
+                r[i] += dt*(1000.0/scaling / ad_window[i] * double(pop%(id)s_nb) - r[i] ) / smooth;
+
+                //ad_window[i] = clip(5.0*isi[i], 20.0*dt, window) ;
+                ad_window[i] += dt * (clip(5.0*isi[i], 20.0*dt, window) - ad_window[i])/100.0;
+                if (i==0)
+                    std::cout << ad_window[i] << " " << isi[i] << std::endl;
             }
-
-            if (pop%(id)s_out > -1){
-                pop%(id)s.last_spikes[i].erase(pop%(id)s.last_spikes[i].begin(), pop%(id)s.last_spikes[i].begin()+pop%(id)s_out);
-            }
-
-            pop%(id)s.r[i] += dt*(1000.0/pop%(id)s.scaling / pop%(id)s.ad_window[i] * double(pop%(id)s_nb) - pop%(id)s.r[i] ) / pop%(id)s.smooth;
-
-            //pop%(id)s.ad_window[i] = clip(5.0*pop%(id)s.isi[i], 20.0*dt, pop%(id)s.window) ;
-            pop%(id)s.ad_window[i] += dt * (clip(5.0*pop%(id)s.isi[i], 20.0*dt, pop%(id)s.window) - pop%(id)s.ad_window[i])/100.0;
-            if (i==0)
-                std::cout << pop%(id)s.ad_window[i] << " " << pop%(id)s.isi[i] << std::endl;
-
         }
     }
-"""  % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
+};
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
 
+        return code
 
 class Rate2SpikePopulation(Population):
     """
@@ -387,34 +453,97 @@ class Rate2SpikePopulation(Population):
             ) 
         )
 
+        self._specific = True
+
+    def generate(self):
         omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+        omp_critical = "#pragma omp critical" if Global.config['num_threads'] > 1 else ""
 
         # Generate the code
-        self.generator['omp']['body_update_neuron'] = """ 
-    // Updating the local variables of population %(id)s (Rate2SpikePopulation)
-    if(pop%(id)s._active){
-        %(omp_code)s
-        for(int i = 0; i < pop%(id)s.size; i++){
+        code = """#pragma once
 
-            pop%(id)s.rates[i] = pop%(id_pre)s.r[i] * pop%(id)s.scaling;
+#include "pop%(id_pre)s.hpp"
+extern PopStruct%(id_pre)s pop%(id_pre)s;
 
-                
-            if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
+struct PopStruct1{
+    // Number of neurons
+    int size;
+    bool _active;
 
-                pop%(id)s.refractory_remaining[i]--;
-            }
-            else if(pop%(id)s.rates[i] > pop%(id)s.rand_0[i]*1000.0/dt){
-                #pragma omp critical
-                {
-                    pop%(id)s.spiked.push_back(i);
-                    if(pop%(id)s.record_spike){
-                        pop%(id)s.recorded_spike[i].push_back(t);
-                    }
+    // Global parameter scaling
+    double  scaling ;
+
+    // Local variable p
+    std::vector< double > p;
+
+    // Local variable rates
+    std::vector< double > rates;
+
+    // Random numbers (STL implementation)
+    std::vector<double> rand_0;
+    std::uniform_real_distribution<double> dist_rand_0;
+
+    // Spiking events
+    std::vector<long int> last_spike;
+    std::vector<int> spiked;
+    std::vector<int> refractory;
+    std::vector<int> refractory_remaining;
+    bool record_spike;
+    std::vector<std::vector<long> > recorded_spike;
+
+    int get_size() { return size; }
+    bool is_active() { return _active; }
+    bool set_active(bool val) { _active = val; }
+
+    // Global parameter scaling
+    double get_scaling() { return scaling; }
+    void set_scaling(double val) { scaling = val; }
+
+    // Local variable p
+    std::vector< double > get_p() { return p; }
+    double get_single_p(int rk) { return p[rk]; }
+    void set_p(std::vector< double > val) { p = val; }
+    void set_single_p(int rk, double val) { p[rk] = val; }
+
+    // Local variable rates
+    std::vector< double > get_rates() { return rates; }
+    double get_single_rates(int rk) { return rates[rk]; }
+    void set_rates(std::vector< double > val) { rates = val; }
+    void set_single_rates(int rk, double val) { rates[rk] = val; }
+
+    void init_population() {
+        size = %(size)s;
+        _active = true;
+
+        refractory = std::vector<int>(size, 0);
+        spiked = std::vector<int>(0, 0);
+        last_spike = std::vector<long int>(size, -10000L);
+        refractory_remaining = std::vector<int>(size, 0);
+    }
+
+    void update() {
+        // Updating the local variables of population %(id)s (Rate2SpikePopulation)
+        if(_active){
+            spiked.clear();
+            %(omp_code)s
+            for(int i = 0; i < size; i++){
+                rates[i] = pop%(id_pre)s.r[i] * scaling;
+
+                if(refractory_remaining[i] > 0){ // Refractory period
+                    refractory_remaining[i]--;
                 }
-                pop%(id)s.last_spike[i] = t;
-                pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];
+                else if(rates[i] > rand_0[i]*1000.0/dt){
+                    %(omp_critical)s
+                    {
+                        spiked.push_back(i);
+                    }
+                    last_spike[i] = t;
+                    refractory_remaining[i] = refractory[i];
+                }
             }
         }
     }
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code}
+};
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size }
 
+        return code

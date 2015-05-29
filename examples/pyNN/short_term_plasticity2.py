@@ -72,22 +72,20 @@ compile()
 # ###########################################
 # Run without plasticity
 # ###########################################
-P.start_record('spike')
+m = Monitor(P, 'spike')
 simulate(duration, measure_time=True)
-data = P.get_record()
-P.stop_record()
-
+data = m.get()
 
 # ###########################################
 # Make plots
 # ###########################################
-spikes = raster_plot(data['spike'])
-rates = population_rate(data['spike'], 5.0)
-print('Total number of spikes: ' + str(len(spikes)))
+t, n = m.raster_plot(data['spike'])
+rates = m.population_rate(data['spike'], 5.0)
+print('Total number of spikes: ' + str(len(t)))
 
 from pylab import *
 subplot(211)
-plot(dt()*spikes[:, 0], spikes[:, 1], '.')
+plot(t, n, '.')
 xlabel('Time (ms)')
 ylabel('Neuron number')
 subplot(212)

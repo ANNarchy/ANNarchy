@@ -41,7 +41,7 @@ P.v = Uniform(-60.0, -50.0)
 we = 0.27 *60.0 / 10.0 # 0.7 * (Vmean - E_rev_exc) / gL (mV)
 wi = - 4.5 * 20.0 / 10.0 # 4.5 * (Vmean - E_rev_inh) / gL (mV)
 Ce = Projection(pre=Pe, post=P, target='exc')
-Ce.connect_fixed_probability(weights=we, probability=0.02)
+Ce.connect_fixed_probability(weights=we, probability=0.02, delays=10.)
 Ci = Projection(pre=Pi, post=P, target='inh')
 Ci.connect_fixed_probability(weights=wi, probability=0.02)
 
@@ -50,20 +50,18 @@ compile()
 # ###########################################
 # Simulate
 # ###########################################
-P.start_record(['spike', 'v'])
+m = Monitor(P, ['spike'])
 simulate(1000.0, measure_time=True)
-data = P.get_record()
-P.stop_record()
-
+data = m.get()
 
 ###########################################
 # Make plots
 ###########################################
-spikes = raster_plot(data['spike'])
-print('Mean firing rate in the population: ' + str(len(spikes) / 4000.) + 'Hz')
+t, n = m.raster_plot(data['spike'])
+print('Mean firing rate in the population: ' + str(len(t) / 4000.) + 'Hz')
 
 from pylab import *
-plot(dt*spikes[:, 0], spikes[:, 1], '.k', markersize=0.5)
+plot(t, n, '.')
 xlabel('Time (ms)')
 ylabel('# neuron')
 show()

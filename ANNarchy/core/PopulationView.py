@@ -43,6 +43,8 @@ class PopulationView(object):
         self.neuron_type = self.population.neuron_type
         self.id = self.population.id
         self.name = population.name
+        self.cyInstance = population.cyInstance
+        self.variables = population.variables
 
     # targets must match the population, both in read and write
     @property

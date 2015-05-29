@@ -61,23 +61,23 @@ if __name__ == '__main__':
     compile()
 
     # Start recording
-    Input.start_record ('spike') 
-    Output.start_record ('spike')
+    Mi = Monitor(Input, 'spike') 
+    Mo = Monitor(Output, 'spike')
 
     # Start the simulation
     print('Start the simulation')
     simulate(duration, measure_time=True)
 
     # Retrieve the recordings
-    input_spikes = Input.get_record()['spike']
-    output_spikes = Output.get_record()['spike']
+    input_spikes = Mi.get('spike')
+    output_spikes = Mo.get('spike')
 
     # Compute the mean firing rates during the simulation
-    print('Mean firing rate in the input population: ' + str(np.mean([len(neur) *1000.0/duration for neur in input_spikes['data']]) ))
-    print('Mean firing rate of the output neuron: ' + str(len(output_spikes['data'][0]) *1000.0/duration ))
+    print('Mean firing rate in the input population: ' + str(Mi.mean_fr(input_spikes)) )
+    print('Mean firing rate of the output neuron: ' + str(Mo.mean_fr(output_spikes)) )
 
     # Compute the instantaneous firing rate of the output neuron
-    output_rate = smoothed_rate(output_spikes, 100.0)
+    output_rate = Mo.smoothed_rate(output_spikes, 100.0)
 
     # Receptive field after simulation
     weights = proj.w[0]

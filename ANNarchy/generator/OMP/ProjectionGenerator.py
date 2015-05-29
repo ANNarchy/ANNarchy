@@ -22,125 +22,156 @@
 
 """
 import ANNarchy.core.Global as Global
+import ProjectionTemplate as ProjTemplate
 
 class ProjectionGenerator(object):
 
     def __init__(self):
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            self._prof_gen = ProfileGenerator(Global._populations, Global._projections)
+            self._prof_gen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
         else:
             self._prof_gen = None
 
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
-    def header_struct(self, proj):
+    def header_struct(self, proj, annarchy_dir):
+        """
+        Generate and store the projection code in a single header file. The name is defined as
+        proj%(id)s.hpp.
+
+        Parameters:
+
+            proj: Projection object
+            annarchy_dir: working directory
+
+        Returns:
+
+            (str, str): include directive, pointer definition
+
+        Templates:
+
+            header_struct: basic template
+
+        """
         # Is it a specific projection?
         if proj.generator['omp']['header_proj_struct']:
-            return proj.generator['omp']['header_proj_struct']
+            final_code = proj.generator['omp']['header_proj_struct']
+            init = ""
+            update = ""
 
-        # create the code for non-specific projections
-        code = """
-// %(pre_name)s -> %(post_name)s
-struct ProjStruct%(id_proj)s{
-    // number of dendrites
-    int size;
+        else:
+            # create the code for non-specific projections
+            decl = ""
 
-    // Learning flag
-    bool _learning;
+            # Spiking neurons have aditional data
+            if proj.synapse.type == 'spike':
+                # Inverse ranks
+                decl += """
+        std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
+    """
 
-    // Connectivity
-    std::vector<int> post_rank ;
-    std::vector< std::vector< int > > pre_rank ;
-"""
-
-        # Spiking neurons have aditional data
-        if proj.synapse.type == 'spike':
-            # Inverse ranks
-            code += """
-    std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
-"""            
             # Exact integration
             has_exact = False
             for var in proj.synapse.description['variables']:
                 if var['method'] == 'exact':
                     has_exact = True
-            if has_exact:
-                code += """
-    std::vector<std::vector<long> > _last_event;
-"""
 
-        # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-    std::vector< std::vector< int > > delay ;
-"""
+            # Delays
+            has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Arrays for the random numbers
-        code += """
+            # Code for declarations and accessors
+            accessor = ""
+            # Parameters
+            for var in proj.synapse.description['parameters']:
+                decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+                accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+
+            # Variables
+            for var in proj.synapse.description['variables']:
+                decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+                accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+
+            # Arrays for the random numbers
+            decl += """
     // Random numbers
 """
-        for rd in proj.synapse.description['random_distributions']:
-            code += """    std::vector< std::vector<double> > %(rd_name)s;
+            for rd in proj.synapse.description['random_distributions']:
+                decl += """    std::vector< std::vector<double> > %(rd_name)s;
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
-        # Parameters
-        for var in proj.synapse.description['parameters']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    // Local parameter %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    // Global parameter %(name)s
-    std::vector<%(type)s>  %(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-        # Variables
-        for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s;
-    std::vector< std::vector< std::vector< %(type)s > > > recorded_%(name)s;
-    std::vector< int > record_%(name)s;
-    std::vector< int > record_period_%(name)s;
-    std::vector< long int > record_offset_%(name)s;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    // Global variable %(name)s
-    std::vector<%(type)s>  %(name)s;
-    std::vector< std::vector< %(type)s > > recorded_%(name)s ;
-    std::vector< int > record_%(name)s ;
-    std::vector< int > record_period_%(name)s ;
-    std::vector< long int > record_offset_%(name)s ;
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-        # Local functions
-        if len(proj.synapse.description['functions'])>0:
-            code += """
+            # Local functions
+            if len(proj.synapse.description['functions'])>0:
+                decl += """
     // Local functions
 """
-            for func in proj.synapse.description['functions']:
-                code += ' '*4 + func['cpp'] + '\n'
+                for func in proj.synapse.description['functions']:
+                    decl += ' '*4 + func['cpp'] + '\n'
 
-        # Structural plasticity
-        if Global.config['structural_plasticity']:
-            code += self.header_structural_plasticity(proj)
+            # Structural plasticity
+            if Global.config['structural_plasticity']:
+                decl += self.header_structural_plasticity(proj)
 
-        # Finish the structure
-        code += """
-};    
-""" 
-        return code % {'id_proj': proj.id, 'pre_name': proj.pre.name, 'post_name': proj.post.name}
+            # Definiton of synaptic equations, initialization
+            init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+            update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
+            if proj.synapse.type == 'rate':
+                psp_prefix = "int nb_post;\ndouble sum;"
+                psp = self.computesum_rate(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+            else:
+                psp_prefix = "int nb_post, i, j, rk_j;\ndouble sum;"
+                psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
+            final_code = ProjTemplate.header_struct % { 'id_proj': proj.id,
+                                                        'pre_name': proj.pre.name,
+                                                        'pre_id': proj.pre.id,
+                                                        'post_name': proj.post.name,
+                                                        'post_id': proj.post.id,
+                                                        'target': proj.target,
+                                                        'exact': ProjTemplate.exact_integ['header_struct'] % {'id': proj.id} if has_exact else "",
+                                                        'delay': ProjTemplate.delay['header_struct'] % {'id': proj.id} if has_delay else "",
+                                                        'decl': decl,
+                                                        'accessor': accessor,
+                                                        'init': init,
+                                                        'psp_prefix': psp_prefix,
+                                                        'psp': psp,
+                                                        'update': update
+                                                     }
+
+        with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+            ofile.write(final_code)
+
+        proj_desc = {
+            'include': """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id },
+            'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
+            'instance': """ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
+            'update': "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id }
+        }
+
+        return proj_desc
+
+    def recorder_class(self, proj):
+        """
+        Generate the code for the recorder object.
+
+        Templates:
+
+            record
+        """
+        tpl_code = ProjTemplate.record
+        init_code = ""
+        recording_code = ""
+        struct_code = ""
+
+        for var in proj.synapse.description['variables']:
+            struct_code += tpl_code[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
+            init_code += tpl_code[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
+            recording_code += tpl_code[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+
+        return tpl_code['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 
 #######################################################################
 ############## BODY ###################################################
@@ -316,7 +347,7 @@ struct ProjStruct%(id_proj)s{
         # Profiling code
         if Global.config['profiling']:
             from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._populations, Global._projections)
+            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
 
         # annotate code
         if self._prof_gen:
@@ -444,10 +475,11 @@ struct ProjStruct%(id_proj)s{
             pre_array = "pop%(id_pre)s.spiked" % ids
 
         # No need for openmp if less than 10 neurons
+        omp_code = ""
         if Global.config['num_threads']>1:
-            omp_code = """//#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id} if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-        else:
-            omp_code = ""
+            if proj.post.size > Global.OMP_MIN_NB_NEURONS and (len(pre_event_list) > 0 or learning != ""):
+                omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id}  
+            
 
         code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
@@ -697,9 +729,6 @@ struct ProjStruct%(id_proj)s{
 
         # Learning by default
         code = """
-    /////////////////////////////////////////
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    /////////////////////////////////////////
     proj%(id_proj)s._learning = true;
 """ % { 'id_proj': proj.id, 'target': proj.target,
         'id_post': proj.post.id, 'id_pre': proj.pre.id,
@@ -725,33 +754,18 @@ struct ProjStruct%(id_proj)s{
         # Initialize variables
         for var in proj.synapse.description['variables']:
             if var['name'] == 'w':
-                code += """
-    // Local variable %(name)s (only the record methods)
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype']}
                 continue
             if var['name'] in proj.synapse.description['local']:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Local variable %(name)s
     proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< std::vector< %(type)s > > > (proj%(id)s.post_rank.size());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
             else:
                 init = 0.0 if var['ctype'] == 'double' else 0
                 code += """
     // Global variable %(name)s
     proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
-    proj%(id)s.record_%(name)s = std::vector<int>();
-    proj%(id)s.record_period_%(name)s = std::vector<int>();
-    proj%(id)s.record_offset_%(name)s = std::vector<long int>();
-    proj%(id)s.recorded_%(name)s = std::vector< std::vector< %(type)s > > (proj%(id)s.post_rank.size(), std::vector< %(type)s >());
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
 
         # Spiking neurons have aditional data
@@ -795,106 +809,62 @@ struct ProjStruct%(id_proj)s{
 
         return code
 
-    def record(self, proj):
-        code = ""
-        for var in proj.synapse.description['variables']:
-            code += """
-    for(int i=0; i< proj%(id)s.record_%(name)s.size(); i++){
-        int rk = proj%(id)s.record_%(name)s[i];
-        if((t - proj%(id)s.record_offset_%(name)s[i]) %(modulo)s proj%(id)s.record_period_%(name)s[i] == 0)
-            proj%(id)s.recorded_%(name)s[rk].push_back(proj%(id)s.%(name)s[rk]) ;
-    }
-""" % {'id': proj.id, 'name': var['name'], 'modulo': '%'}
-        return code
-
 
 #######################################################################
 ############## PYX ####################################################
 #######################################################################
 
     def pyx_struct(self, proj):
+        """
+        The python extension wrapper needs a definition of the corresponding
+        C object. The pyx_struct contains all methods, which should be accessible
+        by the python extension wrapper.
+
+        Templates:
+
+            attribute_cpp_export: normal accessors for variables/parameters
+            structural_plasticity: pruning, creating, calling method
+            delay, exact_integ: variables accessed by the wrapper
+
+        """
         # Is it a specific projection?
         if proj.generator['omp']['pyx_proj_struct']:
             return proj.generator['omp']['pyx_proj_struct']
 
-        # create the code for non-specific projections
-        code = """
-    cdef struct ProjStruct%(id_proj)s :
-        int size
-        bool _learning
-        vector[int] post_rank
-        vector[vector[int]] pre_rank
-"""         
+        # Check for exact intgeration
+        has_exact = False
+        for var in proj.synapse.description['variables']:
+            if var['method'] == 'exact':
+                has_exact = True
+                break;
+
+        # Check if we need delay code
+        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'exact':
                 has_exact = True
-        if has_exact:
-            code += """
-        vector[vector[long]] _last_event
-"""% {'id': proj.id}
 
-        # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-        vector[vector[int]] delay
-"""
+        # Determine all export methods
+        export = ""
         # Parameters
         for var in proj.synapse.description['parameters']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-        # Local parameter %(name)s
-        vector[vector[%(type)s]] %(name)s
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-        # Global parameter %(name)s
-        vector[%(type)s]  %(name)s 
-""" % {'type' : var['ctype'], 'name': var['name']}
-
+            export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         # Variables
         for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-        # Local variable %(name)s
-        vector[vector[%(type)s]] %(name)s 
-        vector[vector[vector[%(type)s]]] recorded_%(name)s 
-        vector[int] record_%(name)s 
-        vector[int] record_period_%(name)s 
-        vector[long] record_offset_%(name)s 
-""" % {'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-        # Global variable %(name)s
-        vector[%(type)s]  %(name)s 
-        vector[vector[%(type)s]] recorded_%(name)s
-        vector[int] record_%(name)s 
-        vector[int] record_period_%(name)s 
-        vector[long] record_offset_%(name)s 
-""" % {'type' : var['ctype'], 'name': var['name']}
+            export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Structural plasticity
+        structural_plasticity = ""
+        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
         if Global.config['structural_plasticity']:
-
             # Pruning in the synapse
             if 'pruning' in proj.synapse.description.keys():
-                code += """
-        # Pruning
-        bool _pruning
-        int _pruning_period
-        long _pruning_offset
-"""
+                structural_plasticity += sp_tpl['pruning']
             if 'creating' in proj.synapse.description.keys():
-                code += """
-        # Creating
-        bool _creating
-        int _creating_period
-        long _creating_offset
-"""
+                structural_plasticity += sp_tpl['creating']
 
             # Retrieve the names of extra attributes   
             extra_args = ""
@@ -902,187 +872,63 @@ struct ProjStruct%(id_proj)s{
                 if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
                     extra_args += ', ' + var['ctype'] + ' ' +  var['name'] 
             # Generate the code
-            code += """
-        # Structural plasticity
-        int dendrite_index(int post, int pre)
-        void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s)
-        void removeSynapse(int post, int pre)
-""" % {'extra_args': extra_args}
+            structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
 
-        # Finalize the code
-        return code % {'id_proj': proj.id}
+        return ProjTemplate.pyx_struct % { 'id_proj': proj.id,
+                                           'exact': ProjTemplate.exact_integ['decl'] % {'id': proj.id} if has_exact else "",
+                                           'delay': ProjTemplate.delay['decl'] % {'id': proj.id} if has_delay else "",
+                                           'export': export,
+                                           'structural_plasticity': structural_plasticity
+                                          }
 
     def pyx_wrapper(self, proj):
+        """
+        Generates the python extension wrapper, which allows access from Python to the C module. There
+        are three optional parts (structural plasticity, non-uniform delays and exact integration of
+        synaptic events) which we need to handle seperatly. The rest of the variables/parameters is 
+        handled by the standard accessors.
 
+        Templates:
+
+            attribute_pyx_wrapper: normal accessors for variables/parameters
+            structural_plasticity: pruning, creating, calling method
+            delay, exact_integ: __cinit__ code
+
+        """
         # Is it a specific population?
         if proj.generator['omp']['pyx_proj_class']:
             return  proj.generator['omp']['pyx_proj_class'] 
 
-        # Init
-        code = """
-cdef class proj%(id)s_wrapper :
-
-    def __cinit__(self, synapses):
-
-        cdef CSR syn = synapses
-        cdef int size = syn.size
-        cdef int nb_post = syn.post_rank.size()
-
-        proj%(id)s.size = size
-        proj%(id)s.post_rank = syn.post_rank
-        proj%(id)s.pre_rank = syn.pre_rank
-        proj%(id)s.w = syn.w
-"""% {'id': proj.id}
-
-        # Exact integration
+        # Check for exact intgeration
         has_exact = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'exact':
                 has_exact = True
-        if has_exact:
-            code += """
-        proj%(id)s._last_event = vector[vector[long]](nb_post, vector[long]())
-        for n in range(nb_post):
-            proj%(id)s._last_event[n] = vector[long](proj%(id)s.pre_rank[n].size(), -10000)
-"""% {'id': proj.id}
+                break;
 
-        # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-        proj%(id)s.delay = syn.delay
-"""% {'id': proj.id}
+        # Check if we need delay code
+        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Size property
-        code += """
-
-    property size:
-        def __get__(self):
-            return proj%(id)s.size
-
-    def nb_synapses(self, int n):
-        return proj%(id)s.pre_rank[n].size()
-
-    def _set_learning(self, bool l):
-        proj%(id)s._learning = l
-
-    def post_rank(self):
-        return proj%(id)s.post_rank
-    def pre_rank(self, int n):
-        return proj%(id)s.pre_rank[n]
-""" % {'id': proj.id}
-
-        # Delays
-        if proj.max_delay > 1 and proj.uniform_delay == -1:
-            code +="""
-    def get_delay(self):
-        return proj%(id)s.delay
-    def set_delay(self, value):
-        proj%(id)s.delay = value
-"""% {'id': proj.id}
-
-        # Parameters
+        # Determine all accessor methods
+        accessor = ""
+        pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
         for var in proj.synapse.description['parameters']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    # Local parameter %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
-        proj%(id)s.%(name)s[rank] = value
-    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
-        return proj%(id)s.%(name)s[rank_post][rank_pre]
-    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
-        proj%(id)s.%(name)s[rank_post][rank_pre] = value
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
-
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    # Global parameter %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, %(type)s value):
-        proj%(id)s.%(name)s[rank] = value
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
-
-        # Variables
+            accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
         for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
-                code += """
-    # Local variable %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
-        proj%(id)s.%(name)s[rank] = value
-    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
-        return proj%(id)s.%(name)s[rank_post][rank_pre]
-    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
-        proj%(id)s.%(name)s[rank_post][rank_pre] = value
-    def start_record_%(name)s(self, int rank, int period, long int offset):
-        if not rank in list(proj%(id)s.record_%(name)s):
-            proj%(id)s.record_%(name)s.push_back(rank)
-            proj%(id)s.record_period_%(name)s.push_back(period)
-            proj%(id)s.record_offset_%(name)s.push_back(offset)
-    def stop_record_%(name)s(self, int rank):
-        cdef list tmp_record = list(proj%(id)s.record_%(name)s)
-        cdef int idx = tmp_record.index(rank)
-        proj%(id)s.record_%(name)s.erase(proj%(id)s.record_%(name)s.begin() + idx)
-        proj%(id)s.record_period_%(name)s.erase(proj%(id)s.record_period_%(name)s.begin() + idx)
-        proj%(id)s.record_offset_%(name)s.erase(proj%(id)s.record_offset_%(name)s.begin() + idx)
-    def get_recorded_%(name)s(self, int rank):
-        cdef vector[vector[%(type)s]] data = proj%(id)s.recorded_%(name)s[rank]
-        proj%(id)s.recorded_%(name)s[rank] = vector[vector[%(type)s]]()
-        return data
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
+            accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
-            elif var['name'] in proj.synapse.description['global']:
-                code += """
-    # Global variable %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.%(name)s
-    def set_%(name)s(self, value):
-        proj%(id)s.%(name)s = value
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.%(name)s[rank]
-    def set_dendrite_%(name)s(self, int rank, %(type)s value):
-        proj%(id)s.%(name)s[rank] = value
-""" % {'id' : proj.id, 'name': var['name'], 'type': var['ctype']}
-
-         # Structural plasticity
+        # Structural plasticity
+        structural_plasticity = ""
+        sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
         if Global.config['structural_plasticity']:
             # Pruning in the synapse
             if 'pruning' in proj.synapse.description.keys():
-                code += """
-    # Pruning
-    def start_pruning(self, int period, long offset):
-        proj%(id)s._pruning = True
-        proj%(id)s._pruning_period = period
-        proj%(id)s._pruning_offset = offset
-    def stop_pruning(self):
-        proj%(id)s._pruning = False
-"""% {'id' : proj.id}
+                structural_plasticity += sp_tpl['pruning'] % {'id' : proj.id}
+
             # Creating in the synapse
             if 'creating' in proj.synapse.description.keys():
-                code += """
-    # Creating
-    def start_creating(self, int period, long offset):
-        proj%(id)s._creating = True
-        proj%(id)s._creating_period = period
-        proj%(id)s._creating_offset = offset
-    def stop_creating(self):
-        proj%(id)s._creating = False
-"""% {'id' : proj.id}
+                structural_plasticity += sp_tpl['creating'] % {'id' : proj.id}
+
             # Retrieve the names of extra attributes   
             extra_args = ""
             extra_values = ""
@@ -1092,40 +938,85 @@ cdef class proj%(id)s_wrapper :
                     extra_values += ', ' +  var['name']       
 
             # Generate the code        
-            code += """
-    # Structural plasticity
-    def add_synapse(self, int post_rank, int pre_rank, double weight, int delay%(extra_args)s):
-        proj%(id)s.addSynapse(post_rank, pre_rank, weight, delay%(extra_values)s)
-    def remove_synapse(self, int post_rank, int pre_rank):
-        proj%(id)s.removeSynapse(post_rank, proj%(id)s.dendrite_index(post_rank, pre_rank))
-"""% {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
+            structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
 
-        return code
+        return ProjTemplate.pyx_wrapper % { 'id': proj.id,
+                                            'exact_init': ProjTemplate.exact_integ['cinit'] % {'id': proj.id} if has_exact else "",
+                                            'delay_init': ProjTemplate.delay['cinit'] % {'id': proj.id} if has_delay else "",
+                                            'delay_acc': ProjTemplate.delay['pyx_wrapper_acc'] % {'id': proj.id} if has_delay else "",
+                                            'accessor': accessor,
+                                            'structural_plasticity': structural_plasticity
+                                           }
 
 
+#######################################################################
+############## Recording ##############################################
+#######################################################################
+
+    def pyx_monitor_struct(self, proj):
+        tpl_code = """
+    # Projection %(id)s : Monitor
+    cdef cppclass ProjRecorder%(id)s (Monitor):
+        ProjRecorder%(id)s(vector[int], int, long) except +    
+"""
+        for var in proj.synapse.description['variables']:
+            if var['name'] in proj.synapse.description['local']:
+                tpl_code += """
+        vector[vector[%(type)s]] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+            elif var['name'] in proj.synapse.description['global']:
+                tpl_code += """
+        vector[%(type)s] %(name)s
+        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+
+
+        return tpl_code % {'id' : proj.id}
+
+    def pyx_monitor_wrapper(self, proj):
+        tpl_code = """
+# Projection Monitor wrapper
+cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
+    def __cinit__(self, list ranks, int period, long offset):
+        self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
+"""
+
+        for var in proj.synapse.description['variables']:
+            tpl_code += """
+    property %(name)s:
+        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val 
+    property record_%(name)s:
+        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s = val 
+    def clear_%(name)s(self):
+        (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : proj.id, 'name': var['name']}
+
+        return tpl_code % {'id' : proj.id}
 
 #######################################################################
 ############## Structural plasticity ##################################
 #######################################################################
 
     def header_structural_plasticity(self, proj):
+        """
+        Generate extension code for C header_struct: variable declaration, add and remove synapses.
+
+        Templates:
+
+            structural_plasticity: 'header_struct' field contains all relevant code templates
+
+        """
+        header_tpl = ProjTemplate.structural_plasticity['header_struct']
+
         code = ""
         # Pruning defined in the synapse
         if 'pruning' in proj.synapse.description.keys():
-            code += """
-    // Pruning
-    bool _pruning;
-    int _pruning_period;
-    long int _pruning_offset;
-"""
+            code += header_tpl['pruning']
+
         # Creating defined in the synapse
         if 'creating' in proj.synapse.description.keys():
-            code += """
-    // Creating
-    bool _creating;
-    int _creating_period;
-    long int _creating_offset;
-"""
+            code += header_tpl['creating']
+
         # Retrieve the names of extra attributes   
         extra_args = ""
         add_code = ""
@@ -1147,30 +1038,8 @@ cdef class proj%(id)s_wrapper :
             delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
         
         # Spiking networks must update the inv_rank array
-        spiking_addcode = ""
-        spiking_removecode = ""
-        if proj.synapse.type == 'spike':
-            spiking_addcode = """
-        // Add the corresponding pair in inv_rank
-        int idx_post = 0;
-        for(int i=0; i<post_rank.size(); i++){
-            if(post_rank[i] == post){
-                idx_post = i;
-                break;
-            }
-        }
-        inv_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
-"""
-            spiking_removecode = """
-        // Remove the corresponding pair in inv_rank
-        int pre = pre_rank[post][idx];
-        for(int i=0; i<inv_rank[pre].size(); i++){
-            if(inv_rank[pre][i].second == idx){
-                inv_rank[pre].erase(inv_rank[pre].begin() + i);
-                break;
-            }
-        }
-"""
+        spiking_addcode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_addcode']
+        spiking_removecode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_removecode']
 
         # Randomdistributions
         rd_addcode = ""; rd_removecode = ""
@@ -1184,44 +1053,8 @@ cdef class proj%(id)s_wrapper :
 """ % {'name': rd['name']}
             
 
-
         # Generate the code
-        code += """
-    // Structural plasticity
-    int dendrite_index(int post, int pre){
-        int idx = 0;
-        for(int i=0; i<pre_rank[post].size(); i++){
-            if(pre_rank[post][i] == pre){
-                idx = i;
-                break;
-            }
-        }
-        return idx;
-    }
-    void addSynapse(int post, int pre, double weight, int _delay=0%(extra_args)s){
-        // Find where to put the synapse
-        int idx = pre_rank[post].size();
-        for(int i=0; i<pre_rank[post].size(); i++){
-            if(pre_rank[post][i] > pre){
-                idx = i;
-                break;
-            }
-        }
-        pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
-        w[post].insert(w[post].begin() + idx, weight);
-        %(delay_code)s
-%(add_code)s
-%(spike_add)s
-%(rd_add)s
-    };
-    void removeSynapse(int post, int idx){
-        pre_rank[post].erase(pre_rank[post].begin() + idx);
-        w[post].erase(w[post].begin() + idx);
-%(remove_code)s  
-%(spike_remove)s
-%(rd_remove)s
-    };
-""" % { 'extra_args': extra_args, 'delay_code': delay_code, 
+        code += header_tpl['header'] % { 'extra_args': extra_args, 'delay_code': delay_code,
         'add_code': add_code, 'remove_code': remove_code,
         'spike_add': spiking_addcode, 'spike_remove': spiking_removecode,
         'rd_add': rd_addcode, 'rd_remove': rd_removecode

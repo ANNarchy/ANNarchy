@@ -7,7 +7,7 @@ The following sections describes the underlying structure of ANNarchy and how to
 .. toctree::
     :maxdepth: 2
 
-    manual/Network.rst
+    manual/Structure.rst
     manual/Parser.rst
     manual/RateNeuron.rst
     manual/SpikeNeuron.rst
@@ -19,6 +19,7 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/Simulation.rst
     manual/NumericalMethods.rst
     manual/Recording.rst
+    manual/Network.rst
     manual/StructuralPlasticity.rst
     manual/ConvolutionalNetworks.rst
     manual/Reporting.rst

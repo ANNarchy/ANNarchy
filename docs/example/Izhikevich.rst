@@ -182,8 +182,8 @@ Now that the populations and projections are created, we can compile the network
 
 and run the simulation for 1 second. For analysis purpose, we need to record the spiking activity in both populations, as well as the evolution of the membrane potential in the excitatory population::
 
-    Exc.start_record(['spike', 'v'])
-    Inh.start_record('spike')
+    Me = Monitor(Exc, ['spike', 'v'])
+    Mi = Monitor(Inh, 'spike')
 
 The simulation is executed by calling::
 
@@ -195,28 +195,28 @@ The analysis is performed using utility functions of ANNarchy (see :doc:`../API/
 
 The recordings are first retrieved::
 
-    exc_data = Exc.get_record()
-    inh_data = Inh.get_record()
+    exc_data = Me.get()
+    inh_data = Mi.get()
 
-Raster plots are generated for each population using the ``raster_plot()`` utility function and concatenated::
+Raster plots are generated for each population using the ``raster_plot()`` function of the monitors::
 
-    spikes_exc = raster_plot(exc_data['spike'])
-    spikes_inh = raster_plot(inh_data['spike'])
-    spikes = np.concatenate((spikes_exc, spikes_inh + [0, 800]), axis=0)
+    te, ne = Me.raster_plot(exc_data['spike'])
+    ti, ni = Mi.raster_plot(inh_data['spike'])
 
 The number of spikes per simulation step in the excitatory population is compued using the ``histogram()`` functions::
 
-    fr_exc = histogram(exc_data['spike'])
+    fr_exc = Me.histogram(exc_data['spike'])
 
 Finally, the raster plots for both populations, the evolution of the membrane potential of a single excitatory neuron and the evolution of the number of spikes in the excitatory poplation are plotted using Matplotlib::
 
     import pylab as plt
     # First plot: raster plot
     ax = plt.subplot(3,1,1)
-    ax.plot(spikes[:, 0], spikes[:, 1], '.', markersize=1.0)
+    ax.plot(te, ne, '.', markersize=1.0)
+    ax.plot(ti, ni+800, '.', markersize=1.0)
     # Second plot: membrane potential of a single excitatory cell
     ax = plt.subplot(3,1,2)
-    ax.plot(exc_data['v']['data'][15, :]) # for example
+    ax.plot(exc_data['v'][:, 15]) # for example
     # Third plot: number of spikes per step in the population.
     ax = plt.subplot(3,1,3)
     ax.plot(fr_exc)

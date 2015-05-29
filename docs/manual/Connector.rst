@@ -1,6 +1,15 @@
 *********************************
-Connection patterns
+Connectivity
 *********************************
+
+There are basically four methods to instantiate projections:
+
+1. By using a built-in connector method (:ref:`connector_methods`)
+2. By using a saved projection (:ref:`saved_connectivity`)
+3. By loading dense or sparse matrices(:ref:`from_matrices`)
+4. By defining a custom connector method (:ref:`connector_custom`)
+
+.. _connector_methods:
 
 Available connector methods
 =============================        
@@ -122,6 +131,9 @@ For each post-synaptic neuron, there is a fixed probability that it forms a conn
 
     proj.connect_fixed_probability(probability = 0.2, weights=1.0) 
 
+
+.. _saved_connectivity:
+
 Saved connectivity
 ==================
 
@@ -146,6 +158,61 @@ It can then be used to create another projection:
 
 Only the connectivity (which neurons are connected), the weights and delays are loaded. Other synaptic variables are left untouched. The pre- and post-synaptic population must have the same size during saving and loading.
 
+.. _from_matrices:
+
+From connectivity matrices
+==========================
+
+One can also create connections using Numpy dense matrices or Scipy sparse matrices.
+
+
+connect_from_matrix
+-------------------
+
+This method accepts a Numpy array to define the weights of the projection (and optionally the delays). By default, the matrix should have the size ``(post.size, pre.size)``, so that the first index represents a post-synaptic neuron and the second the pre-synaptic neurons. If your matrix is defined in the reversed order, you can either transpose it or set the ``pre_post`` argument to ``True``.
+
+This method is useful for dense connectivity matrices (all-to-all). If you do not want to create some synapses, the weight value should be set to ``None``. 
+
+The following code creates a synfire chain inside a population of 100 neurons::
+
+    N = 100
+    proj = Projection(pop, pop, 'exc')
+    # Initialize an empty connectivity matrix
+    w = np.array([[None]*N]*N)
+    # Connect each post-synaptic neuron to its predecessor
+    for i in range(N):
+        w[i, (i-1)%N] = 1.0
+    # Create the connections
+    proj.connect_from_matrix(w)
+
+Connectivity matrices can not work with multi-dimensional coordinates, only ranks are used. Population views can be used in the projection, but the connection matrix must have the corresponding size::
+
+    proj = Projection(pop[10:20], pop[50:60], 'exc')
+    # Create the connectivity matrix
+    w = np.ones((10, 10))
+    # Create the connections
+    proj.connect_from_matrix(w)
+
+
+connect_from_sparse
+-------------------
+
+For sparse connection matrices, the Numpy array format may have a huge memory overhead if most of its values are None. It is possible to use Scipy sparse matrices in that case. The previous synfire chain example becomes::
+
+    from scipy.sparse import lil_matrix
+    proj = Projection(pop, pop, 'exc')
+    w = lil_matrix((N, N))
+    for i in range(N):
+        w[i, (i+1)%N] = 1.0
+    proj.connect_from_sparse(w)
+
+.. note::
+
+    Contrary to ``connect_from_matrix()``, the first index of the sparse matrix represents the **pre-synaptic** neurons, not the post-synaptic ones. This is for compatibility with other neural simulators.
+
+``connect_from_sparse()`` accepts ``lil_matrix``, ``csr_matrix`` and ``csc_matrix`` objects, although ``lil_matrix`` should be preferred for its simplicity of element access.
+
+.. _connector_custom:
 
 User-defined patterns
 ==================================

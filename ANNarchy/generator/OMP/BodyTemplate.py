@@ -19,6 +19,20 @@ std::mt19937  rng;
 // Global operations
 %(glops_def)s
 
+// Recorders 
+std::vector<Monitor*> recorders;
+void addRecorder(Monitor* recorder){
+    recorders.push_back(recorder);
+}
+void removeRecorder(Monitor* recorder){
+    for(int i=0; i<recorders.size(); i++){
+        if(recorders[i] == recorder){
+            recorders.erase(recorders.begin()+i);
+            break;
+        }
+    }
+}
+
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
 %(prof_run_pre)s
@@ -53,8 +67,8 @@ void initialize(double _dt, long int seed) {
         rng = std::mt19937(seed);
     }
     
-%(random_dist_init)s
 %(pop_init)s
+%(random_dist_init)s
 %(projection_init)s
 %(globalops_init)s
 }
@@ -113,7 +127,9 @@ void step()
     ////////////////////////////////
     // Recording
     ////////////////////////////////
-%(record)s
+    for(int i=0; i < recorders.size(); i++){
+        recorders[i]->record();
+    }
 
     ////////////////////////////////
     // Increase internal time

@@ -30,7 +30,7 @@ Once the populations are created, one can connect them by creating ``Projection`
     
 * ``synapse`` is an optional argument requiring a *Synapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
   
-    * the default rate-coded synapse defines``psp = w * pre.r``,
+    * the default rate-coded synapse defines ``psp = w * pre.r``,
     * the default spiking synapse defines ``g_target += w``.
 
 Building the projections
@@ -244,4 +244,4 @@ If the delay is not a multiple of the simulation time step (``dt = 1.0`` by defa
 
 .. warning::
 
-    Only the pre-synaptic firing of a rate-coded neuron or the spiking time of a spiking neuron can be accessed with a delay. 
+    Spiking projections do not accept yet variable delays.

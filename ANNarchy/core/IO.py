@@ -219,7 +219,7 @@ def _load_data(filename):
             return desc
     return desc
 
-def load(filename, populations=True, projections=True):#, pure_data=True): TODO
+def load(filename, populations=True, projections=True, net_id=0):
     """
     Loads a saved state of the network.
 
@@ -244,17 +244,17 @@ def load(filename, populations=True, projections=True):#, pure_data=True): TODO
         return
     if populations:
         # Over all populations
-        for pop in Global._populations:  
+        for pop in Global._network[net_id]['populations']:  
             # check if the population is contained in save file
             if pop.name in desc.keys():
                 _load_pop_data(pop, desc[pop.name])  
     if projections:    
-        for proj in Global._projections : 
+        for proj in Global._network[net_id]['projections'] : 
             if proj.name in desc.keys():            
                 _load_proj_data(proj, desc[proj.name])
 
   
-def _net_description(populations, projections):
+def _net_description(populations, projections, net_id=0):
     """
     Returns a dictionary containing the requested network data.
     
@@ -266,11 +266,11 @@ def _net_description(populations, projections):
     network_desc = {}   
     
     if populations:
-        for pop in Global._populations:             
+        for pop in Global._network[net_id]['populations']:             
             network_desc[pop.name] = pop._data() 
 
     if projections:
-        for proj in Global._projections:  
+        for proj in Global._network[net_id]['projections']:  
             network_desc[proj.name] = proj._data() 
 
 

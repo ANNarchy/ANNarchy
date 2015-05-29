@@ -83,30 +83,26 @@ compile()
 # ###########################################
 # Simulation
 # ###########################################
-P.start_record('spike')
+m = Monitor(P, 'spike')
 simulate(duration , measure_time=True)
-data = P.get_record()
-P.stop_record()
+data = m.get()
 
 # ###########################################
 # Data analysis
 # ###########################################
-import time
-ts = time.time()
-spikes = raster_plot(data['spike'])
-print 'Raster plot took', time.time() - ts
-print 'Number of spikes:', len(spikes)
-print 'Mean firing rate:', len(spikes)/float(NE+NI)/duration*1000.0
+t, n = m.raster_plot(data['spike'])
+print 'Number of spikes:', len(t)
+print 'Mean firing rate:', len(t)/float(NE+NI)/duration*1000.0
 
 from pylab import *
 subplot(211)
-plot(0.1*spikes[:, 0], spikes[:, 1], '.', markersize=0.5)
+plot(t, n, '.', markersize=0.5)
 title("Before")
 xlabel('')
 ylabel('Neuron number')
 xlim(0, 0.2*1e3)
 subplot(212)
-plot(0.1*spikes[:, 0], spikes[:, 1], '.', markersize=0.5)
+plot(t, n, '.', markersize=0.5)
 title("After")
 xlabel('Time (ms)')
 ylabel('Neuron number')
