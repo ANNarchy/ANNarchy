@@ -58,6 +58,8 @@ class ProjectionGenerator(object):
         # Is it a specific projection?
         if proj.generator['omp']['header_proj_struct']:
             final_code = proj.generator['omp']['header_proj_struct']
+            init = ""
+            update = ""
 
         else:
             # create the code for non-specific projections

@@ -56,14 +56,22 @@ class Spike2RatePopulation(Population):
             exit(0)
 
         if self.mode == 'window':
-            self._create_window()
+            self._code = self._create_window()
         elif self.mode == 'adaptive':
-            self._create_adaptive()
+            self._code = self._create_adaptive()
         elif self.mode == 'isi':
-            self._create_isi()
+            self._code = self._create_isi()
         else:
             Global._error('Spike2RatePopulation: Unknown method ' + self.mode)
             exit(0)
+
+        self._specific = True
+
+    def generate(self):
+        """
+        return the corresponding code template
+        """
+        return self._code
 
     def _create_isi(self):
 
@@ -84,7 +92,7 @@ class Spike2RatePopulation(Population):
 
         # Generate specific code
         omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
-        self.generator['omp']['header_pop_struct'] = """#pragma once
+        code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
 extern PopStruct%(id_pre)s pop%(id_pre)s;
@@ -133,6 +141,8 @@ struct PopStruct%(id)s{
 
     void init_population() {
         size = %(size)s;
+        _active = true;
+
         last_spike = std::vector< long int >(size, -10000L);
         isi = std::vector< double >(size, 10000.0);
         support = std::vector< double >(size, 10000.0);
@@ -166,6 +176,8 @@ struct PopStruct%(id)s{
 };
 """ % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size }
 
+        return code
+
     def _create_window(self):
 
         # Create the description, but it will not be used for generation
@@ -185,7 +197,7 @@ struct PopStruct%(id)s{
 
         # Generate specific code
         omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
-        self.generator['omp']['header_pop_struct'] = """#pragma once
+        code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
 extern PopStruct%(id_pre)s pop%(id_pre)s;
@@ -232,6 +244,8 @@ struct PopStruct%(id)s{
 
     void init_population() {
         size = %(size)s;
+        _active = true;
+
         last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
     }
 
@@ -267,6 +281,8 @@ struct PopStruct%(id)s{
 };
 """ % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
 
+        return code
+
     def _create_adaptive(self):
 
         # Create the description, but it will not be used for generation
@@ -286,7 +302,7 @@ struct PopStruct%(id)s{
 
         # Generate specific code
         omp_code = "#pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)" if Global.config['num_threads'] > 1 else ""
-        self.generator['omp']['header_pop_struct'] = """#pragma once
+        code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
 extern PopStruct%(id_pre)s pop%(id_pre)s;
@@ -337,6 +353,8 @@ struct PopStruct%(id)s{
 
     void init_population() {
         size = %(size)s;
+        _active = true;
+
         last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
         ad_window = std::vector< double >(size, window);
         isi = std::vector< double >(size, 10000.0);
@@ -382,6 +400,8 @@ struct PopStruct%(id)s{
     }
 };
 """ % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
+
+        return code
 
 class Rate2SpikePopulation(Population):
     """
@@ -433,11 +453,14 @@ class Rate2SpikePopulation(Population):
             ) 
         )
 
+        self._specific = True
+
+    def generate(self):
         omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
         omp_critical = "#pragma omp critical" if Global.config['num_threads'] > 1 else ""
 
         # Generate the code
-        self.generator['omp']['header_pop_struct'] = """#pragma once
+        code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
 extern PopStruct%(id_pre)s pop%(id_pre)s;
@@ -490,6 +513,8 @@ struct PopStruct1{
 
     void init_population() {
         size = %(size)s;
+        _active = true;
+
         refractory = std::vector<int>(size, 0);
         spiked = std::vector<int>(0, 0);
         last_spike = std::vector<long int>(size, -10000L);
@@ -520,3 +545,5 @@ struct PopStruct1{
     }
 };
 """ % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size }
+
+        return code

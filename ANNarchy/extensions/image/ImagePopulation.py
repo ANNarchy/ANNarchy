@@ -57,7 +57,6 @@ class ImagePopulation(Population):
         # Create the population     
         Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0") )
 
-        
     def set_image(self, image_name):
         """ 
         Sets an image (.png, .jpg or whatever is supported by PIL) into the firing rate of the population.
