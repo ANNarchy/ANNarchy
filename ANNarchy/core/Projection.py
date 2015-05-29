@@ -808,7 +808,7 @@ class Projection(object):
 
         return self
 
-    def _load_from_matrix(self, weights, delays, pre_post):
+    def _load_from_matrix(self, pre, post, weights, delays, pre_post):
         csr = Connector.CSR()
 
         if isinstance(weights, list):
@@ -894,7 +894,7 @@ class Projection(object):
 
         return self
 
-    def _load_from_sparse(self, weights, delays):
+    def _load_from_sparse(self, pre, post, weights, delays):
 
         # Create an empty CSR object
         csr = Connector.CSR()

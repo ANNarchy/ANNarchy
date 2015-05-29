@@ -157,6 +157,9 @@ class Population(object):
 
         # Recorded variables
         self._monitor = None
+
+        # Is overwritten by SpecificPopulations
+        self._specific = False
         
     def _instantiate(self, module):
         # Create the Cython instance 

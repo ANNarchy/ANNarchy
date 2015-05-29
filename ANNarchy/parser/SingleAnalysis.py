@@ -127,7 +127,7 @@ def analyse_neuron(neuron):
                     break
             if not found:
                 description['variables'].append(
-                    {'name': 'g_'+target, 'bounds': {}, 'ctype': 'double', 
+                    { 'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': 'double',
                         'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'}
                 )
                 description['attributes'].append('g_'+target)

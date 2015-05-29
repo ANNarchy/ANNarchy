@@ -169,7 +169,14 @@ public:
         this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
                 recording_code += """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            //this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+            // grab data from gpu
+            std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
+            cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, proj%(id)s.flat_idx);
+
+            // store data
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+            flat_proj%(id)s_%(name)s.clear();
         }""" % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:

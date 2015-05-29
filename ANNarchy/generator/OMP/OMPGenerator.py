@@ -16,12 +16,23 @@ class OMPGenerator(object):
         self.popgen = PopulationGenerator()
         self.projgen = ProjectionGenerator()
 
+        self._pop_desc = []
+        self._proj_desc = []
+
     def generate(self):
         if Global.config['verbose']:
             print('\nGenerate code for OpenMP ...')
 
         # Propagte the global operations needed by the projections to the corresponding populations.
         self.propagate_global_ops()
+
+        # Create all populations
+        for pop in self.populations:
+            self._pop_desc.append(self.popgen.header_struct(pop, self.annarchy_dir))
+
+        # Create all projections
+        for proj in self.projections:
+            self._proj_desc.append(self.projgen.header_struct(proj, self.annarchy_dir))
 
         # Generate header code for the analysed pops and projs
         with open(self.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
@@ -74,12 +85,24 @@ class OMPGenerator(object):
 ############## HEADER #################################################
 #######################################################################
     def generate_header(self):
-
+        """
+        Generate the ANNarchy.h code. This header represents the interface to
+        the python extension and therefore includes all network objects.
+        """
         # struct declaration for each population
-        pop_struct, pop_ptr = self.header_struct_pop()
+        pop_struct = ""
+        pop_ptr = ""
+
+        for pop in self._pop_desc:
+            pop_struct += pop['include']
+            pop_ptr += pop['extern']
 
         # struct declaration for each projection
-        proj_struct, proj_ptr = self.header_struct_proj()
+        proj_struct = ""
+        proj_ptr = ""
+        for proj in self._proj_desc:
+            proj_struct += proj['include']
+            proj_ptr += proj['extern']
 
         # Custom functions
         custom_func = self.header_custom_functions()
@@ -100,29 +123,6 @@ class OMPGenerator(object):
             'include_omp': include_omp,
             'record_classes': record_classes
         }
-
-    def header_struct_pop(self):
-        # struct declaration for each population
-        pop_struct = ""
-        pop_ptr = ""
-
-        for pop in self.populations:
-            struct, ptr = self.popgen.header_struct(pop, self.annarchy_dir)
-            pop_struct += struct
-            pop_ptr += ptr
-
-        return pop_struct, pop_ptr
-
-    def header_struct_proj(self):
-        # struct declaration for each projection
-        proj_struct = ""
-        proj_ptr = ""
-        for proj in self.projections:
-            struct, ptr = self.projgen.header_struct(proj, self.annarchy_dir)
-            proj_struct += struct
-            proj_ptr += ptr
-
-        return proj_struct, proj_ptr
 
     def header_custom_functions(self):
 
@@ -151,17 +151,13 @@ class OMPGenerator(object):
     def generate_body(self):
         # struct declaration for each population
         pop_ptr = ""
-        for pop in self.populations:
-            # Declaration of the structure
-            pop_ptr += """PopStruct%(id)s pop%(id)s;
-"""% {'id': pop.id}
+        for pop in self._pop_desc:
+            pop_ptr += pop['instance']
 
         # struct declaration for each projection
         proj_ptr = ""
-        for proj in self.projections:
-            # Declaration of the structure
-            proj_ptr += """ProjStruct%(id)s proj%(id)s;
-"""% {'id': proj.id}
+        for proj in self._proj_desc:
+            proj_ptr += proj['instance']
 
         # Code for the global operations
         glop_definition = self.body_def_glops()
@@ -186,7 +182,9 @@ class OMPGenerator(object):
         globalops_init = self.body_init_globalops()
 
         # Equations for the neural variables
-        update_neuron = self.body_update_neuron()
+        update_neuron = ""
+        for pop in self._pop_desc:
+            update_neuron  += pop['update']
 
         # Enque delayed outputs
         delay_code = self.body_delay_neuron()
@@ -195,7 +193,9 @@ class OMPGenerator(object):
         update_globalops = self.body_update_globalops()
 
         # Equations for the synaptic variables
-        update_synapse = self.body_update_synapse()
+        update_synapse = ""
+        for proj in self._proj_desc:
+            update_synapse += proj['update']
 
         # Equations for the post-events
         post_event = self.body_postevent_proj()
@@ -245,15 +245,6 @@ class OMPGenerator(object):
             'prof_run_post': prof_run_post
         }
 
-    def body_update_neuron(self):
-        code = ""
-        for pop in self.populations:
-            code  += """    pop%(id)s.update();
-""" % { 'id': pop.id }
-    #self.popgen.update_neuron(pop)
-
-        return code
-
     def body_delay_neuron(self):
         code = ""
         for pop in self.populations:
@@ -288,17 +279,6 @@ class OMPGenerator(object):
         for proj in self.projections:
             if proj.synapse.type == 'spike':
                 code += self.projgen.postevent(proj)
-
-        return code
-
-
-    def body_update_synapse(self):
-        # Reset code
-        code = ""
-        # Iterate over all synapses 
-        for proj in self.projections:
-            code += """    proj%(id)s.update_synapse();
-""" % { 'id' : proj.id };
 
         return code
 

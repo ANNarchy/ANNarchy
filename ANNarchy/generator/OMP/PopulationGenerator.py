@@ -23,6 +23,7 @@
 """
 import ANNarchy.core.Global as Global
 import PopulationTemplate as PopTemplate
+from ANNarchy import SpikeSourceArray
 
 class PopulationGenerator(object):
 
@@ -46,9 +47,10 @@ class PopulationGenerator(object):
 
             header_struct, parameter_decl, parameter_acc, variable_decl, variable_acc
         """
-        # Is it a specific population?
-        if pop.generator['omp']['header_pop_struct']:
-            code = pop.generator['omp']['header_pop_struct']
+        # SpikeSourceArrays need an additional delay,
+        # we now this value only at this point
+        if pop._specific:
+            code = pop.generate()
 
         else:
             # Pick basic template based on neuron type
@@ -134,12 +136,16 @@ class PopulationGenerator(object):
         with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
             ofile.write(code)
 
-        # Include directive
-        pop_struct = """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id }
-        # Extern pointer
-        pop_ptr = """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id }
+        has_no_update = ( len(pop.neuron_type.description['variables']) == 0 and not pop._specific )
 
-        return pop_struct, pop_ptr
+        pop_desc = {
+            'include': """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id },
+            'extern': """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
+            'instance': """PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
+            'update': "" if has_no_update else """    pop%(id)s.update();\n""" % { 'id': pop.id }
+        }
+
+        return pop_desc
 
     def recorder_class(self, pop):
         tpl_code = """

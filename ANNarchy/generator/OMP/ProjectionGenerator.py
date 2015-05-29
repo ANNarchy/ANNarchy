@@ -57,95 +57,99 @@ class ProjectionGenerator(object):
         """
         # Is it a specific projection?
         if proj.generator['omp']['header_proj_struct']:
-            return proj.generator['omp']['header_proj_struct']
+            final_code = proj.generator['omp']['header_proj_struct']
 
-        # create the code for non-specific projections
-        decl = ""
+        else:
+            # create the code for non-specific projections
+            decl = ""
 
-        # Spiking neurons have aditional data
-        if proj.synapse.type == 'spike':
-            # Inverse ranks
+            # Spiking neurons have aditional data
+            if proj.synapse.type == 'spike':
+                # Inverse ranks
+                decl += """
+        std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
+    """
+
+            # Exact integration
+            has_exact = False
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'exact':
+                    has_exact = True
+
+            # Delays
+            has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
+
+            # Code for declarations and accessors
+            accessor = ""
+            # Parameters
+            for var in proj.synapse.description['parameters']:
+                decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+                accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+
+            # Variables
+            for var in proj.synapse.description['variables']:
+                decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+                accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+
+            # Arrays for the random numbers
             decl += """
-    std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
-"""            
-        # Exact integration
-        has_exact = False
-        for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
-                has_exact = True
-
-        # Delays
-        has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
-
-        # Code for declarations and accessors
-        accessor = ""
-        # Parameters
-        for var in proj.synapse.description['parameters']:
-            decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
-            accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
-
-        # Variables
-        for var in proj.synapse.description['variables']:
-            decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
-            accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
-
-        # Arrays for the random numbers
-        decl += """
     // Random numbers
 """
-        for rd in proj.synapse.description['random_distributions']:
-            decl += """    std::vector< std::vector<double> > %(rd_name)s;
+            for rd in proj.synapse.description['random_distributions']:
+                decl += """    std::vector< std::vector<double> > %(rd_name)s;
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
-        # Local functions
-        if len(proj.synapse.description['functions'])>0:
-            decl += """
+            # Local functions
+            if len(proj.synapse.description['functions'])>0:
+                decl += """
     // Local functions
 """
-            for func in proj.synapse.description['functions']:
-                decl += ' '*4 + func['cpp'] + '\n'
+                for func in proj.synapse.description['functions']:
+                    decl += ' '*4 + func['cpp'] + '\n'
 
-        # Structural plasticity
-        if Global.config['structural_plasticity']:
-            decl += self.header_structural_plasticity(proj)
+            # Structural plasticity
+            if Global.config['structural_plasticity']:
+                decl += self.header_structural_plasticity(proj)
 
-        # Definiton of synaptic equations, initialization
-        init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
-        update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+            # Definiton of synaptic equations, initialization
+            init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+            update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
-        if proj.synapse.type == 'rate':
-            psp_prefix = "int nb_post;\ndouble sum;"
-            psp = self.computesum_rate(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
-        else:
-            psp_prefix = "int nb_post, i, j, rk_j;"
-            psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+            if proj.synapse.type == 'rate':
+                psp_prefix = "int nb_post;\ndouble sum;"
+                psp = self.computesum_rate(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+            else:
+                psp_prefix = "int nb_post, i, j, rk_j;\ndouble sum;"
+                psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
-        final_code = ProjTemplate.header_struct % { 'id_proj': proj.id,
-                                                    'pre_name': proj.pre.name,
-                                                    'pre_id': proj.pre.id,
-                                                    'post_name': proj.post.name,
-                                                    'post_id': proj.post.id,
-                                                    'target': proj.target,
-                                                    'exact': ProjTemplate.exact_integ['header_struct'] % {'id': proj.id} if has_exact else "",
-                                                    'delay': ProjTemplate.delay['header_struct'] % {'id': proj.id} if has_delay else "",
-                                                    'decl': decl,
-                                                    'accessor': accessor,
-                                                    'init': init,
-                                                    'psp_prefix': psp_prefix,
-                                                    'psp': psp,
-                                                    'update': update
-                                                 }
+            final_code = ProjTemplate.header_struct % { 'id_proj': proj.id,
+                                                        'pre_name': proj.pre.name,
+                                                        'pre_id': proj.pre.id,
+                                                        'post_name': proj.post.name,
+                                                        'post_id': proj.post.id,
+                                                        'target': proj.target,
+                                                        'exact': ProjTemplate.exact_integ['header_struct'] % {'id': proj.id} if has_exact else "",
+                                                        'delay': ProjTemplate.delay['header_struct'] % {'id': proj.id} if has_delay else "",
+                                                        'decl': decl,
+                                                        'accessor': accessor,
+                                                        'init': init,
+                                                        'psp_prefix': psp_prefix,
+                                                        'psp': psp,
+                                                        'update': update
+                                                     }
 
         with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
             ofile.write(final_code)
 
-        # Include directive
-        proj_struct = """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id }
-        # Extern pointer
-        proj_ptr = """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id }
+        proj_desc = {
+            'include': """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id },
+            'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
+            'instance': """ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
+            'update': "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id }
+        }
 
-        return proj_struct, proj_ptr
+        return proj_desc
 
     def recorder_class(self, proj):
         """
