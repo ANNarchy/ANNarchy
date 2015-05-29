@@ -131,8 +131,8 @@ class VideoPopulation(ImagePopulation):
         extra_libs.append('-lopencv_objdetect')
         extra_libs.append('-lopencv_video')
 
-                # Generate the code
-        self.generator['omp']['header_pop_struct'] = """ 
+        self._specific = True
+        self._code = """#pragma once
 #include <opencv2/opencv.hpp>
 using namespace cv;
 // VideoPopulation
@@ -201,6 +201,12 @@ struct PopStruct%(id)s{
             r = camera_->GrabImage();   
         }
     };
+
+    void init_population() {
+        _active = true;
+    }
+
+    void update() {}
 }; 
 """ % {'id': self.id}
 
@@ -246,6 +252,9 @@ cdef class pop%(id)s_wrapper :
     def grab_image(self):
         pop%(id)s.GrabImage()
 """ % {'id': self.id}
+
+    def generate(self):
+        return self._code
 
             
     def start_camera(self, camera_port=0):
