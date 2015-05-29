@@ -8,10 +8,10 @@ In order to run different networks using the same script, the ``Network`` object
 
 Let's suppose the following dummy network is defined::
 
-    pop1 = Population(100, Izhikevich)
+    pop1 = PoissonPopulation(100, rates=10.0)
     pop2 = Population(100, Izhikevich)
     proj = Projection(pop1, pop2, 'exc')
-    proj.connect_all_to_all(1.0)
+    proj.connect_fixed_probability(weights=5.0, probability=0.2)
     m = Monitor(pop2, 'spike')
     compile()
 
