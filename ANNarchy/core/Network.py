@@ -188,7 +188,7 @@ class Network(object):
         """
         Global.simulate(duration, measure_time, self.id)
     
-    def simulate_until(max_duration, population, operator='and', measure_time = False):
+    def simulate_until(self, max_duration, population, operator='and', measure_time = False):
         """
         Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
 
@@ -211,7 +211,7 @@ class Network(object):
 
         * the actual duration of the simulation in milliseconds.
         """
-        Global.simulate_until(max_duration, population, operator, measure_time, self.id)
+        return Global.simulate_until(max_duration, population, operator, measure_time, self.id)
     
     def step():
         """
@@ -257,6 +257,33 @@ class Network(object):
         Can be dangerous for some spiking models.
     """
         Global.set_current_step(t, self.id)
+
+    def enable_learning(self, projections=None):
+        """
+        Enables learning for all projections.
+        
+        *Parameter*:
+        
+        * **projections**: the projections whose learning should be enabled. By default, all the existing projections are disabled.
+        """
+        if not projections:
+            projections = self.projections
+        for proj in projections:
+            proj.enable_learning()
+
+    def disable_learning(self, projections=None):
+        """
+        Disables learning for all projections.
+        
+        *Parameter*:
+        
+        * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
+        """
+        if not projections:
+            projections = self.projections
+        for proj in projections:
+            proj.disable_learning()
+
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False):
     """
