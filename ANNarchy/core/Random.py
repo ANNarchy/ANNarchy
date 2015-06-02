@@ -142,6 +142,10 @@ class Normal(RandomDistribution):
         * **sigma**: standard deviation of the distribution
         
         * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
+        
+        * **min**: minimum value returned (default: unlimited).
+        
+        * **max**: maximum value returned (default: unlimited).
         """
         self.mu = mu
         self.sigma = sigma
@@ -153,9 +157,9 @@ class Normal(RandomDistribution):
         Returns a np.ndarray with the given shape
         """
         data = np.random.normal(self.mu, self.sigma, shape)
-        if self.min:
+        if self.min != None:
             data[data<self.min] = self.min
-        if self.max:
+        if self.max != None:
             data[data>self.max] = self.max
         return data
 
@@ -166,22 +170,33 @@ class LogNormal(RandomDistribution):
     """
     Random distribution instance returning a random value based on lognormal distribution.
     """   
-    def __init__(self, mu, sigma):
+    def __init__(self, mu, sigma, min=None, max=None):
         """        
         *Parameters*:
         
         * **mu**: mean of the distribution
         
         * **sigma**: standard deviation of the distribution
+        
+        * **min**: minimum value returned (default: unlimited).
+        
+        * **max**: maximum value returned (default: unlimited).
         """
         self.mu = mu
         self.sigma = sigma
+        self.min = min
+        self.max = max
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        return np.random.lognormal(self.mu, self.sigma, shape)
+        data = np.random.lognormal(self.mu, self.sigma, shape)
+        if self.min != None:
+            data[data<self.min] = self.min
+        if self.max != None:
+            data[data>self.max] = self.max
+        return data
 
     def latex(self):
         return "$\\ln\\mathcal{N}$(" + str(self.mu) + ', ' + str(self.sigma) + ')'
@@ -195,7 +210,7 @@ class Exponential(RandomDistribution):
         P(x | \lambda) = \lambda e^{(-\lambda x )}
 
     """   
-    def __init__(self, Lambda):
+    def __init__(self, Lambda, min=None, max=None):
         """        
         *Parameters*:
         
@@ -203,18 +218,29 @@ class Exponential(RandomDistribution):
         
         * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
         
+        * **min**: minimum value returned (default: unlimited).
+        
+        * **max**: maximum value returned (default: unlimited).
+        
         .. note::
 
             ``Lambda`` is capitalized, otherwise it would be a reserved Python keyword.
 
         """
         self.Lambda = Lambda
+        self.min = min
+        self.max = max
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape.
         """
-        return np.random.exponential(self.Lambda, shape)
+        data = np.random.exponential(self.Lambda, shape)
+        if self.min != None:
+            data[data<self.min] = self.min
+        if self.max != None:
+            data[data>self.max] = self.max
+        return data
 
     def latex(self):
         return "$\\exp$(" + str(self.Lambda) + ')'
@@ -223,22 +249,33 @@ class Gamma(RandomDistribution):
     """
     Random distribution instance returning a random value based on gamma distribution.
     """   
-    def __init__(self, alpha, beta=1.0, seed=-1):
+    def __init__(self, alpha, beta=1.0, seed=-1, min=None, max=None):
         """        
         *Parameters*:
         
         * **alpha**: shape of the gamma distribution
         
         * **beta**: scale of the gamma distribution
+        
+        * **min**: minimum value returned (default: unlimited).
+        
+        * **max**: maximum value returned (default: unlimited).
         """
         self.alpha = alpha
         self.beta = beta
+        self.min = min
+        self.max = max
         
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
         """
-        return np.random.gamma(self.alpha, self.beta, shape)
+        data = np.random.gamma(self.alpha, self.beta, shape)
+        if self.min != None:
+            data[data<self.min] = self.min
+        if self.max != None:
+            data[data>self.max] = self.max
+        return data
 
     def latex(self):
         return "$\\Gamma$(" + str(self.alpha) + ', ' + str(self.beta) + ')'

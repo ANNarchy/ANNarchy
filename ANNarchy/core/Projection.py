@@ -187,8 +187,14 @@ class Projection(object):
         if isinstance(delay, (int, float)):
             self.max_delay = int(delay/Global.config['dt'])
             self.uniform_delay = int(delay/Global.config['dt'])
+        elif isinstance(delay, RandomDistribution):
+            self.uniform_delay = -1
+            if delay.max == None:
+                Global._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.') 
+                exit(0)
+            self.max_delay = int(delay.max/Global.config['dt'])
         else:
-            Global._print('Non-uniform delays are disabled for now!') # TODO
+            Global._error('Projection.connect_xxx(): delays are not valid!')
             exit(0)
 
         # Transmit the max delay to the pre pop
