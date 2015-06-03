@@ -703,6 +703,10 @@ cdef class pop%(id)s_wrapper :
 
         return code
 
+#######################
+### Monitor pyx
+#######################
+
     def pyx_monitor_struct(self, pop):
         tpl_code = """
     # Population %(id)s (%(name)s) : Monitor
@@ -754,7 +758,8 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_spike
         def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val 
     def clear_spike(self):
-        (<PopRecorder%(id)s *>self.thisptr).spike.clear()""" % {'id' : pop.id}
+        for idx in range((<PopRecorder%(id)s *>self.thisptr).spike.size()):
+            (<PopRecorder%(id)s *>self.thisptr).spike[idx].clear()""" % {'id' : pop.id}
 
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
