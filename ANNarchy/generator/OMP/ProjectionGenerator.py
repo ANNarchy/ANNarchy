@@ -22,6 +22,7 @@
 
 """
 import ANNarchy.core.Global as Global
+from ANNarchy.core.PopulationView import PopulationView
 import ProjectionTemplate as ProjTemplate
 
 class ProjectionGenerator(object):
@@ -189,9 +190,13 @@ class ProjectionGenerator(object):
             else: # custom psp
                 psp = (proj.synapse.description['psp']['cpp'] % ids)
             # Take delays into account if any
-            if proj.max_delay > 1:
+            if proj.max_delay > 1: # There is non-zero delay
+                if isinstance(proj.pre, PopulationView):
+                    delayed_variables = proj.pre.population.delayed_variables
+                else:
+                    delayed_variables = proj.pre.delayed_variables
                 if proj.uniform_delay == -1 : # Non-uniform delays
-                    for var in proj.pre.delayed_variables:
+                    for var in delayed_variables:
                         if var in proj.pre.neuron_type.description['local']:
                             psp = psp.replace(
                                 'pop%(id_pre)s.%(var)s[rk_pre]'% dict({'var': var}.items() + ids.items()), 
@@ -204,7 +209,7 @@ class ProjectionGenerator(object):
                             )
 
                 else: # Uniform delays
-                    for var in proj.pre.delayed_variables:
+                    for var in delayed_variables:
                         if var in proj.pre.neuron_type.description['local']:
                             psp = psp.replace(
                                 'pop%(id_pre)s.%(var)s[rk_pre]'% dict({'var': var}.items() + ids.items()), 
@@ -226,7 +231,7 @@ class ProjectionGenerator(object):
             else: # custom psp
                 psp = (proj.synapse.description['psp']['cpp'] % ids)
             # Take delays into account if any
-            if proj.max_delay > 1:
+            if proj.max_delay > 1: # there is a delay
                 if proj.uniform_delay == -1 : # Non-uniform delays
                     for var in list(set(proj.synapse.description['dependencies']['pre'])):
                         if var in proj.pre.neuron_type.description['local']:
@@ -250,7 +255,7 @@ class ProjectionGenerator(object):
                         omp_code += 'proj%(id_proj)s_pre_%(var)s, ' % {'id_proj': proj.id, 'var': var}
 
                     omp_code += "nb_post) schedule(dynamic)"
-            else:
+            else: # No delay
                 pre_copy = ""; omp_code = "#pragma omp parallel for private(sum) firstprivate("
                 for var in list(set(proj.synapse.description['dependencies']['pre'])):
                     if var in proj.pre.neuron_type.description['local']:

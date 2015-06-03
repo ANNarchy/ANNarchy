@@ -108,6 +108,8 @@ cdef class proj%(id)s_wrapper :
     def pre_rank(self, int n):
         return proj%(id)s.get_pre_rank()[n]
 
+%(delay_acc)s
+
 %(accessor)s
 %(structural_plasticity)s
 """
@@ -312,8 +314,11 @@ delay = {
 """,
     'pyx_wrapper_acc':
 """
+    # Access to delay
     def get_delay(self):
         return proj%(id)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id)s.delay[idx]
     def set_delay(self, value):
         proj%(id)s.delay = value
 """
