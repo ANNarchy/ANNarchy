@@ -156,3 +156,40 @@ void setNumberThreads(int threads)
     %(set_number_threads)s
 }
 '''
+
+run_until_template = {
+    'default':
+"""
+    run(steps);
+    return steps;
+""",
+    'body': 
+"""
+    bool stop = false;
+    bool pop_stop = false;
+    int nb = 0;
+    for(int n = 0; n < steps; n++)
+    {
+        step();
+        nb++;
+        stop = or_and;
+        for(int i=0; i<populations.size();i++)
+        {
+            // Check all populations
+            switch(populations[i]){
+%(run_until)s
+            }
+
+            // Accumulate the results
+            if(or_and)
+                stop = stop && pop_stop;
+            else
+                stop = stop || pop_stop;
+        }
+        if(stop)
+            break;
+    }
+    return nb;
+
+"""
+}

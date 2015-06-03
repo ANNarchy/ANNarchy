@@ -1,3 +1,25 @@
+"""
+    OMPGenerator.py
+    
+    This file is part of ANNarchy.
+    
+    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from .PopulationGenerator import PopulationGenerator
@@ -6,55 +28,92 @@ from .ProjectionGenerator import ProjectionGenerator
 import numpy as np
 
 class OMPGenerator(object):
-
+    """
+    Implements the code generator class for OpenMP (and sequential) code.
+    OpenMP support is only enabled if the number of threads is higher then one.
+    """
     def __init__(self, annarchy_dir, populations, projections, net_id):
-        self.net_id = net_id
-        self.annarchy_dir = annarchy_dir
-        self.populations = populations
-        self.projections = projections
+        """
+        Constructor initializes PopulationGenerator and ProjectionGenerator
+        class and stores the provided information for later use.
 
-        self.popgen = PopulationGenerator()
-        self.projgen = ProjectionGenerator()
+        Parameters:
+
+            * *net_id*: unique id for the current network
+            * *annarchy_dir*: unique target directory for the generated code
+              files; they are stored in 'generate' sub-folder
+            * *populations*: list of populations
+            * *populations*: list of projections
+        """
+        self._net_id = net_id
+        self._annarchy_dir = annarchy_dir
+        self._populations = populations
+        self._projections = projections
+
+        self._popgen = PopulationGenerator()
+        self._projgen = ProjectionGenerator()
 
         self._pop_desc = []
         self._proj_desc = []
 
     def generate(self):
-        if Global.config['verbose']:
-            print('\nGenerate code for OpenMP ...')
+        """
+        Generate code files and store them in target directory (self._annarchy_dir/generate).
+        More detailed the following files are generated, by this class:
 
-        # Propagte the global operations needed by the projections to the corresponding populations.
-        self.propagate_global_ops()
+            * *ANNarchy.cpp*: main simulation loop, object instantiation
+            * *ANNarchy.h*: collection of all objects, interface to Python
+              extension
+            * *ANNarchyCore.pyx*: Python extension file, gathering all functions /
+              objects, which should be accessible from Python
+            * for each population a seperate header file, contain semantic
+              logic of a population respectively neuron object (filename:
+              pop<id>).
+            * for each projection a seperate header file, contain semantic
+              logic of a projection respectively synapse object (filename:
+              proj<id>)
+        """
+        if Global.config['verbose']:
+            if Global.config['num_threads'] > 1:
+                print('\nGenerate code for OpenMP ...')
+            else:
+                print('\nGenerate sequential code ...')
+
+        # Propagte the global operations needed by the projections to the
+        # corresponding populations.
+        self._propagate_global_ops()
 
         # Create all populations
-        for pop in self.populations:
-            self._pop_desc.append(self.popgen.header_struct(pop, self.annarchy_dir))
+        for pop in self._populations:
+            self._pop_desc.append(self._popgen.header_struct(pop, self._annarchy_dir))
 
         # Create all projections
-        for proj in self.projections:
-            self._proj_desc.append(self.projgen.header_struct(proj, self.annarchy_dir))
+        for proj in self._projections:
+            self._proj_desc.append(self._projgen.header_struct(proj, self._annarchy_dir))
 
         # Generate header code for the analysed pops and projs
-        with open(self.annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self.generate_header())
-            
+
         # Generate cpp code for the analysed pops and projs
-        with open(self.annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
             ofile.write(self.generate_body())
 
         # Generate cython code for the analysed pops and projs
-        with open(self.annarchy_dir+'/generate/ANNarchyCore'+str(self.net_id)+'.pyx', 'w') as ofile:
-            ofile.write(self.generate_pyx())
+        with open(self._annarchy_dir+'/generate/ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
+            ofile.write(self._generate_pyx())
 
-    def propagate_global_ops(self):
-
+    def _propagate_global_ops(self):
+        """
+        
+        """
         # Analyse the populations
-        for pop in self.populations:
+        for pop in self._populations:
             pop.global_operations = pop.neuron_type.description['global_operations']
             pop.delayed_variables = []
 
         # Propagate the global operations from the projections to the populations
-        for proj in self.projections:
+        for proj in self._projections:
             for op in proj.synapse.description['pre_global_operations']:
                 if isinstance(proj.pre, PopulationView):
                     if not op in proj.pre.population.global_operations:
@@ -75,7 +134,7 @@ class OMPGenerator(object):
                     proj.pre.delayed_variables.append(var)
 
         # Make sure the operations are declared only once
-        for pop in self.populations:
+        for pop in self._populations:
             pop.global_operations = list(np.unique(np.array(pop.global_operations)))
             pop.delayed_variables = list(set(pop.delayed_variables))
 
@@ -132,16 +191,16 @@ class OMPGenerator(object):
         code = ""
         from ANNarchy.parser.Extraction import extract_functions
         for func in Global._objects['functions']:
-            code +=  extract_functions(func, local_global=True)[0]['cpp'] + '\n'
+            code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
 
         return code
 
     def header_recorder_classes(self):
         code = ""
-        for pop in self.populations:
-            code += self.popgen.recorder_class(pop)  
-        for proj in self.projections:
-            code += self.projgen.recorder_class(proj)  
+        for pop in self._populations:
+            code += self._popgen.recorder_class(pop)
+        for proj in self._projections:
+            code += self._projgen.recorder_class(proj)
 
         return code
 
@@ -184,7 +243,7 @@ class OMPGenerator(object):
         # Equations for the neural variables
         update_neuron = ""
         for pop in self._pop_desc:
-            update_neuron  += pop['update']
+            update_neuron += pop['update']
 
         # Enque delayed outputs
         delay_code = self.body_delay_neuron()
@@ -247,52 +306,51 @@ class OMPGenerator(object):
 
     def body_delay_neuron(self):
         code = ""
-        for pop in self.populations:
-            code += self.popgen.delay_code(pop)
+        for pop in self._populations:
+            code += self._popgen.delay_code(pop)
         return code
 
     def body_computesum_proj(self):
         code = ""
-        # Sum over all synapses 
-        for proj in self.projections:
+        # Sum over all synapses
+        for proj in self._projections:
             # Is it a specific projection?
             if proj.generator['omp']['body_compute_psp']:
-                code += proj.generator['omp']['body_compute_psp'] 
+                code += proj.generator['omp']['body_compute_psp']
                 continue
 
             # Call the comput_psp method
             code += """    proj%(id)s.compute_psp();
-""" % { 'id' : proj.id }
+""" % {'id' : proj.id}
 
         return code
 
     def body_resetcomputesum_pop(self):
         code = ""
-        for pop in self.populations:
+        for pop in self._populations:
             if pop.neuron_type.type == 'rate':
-                code += self.popgen.reset_computesum(pop)
-        
+                code += self._popgen.reset_computesum(pop)
+
         return code
 
     def body_postevent_proj(self):
         code = ""
-        for proj in self.projections:
+        for proj in self._projections:
             if proj.synapse.type == 'spike':
-                code += self.projgen.postevent(proj)
+                code += self._projgen.postevent(proj)
 
         return code
 
-
     def body_structural_plasticity(self):
         # Pruning if any
-        pruning=""
-        creating=""
-        if Global.config['structural_plasticity'] :
-            for proj in self.projections:
+        pruning = ""
+        creating = ""
+        if Global.config['structural_plasticity']:
+            for proj in self._projections:
                 if 'pruning' in proj.synapse.description.keys():
-                    pruning += self.projgen.pruning(proj)
+                    pruning += self._projgen.pruning(proj)
                 if 'creating' in proj.synapse.description.keys():
-                    creating += self.projgen.creating(proj)
+                    creating += self._projgen.creating(proj)
 
         return creating + pruning
 
@@ -300,11 +358,11 @@ class OMPGenerator(object):
         code = """
     // Initialize random distribution objects
 """
-        for pop in self.populations:
-            code += self.popgen.init_random_distributions(pop)
+        for pop in self._populations:
+            code += self._popgen.init_random_distributions(pop)
 
-        for proj in self.projections:
-            code += self.projgen.init_random_distributions(proj)
+        for proj in self._projections:
+            code += self._projgen.init_random_distributions(proj)
 
         return code
 
@@ -312,16 +370,16 @@ class OMPGenerator(object):
         code = """
     // Initialize global operations
 """
-        for pop in self.populations:
-            code += self.popgen.init_globalops(pop)
+        for pop in self._populations:
+            code += self._popgen.init_globalops(pop)
 
         return code
 
     def body_def_glops(self):
         ops = []
-        for pop in self.populations:
+        for pop in self._populations:
             for op in pop.global_operations:
-                ops.append( op['function'] )
+                ops.append(op['function'])
 
         if ops == []:
             return ""
@@ -335,22 +393,23 @@ class OMPGenerator(object):
 
     def body_init_delay(self):
         code = ""
-        for pop in self.populations:
+        for pop in self._populations:
             if pop.max_delay > 1: # no need to generate the code otherwise
-                code += self.popgen.init_delay(pop)
+                code += self._popgen.init_delay(pop)
 
         return code
 
     def body_init_population(self):
         """
-        Generate PopStruct::init_population() calls for the initialize() function. 
+        Generate PopStruct::init_population() calls for the initialize()
+        function.
         """
         code = """
     // Initialize populations
 """
-        for pop in self.populations:
+        for pop in self._populations:
             code += """    pop%(id)s.init_population();
-""" % { 'id': pop.id }
+""" % {'id': pop.id}
 
         return code
 
@@ -358,97 +417,75 @@ class OMPGenerator(object):
         code = """
     // Initialize projections
 """
-        for proj in self.projections:
+        for proj in self._projections:
             code += """    proj%(id)s.init_projection();
-""" % { 'id' : proj.id };
-
+""" % {'id' : proj.id}
         return code
-        
-    def body_update_randomdistributions(self):
-        code = "" 
-        for pop in self.populations:
-            code += self.popgen.update_random_distributions(pop)
 
-        for proj in self.projections:
-            code += self.projgen.update_random_distributions(proj)
+    def body_update_randomdistributions(self):
+        code = ""
+        for pop in self._populations:
+            code += self._popgen.update_random_distributions(pop)
+
+        for proj in self._projections:
+            code += self._projgen.update_random_distributions(proj)
 
         return code
 
     def body_update_globalops(self):
         code = ""
-        for pop in self.populations:
-            code += self.popgen.update_globalops(pop)
+        for pop in self._populations:
+            code += self._popgen.update_globalops(pop)
         return code
 
     def body_run_until(self):
+        """
+        Generate the code for conditioned stop of simulation
+        """
+        from .BodyTemplate import run_until_template as tpl
+
         # Check if it is useful to generate anything at all
-        for pop in self.populations:
-            if pop.stop_condition: # a condition has been defined
+        for pop in self._populations:
+            if pop.stop_condition:
                 break
         else:
-            return """
-    run(steps);
-    return steps;
-"""
+            # No stop conditions were detected
+            return tpl['default']
 
-        # Generate the conditional code
-        complete_code = """
-    bool stop = false;
-    bool pop_stop = false;
-    int nb = 0;
-    for(int n = 0; n < steps; n++)
-    {
-        step();
-        nb++;
-        stop = or_and;
-        for(int i=0; i<populations.size();i++)
-        {
-            // Check all populations
-            switch(populations[i]){
-%(run_until)s
-            }
+        # a condition has been defined, so we generate corresponding code
+        cond_code = ""
+        for pop in self._populations:
+            cond_code += self._popgen.stop_condition(pop)
 
-            // Accumulate the results
-            if(or_and)
-                stop = stop && pop_stop;
-            else
-                stop = stop || pop_stop;
-        }
-        if(stop)
-            break;
-    }
-    return nb;
-
-"""
-        code = ""
-        for pop in self.populations:
-            code += self.popgen.stop_condition(pop)
-
-        return complete_code % {'run_until': code}
+        return tpl['body'] % {'run_until': cond_code}
 
 
 #######################################################################
 ############## PYX ####################################################
 #######################################################################
-    def generate_pyx(self):
+    def _generate_pyx(self):
+        """
+        Generate the python extension (*.pyx) file comprising of wrapper
+        classes for the several objects. Secondly the definition of accessible
+        methods, e. g. simulate(int steps).
+        """
         # struct declaration for each population
-        pop_struct, pop_ptr = self.pyx_struct_pop()
+        pop_struct, pop_ptr = self._pyx_struct_pop()
 
         # struct declaration for each projection
-        proj_struct, proj_ptr = self.pyx_struct_proj()
+        proj_struct, proj_ptr = self._pyx_struct_proj()
 
         # struct declaration for each monitor
-        monitor_struct = self.pyx_struct_monitor()
+        monitor_struct = self._pyx_struct_monitor()
 
         # Cython wrappers for the populations
-        pop_class = self.pyx_wrapper_pop()
+        pop_class = self._pyx_wrapper_pop()
 
         # Cython wrappers for the projections
-        proj_class = self.pyx_wrapper_proj()
+        proj_class = self._pyx_wrapper_proj()
 
         # Cython wrappers for the monitors
-        monitor_class = self.pyx_wrapper_monitor()
-
+        monitor_class = self._pyx_wrapper_monitor()
 
         from .PyxTemplate import pyx_template
         return pyx_template % {
@@ -458,12 +495,12 @@ class OMPGenerator(object):
             'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class
         }
 
-    def pyx_struct_pop(self):
+    def _pyx_struct_pop(self):
         pop_struct = ""
         pop_ptr = ""
-        for pop in self.populations:
+        for pop in self._populations:
             # Header export
-            pop_struct += self.popgen.pyx_struct(pop)
+            pop_struct += self._popgen.pyx_struct(pop)
             # Population instance
             pop_ptr += """
     PopStruct%(id)s pop%(id)s"""% {
@@ -471,12 +508,12 @@ class OMPGenerator(object):
 }
         return pop_struct, pop_ptr
 
-    def pyx_struct_proj(self):
+    def _pyx_struct_proj(self):
         proj_struct = ""
         proj_ptr = ""
-        for proj in self.projections:
+        for proj in self._projections:
             # Header export
-            proj_struct += self.projgen.pyx_struct(proj)
+            proj_struct += self._projgen.pyx_struct(proj)
 
             # Projection instance
             proj_ptr += """
@@ -485,34 +522,34 @@ class OMPGenerator(object):
 }
         return proj_struct, proj_ptr
 
-    def pyx_wrapper_pop(self):
+    def _pyx_wrapper_pop(self):
         # Cython wrappers for the populations
         code = ""
-        for pop in self.populations:
-            code += self.popgen.pyx_wrapper(pop)
+        for pop in self._populations:
+            code += self._popgen.pyx_wrapper(pop)
         return code
 
-    def pyx_wrapper_proj(self):
+    def _pyx_wrapper_proj(self):
         # Cython wrappers for the projections
         code = ""
-        for proj in self.projections:
-            code += self.projgen.pyx_wrapper(proj)
+        for proj in self._projections:
+            code += self._projgen.pyx_wrapper(proj)
         return code
 
     # Monitors
-    def pyx_struct_monitor(self):
+    def _pyx_struct_monitor(self):
         code = ""
-        for pop in self.populations:
-            code += self.popgen.pyx_monitor_struct(pop)
-        for proj in self.projections:
-            code += self.projgen.pyx_monitor_struct(proj)
+        for pop in self._populations:
+            code += self._popgen.pyx_monitor_struct(pop)
+        for proj in self._projections:
+            code += self._projgen.pyx_monitor_struct(proj)
         return code
 
-    def pyx_wrapper_monitor(self):
+    def _pyx_wrapper_monitor(self):
         # Cython wrappers for the populations monitors
         code = ""
-        for pop in self.populations:
-            code += self.popgen.pyx_monitor_wrapper(pop)
-        for proj in self.projections:
-            code += self.projgen.pyx_monitor_wrapper(proj)
+        for pop in self._populations:
+            code += self._popgen.pyx_monitor_wrapper(pop)
+        for proj in self._projections:
+            code += self._projgen.pyx_monitor_wrapper(proj)
         return code
