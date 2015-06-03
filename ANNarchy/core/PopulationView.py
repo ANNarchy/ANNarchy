@@ -45,6 +45,7 @@ class PopulationView(object):
         self.name = population.name
         self.cyInstance = population.cyInstance
         self.variables = population.variables
+        self.attributes = population.attributes
 
     # targets must match the population, both in read and write
     @property

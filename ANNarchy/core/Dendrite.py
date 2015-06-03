@@ -120,6 +120,11 @@ class Dendrite(object):
         elif hasattr(self, 'proj'):
             if name == 'rank':
                 return self.proj.cyInstance.pre_rank(self.idx)
+            elif name == 'delay':
+                if self.proj.uniform_delay == -1:
+                    return [d*Global.config['dt'] for d in self.proj.cyInstance.get_dendrite_delay(self.idx)] 
+                else:
+                    return self.proj.max_delay * Global.config['dt']
             elif name in self.proj.attributes:
                 return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.idx)
             else:

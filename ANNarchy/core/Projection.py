@@ -165,18 +165,6 @@ class Projection(object):
 
         # Access the list of postsynaptic neurons
         self.post_ranks = self.cyInstance.post_rank()
-    
-    def _store_csr(self, csr):
-        "Stores the CSR object created by the connector method."
-        if self._synapses:
-            del self._synapses
-        self._synapses = csr
-        self.max_delay = self._synapses.get_max_delay()
-        self.uniform_delay = self._synapses.get_uniform_delay()
-        if isinstance(self.pre, PopulationView):
-            self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
-        else:
-            self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
     def _store_connectivity(self, method, args, delay):
         self._connection_method = method
@@ -184,15 +172,22 @@ class Projection(object):
         self._connection_delay = delay
 
         # Analyse the delay
-        if isinstance(delay, (int, float)):
+        if isinstance(delay, (int, float)): # Uniform delay
             self.max_delay = int(delay/Global.config['dt'])
             self.uniform_delay = int(delay/Global.config['dt'])
-        elif isinstance(delay, RandomDistribution):
+        elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
+            # Ensure no negative delays are generated
+            if delay.min == None: 
+                delay.min = Global.config['dt']
+            # The user needs to provide a max in order to compute max_delay
             if delay.max == None:
                 Global._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.') 
                 exit(0)
             self.max_delay = int(delay.max/Global.config['dt'])
+        elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
+            self.uniform_delay = -1
+            self.max_delay = int(max([max(l) for l in delay])/Global.config['dt'])
         else:
             Global._error('Projection.connect_xxx(): delays are not valid!')
             exit(0)
@@ -638,7 +633,7 @@ class Projection(object):
             allow_self_connections = True
 
         if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-            Global._error('gaussian connector is only possible on whole populations, not PopulationViews.')
+            Global._error('Gaussian connector is only possible on whole populations, not PopulationViews.')
             exit(0)
 
 
@@ -821,7 +816,7 @@ class Projection(object):
             try:
                 weights= np.array(weights)
             except:
-                Global._error('connect_from_matrix: You must provide a dense 2D matrix.')
+                Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
                 exit(0)
 
         uniform_delay = not isinstance(delays, (list, np.ndarray))
@@ -829,7 +824,7 @@ class Projection(object):
             try:
                 delays= np.array(delays)
             except:
-                Global._error('connect_from_matrix: You must provide a dense 2D matrix.')
+                Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
                 exit(0)
 
         if pre_post: # if the user prefers pre as the first index...
@@ -840,9 +835,9 @@ class Projection(object):
         shape = weights.shape
         if shape != (self.post.size, self.pre.size):
             if not pre_post:
-                Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
+                Global._error('connect_from_matrix(): wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
             else:
-                Global._error('connect_from_matrix: wrong size for for the matrix, should be', str((self.pre.size, self.post.size)))
+                Global._error('connect_from_matrix(): wrong size for for the matrix, should be', str((self.pre.size, self.post.size)))
             exit(0)
 
         for i in range(self.post.size):
@@ -875,21 +870,25 @@ class Projection(object):
         """
         Builds a connectivity pattern using a Scipy sparse matrix for the weights and (optionally) delays.
 
-        Warning: a sparse matrix has pre-synaptic ranks as first dimension, 
+        Warning: a sparse matrix has pre-synaptic ranks as first dimension.
 
         *Parameters*:
 
         * **weights**: a sparse lil_matrix object created from scipy.
-        * **delays**: the value of the homogenous delay (default: dt).
+        * **delays**: the value of the constant delay (default: dt).
         """
         try:
             from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
         except:
-            Global._error("scipy is not installed, sparse matrices can not be loaded.")
+            Global._error("connect_from_sparse(): scipy is not installed, sparse matrices can not be loaded.")
             exit(0)
 
         if not isinstance(weights, (lil_matrix, csr_matrix, csc_matrix)):
-            Global._error("only lil, csr and csc matrices are allowed for now.")
+            Global._error("connect_from_sparse(): only lil, csr and csc matrices are allowed for now.")
+            exit(0)
+
+        if not isinstance(delays, (int, float)):
+            Global._error("connect_from_sparse(): only constant delays are allowed for sparse matrices.")
             exit(0)
 
 
@@ -946,7 +945,7 @@ class Projection(object):
         try:
             data = _load_data(filename)
         except:
-            Global._error('Unable to load the data', filename, 'into the projection.')
+            Global._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')
             exit(0)
 
         # Load the CSR object
@@ -967,7 +966,7 @@ class Projection(object):
         # Store the synapses
         self.connector_name = "From File"
         self.connector_description = "From File"
-        self._store_connectivity(self._load_from_csr, (csr,), csr.max_delay)
+        self._store_connectivity(self._load_from_csr, (csr,), csr.max_delay if csr.uniform_delay > -1 else csr.delay)
         return self
 
     def save_connectivity(self, filename):
