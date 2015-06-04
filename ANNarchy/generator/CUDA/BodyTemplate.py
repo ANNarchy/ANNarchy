@@ -8,6 +8,7 @@ body_template = '''
 /*                                                                                 */
 /***********************************************************************************/
 #include <curand_kernel.h>
+#include <float.h>
 
 // global time step
 __constant__ long int t;
