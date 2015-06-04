@@ -539,11 +539,11 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             for op in pop.global_operations:
                 call = global_operation_templates[op['function']]['call'] % { 'id': pop.id, 'op': op['function'], 'var': op['variable']  }
                 code += """
-    double *tmp_%(op)s_%(name)s;
-    cudaMalloc((void**)&tmp_%(op)s_%(name)s, sizeof(double));
+    double *tmp_pop%(id)s_%(op)s_%(name)s;
+    cudaMalloc((void**)&tmp_pop%(id)s_%(op)s_%(name)s, sizeof(double));
 %(call)s
-    cudaFree(tmp_%(op)s_%(name)s);
-""" % { 'call': call, 'op': op['function'], 'name': op['variable']}
+    cudaFree(tmp_pop%(id)s_%(op)s_%(name)s);
+""" % { 'id': pop.id, 'call': call, 'op': op['function'], 'name': op['variable']}
 
         return code
 

@@ -47,8 +47,8 @@ __global__ void cuMaxValue(double* result, double *gpu_array, int N)
     if ( pop%(id)s._active ) {
         // TODO: determine correct kernel sizes
         int sharedMemSize = 64 * 8;
-        cuMaxValue <<< 1, 32, sharedMemSize >>> ( tmp_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._max_%(var)s, tmp_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cuMaxValue <<< 1, 32, sharedMemSize >>> ( tmp_pop%(id)s_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._max_%(var)s, tmp_pop%(id)s_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
 """
     },
@@ -101,8 +101,8 @@ __global__ void cuMinValue(double* result, double *gpu_array, int N)
     if ( pop%(id)s._active ) {
         // TODO: determine correct kernel sizes
         int sharedMemSize = 64 * 8;
-        cuMinValue <<< 1, 32, sharedMemSize >>> ( tmp_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._min_%(var)s, tmp_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cuMinValue <<< 1, 32, sharedMemSize >>> ( tmp_pop%(id)s_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._min_%(var)s, tmp_pop%(id)s_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
 """
     },
@@ -155,8 +155,8 @@ __global__ void cuMeanValue(double* result, double *gpu_array, int N)
     if ( pop%(id)s._active ) {
         // TODO: determine correct kernel sizes
         int sharedMemSize = 64 * 8;
-        cuMeanValue <<< 1, 32, sharedMemSize >>> ( tmp_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._mean_%(var)s, tmp_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cuMeanValue <<< 1, 32, sharedMemSize >>> ( tmp_pop%(id)s_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._mean_%(var)s, tmp_pop%(id)s_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
 """
     }
