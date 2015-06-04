@@ -900,6 +900,7 @@ class Projection(object):
         return self
 
     def _load_from_sparse(self, pre, post, weights, delays):
+        from scipy.sparse import csc_matrix
 
         # Create an empty CSR object
         csr = Connector.CSR()
