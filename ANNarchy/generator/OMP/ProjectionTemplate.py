@@ -294,7 +294,7 @@ public:
 """,
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            // Do something
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
         }
 """
     }
