@@ -131,7 +131,10 @@ class OMPGenerator(object):
                         proj.post.global_operations.append(op)
             if proj.max_delay > 1:
                 for var in proj.synapse.description['dependencies']['pre']:
-                    proj.pre.delayed_variables.append(var)
+                    if isinstance(proj.pre, PopulationView):
+                        proj.pre.population.delayed_variables.append(var)
+                    else:
+                        proj.pre.delayed_variables.append(var)
 
         # Make sure the operations are declared only once
         for pop in self._populations:

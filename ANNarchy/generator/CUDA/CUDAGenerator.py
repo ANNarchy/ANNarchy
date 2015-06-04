@@ -263,7 +263,7 @@ class CUDAGenerator(object):
             'device_init': device_init,
             'host_device_transfer': host_device_transfer,
             'device_host_transfer': device_host_transfer,
-            'kernel_def': update_neuron_header + compute_sums_header + update_synapse_header,
+            'kernel_def': update_neuron_header + compute_sums_header + update_synapse_header+glob_ops_header,
             
             #device stuff
             'kernel_config': threads_per_kernel,

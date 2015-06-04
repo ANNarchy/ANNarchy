@@ -1,6 +1,6 @@
 global_operation_templates = {
    'max' : {
-        'header' : """void max_value(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuMaxValue(double* result, double *gpu_array, int N);""",
         'body' : """// Computes the maximum value of an array
 __global__ void cuMaxValue(double* result, double *gpu_array, int N)
 {
@@ -42,24 +42,19 @@ __global__ void cuMaxValue(double* result, double *gpu_array, int N)
         *result = sdata[0];
     }
 }
-
-void max_value(double* result, double *gpu_array, int N)
-{
-    // TODO: determine correct kernel sizes
-    int sharedMemSize = 64 * 8;
-    cuMaxValue <<< 1, 32, sharedMemSize >>> ( result, gpu_array, N );
-}
 """,
         'call' : """
     if ( pop%(id)s._active ) {
-        max_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._max_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+        // TODO: determine correct kernel sizes
+        int sharedMemSize = 64 * 8;
+        cuMaxValue <<< 1, 32, sharedMemSize >>> ( tmp_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._max_%(var)s, tmp_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
 """
     },
 
     'min' : {
-        'header' : """void min_value(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuMinValue(double* result, double *gpu_array, int N);""",
         'body' : """// Computes the minimum value of an array
 __global__ void cuMinValue(double* result, double *gpu_array, int N)
 {
@@ -101,24 +96,19 @@ __global__ void cuMinValue(double* result, double *gpu_array, int N)
         *result = sdata[0];
     }
 }
-
-void min_value(double* result, double *gpu_array, int N)
-{
-    // TODO: determine correct kernel sizes
-    int sharedMemSize = 64 * 8;
-    cuMinValue <<< 1, 32, sharedMemSize >>> ( result, gpu_array, N );
-}
 """,
         'call' : """
     if ( pop%(id)s._active ) {
-        min_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._min_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+        // TODO: determine correct kernel sizes
+        int sharedMemSize = 64 * 8;
+        cuMinValue <<< 1, 32, sharedMemSize >>> ( tmp_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._min_%(var)s, tmp_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
 """
     },
 
     'mean' : {
-        'header' : """void mean_value(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuMeanValue(double* result, double *gpu_array, int N);""",
         'body' : """// Computes the mean value of an array
 __global__ void cuMeanValue(double* result, double *gpu_array, int N)
 {
@@ -160,18 +150,13 @@ __global__ void cuMeanValue(double* result, double *gpu_array, int N)
         *result = sdata[0] / (double)N;
     }
 }
-
-void mean_value(double* result, double *gpu_array, int N)
-{
-    // TODO: determine correct kernel sizes
-    int sharedMemSize = 64 * 8;
-    cuMeanValue <<< 1, 32, sharedMemSize >>> ( result, gpu_array, N );
-}
 """,
         'call' : """
     if ( pop%(id)s._active ) {
-        mean_value( tmp, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._mean_%(var)s, tmp, sizeof(double), cudaMemcpyDeviceToHost);
+        // TODO: determine correct kernel sizes
+        int sharedMemSize = 64 * 8;
+        cuMeanValue <<< 1, 32, sharedMemSize >>> ( tmp_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._mean_%(var)s, tmp_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
 """
     }
