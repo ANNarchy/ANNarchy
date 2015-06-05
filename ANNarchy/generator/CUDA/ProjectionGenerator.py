@@ -526,13 +526,15 @@ public:
             if var['name'] in proj.synapse.description['local']:
                 code += """
         # Local variable %(name)s
-        vector[vector[%(type)s]] %(name)s 
+        vector[vector[%(type)s]] %(name)s
+        bool %(name)s_dirty
 """ % {'type' : var['ctype'], 'name': var['name']}
 
             elif var['name'] in proj.synapse.description['global']:
                 code += """
         # Global variable %(name)s
-        vector[%(type)s]  %(name)s 
+        vector[%(type)s]  %(name)s
+        bool %(name)s_dirty
 """ % {'type' : var['ctype'], 'name': var['name']}
 
         # Structural plasticity
