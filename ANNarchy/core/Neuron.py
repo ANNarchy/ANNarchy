@@ -23,7 +23,7 @@
 """
 from ANNarchy.core.Global import _error, _warning, _network, _objects
 from ANNarchy.parser.SingleAnalysis import analyse_neuron
-form ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.PopulationView import PopulationView
 import numpy as np
 
 class Neuron(object):
