@@ -30,6 +30,7 @@
 #    additional: neuron specific definitions
 #    accessors: set of functions to export population data to python
 header_struct = {
+    'openmp': {
     'rate' :
 """#pragma once
 #include<random>
@@ -52,7 +53,7 @@ struct PopStruct%(id)s{
     // Access functions used by cython wrapper
     int get_size() { return size; }
     bool is_active() { return _active; }
-    bool set_active(bool val) { _active = val; }
+    void set_active(bool val) { _active = val; }
 
     // Neuron specific
 %(accessor)s
@@ -112,7 +113,7 @@ struct PopStruct%(id)s{
     // Access functions used by cython wrapper
     int get_size() { return size; }
     bool is_active() { return _active; }
-    bool set_active(bool val) { _active = val; }
+    void set_active(bool val) { _active = val; }
 
     // Neuron specific
 %(accessor)s
@@ -144,6 +145,64 @@ struct PopStruct%(id)s{
     }
 };
 """
+    },
+    'cuda': {
+    'rate' :
+"""#pragma once
+
+extern double dt;
+extern long int t;
+
+struct PopStruct%(id)s{
+    // Number of neurons
+    int size;
+
+    // Active
+    bool _active;
+
+    // assigned stream for concurrent kernel execution ( CC > 2.x )
+    cudaStream_t stream;
+
+%(additional)s
+
+    // Access functions used by cython wrapper
+    int get_size() { return size; }
+    bool is_active() { return _active; }
+    void set_active(bool val) { _active = val; }
+
+    // Neuron specific
+%(accessor)s
+
+    void init_population() {
+%(init)s
+    }
+
+    void update_rng() {
+        if (_active){
+            for(int i = 0; i < size; i++) {
+%(update_rng)s
+            }
+        }
+    }
+
+    void update_global_ops() {
+        if (_active){
+%(update_global_ops)s
+        }
+    }
+
+    void update_delay() {
+%(update_delay)s
+    }
+
+    void update() {
+%(update)s
+    }
+};
+""",
+    'spike': """
+"""
+    }
 }
 
 # c like definition of neuron attributes, whereas 'local' is used if values can vary across
@@ -278,6 +337,9 @@ attribute_cpp_init = {
 #    rd_name:
 #    rd_update:
 cpp_11_rng = {
+    'decl': """    std::vector<double> %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+""",
     'init': """
         %(rd_name)s = std::vector<double>(size, 0.0);
         dist_%(rd_name)s = %(rd_init)s;
@@ -286,6 +348,24 @@ cpp_11_rng = {
             pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
 """
 }
+
+# Definition for the usage of C++11 STL template random
+# number generators
+#
+# Parameters:
+#
+#    rd_name:
+#    rd_update:
+cuda_rng = {
+    'decl': """
+    curandState* gpu_%(rd_name)s;
+""",
+    'init': """
+""",
+    'update': """
+"""
+}
+
 # Rate respectively spiking models require partly special variables or have different operations.
 # This dictionary contain these unique initializations.
 #

@@ -28,7 +28,7 @@ from .PyxGenerator import PyxGenerator
 
 import numpy as np
 
-class OMPGenerator(object):
+class CodeGenerator(object):
     """
     Implements the code generator class for OpenMP (and sequential) code.
     OpenMP support is only enabled if the number of threads is higher then one.
@@ -99,7 +99,8 @@ class OMPGenerator(object):
             ofile.write(self._generate_header())
 
         # Generate cpp code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
+        postfix = ".cpp" if Global.config['paradigm']=="openmp" else ".cu"
+        with open(self._annarchy_dir+'/generate/ANNarchy'+postfix, 'w') as ofile:
             ofile.write(self.generate_body())
 
         # Generate cython code for the analysed pops and projs
@@ -178,17 +179,27 @@ class OMPGenerator(object):
         # Population recorders
         record_classes = self.header_recorder_classes()
 
-        from .BaseTemplate import omp_header_template
-        return omp_header_template % {
-            'pop_struct': pop_struct,
-            'proj_struct': proj_struct,
-            'pop_ptr': pop_ptr,
-            'proj_ptr': proj_ptr,
-            'custom_func': custom_func,
-            'include_omp': include_omp,
-            'record_classes': record_classes
-        }
-
+        if Global.config['paradigm']=="openmp":
+            from .BaseTemplate import omp_header_template
+            return omp_header_template % {
+                'pop_struct': pop_struct,
+                'proj_struct': proj_struct,
+                'pop_ptr': pop_ptr,
+                'proj_ptr': proj_ptr,
+                'custom_func': custom_func,
+                'include_omp': include_omp,
+                'record_classes': record_classes
+            }
+        else:
+            from .BaseTemplate import cuda_header_template
+            return cuda_header_template % {
+                'pop_struct': pop_struct,
+                'proj_struct': proj_struct,
+                'pop_ptr': pop_ptr,
+                'proj_ptr': proj_ptr,
+                'record_classes': record_classes
+            }
+            
     def header_custom_functions(self):
 
         if len(Global._objects['functions']) == 0:
@@ -276,28 +287,72 @@ class OMPGenerator(object):
         prof_run_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
 
         # Generate cpp code for the analysed pops and projs
-        from .BaseTemplate import omp_body_template
-        return omp_body_template % {
-            'pop_ptr': pop_ptr,
-            'proj_ptr': proj_ptr,
-            'glops_def': glop_definition,
-            'initialize': self._body_initialize(),
-            'run_until': run_until,
-            'compute_sums' : compute_sums,
-            'reset_sums' : reset_sums,
-            'update_neuron' : update_neuron,
-            'update_globalops' : update_globalops,
-            'update_synapse' : update_synapse,
-            'random_dist_update' : rd_update_code,
-            'delay_code' : delay_code,
-            'post_event' : post_event,
-            'structural_plasticity': structural_plasticity,
-            'set_number_threads' : number_threads,
-            'prof_include': prof_include,
-            'prof_step_pre': prof_step_pre,
-            'prof_run_pre': prof_run_pre,
-            'prof_run_post': prof_run_post
-        }
+        if Global.config['paradigm']=="openmp":
+            from .BaseTemplate import omp_body_template
+            return omp_body_template % {
+                'pop_ptr': pop_ptr,
+                'proj_ptr': proj_ptr,
+                'glops_def': glop_definition,
+                'initialize': self._body_initialize(),
+                'run_until': run_until,
+                'compute_sums' : compute_sums,
+                'reset_sums' : reset_sums,
+                'update_neuron' : update_neuron,
+                'update_globalops' : update_globalops,
+                'update_synapse' : update_synapse,
+                'random_dist_update' : rd_update_code,
+                'delay_code' : delay_code,
+                'post_event' : post_event,
+                'structural_plasticity': structural_plasticity,
+                'set_number_threads' : number_threads,
+                'prof_include': prof_include,
+                'prof_step_pre': prof_step_pre,
+                'prof_run_pre': prof_run_pre,
+                'prof_run_post': prof_run_post
+            }
+
+        else:
+            compute_sums_call = ""
+            update_neuron_call = ""
+            update_synapse_call = ""
+            projection_init = ""
+            device_init = ""
+            delay_code = ""
+
+            # determine number of threads per kernel and concurrent kernel execution
+            threads_per_kernel, stream_setup = self.body_kernel_config()
+            
+            from .BaseTemplate import cuda_body_template
+            return cuda_body_template % {
+                # network definitions
+                'pop_ptr': pop_ptr,
+                'proj_ptr': proj_ptr,
+                'run_until': run_until,
+                'compute_sums' : compute_sums_call,
+                'update_neuron' : update_neuron_call,
+                'update_globalops' : update_globalops,
+                'update_synapse' : update_synapse_call,
+                'delay_code': delay_code,
+                'projection_init' : projection_init,
+                'post_event' : post_event,
+                'structural_plasticity': structural_plasticity,
+                
+                # cuda host specific
+                'stream_setup': stream_setup,
+                'device_init': device_init,
+                'host_device_transfer': "", #host_device_transfer,
+                'device_host_transfer': "", #device_host_transfer,
+                'kernel_def': "", #update_neuron_header + compute_sums_header + update_synapse_header+glob_ops_header,
+                
+                #device stuff
+                'kernel_config': threads_per_kernel,
+                'pop_kernel': "", #update_neuron_body,
+                'psp_kernel': "", #compute_sums_body,
+                'syn_kernel': "", #update_synapse_body,
+                'glob_ops_kernel': "", #glob_ops_body,
+                'custom_func': "", #custom_func            
+            }
+        
 
     def _body_initialize(self):
         """
@@ -403,3 +458,64 @@ class OMPGenerator(object):
             cond_code += self._popgen.stop_condition(pop)
 
         return tpl['body'] % {'run_until': cond_code}
+
+    def body_kernel_config(self):
+        """
+        Generates a kernel config and stream setup (if a device with compute
+        compability > 2.x available. The kernel configuration is needed for
+        the device code, to have number of threads and blocks for calling
+        device functions. Stream setup is for the concurrent kernel
+        execution. Please note, that these parameter must be modified
+        through Global.cuda_config dictionary, otherwise default values (no
+        stream, 192 threads for psp, 32 threads for neurons) are used.
+        
+        Notice:
+        
+            Only related to the CUDA implementation
+        """
+        cu_config = Global.cuda_config
+
+        code = "// Population config\n"
+        for pop in self._populations:
+            num_threads = 32
+            if pop in cu_config.keys():
+                num_threads = cu_config[pop]['num_threads']
+
+            code+= """#define __pop%(id)s__ %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
+
+        code += "\n// Population config\n"
+        for proj in self._projections:
+            num_threads = 192
+            if proj in cu_config.keys():
+                num_threads = cu_config[proj]['num_threads']
+
+            code+= """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
+
+        pop_assign = "    // populations\n"
+        for pop in self._populations:
+            if pop in Global.cuda_config.keys():
+                pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
+""" % {'pid': pop.id, 'sid': Global.cuda_config[pop]['stream'] }
+            else:
+                # default stream
+                pop_assign += """    pop%(pid)s.stream = 0;
+""" % {'pid': pop.id }
+
+        proj_assign = "    // populations\n"
+        for proj in self._projections:
+            if proj in Global.cuda_config.keys():
+                proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
+""" % {'pid': proj.id, 'sid': Global.cuda_config[proj]['stream'] }
+            else:
+                # default stream
+                proj_assign += """    proj%(pid)s.stream = 0;
+""" % {'pid': proj.id }
+
+        from .BaseTemplate import cuda_stream_setup
+        stream_config = cuda_stream_setup % {
+            'nbStreams': 2,
+            'pop_assign': pop_assign,
+            'proj_assign': proj_assign
+        }
+
+        return code, stream_config

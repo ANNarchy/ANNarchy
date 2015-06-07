@@ -367,19 +367,9 @@ clean:
 
     def code_generation(self, cpp_stand_alone, profile_enabled, clean):
         """ Code generation dependent on paradigm """
-        if Global.config['paradigm'] == "openmp":
-            from .OMP.OMPGenerator import OMPGenerator
-            generator = OMPGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id)
-            generator.generate()
-        else: # CUDA
-            from .CUDA.CUDAGenerator import CUDAGenerator
-            generator = CUDAGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id)
-            generator.generate()
-
-        if self.profile_enabled:
-            from .Profile.ProfileGenerator import ProfileGenerator
-            prof_generator = ProfileGenerator(self.annarchy_dir, self.populations, self.projections)
-            prof_generator.generate()
+        from .OMP.CodeGenerator import CodeGenerator
+        generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id)
+        generator.generate()
 
     def check_structure(self):
         """

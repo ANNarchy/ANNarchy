@@ -21,13 +21,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-import ANNarchy.core.Global as Global
+from ANNarchy.core import Global
 import PopulationTemplate as PopTemplate
 from ANNarchy import SpikeSourceArray
 from GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 
 class PopulationGenerator(object):
-
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
@@ -55,7 +54,7 @@ class PopulationGenerator(object):
 
         else:
             # Pick basic template based on neuron type
-            base_template = PopTemplate.header_struct[pop.neuron_type.type]
+            base_template = PopTemplate.header_struct[Global.config['paradigm']][pop.neuron_type.type]
 
             code = "" # member declarations
             accessors = "" # export member functions
@@ -91,13 +90,14 @@ class PopulationGenerator(object):
 
             # Arrays for the random numbers
             code += """
-    // Random numbers (STL implementation)
+    // Random numbers
 """
             for rd in pop.neuron_type.description['random_distributions']:
-                code += """    std::vector<double> %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
-
+                if Global.config['paradigm']=="openmp":
+                    code += PopTemplate.cpp_11_rng['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+                else:
+                    code += PopTemplate.cuda_rng['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+                
             # Delays
             if pop.max_delay > 1:
                 if pop.neuron_type.type == "rate":
@@ -267,6 +267,9 @@ public:
         # Is it a specific population?
         if pop.generator['omp']['body_update_neuron']:
             return pop.generator['omp']['body_update_neuron'] %{'id': pop.id}
+
+        if Global.config['paradigm']=="cuda":
+            return ""
 
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
@@ -490,9 +493,12 @@ public:
         # Random numbers
         if len(pop.neuron_type.description['random_distributions']) > 0:
             code += """
-        // Random numbers (STL, C++11)"""
+        // Random numbers"""
             for rd in pop.neuron_type.description['random_distributions']:
-                code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+                if Global.config['paradigm'] == "openmp":
+                    code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+                else:
+                    code += PopTemplate.cuda_rng['init']
 
         # Global operations
         code += self._init_globalops(pop)
@@ -583,6 +589,9 @@ public:
     def update_random_distributions(self, pop):
         code = ""
         for rd in pop.neuron_type.description['random_distributions']:
-            code += PopTemplate.cpp_11_rng['update'] % {'id': pop.id, 'rd_name': rd['name']}
+            if Global.config['paradigm']=="openmp":
+                code += PopTemplate.cpp_11_rng['update'] % {'id': pop.id, 'rd_name': rd['name']}
+            else:
+                code += PopTemplate.cuda_rng['update']
 
         return code
