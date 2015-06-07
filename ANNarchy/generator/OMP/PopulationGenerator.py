@@ -406,29 +406,23 @@ public:
             return pop.generator['omp']['body_delay_code'] % {'id': pop.id}
 
         code = ""
-        if pop.neuron_type.type == 'rate':
+        for var in pop.delayed_variables:
             code += """
-    // Enqueuing outputs of pop%(id)s (%(name)s)
-    if ( pop%(id)s._active ) {""" % {'id': pop.id, 'name' : pop.name }
-
-            for var in pop.delayed_variables:
-                code += """
         pop%(id)s._delayed_%(var)s.push_front(pop%(id)s.%(var)s);
-        pop%(id)s._delayed_%(var)s.pop_back();""" % {'id': pop.id, 'var' : var}
+        pop%(id)s._delayed_%(var)s.pop_back();
+""" % {'id': pop.id, 'var' : var}
 
+        if pop.neuron_type.type == 'spike':
             code += """
-    }
-""" 
-        else:
-            code += """
-    // Enqueuing outputs of pop%(id)s (%(name)s)
-    if (pop%(id)s._active){
         pop%(id)s._delayed_spike.push_front(pop%(id)s.spiked);
         pop%(id)s._delayed_spike.pop_back();
-    }
 """ % {'id': pop.id, 'name' : pop.name }
 
-        return code
+        return """
+    // delayed variables of pop%(id)s (%(name)s)
+    if ( pop%(id)s._active ) {
+%(code)s
+    }""" % {'id': pop.id, 'name' : pop.name, 'code': code }
 
     def init_globalops(self, pop):
         # Is it a specific population?
@@ -445,26 +439,18 @@ public:
         code = """
     // Delayed variables
 """
-        # Is it a specific population?
-        if pop.generator['omp']['body_delay_init']:
-            code += pop.generator['omp']['body_delay_init'] %{'id': pop.id, 'delay': pop.max_delay}
-            return code
+        for var in pop.delayed_variables:
+            if var in pop.neuron_type.description['local']:
+                code += """
+    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+            else:
+                code += """
+    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
 
-        if pop.neuron_type.type == 'rate':
-            for var in pop.delayed_variables:
-                if var in pop.neuron_type.description['local']:
-                    code += """
-    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));
-""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
-                else:
-                    code += """
-    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);
-""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
-
-        else: # SPIKE
+        # spike event is handled seperatly
+        if pop.neuron_type.type == 'spike':
             code += """
-    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
-""" % {'id': pop.id, 'delay': pop.max_delay}
+    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 
@@ -474,13 +460,6 @@ public:
         size = %(size)s;
         _active = true;
 """ % { 'id': pop.id, 'size': pop.size }
-
-        # Is it a specific population?
-        if pop.generator['omp']['body_spike_init']:
-            code += pop.generator['omp']['body_spike_init'] %{'id': pop.id}
-            if pop.max_delay > 1:
-                code += self.init_delay(pop)
-            return code
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
@@ -524,10 +503,6 @@ public:
         return code
 
     def update_globalops(self, pop):
-        # Is it a specific population?
-        if pop.generator['omp']['body_update_globalops']:
-            return pop.generator['omp']['body_update_globalops'] %{'id': pop.id}
-
         code = ""
         if len(pop.global_operations) > 0:
             code += """
