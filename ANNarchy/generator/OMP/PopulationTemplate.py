@@ -38,6 +38,8 @@ extern double dt;
 extern long int t;
 extern std::mt19937 rng;
 
+%(gl_ops_extern)s
+
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
@@ -65,6 +67,16 @@ struct PopStruct%(id)s{
 %(update_rng)s
             }
         }
+    }
+
+    void update_global_ops() {
+        if (_active){
+%(update_global_ops)s
+        }
+    }
+
+    void update_delay() {
+%(update_delay)s
     }
 
     void update() {
@@ -107,6 +119,24 @@ struct PopStruct%(id)s{
 
     void init_population() {
 %(init)s
+    }
+
+    void update_rng() {
+        if (_active){
+            for(int i = 0; i < size; i++) {
+%(update_rng)s
+            }
+        }
+    }
+
+    void update_global_ops() {
+        if (_active){
+%(update_global_ops)s
+        }
+    }
+
+    void update_delay() {
+%(update_delay)s
     }
 
     void update() {

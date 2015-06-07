@@ -24,6 +24,7 @@
 import ANNarchy.core.Global as Global
 import PopulationTemplate as PopTemplate
 from ANNarchy import SpikeSourceArray
+from GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 
 class PopulationGenerator(object):
 
@@ -79,12 +80,14 @@ class PopulationGenerator(object):
 """ % {'target' : target}
 
             # Global operations
+            glops_extern = ""
             code += """
     // Global operations
 """
             for op in pop.global_operations:
                 code += """    double _%(op)s_%(var)s;
 """ % {'op': op['function'], 'var': op['variable']}
+                glops_extern += global_op_extern_dict[op['function']]
 
             # Arrays for the random numbers
             code += """
@@ -125,13 +128,18 @@ class PopulationGenerator(object):
             init = self.init_population(pop)
             update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
             update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+            update_global_ops = self.update_globalops(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+            update_delay = self.delay_code(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
             code = base_template % { 'id': pop.id,
+                                     'gl_ops_extern': glops_extern,
                                      'additional': code,
                                      'accessor': accessors,
                                      'init': init,
                                      'update': update,
-                                     'update_rng': update_rng
+                                     'update_rng': update_rng,
+                                     'update_delay': update_delay,
+                                     'update_global_ops': update_global_ops
                                     }
 
         # Store the complete header definition in a single file
@@ -139,16 +147,21 @@ class PopulationGenerator(object):
             ofile.write(code)
 
         # check if we have to add rng, delay calls
-        has_no_update = ( len(pop.neuron_type.description['variables']) == 0 and not pop._specific )
-        has_no_rng = ( len(pop.neuron_type.description['random_distributions']) == 0 and not pop._specific )
+        has_update = ( len(pop.neuron_type.description['variables']) > 0 or pop._specific )
+        has_rng = ( len(pop.neuron_type.description['random_distributions']) > 0 or pop._specific )
+        has_no_delay = (not pop.max_delay > 1)
+        has_no_gops = ( len(pop.neuron_type.description['global_operations']) == 0)
 
         # build dictionary of calls for the ANNarchy.cpp file
         pop_desc = {
             'include': """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id },
             'extern': """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
             'instance': """PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
-            'update': "" if has_no_update else """    pop%(id)s.update();\n""" % { 'id': pop.id },
-            'rng_update': "" if has_no_rng else """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
+            'init': """    pop%(id)s.init_population();\n""" % {'id': pop.id},
+            'update': "" if not has_update else """    pop%(id)s.update();\n""" % { 'id': pop.id },
+            'rng_update': "" if not has_rng else """    pop%(id)s.update_rng();\n""" % { 'id': pop.id },
+            'delay_update': "" if has_no_delay else """    pop%(id)s.update_delay();\n""" % { 'id': pop.id },
+            'gops_update': "" if has_no_gops else """    pop%(id)s.update_global_ops();\n""" % { 'id': pop.id }
         }
 
         return pop_desc
@@ -424,14 +437,13 @@ public:
 %(code)s
     }""" % {'id': pop.id, 'name' : pop.name, 'code': code }
 
-    def init_globalops(self, pop):
-        # Is it a specific population?
-        if pop.generator['omp']['body_globalops_init']:
-            return pop.generator['omp']['body_globalops_init'] %{'id': pop.id}
+    def _init_globalops(self, pop):
+        if len(pop.global_operations)==0:
+            return ""
 
-        code = ""
+        code = "//Initialize global operations\n"
         for op in pop.global_operations:
-            code += """    pop%(id)s._%(op)s_%(var)s = 0.0;
+            code += """    _%(op)s_%(var)s = 0.0;
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         return code
 
@@ -481,6 +493,9 @@ public:
         // Random numbers (STL, C++11)"""
             for rd in pop.neuron_type.description['random_distributions']:
                 code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+
+        # Global operations
+        code += self._init_globalops(pop)
 
         # Targets
         if pop.neuron_type.type == 'rate':

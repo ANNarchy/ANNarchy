@@ -223,6 +223,9 @@ class OMPGenerator(object):
 
         # Code for the global operations
         glop_definition = self.body_def_glops()
+        update_globalops = ""
+        for pop in self._pop_desc:
+            update_globalops += pop['gops_update']
 
         # Reset presynaptic sums
         reset_sums = self.body_resetcomputesum_pop()
@@ -236,13 +239,14 @@ class OMPGenerator(object):
             rd_update_code += desc['rng_update']
 
         # Initialize populations
-        pop_init = self.body_init_population()
+        population_init = "    //Initialize populations\n"
+        for pop in self._pop_desc:
+            population_init += pop['init']
 
         # Initialize projections
-        projection_init = self.body_init_projection()
-
-        # Initialize global operations
-        globalops_init = self.body_init_globalops()
+        projection_init = "        // Initialize projections\n"
+        for proj in self._proj_desc:
+            projection_init += proj['init']
 
         # Equations for the neural variables
         update_neuron = ""
@@ -250,10 +254,9 @@ class OMPGenerator(object):
             update_neuron += pop['update']
 
         # Enque delayed outputs
-        delay_code = self.body_delay_neuron()
-
-        # Global operations
-        update_globalops = self.body_update_globalops()
+        delay_code = ""
+        for pop in self._pop_desc:
+            delay_code += pop['delay_update']
 
         # Equations for the synaptic variables
         update_synapse = ""
@@ -294,9 +297,8 @@ class OMPGenerator(object):
             'update_synapse' : update_synapse,
             'random_dist_update' : rd_update_code,
             'delay_code' : delay_code,
-            'pop_init' : pop_init,
+            'pop_init' : population_init,
             'projection_init' : projection_init,
-            'globalops_init' : globalops_init,
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
             'set_number_threads' : number_threads,
@@ -306,12 +308,6 @@ class OMPGenerator(object):
             'prof_run_pre': prof_run_pre,
             'prof_run_post': prof_run_post
         }
-
-    def body_delay_neuron(self):
-        code = ""
-        for pop in self._populations:
-            code += self._popgen.delay_code(pop)
-        return code
 
     def body_computesum_proj(self):
         code = ""
@@ -357,27 +353,6 @@ class OMPGenerator(object):
 
         return creating + pruning
 
-    def body_init_randomdistributions(self):
-        code = """
-    // Initialize random distribution objects
-"""
-        for pop in self._populations:
-            code += self._popgen.init_random_distributions(pop)
-
-        for proj in self._projections:
-            code += self._projgen.init_random_distributions(proj)
-
-        return code
-
-    def body_init_globalops(self):
-        code = """
-    // Initialize global operations
-"""
-        for pop in self._populations:
-            code += self._popgen.init_globalops(pop)
-
-        return code
-
     def body_def_glops(self):
         ops = []
         for pop in self._populations:
@@ -392,53 +367,6 @@ class OMPGenerator(object):
         for op in list(set(ops)):
             code += global_operation_templates[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
 
-        return code
-
-    def body_init_delay(self):
-        code = ""
-        for pop in self._populations:
-            if pop.max_delay > 1: # no need to generate the code otherwise
-                code += self._popgen.init_delay(pop)
-
-        return code
-
-    def body_init_population(self):
-        """
-        Generate PopStruct::init_population() calls for the initialize()
-        function.
-        """
-        code = """
-    // Initialize populations
-"""
-        for pop in self._populations:
-            code += """    pop%(id)s.init_population();
-""" % {'id': pop.id}
-
-        return code
-
-    def body_init_projection(self):
-        code = """
-    // Initialize projections
-"""
-        for proj in self._projections:
-            code += """    proj%(id)s.init_projection();
-""" % {'id' : proj.id}
-        return code
-
-    def body_update_randomdistributions(self):
-        code = ""
-        for pop in self._populations:
-            code += self._popgen.update_random_distributions(pop)
-
-        for proj in self._projections:
-            code += self._projgen.update_random_distributions(proj)
-
-        return code
-
-    def body_update_globalops(self):
-        code = ""
-        for pop in self._populations:
-            code += self._popgen.update_globalops(pop)
         return code
 
     def body_run_until(self):

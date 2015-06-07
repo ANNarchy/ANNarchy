@@ -152,6 +152,7 @@ class ProjectionGenerator(object):
             'include': """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id },
             'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
             'instance': """ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
+            'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id},
             'update': "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id },
             'rng_update': "" if update_rng=="" else """    proj%(id)s.update_rng();\n""" % { 'id': proj.id }
         }

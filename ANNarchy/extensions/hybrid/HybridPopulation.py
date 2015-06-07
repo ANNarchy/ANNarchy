@@ -148,6 +148,10 @@ struct PopStruct%(id)s{
         support = std::vector< double >(size, 10000.0);
     }
 
+    void update_rng() {
+
+    }
+
     void update() {
         // Updating the local variables of Spike2Rate population %(id)s
         if(_active){
@@ -247,6 +251,10 @@ struct PopStruct%(id)s{
         _active = true;
 
         last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
+    }
+
+    void update_rng() {
+
     }
 
     void update() {
@@ -358,6 +366,10 @@ struct PopStruct%(id)s{
         last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
         ad_window = std::vector< double >(size, window);
         isi = std::vector< double >(size, 10000.0);
+    }
+
+    void update_rng() {
+
     }
 
     void update() {
@@ -519,6 +531,16 @@ struct PopStruct1{
         spiked = std::vector<int>(0, 0);
         last_spike = std::vector<long int>(size, -10000L);
         refractory_remaining = std::vector<int>(size, 0);
+
+        rand_0 = std::vector<double>(size, 0.0);
+        dist_rand_0 = std::uniform_real_distribution<double>(0.0, 1.0);
+    }
+
+    void update_rng() {
+        for(int i = 0; i < size; i++)
+        {
+            rand_0[i] = dist_rand_0(rng);
+        }
     }
 
     void update() {
