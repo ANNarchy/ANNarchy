@@ -58,6 +58,10 @@ struct ProjStruct%(id_proj)s{
 %(psp)s
     }
     
+    void update_rng() {
+%(update_rng)s
+    }
+
     void update_synapse() {
         int rk_pre, rk_post;
 

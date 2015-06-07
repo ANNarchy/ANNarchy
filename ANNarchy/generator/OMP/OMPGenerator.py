@@ -230,9 +230,10 @@ class OMPGenerator(object):
         # Compute presynaptic sums
         compute_sums = self.body_computesum_proj()
 
-        # Initialize random distributions
-        rd_init_code = self.body_init_randomdistributions()
-        rd_update_code = self.body_update_randomdistributions()
+        # Update random distributions
+        rd_update_code = ""
+        for desc in self._pop_desc + self._proj_desc:
+            rd_update_code += desc['rng_update']
 
         # Initialize populations
         pop_init = self.body_init_population()
@@ -291,7 +292,6 @@ class OMPGenerator(object):
             'update_neuron' : update_neuron,
             'update_globalops' : update_globalops,
             'update_synapse' : update_synapse,
-            'random_dist_init' : rd_init_code,
             'random_dist_update' : rd_update_code,
             'delay_code' : delay_code,
             'pop_init' : pop_init,

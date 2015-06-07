@@ -68,7 +68,6 @@ void initialize(double _dt, long int seed) {
     }
     
 %(pop_init)s
-%(random_dist_init)s
 %(projection_init)s
 %(globalops_init)s
 }
@@ -107,12 +106,10 @@ void step()
     ////////////////////////////////
 %(update_globalops)s
 
-
     ////////////////////////////////
     // Update synaptic variables
     ////////////////////////////////
 %(update_synapse)s    
-
 
     ////////////////////////////////
     // Postsynaptic events

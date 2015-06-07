@@ -124,25 +124,31 @@ class PopulationGenerator(object):
             # Implementation for init_population, update
             init = self.init_population(pop)
             update = self.update_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+            update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
             code = base_template % { 'id': pop.id,
                                      'additional': code,
                                      'accessor': accessors,
                                      'init': init,
-                                     'update': update
+                                     'update': update,
+                                     'update_rng': update_rng
                                     }
 
         # Store the complete header definition in a single file
         with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
             ofile.write(code)
 
+        # check if we have to add rng, delay calls
         has_no_update = ( len(pop.neuron_type.description['variables']) == 0 and not pop._specific )
+        has_no_rng = ( len(pop.neuron_type.description['random_distributions']) == 0 and not pop._specific )
 
+        # build dictionary of calls for the ANNarchy.cpp file
         pop_desc = {
             'include': """#include "pop%(id)s.hpp"\n""" % { 'id': pop.id },
             'extern': """extern PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
             'instance': """PopStruct%(id)s pop%(id)s;\n"""% { 'id': pop.id },
-            'update': "" if has_no_update else """    pop%(id)s.update();\n""" % { 'id': pop.id }
+            'update': "" if has_no_update else """    pop%(id)s.update();\n""" % { 'id': pop.id },
+            'rng_update': "" if has_no_rng else """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
         }
 
         return pop_desc
@@ -435,18 +441,6 @@ public:
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         return code
 
-    def init_random_distributions(self, pop):
-        # Is it a specific population?
-        if pop.generator['omp']['body_random_dist_init']:
-            return pop.generator['omp']['body_random_dist_init'] %{'id': pop.id}
-
-        code = ""
-        for rd in pop.neuron_type.description['random_distributions']:
-            code += """    pop%(id)s.%(rd_name)s = std::vector<double>(pop%(id)s.size, 0.0);
-    pop%(id)s.dist_%(rd_name)s = %(rd_init)s;
-""" % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
-        return code
-
     def init_delay(self, pop):
         code = """
     // Delayed variables
@@ -460,15 +454,17 @@ public:
             for var in pop.delayed_variables:
                 if var in pop.neuron_type.description['local']:
                     code += """
-    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0)); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));
+""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
                 else:
                     code += """
-    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0); """ % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
-
+    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);
+""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
 
         else: # SPIKE
             code += """
-    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>()); """ % {'id': pop.id, 'delay': pop.max_delay}
+    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
+""" % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 
@@ -496,6 +492,17 @@ public:
             init = 0.0 if var['ctype'] == 'double' else 0
             code += PopTemplate.attribute_cpp_init[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
 
+        # Delays
+        if pop.max_delay > 1:
+            code += self.init_delay(pop)
+
+        # Random numbers
+        if len(pop.neuron_type.description['random_distributions']) > 0:
+            code += """
+        // Random numbers (STL, C++11)"""
+            for rd in pop.neuron_type.description['random_distributions']:
+                code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+
         # Targets
         if pop.neuron_type.type == 'rate':
             for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
@@ -504,10 +511,6 @@ public:
         # Spike event and refractory
         if pop.neuron_type.type == 'spike':
             code += PopTemplate.model_specific_init['spike_event'] % {'id': pop.id}
-
-        # Delays
-        if pop.max_delay > 1:
-            code += self.init_delay(pop)
 
         return code
 
@@ -588,28 +591,9 @@ public:
 """ % {'id': pop.id, 'stop_code': stop_code}
 
     def update_random_distributions(self, pop):
-        # Is it a specific population?
-        if pop.generator['omp']['body_random_dist_update']:
-            return pop.generator['omp']['body_random_dist_update'] %{'id': pop.id}
-
         code = ""
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-            code += """
-    // RD of pop%(id)s
-    if (pop%(id)s._active){
-        for(int i = 0; i < pop%(id)s.size; i++)
-        {
-"""% {'id': pop.id}
-
-            for rd in pop.neuron_type.description['random_distributions']:
-                code += """
-            pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
-""" % {'id': pop.id, 'rd_name': rd['name']}
-
-            code += """
-        }
-    }
-"""
+        for rd in pop.neuron_type.description['random_distributions']:
+            code += PopTemplate.cpp_11_rng['update'] % {'id': pop.id, 'rd_name': rd['name']}
 
         return code
 

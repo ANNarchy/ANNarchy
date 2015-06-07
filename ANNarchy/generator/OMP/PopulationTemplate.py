@@ -32,9 +32,11 @@
 header_struct = {
     'rate' :
 """#pragma once
+#include<random>
 
 extern double dt;
 extern long int t;
+extern std::mt19937 rng;
 
 struct PopStruct%(id)s{
     // Number of neurons
@@ -56,7 +58,15 @@ struct PopStruct%(id)s{
     void init_population() {
 %(init)s
     }
-    
+
+    void update_rng() {
+        if (_active){
+            for(int i = 0; i < size; i++) {
+%(update_rng)s
+            }
+        }
+    }
+
     void update() {
 %(update)s
     }
@@ -64,9 +74,11 @@ struct PopStruct%(id)s{
 """,
     'spike':
 """#pragma once
+#include<random>
 
 extern double dt;
 extern long int t;
+extern std::mt19937 rng;
 
 struct PopStruct%(id)s{
     // Number of neurons
@@ -228,6 +240,22 @@ attribute_cpp_init = {
 """
 }
 
+# Definition for the usage of C++11 STL template random
+# number generators
+#
+# Parameters:
+#
+#    rd_name:
+#    rd_update:
+cpp_11_rng = {
+    'init': """
+        %(rd_name)s = std::vector<double>(size, 0.0);
+        dist_%(rd_name)s = %(rd_init)s;
+""",
+    'update': """
+            pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
+"""
+}
 # Rate respectively spiking models require partly special variables or have different operations.
 # This dictionary contain these unique initializations.
 #

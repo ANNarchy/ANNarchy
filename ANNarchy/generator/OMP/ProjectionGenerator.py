@@ -61,6 +61,7 @@ class ProjectionGenerator(object):
             final_code = proj.generator['omp']['header_proj_struct']
             init = ""
             update = ""
+            update_rng = ""
 
         else:
             # create the code for non-specific projections
@@ -118,6 +119,7 @@ class ProjectionGenerator(object):
             # Definiton of synaptic equations, initialization
             init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
             update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+            update_rng = self.update_random_distributions(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
             if proj.synapse.type == 'rate':
                 psp_prefix = "int nb_post;\ndouble sum;"
@@ -139,6 +141,7 @@ class ProjectionGenerator(object):
                                                         'init': init,
                                                         'psp_prefix': psp_prefix,
                                                         'psp': psp,
+                                                        'update_rng': update_rng,
                                                         'update': update
                                                      }
 
@@ -149,7 +152,8 @@ class ProjectionGenerator(object):
             'include': """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id },
             'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
             'instance': """ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
-            'update': "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id }
+            'update': "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id },
+            'rng_update': "" if update_rng=="" else """    proj%(id)s.update_rng();\n""" % { 'id': proj.id }
         }
 
         return proj_desc
@@ -772,6 +776,9 @@ class ProjectionGenerator(object):
     // Global variable %(name)s
     proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
 """ %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+
+        # Random numbers
+        code += self.init_random_distributions(proj)
 
         # Spiking neurons have aditional data
         if proj.synapse.type == 'spike':
