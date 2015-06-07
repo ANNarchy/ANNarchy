@@ -24,6 +24,7 @@ import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from .PopulationGenerator import PopulationGenerator
 from .ProjectionGenerator import ProjectionGenerator
+from .PyxGenerator import PyxGenerator
 
 import numpy as np
 
@@ -52,6 +53,8 @@ class OMPGenerator(object):
 
         self._popgen = PopulationGenerator()
         self._projgen = ProjectionGenerator()
+
+        self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
 
         self._pop_desc = []
         self._proj_desc = []
@@ -93,7 +96,7 @@ class OMPGenerator(object):
 
         # Generate header code for the analysed pops and projs
         with open(self._annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
-            ofile.write(self.generate_header())
+            ofile.write(self._generate_header())
 
         # Generate cpp code for the analysed pops and projs
         with open(self._annarchy_dir+'/generate/ANNarchy.cpp', 'w') as ofile:
@@ -101,7 +104,7 @@ class OMPGenerator(object):
 
         # Generate cython code for the analysed pops and projs
         with open(self._annarchy_dir+'/generate/ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
-            ofile.write(self._generate_pyx())
+            ofile.write(self._pyxgen.generate())
 
     def _propagate_global_ops(self):
         """
@@ -146,7 +149,7 @@ class OMPGenerator(object):
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
-    def generate_header(self):
+    def _generate_header(self):
         """
         Generate the ANNarchy.h code. This header represents the interface to
         the python extension and therefore includes all network objects.
@@ -175,8 +178,8 @@ class OMPGenerator(object):
         # Population recorders
         record_classes = self.header_recorder_classes()
 
-        from .HeaderTemplate import header_template
-        return header_template % {
+        from .BaseTemplate import omp_header_template
+        return omp_header_template % {
             'pop_struct': pop_struct,
             'proj_struct': proj_struct,
             'pop_ptr': pop_ptr,
@@ -238,16 +241,6 @@ class OMPGenerator(object):
         for desc in self._pop_desc + self._proj_desc:
             rd_update_code += desc['rng_update']
 
-        # Initialize populations
-        population_init = "    //Initialize populations\n"
-        for pop in self._pop_desc:
-            population_init += pop['init']
-
-        # Initialize projections
-        projection_init = "        // Initialize projections\n"
-        for proj in self._proj_desc:
-            projection_init += proj['init']
-
         # Equations for the neural variables
         update_neuron = ""
         for pop in self._pop_desc:
@@ -278,17 +271,17 @@ class OMPGenerator(object):
         #Profiling
         from ..Profile.Template import profile_generator_omp_template
         prof_include = "" if not Global.config["profiling"] else profile_generator_omp_template['include']
-        prof_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
         prof_step_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['step_pre']
         prof_run_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
         prof_run_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
 
         # Generate cpp code for the analysed pops and projs
-        from .BodyTemplate import body_template
-        return body_template % {
+        from .BaseTemplate import omp_body_template
+        return omp_body_template % {
             'pop_ptr': pop_ptr,
             'proj_ptr': proj_ptr,
             'glops_def': glop_definition,
+            'initialize': self._body_initialize(),
             'run_until': run_until,
             'compute_sums' : compute_sums,
             'reset_sums' : reset_sums,
@@ -297,17 +290,38 @@ class OMPGenerator(object):
             'update_synapse' : update_synapse,
             'random_dist_update' : rd_update_code,
             'delay_code' : delay_code,
-            'pop_init' : population_init,
-            'projection_init' : projection_init,
             'post_event' : post_event,
             'structural_plasticity': structural_plasticity,
             'set_number_threads' : number_threads,
             'prof_include': prof_include,
-            'prof_init': prof_init,
             'prof_step_pre': prof_step_pre,
             'prof_run_pre': prof_run_pre,
             'prof_run_post': prof_run_post
         }
+
+    def _body_initialize(self):
+        """
+        Define codes for the method initialize(), comprising of population and projection
+        initializations, optionally profiling class.
+        """
+        from ..Profile.Template import profile_generator_omp_template
+        profiling_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
+
+        # Initialize populations
+        population_init = "    //Initialize populations\n"
+        for pop in self._pop_desc:
+            population_init += pop['init']
+
+        # Initialize projections
+        projection_init = "        // Initialize projections\n"
+        for proj in self._proj_desc:
+            projection_init += proj['init']
+
+        from .BaseTemplate import omp_initialize_template
+        return omp_initialize_template % { 'prof_init': profiling_init,
+                                           'pop_init': population_init,
+                                           'proj_init': projection_init
+                                         }
 
     def body_computesum_proj(self):
         code = ""
@@ -373,7 +387,7 @@ class OMPGenerator(object):
         """
         Generate the code for conditioned stop of simulation
         """
-        from .BodyTemplate import run_until_template as tpl
+        from .BaseTemplate import omp_run_until_template as tpl
 
         # Check if it is useful to generate anything at all
         for pop in self._populations:
@@ -389,98 +403,3 @@ class OMPGenerator(object):
             cond_code += self._popgen.stop_condition(pop)
 
         return tpl['body'] % {'run_until': cond_code}
-
-
-#######################################################################
-############## PYX ####################################################
-#######################################################################
-    def _generate_pyx(self):
-        """
-        Generate the python extension (*.pyx) file comprising of wrapper
-        classes for the several objects. Secondly the definition of accessible
-        methods, e. g. simulate(int steps).
-        """
-        # struct declaration for each population
-        pop_struct, pop_ptr = self._pyx_struct_pop()
-
-        # struct declaration for each projection
-        proj_struct, proj_ptr = self._pyx_struct_proj()
-
-        # struct declaration for each monitor
-        monitor_struct = self._pyx_struct_monitor()
-
-        # Cython wrappers for the populations
-        pop_class = self._pyx_wrapper_pop()
-
-        # Cython wrappers for the projections
-        proj_class = self._pyx_wrapper_proj()
-
-        # Cython wrappers for the monitors
-        monitor_class = self._pyx_wrapper_monitor()
-
-        from .PyxTemplate import pyx_template
-        return pyx_template % {
-            'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
-            'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
-            'pop_class' : pop_class, 'proj_class': proj_class,
-            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class
-        }
-
-    def _pyx_struct_pop(self):
-        pop_struct = ""
-        pop_ptr = ""
-        for pop in self._populations:
-            # Header export
-            pop_struct += self._popgen.pyx_struct(pop)
-            # Population instance
-            pop_ptr += """
-    PopStruct%(id)s pop%(id)s"""% {
-    'id': pop.id,
-}
-        return pop_struct, pop_ptr
-
-    def _pyx_struct_proj(self):
-        proj_struct = ""
-        proj_ptr = ""
-        for proj in self._projections:
-            # Header export
-            proj_struct += self._projgen.pyx_struct(proj)
-
-            # Projection instance
-            proj_ptr += """
-    ProjStruct%(id_proj)s proj%(id_proj)s"""% {
-    'id_proj': proj.id,
-}
-        return proj_struct, proj_ptr
-
-    def _pyx_wrapper_pop(self):
-        # Cython wrappers for the populations
-        code = ""
-        for pop in self._populations:
-            code += self._popgen.pyx_wrapper(pop)
-        return code
-
-    def _pyx_wrapper_proj(self):
-        # Cython wrappers for the projections
-        code = ""
-        for proj in self._projections:
-            code += self._projgen.pyx_wrapper(proj)
-        return code
-
-    # Monitors
-    def _pyx_struct_monitor(self):
-        code = ""
-        for pop in self._populations:
-            code += self._popgen.pyx_monitor_struct(pop)
-        for proj in self._projections:
-            code += self._projgen.pyx_monitor_struct(proj)
-        return code
-
-    def _pyx_wrapper_monitor(self):
-        # Cython wrappers for the populations monitors
-        code = ""
-        for pop in self._populations:
-            code += self._popgen.pyx_monitor_wrapper(pop)
-        for proj in self._projections:
-            code += self._projgen.pyx_monitor_wrapper(proj)
-        return code
