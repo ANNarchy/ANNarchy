@@ -7,16 +7,18 @@ Changelog
 
 **4.4.1:**
 
+* A ``Network`` object has been added to run multiple simulations in parallel (``parallel_run()``). See :doc:`../manual/Network`.
 * Recording goes through the ``Monitor`` object. Old recording methods are depreciated. 
+* The flag ``exact`` is replaced by ``event-driven``. Still works, but will be suppressed in future versions.
 * Variables updated in pre-spike or post-spike (spiking synapse) can now define min/max bounds
-* Bug when using conditionals in pre-spike and post-spike
-* Bug when using t_pre and t_post
+* Bug when using conditionals in pre-spike and post-spike.
+* Bug when using t_pre and t_post explicitly.
 * Speed-up of connect_fixed_number_pre/post. 
 
 **4.4.0:**
 
 * Experimental support for CUDA backend for rate-coded networks.
-* Any pre-synaptic vriable can be delayed if used in the synapse.
+* Any pre-synaptic variable can be delayed if used in the synapse.
 * ``g_target`` can define min/max flags. 
 * Support for MacOS X.
 * Parallel performance for OpenMP and spiking networks improved.

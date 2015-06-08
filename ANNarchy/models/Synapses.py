@@ -137,7 +137,7 @@ class STP(Synapse):
 
         du/dt = (U - u)/tau_facil 
 
-    Both variables are integrated exactly. 
+    Both variables are integrated event-driven. 
 
     *Pre-spike events*::
 
@@ -201,7 +201,7 @@ class STDP(Synapse):
 
         tau_minus * dy/dt = -y
 
-    Both variables are evaluated exactly.
+    Both variables are evaluated event-driven.
 
     **Pre-spike events**::
 

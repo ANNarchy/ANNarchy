@@ -141,10 +141,14 @@ def process_equations(equations):
             if re.match(pattern, eq):
                 return True
         return False
+
     # All equations will be stored there, in the order of their definition
-    variables = []        
-    
-    equations = equations.replace(';', '\n').split('\n')
+    variables = []
+    try:
+        equations = equations.replace(';', '\n').split('\n')
+    except: # euqations is empty
+        return variables
+        
     # Iterate over all lines
     for line in equations:
         # Skip empty lines

@@ -93,6 +93,7 @@ class Projection(object):
             self.synapse = synapse()
         else:
             self.synapse = copy.deepcopy(synapse)
+        self.synapse.type = self.pre.neuron_type.type
 
         self.synapse._analyse()
         from ANNarchy.generator.Templates import proj_generator_template
