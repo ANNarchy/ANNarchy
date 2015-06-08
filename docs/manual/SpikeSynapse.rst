@@ -143,8 +143,8 @@ Using the same vocabulary as Brian, such an implementation would be:
             wmax = 0.01 : post-synaptic
         """,
         equations = """
-            tau_pre * dApre/dt = - Apre : exact
-            tau_post * dApost/dt = - Apost : exact
+            tau_pre * dApre/dt = - Apre : event-driven
+            tau_post * dApost/dt = - Apost : event-driven
         """,
         pre_spike = """
             g_target += w
@@ -161,7 +161,7 @@ The variables ``Apre`` and ``Apost`` are exponentially decreasing traces of pre-
 
 The effect of this online version is globally the same as the spike timing dependent version, except that the history of pre- and post-synaptic spikes is fully contained in the variables ``Apre`` and ``Apost``.
 
-The ``exact`` keyword allows exact integration of the variables ``Apre`` and ``Apost``. This means the equations are not updated at each time step, but only when a pre- or post-synaptic spike occurs at the synapse. This is only possible because the two variables follow linear first-order ODEs. The exact integration method allows to spare a lot of computations if the number of spikes is not too high in the network.
+The ``event-driven`` keyword allows event-driven integration of the variables ``Apre`` and ``Apost``. This means the equations are not updated at each time step, but only when a pre- or post-synaptic spike occurs at the synapse. This is only possible because the two variables follow linear first-order ODEs. The event-driven integration method allows to spare a lot of computations if the number of spikes is not too high in the network.
 
 
 Continuous synaptic transmission
@@ -198,4 +198,4 @@ Such a synapse could be implemented the following way::
     )
 
 
-The synapse defines a ``psp`` argument which means that the output of this synapse is non-linear and the post-synaptic conductance should be summed over this value (``g`` in this case). It is not possible to use the exact integration scheme for such non-linear synapses. 
+The synapse defines a ``psp`` argument which means that the output of this synapse is non-linear and the post-synaptic conductance should be summed over this value (``g`` in this case). It is not possible to use the event-driven integration scheme for such non-linear synapses. 

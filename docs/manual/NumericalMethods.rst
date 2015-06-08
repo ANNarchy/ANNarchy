@@ -24,7 +24,7 @@ Different numerical methods are available:
 * Implicit Euler ``'implicit'``
 * Exponential Euler ``'exponential'``
 * Midpoint ``'midpoint'``
-* Exact ``'exact'``
+* Event-driven ``'event-driven'``
   
 Each method has advantages/drawbacks in term of numerical error, stability and computational cost.  
 
@@ -173,10 +173,10 @@ The midpoint method is a Runge-Kutta method of order 2. It estimates the derivat
     y(t+h) = y(t) + h \cdot g(x(t) + k_x \cdot \frac{h}{2}, y(t) +  k_y \cdot \frac{h}{2})
 
 
-Exact
-======
+Event-driven
+=============
 
-Exact integration is only available for spiking synapses with variables following linear first-order dynamics. Let's consider the following STDP synapse (see :doc:`SpikeSynapse` for explanations)::
+Event-driven integration is only available for spiking synapses with variables following linear first-order dynamics. Let's consider the following STDP synapse (see :doc:`SpikeSynapse` for explanations)::
 
     STDP = Synapse(
         parameters = """
@@ -184,8 +184,8 @@ Exact integration is only available for spiking synapses with variables followin
             tau_post = 10.0 : post-synaptic
         """,
         equations = """
-            tau_pre * dApre/dt = - Apre : exact
-            tau_post * dApost/dt = - Apost : exact
+            tau_pre * dApre/dt = - Apre : event-driven
+            tau_post * dApost/dt = - Apost : event-driven
         """,
         pre_spike = """
             g_target += w
@@ -211,8 +211,6 @@ If :math:`v` has the value :math:`V_0` at time :math:`t`,, its value at time :ma
     v(t + \Delta t) = V_0 \cdot \exp(-\frac{\Delta t}\tau}) 
 
 
-
-
 .. note::
 
-    If the synapse defines a ``psp`` argument (synaptic transmission is not event-driven), it is not possible to use exact integration.
+    If the synapse defines a ``psp`` argument (synaptic transmission is continuous), it is not possible to use event-driven integration.

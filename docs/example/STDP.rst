@@ -86,8 +86,8 @@ Using the notations of the Brian example and the corresponding parameter values,
             wmax = 0.01 : post-synaptic
         """,
         equations = """
-            tau_pre * dApre/dt = -Apre : exact 
-            tau_post * dApost/dt = -Apost : exact
+            tau_pre * dApre/dt = -Apre : event-driven 
+            tau_post * dApost/dt = -Apost : event-driven
         """,
         pre_spike="""
             g_target += w
@@ -113,7 +113,7 @@ The parameters are flagged with ``post-synaptic`` as they have he same value for
 * ``Apost`` is decremented (as ``cApost`` is negative),
 * the synaptic weight is increased from ``Apre``, resulting to LTP.
   
-Otherwise, ``Apre`` and ``Apost`` decay to 0 with their own dynamics. This is only simulated, as the integration is performed analytically, using the ``exact`` flag.
+Otherwise, ``Apre`` and ``Apost`` decay to 0 with their own dynamics. This is only simulated, as the integration is performed analytically, using the ``event-driven`` flag.
 
 This online version of STDP is already provided by ANNarchy (:doc:`../API/SpecificSynapse`), so one can simply use:
 

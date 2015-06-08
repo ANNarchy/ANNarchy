@@ -10,7 +10,7 @@ def sort_odes(desc, locality='local'):
     for param in desc['variables']: 
         if param['cpp'] == '':
             continue
-        if param['method'] == 'exact':
+        if param['method'] == 'event-driven':
             continue
         if param['name'] in desc[locality]: 
             if is_pre_ode: # look if it is an ode or not

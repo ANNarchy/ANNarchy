@@ -76,7 +76,7 @@ class ProjectionGenerator(object):
             # Exact integration
             has_exact = False
             for var in proj.synapse.description['variables']:
-                if var['method'] == 'exact':
+                if var['method'] == 'event-driven':
                     has_exact = True
 
             # Delays
@@ -425,7 +425,7 @@ class ProjectionGenerator(object):
         has_exact = False
         exact_code = ''
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
                 exact_code += """
                 // Exact integration of synaptic variables
@@ -553,7 +553,7 @@ class ProjectionGenerator(object):
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
                 post_code += """
                 // Exact integration
@@ -839,7 +839,7 @@ class ProjectionGenerator(object):
         # Check for exact intgeration
         has_exact = False
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
                 break;
 
@@ -849,7 +849,7 @@ class ProjectionGenerator(object):
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
 
         # Determine all export methods
@@ -907,7 +907,7 @@ class ProjectionGenerator(object):
         # Check for exact intgeration
         has_exact = False
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
                 break;
 

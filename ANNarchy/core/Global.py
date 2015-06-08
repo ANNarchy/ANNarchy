@@ -87,6 +87,7 @@ authorized_keywords = [
     'exponential',
     'midpoint',
     'exact',
+    'event-driven',
     # Refractory
     'unless_refractory',
     # Type

@@ -186,7 +186,7 @@ class Equation(object):
             return self.exponential(expression)
         elif self.method == 'midpoint':
             return self.midpoint(expression)
-        elif self.method == 'exact':
+        elif self.method == 'event-driven':
             return self.eventdriven(expression)
         
     def explicit(self, expression):
