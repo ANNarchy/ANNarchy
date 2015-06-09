@@ -33,7 +33,7 @@ dgi/dt = -gi/taui : 1 (unless refractory)
 # ###########################################
 # Population
 # ###########################################
-P = NeuronGroup(4000, eqs, threshold='v>Vt', reset='v = Vr', refractory=5*ms, order=1)
+P = NeuronGroup(4000, eqs, threshold='v>Vt', reset='v = Vr', refractory=5*ms, method='euler')
 P.v = (randn(len(P)) * 5. - 55.) * mvolt
 
 # ###########################################
