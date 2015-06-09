@@ -594,7 +594,10 @@ def find_method(variable):
     elif 'explicit' in variable['flags']:
         method = 'explicit'
     elif 'exact' in variable['flags']:
-        method = 'exact'
+        _warning('The "exact" flag should now be replaced by "event-driven". It will stop being valid in a future release.')
+        method = 'event-driven'
+    elif 'event-driven' in variable['flags']:
+        method = 'event-driven'
     else:
         method= config['method']
 

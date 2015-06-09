@@ -137,7 +137,7 @@ class STP(Synapse):
 
         du/dt = (U - u)/tau_facil 
 
-    Both variables are integrated exactly. 
+    Both variables are integrated event-driven. 
 
     *Pre-spike events*::
 
@@ -158,8 +158,8 @@ class STP(Synapse):
     U = %(U)s
     """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         equations = """
-    dx/dt = (1 - x)/tau_rec : init = 1.0, exact
-    du/dt = (U - u)/tau_facil : init = %(U)s, exact   
+    dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
+    du/dt = (U - u)/tau_facil : init = %(U)s, event-driven   
     """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         pre_spike="""
     g_target += w * u * x
@@ -201,7 +201,7 @@ class STDP(Synapse):
 
         tau_minus * dy/dt = -y
 
-    Both variables are evaluated exactly.
+    Both variables are evaluated event-driven.
 
     **Pre-spike events**::
 
@@ -230,8 +230,8 @@ class STDP(Synapse):
         """ % {'tau_plus': tau_plus, 'tau_minus':tau_minus, 'A_plus':A_plus, 'A_minus': A_minus, 'w_min': w_min, 'w_max': w_max}
 
         equations = """
-            tau_plus  * dx/dt = -x : exact
-            tau_minus * dy/dt = -y : exact
+            tau_plus  * dx/dt = -x : event-driven
+            tau_minus * dy/dt = -y : event-driven
         """
         pre_spike="""
             g_target += w

@@ -168,7 +168,7 @@ The available numerical methods are described in :doc:`NumericalMethods`.
 * *max*: maximum allowed value (unset by default)
 * *population*: the attribute is equal for all neurons in a population.
 * *post-synaptic*: the attribute is equal for all synapses of a post-synaptic neuron.
-* *explicit*, *implicit*, *exponential*, *midpoint*, *exact*: the numerical method to be used. 
+* *explicit*, *implicit*, *exponential*, *midpoint*, *event-driven*: the numerical method to be used. 
 
 Allowed vocabulary
 ___________________

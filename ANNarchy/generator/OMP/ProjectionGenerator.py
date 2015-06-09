@@ -77,7 +77,7 @@ class ProjectionGenerator(object):
             # Exact integration
             has_exact = False
             for var in proj.synapse.description['variables']:
-                if var['method'] == 'exact':
+                if var['method'] == 'event-driven':
                     has_exact = True
 
             # Delays
@@ -122,10 +122,10 @@ class ProjectionGenerator(object):
             update_rng = self.update_random_distributions(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
             if proj.synapse.type == 'rate':
-                psp_prefix = "int nb_post;\ndouble sum;"
+                psp_prefix = "\tint nb_post;\n\tdouble sum;"
                 psp = self.computesum_rate(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
             else:
-                psp_prefix = "int nb_post, i, j, rk_j;\ndouble sum;"
+                psp_prefix = "\tint nb_post, i, j, rk_j, rk_post, rk_pre;\n\tdouble sum;"
                 psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
             final_code = ProjTemplate.header_struct % { 'id_proj': proj.id,
@@ -430,7 +430,7 @@ class ProjectionGenerator(object):
         has_exact = False
         exact_code = ''
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
                 exact_code += """
                 // Exact integration of synaptic variables
@@ -490,8 +490,10 @@ class ProjectionGenerator(object):
             if proj.post.size > Global.OMP_MIN_NB_NEURONS and (len(pre_event_list) > 0 or learning != ""):
                 omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id}  
             
-
-        code = """
+        if psp == "" and pre_event == "":
+            code = ""
+        else:
+            code = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
     if (pop%(id_post)s._active){
         std::vector< std::pair<int, int> > proj%(id_proj)s_inv_post;
@@ -524,17 +526,21 @@ class ProjectionGenerator(object):
                 omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
             else:
                 omp_code = ""
+
+            # Code
             psp_sum = """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. sum of psp
     if (pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-        sum = 0.0;
-        for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-            sum += %(psp)s
+        %(omp_code)s
+        for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
+            sum = 0.0;
+            for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
+                rk_post = proj%(id_proj)s.post_rank[i];
+                rk_pre = proj%(id_proj)s.pre_rank[i][j];
+                sum += %(psp)s
+            }
+            pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
         }
-        pop%(id_post)s.g_%(target)s[proj%(id_proj)s.post_rank[i]] += sum;
-    }
     } // active
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 
        'name_post': proj.post.name, 'name_pre': proj.pre.name, 
@@ -558,7 +564,7 @@ class ProjectionGenerator(object):
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
                 post_code += """
                 // Exact integration
@@ -821,6 +827,7 @@ class ProjectionGenerator(object):
 """% {'id_proj': proj.id}
 
         return code
+
 
 #######################################################################
 ############## Structural plasticity ##################################

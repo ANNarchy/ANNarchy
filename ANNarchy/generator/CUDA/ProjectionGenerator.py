@@ -493,7 +493,7 @@ public:
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
         if has_exact:
             code += """
@@ -569,7 +569,7 @@ cdef class proj%(id)s_wrapper :
         # Exact integration
         has_exact = False
         for var in proj.synapse.description['variables']:
-            if var['method'] == 'exact':
+            if var['method'] == 'event-driven':
                 has_exact = True
         if has_exact:
             code += """

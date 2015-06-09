@@ -40,8 +40,8 @@ STP = Synapse(
     U = 0.2
     """,
     equations = """
-    dx/dt = (1 - x)/tau_rec : init = 1.0, exact
-    du/dt = (U - u)/tau_facil : init = 0.2, exact   
+    dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
+    du/dt = (U - u)/tau_facil : init = 0.2, event-driven   
     """,
     pre_spike="""
     g_target += w * u * x
