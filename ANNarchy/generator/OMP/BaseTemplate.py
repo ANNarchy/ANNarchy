@@ -482,6 +482,7 @@ void run(int nbSteps);
 
 inline int run_until(int steps, std::vector<int> populations, bool or_and) {
     printf("NOT IMPLEMENTED ...");
+    return 0;
 }
 
 void step();
@@ -676,6 +677,7 @@ void initialize(double _dt, long seed) {
     t = (long int)(0);
     cudaMemcpyToSymbol(t, &t, sizeof(long int));
 
+    pop0.init_population();
 %(device_init)s
 
 %(projection_init)s

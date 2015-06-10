@@ -286,6 +286,11 @@ class CodeGenerator(object):
         prof_run_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
         prof_run_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
 
+        #
+        # Generate the ANNarchy.cpp code, the corrsponding template differs greatly
+        # for further information take a look into the corresponding branch
+        #
+
         # Generate cpp code for the analysed pops and projs
         if Global.config['paradigm']=="openmp":
             from .BaseTemplate import omp_body_template
@@ -312,26 +317,50 @@ class CodeGenerator(object):
             }
 
         else:
-            compute_sums_call = ""
-            update_neuron_call = ""
-            update_synapse_call = ""
+            # Implementation notice ( HD: 10. June, 2015 )
+            #
+            # The CUDA linking process is a big problem for object oriented approaches
+            # and the seperation of implementation codes into several files. Even in the
+            # current SDK 5.0 this problem is not fully solved. Linking is available, but
+            # only for small, independent code pieces, by far not sufficient for full
+            # object-oriented approaches ...
+            #
+            # For us, this currently have one consequence: we cannot completely seperate
+            # the implementation of objects into several files. To hold a certain equality
+            # between the structures of objects, I implemented the following workaround:
+            #
+            # We create the c-structs holding data fields and accessors as in OpenMP. We also
+            # create the kernels, call entity in the corresponding generator objects, and 
+            # return the codes via the descriptor dictionary.
+            #
+            # This ensures a consistent interface in the generators and also in the generated
+            # codes, but sometimes require additional overhead. Hopefully NVidia will improve
+            # their linker in the next releases, so one could remove this overhead.
             projection_init = ""
             device_init = ""
             delay_code = ""
 
+            pop_kernel = ""
+            for pop in self._pop_desc:
+                pop_kernel += pop['update_body']
+
+            kernel_def = ""
+            for pop in self._pop_desc:
+                kernel_def += pop['update_header']
+
             # determine number of threads per kernel and concurrent kernel execution
             threads_per_kernel, stream_setup = self.body_kernel_config()
-            
+
             from .BaseTemplate import cuda_body_template
             return cuda_body_template % {
                 # network definitions
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,
-                'compute_sums' : compute_sums_call,
-                'update_neuron' : update_neuron_call,
+                'compute_sums' : "",
+                'update_neuron' : update_neuron,
                 'update_globalops' : update_globalops,
-                'update_synapse' : update_synapse_call,
+                'update_synapse' : "",
                 'delay_code': delay_code,
                 'projection_init' : projection_init,
                 'post_event' : post_event,
@@ -342,11 +371,11 @@ class CodeGenerator(object):
                 'device_init': device_init,
                 'host_device_transfer': "", #host_device_transfer,
                 'device_host_transfer': "", #device_host_transfer,
-                'kernel_def': "", #update_neuron_header + compute_sums_header + update_synapse_header+glob_ops_header,
+                'kernel_def': kernel_def, #update_neuron_header + compute_sums_header + update_synapse_header+glob_ops_header,
                 
                 #device stuff
                 'kernel_config': threads_per_kernel,
-                'pop_kernel': "", #update_neuron_body,
+                'pop_kernel': pop_kernel, #update_neuron_body,
                 'psp_kernel': "", #compute_sums_body,
                 'syn_kernel': "", #update_synapse_body,
                 'glob_ops_kernel': "", #glob_ops_body,

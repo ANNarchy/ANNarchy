@@ -194,10 +194,6 @@ struct PopStruct%(id)s{
     void update_delay() {
 %(update_delay)s
     }
-
-    void update() {
-%(update)s
-    }
 };
 """,
     'spike': """
@@ -206,7 +202,9 @@ struct PopStruct%(id)s{
 }
 
 # c like definition of neuron attributes, whereas 'local' is used if values can vary across
-# neurons, consequently 'global' is used if values are common to all neurons.
+# neurons, consequently 'global' is used if values are common to all neurons.Currently two
+# types of sets are defined: openmp and cuda. In cuda case additional 'dirty' flags are 
+# created.
 #
 # Parameters:
 #
@@ -214,6 +212,7 @@ struct PopStruct%(id)s{
 #    name: name of the variable
 #    attr_type: either 'variable' or 'parameter'
 attribute_decl = {
+    'openmp': {
     'local':
 """
     // Local %(attr_type)s %(name)s
@@ -223,11 +222,26 @@ attribute_decl = {
 """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""    
+"""
+    },
+    'cuda': {
+    'local': """
+    // Local parameter %(name)s
+    std::vector< %(type)s > %(name)s;
+    %(type)s *gpu_%(name)s;
+    bool %(name)s_dirty;
+""",
+    'global': """
+    // Global parameter %(name)s
+    %(type)s  %(name)s ;
+"""
+    }
 }
 
 # c like definition of accessors for neuron attributes, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons.
+# across neurons, consequently 'global' is used if values are common to all neurons. Currently two
+# types of sets are defined: openmp and cuda. In cuda case additional 'dirty' flags are created for
+# each variable (set to true, in case of setters).
 #
 # Parameters:
 #
@@ -235,6 +249,7 @@ attribute_decl = {
 #    name: name of the variable
 #    attr_type: either 'variable' or 'parameter'
 attribute_acc = {
+    'openmp':{
     'local':
 """
     // Local %(attr_type)s %(name)s
@@ -249,6 +264,23 @@ attribute_acc = {
     %(type)s get_%(name)s() { return %(name)s; }
     void set_%(name)s(%(type)s val) { %(name)s = val; }
 """
+    },
+    'cuda':{
+    'local':
+"""
+    // Local %(attr_type)s %(name)s
+    std::vector< %(type)s > get_%(name)s() { return %(name)s; }
+    %(type)s get_single_%(name)s(int rk) { return %(name)s[rk]; }
+    void set_%(name)s(std::vector< %(type)s > val) { %(name)s = val; %(name)s_dirty = true; }
+    void set_single_%(name)s(int rk, %(type)s val) { %(name)s[rk] = val; %(name)s_dirty = true; }
+""",
+    'global':
+"""
+    // Global %(attr_type)s %(name)s
+    %(type)s get_%(name)s() { return %(name)s; }
+    void set_%(name)s(%(type)s val) { %(name)s = val; }
+"""
+    }
 }
 
 # export of accessors for parameter members towards python, whereas 'local' is used if values can vary
@@ -317,6 +349,8 @@ attribute_pyx_wrapper = {
 #    name: name of the variable
 #    init: initial value
 attribute_cpp_init = {
+    'openmp':
+    {
     'local':
 """
         // Local %(attr_type)s %(name)s
@@ -327,6 +361,22 @@ attribute_cpp_init = {
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
 """
+    },
+    'cuda':
+    {
+    'local':
+"""
+        // Local %(attr_type)s %(name)s
+        %(name)s = std::vector<%(type)s>(size, %(init)s);
+        cudaMalloc(&gpu_%(name)s, size * sizeof(double));
+        cudaMemcpy(gpu_%(name)s, %(name)s.data(), size * sizeof(double), cudaMemcpyHostToDevice);
+""",
+    'global':
+"""
+        // Global %(attr_type)s %(name)s
+        %(name)s = %(init)s;
+"""
+    }
 }
 
 # Definition for the usage of C++11 STL template random
@@ -366,6 +416,46 @@ cuda_rng = {
 """
 }
 
+cuda_pop_kernel=\
+"""
+// gpu device kernel for population %(id)s
+__forceinline__ __global__ void cuPop%(id)s_step(double dt%(tar)s%(var)s%(par)s)
+{
+    int i = threadIdx.x + blockIdx.x*blockDim.x;
+
+    // Updating global variables of population %(id)s
+%(global_eqs)s
+
+    // Updating local variables of population %(id)s
+    if ( i < %(pop_size)s )
+    {
+%(local_eqs)s
+    }
+}
+"""
+
+cuda_pop_kernel_call =\
+"""
+    // Updating the local and global variables of population %(id)s
+    if ( pop%(id)s._active ) {
+        int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
+
+        cuPop%(id)s_step<<<nb, __pop%(id)s__>>>(/* default arguments */
+              dt
+              /* population targets */
+              %(tar)s
+              /* kernel gpu arrays */
+              %(var)s
+              /* kernel constants */
+              %(par)s );
+    }
+
+#ifdef _DEBUG
+    cudaError_t err_pop_step_%(id)s = cudaGetLastError();
+    if(err_pop_step_%(id)s != cudaSuccess)
+        std::cout << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
+#endif
+"""
 # Rate respectively spiking models require partly special variables or have different operations.
 # This dictionary contain these unique initializations.
 #
@@ -382,8 +472,25 @@ model_specific_init = {
         last_spike = std::vector<long int>(size, -10000L);
         refractory_remaining = std::vector<int>(size, 0);
 """,
-    'rate_psp':
-"""
+}
+
+rate_psp = {
+    'openmp':
+    {
+        'decl': """    std::vector<double> _sum_%(target)s;""",
+        'init': """
         // Post-synaptic potential
-        _sum_%(target)s = std::vector<double>(size, 0.0);"""
+        _sum_%(target)s = std::vector<double>(size, 0.0);""",
+    },
+    'cuda':
+    {
+        'decl': """
+    std::vector<double> _sum_%(target)s;
+    double* gpu_sum_%(target)s;
+        """,
+        'init': """
+        // Post-synaptic potential
+        _sum_%(target)s = std::vector<double>(size, 0.0);
+        cudaMemcpy(gpu_sum_%(target)s, _sum_%(target)s.data(), size * sizeof(double), cudaMemcpyHostToDevice);""",
+    }
 }
