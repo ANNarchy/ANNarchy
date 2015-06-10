@@ -25,6 +25,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from .PopulationGenerator import PopulationGenerator
 from .ProjectionGenerator import ProjectionGenerator
 from .PyxGenerator import PyxGenerator
+from .RecordGenerator import RecordGenerator
 
 import numpy as np
 
@@ -55,6 +56,7 @@ class CodeGenerator(object):
         self._projgen = ProjectionGenerator()
 
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
+        self._recordgen = RecordGenerator(annarchy_dir, populations, projections, net_id)
 
         self._pop_desc = []
         self._proj_desc = []
@@ -97,6 +99,9 @@ class CodeGenerator(object):
         # Generate header code for the analysed pops and projs
         with open(self._annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self._generate_header())
+
+        # Generate mointor code for the analysed pops and projs
+        self._recordgen.generate()
 
         # Generate cpp code for the analysed pops and projs
         postfix = ".cpp" if Global.config['paradigm']=="openmp" else ".cu"
@@ -176,9 +181,6 @@ class CodeGenerator(object):
         # Include OMP
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
-        # Population recorders
-        record_classes = self.header_recorder_classes()
-
         if Global.config['paradigm']=="openmp":
             from .BaseTemplate import omp_header_template
             return omp_header_template % {
@@ -187,8 +189,7 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
-                'include_omp': include_omp,
-                'record_classes': record_classes
+                'include_omp': include_omp
             }
         else:
             from .BaseTemplate import cuda_header_template
@@ -196,8 +197,7 @@ class CodeGenerator(object):
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
-                'proj_ptr': proj_ptr,
-                'record_classes': record_classes
+                'proj_ptr': proj_ptr
             }
             
     def header_custom_functions(self):
@@ -209,15 +209,6 @@ class CodeGenerator(object):
         from ANNarchy.parser.Extraction import extract_functions
         for func in Global._objects['functions']:
             code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
-
-        return code
-
-    def header_recorder_classes(self):
-        code = ""
-        for pop in self._populations:
-            code += self._popgen.recorder_class(pop)
-        for proj in self._projections:
-            code += self._projgen.recorder_class(proj)
 
         return code
 

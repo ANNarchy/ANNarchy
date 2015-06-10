@@ -159,26 +159,6 @@ class ProjectionGenerator(object):
 
         return proj_desc
 
-    def recorder_class(self, proj):
-        """
-        Generate the code for the recorder object.
-
-        Templates:
-
-            record
-        """
-        tpl_code = ProjTemplate.record
-        init_code = ""
-        recording_code = ""
-        struct_code = ""
-
-        for var in proj.synapse.description['variables']:
-            struct_code += tpl_code[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
-            init_code += tpl_code[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
-            recording_code += tpl_code[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
-
-        return tpl_code['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
-
 #######################################################################
 ############## BODY ###################################################
 #######################################################################

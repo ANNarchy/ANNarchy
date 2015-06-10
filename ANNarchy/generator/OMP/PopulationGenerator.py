@@ -52,6 +52,8 @@ class PopulationGenerator(object):
         if pop._specific:
             code = pop.generate()
 
+            update_call = """    pop%(id)s.update();\n""" % { 'id': pop.id }
+
         else:
             # Pick basic template based on neuron type
             base_template = PopTemplate.header_struct[Global.config['paradigm']][pop.neuron_type.type]
@@ -195,96 +197,6 @@ class PopulationGenerator(object):
         }
 
         return pop_desc
-
-    def recorder_class(self, pop):
-        tpl_code = """
-class PopRecorder%(id)s : public Monitor
-{
-public:
-    PopRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset)
-    {
-%(init_code)s
-    };
-    virtual void record() {
-%(recording_code)s
-    };
-%(struct_code)s
-};
-""" 
-        init_code = ""
-        recording_code = ""
-        struct_code = ""
-
-        for var in pop.neuron_type.description['variables']:
-            if var['name'] in pop.neuron_type.description['local']:
-                struct_code += """
-    // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
-                init_code += """
-        this->%(name)s = std::vector< std::vector< %(type)s > >();
-        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
-                recording_code += """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            if(!this->partial)
-                this->%(name)s.push_back(pop%(id)s.%(name)s); 
-            else{
-                std::vector<%(type)s> tmp = std::vector<%(type)s>();
-                for(int i=0; i<this->ranks.size(); i++){
-                    tmp.push_back(pop%(id)s.%(name)s[this->ranks[i]]);
-                }
-                this->%(name)s.push_back(tmp);
-            }
-        }""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
-
-            elif var['name'] in pop.neuron_type.description['global']:
-                struct_code += """
-    // Global variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
-                init_code += """
-        this->%(name)s = std::vector< %(type)s >();
-        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
-                recording_code += """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(pop%(id)s.%(name)s); 
-        } """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
-        
-        if pop.neuron_type.type == 'spike':
-            struct_code += """
-    // Local variable %(name)s
-    std::map<int, std::vector< long int > > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : 'long int', 'name': 'spike'}
-            init_code += """
-        this->spike = std::map<int,  std::vector< long int > >();
-        if(!this->partial){
-            for(int i=0; i<pop%(id)s.size; i++) {
-                this->spike[i]=std::vector<long int>();
-            }
-        }
-        else{
-            for(int i=0; i<this->ranks.size(); i++) {
-                this->spike[this->ranks[i]]=std::vector<long int>();
-            }
-        }
-        this->record_spike = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
-            recording_code += """
-        if(this->record_spike){
-            for(int i=0; i<pop%(id)s.spiked.size(); i++){
-                if(!this->partial){
-                    this->spike[pop%(id)s.spiked[i]].push_back(t);
-                }
-                else{
-                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                        this->spike[pop%(id)s.spiked[i]].push_back(t);
-                    }
-                }
-            }
-        }""" % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
-
-        return tpl_code % {'id': pop.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
-
 
 #######################################################################
 ############## BODY ###################################################
