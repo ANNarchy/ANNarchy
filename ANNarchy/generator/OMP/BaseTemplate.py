@@ -627,18 +627,7 @@ void step() {
 
 // Initialize the internal data and random numbers generators
 void initialize(double _dt, long seed) {
-
-    dt = _dt;
-    t = (long int)(0);
-    cudaMemcpyToSymbol(t, &t, sizeof(long int));
-
-    pop0.init_population();
-%(device_init)s
-
-%(projection_init)s
-
-    // create streams
-    stream_setup();
+%(initialize)s
 }
 
 %(kernel_def)s
@@ -741,6 +730,19 @@ void stream_destroy()
         cudaStreamDestroy( streams[i] );
     }
 }
+"""
+
+cuda_initialize_template = """
+    dt = _dt;
+    t = (long int)(0);
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));
+
+%(pop_init)s
+
+%(proj_init)s
+
+    // create streams
+    stream_setup();
 """
 
 monitor = """

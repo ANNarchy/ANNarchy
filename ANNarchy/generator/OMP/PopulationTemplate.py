@@ -248,6 +248,12 @@ attribute_decl = {
 #    type: data type of the variable (double, float, int ...)
 #    name: name of the variable
 #    attr_type: either 'variable' or 'parameter'
+#
+# TODO:
+#
+#    For CUDA we currently double the memory: python accesses modify the host
+#    data. Only before and after simulate() the GPU memory is involved. To speedup
+#    host-to-device transfers, we use a 'dirty' flag to mark changed variables.
 attribute_acc = {
     'openmp':{
     'local':
@@ -419,7 +425,7 @@ cuda_rng = {
 cuda_pop_kernel=\
 """
 // gpu device kernel for population %(id)s
-__forceinline__ __global__ void cuPop%(id)s_step(double dt%(tar)s%(var)s%(par)s)
+__global__ void cuPop%(id)s_step(double dt%(tar)s%(var)s%(par)s)
 {
     int i = threadIdx.x + blockIdx.x*blockDim.x;
 

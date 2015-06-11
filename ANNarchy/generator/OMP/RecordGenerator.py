@@ -20,7 +20,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+from ANNarchy.core import Global
 import BaseTemplate
+import ProjectionTemplate as ProjTemplate
+import RecordTemplate as RecTemplate
 
 class RecordGenerator:
     def __init__(self, annarchy_dir, populations, projections, net_id):
@@ -44,60 +47,23 @@ class RecordGenerator:
             ofile.write(code)
 
     def _pop_recorder_class(self, pop):
-        tpl_code = """
-class PopRecorder%(id)s : public Monitor
-{
-public:
-    PopRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset)
-    {
-%(init_code)s
-    };
-    virtual void record() {
-%(recording_code)s
-    };
-%(struct_code)s
-};
-""" 
+
+        if Global.config['paradigm']=="openmp":
+            template = RecTemplate.omp_population
+        else:
+            template = RecTemplate.cuda_population
+
+        tpl_code = template['template']
+
         init_code = ""
         recording_code = ""
         struct_code = ""
 
         for var in pop.neuron_type.description['variables']:
-            if var['name'] in pop.neuron_type.description['local']:
-                struct_code += """
-    // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
-                init_code += """
-        this->%(name)s = std::vector< std::vector< %(type)s > >();
-        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
-                recording_code += """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            if(!this->partial)
-                this->%(name)s.push_back(pop%(id)s.%(name)s); 
-            else{
-                std::vector<%(type)s> tmp = std::vector<%(type)s>();
-                for(int i=0; i<this->ranks.size(); i++){
-                    tmp.push_back(pop%(id)s.%(name)s[this->ranks[i]]);
-                }
-                this->%(name)s.push_back(tmp);
-            }
-        }""" % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
+            struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
+            init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
+            recording_code += template[var['locality']]['recording'] % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
 
-            elif var['name'] in pop.neuron_type.description['global']:
-                struct_code += """
-    // Global variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : var['ctype'], 'name': var['name']}
-                init_code += """
-        this->%(name)s = std::vector< %(type)s >();
-        this->record_%(name)s = false; """ % {'type' : var['ctype'], 'name': var['name']}
-                recording_code += """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(pop%(id)s.%(name)s); 
-        } """ % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
-        
         if pop.neuron_type.type == 'spike':
             struct_code += """
     // Local variable %(name)s

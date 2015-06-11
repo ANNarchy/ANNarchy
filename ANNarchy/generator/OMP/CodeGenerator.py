@@ -230,7 +230,8 @@ class CodeGenerator(object):
         glop_definition = self.body_def_glops()
         update_globalops = ""
         for pop in self._pop_desc:
-            update_globalops += pop['gops_update']
+            if 'gops_update' in pop.keys():
+                update_globalops += pop['gops_update']
 
         # Reset presynaptic sums
         reset_sums = self.body_resetcomputesum_pop()
@@ -241,17 +242,20 @@ class CodeGenerator(object):
         # Update random distributions
         rd_update_code = ""
         for desc in self._pop_desc + self._proj_desc:
-            rd_update_code += desc['rng_update']
+            if 'rng_update' in desc.keys():
+                rd_update_code += desc['rng_update']
 
         # Equations for the neural variables
         update_neuron = ""
         for pop in self._pop_desc:
-            update_neuron += pop['update']
+            if 'update' in pop.keys():
+                update_neuron += pop['update']
 
         # Enque delayed outputs
         delay_code = ""
         for pop in self._pop_desc:
-            delay_code += pop['delay_update']
+            if 'delay_update' in pop.keys():
+                delay_code += pop['delay_update']
 
         # Equations for the synaptic variables
         update_synapse = ""
@@ -340,7 +344,8 @@ class CodeGenerator(object):
                 kernel_def += pop['update_header']
 
             # determine number of threads per kernel and concurrent kernel execution
-            threads_per_kernel, stream_setup = self.body_kernel_config()
+            threads_per_kernel, stream_setup = self._cuda_kernel_config()
+            host_device_transfer, device_host_transfer = "", ""
 
             from .BaseTemplate import cuda_body_template
             return cuda_body_template % {
@@ -353,16 +358,15 @@ class CodeGenerator(object):
                 'update_globalops' : update_globalops,
                 'update_synapse' : "",
                 'delay_code': delay_code,
-                'projection_init' : projection_init,
+                'initialize' : self._body_initialize(),
                 'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
                 
                 # cuda host specific
                 'stream_setup': stream_setup,
-                'device_init': device_init,
-                'host_device_transfer': "", #host_device_transfer,
-                'device_host_transfer': "", #device_host_transfer,
-                'kernel_def': kernel_def, #update_neuron_header + compute_sums_header + update_synapse_header+glob_ops_header,
+                'host_device_transfer': host_device_transfer,
+                'device_host_transfer': device_host_transfer,
+                'kernel_def': kernel_def,
                 
                 #device stuff
                 'kernel_config': threads_per_kernel,
@@ -383,20 +387,24 @@ class CodeGenerator(object):
         profiling_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
 
         # Initialize populations
-        population_init = "    //Initialize populations\n"
+        population_init = "    // Initialize populations\n"
         for pop in self._pop_desc:
             population_init += pop['init']
 
         # Initialize projections
-        projection_init = "        // Initialize projections\n"
+        projection_init = "    // Initialize projections\n"
         for proj in self._proj_desc:
             projection_init += proj['init']
 
-        from .BaseTemplate import omp_initialize_template
-        return omp_initialize_template % { 'prof_init': profiling_init,
-                                           'pop_init': population_init,
-                                           'proj_init': projection_init
-                                         }
+        if Global.config['paradigm']=="openmp":
+            from .BaseTemplate import omp_initialize_template as init_tpl
+        else:
+            from .BaseTemplate import cuda_initialize_template as init_tpl
+
+        return init_tpl % { 'prof_init': profiling_init,
+                            'pop_init': population_init,
+                            'proj_init': projection_init
+                          }
 
     def body_computesum_proj(self):
         code = ""
@@ -479,7 +487,10 @@ class CodeGenerator(object):
 
         return tpl['body'] % {'run_until': cond_code}
 
-    def body_kernel_config(self):
+#######################################################################
+############## CUDA specific ##########################################
+#######################################################################
+    def _cuda_kernel_config(self):
         """
         Generates a kernel config and stream setup (if a device with compute
         compability > 2.x available. The kernel configuration is needed for
