@@ -185,12 +185,6 @@ struct PopStruct%(id)s{
         }
     }
 
-    void update_global_ops() {
-        if (_active){
-%(update_global_ops)s
-        }
-    }
-
     void update_delay() {
 %(update_delay)s
     }

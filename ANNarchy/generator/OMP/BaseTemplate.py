@@ -744,33 +744,3 @@ cuda_initialize_template = """
     // create streams
     stream_setup();
 """
-
-monitor = """
-/*
- * Recorders
- *
- */
-class Monitor
-{
-public:
-    Monitor(std::vector<int> ranks, int period, long int offset){
-        this->ranks = ranks;
-        this->period = period;
-        this->offset = offset;
-        if(this->ranks.size() ==1 && this->ranks[0]==-1) // All neurons should be recorded
-            this->partial = false;
-        else
-            this->partial = true;
-    };
-
-    virtual void record() {std::cout << "recording" << std::endl;};
-
-    // Attributes
-    bool partial;
-    std::vector<int> ranks;
-    int period;
-    long int offset;
-
-};
-%(record_classes)s
-"""

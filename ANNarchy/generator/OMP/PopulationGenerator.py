@@ -67,7 +67,7 @@ class PopulationGenerator(object):
             # we definitely call update methods, if there are not implemented
             # we have some additional calls, we accept them at this point 
             pop_desc['update'] = """    pop%(id)s.update();\n""" % { 'id': pop.id }
-            pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id },
+            pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
 
             # Store the complete header definition in a single file
             with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
@@ -122,15 +122,16 @@ class PopulationGenerator(object):
                 if pop.max_delay > 1:
                     pop_desc['delay_update'] = """    pop%(id)s.update_delay();\n""" % { 'id': pop.id }
 
-                return pop_desc
+                if len(pop.global_operations) > 0:
+                    pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % { 'id': pop.id }
 
+                return pop_desc
             else:
                 glops_extern = ""
 
                 init = self.init_population(pop)
 
                 update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
-                update_global_ops = self.update_globalops(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
                 update_delay = self.delay_code(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
                 if pop.neuron_type.type == 'rate':
                     body, header, update_call = self._update_rate_neuron_cuda(pop)
@@ -145,8 +146,7 @@ class PopulationGenerator(object):
                                          'accessor': accessors,
                                          'init': init,
                                          'update_rng': update_rng,
-                                         'update_delay': update_delay,
-                                         'update_global_ops': update_global_ops
+                                         'update_delay': update_delay
                                         }
 
                 # Store the complete header definition in a single file
@@ -157,6 +157,13 @@ class PopulationGenerator(object):
                 pop_desc['update_body'] =  body
                 pop_desc['update_header'] =  header
 
+                if len(pop.global_operations) > 0:
+                    update_global_ops = self.update_globalops(pop)
+                    pop_desc['gops_update'] = update_global_ops % { 'id': pop.id }
+
+                host_to_device, device_to_host = self._cuda_memory_transfers(pop)
+                pop_desc['host_to_device'] = host_to_device
+                pop_desc['device_to_host'] = device_to_host
                 return pop_desc
 
     def _generate_decl_and_acc(self, pop):
@@ -190,9 +197,13 @@ class PopulationGenerator(object):
     // Global operations
 """
         for op in pop.global_operations:
-            decleration += """    double _%(op)s_%(var)s;
+            if Global.config['paradigm']=="openmp":
+                decleration += """    double _%(op)s_%(var)s;
 """ % {'op': op['function'], 'var': op['variable']}
-
+            else:
+                decleration += """    double _%(op)s_%(var)s;
+    double *_gpu_%(op)s_%(var)s;
+""" % {'op': op['function'], 'var': op['variable']}
         # Arrays for the random numbers
         decleration += """
     // Random numbers
@@ -232,9 +243,93 @@ class PopulationGenerator(object):
         return decleration, accessors
 
 #######################################################################
-############## BODY ###################################################
+############## BODY: initialization codes #############################
 #######################################################################
+    def init_population(self, pop):
+        # active is true by default
+        code = """
+        size = %(size)s;
+        _active = true;
+""" % { 'id': pop.id, 'size': pop.size }
 
+        attr_tpl = PopTemplate.attribute_cpp_init[Global.config['paradigm']]
+
+        # Parameters
+        for var in pop.neuron_type.description['parameters']:
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
+
+        # Variables
+        for var in pop.neuron_type.description['variables']:
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
+
+        # Delays
+        if pop.max_delay > 1:
+            code += self.init_delay(pop)
+
+        # Random numbers
+        if len(pop.neuron_type.description['random_distributions']) > 0:
+            code += """
+        // Random numbers"""
+            for rd in pop.neuron_type.description['random_distributions']:
+                if Global.config['paradigm'] == "openmp":
+                    code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+                else:
+                    code += PopTemplate.cuda_rng['init']
+
+        # Global operations
+        code += self._init_globalops(pop)
+
+        # Targets
+        if pop.neuron_type.type == 'rate':
+            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
+                code += PopTemplate.rate_psp[Global.config['paradigm']]['init'] % {'id': pop.id, 'target': target}
+
+        # Spike event and refractory
+        if pop.neuron_type.type == 'spike':
+            code += PopTemplate.model_specific_init['spike_event'] % {'id': pop.id}
+
+        return code
+
+    def init_delay(self, pop):
+        code = """
+    // Delayed variables
+"""
+        for var in pop.delayed_variables:
+            if var in pop.neuron_type.description['local']:
+                code += """
+    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+            else:
+                code += """
+    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+
+        # spike event is handled seperatly
+        if pop.neuron_type.type == 'spike':
+            code += """
+    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'id': pop.id, 'delay': pop.max_delay}
+
+        return code
+
+    def _init_globalops(self, pop):
+        if len(pop.global_operations)==0:
+            return ""
+
+        code = "//Initialize global operations\n"
+        for op in pop.global_operations:
+            if Global.config['paradigm'] == "openmp":
+                code += """    _%(op)s_%(var)s = 0.0;
+""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+            else:
+                code += """    _%(op)s_%(var)s = 0.0;
+    cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(double));
+""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+
+        return code
+
+#######################################################################
+############## BODY: update variables codes ###########################
+#######################################################################
     def _update_rate_neuron_openmp(self, pop):
         """
         Generate the code template for neural update step, more precise updating of variables.
@@ -497,7 +592,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
     } // active
 """ % {'id': pop.id, 'code': code }
 
-
     def delay_code(self, pop):
         # No delay
         if pop.max_delay <= 1:
@@ -526,82 +620,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 %(code)s
     }""" % {'id': pop.id, 'name' : pop.name, 'code': code }
 
-    def _init_globalops(self, pop):
-        if len(pop.global_operations)==0:
-            return ""
-
-        code = "//Initialize global operations\n"
-        for op in pop.global_operations:
-            code += """    _%(op)s_%(var)s = 0.0;
-""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
-        return code
-
-    def init_delay(self, pop):
-        code = """
-    // Delayed variables
-"""
-        for var in pop.delayed_variables:
-            if var in pop.neuron_type.description['local']:
-                code += """
-    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
-            else:
-                code += """
-    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
-
-        # spike event is handled seperatly
-        if pop.neuron_type.type == 'spike':
-            code += """
-    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'id': pop.id, 'delay': pop.max_delay}
-
-        return code
-
-    def init_population(self, pop):
-        # active is true by default
-        code = """
-        size = %(size)s;
-        _active = true;
-""" % { 'id': pop.id, 'size': pop.size }
-
-        attr_tpl = PopTemplate.attribute_cpp_init[Global.config['paradigm']]
-
-        # Parameters
-        for var in pop.neuron_type.description['parameters']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
-
-        # Variables
-        for var in pop.neuron_type.description['variables']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
-
-        # Delays
-        if pop.max_delay > 1:
-            code += self.init_delay(pop)
-
-        # Random numbers
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-            code += """
-        // Random numbers"""
-            for rd in pop.neuron_type.description['random_distributions']:
-                if Global.config['paradigm'] == "openmp":
-                    code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
-                else:
-                    code += PopTemplate.cuda_rng['init']
-
-        # Global operations
-        code += self._init_globalops(pop)
-
-        # Targets
-        if pop.neuron_type.type == 'rate':
-            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
-                code += PopTemplate.rate_psp[Global.config['paradigm']]['init'] % {'id': pop.id, 'target': target}
-
-        # Spike event and refractory
-        if pop.neuron_type.type == 'spike':
-            code += PopTemplate.model_specific_init['spike_event'] % {'id': pop.id}
-
-        return code
-
     def reset_computesum(self, pop):
         code = ""
         for target in pop.targets:
@@ -612,19 +630,23 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         return code
 
     def update_globalops(self, pop):
+        """
+        Update of global functions is a call of pre-implemented
+        functions defined in GlobalOperationTemplate. In case of
+        OpenMP this calls will take place in the population header.
+        In case of CUDA the call semantic will be placed in ANNarchy.cu
+        file.
+        """
         code = ""
-        if len(pop.global_operations) > 0:
-            code += """
-    if (pop%(id)s._active){
-"""% {'id': pop.id}
 
+        if Global.config['paradigm'] == "openmp":
             for op in pop.global_operations:
-                code += """    pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s.data(), pop%(id)s.size);
+                code += """            pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s.data(), pop%(id)s.size);
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
-
-            code += """
-    }
-"""
+        else:
+            from .GlobalOperationTemplate import global_operation_templates_cuda as template
+            for op in pop.global_operations:
+                code += template[op['function']]['call'] % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
 
         return code
 
@@ -701,12 +723,11 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         host_device_transfer = ""
         device_host_transfer = ""
 
-        for pop in self.populations:
-            host_device_transfer += """
+        host_device_transfer += """
     // host to device transfers for %(pop_name)s""" % { 'pop_name': pop.name }
-            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
-                if attr['name'] in pop.neuron_type.description['local']:
-                    host_device_transfer += """
+        for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                host_device_transfer += """
         // %(attr_name)s: local
         if( pop%(id)s.%(attr_name)s_dirty )
         {
@@ -716,11 +737,11 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         }
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
-            device_host_transfer += """
+        device_host_transfer += """
     // device to host transfers for %(pop_name)s\n""" % { 'pop_name': pop.name }
-            for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
-                if attr['name'] in pop.neuron_type.description['local']:
-                    device_host_transfer += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+        for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                device_host_transfer += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         return host_device_transfer, device_host_transfer

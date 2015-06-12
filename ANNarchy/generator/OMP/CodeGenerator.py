@@ -260,7 +260,8 @@ class CodeGenerator(object):
         # Equations for the synaptic variables
         update_synapse = ""
         for proj in self._proj_desc:
-            update_synapse += proj['update']
+            if 'update' in proj.keys():
+                update_synapse += proj['update']
 
         # Equations for the post-events
         post_event = self.body_postevent_proj()
@@ -335,17 +336,33 @@ class CodeGenerator(object):
             device_init = ""
             delay_code = ""
 
+            psp_call = ""
+            for proj in self._proj_desc:
+                psp_call += proj['psp_call']
+
             pop_kernel = ""
             for pop in self._pop_desc:
                 pop_kernel += pop['update_body']
+            psp_kernel = ""
+            for proj in self._proj_desc:
+                psp_kernel += proj['psp_body']
 
             kernel_def = ""
             for pop in self._pop_desc:
                 kernel_def += pop['update_header']
+            for proj in self._proj_desc:
+                kernel_def += proj['psp_header']
+
+            # global operations
+            glob_ops_header, glob_ops_body = self.body_def_glops()
+            kernel_def += glob_ops_header
 
             # determine number of threads per kernel and concurrent kernel execution
             threads_per_kernel, stream_setup = self._cuda_kernel_config()
             host_device_transfer, device_host_transfer = "", ""
+            for pop in self._pop_desc + self._proj_desc:
+                host_device_transfer += pop['host_to_device']
+                device_host_transfer += pop['device_to_host']
 
             from .BaseTemplate import cuda_body_template
             return cuda_body_template % {
@@ -353,7 +370,7 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,
-                'compute_sums' : "",
+                'compute_sums' : psp_call,
                 'update_neuron' : update_neuron,
                 'update_globalops' : update_globalops,
                 'update_synapse' : "",
@@ -371,9 +388,9 @@ class CodeGenerator(object):
                 #device stuff
                 'kernel_config': threads_per_kernel,
                 'pop_kernel': pop_kernel, #update_neuron_body,
-                'psp_kernel': "", #compute_sums_body,
+                'psp_kernel': psp_kernel,
                 'syn_kernel': "", #update_synapse_body,
-                'glob_ops_kernel': "", #glob_ops_body,
+                'glob_ops_kernel': glob_ops_body,
                 'custom_func': "", #custom_func            
             }
         
@@ -451,20 +468,43 @@ class CodeGenerator(object):
         return creating + pruning
 
     def body_def_glops(self):
+        """
+        Dependent on the used global operations we add pre-defined templates
+        to the ANNarchy body file.
+
+        Return:
+
+            dependent on the used paradigm we return one string (OpenMP)
+            or tuple(string, string) (CUDA).
+        """
         ops = []
         for pop in self._populations:
             for op in pop.global_operations:
                 ops.append(op['function'])
 
-        if ops == []:
-            return ""
+        if Global.config['paradigm'] == "openmp":
+            if ops == []:
+                return ""
 
-        from .GlobalOperationTemplate import global_operation_templates
-        code = ""
-        for op in list(set(ops)):
-            code += global_operation_templates[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
+            from .GlobalOperationTemplate import global_operation_templates_openmp as template
+            code = ""
+            for op in list(set(ops)):
+                code += template[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
 
-        return code
+            return code
+        else:
+            if ops == []:
+                return "", ""
+
+            header = ""
+            body = ""
+
+            from .GlobalOperationTemplate import global_operation_templates_cuda as template
+            for op in list(set(ops)):
+                header += template[op]['header']
+                body += template[op]['body']
+
+            return header, body
 
     def body_run_until(self):
         """

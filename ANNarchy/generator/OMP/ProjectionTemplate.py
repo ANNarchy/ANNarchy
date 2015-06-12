@@ -22,7 +22,8 @@
 
 """
 from ANNarchy.generator.OMP.PopulationTemplate import attribute_pyx_wrapper
-header_struct = """#pragma once
+header_struct = {
+    'openmp': """#pragma once
 
 #include "pop%(pre_id)s.hpp"
 #include "pop%(post_id)s.hpp"
@@ -79,7 +80,78 @@ struct ProjStruct%(id_proj)s{
 
 %(accessor)s
 };
+""",
+    'cuda': """#pragma once
+
+#include "pop%(pre_id)s.hpp"
+#include "pop%(post_id)s.hpp"
+
+extern PopStruct%(pre_id)s pop%(pre_id)s;
+extern PopStruct%(post_id)s pop%(post_id)s;
+
+/////////////////////////////////////////
+// proj%(id_proj)s: %(pre_name)s -> %(post_name)s with target %(target)s
+/////////////////////////////////////////
+struct ProjStruct%(id_proj)s{
+    // number of dendrites
+    int size;
+
+    // Learning flag
+    bool _learning;
+
+    // Connectivity
+    std::vector<int> post_rank ;
+    int* gpu_post_rank;
+    std::vector< std::vector< int > > pre_rank ;
+    int* gpu_pre_rank;
+    int* gpu_nb_synapses;
+    int* gpu_off_synapses;
+
+    // flat connectivity parameters
+    int overallSynapses;
+    std::vector<int> flat_idx;
+    std::vector<int> flat_off;
+
+    // stream
+    cudaStream_t stream;
+
+%(delay)s
+%(exact)s
+%(decl)s
+
+    void init_projection() {
+%(init)s
+    }
+
+    void compute_psp() {
+%(psp_prefix)s
+
+%(psp)s
+    }
+
+    void update_rng() {
+%(update_rng)s
+    }
+
+    void update_synapse() {
+        int rk_pre, rk_post;
+
+%(update)s
+    }
+
+    // Accessors for c-wrapper
+    int get_size() { return size; }
+    void set_size(int new_size) { size = new_size; }
+    std::vector<int> get_post_rank() { return post_rank; }
+    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
+    std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
+    void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
+    int nb_synapses(int n) { return pre_rank[n].size(); }
+
+%(accessor)s
+};
 """
+}
 
 pyx_wrapper = """
 cdef class proj%(id)s_wrapper :
@@ -146,6 +218,7 @@ pyx_struct = """
 #    name: name of the variable
 #    attr_type: either 'variable' or 'parameter'
 attribute_decl = {
+    'openmp': {
     'local':
 """
     // Local %(attr_type)s %(name)s
@@ -156,6 +229,21 @@ attribute_decl = {
     // Global %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
 """
+    },
+    'cuda': {
+    'local':
+"""
+    // Local %(attr_type)s %(name)s
+    std::vector< std::vector<%(type)s > > %(name)s;
+    %(type)s* gpu_%(name)s;
+    bool %(name)s_dirty;
+""",
+    'global':
+"""
+    // Global %(attr_type)s %(name)s
+    std::vector< %(type)s >  %(name)s ;
+"""
+    }
 }
 
 # c like definition of accessors for synaptic attributes, whereas 'local' is used if values can vary
@@ -167,6 +255,7 @@ attribute_decl = {
 #    name: name of the variable
 #    attr_type: either 'variable' or 'parameter'
 attribute_acc = {
+    'openmp': {
     'local':
 """
     // Local %(attr_type)s %(name)s
@@ -185,6 +274,27 @@ attribute_acc = {
     void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
     void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
 """
+    },
+    'cuda': {
+    'local':
+"""
+    // Local %(attr_type)s %(name)s
+    std::vector<std::vector< %(type)s > > get_%(name)s() { return %(name)s; }
+    std::vector<%(type)s> get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
+    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) { return %(name)s[rk_post][rk_pre]; }
+    void set_%(name)s(std::vector<std::vector< %(type)s > >value) { %(name)s = value; %(name)s_dirty = true; }
+    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { %(name)s[rk] = value; %(name)s_dirty = true; }
+    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { %(name)s[rk_post][rk_pre] = value; %(name)s_dirty = true; }
+""",
+    'global':
+"""
+    // Global %(attr_type)s %(name)s
+    std::vector<%(type)s> get_%(name)s() { return %(name)s; }
+    %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
+    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
+    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
+"""
+    }
 }
 
 # export of accessors for synaptic attributes towards python, whereas 'local' is used if values can vary
@@ -471,3 +581,70 @@ structural_plasticity = {
 """
     }
 }
+
+# Comment to if (tid < 32) block:
+#
+# now that we are using warp-synchronous programming (below)
+# we need to declare our shared memory volatile so that the compiler
+# doesn't reorder stores to it and induce incorrect behavior.
+cuda_psp_kernel=\
+"""
+__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* rank_pre, int *nb_synapses, int* offsets, double *pre_r, double* w, double *sum_%(target)s ) {
+    unsigned int tid = threadIdx.x;
+    unsigned int j = tid+offsets[blockIdx.x];
+
+    extern double __shared__ sdata[];
+    double localSum = 0.0;
+
+    while(j < nb_synapses[blockIdx.x]+offsets[blockIdx.x])
+    {
+        localSum += %(psp)s
+
+        j+= blockDim.x;
+    }
+
+    sdata[tid] = localSum;
+    __syncthreads();
+
+    // do reduction in shared mem
+    if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+    if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+    if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+
+    if (tid < 32)
+    {
+        volatile double* smem = sdata;
+
+        if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
+        if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
+        if (blockDim.x >=  16) { smem[tid] = localSum = localSum + smem[tid +  8]; }
+        if (blockDim.x >=   8) { smem[tid] = localSum = localSum + smem[tid +  4]; }
+        if (blockDim.x >=   4) { smem[tid] = localSum = localSum + smem[tid +  2]; }
+        if (blockDim.x >=   2) { smem[tid] = localSum = localSum + smem[tid +  1]; }
+
+    }
+
+    // write result for this block to global mem
+    if (tid == 0)
+    {
+        sum_%(target)s[blockIdx.x] = sdata[0];
+    }
+
+}
+"""
+
+cuda_psp_kernel_call =\
+"""
+    // proj%(id)s: pop%(pre)s -> pop%(post)s
+    if ( pop%(post)s._active ) {
+        int sharedMemSize = __pop%(pre)s_pop%(post)s_%(target)s__ * 64;
+
+        cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, sharedMemSize>>>(
+                       /* ranks and offsets */
+                       proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
+                       /* computation data */
+                       pop%(pre)s.gpu_r, proj%(id)s.gpu_w,
+                       /* result */
+                       pop%(post)s.gpu_sum_%(target)s );
+    }
+"""

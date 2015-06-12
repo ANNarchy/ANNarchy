@@ -56,115 +56,159 @@ class ProjectionGenerator(object):
             header_struct: basic template
 
         """
-        # Is it a specific projection?
-        if proj.generator['omp']['header_proj_struct']:
-            final_code = proj.generator['omp']['header_proj_struct']
-            init = ""
-            update = ""
-            update_rng = ""
-
-        else:
-            # create the code for non-specific projections
-            decl = ""
-
-            # Spiking neurons have aditional data
-            if proj.synapse.type == 'spike':
-                # Inverse ranks
-                decl += """
-        std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
-    """
-
-            # Exact integration
-            has_exact = False
-            for var in proj.synapse.description['variables']:
-                if var['method'] == 'event-driven':
-                    has_exact = True
-
-            # Delays
-            has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
-
-            # Code for declarations and accessors
-            accessor = ""
-            # Parameters
-            for var in proj.synapse.description['parameters']:
-                decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
-                accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
-
-            # Variables
-            for var in proj.synapse.description['variables']:
-                decl += ProjTemplate.attribute_decl[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
-                accessor += ProjTemplate.attribute_acc[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
-
-            # Arrays for the random numbers
-            decl += """
-    // Random numbers
-"""
-            for rd in proj.synapse.description['random_distributions']:
-                decl += """    std::vector< std::vector<double> > %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
-
-            # Local functions
-            if len(proj.synapse.description['functions'])>0:
-                decl += """
-    // Local functions
-"""
-                for func in proj.synapse.description['functions']:
-                    decl += ' '*4 + func['cpp'] + '\n'
-
-            # Structural plasticity
-            if Global.config['structural_plasticity']:
-                decl += self.header_structural_plasticity(proj)
-
-            # Definiton of synaptic equations, initialization
-            init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
-            update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
-            update_rng = self.update_random_distributions(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
-
-            if proj.synapse.type == 'rate':
-                psp_prefix = "\tint nb_post;\n\tdouble sum;"
-                psp = self.computesum_rate(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
-            else:
-                psp_prefix = "\tint nb_post, i, j, rk_j, rk_post, rk_pre;\n\tdouble sum;"
-                psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
-
-            final_code = ProjTemplate.header_struct % { 'id_proj': proj.id,
-                                                        'pre_name': proj.pre.name,
-                                                        'pre_id': proj.pre.id,
-                                                        'post_name': proj.post.name,
-                                                        'post_id': proj.post.id,
-                                                        'target': proj.target,
-                                                        'exact': ProjTemplate.exact_integ['header_struct'] % {'id': proj.id} if has_exact else "",
-                                                        'delay': ProjTemplate.delay['header_struct'] % {'id': proj.id} if has_delay else "",
-                                                        'decl': decl,
-                                                        'accessor': accessor,
-                                                        'init': init,
-                                                        'psp_prefix': psp_prefix,
-                                                        'psp': psp,
-                                                        'update_rng': update_rng,
-                                                        'update': update
-                                                     }
-
-        with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
-            ofile.write(final_code)
-
         proj_desc = {
             'include': """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id },
             'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
             'instance': """ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
-            'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id},
-            'update': "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id },
-            'rng_update': "" if update_rng=="" else """    proj%(id)s.update_rng();\n""" % { 'id': proj.id }
+            'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
         }
 
-        return proj_desc
+        # Is it a specific projection?
+        if proj.generator['omp']['header_proj_struct']:
+            final_code = proj.generator['omp']['header_proj_struct']
+
+            return proj_desc
+        else:
+            decl, accessor = self._generate_decl_and_acc(proj)
+
+            if Global.config['paradigm'] == "openmp":
+                # Definiton of synaptic equations, initialization
+                init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+                update = self.update_synapse(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+                update_rng = self.update_random_distributions(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+
+                if proj.synapse.type == 'rate':
+                    psp_prefix = "\tint nb_post;\n\tdouble sum;"
+                    psp = self._computesum_rate_openmp(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+                else:
+                    psp_prefix = "\tint nb_post, i, j, rk_j, rk_post, rk_pre;\n\tdouble sum;"
+                    psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+
+                final_code = ProjTemplate.header_struct['openmp'] % {
+                                    'id_proj': proj.id,
+                                    'pre_name': proj.pre.name,
+                                    'pre_id': proj.pre.id,
+                                    'post_name': proj.post.name,
+                                    'post_id': proj.post.id,
+                                    'target': proj.target,
+                                    'exact': ProjTemplate.exact_integ['header_struct'] % {'id': proj.id} if has_exact else "",
+                                    'delay': ProjTemplate.delay['header_struct'] % {'id': proj.id} if has_delay else "",
+                                    'decl': decl,
+                                    'accessor': accessor,
+                                    'init': init,
+                                    'psp_prefix': psp_prefix,
+                                    'psp': psp,
+                                    'update_rng': update_rng,
+                                    'update': update
+                                 }
+
+                with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+                    ofile.write(final_code)
+
+                proj_desc['update'] = "" if update=="" else """    proj%(id)s.update_synapse();\n""" % { 'id': proj.id }
+                proj_desc['rng_update'] = "" if update_rng=="" else """    proj%(id)s.update_rng();\n""" % { 'id': proj.id }
+
+                return proj_desc
+            else:
+                init = self.init_projection(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
+
+                final_code = ProjTemplate.header_struct['cuda'] % {
+                                            'id_proj': proj.id,
+                                            'pre_name': proj.pre.name,
+                                            'pre_id': proj.pre.id,
+                                            'post_name': proj.post.name,
+                                            'post_id': proj.post.id,
+                                            'target': proj.target,
+                                            'exact': "",
+                                            'delay': "",
+                                            'decl': decl,
+                                            'accessor': accessor,
+                                            'init': init,
+                                            'psp_prefix': "",
+                                            'psp': "",
+                                            'update_rng': "",
+                                            'update': ""
+                                         }
+
+                psp_header, psp_body, psp_call = self._computesum_rate_cuda(proj)
+
+                proj_desc['psp_header'] = psp_header
+                proj_desc['psp_body'] = psp_body
+                proj_desc['psp_call'] = psp_call
+
+                host_device_transfer, device_host_transfer = self._cuda_memory_transfers(proj)
+
+                proj_desc['host_to_device'] = host_device_transfer
+                proj_desc['device_to_host'] = device_host_transfer
+
+                with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+                    ofile.write(final_code)
+
+                return proj_desc
+
+    def _generate_decl_and_acc(self, proj):
+        # create the code for non-specific projections
+        decl = ""
+
+        # Spiking neurons have aditional data
+        if proj.synapse.type == 'spike':
+            # Inverse ranks
+            decl += """
+        std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
+    """
+
+        # Exact integration
+        has_exact = False
+        for var in proj.synapse.description['variables']:
+            if var['method'] == 'event-driven':
+                has_exact = True
+
+        # Delays
+        has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
+
+        # choose templates dependend on the paradigm
+        decl_template = ProjTemplate.attribute_decl[Global.config['paradigm']]
+        acc_template = ProjTemplate.attribute_acc[Global.config['paradigm']]
+
+        # Code for declarations and accessors
+        accessor = ""
+        # Parameters
+        for var in proj.synapse.description['parameters']:
+            decl += decl_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+            accessor += acc_template[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
+
+        # Variables
+        for var in proj.synapse.description['variables']:
+            decl += decl_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+            accessor += acc_template[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
+
+        # Arrays for the random numbers
+        decl += """
+    // Random numbers
+"""
+        for rd in proj.synapse.description['random_distributions']:
+            decl += """    std::vector< std::vector<double> > %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+""" % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+
+        # Local functions
+        if len(proj.synapse.description['functions'])>0:
+            decl += """
+    // Local functions
+"""
+            for func in proj.synapse.description['functions']:
+                decl += ' '*4 + func['cpp'] + '\n'
+
+        # Structural plasticity
+        if Global.config['structural_plasticity']:
+            decl += self.header_structural_plasticity(proj)
+
+        return decl, accessor
 
 #######################################################################
 ############## BODY ###################################################
 #######################################################################
-
-
-    def computesum_rate(self, proj):
+    def _computesum_rate_openmp(self, proj):
         code = ""    
         ids = {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
@@ -356,6 +400,50 @@ class ProjectionGenerator(object):
                }
 
         return code
+
+    def _computesum_rate_cuda(self, proj):
+        """
+        returns all data needed for compute postsynaptic sum kernels:
+
+        header:  kernel prototypes
+        body:    kernel implementation
+        call:    kernel call
+        """
+        code = ""
+
+        psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+        psp = psp.replace('rk_pre', 'rank_pre[j]')
+
+        body_code = ProjTemplate.cuda_psp_kernel % {
+                                   'id': proj.id,
+                                   'pre': proj.pre.id,
+                                   'post': proj.post.id,
+                                   'target': proj.target,
+                                   'psp': psp
+                                  }
+
+        header_code = """__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* pre_rank, int* nb_synapses, int *offsets, double *pre_r, double* w, double *sum_%(target)s );
+""" % { 'pre': proj.pre.id,
+        'post': proj.post.id,
+        'target': proj.target,
+      }
+
+        call_code = ProjTemplate.cuda_psp_kernel_call % {
+                                        'id': proj.id,
+                                        'pre': proj.pre.id,
+                                        'post': proj.post.id,
+                                        'target': proj.target,
+                                      }
+
+        # Take delays into account if any
+        if proj.max_delay > 1:
+            if proj.uniform_delay == -1:
+                Global._error("only uniform delays are supported on GPUs.")
+                exit(0)
+            else:
+                call_code = call_code.replace("gpu_r", "gpu_delayed_r["+str(proj.max_delay-1)+"]")
+
+        return header_code, body_code, call_code
 
     def computesum_spiking(self, proj):
 
@@ -991,6 +1079,51 @@ class ProjectionGenerator(object):
         }
         
         return pruning
+
+    def _cuda_memory_transfers(self, proj):
+        host_device_transfer = ""
+        device_host_transfer = ""
+
+        # transfers for projections
+        host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
+        for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
+            if attr['name'] in proj.synapse.description['local']:
+                host_device_transfer += """
+        // %(name)s: local
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+            std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            flat_proj%(id)s_%(name)s.clear();
+        }
+""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
+            else:
+                host_device_transfer += """
+        // %(name)s: global
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        }
+""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
+
+        device_host_transfer += """
+    // device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
+        for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
+            if attr['name'] in proj.synapse.description['local']:
+                device_host_transfer += """
+            // %(name)s: local
+            std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
+            cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, proj%(id)s.flat_idx);
+            flat_proj%(id)s_%(name)s.clear();
+""" % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
+            else:
+                device_host_transfer += """
+            // %(name)s: global
+            cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
+
+        return host_device_transfer, device_host_transfer
 
 ######################################
 ### Code generation

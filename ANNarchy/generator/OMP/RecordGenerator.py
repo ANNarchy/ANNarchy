@@ -21,18 +21,42 @@
 
 """
 from ANNarchy.core import Global
-import BaseTemplate
 import ProjectionTemplate as ProjTemplate
 import RecordTemplate as RecTemplate
 
 class RecordGenerator:
+    """
+    Creates the required codes for recording population
+    and projection data
+    """
     def __init__(self, annarchy_dir, populations, projections, net_id):
+        """
+        Constructor, stores all required data for later
+        following code generation step
+
+        Paramaters:
+
+            * *annarchy_dir*: unique target directory for the generated code
+              files; they are stored in 'generate' sub-folder
+            * *populations*: list of populations
+            * *populations*: list of projections
+            * *net_id*: unique id for the current network
+
+        """
         self._annarchy_dir = annarchy_dir
         self._populations = populations
         self._projections = projections
         self._net_id = net_id
         
     def generate(self):
+        """
+        Generate one file "Recorder.h" comprising of Monitor base class and inherited
+        classes for each Population/Projection.
+
+        Templates:
+
+            record_base_class
+        """
         record_class = ""
         for pop in self._populations:
             record_class += self._pop_recorder_class(pop)
@@ -40,14 +64,24 @@ class RecordGenerator:
         for proj in self._projections:
             record_class += self._proj_recorder_class(proj)
         
-        code = BaseTemplate.monitor % {'record_classes': record_class} 
+        code = RecTemplate.record_base_class % {'record_classes': record_class}
         
         # Generate header code for the analysed pops and projs
         with open(self._annarchy_dir+'/generate/Recorder.h', 'w') as ofile:
             ofile.write(code)
 
     def _pop_recorder_class(self, pop):
+        """
+        Creates population recording class code.
 
+        Returns:
+
+            * complete code as string
+
+        Templates:
+
+            omp_population, cuda_population
+        """
         if Global.config['paradigm']=="openmp":
             template = RecTemplate.omp_population
         else:
@@ -101,6 +135,10 @@ class RecordGenerator:
     def _proj_recorder_class(self, proj):
         """
         Generate the code for the recorder object.
+
+        Returns:
+
+            * complete code as string
 
         Templates:
 
