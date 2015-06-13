@@ -612,10 +612,10 @@ class ProjectionGenerator(object):
         from ..Utils import generate_equation_code
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=3) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj') %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
+        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=4) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
 
         # Generate the code
         if local_eq.strip() != '' or global_eq.strip() != '' :

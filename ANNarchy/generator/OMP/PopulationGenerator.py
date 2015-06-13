@@ -269,7 +269,7 @@ public:
         code = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id}
         if eqs.strip() != "":
             code += """
     // Updating the global variables of population %(id)s (%(name)s)
@@ -277,7 +277,7 @@ public:
 """ % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
 
         # Local variables, evaluated in parallel
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id}
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         code += """
         // Updating the local variables of population %(id)s (%(name)s)
@@ -304,26 +304,36 @@ public:
     def update_spike_neuron(self, pop):
         # Neural update
         from ..Utils import generate_equation_code
-        code = ""
+
+        # Is there a refractory period?
+        if pop.neuron_type.refractory or pop.refractory:
+            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id}
+            code = """
+            if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
+%(eqs)s
+                // Decrement the refractory period
+                pop%(id)s.refractory_remaining[i]--;
+                continue;
+            }
+        """ %  {'id': pop.id, 'eqs': eqs}
+            refrac_inc = "pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];" %  {'id': pop.id}
+        else:
+            code = ""
+            refrac_inc = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id}
         if eqs.strip() != "":
-            code += """
-    // Updating the global variables of population %(id)s (%(name)s)
-%(eqs)s
-""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
+            global_code = eqs
+        else:
+            global_code = ""
+
+        # OMP code
+        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+        omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
 
         # Local variables, evaluated in parallel
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
-        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
-        code += """
-        // Updating the local variables of population %(id)s (%(name)s)
-        pop%(id)s.spiked.clear();
-        %(omp_code)s
-        for(int i = 0; i < %(size)s; i++){
-%(eqs)s
-""" % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs, 'omp_code': omp_code}
+        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id}
 
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
@@ -333,33 +343,17 @@ public:
 
         # Process the condition
         cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
-        reset = ""; refrac = ""
+
         # reset equations
+        reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
                 %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id}}
-            if not 'unless_refractory' in eq['constraint']:
-                refrac += """
-                %(refrac)s
-""" % {'refrac': eq['cpp'] % {'id': pop.id} }
 
-        # Is there a refractory period?
-        if pop.neuron_type.refractory or pop.refractory:
-            refrac_period = """if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
-%(refrac)s
-                pop%(id)s.refractory_remaining[i]--;
-            }
-            else """ %  {'id': pop.id, 'refrac': refrac}
-            refrac_inc = "pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];" %  {'id': pop.id}
-        else:
-            refrac_period = ""
-            refrac_inc = ""
-
-        # Main code
-        omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+        # Gather code
         spike_gather = """
-            %(refrac_period)sif(%(condition)s){ // Emit a spike
+            if(%(condition)s){ // Emit a spike
 %(reset)s        
                 %(omp_critical_code)s
                 {
@@ -368,10 +362,9 @@ public:
                 pop%(id)s.last_spike[i] = t;
                 %(refrac_inc)s
             }
-        }
 """% {  'id': pop.id, 'name': pop.name, 'size': pop.size, 
         'condition' : cond, 'reset': reset, 
-        'refrac_period': refrac_period, 'refrac_inc': refrac_inc,
+        'refrac_inc': refrac_inc,
         'omp_critical_code': omp_critical_code} 
 
         # if profiling enabled, annotate with profiling code
@@ -385,9 +378,14 @@ public:
         # finish code
         return """
     if(pop%(id)s._active){
+        pop%(id)s.spiked.clear();
+%(global_code)s
+        %(omp_code)s
+        for(int i = 0; i < %(size)s; i++){
 %(code)s
+        }
     } // active
-""" % {'id': pop.id, 'code': code }
+""" % {'id': pop.id, 'size': pop.size, 'name': pop.name, 'code': code, 'global_code': global_code, 'omp_code': omp_code }
 
 
     def delay_code(self, pop):

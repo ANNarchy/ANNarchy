@@ -509,9 +509,6 @@ def _process_neuron_equations(neuron):
         spike_code += """
         \\item $""" + _analyse_equation(eq, local_dict, tex_dict) + "$"
 
-        if 'unless_refractory' in var['constraint']:
-            spike_code += " (not during the refractory period)."
-
     spike_code += """
     \\end{enumerate}"""
 
