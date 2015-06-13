@@ -178,7 +178,6 @@ class ProjectionGenerator(object):
 ############## BODY ###################################################
 #######################################################################
 
-
     def computesum_rate(self, proj):
         code = ""    
         ids = {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
