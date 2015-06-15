@@ -149,6 +149,71 @@ struct ProjStruct%(id_proj)s{
     int nb_synapses(int n) { return pre_rank[n].size(); }
 
 %(accessor)s
+
+    /*
+     * (De-)Flattening of LIL structures
+     */
+    template<typename T>
+    std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
+    {
+        std::vector<T> flatIdx = std::vector<T>();
+        typename std::vector<std::vector<T> >::iterator it;
+
+        for ( it = in.begin(); it != in.end(); it++)
+        {
+            flatIdx.push_back(it->size());
+        }
+
+        return flatIdx;
+    }
+
+    template<typename T>
+    std::vector<int> flattenOff(std::vector<std::vector<T> > in)
+    {
+        std::vector<T> flatOff = std::vector<T>();
+        typename std::vector<std::vector<T> >::iterator it;
+
+        int currOffset = 0;
+        for ( it = in.begin(); it != in.end(); it++)
+        {
+            flatOff.push_back(currOffset);
+            currOffset += it->size();
+        }
+
+        return flatOff;
+    }
+
+    template<typename T>
+    std::vector<T> flattenArray(std::vector<std::vector<T> > in)
+    {
+        std::vector<T> flatVec = std::vector<T>();
+        typename std::vector<std::vector<T> >::iterator it;
+
+        for ( it = in.begin(); it != in.end(); it++)
+        {
+            flatVec.insert(flatVec.end(), it->begin(), it->end());
+        }
+
+        return flatVec;
+    }
+
+    template<typename T>
+    std::vector<std::vector<T> > deFlattenArray(std::vector<T> in, std::vector<int> idx)
+    {
+        std::vector<std::vector<T> > deFlatVec = std::vector<std::vector<T> >();
+        std::vector<int>::iterator it;
+
+        int t=0;
+        for ( it = idx.begin(); it != idx.end(); it++)
+        {
+            std::vector<T> tmp = std::vector<T>(in.begin()+t, in.begin()+t+*it);
+            t += *it;
+
+            deFlatVec.push_back(tmp);
+        }
+
+        return deFlatVec;
+    }
 };
 """
 }
@@ -293,6 +358,39 @@ attribute_acc = {
     %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
     void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
     void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
+"""
+    }
+}
+
+# Initialization of parameters due to the init_projection method.
+#
+# Parameters:
+#
+#    name: name of the variable
+#    init: initial value
+attribute_cpp_init = {
+    'openmp':
+    {
+    'local':
+"""
+        // Local %(attr_type)s %(name)s
+        proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
+""",
+    'global':
+"""
+        // Global %(attr_type)s %(name)s
+        proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
+"""
+    },
+    'cuda':
+    {
+    'local':
+"""
+        // Local %(attr_type)s %(name)s
+""",
+    'global':
+"""
+        // Global %(attr_type)s %(name)s
 """
     }
 }
@@ -647,4 +745,37 @@ cuda_psp_kernel_call =\
                        /* result */
                        pop%(post)s.gpu_sum_%(target)s );
     }
+"""
+
+cuda_proj_base_data =\
+"""
+    // Initialize device memory for proj%(id)s
+
+    // post_rank
+    cudaMalloc((void**)&proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_post_rank, proj%(id)s.post_rank.data(), proj%(id)s.post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+    // nb_synapses
+    proj%(id)s.flat_idx = flattenIdx<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_nb_synapses, proj%(id)s.flat_idx.data(), proj%(id)s.flat_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
+    proj%(id)s.overallSynapses = 0;
+    std::vector<int>::iterator it%(id)s;
+    for ( it%(id)s = proj%(id)s.flat_idx.begin(); it%(id)s != proj%(id)s.flat_idx.end(); it%(id)s++)
+        proj%(id)s.overallSynapses += *it%(id)s;
+
+    // off_synapses
+    proj%(id)s.flat_off = flattenOff<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_off_synapses, proj%(id)s.flat_off.data(), proj%(id)s.flat_off.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+    // pre_rank
+    std::vector<int> flat_proj%(id)s_pre_rank = flattenArray<int>(proj%(id)s.pre_rank);
+    cudaMalloc((void**)&proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.size() * sizeof(int));
+    cudaMemcpy(proj%(id)s.gpu_pre_rank, flat_proj%(id)s_pre_rank.data(), flat_proj%(id)s_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+    flat_proj%(id)s_pre_rank.clear();
+
+    // weights
+    cudaMalloc((void**)&gpu_w, overallSynapses * sizeof(double));
+    w_dirty = true; // enforce update
 """

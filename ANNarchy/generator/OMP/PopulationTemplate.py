@@ -491,6 +491,7 @@ rate_psp = {
         'init': """
         // Post-synaptic potential
         _sum_%(target)s = std::vector<double>(size, 0.0);
+        cudaMalloc((void**)&gpu_sum_%(target)s, size * sizeof(double));
         cudaMemcpy(gpu_sum_%(target)s, _sum_%(target)s.data(), size * sizeof(double), cudaMemcpyHostToDevice);""",
     }
 }

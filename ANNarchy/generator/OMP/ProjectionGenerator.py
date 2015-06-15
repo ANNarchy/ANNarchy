@@ -84,6 +84,15 @@ class ProjectionGenerator(object):
                     psp_prefix = "\tint nb_post, i, j, rk_j, rk_post, rk_pre;\n\tdouble sum;"
                     psp = self.computesum_spiking(proj).replace("proj"+str(proj.id)+".", "") #TODO: adjust prefix in parser
 
+                # Exact integration
+                has_exact = False
+                for var in proj.synapse.description['variables']:
+                    if var['method'] == 'event-driven':
+                        has_exact = True
+
+                # Delays
+                has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
+
                 final_code = ProjTemplate.header_struct['openmp'] % {
                                     'id_proj': proj.id,
                                     'pre_name': proj.pre.name,
@@ -156,15 +165,6 @@ class ProjectionGenerator(object):
             decl += """
         std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
     """
-
-        # Exact integration
-        has_exact = False
-        for var in proj.synapse.description['variables']:
-            if var['method'] == 'event-driven':
-                has_exact = True
-
-        # Delays
-        has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # choose templates dependend on the paradigm
         decl_template = ProjTemplate.attribute_decl[Global.config['paradigm']]
@@ -818,39 +818,28 @@ class ProjectionGenerator(object):
         'id_post': proj.post.id, 'id_pre': proj.pre.id,
         'name_post': proj.post.name, 'name_pre': proj.pre.name}
 
+        # In case of GPUs we need to pre-allocate data fields
+        # on the GPU, the base data need to come first, as it
+        # initialize nb_total_synapses
+        if Global.config['paradigm'] == "cuda":
+            code += ProjTemplate.cuda_proj_base_data % {'id': proj.id}
+
+        # choose initialization templates based on chosen paradigm
+        attr_init_tpl = ProjTemplate.attribute_cpp_init[Global.config['paradigm']]
+
         # Initialize parameters
         for var in proj.synapse.description['parameters']:
             if var['name'] == 'w':
                 continue
-            if var['name'] in proj.synapse.description['local']:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-    // Local parameter %(name)s
-    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-            else:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-    // Global parameter %(name)s
-    proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_init_tpl[var['locality']] % { 'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter' }
 
         # Initialize variables
         for var in proj.synapse.description['variables']:
             if var['name'] == 'w':
                 continue
-            if var['name'] in proj.synapse.description['local']:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-    // Local variable %(name)s
-    proj%(id)s.%(name)s = std::vector< std::vector<%(type)s> >(proj%(id)s.post_rank.size(), std::vector<%(type)s>());
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
-            else:
-                init = 0.0 if var['ctype'] == 'double' else 0
-                code += """
-    // Global variable %(name)s
-    proj%(id)s.%(name)s = std::vector<%(type)s>(proj%(id)s.post_rank.size(), %(init)s);
-""" %{'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init}
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_init_tpl[var['locality']] % { 'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable' }
 
         # Random numbers
         code += self.init_random_distributions(proj)
@@ -1084,7 +1073,7 @@ class ProjectionGenerator(object):
         host_device_transfer = ""
         device_host_transfer = ""
 
-        # transfers for projections
+        # transfer of variables
         host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
         for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
             if attr['name'] in proj.synapse.description['local']:
