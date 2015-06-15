@@ -34,7 +34,7 @@ def sort_odes(desc, locality='local'):
 
     return pre_odes, odes, post_odes
 
-def generate_equation_code(id, desc, locality='local', obj='pop'):
+def generate_equation_code(id, desc, locality='local', obj='pop', conductance_only=False, padding=3):
     
     # Find the paradigm OMP or CUDA
     if config['paradigm'] == 'openmp':
@@ -56,14 +56,15 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
     #########################
     if len(pre_odes) > 0:
         code += """
-            /////////////////////////
-            // Before the ODES
-            /////////////////////////
+// Before the ODES
 """
         for param in pre_odes: 
+            if conductance_only: # skip the variables which do not start with g_
+                if not param['name'].startswith('g_'):
+                    continue
             code += """
-            %(comment)s
-            %(cpp)s
+%(comment)s
+%(cpp)s
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
             # Min-Max bounds
@@ -72,8 +73,8 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                     continue
 
                 code += """
-        if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-            %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
 """ % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
        'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
        'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
@@ -95,15 +96,16 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
     # Iterate over all steps
     if len(odes) > 0:
         code += """
-            /////////////////////////
-            // ODES
-            /////////////////////////
+// ODES
 """
         for step in range(nb_step):
             code += """
-            // Step %(step)s
+// Step %(step)s
         """ % {'step' : str(step+1)}
             for param in odes:
+                if conductance_only: # skip the variables which do not start with g_
+                    if not param['name'].startswith('g_'):
+                        continue
                 if isinstance(param['cpp'], list) and step < len(param['cpp']):
                     eq = param['cpp'][step]
                 elif isinstance(param['cpp'], str) and step == 0: 
@@ -111,21 +113,22 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                 else:
                     eq = ''
                 code += """
-            %(comment)s
-            %(cpp)s
+%(comment)s
+%(cpp)s
 """ % { 'comment': '// '+param['eq'],
                 'cpp': eq }
 
         # Generate the switch code
         code += """    
-            /////////////////////
-            // Switch values
-            /////////////////////
+// Switch values
 """
         for param in odes: 
+            if conductance_only: # skip the variables which do not start with g_
+                if not param['name'].startswith('g_'):
+                    continue
             code += """
-            %(comment)s
-            %(switch)s 
+%(comment)s
+%(switch)s 
 """ % { 'comment': '// '+param['eq'],
         'switch' : param['switch']}
 
@@ -135,8 +138,8 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                     continue
 
                 code += """
-        if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-            %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
 """ % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
        'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
        'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
@@ -149,14 +152,15 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
     #######################
     if len(post_odes) > 0:
         code += """
-            /////////////////////////
-            // After the ODES
-            /////////////////////////
+// After the ODES
 """
-        for param in post_odes: 
+        for param in post_odes:           
+            if conductance_only: # skip the variables which do not start with g_
+                if not param['name'].startswith('g_'):
+                    continue
             code += """
-            %(comment)s
-            %(cpp)s
+%(comment)s
+%(cpp)s
 """ % { 'comment': '// '+param['eq'],
         'cpp': param['cpp'] }
 
@@ -166,8 +170,8 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
                     continue
 
                 code += """
-        if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-            %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
 """ % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
        'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
        'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
@@ -175,4 +179,17 @@ def generate_equation_code(id, desc, locality='local', obj='pop'):
        'operator': '<' if bound=='min' else '>'
        }
 
-    return code
+    # Add the padding to each line
+    padded_code = reindentBlock(code, 4*padding)
+
+    return padded_code
+
+def indentLine(line, spaces=4):
+    return (' ' * spaces) + line
+
+def reindentBlock(s, numSpaces):
+    import string
+    s = string.split(s, '\n')
+    s = map(lambda a, ns=numSpaces: indentLine(a, ns), s)
+    s = string.join(s, '\n')
+    return s

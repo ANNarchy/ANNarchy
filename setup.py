@@ -90,7 +90,7 @@ if sys.platform.startswith("darwin"):
 
 
 setup(  name='ANNarchy',
-        version='4.4.1',
+        version='4.5.0',
         license='GPLv2+',
         platforms='GNU/Linux; MacOSX',
         description='Artificial Neural Networks architect',

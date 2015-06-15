@@ -154,7 +154,9 @@ The refractory period in milliseconds is specified by the ``refractory`` paramet
         refractory = 5.0
     )
 
-If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 consecutive steps after a spike is emitted. The equations will be evaluated normally, so ``g_exc`` will not "miss" incoming spikes during this period, only ``v`` will be stuck to ``c`` and ``u`` incremented 5 times altogether. 
+The ``refractory`` argument can be a floating value or the name of a parameter/variable (string).
+
+If ``dt = 0.1``, this means that the ``equations`` will not be evaluated for 50 consecutive steps after a spike is emitted, except for the conductances (starting with ``g_``) which are evaluated normally during the refractory period (the neuron is not "deaf", it only is frozen in a refractory state). 
 
 ``refractory`` becomes an attribute of a spiking ``Population`` object, so it can be set specifically for a population even when omitted in the neuron definition:
 
@@ -174,21 +176,5 @@ If ``dt = 1.0``, this means that the ``reset`` function will be called for 5 con
     pop.refractory = Uniform(1.0, 10.0)
 
 It can be either a single value, a ``RandomDistribution`` object or a Numpy array of the same size/geometry as the population.
-
-If you want only a subpart of the ``reset`` statements to be executed during the refractory period, you can use the ``unless_refractory`` flag. Statements flagged with ``unless_refractory`` will only be executed once just after a spike is emitted, but not during the refractory period. In the example above, it would indeed make more sense to define ``u`` as non-refractory, as the increment should be executed only once after each spike:
-
-.. code-block:: python
-
-    LIF = Neuron (
-        parameters = """ ... """,
-        equations = """ ... """,
-        spike = """ ... """,
-        reset = """ 
-            v = c
-            u += d : unless_refractory
-        """,
-        refractory = 5.0
-    )
-
 
 

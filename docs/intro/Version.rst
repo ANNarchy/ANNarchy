@@ -5,12 +5,13 @@ ANNarchy versions
 Changelog
 ==========
 
-**4.4.1:**
+**4.5.0:**
 
 * A ``Network`` object has been added to run multiple simulations in parallel (``parallel_run()``). See :doc:`../manual/Network`.
 * Recording goes through the ``Monitor`` object. Old recording methods are depreciated. 
 * The flag ``exact`` is replaced by ``event-driven``. Still works, but will be suppressed in future versions.
-* Variables updated in pre-spike or post-spike (spiking synapse) can now define min/max bounds
+* The behavior of a spiking neuron with two coupled variables (e.g. Izhikevich) during the refractory period is changed. The ODEs are not evaluated at all during the refractory period (except the conductances). The ``unless-refractory`` flag has no effect anymore. Before, ``u`` started decaying during the refractory period.
+* Variables updated in pre-spike or post-spike (spiking synapse) can now define min/max bounds. Useful to avoid clipping explicitly the weights.
 * Bug when using conditionals in pre-spike and post-spike.
 * Bug when using t_pre and t_post explicitly.
 * Speed-up of connect_fixed_number_pre/post. 

@@ -8,6 +8,8 @@ class PoissonPopulation(Population):
     """ 
     Population of spiking neurons following a Poisson distribution.
 
+    **Case 1:** Input population
+
     Each neuron of the population will randomly emit spikes, with a mean firing rate defined by the *rates* argument.
 
     The mean firing rate in Hz can be a fixed value for all neurons::
@@ -55,9 +57,15 @@ class PoissonPopulation(Population):
 
     The refractory period can also be set, so that a neuron can not emit two spikes too close from each other.
 
+    **Case 2:** Hybrid population
+
+    If the ``rates`` argument is not set, the population can be used as an interface from a rate-coded population. 
+
+    The ``target`` argument 
+
     """
 
-    def __init__(self, geometry, name=None, rates=10.0, parameters=None, refractory=None):
+    def __init__(self, geometry, name=None, rates=None, target=None, parameters=None, refractory=None):
         """        
         *Parameters*:
         
@@ -65,11 +73,38 @@ class PoissonPopulation(Population):
 
             * *name*: unique name of the population (optional).
 
-            * *rates*: mean firing rate of each neuron (default: 10.0 Hz). It can be a single value (e.g. 10.0) or an equation (as string).
+            * *rates*: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
 
             * *parameters*: additional parameters which can be used in the *rates* equation.
+
+            * *refractory*: refractory period in ms.
         """  
-        if isinstance(rates, str):
+        if rates == None and target==None:
+            Global._error('A PoissonPopulation must define either rates or target.')
+            exit(0)
+
+        if target is not None: # hybrid population
+            # Create the neuron
+            poisson_neuron = Neuron(
+                parameters = """
+                %(params)s
+                """ % {'params': parameters if parameters else ''},
+                equations = """
+                rates = sum(%(target)s)
+                p = Uniform(0.0, 1.0) * 1000.0 / dt
+                _sum_%(target)s = 0.0
+                """ % {'target': target},
+                spike = """
+                    p < rates
+                """,
+                refractory=refractory,
+                name="Hybrid",
+                description="Hybrid spiking neuron emitting spikes according to a Poisson distribution at a frequency determined by the weighted sum of inputs."
+            )
+
+
+        elif isinstance(rates, str):
+            # Create the neuron
             poisson_neuron = Neuron(
                 parameters = """
                 %(params)s
@@ -77,6 +112,7 @@ class PoissonPopulation(Population):
                 equations = """
                 rates = %(rates)s
                 p = Uniform(0.0, 1.0) * 1000.0 / dt
+                _sum_exc = 0.0
                 """ % {'rates': rates},
                 spike = """
                     p < rates

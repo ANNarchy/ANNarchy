@@ -132,7 +132,7 @@ class Izhikevich(Neuron):
     Reset::
 
         v = c
-        u += d : unless_refractory 
+        u += d 
 
     The ODEs are solved using the explicit Euler method.
     """
@@ -171,7 +171,7 @@ class Izhikevich(Neuron):
 """
         reset = """
     v = c
-    u += d: unless_refractory
+    u += d
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
             name="Izhikevich", description="Quadratic integrate-and-fire spiking neuron with adaptation.")
@@ -592,7 +592,7 @@ class EIF_cond_exp_isfa_ista(Neuron):
     Reset::
 
         v = v_reset
-        u += b : unless_refractory
+        u += b
 
     The ODEs are solved using the explicit Euler method.
 """
@@ -653,7 +653,7 @@ class EIF_cond_exp_isfa_ista(Neuron):
 """
         reset = """
     v = v_reset
-    w += b : unless_refractory
+    w += b
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
             name="Adaptive exponential Integrate-and-Fire", description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.).")
@@ -726,7 +726,7 @@ class EIF_cond_alpha_isfa_ista(Neuron):
     Reset::
 
         v = v_reset
-        u += b : unless_refractory
+        u += b
 
     The ODEs are solved using the explicit Euler method.
 """
@@ -793,7 +793,7 @@ class EIF_cond_alpha_isfa_ista(Neuron):
 """
         reset = """
     v = v_reset
-    w += b : unless_refractory
+    w += b
 """
         Neuron.__init__(self, parameters=parameters, equations=equations, spike=spike, reset=reset, refractory='tau_refrac',
             name="Adaptive exponential Integrate-and-Fire", description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.).")
