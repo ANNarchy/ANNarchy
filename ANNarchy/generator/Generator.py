@@ -253,7 +253,7 @@ class Generator(object):
             gpu_flags = ""
         else:
             cpu_flags = "-O0 -g -D_DEBUG"
-            gpu_flags = "-g -G"
+            gpu_flags = "-g -G -D_DEBUG"
 
         if self.profile_enabled:
             cpu_flags += " -g"

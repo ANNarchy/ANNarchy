@@ -554,6 +554,7 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
  */
 double dt;
 long int t;
+long seed;
 
 // Recorders 
 std::vector<Monitor*> recorders;
@@ -626,7 +627,7 @@ void step() {
 }
 
 // Initialize the internal data and random numbers generators
-void initialize(double _dt, long seed) {
+void initialize(double _dt, long _seed) {
 %(initialize)s
 }
 
@@ -736,6 +737,9 @@ cuda_initialize_template = """
     dt = _dt;
     t = (long int)(0);
     cudaMemcpyToSymbol(t, &t, sizeof(long int));
+
+    // seed
+    seed = _seed;
 
 %(pop_init)s
 

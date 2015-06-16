@@ -153,6 +153,10 @@ struct PopStruct%(id)s{
 extern double dt;
 extern long int t;
 
+// RNG - defined in ANNarchy.cu
+extern long seed;
+extern void init_curand_states( int N, curandState* states, unsigned long seed );
+
 struct PopStruct%(id)s{
     // Number of neurons
     int size;
@@ -379,6 +383,22 @@ attribute_cpp_init = {
     }
 }
 
+attribute_delayed = {
+    'openmp':{
+        'local': """
+    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""",
+        'global': """
+    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);"""
+    },
+    'cuda':{
+        'local':"""    gpu_delayed_%(var)s = std::deque< double* >(%(delay)s, NULL);
+    for ( int i = 0; i < %(delay)s; i++ )
+        cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(double) * size);
+""",
+        'global': "//TODO: implement code template"
+    }
+}
+
 # Definition for the usage of C++11 STL template random
 # number generators
 #
@@ -399,7 +419,7 @@ cpp_11_rng = {
 """
 }
 
-# Definition for the usage of C++11 STL template random
+# Definition for the usage of CUDA device random
 # number generators
 #
 # Parameters:
@@ -411,6 +431,13 @@ cuda_rng = {
     curandState* gpu_%(rd_name)s;
 """,
     'init': """
+        cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
+        init_curand_states( size, gpu_%(rd_name)s, seed );
+#ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "pop%(id)s - init_population: " << cudaGetErrorString(err) << std::endl;
+#endif
 """,
     'update': """
 """
@@ -456,6 +483,7 @@ cuda_pop_kernel_call =\
         std::cout << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
 #endif
 """
+
 # Rate respectively spiking models require partly special variables or have different operations.
 # This dictionary contain these unique initializations.
 #

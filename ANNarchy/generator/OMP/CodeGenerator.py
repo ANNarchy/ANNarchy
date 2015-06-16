@@ -334,7 +334,6 @@ class CodeGenerator(object):
             # their linker in the next releases, so one could remove this overhead.
             projection_init = ""
             device_init = ""
-            delay_code = ""
 
             psp_call = ""
             for proj in self._proj_desc:
@@ -352,6 +351,11 @@ class CodeGenerator(object):
                 kernel_def += pop['update_header']
             for proj in self._proj_desc:
                 kernel_def += proj['psp_header']
+
+            delay_code = ""
+            for pop in self._pop_desc:
+                if 'update_delay' in pop.keys():
+                    delay_code += pop['update_delay']
 
             # global operations
             glob_ops_header, glob_ops_body = self.body_def_glops()

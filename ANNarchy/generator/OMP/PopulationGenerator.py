@@ -80,7 +80,7 @@ class PopulationGenerator(object):
             decleration, accessors = self._generate_decl_and_acc(pop)
 
             # Implementation for init_population, update functions
-            # vary dependent on the parallelization paradigm
+            # varies dependent on the parallelization paradigm
             if Global.config['paradigm'] == "openmp":
                 glops_extern = ""
                 for op in pop.global_operations:
@@ -88,9 +88,13 @@ class PopulationGenerator(object):
 
                 init = self.init_population(pop)
 
+                if pop.max_delay > 1:
+                    delay_init, delay_update = self._delay_code(pop)
+                    delay_update = delay_update.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+                    init += delay_init
+
                 update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
                 update_global_ops = self.update_globalops(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
-                update_delay = self.delay_code(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
                 if pop.neuron_type.type == 'rate':
                     update = self._update_rate_neuron_openmp(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
@@ -104,7 +108,7 @@ class PopulationGenerator(object):
                                          'init': init,
                                          'update': update,
                                          'update_rng': update_rng,
-                                         'update_delay': update_delay,
+                                         'update_delay': delay_update if pop.max_delay > 1 else "",
                                          'update_global_ops': update_global_ops
                                         }
 
@@ -130,12 +134,15 @@ class PopulationGenerator(object):
                 glops_extern = ""
 
                 init = self.init_population(pop)
+                if pop.max_delay > 1:
+                    delay_init, delay_update = self._delay_code(pop)
+                    delay_update = delay_update.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+                    init += delay_init
 
                 update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
-                update_delay = self.delay_code(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+
                 if pop.neuron_type.type == 'rate':
                     body, header, update_call = self._update_rate_neuron_cuda(pop)
-
                 else:
                     Global._error("Spiking neurons on GPUs are currently not supported")
                     exit(0)
@@ -146,7 +153,7 @@ class PopulationGenerator(object):
                                          'accessor': accessors,
                                          'init': init,
                                          'update_rng': update_rng,
-                                         'update_delay': update_delay
+                                         'update_delay': delay_update if pop.max_delay > 1 else ""
                                         }
 
                 # Store the complete header definition in a single file
@@ -156,6 +163,7 @@ class PopulationGenerator(object):
                 pop_desc['update'] = update_call
                 pop_desc['update_body'] =  body
                 pop_desc['update_header'] =  header
+                pop_desc['update_delay'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
 
                 if len(pop.global_operations) > 0:
                     update_global_ops = self.update_globalops(pop)
@@ -216,21 +224,35 @@ class PopulationGenerator(object):
 
         # Delays
         if pop.max_delay > 1:
-            if pop.neuron_type.type == "rate":
-                decleration += """
+            decleration += """
     // Delayed variables"""
-            for var in pop.delayed_variables:
-                if var in pop.neuron_type.description['local']:
-                    decleration += """
+
+            if Global.config['paradigm'] == "openmp":
+                if pop.neuron_type.type == "rate":
+                    for var in pop.delayed_variables:
+                        if var in pop.neuron_type.description['local']:
+                            decleration += """
     std::deque< std::vector<double> > _delayed_%(var)s; """ % {'var': var}
-                else:
-                    decleration += """
+                        else:
+                            decleration += """
     std::deque< double > _delayed_%(var)s; """ % {'var': var}
-            else: # Spiking networks should only exchange spikes
-                decleration += """
+                else: # Spiking networks should only exchange spikes
+                    decleration += """
     // Delays for spike population
     std::deque< std::vector<int> > _delayed_spike;
 """
+            else: #CUDA
+                if pop.neuron_type.type == "rate":
+                    for var in pop.delayed_variables:
+                        if var in pop.neuron_type.description['local']:
+                            decleration += """
+    std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': var}
+                        else:
+                            #TODO:
+                            continue
+                else:
+                    Global._error("synaptic delays for spiking neurons are not implemented yet ...")
+                    exit(0)
 
         # Local functions
         if len(pop.neuron_type.description['functions'])>0:
@@ -264,10 +286,6 @@ class PopulationGenerator(object):
             init = 0.0 if var['ctype'] == 'double' else 0
             code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
 
-        # Delays
-        if pop.max_delay > 1:
-            code += self.init_delay(pop)
-
         # Random numbers
         if len(pop.neuron_type.description['random_distributions']) > 0:
             code += """
@@ -276,7 +294,7 @@ class PopulationGenerator(object):
                 if Global.config['paradigm'] == "openmp":
                     code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
                 else:
-                    code += PopTemplate.cuda_rng['init']
+                    code += PopTemplate.cuda_rng['init'] % {'id': pop.id, 'rd_name': rd['name'] }
 
         # Global operations
         code += self._init_globalops(pop)
@@ -289,25 +307,6 @@ class PopulationGenerator(object):
         # Spike event and refractory
         if pop.neuron_type.type == 'spike':
             code += PopTemplate.model_specific_init['spike_event'] % {'id': pop.id}
-
-        return code
-
-    def init_delay(self, pop):
-        code = """
-    // Delayed variables
-"""
-        for var in pop.delayed_variables:
-            if var in pop.neuron_type.description['local']:
-                code += """
-    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
-            else:
-                code += """
-    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""" % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
-
-        # spike event is handled seperatly
-        if pop.neuron_type.type == 'spike':
-            code += """
-    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'id': pop.id, 'delay': pop.max_delay}
 
         return code
 
@@ -326,6 +325,91 @@ class PopulationGenerator(object):
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
 
         return code
+
+    def _delay_code(self, pop):
+        """
+        Generate code for delayed variables, comprising of initialization
+        and update codes.
+
+        Parameters:
+            * population object
+
+        Templates:
+            attribute_delayed
+
+        TODO:
+            extract several templates, reorganize template dictionary
+        """
+        # initialization
+        delay_tpl = PopTemplate.attribute_delayed[Global.config['paradigm']]
+        init_code = """
+    // Delayed variables
+"""
+        for var in pop.delayed_variables:
+            locality = "local" if var in pop.neuron_type.description['local'] else "global"
+            init_code += delay_tpl[locality] % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+
+        # update
+        update_code = ""
+        if Global.config['paradigm'] == "openmp":
+            for var in pop.delayed_variables:
+                update_code += """
+        pop%(id)s._delayed_%(var)s.push_front(pop%(id)s.%(var)s);
+        pop%(id)s._delayed_%(var)s.pop_back();
+""" % {'id': pop.id, 'var' : var}
+
+        else:
+            """
+            Implementation Note: (HD: 15.06.2015)
+
+                Currently I see no better way to implement delays, as consequence of missing device-device memory transfers ...
+
+                This implementation is from a performance point of view problematic, cause of low host-device memory bandwith,
+                maybe enhancable through pinned memory (CC 2.x), or asynchronous device transfers (CC 3.x)
+
+            Algorithm:
+
+                * get reference of last list in queue (last_%(var)s)
+                * cycle the last_%(var)s pointer from back to front
+                * get current value from %(var)s and store it in tmp_%(var)s
+                * store the data in queue
+            """
+            for var in pop.delayed_variables:
+                update_code += """
+        double* last_%(var)s = gpu_delayed_%(var)s.back();
+        gpu_delayed_%(var)s.pop_back();
+        gpu_delayed_%(var)s.push_front(last_%(var)s);
+        std::vector<double> tmp_%(var)s = std::vector<double>( size, 0.0);
+        cudaMemcpy( last_%(var)s, gpu_%(var)s, sizeof(double) * size, cudaMemcpyDeviceToDevice );
+    #ifdef _DEBUG
+        cudaError_t err_%(var)s = cudaGetLastError();
+        if (err_%(var)s != cudaSuccess)
+            std::cout << "pop%(id)s - delay %(var)s: " << cudaGetErrorString(err_%(var)s) << std::endl;
+    #endif
+""" % {'id': pop.id, 'name' : pop.name, 'var': var }
+
+        update_code = """
+    // delayed variables of pop%(id)s (%(name)s)
+    if ( pop%(id)s._active ) {
+%(code)s
+    }""" % {'id': pop.id, 'name' : pop.name, 'code': update_code }
+
+        # spike event is handled seperatly
+        if pop.neuron_type.type == 'spike':
+            if Global.config['paradigm']=="openmp":
+                init_code += """
+    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'id': pop.id, 'delay': pop.max_delay}
+
+                update_code += """
+        pop%(id)s._delayed_spike.push_front(pop%(id)s.spiked);
+        pop%(id)s._delayed_spike.pop_back();
+""" % {'id': pop.id, 'name' : pop.name }
+
+            else:
+                Global._error("no synaptic delays for spiking synapses on CUDA implemented ...")
+                exit(0)
+
+        return init_code, update_code
 
 #######################################################################
 ############## BODY: update variables codes ###########################
@@ -589,34 +673,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         }
     } // active
 """ % {'id': pop.id, 'size': pop.size, 'name': pop.name, 'code': code, 'global_code': global_code, 'omp_code': omp_code }
-
-    def delay_code(self, pop):
-        # No delay
-        if pop.max_delay <= 1:
-            return ""
-
-        # Is it a specific population?
-        if pop.generator['omp']['body_delay_code']:
-            return pop.generator['omp']['body_delay_code'] % {'id': pop.id}
-
-        code = ""
-        for var in pop.delayed_variables:
-            code += """
-        pop%(id)s._delayed_%(var)s.push_front(pop%(id)s.%(var)s);
-        pop%(id)s._delayed_%(var)s.pop_back();
-""" % {'id': pop.id, 'var' : var}
-
-        if pop.neuron_type.type == 'spike':
-            code += """
-        pop%(id)s._delayed_spike.push_front(pop%(id)s.spiked);
-        pop%(id)s._delayed_spike.pop_back();
-""" % {'id': pop.id, 'name' : pop.name }
-
-        return """
-    // delayed variables of pop%(id)s (%(name)s)
-    if ( pop%(id)s._active ) {
-%(code)s
-    }""" % {'id': pop.id, 'name' : pop.name, 'code': code }
 
     def reset_computesum(self, pop):
         code = ""

@@ -540,8 +540,7 @@ exact_integ = {
     'header_struct': """
     std::vector<std::vector<long> > _last_event;
 """,
-    'decl':
-"""
+    'decl': """
         vector[vector[long]] _last_event
 """,
     'cinit':
