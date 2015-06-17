@@ -494,7 +494,7 @@ class Monitor(object):
     def population_rate(self, spikes=None, smooth=0.):
         """ Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
         
-        This method is fatser than calling ``smoothed_rate`` and averaging.
+        This method is faster than calling ``smoothed_rate`` and averaging.
 
         *Parameters*:
         
