@@ -1,21 +1,13 @@
 ****************************************
-Hybrid populations
+Hybrid networks
 ****************************************
 
-Hybrid populations (transforming spiking populations into rate-coded populations and vice-versa) are provided in the module ``ANNarchy.extensions.hybrid``. They must be explicitely imported::
+Converting a rate-coded population to a spiking population requires connecting a ``PoissonPopulation`` (see :doc:`SpecificPopulation`) with the rate-coded one. 
 
-    from ANNarchy import *
-    from ANNarchy.extensions.hybrid import Spike2RatePopulation, Rate2SpikePopulation
+Converting a spiking population with a rate-coded one requires the use of a ``DecodingProjection``, which can connected using any connector method available for ``Projection``.
 
-
-Class Spike2RatePopulation
+Class DecodingProjection
 ===============================
 
-.. autoclass:: ANNarchy.extensions.hybrid.Spike2RatePopulation
-   :members:
-
-Class Rate2SpikePopulation
-===============================
-
-.. autoclass:: ANNarchy.extensions.hybrid.Rate2SpikePopulation
+.. autoclass:: ANNarchy.DecodingProjection
    :members:

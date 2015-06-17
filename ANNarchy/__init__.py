@@ -4,6 +4,7 @@ from .core.Neuron import Neuron, RateNeuron, SpikeNeuron
 from .core.Synapse import Synapse, RateSynapse, SpikeSynapse
 from .core.Population import Population
 from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray
+from .core.SpecificProjection import DecodingProjection
 from .core.Projection import Projection
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
@@ -31,6 +32,6 @@ import os, sys
 
 # Version
 __version__ = '4.5'
-__release__ = 'refactoring'
+__release__ = '4.5.1'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                    ') on ' + sys.platform + ' (' + os.name + ').' )

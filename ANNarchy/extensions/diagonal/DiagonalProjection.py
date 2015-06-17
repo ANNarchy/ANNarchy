@@ -158,6 +158,13 @@ struct ProjStruct%(id_proj)s{
     std::vector<int> post_rank ;
     std::vector<double> w ;
 
+    void init_projection() {
+
+    }
+
+    void update_synapse() {
+    
+    }
 };  
 """ % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target}
 

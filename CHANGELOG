@@ -1,0 +1,114 @@
+**4.5.0:**
+
+* A ``Network`` object has been added to run multiple simulations in parallel (``parallel_run()``). See :doc:`../manual/Network`.
+* Recording goes through the ``Monitor`` object. Old recording methods are depreciated. See :doc:`../manual/Recording`.
+* The flag ``exact`` is replaced by ``event-driven``. Still works, but will be suppressed in future versions.
+* The behavior of a spiking neuron with two coupled variables (e.g. Izhikevich) during the refractory period is changed. The ODEs are not evaluated at all during the refractory period (except the conductances). The ``unless-refractory`` flag has no effect anymore. Before, ``u`` started decaying during the refractory period.
+* Variables updated in pre-spike or post-spike (spiking synapse) can now define min/max bounds. Useful to avoid clipping explicitly the weights.
+* Change in hybrid populations. ``PoissonPopulation`` should be used for rate-to-spike conversion, ``DecodingProjection`` for spike-to-rate. See :doc:`../manual/Hybrid`.
+* Bug when using conditionals in pre-spike and post-spike.
+* Bug when using t_pre and t_post explicitly.
+* Speed-up of connect_fixed_number_pre/post. 
+
+**4.4.0:**
+
+* Experimental support for CUDA backend for rate-coded networks.
+* Any pre-synaptic variable can be delayed if used in the synapse.
+* ``g_target`` can define min/max flags. 
+* Support for MacOS X.
+* Parallel performance for OpenMP and spiking networks improved.
+* Sequential code (1T) does not use OMP.
+* psp argument can use global operations and global variables.
+* Added ``connect_from_sparse()`` method.
+
+**4.3.5:**
+
+* Small bug fixes.
+
+**4.3.4:**
+
+* Automatic reporting is added.
+* Several bug fixes.
+* The distinction between Rate- and SpikeNeuron objects is deprecated, use Neuron instead.
+* The distinction between Rate- and SpikeSynapse objects is deprecated, use Synapse instead.
+
+
+**4.3.3:**
+
+* Structural plasticity can be defined at the synaptic level.
+
+**4.3.2:**
+
+* Random distributions are available in synapses.
+* Populations can be momentarily disabled/enabled.
+* Recording can be done with a given period instead of every time step.
+* Different modes for Spike2Rate conversion.
+* Extension for shared projections (convolution/pooling) improved.
+
+**4.3.1:** 
+
+* CUDA implementation for rate-coded networks with small restrictions.
+
+**4.3.1:** 
+
+* Weight-sharing for convolutions and pooling.
+* Possibility to create projections using a dense connection matrix or data saved in a file.
+* A seed can be defined for the random number generators.
+
+**4.3.0:** 
+
+* Simplified internal structure for the generated code. 
+* Major speed-up for compilation and execution times.
+* Rate-coded projections can perform other functions than sum (min/max/mean) over the connected synapses.
+  
+**4.2.4:**
+
+* Neuron and Synapse replace RateNeuron, SpikeNeuron, RateSynapse, SpikeSynapse in the main interface (kept for backward compatibility).
+* Default PyNN neural models are now available (Izhikevich, IF_curr_exp, IF_cond_exp, IF_curr_alpha, IF_cond_alpha, HH_cond_exp, EIF_cond_alpha_isfa_ista, EIF_cond_exp_isfa_ista).
+* Bug fixes for delays and spike propagation.
+* Connectivity matrices (CSR) are more efficient.
+* Several PyNN examples are added to the examples/ folder.
+
+**4.2.3**
+
+* Spike conditions can depend on several variables.
+* The midpoint numerical method is added.
+* Ability to choose globally the numerical method.
+
+**4.2.2**
+
+* The Euler implicit method is added.
+* Systems of equations are now solved concurrentely.
+
+**4.2.1:**
+
+* Early-stopping of simulations (simulate_until).
+
+**4.2.0:**
+
+* Added hybrid populations (Spike2RatePopulaton, Rate2SpikePopulation).
+* Individual save/load of populations and projections.
+* PopulationViews can be used to build Projections.
+* CSR objects are simplified.
+* Default conductance behaviour (g_target = 0.0).
+* Random distribution objects can take global parameters as arguments.
+* min and max bounds can depend on other variables.
+* Logical operators (and, or..) can be used in conditions.
+
+**4.1.2:**
+
+* Rate-coded neurons must output "r", not "rate". Synapses must use "w", not "value".
+* Synapses can access pre-synaptic weighted sums (pre.sum(exc)).
+* Created PoissonPopulation.
+
+**4.1.1:**
+
+* Connectivity matrices are now created in Cython.
+* Recording methods have changed.
+* Spiking neurons have a refractory period.
+* Added clip() functions for emi-linear transfer functions.
+* Added smoothed_firing_rate() method for visualizing spiking networks.
+  
+**4.1.0:**
+
+* First stable release with both rate-coded and spiking networks.
