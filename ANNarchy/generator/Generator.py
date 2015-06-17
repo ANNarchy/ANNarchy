@@ -101,18 +101,19 @@ def setup_parser():
 
     return parser
 
-def compile(directory='annarchy', clean=False, populations=None, projections=None, silent=False, cpp_stand_alone=False, debug_build=False, profile_enabled = False, net_id=0):
+def compile(directory='annarchy', clean=False, populations=None, projections=None, silent=False, cuda_config={'device': 0}, cpp_stand_alone=False, debug_build=False, profile_enabled = False, net_id=0):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
     
     *Parameters*:
 
-    * **directory**: name of the subdirectory where the code will be generated and compiled.
+    * **directory**: name of the subdirectory where the code will be generated and compiled. Must be a relative path.
     * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
     * **silent**: defines if the "Compiling... OK" should be printed.
+    * **cuda_config**: TODO
 
     The following arguments are for internal use only:
 
@@ -159,20 +160,21 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     _folder_management(annarchy_dir, profile_enabled, clean, net_id)
     
     # Create a Generator object
-    generator = Generator(annarchy_dir, clean, silent, cpp_stand_alone, debug_build, profile_enabled, 
+    generator = Generator(annarchy_dir, clean, silent, cuda_config, cpp_stand_alone, debug_build, profile_enabled, 
                  populations, projections, net_id)
     generator.generate()
     
 class Generator(object):
     " Main class to generate C++ code efficiently"
       
-    def __init__(self, annarchy_dir, clean, silent, cpp_stand_alone, debug_build, profile_enabled, 
+    def __init__(self, annarchy_dir, clean, silent, cuda_config, cpp_stand_alone, debug_build, profile_enabled, 
                  populations, projections, net_id): 
         
         # Store arguments
         self.annarchy_dir = annarchy_dir
         self.clean = clean
         self.silent = silent
+        self.cuda_config = cuda_config
         self.cpp_stand_alone = cpp_stand_alone
         self.debug_build = debug_build
         self.profile_enabled = profile_enabled

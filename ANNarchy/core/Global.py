@@ -107,6 +107,8 @@ def setup(**keyValueArgs):
     
     * **dt**: simulation step size (default: 1.0 ms).
 
+    * **paradigm**: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
+
     * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     
     * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
@@ -142,24 +144,6 @@ def setup(**keyValueArgs):
         if key == 'seed':
             np.random.seed(keyValueArgs[key])
 
-def set_cuda_config(config):
-    """
-    Sets the CUDA configuration, where config is a dictionary containing the device id where to compute on (default 0) 
-    and for each population and projection a number of threads. If not specified, we assume 32 threads for 
-    populations and 192 threads for projections. ATTENTION: this need to be set before compilation.
-
-    Example::
-
-        config = { 'device': 0, Input: 64, Output: 32, Input_Output: 64 }
-        set_cuda_config(config)
-        compile()
-
-    .. warning::
-
-        Setting this configuration will overwrite completely existing configurations.
-    """
-    global cuda_config
-    cuda_config = config
     
 def reset(populations=True, projections=False, synapses = False, net_id=0):
     """
