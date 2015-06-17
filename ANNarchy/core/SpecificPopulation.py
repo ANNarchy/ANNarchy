@@ -291,6 +291,13 @@ struct PopStruct%(id)s{
             }
         }
     }
+
+    void update_delay() {
+        if ( _active ) {
+            _delayed_spike.push_front(spiked);
+            _delayed_spike.pop_back();
+        }
+    }
 };
 """ % { 'id': self.id, 'size': self.size, 'delay': self.max_delay }
 

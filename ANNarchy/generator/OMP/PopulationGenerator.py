@@ -67,7 +67,11 @@ class PopulationGenerator(object):
             # we definitely call update methods, if there are not implemented
             # we have some additional calls, we accept them at this point 
             pop_desc['update'] = """    pop%(id)s.update();\n""" % { 'id': pop.id }
+
             if pop.max_delay > 1:
+                pop_desc['delay_update'] = """    pop%(id)s.update_delay();\n""" % { 'id': pop.id }
+
+            if len(pop.neuron_type.description['random_distributions'])>1:
                 pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
 
             # Store the complete header definition in a single file
@@ -389,26 +393,24 @@ class PopulationGenerator(object):
     #endif
 """ % {'id': pop.id, 'name' : pop.name, 'var': var }
 
-        update_code = """
-    // delayed variables of pop%(id)s (%(name)s)
-    if ( _active ) {
-%(code)s
-    }""" % {'id': pop.id, 'name' : pop.name, 'code': update_code }
-
         # spike event is handled seperatly
         if pop.neuron_type.type == 'spike':
             if Global.config['paradigm']=="openmp":
                 init_code += """
-    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'id': pop.id, 'delay': pop.max_delay}
+    _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'delay': pop.max_delay}
 
                 update_code += """
-        pop%(id)s._delayed_spike.push_front(pop%(id)s.spiked);
-        pop%(id)s._delayed_spike.pop_back();
-""" % {'id': pop.id, 'name' : pop.name }
-
+            _delayed_spike.push_front(spiked);
+            _delayed_spike.pop_back();
+"""
             else:
                 Global._error("no synaptic delays for spiking synapses on CUDA implemented ...")
                 exit(0)
+
+        update_code = """
+        if ( _active ) {
+%(code)s
+        }""" % {'code': update_code }
 
         return init_code, update_code
 

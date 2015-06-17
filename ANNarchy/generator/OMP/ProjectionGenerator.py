@@ -67,6 +67,9 @@ class ProjectionGenerator(object):
         if proj.generator['omp']['header_proj_struct']:
             final_code = proj.generator['omp']['header_proj_struct']
 
+            with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+                ofile.write(final_code)
+
             return proj_desc
         else:
             decl, accessor = self._generate_decl_and_acc(proj)
