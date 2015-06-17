@@ -1,38 +1,42 @@
 #
 #   ANNarchy - Hybrid network
 #
-#   Simple example showing hybrid spike/rate-coded networks.
+#   Simple example showing hybrid spike/rate-coded networks. 
+#   Reproduces Fig.4 of (Vitay, Dinkelbach and Hamker, 2015)
 #
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
 
-# Frequency corresponding to a rate r of 1.0
-max_freq = 100.0
+setup(dt=0.1)
 
 # Rate-coded input neuron
-neuron = Neuron(
-    equations="""
-    r = if t < 500: 
-            0.0 
-        else: 
-            if t < 1000.0: 
-                0.5 
-            else: 
-                if t < 1500: 
-                    1.0 
-                else: 
-                    if t > 2000.0 : 
-                        (1.0 + sin(2*pi*(t-2000)/1000 -pi/2))/2.0 
-                    else: 0.0 : min=0.0 """)
+input_neuron = Neuron(
+    parameters = "baseline = 0.0",
+    equations = "r = baseline"
+)
+# Rate-coded output neuron
+simple_neuron = Neuron(
+    equations = "r = sum(exc)"
+)
 
 # Rate-coded population for input
-pop1 = Population(geometry=200, neuron=neuron)
-# Spiking population
-pop2 = Rate2SpikePopulation(population=pop1, scaling=max_freq)
-# Rate-coded population for the backward convertion
-pop3 = Spike2RatePopulation(population=pop2, mode='window', window=50.0, smooth=20.0)
-pop4 = Spike2RatePopulation(population=pop2, mode='isi', cut=4.0, smooth=20.0)
+pop1 = Population(geometry=1, neuron=input_neuron)
+
+# Poisson Population to encode
+pop2 = PoissonPopulation(geometry=1000, target="exc")
+proj = Projection(pop1, pop2, 'exc').connect_all_to_all(weights=1.)
+
+# Rate-coded population to decode
+pop3 = Population(geometry=1000, neuron =simple_neuron)
+proj = DecodingProjection(pop2, pop3, 'exc', window=10.0)
+def diagonal(pre, post, weights):
+    "Simple connector pattern to progressively connect each post-synaptic neuron to a growing number of pre-synaptic neurons"
+    csr = CSR()
+    for rk_post in range(post.size):
+        csr.add(rk_post, range((rk_post+1)), [weights], [0] )
+    return csr
+proj.connect_with_func(method=diagonal, weights=1.)
 
 compile()
 
@@ -40,53 +44,63 @@ compile()
 m1 = Monitor(pop1, 'r')
 m2 = Monitor(pop2, 'spike')
 m3 = Monitor(pop3, 'r')
-m4 = Monitor(pop4, 'r')
 
 # Simulate
-simulate(4000.0)
+duration = 250.
+# 0 Hz
+pop1.baseline = 0.0
+simulate(duration)
+# 10 Hz
+pop1.baseline = 10.0
+simulate(duration)
+# 50 Hz
+pop1.baseline = 50.0
+simulate(duration)
+# 100 Hz
+pop1.baseline = 100.0
+simulate(duration)
 
 # Get recordings
 data1 = m1.get()
 data2 = m2.get()
 data3 = m3.get()
-data4 = m4.get()
 
 # Raster plot of the spiking population
 t, n = m2.raster_plot(data2['spike'])
 
-# Spike times of a single neuron
-singlespike = data2['spike'][0]
+# Variance of the the decoded firing rate
+data_10 = data3['r'][1.0*duration/dt():2*duration/dt(), :]
+data_50 = data3['r'][2.0*duration/dt():3*duration/dt(), :]
+data_100 = data3['r'][3.0*duration/dt():4*duration/dt(), :]
+var_10 = np.mean(np.abs((data_10 - 10.)/10.), axis=0)
+var_50 = np.mean(np.abs((data_50 - 50.)/50.), axis=0)
+var_100 = np.mean(np.abs((data_100 - 100.)/100.), axis=0)
 
-# Plot the results
-import pylab as plt
+### Plot the results
+from pylab import *
+subplot(3,1,1)
+plot(t, n, '.', markersize=0.5)
+title('a) Raster plot')
+xlabel('Time (ms)')
+ylabel('# neurons')
+xlim((0, 4*duration))
 
-ax1 = plt.subplot(3,1,1)
-ax1.plot(t, n, '.', markersize=0.5)
-ax1.set_title('a) Raster plot')
-ax1.set_ylabel('# neurons')
-ax1.set_xticks([0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000])
-ax1.set_xticklabels([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4])
+subplot(3,1,2)
+plot(np.arange(0, 4*duration, 0.1), data1['r'][:, 0], label='Original firing rate')
+plot(np.arange(0, 4*duration, 0.1), data3['r'][:, 999], label='Decoded firing rate')
+legend(frameon=False, loc=2)
+title('b) Decoded firing rate')
+xlabel('Time (ms)')
+ylabel('Activity (Hz)')
 
-ax2 = plt.subplot(3,1,2, sharex=ax1)
-ax2.plot(max_freq*data1['r'][:, 0], label='r')
-ax2.plot(data4['r'][:,0], label='ISI')
-ax2.plot(data3['r'][:,0], label='W')
-ax2.plot(np.array(singlespike), 2.0*max_freq*np.ones(np.array(singlespike).shape), 'b.')
-lg = ax2.legend(loc=2)
-lg.draw_frame(False)
-ax2.set_ylim((0.0, 2.2*max_freq))
-ax2.set_title('b) Single neuron')
-ax2.set_ylabel('Firing rate (Hz)')
+subplot(3,1,3)
+plot(var_10, label='10 Hz')
+plot(var_50, label='50 Hz')
+plot(var_100, label='100 Hz')
+legend(frameon=False)
+title('c) Precision')
+xlabel('# neurons used for decoding')
+ylabel('Normalized error')
+ylim((0,1))
 
-ax3 = plt.subplot(3,1,3, sharex=ax1)
-ax3.plot(max_freq*data1['r'][:,0], label='r')
-ax3.plot(np.mean(data4['r'], axis=1), label='ISI')
-ax3.plot(np.mean(data3['r'], axis=1), label='W')
-ax3.set_ylim((0.0, 1.2*max_freq))
-lg = ax3.legend(loc=2)
-lg.draw_frame(False)
-ax3.set_title('c) Population firing rate')
-ax3.set_xlabel('Time (s)')
-ax3.set_ylabel('Mean firing rate (Hz)')
-
-plt.show()
+show()
