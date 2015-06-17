@@ -67,7 +67,8 @@ class PopulationGenerator(object):
             # we definitely call update methods, if there are not implemented
             # we have some additional calls, we accept them at this point 
             pop_desc['update'] = """    pop%(id)s.update();\n""" % { 'id': pop.id }
-            pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
+            if pop.max_delay > 1:
+                pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
 
             # Store the complete header definition in a single file
             with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
@@ -90,16 +91,16 @@ class PopulationGenerator(object):
 
                 if pop.max_delay > 1:
                     delay_init, delay_update = self._delay_code(pop)
-                    delay_update = delay_update.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+                    delay_update = delay_update
                     init += delay_init
 
-                update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
-                update_global_ops = self.update_globalops(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+                update_rng = self.update_random_distributions(pop)
+                update_global_ops = self.update_globalops(pop)
 
                 if pop.neuron_type.type == 'rate':
-                    update = self._update_rate_neuron_openmp(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+                    update = self._update_rate_neuron_openmp(pop)
                 else:
-                    update = self.update_spike_neuron(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+                    update = self.update_spike_neuron(pop)
 
                 code = base_template % { 'id': pop.id,
                                          'gl_ops_extern': glops_extern,
@@ -347,15 +348,15 @@ class PopulationGenerator(object):
 """
         for var in pop.delayed_variables:
             locality = "local" if var in pop.neuron_type.description['local'] else "global"
-            init_code += delay_tpl[locality] % {'id': pop.id, 'delay': pop.max_delay, 'var': var}
+            init_code += delay_tpl[locality] % {'delay': pop.max_delay, 'var': var}
 
         # update
         update_code = ""
         if Global.config['paradigm'] == "openmp":
             for var in pop.delayed_variables:
                 update_code += """
-        pop%(id)s._delayed_%(var)s.push_front(pop%(id)s.%(var)s);
-        pop%(id)s._delayed_%(var)s.pop_back();
+        _delayed_%(var)s.push_front(%(var)s);
+        _delayed_%(var)s.pop_back();
 """ % {'id': pop.id, 'var' : var}
 
         else:
@@ -390,7 +391,7 @@ class PopulationGenerator(object):
 
         update_code = """
     // delayed variables of pop%(id)s (%(name)s)
-    if ( pop%(id)s._active ) {
+    if ( _active ) {
 %(code)s
     }""" % {'id': pop.id, 'name' : pop.name, 'code': update_code }
 
@@ -427,15 +428,15 @@ class PopulationGenerator(object):
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id}
         if eqs.strip() != "":
             code += """
-    // Updating the global variables of population %(id)s (%(name)s)
+    // Updating the global variables
 %(eqs)s
-""" % {'id': pop.id, 'name' : pop.name, 'eqs': eqs}
+""" % {'eqs': eqs}
 
         # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id}
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         code += """
-        // Updating the local variables of population %(id)s (%(name)s)
+        // Updating the local variables
         %(omp_code)s
         for(int i = 0; i < %(size)s; i++){
 %(eqs)s
@@ -444,10 +445,10 @@ class PopulationGenerator(object):
 
         # finish code
         return """
-    if(pop%(id)s._active){
+    if( _active ) {
 %(code)s
     } // active
-""" % {'id': pop.id, 'code': code }
+""" % {'code': code}
 
     def _update_rate_neuron_cuda(self, pop):
         """
@@ -596,14 +597,14 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         if pop.neuron_type.refractory or pop.refractory:
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id}
             code = """
-            if(pop%(id)s.refractory_remaining[i] > 0){ // Refractory period
+            if( refractory_remaining[i] > 0){ // Refractory period
 %(eqs)s
                 // Decrement the refractory period
-                pop%(id)s.refractory_remaining[i]--;
+                refractory_remaining[i]--;
                 continue;
             }
         """ %  {'id': pop.id, 'eqs': eqs}
-            refrac_inc = "pop%(id)s.refractory_remaining[i] = pop%(id)s.refractory[i];" %  {'id': pop.id}
+            refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
         else:
             code = ""
             refrac_inc = ""
@@ -644,9 +645,9 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 %(reset)s        
                 %(omp_critical_code)s
                 {
-                    pop%(id)s.spiked.push_back(i);
+                    spiked.push_back(i);
                 }
-                pop%(id)s.last_spike[i] = t;
+                last_spike[i] = t;
                 %(refrac_inc)s
             }
 """% {  'id': pop.id, 'name': pop.name, 'size': pop.size, 
@@ -664,8 +665,8 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         # finish code
         return """
-    if(pop%(id)s._active){
-        pop%(id)s.spiked.clear();
+    if( _active ) {
+        spiked.clear();
 %(global_code)s
         %(omp_code)s
         for(int i = 0; i < %(size)s; i++){

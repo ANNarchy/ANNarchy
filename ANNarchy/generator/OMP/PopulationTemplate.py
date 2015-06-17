@@ -415,7 +415,7 @@ cpp_11_rng = {
         dist_%(rd_name)s = %(rd_init)s;
 """,
     'update': """
-            pop%(id)s.%(rd_name)s[i] = pop%(id)s.dist_%(rd_name)s(rng);
+                %(rd_name)s[i] = dist_%(rd_name)s(rng);
 """
 }
 

@@ -1,8 +1,8 @@
 """
     PyxGenerator.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -21,23 +21,50 @@
 
 """
 from ANNarchy.core import Global
-from .PyxTemplate import *
 
 import PopulationTemplate as PopTemplate
 import ProjectionTemplate as ProjTemplate
 
-class PyxGenerator:
+class PyxGenerator(object):
+    """
+    Generate the python extension (*.pyx) file comprising of wrapper
+    classes for the individual objects. Secondly the definition of accessible
+    methods, e. g. simulate(int steps). Generally an extension consists of two
+    parts: a struct definition (define accessible parts of the C++ object) and
+    the wrapper object.
+
+    In detail, there are extensions available for:
+
+        * parsed populations
+        * parsed projections
+        * recorder objects
+
+    Implementation Note (HD: 17.06.2015)
+
+        This class could be implemented in general as a set of functions.
+        Nevertheless we chose an object-oriented approach, as it is easier to
+        use from Generator object. As the submethods has no access to data
+        stored in PyxGenerator (there is no real data at all) all private
+        functions are marked with @staticmethod to make this clear.
+
+    TODO:
+
+        * handling of specific populations, projections is currently done over
+        generator struct in the population/projection object. This should be
+        changed as in the C++ code generation.
+    """
     def __init__(self, annarchy_dir, populations, projections, net_id):
+        """
+        Store a list of population und projection objects for later processing.
+        """
         self._annarchy_dir = annarchy_dir
         self._populations = populations
         self._projections = projections
         self._net_id = net_id
-        
+
     def generate(self):
         """
-        Generate the python extension (*.pyx) file comprising of wrapper
-        classes for the several objects. Secondly the definition of accessible
-        methods, e. g. simulate(int steps).
+        Perform code generation.
         """
         # struct declaration for each population
         pop_struct = ""
@@ -99,7 +126,11 @@ class PyxGenerator:
 #######################################################################
 ############## Population #############################################
 #######################################################################
-    def _pop_struct(self, pop):
+    @staticmethod
+    def _pop_struct(pop):
+        """
+        Generate population struct definition, mimics the c++ class.
+        """
         # Is it a specific population?
         if pop.generator['omp']['pyx_pop_struct']:
             return pop.generator['omp']['pyx_pop_struct'] %{'id': pop.id}
@@ -136,7 +167,11 @@ class PyxGenerator:
         # Finalize the code
         return code % {'id': pop.id, 'name': pop.name}
 
-    def _pop_wrapper(self, pop):
+    @staticmethod
+    def _pop_wrapper(pop):
+        """
+        Generate population wrapper definition.
+        """
         # Is it a specific population?
         if pop.generator['omp']['pyx_pop_class']:
             return pop.generator['omp']['pyx_pop_class'] %{'id': pop.id}
@@ -188,7 +223,8 @@ cdef class pop%(id)s_wrapper :
 #######################################################################
 ############## Projection #############################################
 #######################################################################
-    def _proj_struct(self, proj):
+    @staticmethod
+    def _proj_struct(proj):
         """
         The python extension wrapper needs a definition of the corresponding
         C object. The pyx_struct contains all methods, which should be accessible
@@ -210,7 +246,7 @@ cdef class pop%(id)s_wrapper :
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
-                break;
+                break
 
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
@@ -234,27 +270,29 @@ cdef class pop%(id)s_wrapper :
             if 'creating' in proj.synapse.description.keys():
                 structural_plasticity += sp_tpl['creating']
 
-            # Retrieve the names of extra attributes   
+            # Retrieve the names of extra attributes
             extra_args = ""
             for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
                 if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
-                    extra_args += ', ' + var['ctype'] + ' ' +  var['name'] 
+                    extra_args += ', ' + var['ctype'] + ' ' +  var['name']
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
 
-        return ProjTemplate.pyx_struct % { 'id_proj': proj.id,
-                                           'exact': ProjTemplate.exact_integ['decl'] % {'id': proj.id} if has_event_driven else "",
-                                           'delay': ProjTemplate.delay['decl'] % {'id': proj.id} if has_delay else "",
-                                           'export': export,
-                                           'structural_plasticity': structural_plasticity
+        return ProjTemplate.pyx_struct % {'id_proj': proj.id,
+                                          'exact': ProjTemplate.exact_integ['decl'] % {'id': proj.id} if has_event_driven else "",
+                                          'delay': ProjTemplate.delay['decl'] % {'id': proj.id} if has_delay else "",
+                                          'export': export,
+                                          'structural_plasticity': structural_plasticity
                                           }
 
-    def _proj_wrapper(self, proj):
+    @staticmethod
+    def _proj_wrapper(proj):
         """
-        Generates the python extension wrapper, which allows access from Python to the C module. There
-        are three optional parts (structural plasticity, non-uniform delays and exact integration of
-        synaptic events) which we need to handle seperatly. The rest of the variables/parameters is 
-        handled by the standard accessors.
+        Generates the python extension wrapper, which allows access from Python
+        to the C module. There are three optional parts (structural plasticity,
+        non-uniform delays and exact integration of synaptic events) which we
+        need to handle seperatly. The rest of the variables/parameters is handled
+        by the standard accessors.
 
         Templates:
 
@@ -265,14 +303,14 @@ cdef class pop%(id)s_wrapper :
         """
         # Is it a specific population?
         if proj.generator['omp']['pyx_proj_class']:
-            return  proj.generator['omp']['pyx_proj_class'] 
+            return  proj.generator['omp']['pyx_proj_class']
 
         # Check for exact intgeration
         has_event_driven = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
-                break;
+                break
 
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
@@ -297,30 +335,34 @@ cdef class pop%(id)s_wrapper :
             if 'creating' in proj.synapse.description.keys():
                 structural_plasticity += sp_tpl['creating'] % {'id' : proj.id}
 
-            # Retrieve the names of extra attributes   
+            # Retrieve the names of extra attributes
             extra_args = ""
             extra_values = ""
             for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
                 if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
-                    extra_args += ', ' + var['ctype'] + ' ' +  var['name']   
-                    extra_values += ', ' +  var['name']       
+                    extra_args += ', ' + var['ctype'] + ' ' +  var['name']
+                    extra_values += ', ' +  var['name']
 
-            # Generate the code        
+            # Generate the code
             structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
 
-        return ProjTemplate.pyx_wrapper % { 'id': proj.id,
-                                            'exact_init': ProjTemplate.exact_integ['cinit'] % {'id': proj.id} if has_event_driven else "",
-                                            'delay_init': ProjTemplate.delay['cinit'] % {'id': proj.id} if has_delay else "",
-                                            'delay_acc': ProjTemplate.delay['pyx_wrapper_acc'] % {'id': proj.id} if has_delay else "",
-                                            'accessor': accessor,
-                                            'structural_plasticity': structural_plasticity
+        return ProjTemplate.pyx_wrapper % {'id': proj.id,
+                                           'exact_init': ProjTemplate.exact_integ['cinit'] % {'id': proj.id} if has_event_driven else "",
+                                           'delay_init': ProjTemplate.delay['cinit'] % {'id': proj.id} if has_delay else "",
+                                           'delay_acc': ProjTemplate.delay['pyx_wrapper_acc'] % {'id': proj.id} if has_delay else "",
+                                           'accessor': accessor,
+                                           'structural_plasticity': structural_plasticity
                                            }
 
 
 #######################################################################
 ############## Recording ##############################################
 #######################################################################
-    def _pop_monitor_struct(self, pop):
+    @staticmethod
+    def _pop_monitor_struct(pop):
+        """
+        Generate recorder struct.
+        """
         tpl_code = """
     # Population %(id)s (%(name)s) : Monitor
     cdef cppclass PopRecorder%(id)s (Monitor):
@@ -337,13 +379,17 @@ cdef class pop%(id)s_wrapper :
         bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
 
         if pop.neuron_type.type == 'spike':
-                tpl_code += """
+            tpl_code += """
         map[int, vector[long]] spike
-        bool record_spike""" 
+        bool record_spike"""
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
 
-    def _pop_monitor_wrapper(self, pop):
+    @staticmethod
+    def _pop_monitor_wrapper(pop):
+        """
+        Generate recorder wrapper.
+        """
         tpl_code = """
 # Population Monitor wrapper
 cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
@@ -377,7 +423,11 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
 
-    def _proj_monitor_struct(self, proj):
+    @staticmethod
+    def _proj_monitor_struct(proj):
+        """
+        Generate projection recorder struct
+        """
         tpl_code = """
     # Projection %(id)s : Monitor
     cdef cppclass ProjRecorder%(id)s (Monitor):
@@ -396,7 +446,11 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
 
         return tpl_code % {'id' : proj.id}
 
-    def _proj_monitor_wrapper(self, proj):
+    @staticmethod
+    def _proj_monitor_wrapper(proj):
+        """
+        Generate projection recorder struct
+        """
         tpl_code = """
 # Projection Monitor wrapper
 cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):

@@ -28,8 +28,8 @@ from .CoupledEquations import CoupledEquations
 # Specific code generation for the chosen paradigm
 pattern_omp = {
     # Populations
-    'pop_prefix': 'pop%(id)s',
-    'pop_sep': '.',
+    'pop_prefix': '',
+    'pop_sep': '',
     'pop_index': '[i]',
     'pop_globalindex': '',
     'pop_sum': '_sum_',
