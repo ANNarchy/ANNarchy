@@ -13,8 +13,6 @@ Planned features
 
 * GPGPU implementation for spiking networks.
 
-
-
 History
 =========
 
