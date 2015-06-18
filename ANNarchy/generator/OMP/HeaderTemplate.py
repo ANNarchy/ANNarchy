@@ -22,6 +22,7 @@ header_template = """#ifndef __ANNARCHY_H__
 #define positive(x) (x>0.0? x : 0.0)
 #define negative(x) (x<0.0? x : 0.0)
 #define clip(x, a, b) (x<a? a : (x>b? b :x))
+#define modulo(a, b) long(a) %% long(b)
 
 /*
  * Custom functions

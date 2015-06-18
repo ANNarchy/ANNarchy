@@ -32,6 +32,7 @@ __global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed
 __device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
 __device__ __forceinline__ double negative( double x ) { return x<0.0? x : 0.0; }
 __device__ __forceinline__ double clip(double x, double a, double b) { return x<a? a : (x>b? b :x); }
+__device__ __forceinline__ long modulo(long a, long b) { return a %% b; }
 
 /****************************************
  * custom functions                     *
