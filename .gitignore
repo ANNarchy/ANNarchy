@@ -8,6 +8,7 @@ examples/*/annarchy
 tests/
 build/
 dist/
+internal/
 ANNarchy.egg-info/
 docs/_build
 ANNarchy/core/cython_ext/*.cpp
