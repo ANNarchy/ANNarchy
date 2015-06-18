@@ -141,6 +141,7 @@ class PyxGenerator(object):
         int get_size()
         bool is_active()
         void set_active(bool)
+        void reset()
 """
         # Spiking neurons have additional data
         if pop.neuron_type.type == 'spike':
@@ -187,6 +188,9 @@ cdef class pop%(id)s_wrapper :
 
         # Size property
         code += """
+
+    def reset(self):
+        pop%(id)s.reset()
 
     property size:
         def __get__(self):

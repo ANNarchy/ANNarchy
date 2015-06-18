@@ -208,6 +208,7 @@ class SpikeSourceArray(Population):
     cdef struct PopStruct%(id)s :
         int size
         bool _active
+        void reset()
 
         # Local parameter spike_times
         vector[vector[double]] spike_times
@@ -218,6 +219,9 @@ cdef class pop%(id)s_wrapper :
     def __cinit__(self, size, times):
         pop%(id)s.size = size
         pop%(id)s.spike_times = times
+
+    def reset(self):
+        pop%(id)s.reset()
 
     property size:
         def __get__(self):
@@ -265,6 +269,17 @@ struct PopStruct%(id)s{
         size = %(size)s;
 
         spiked = std::vector<int>();
+        last_spike = std::vector<long int>(size, -10000L);
+        next_spike = std::vector<double>(size, -10000.0);
+        for(int i=0; i< size; i++){
+            if(!spike_times[i].empty())
+                next_spike[i] = spike_times[i][0];
+        }
+        idx_next_spike = std::vector<int>(size, 0);
+        _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
+    }
+
+    void reset() {
         last_spike = std::vector<long int>(size, -10000L);
         next_spike = std::vector<double>(size, -10000.0);
         for(int i=0; i< size; i++){

@@ -62,6 +62,10 @@ struct PopStruct%(id)s{
 %(init)s
     }
 
+    void reset() {
+%(reset)s
+    }
+
     void update_rng() {
         if (_active){
             for(int i = 0; i < size; i++) {
@@ -122,6 +126,10 @@ struct PopStruct%(id)s{
 %(init)s
     }
 
+    void reset() {
+%(reset)s
+    }
+
     void update_rng() {
         if (_active){
             for(int i = 0; i < size; i++) {
@@ -179,6 +187,10 @@ struct PopStruct%(id)s{
 
     void init_population() {
 %(init)s
+    }
+
+    void reset() {
+%(reset)s
     }
 
     void update_rng() {
@@ -388,14 +400,24 @@ attribute_delayed = {
         'local': """
     _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""",
         'global': """
-    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);"""
+    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""",
+        'reset' : """
+        for ( int i = 0; i < _delayed_%(var)s.size(); i++ ) {
+            _delayed_%(var)s[i] = %(var)s;
+        }
+        """
     },
     'cuda':{
         'local':"""    gpu_delayed_%(var)s = std::deque< double* >(%(delay)s, NULL);
     for ( int i = 0; i < %(delay)s; i++ )
         cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(double) * size);
 """,
-        'global': "//TODO: implement code template"
+        'global': "//TODO: implement code template",
+        'reset' : """
+    for ( int i = 0; i < gpu_delayed_%(var)s.size(); i++ ) {
+        cudaMemcpy( gpu_delayed_%(var)s[i], gpu_%(var)s, sizeof(double) * size, cudaMemcpyDeviceToDevice );
+    }
+    """
     }
 }
 
@@ -500,6 +522,12 @@ model_specific_init = {
         last_spike = std::vector<long int>(size, -10000L);
         refractory_remaining = std::vector<int>(size, 0);
 """,
+}
+
+refractoriness = {
+    'reset': """
+    refractory_remaining = std::vector<int>(size, 0);
+"""
 }
 
 rate_psp = {

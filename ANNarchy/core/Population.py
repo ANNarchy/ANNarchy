@@ -171,6 +171,7 @@ class Population(object):
         self.initialized = True  
         self.set(self.init)
         self.cyInstance.activate(self._activated)
+        self.cyInstance.reset()
 
         # If the spike population has a refractory period:    
         if self.neuron_type.type == 'spike' and self.neuron_type.description['refractory']:

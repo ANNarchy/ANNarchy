@@ -93,10 +93,16 @@ class PopulationGenerator(object):
 
                 init = self.init_population(pop)
 
+                reset = ""
+                if pop.neuron_type.description['type'] == 'spike':
+                    if pop.neuron_type.refractory or pop.refractory:
+                        reset += PopTemplate.refractoriness['reset']
+
                 if pop.max_delay > 1:
-                    delay_init, delay_update = self._delay_code(pop)
+                    delay_init, delay_update, delay_reset = self._delay_code(pop)
                     delay_update = delay_update
                     init += delay_init
+                    reset += delay_reset
 
                 update_rng = self.update_random_distributions(pop)
                 update_global_ops = self.update_globalops(pop)
@@ -111,6 +117,7 @@ class PopulationGenerator(object):
                                          'additional': decleration,
                                          'accessor': accessors,
                                          'init': init,
+                                         'reset': reset,
                                          'update': update,
                                          'update_rng': update_rng,
                                          'update_delay': delay_update if pop.max_delay > 1 else "",
@@ -139,10 +146,12 @@ class PopulationGenerator(object):
                 glops_extern = ""
 
                 init = self.init_population(pop)
+                reset = ""
                 if pop.max_delay > 1:
-                    delay_init, delay_update = self._delay_code(pop)
+                    delay_init, delay_update, delay_reset = self._delay_code(pop)
                     delay_update = delay_update.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
                     init += delay_init
+                    reset += delay_reset
 
                 update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
@@ -157,6 +166,7 @@ class PopulationGenerator(object):
                                          'additional': decleration,
                                          'accessor': accessors,
                                          'init': init,
+                                         'reset': reset,
                                          'update_rng': update_rng,
                                          'update_delay': delay_update if pop.max_delay > 1 else ""
                                         }
@@ -356,12 +366,16 @@ class PopulationGenerator(object):
 
         # update
         update_code = ""
+        reset_code = ""
         if Global.config['paradigm'] == "openmp":
             for var in pop.delayed_variables:
                 update_code += """
         _delayed_%(var)s.push_front(%(var)s);
         _delayed_%(var)s.pop_back();
 """ % {'id': pop.id, 'var' : var}
+
+            # reset
+            reset_code += PopTemplate.attribute_delayed['openmp']['reset'] % {'id': pop.id, 'var' : var}
 
         else:
             """
@@ -393,6 +407,9 @@ class PopulationGenerator(object):
     #endif
 """ % {'id': pop.id, 'name' : pop.name, 'var': var }
 
+            # reset
+            reset_code += PopTemplate.attribute_delayed['cuda']['reset'] % {'id': pop.id, 'var' : var}
+
         # spike event is handled seperatly
         if pop.neuron_type.type == 'spike':
             if Global.config['paradigm']=="openmp":
@@ -403,6 +420,10 @@ class PopulationGenerator(object):
             _delayed_spike.push_front(spiked);
             _delayed_spike.pop_back();
 """
+
+                reset_code += """
+            last_spike = std::vector<long int>(size, -10000L);
+"""
             else:
                 Global._error("no synaptic delays for spiking synapses on CUDA implemented ...")
                 exit(0)
@@ -412,7 +433,7 @@ class PopulationGenerator(object):
 %(code)s
         }""" % {'code': update_code }
 
-        return init_code, update_code
+        return init_code, update_code, reset_code
 
 #######################################################################
 ############## BODY: update variables codes ###########################
