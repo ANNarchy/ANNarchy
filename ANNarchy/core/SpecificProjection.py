@@ -51,57 +51,17 @@ class DecodingProjection(Projection):
 
     def _generate_code(self):
         # Generate the code
-        self.generator['omp']['header_proj_struct'] = """#pragma once
-
-#include "pop%(id_pre)s.hpp"
-#include "pop%(id_post)s.hpp"
-
-extern PopStruct%(id_pre)s pop%(id_pre)s;
-extern PopStruct%(id_post)s pop%(id_post)s;
-
-/////////////////////////////////////////
-// proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s
-/////////////////////////////////////////
-struct ProjStruct%(id_proj)s{
-    // number of dendrites
-    int size;
-
-    // Learning flag
-    bool _learning;
-
-    // Connectivity
-    std::vector<int> post_rank ;
-    std::vector< std::vector< int > > pre_rank ;
-
-    std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
-    
-    // Local parameter w
-    std::vector< std::vector<double > > w;
-
+        self._specific_template['declare_additional'] = """
     // Window
     int window = %(window)s;
     std::deque< std::vector< double > > rates_history ;
+""" % { 'window': int(self.window/Global.config['dt']) }
 
-
-    void init_projection() {
-
-        _learning = true;
-
-        inv_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
-        for(int i=0; i<pre_rank.size(); i++){
-            for(int j=0; j<pre_rank[i].size(); j++){
-                inv_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
-            }
-        }
-
+        self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector<double> >(%(window)s, std::vector<double>(%(post_size)s, 0.0));
+""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size }
 
-    }
-
-    void compute_psp() {
-        int nb_post, i, j, rk_j, rk_post, rk_pre;
-        double sum;
-
+        self._specific_template['psp_code'] = """
         // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target exc. event-based
         if (pop%(id_post)s._active){
             std::vector< std::pair<int, int> > proj%(id_proj)s_inv_post;
@@ -132,31 +92,10 @@ struct ProjStruct%(id_proj)s{
                 pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt  / float(pre_rank[i].size());
             }
         } // active
+""" % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
+        'post_size': self.post.size}
 
-    }
-    
-    void update_synapse() {
-    }
-
-    // Accessors for c-wrapper
-    int get_size() { return size; }
-    void set_size(int new_size) { size = new_size; }
-    std::vector<int> get_post_rank() { return post_rank; }
-    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
-    std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
-    void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
-    int nb_synapses(int n) { return pre_rank[n].size(); }
-
-
-    // Local parameter w
-    std::vector<std::vector< double > > get_w() { return w; }
-    std::vector<double> get_dendrite_w(int rk) { return w[rk]; }
-    double get_synapse_w(int rk_post, int rk_pre) { return w[rk_post][rk_pre]; }
-    void set_w(std::vector<std::vector< double > >value) { w = value; }
-    void set_dendrite_w(int rk, std::vector<double> value) { w[rk] = value; }
-    void set_synapse_w(int rk_post, int rk_pre, double value) { w[rk_post][rk_pre] = value; }
-
-};
-
-""" % {'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
-        'window': int(self.window/Global.config['dt']), 'post_size': self.post.size}
+        self._specific_template['psp_prefix'] = """
+        int nb_post, i, j, rk_j, rk_post, rk_pre;
+        double sum;
+"""

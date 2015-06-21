@@ -140,6 +140,10 @@ class Projection(object):
         self.connector_name = "Specific"
         self.connector_description = "Specific"
 
+        # Overwritten by derived classes, to add
+        # additional code
+        self._specific_template = {}
+
     def _instantiate(self, module):
         "Instantiates the projection after compilation."
         self._connect(module)

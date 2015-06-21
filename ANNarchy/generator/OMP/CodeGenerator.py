@@ -264,7 +264,10 @@ class CodeGenerator(object):
                 update_synapse += proj['update']
 
         # Equations for the post-events
-        post_event = self.body_postevent_proj()
+        post_event = ""
+        for proj in self._proj_desc:
+            if 'post_event' in proj.keys():
+                post_event += proj['post_event']
 
         # Structural plasticity
         structural_plasticity = self.body_structural_plasticity()
@@ -447,14 +450,6 @@ class CodeGenerator(object):
         for pop in self._populations:
             if pop.neuron_type.type == 'rate':
                 code += self._popgen.reset_computesum(pop)
-
-        return code
-
-    def body_postevent_proj(self):
-        code = ""
-        for proj in self._projections:
-            if proj.synapse.type == 'spike':
-                code += self._projgen.postevent(proj)
 
         return code
 
