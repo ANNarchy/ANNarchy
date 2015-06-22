@@ -61,7 +61,7 @@ The stop criterion can depend on several populations, by providing a list of pop
 
 The simulation will then stop when the criterion is met in both populations at the same time. If you want that the simulation stops when at least one population meets its criterion, you can specify the ``operator`` argument::
 
-    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2]. operator='or')
+    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2], operator='or')
 
 The default value of ``operator`` is a ``'and'`` function between the populations' criteria.
 
