@@ -8,6 +8,10 @@ The documentation is available online at:
 
 [http://annarchy.readthedocs.org](http://annarchy.readthedocs.org)
 
+A forum for discussion is set at:
+
+[https://groups.google.com/forum/#!forum/annarchy](https://groups.google.com/forum/#!forum/annarchy)
+
 
 **Authors**:
 

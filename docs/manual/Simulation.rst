@@ -61,7 +61,7 @@ The stop criterion can depend on several populations, by providing a list of pop
 
 The simulation will then stop when the criterion is met in both populations at the same time. If you want that the simulation stops when at least one population meets its criterion, you can specify the ``operator`` argument::
 
-    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2]. operator='or')
+    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2], operator='or')
 
 The default value of ``operator`` is a ``'and'`` function between the populations' criteria.
 
@@ -181,18 +181,20 @@ First of all, please note, that the CUDA paradigm is implemented for simulation 
 .. code-block:: python
 
     from ANNarchy import *
-    setup(paradigm="cuda_20")
+    setup(paradigm="cuda")
 
-currently two versions of the CUDA paradigm are provided:
+Currently two versions of the CUDA paradigm are provided:
     
-    * cuda_20: for all cards that support CUDA compute compability 2.0 and upper ( Fermi cards )
-    * cuda_35: for all cards that support CUDA compute compability 3.5 and upper ( Keplar cards )
+    * 2.0 and later ( Fermi cards )
+    * 3.5 and later ( Keplar cards )
 
-if you are uncertain, which compute compability belongs to your card, you can check it on the official website: https://developer.nvidia.com/cuda-gpus
+You can check the version of your card on the official website: https://developer.nvidia.com/cuda-gpus
 
 .. hint::
 
-    As the current implementation is a first test version, some of the features provided by ANNarchy are not supported yet:
+    As the current implementation is a development version, some of the features provided by ANNarchy are not supported yet:
     
+        * spiking networks
         * weight sharing
         * non-uniform synaptic delays
+        * structural plasticity
