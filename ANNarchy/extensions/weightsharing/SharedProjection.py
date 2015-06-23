@@ -272,7 +272,7 @@ class SharedProjection(Projection):
         self._generate_extent_coordinates()
 
         # Filter definition
-        filter_definition, filter_pyx_definition = "", ""
+        filter_definition, filter_pyx_definition = "",""
 
         # Convolve_code
         convolve_code, sum_code = self._generate_pooling_code()
@@ -847,27 +847,15 @@ class SharedProjection(Projection):
     ################################
 
     def _generate_omp(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
-
-        # C++ header
-        self.generator['omp']['header_proj_struct'] = """
-// Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-struct ProjStruct%(id_proj)s{
-
-    std::vector<int> post_rank ;
-    std::vector< std::vector<int> > pre_coords ;
-
-%(filter)s
-
-    void init_projection() {
-
-    }
-
-    void update_synapse() {
-
-    }
-};  
-""" % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target, 
-        'filter': filter_definition}
+        self._specific_template = {
+            'declare_connectivity_matrix': """
+    std::vector<int> post_rank;
+    std::vector< std::vector<int> > pre_coords;
+""",
+            'init_connectivity_matrix': "",
+            'accessor_connectivity_matrix': "",
+            'declare_additional': filter_definition
+        }
 
         # PYX header
         self.generator['omp']['pyx_proj_struct'] = """
@@ -922,9 +910,6 @@ cdef class proj%(id_proj)s_wrapper :
             'size_filter': self.weights.size if kernel else 0,
         }
 
-        # No need to initialize anything (no recordable variable, no learning)
-        self.generator['omp']['body_proj_init'] = " "
-
         # Compute sum
         wsum =  """
     // Shared proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
@@ -946,12 +931,14 @@ cdef class proj%(id_proj)s_wrapper :
             omp_copy_filter = "firstprivate(proj%(id_proj)s_w)"% {'id_proj': self.id}
         else: # no need to firstprivate it
             omp_copy_filter = ""
-        self.generator['omp']['body_compute_psp'] = wsum % {'id_proj': self.id, 
+        
+        self._specific_template['psp_code'] = wsum % {'id_proj': self.id, 
             'target': self.target,  
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'copy_filter': copy_filter, 'omp_copy_filter': omp_copy_filter
           }
+        self._specific_template['psp_prefix'] = "int rk_pre;\ndouble sum=0.0;"
 
     def _generate_cuda(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
 
@@ -1024,14 +1011,14 @@ cdef class proj%(id_proj)s_wrapper :
             omp_code = ""
 
         # PSP
-        psp = self.synapse.description['psp']['cpp'].replace('%(id_proj)s', '%(id)s').replace('rk_pre', 'proj%(id)s.pre_rank[i][j]').replace(';', '') % {'id' : self.projection.id, 'id_post': self.post.id, 'id_pre': self.pre.id}
+        psp = self.synapse.description['psp']['cpp'].replace('%(id_proj)s', '%(id)s').replace('rk_pre', 'pre_rank[i][j]').replace(';', '') % {'id' : self.projection.id, 'id_post': self.post.id, 'id_pre': self.pre.id}
             
         # Take delays into account if any
         if self.projection.max_delay > 1:
             if self.projection.uniform_delay == -1 : # Non-uniform delays
                 psp = psp.replace(
                     'pop%(id_pre)s.r['%{'id_pre': self.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[proj%(id)s.delay[i][j]-1]['%{'id' : self.projection.id, 'id_pre': self.pre.id}
+                    'pop%(id_pre)s._delayed_r[delay[i][j]-1]['%{'id' : self.projection.id, 'id_pre': self.pre.id}
                 )
             else: # Uniform delays
                 psp = psp.replace(
@@ -1047,12 +1034,12 @@ cdef class proj%(id_proj)s_wrapper :
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s._active){
         %(omp_code)s
-        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        for(int i = 0; i < post_rank.size(); i++){
             sum = 0.0;
-            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            for(int j = 0; j < pre_rank[i].size(); j++){
                 sum += %(psp)s ;
             }
-            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
+            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
         }
     }
 """
@@ -1061,14 +1048,14 @@ cdef class proj%(id_proj)s_wrapper :
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s._active){
         %(omp_code)s
-        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        for(int i = 0; i < post_rank.size(); i++){
             sum = %(psp)s;
-            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            for(int j = 0; j < pre_rank[i].size(); j++){
                 if(%(psp)s > sum){
                     sum = %(psp)s ;
                 }
             }
-            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
+            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
         }
     }
 """
@@ -1077,14 +1064,14 @@ cdef class proj%(id_proj)s_wrapper :
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s._active){
         %(omp_code)s
-        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        for(int i = 0; i < post_rank.size(); i++){
             sum = %(psp)s;
-            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            for(int j = 0; j < pre_rank[i].size(); j++){
                 if(%(psp)s < sum){
                     sum = %(psp)s ;
                 }
             }
-            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum;
+            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
         }
     }
 """
@@ -1093,12 +1080,12 @@ cdef class proj%(id_proj)s_wrapper :
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s._active){
         %(omp_code)s
-        for(int i = 0; i < proj%(id)s.post_rank.size(); i++){
+        for(int i = 0; i < post_rank.size(); i++){
             sum = 0.0;
-            for(int j = 0; j < proj%(id)s.pre_rank[i].size(); j++){
+            for(int j = 0; j < pre_rank[i].size(); j++){
                 sum += %(psp)s ;
             }
-            pop%(id_post)s._sum_%(target)s[proj%(id)s.post_rank[i]] += sum/ (double)(proj%(id)s.pre_rank[i].size());
+            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum/ (double)(pre_rank[i].size());
         }
     }
 """

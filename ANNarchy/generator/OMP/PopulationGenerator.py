@@ -374,8 +374,8 @@ class PopulationGenerator(object):
         _delayed_%(var)s.pop_back();
 """ % {'id': pop.id, 'var' : var}
 
-            # reset
-            reset_code += PopTemplate.attribute_delayed['openmp']['reset'] % {'id': pop.id, 'var' : var}
+                # reset
+                reset_code += PopTemplate.attribute_delayed['openmp']['reset'] % {'id': pop.id, 'var' : var}
 
         else:
             """
@@ -407,8 +407,8 @@ class PopulationGenerator(object):
     #endif
 """ % {'id': pop.id, 'name' : pop.name, 'var': var }
 
-            # reset
-            reset_code += PopTemplate.attribute_delayed['cuda']['reset'] % {'id': pop.id, 'var' : var}
+                # reset
+                reset_code += PopTemplate.attribute_delayed['cuda']['reset'] % {'id': pop.id, 'var' : var}
 
         # spike event is handled seperatly
         if pop.neuron_type.type == 'spike':
@@ -719,7 +719,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         if Global.config['paradigm'] == "openmp":
             for op in pop.global_operations:
-                code += """            pop%(id)s._%(op)s_%(var)s = %(op)s_value(pop%(id)s.%(var)s.data(), pop%(id)s.size);
+                code += """            _%(op)s_%(var)s = %(op)s_value(%(var)s.data(), size);
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         else:
             from .GlobalOperationTemplate import global_operation_templates_cuda as template

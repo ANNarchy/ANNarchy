@@ -283,7 +283,7 @@ cdef class pop%(id)s_wrapper :
             structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
 
         return ProjTemplate.pyx_struct % {'id_proj': proj.id,
-                                          'exact': ProjTemplate.exact_integ['decl'] % {'id': proj.id} if has_event_driven else "",
+                                          'exact': ProjTemplate.event_driven['decl'] % {'id': proj.id} if has_event_driven else "",
                                           'delay': ProjTemplate.delay['decl'] % {'id': proj.id} if has_delay else "",
                                           'export': export,
                                           'structural_plasticity': structural_plasticity
@@ -351,7 +351,7 @@ cdef class pop%(id)s_wrapper :
             structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
 
         return ProjTemplate.pyx_wrapper % {'id': proj.id,
-                                           'exact_init': ProjTemplate.exact_integ['cinit'] % {'id': proj.id} if has_event_driven else "",
+                                           'exact_init': ProjTemplate.event_driven['cy_init'] % {'id': proj.id} if has_event_driven else "",
                                            'delay_init': ProjTemplate.delay['cinit'] % {'id': proj.id} if has_delay else "",
                                            'delay_acc': ProjTemplate.delay['pyx_wrapper_acc'] % {'id': proj.id} if has_delay else "",
                                            'accessor': accessor,

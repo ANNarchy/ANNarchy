@@ -34,12 +34,12 @@ pattern_omp = {
     'pop_globalindex': '',
     'pop_sum': '_sum_',
     # Projections
-    'proj_prefix': 'proj%(id_proj)s',
-    'proj_sep': '.',
+    'proj_prefix': '',
+    'proj_sep': '',
     'proj_index': '[i][j]',
     'proj_globalindex': '[i]',
-    'proj_preprefix': 'pop%(id_pre)s',
-    'proj_postprefix': 'pop%(id_post)s',
+    'proj_preprefix': 'pop%(id_pre)s.',
+    'proj_postprefix': 'pop%(id_post)s.',
     'proj_preindex': '[rk_pre]',
     'proj_postindex': '[rk_post]',
 }
