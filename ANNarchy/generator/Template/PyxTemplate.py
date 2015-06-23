@@ -121,3 +121,52 @@ def get_dt():
 def set_number_threads(int n):
     setNumberThreads(n)
 '''
+
+proj_pyx_wrapper = """
+cdef class proj%(id_proj)s_wrapper :
+
+    def __cinit__(self, synapses):
+
+        cdef CSR syn = synapses
+        cdef int size = syn.size
+        cdef int nb_post = syn.post_rank.size()
+
+        proj%(id_proj)s.set_size( size )
+%(init_connectivity)s
+        proj%(id_proj)s.set_w(syn.w)
+%(init_delay)s
+%(init_event_driven)s
+
+    property size:
+        def __get__(self):
+            return proj%(id_proj)s.get_size()
+
+    def nb_synapses(self, int n):
+        return proj%(id_proj)s.nb_synapses(n)
+
+    def _set_learning(self, bool l):
+        proj%(id_proj)s._learning = l
+
+%(accessor_declaration_connectivity)s
+%(accessor_declaration_delay)s
+%(accessor_declaration_parameters_variables)s
+%(accessor_declaration_structural_plasticity)s
+%(accessor_declaration_additional)s
+
+"""
+
+proj_pyx_struct = """
+    cdef struct ProjStruct%(id_proj)s :
+        bool _learning
+
+        int get_size()
+        int nb_synapses(int)
+        void set_size(int)
+
+%(accessor_wrapper_connectivity)s
+%(accessor_wrapper_delay)s
+%(accessor_wrapper_event_driven)s
+%(accessor_wrapper_export)s
+%(accessor_wrapper_structural_plasticity)s
+%(accessor_wrapper_additional)s
+"""

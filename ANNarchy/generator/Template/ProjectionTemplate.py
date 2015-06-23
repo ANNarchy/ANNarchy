@@ -114,6 +114,22 @@ connectivity_matrix_omp = {
     int nb_synapses(int n) { return pre_rank[n].size(); }
 """,
     'init': """
+""",
+    'pyx_struct': """
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_rank()
+        void set_post_rank(vector[int])
+        void set_pre_rank(vector[vector[int]])
+""",
+    'pyx_wrapper_init': """
+        proj%(id_proj)s.set_post_rank( syn.post_rank )
+        proj%(id_proj)s.set_pre_rank( syn.pre_rank )
+""",
+    'pyx_wrapper_accessor': """
+    def post_rank(self):
+        return proj%(id_proj)s.get_post_rank()
+    def pre_rank(self, int n):
+        return proj%(id_proj)s.get_pre_rank()[n]
 """
 }
 
@@ -164,6 +180,22 @@ connectivity_matrix_cuda = {
     cudaMalloc((void**)&gpu_pre_rank, flat_pre_rank.size() * sizeof(int));
     cudaMemcpy(gpu_pre_rank, flat_pre_rank.data(), flat_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
     flat_pre_rank.clear();
+""",
+    'pyx_struct': """
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_rank()
+        void set_post_rank(vector[int])
+        void set_pre_rank(vector[vector[int]])
+""",
+    'pyx_wrapper_init': """
+        proj%(id_proj)s.set_post_rank( syn.post_rank )
+        proj%(id_proj)s.set_pre_rank( syn.pre_rank )
+""",
+    'pyx_wrapper_accessor': """
+    def post_rank(self):
+        return proj%(id_proj)s.get_post_rank()
+    def pre_rank(self, int n):
+        return proj%(id_proj)s.get_pre_rank()[n]
 """
 }
 
@@ -180,61 +212,6 @@ inverse_connectivity_matrix = {
     }
 """
 }
-
-pyx_wrapper = """
-cdef class proj%(id)s_wrapper :
-
-    def __cinit__(self, synapses):
-
-        cdef CSR syn = synapses
-        cdef int size = syn.size
-        cdef int nb_post = syn.post_rank.size()
-
-        proj%(id)s.set_size( size )
-        proj%(id)s.set_post_rank( syn.post_rank )
-        proj%(id)s.set_pre_rank( syn.pre_rank )
-        proj%(id)s.set_w(syn.w)
-%(delay_init)s
-%(exact_init)s
-
-    property size:
-        def __get__(self):
-            return proj%(id)s.get_size()
-
-    def nb_synapses(self, int n):
-        return proj%(id)s.nb_synapses(n)
-
-    def _set_learning(self, bool l):
-        proj%(id)s._learning = l
-
-    def post_rank(self):
-        return proj%(id)s.get_post_rank()
-    def pre_rank(self, int n):
-        return proj%(id)s.get_pre_rank()[n]
-
-%(delay_acc)s
-
-%(accessor)s
-%(structural_plasticity)s
-"""
-
-pyx_struct = """
-    cdef struct ProjStruct%(id_proj)s :
-        bool _learning
-
-        int get_size()
-        vector[int] get_post_rank()
-        vector[vector[int]] get_pre_rank()
-        int nb_synapses(int)
-        void set_size(int)
-        void set_post_rank(vector[int])
-        void set_pre_rank(vector[vector[int]])
-
-%(delay)s
-%(exact)s
-%(export)s
-%(structural_plasticity)s
-"""
 
 # c like definition of synaptic attributes, whereas 'local' is used if values can vary across
 # synapses, consequently 'global' is used if values are common to all synapses within a dendrite.
@@ -479,23 +456,23 @@ delay = {
     'header_struct': """
     std::vector< std::vector< int > > delay ;
 """,
-    'decl':
+    'pyx_struct':
 """
         vector[vector[int]] delay
 """,
-    'cinit':
+    'pyx_wrapper_init':
 """
         proj%(id)s.delay = syn.delay
 """,
-    'pyx_wrapper_acc':
+    'pyx_wrapper_accessor':
 """
     # Access to delay
     def get_delay(self):
-        return proj%(id)s.delay
+        return proj%(id_proj)s.delay
     def get_dendrite_delay(self, idx):
-        return proj%(id)s.delay[idx]
+        return proj%(id_proj)s.delay[idx]
     def set_delay(self, value):
-        proj%(id)s.delay = value
+        proj%(id_proj)s.delay = value
 """
 }
 
@@ -503,16 +480,16 @@ event_driven = {
     'header_struct': """
     std::vector<std::vector<long> > _last_event;
 """,
-    'decl': """
-        vector[vector[long]] _last_event
-""",
     'cpp_init': """
 """,
-    'cy_init':
+    'pyx_struct': """
+        vector[vector[long]] _last_event
+""",
+    'pyx_wrapper_init':
 """
-        proj%(id)s._last_event = vector[vector[long]](nb_post, vector[long]())
+        proj%(id_proj)s._last_event = vector[vector[long]](nb_post, vector[long]())
         for n in range(nb_post):
-            proj%(id)s._last_event[n] = vector[long](proj%(id)s.nb_synapses(n), -10000)
+            proj%(id_proj)s._last_event[n] = vector[long](proj%(id_proj)s.nb_synapses(n), -10000)
 """
 }
 
