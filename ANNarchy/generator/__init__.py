@@ -1,1 +1,1 @@
-from .Generator import compile
+from .Compiler import compile

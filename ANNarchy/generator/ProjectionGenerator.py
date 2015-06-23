@@ -23,7 +23,7 @@
 """
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
-import ProjectionTemplate as ProjTemplate
+import Template.ProjectionTemplate as ProjTemplate
 
 class ProjectionGenerator(object):
 
@@ -809,7 +809,7 @@ class ProjectionGenerator(object):
     def update_synapse(self, proj):
         prefix = "int rk_post, rk_pre;"
         code = ""
-        from ..Utils import generate_equation_code
+        from .Utils import generate_equation_code
 
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=3) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
@@ -1224,7 +1224,7 @@ class ProjectionGenerator(object):
 ######################################
 def get_bounds(param):
     "Analyses the bounds of a variable and returns the corresponding code."
-    from ...parser.SingleAnalysis import pattern_omp as pattern
+    from ANNarchy.parser.SingleAnalysis import pattern_omp as pattern
     code = ""
     # Min-Max bounds
     for bound, val in param['bounds'].items():

@@ -21,8 +21,8 @@
 
 """
 from ANNarchy.core import Global
-import ProjectionTemplate as ProjTemplate
-import RecordTemplate as RecTemplate
+import Template.ProjectionTemplate as ProjTemplate
+import Template.RecordTemplate as RecTemplate
 
 class RecordGenerator:
     """
@@ -34,7 +34,7 @@ class RecordGenerator:
         Constructor, stores all required data for later
         following code generation step
 
-        Paramaters:
+        Parameters:
 
             * *annarchy_dir*: unique target directory for the generated code
               files; they are stored in 'generate' sub-folder

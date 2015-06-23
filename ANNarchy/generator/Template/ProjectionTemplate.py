@@ -1,6 +1,6 @@
 """
 
-    PopulationTemplate.py
+    ProjectionTemplate.py
 
     This file is part of ANNarchy.
 
@@ -21,7 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.generator.OMP.PopulationTemplate import attribute_pyx_wrapper
+from ANNarchy.generator.Template.PopulationTemplate import attribute_pyx_wrapper
+
 header_struct = """#pragma once
 
 #include "pop%(id_pre)s.hpp"

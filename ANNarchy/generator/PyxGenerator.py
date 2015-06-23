@@ -22,8 +22,8 @@
 """
 from ANNarchy.core import Global
 
-import PopulationTemplate as PopTemplate
-import ProjectionTemplate as ProjTemplate
+import Template.PopulationTemplate as PopTemplate
+import Template.ProjectionTemplate as ProjTemplate
 
 class PyxGenerator(object):
     """
@@ -115,7 +115,7 @@ class PyxGenerator(object):
         for proj in self._projections:
             monitor_class += self._proj_monitor_wrapper(proj)
 
-        from .PyxTemplate import pyx_template
+        from Template.PyxTemplate import pyx_template
         return pyx_template % {
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,

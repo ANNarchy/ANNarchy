@@ -22,9 +22,10 @@
 
 """
 from ANNarchy.core import Global
-import PopulationTemplate as PopTemplate
 from ANNarchy import SpikeSourceArray
-from GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
+
+import Template.PopulationTemplate as PopTemplate
+from Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 
 class PopulationGenerator(object):
 #######################################################################
@@ -444,7 +445,7 @@ class PopulationGenerator(object):
         The code comprise of two major parts: global and local update, second one parallelized
         with an openmp for construct, if number of threads is greater than one.
         """
-        from ..Utils import generate_equation_code
+        from .Utils import generate_equation_code
         code = ""
 
         # Global variables
@@ -492,7 +493,7 @@ class PopulationGenerator(object):
             return "", "", ""
 
         # Neural update
-        from ..Utils import generate_equation_code
+        from .Utils import generate_equation_code
 
         header = ""
         body = ""
@@ -614,7 +615,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
     def update_spike_neuron(self, pop):
         # Neural update
-        from ..Utils import generate_equation_code
+        from .Utils import generate_equation_code
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:

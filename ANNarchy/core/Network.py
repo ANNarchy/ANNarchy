@@ -3,7 +3,7 @@ from .PopulationView import PopulationView
 from .Projection import Projection
 from .Record import Monitor
 import Global
-import ANNarchy.generator.Generator as Generator
+import ANNarchy.generator.Compiler as Compiler
 
 import os, shutil, sys
 import numpy as np
@@ -173,7 +173,7 @@ class Network(object):
         * **directory**: name of the subdirectory where the code will be generated and compiled.
         * **silent**: defines if the "Compiling... OK" should be printed.
         """
-        Generator.compile(directory=directory, silent=silent, net_id=self.id)
+        Compiler.compile(directory=directory, silent=silent, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
         """   Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
@@ -427,7 +427,7 @@ def _create_and_run_method(args):
     n, method = args
     net = Network(True)
     np.random.seed() # TODO: if seed is declared
-    Generator._instantiate(net.id, 0)
+    Compiler._instantiate(net.id, 0)
     res = method(n, net)
     del net
     return res
