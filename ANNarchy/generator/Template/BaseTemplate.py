@@ -167,9 +167,6 @@ void initialize(double _dt, long int seed) {
 void step()
 {
 %(prof_step_pre)s
-
-    double sum;
-    int rk_pre, rk_post, i, j, rk_j, nb_post;
     
     ////////////////////////////////
     // Presynaptic events

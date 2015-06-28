@@ -238,11 +238,15 @@ class ProjectionGenerator(object):
         accessor = ""
         # Parameters
         for var in proj.synapse.description['parameters']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
             declare_parameters_variables += decl_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
             accessor += acc_template[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
 
         # Variables
         for var in proj.synapse.description['variables']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
             declare_parameters_variables += decl_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
             accessor += acc_template[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
 

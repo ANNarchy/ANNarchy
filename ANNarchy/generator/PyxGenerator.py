@@ -242,10 +242,6 @@ cdef class pop%(id)s_wrapper :
             delay, exact_integ: variables accessed by the wrapper
 
         """
-        # Is it a specific projection?
-        if proj.generator['omp']['pyx_proj_struct']:
-            return proj.generator['omp']['pyx_proj_struct']
-
         # Check for exact intgeration
         has_event_driven = False
         for var in proj.synapse.description['variables']:
@@ -256,18 +252,47 @@ cdef class pop%(id)s_wrapper :
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
+        # Import templates
+        connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
+        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
+
+        # Export connectivity matrix
+        if 'export_connectivity' in proj._specific_template.keys():
+            export_connectivity_matrix = proj._specific_template['export_connectivity']
+        else:
+            export_connectivity_matrix = connectivity_tpl['pyx_struct']
+
+        # Delay 
+        export_delay=""
+        if has_delay:
+            if 'export_delay' in proj._specific_template.keys():
+                export_delay = proj._specific_template['export_delay']
+            else:
+                export_delay = ProjTemplate.delay['pyx_struct'] % {'id': proj.id} if has_delay else ""
+
+        # Event-driven
+        export_event_driven = ""
+        if has_event_driven:
+            if 'export_event_driven' in proj._specific_template.keys():
+                export_event_driven = proj._specific_template['export_event_driven']
+            else:
+                export_event_driven = ProjTemplate.event_driven['pyx_struct']
+
         # Determine all export methods
         export = ""
         # Parameters
         for var in proj.synapse.description['parameters']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
             export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         # Variables
         for var in proj.synapse.description['variables']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
             export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Structural plasticity
         structural_plasticity = ""
-        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
         if Global.config['structural_plasticity']:
             # Pruning in the synapse
             if 'pruning' in proj.synapse.description.keys():
@@ -283,15 +308,14 @@ cdef class pop%(id)s_wrapper :
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
 
-        connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
-            'accessor_wrapper_connectivity': connectivity_tpl['pyx_struct'],
-            'accessor_wrapper_delay': ProjTemplate.delay['pyx_struct'] % {'id': proj.id} if has_delay else "",
-            'accessor_wrapper_event_driven': ProjTemplate.event_driven['pyx_struct'] if has_event_driven else "",
-            'accessor_wrapper_export': export,
-            'accessor_wrapper_structural_plasticity': structural_plasticity,
-            'accessor_wrapper_additional': proj._specific_template['accessor_wrapper_additional'] if 'accessor_wrapper_additional' in proj._specific_template.keys() else ""
+            'export_connectivity': export_connectivity_matrix,
+            'export_delay': export_delay,
+            'export_event_driven': export_event_driven,
+            'export_parameters_variables': export,
+            'export_structural_plasticity': structural_plasticity,
+            'export_additional': proj._specific_template['export_additional'] if 'export_additional' in proj._specific_template.keys() else ""
         }
 
     @staticmethod
@@ -320,17 +344,70 @@ cdef class pop%(id)s_wrapper :
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Determine all accessor methods
-        accessor = ""
+        # Import templates
         pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
-        for var in proj.synapse.description['parameters']:
-            accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
-        for var in proj.synapse.description['variables']:
-            accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
-
-        # Structural plasticity
-        structural_plasticity = ""
+        connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
         sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
+
+        # Arguments to the wrapper (default: synapses)
+        if 'wrapper_args' in proj._specific_template.keys():
+            wrapper_args = proj._specific_template['wrapper_args']
+        else:
+            wrapper_args = connectivity_tpl['pyx_wrapper_args']
+
+        # Wrapper constructor
+        if 'wrapper_init_connectivity' in proj._specific_template.keys():
+            wrapper_init = proj._specific_template['wrapper_init_connectivity']
+        else:
+            wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
+
+        # Wrapper sccess to connectivity matrix 
+        if 'wrapper_access_connectivity' in proj._specific_template.keys():
+            wrapper_access_connectivity = proj._specific_template['wrapper_access_connectivity']
+        else:
+            wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+
+        # Delays
+        wrapper_init_delay = ""; wrapper_access_delay=""
+        if has_delay:
+            # Initialize the wrapper
+            if 'wrapper_init_delay' in proj._specific_template.keys():
+                wrapper_init_delay = proj._specific_template['wrapper_init_delay']
+            else:
+                wrapper_init_delay = ProjTemplate.delay['pyx_wrapper_init'] % {'id': proj.id}
+            # Access in wrapper
+            if 'wrapper_access_delay' in proj._specific_template.keys():
+                wrapper_access_delay = proj._specific_template['wrapper_access_delay']
+            else:
+                wrapper_access_delay = ProjTemplate.delay['pyx_wrapper_accessor'] % {'id': proj.id}
+
+        # Event-driven
+        wrapper_init_event_driven = ""
+        if has_event_driven:
+            if 'wrapper_init_event_driven' in proj._specific_template.keys():
+                wrapper_init_event_driven = proj._specific_template['wrapper_init_event_driven']
+            else:
+                wrapper_init_event_driven = ProjTemplate.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id}
+
+        # Determine all accessor methods
+        if 'wrapper_access_parameters_variables' in proj._specific_template.keys():
+            accessor = proj._specific_template['wrapper_access_parameters_variables']
+        else:
+            accessor = ""
+            for var in proj.synapse.description['parameters']:
+                if var['name'] == 'w': # Already defined by the connectivity matrix
+                    continue
+                accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
+            for var in proj.synapse.description['variables']:
+                if var['name'] == 'w': # Already defined by the connectivity matrix
+                    continue
+                accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
+
+        # Additional declarations
+        additional_declarations = proj._specific_template['wrapper_access_additional'] if 'wrapper_access_additional' in proj._specific_template.keys() else ""
+
+        # Structural plasticity (TODO: not templated yet)
+        structural_plasticity = ""
         if Global.config['structural_plasticity']:
             # Pruning in the synapse
             if 'pruning' in proj.synapse.description.keys():
@@ -351,17 +428,18 @@ cdef class pop%(id)s_wrapper :
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
 
-        connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
+        
         return PyxTemplate.proj_pyx_wrapper % {
             'id_proj': proj.id,
-            'init_connectivity': connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id},
-            'init_delay': ProjTemplate.delay['pyx_wrapper_init'] % {'id': proj.id} if has_delay else "",
-            'init_event_driven': ProjTemplate.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id} if has_event_driven else "",
-            'accessor_declaration_connectivity': connectivity_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id},
-            'accessor_declaration_delay': ProjTemplate.delay['pyx_wrapper_accessor'] % {'id': proj.id} if has_delay else "",
-            'accessor_declaration_parameters_variables': accessor,
-            'accessor_declaration_structural_plasticity': structural_plasticity,
-            'accessor_declaration_additional': proj._specific_template['accessor_declaration_additional'] if 'accessor_declaration_additional' in proj._specific_template.keys() else ""
+            'wrapper_args': wrapper_args, 
+            'wrapper_init_connectivity': wrapper_init,
+            'wrapper_init_delay': wrapper_init_delay,
+            'wrapper_init_event_driven': wrapper_init_event_driven,
+            'wrapper_access_connectivity': wrapper_access_connectivity,
+            'wrapper_access_delay': wrapper_access_delay,
+            'wrapper_access_parameters_variables': accessor,
+            'wrapper_access_structural_plasticity': structural_plasticity,
+            'wrapper_access_additional': additional_declarations
         }
 
 #######################################################################

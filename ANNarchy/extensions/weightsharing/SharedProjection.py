@@ -4,6 +4,7 @@ import ANNarchy.core.Global as Global
 
 import numpy as np
 from math import floor
+import pprint
 
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
@@ -36,11 +37,11 @@ class SharedProjection(Projection):
         )
 
         if not Global.config["paradigm"] == "openmp":
-            Global._error('weightsharing is only implemented for the OpenMP paradigm.')
+            Global._error('Weight sharing is only implemented for the OpenMP paradigm.')
             exit(0)
 
         if not pre.neuron_type.type == 'rate':
-            Global._error('weightsharing is only implemented for rate-coded populations.')
+            Global._error('Weight sharing is only implemented for rate-coded populations.')
             exit(0)
 
     def _create(self):
@@ -562,46 +563,46 @@ class SharedProjection(Projection):
 
         # Main code
         code = """
-        sum = 0.0;
+            sum = 0.0;
 """
 
         # Generate for loops
         for dim in range(self.dim_kernel):
-            code += """        for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++){
+            code += """            for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++){
     """ % { 'index': indices[dim], 'size': self.weights.shape[dim]}
 
         # Compute indices
         for dim in range(self.dim_pre):
             if dim < self.dim_kernel:
                 code += """
-            int %(index)s_pre = coord_%(id_proj)s[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim])}
+                int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim])}
             else:
                 code += """
-            int %(index)s_pre = coord_%(id_proj)s[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
+                int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
 
         # Check indices
         for dim in range(self.dim_kernel):
             if operation in ['sum', 'mean']:
                 if isinstance(self.padding, str): # 'border'
                         code += """
-            if (%(index)s_pre < 0) %(index)s_pre = 0 ;
-            if (%(index)s_pre > %(max_size)s) %(index)s_pre = %(max_size)s ;""" % { 'index': indices[dim], 'dim': dim, 'max_size': self.pre.geometry[dim] -1}
+                if (%(index)s_pre < 0) %(index)s_pre = 0 ;
+                if (%(index)s_pre > %(max_size)s) %(index)s_pre = %(max_size)s ;""" % { 'index': indices[dim], 'dim': dim, 'max_size': self.pre.geometry[dim] -1}
                 else:
                     code += """
-            if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
-                sum += %(padding)s;
-                continue;
-            }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
+                if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
+                    sum += %(padding)s;
+                    continue;
+                }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
             
             else: # min, max
                 code += """
-            if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
-                continue;
-            }""" % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
+                if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
+                    continue;
+                }""" % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
 
         # Compute pre-synaptic rank
         code +="""
-            rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
+                rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the increment
         psp = self.synapse.description['psp']['cpp']
@@ -618,25 +619,25 @@ class SharedProjection(Projection):
         # Apply the operation
         if operation == "sum":
             code += """
-            sum += %(increment)s""" % {'increment': increment}
+                sum += %(increment)s""" % {'increment': increment}
         elif operation == "max":
             code += """
-            double _psp = %(increment)s
-            if(_psp > sum) sum = _psp;""" % {'increment': increment}
+                double _psp = %(increment)s
+                if(_psp > sum) sum = _psp;""" % {'increment': increment}
         elif operation == "min":
             code += """
-            double _psp = %(increment)s
-            if(_psp < sum) sum = _psp;""" % {'increment': increment}
+                double _psp = %(increment)s
+                if(_psp < sum) sum = _psp;""" % {'increment': increment}
         elif operation == "mean":
             code += """
-            sum += %(increment)s""" % {'increment': increment}
+                sum += %(increment)s""" % {'increment': increment}
         else:
             Global._error('Operation', operation, 'is not implemented yet for shared projections.')
 
         # Close for loops
         for dim in range(self.dim_kernel):
             code += """
-        }""" 
+            }""" 
 
         impl_code = code % {'id_proj': self.id, 
             'target': self.target,  
@@ -678,10 +679,10 @@ class SharedProjection(Projection):
         for dim in range(self.dim_pre):
             if dim < self.dim_kernel:
                 code += """
-            int %(index)s_pre = coord_%(id_proj)s[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim+1])}
+            int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim+1])}
             else:
                 code += """
-            int %(index)s_pre = coord_%(id_proj)s[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
+            int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
 
 
         # Check indices
@@ -710,7 +711,7 @@ class SharedProjection(Projection):
 
         # Compute the increment
         psp = self.synapse.description['psp']['cpp']
-        index = "[coord_%(id_proj)s["+str(self.dim_pre)+"]]"
+        index = "[coord["+str(self.dim_pre)+"]]"
         for dim in range(self.dim_kernel-1):
             index += '[' + indices[dim] + '_w]'
         increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
@@ -847,98 +848,104 @@ class SharedProjection(Projection):
     ################################
 
     def _generate_omp(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
+
+        # Specific template for generation
         self._specific_template = {
+            # Declare the connectivity matrix
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
-    std::vector< std::vector<int> > pre_coords;
-""",
-            'init_connectivity_matrix': "",
-            'accessor_connectivity_matrix': "",
-            'declare_additional': filter_definition
-        }
-
-        # PYX header
-        self.generator['omp']['pyx_proj_struct'] = """
-    # Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-    cdef struct ProjStruct%(id_proj)s :
-        vector[int] post_rank
-        vector[vector[int]] pre_coords
-        %(filter)s
-""" % {'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target, 
-        'filter': filter_pyx_definition}
-
-        # Pyx class
-        proj_class = """
-# Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-cdef class proj%(id_proj)s_wrapper :
-    def __cinit__(self, weights, coords):
-        proj%(id_proj)s.post_rank = list(range(%(size_post)s))
-        proj%(id_proj)s.pre_coords = coords""" + ("""
-        proj%(id_proj)s.w = weights""" if kernel else "" )+ """
-
-    property size:
-        def __get__(self):
-            return %(size_post)s
-""" + ( """
-    def nb_synapses(self, int n):
-        return %(size_filter)s
-""" if kernel else """
-    def nb_synapses(self, int n):
-        return 0
-""") + """
-
+    std::vector< std::vector<int> > pre_rank;
+    """ + filter_definition,
+            # Accessors for the connectivity matrix
+            'accessor_connectivity_matrix': """
+    // Accessor to connectivity data
+    std::vector<int> get_post_rank() { return post_rank; }
+    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
+    std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
+    void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
+    int nb_synapses(int n) { return pre_rank[n].size(); }
+    // Local parameter w
+    %(type_w)s get_w() { return w; }
+    void set_w(%(type_w)s value) { w = value; }
+""" % {'type_w': filter_definition.replace(' w;', '')},
+            # Export the connectivity matrix
+            'export_connectivity': """
+        # Connectivity
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_rank()
+        void set_post_rank(vector[int])
+        void set_pre_rank(vector[vector[int]])
+        # Local variable w
+        %(type_w)s get_w()
+        void set_w(%(type_w)s)
+            """ % {'type_w': filter_pyx_definition.replace(' w', '')},
+            # Arguments to the wrapper constructor
+            'wrapper_args': "weights, coords",
+            # Initialize the wrapper connectivity matrix
+            'wrapper_init_connectivity': """
+        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
+        proj%(id_proj)s.set_pre_rank(coords)
+        proj%(id_proj)s.set_w(weights)
+""" % {'id_proj': self.id, 'size_post': self.post.size},
+            # Wrapper access to connectivity matrix
+            'wrapper_access_connectivity': """
+    # Connectivity
     def post_rank(self):
-        return proj%(id_proj)s.post_rank
+        return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
-        return proj%(id_proj)s.pre_coords[n]
-
-""" 
-        if kernel: # not needed for max pooling
-            proj_class += """
-    # Kernel
+        return proj%(id_proj)s.get_pre_rank()
+    # Local variable w
     def get_w(self):
-        return proj%(id_proj)s.w
+        return proj0.get_w()
     def set_w(self, value):
-        proj%(id_proj)s.w = value
-
-"""
-        self.generator['omp']['pyx_proj_class'] = proj_class % { 
-            'id_proj': self.id, 'target': self.target, 
-            'name_pre': self.pre.name, 
-            'name_post': self.post.name, 
-            'size_post': self.post.size,
-            'size_filter': self.weights.size if kernel else 0,
+        proj0.set_w( value )
+    def get_dendrite_w(self, int rank):
+        return proj0.get_w()
+    def set_dendrite_w(self, int rank, value):
+        proj0.set_w(value)
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return 0.0
+    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+        pass
+            """ % {'id_proj': self.id},
+            # Wrapper access to variables
+            'wrapper_access_parameters_variables' : "",
+            # Variables for the psp code
+            'psp_prefix': """
+        int rk_pre;
+        double sum=0.0;"""
         }
+
+        # OMP code
+        omp_code = ""
+        if Global.config['num_threads'] > 1:
+            if filter_definition != "":
+                omp_copy_filter = "firstprivate(w)"% {'id_proj': self.id}
+            else: # no need to firstprivate it
+                omp_copy_filter = ""
+            omp_code = """
+        #pragma omp parallel for private(sum, rk_pre, coord) """ + omp_copy_filter         
 
         # Compute sum
         wsum =  """
-    // Shared proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
-    %(copy_filter)s
-    std::vector<int> coord_%(id_proj)s;"""
-        if Global.config['num_threads'] > 1:
-            wsum += """
-    #pragma omp parallel for private(sum, rk_pre, coord_%(id_proj)s) %(omp_copy_filter)s"""
-        wsum += """
-    for(int i = 0; i < %(size_post)s; i++){
-        coord_%(id_proj)s = proj%(id_proj)s.pre_coords[i];
-""" + convolve_code + """
-        pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
-    }
+        std::vector<int> coord;
+        %(omp_code)s
+        for(int i = 0; i < %(size_post)s; i++){
+            coord = pre_rank[i];
+            %(convolve_code)s
+            pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
+        }
 """ 
-        # Copy the filter
-        copy_filter = filter_definition.replace('w', 'proj%(id_proj)s_w = proj%(id_proj)s.w')% {'id_proj': self.id}
-        if filter_definition != "":
-            omp_copy_filter = "firstprivate(proj%(id_proj)s_w)"% {'id_proj': self.id}
-        else: # no need to firstprivate it
-            omp_copy_filter = ""
         
-        self._specific_template['psp_code'] = wsum % {'id_proj': self.id, 
+        self._specific_template['psp_code'] = wsum % \
+        {   'id_proj': self.id, 
             'target': self.target,  
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
-            'copy_filter': copy_filter, 'omp_copy_filter': omp_copy_filter
-          }
-        self._specific_template['psp_prefix'] = "int rk_pre;\ndouble sum=0.0;"
+            'omp_code': omp_code,
+            'convolve_code': convolve_code
+        }
+
 
     def _generate_cuda(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
 

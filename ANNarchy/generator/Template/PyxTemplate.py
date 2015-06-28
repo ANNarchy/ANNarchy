@@ -125,17 +125,10 @@ def set_number_threads(int n):
 proj_pyx_wrapper = """
 cdef class proj%(id_proj)s_wrapper :
 
-    def __cinit__(self, synapses):
-
-        cdef CSR syn = synapses
-        cdef int size = syn.size
-        cdef int nb_post = syn.post_rank.size()
-
-        proj%(id_proj)s.set_size( size )
-%(init_connectivity)s
-        proj%(id_proj)s.set_w(syn.w)
-%(init_delay)s
-%(init_event_driven)s
+    def __cinit__(self, %(wrapper_args)s):
+%(wrapper_init_connectivity)s
+%(wrapper_init_delay)s
+%(wrapper_init_event_driven)s
 
     property size:
         def __get__(self):
@@ -147,11 +140,11 @@ cdef class proj%(id_proj)s_wrapper :
     def _set_learning(self, bool l):
         proj%(id_proj)s._learning = l
 
-%(accessor_declaration_connectivity)s
-%(accessor_declaration_delay)s
-%(accessor_declaration_parameters_variables)s
-%(accessor_declaration_structural_plasticity)s
-%(accessor_declaration_additional)s
+%(wrapper_access_connectivity)s
+%(wrapper_access_delay)s
+%(wrapper_access_parameters_variables)s
+%(wrapper_access_structural_plasticity)s
+%(wrapper_access_additional)s
 
 """
 
@@ -163,10 +156,10 @@ proj_pyx_struct = """
         int nb_synapses(int)
         void set_size(int)
 
-%(accessor_wrapper_connectivity)s
-%(accessor_wrapper_delay)s
-%(accessor_wrapper_event_driven)s
-%(accessor_wrapper_export)s
-%(accessor_wrapper_structural_plasticity)s
-%(accessor_wrapper_additional)s
+%(export_connectivity)s
+%(export_delay)s
+%(export_event_driven)s
+%(export_parameters_variables)s
+%(export_structural_plasticity)s
+%(export_additional)s
 """
