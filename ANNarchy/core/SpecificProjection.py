@@ -46,10 +46,8 @@ class DecodingProjection(Projection):
         if window == 0.0:
             window = Global.config['dt']
         self.window = window
-        # Generate the code
-        self._generate_code()
 
-    def _generate_code(self):
+    def _generate(self):
         # Generate the code
         self._specific_template['declare_additional'] = """
     // Window

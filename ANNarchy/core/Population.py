@@ -161,6 +161,10 @@ class Population(object):
         # Is overwritten by SpecificPopulations
         self._specific = False
         
+    def _generate(self):
+        "Overriden by specific populations to generate the code."
+        pass
+
     def _instantiate(self, module):
         # Create the Cython instance 
         self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)

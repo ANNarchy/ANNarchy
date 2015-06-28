@@ -52,6 +52,11 @@ class CodeGenerator(object):
         self._populations = populations
         self._projections = projections
 
+        for pop in self._populations:
+            pop._generate()
+        for proj in self._projections:
+            proj._generate()
+
         self._popgen = PopulationGenerator()
         self._projgen = ProjectionGenerator()
 
@@ -100,7 +105,7 @@ class CodeGenerator(object):
         with open(self._annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
-        # Generate mointor code for the analysed pops and projs
+        # Generate monitor code for the analysed pops and projs
         self._recordgen.generate()
 
         # Generate cpp code for the analysed pops and projs

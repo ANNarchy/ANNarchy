@@ -436,7 +436,6 @@ def _instantiate(net_id, import_id=-1):
 
     # Import the Cython library
     try:
-        #cython_module = __import__('ANNarchyCore'+str(base_net))
         cython_module = imp.load_dynamic('ANNarchyCore'+str(import_id), 'annarchy/ANNarchyCore'+str(import_id)+'.so')
     except Exception as e:
         Global._print(e)

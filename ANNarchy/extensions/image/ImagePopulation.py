@@ -132,6 +132,11 @@ class VideoPopulation(ImagePopulation):
         extra_libs.append('-lopencv_video')
 
         self._specific = True
+
+    def generate(self):
+        return self._code
+
+    def _generate(self):
         self._code = """#pragma once
 #include <opencv2/opencv.hpp>
 using namespace cv;
@@ -253,8 +258,6 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.GrabImage()
 """ % {'id': self.id}
 
-    def generate(self):
-        return self._code
 
             
     def start_camera(self, camera_port=0):

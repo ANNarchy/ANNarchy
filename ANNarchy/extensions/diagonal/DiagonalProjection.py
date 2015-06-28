@@ -45,19 +45,19 @@ class DiagonalProjection(Projection):
         self.offset = offset
         self.slope = slope
 
-        # Generate the code
-        if self.pre.dimension == 2 and self.post.dimension == 2:
-            self._generate_omp_1d()
-        # elif self.pre.dimension == 4 and self.post.dimension == 4:
-        #     self._generate_omp_2d()
-        else:
-            Global._error('The diagonal projection only works when both populations have 2 or 4 dimensions.')
-            exit(0)
-
         # create a fake CSR object
         self._create()
         return self
 
+    def _generate(self):
+        # Generate the code
+        if self.pre.dimension == 2 and self.post.dimension == 2:
+            self._generate_omp_1d()
+        elif self.pre.dimension == 4 and self.post.dimension == 4:
+            self._generate_omp_2d_gaussian()
+        else:
+            Global._error('The diagonal projection only works when both populations have 2 or 4 dimensions.')
+            exit(0)
 
     def connect_gaussian(self, amp, sigma, min_val, max_distance=0.0):
         """
@@ -101,10 +101,6 @@ class DiagonalProjection(Projection):
             for dist_h in xrange(int(self.offset_h) - self.pre.geometry[1] - self.pre.geometry[3], int(self.offset_h) + self.post.geometry[3]):
                 val = self.amp * np.exp(- (dist_w*dist_w/self.sigma_w/self.sigma_w + dist_h*dist_h/self.sigma_h/self.sigma_h) )
                 self.weights[(dist_w, dist_h)] = val
-
-
-        # Generate the code
-        self._generate_omp_2d_gaussian()
         
         # create a fake CSR object
         self._create()
@@ -148,69 +144,61 @@ class DiagonalProjection(Projection):
     ################################
 
     def _generate_omp_1d(self):
+        # Specific template for generation
+        self._specific_template = {
+            # Declare the connectivity matrix
+            'declare_connectivity_matrix': """
+    std::vector<int> post_rank;
+    std::vector< double > w;
+""",
 
-        # C++ header
-        self.generator['omp']['header_proj_struct'] = """
-// Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-struct ProjStruct%(id_proj)s{
-    bool _learning;
+            # Accessors for the connectivity matrix
+            'accessor_connectivity_matrix': """
+    // Accessor to connectivity data
+    std::vector<int> get_post_rank() { return post_rank; }
+    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
+    int nb_synapses(int n) { return w.size(); }
+    // Weights w
+    std::vector<double> get_w() { return w; }
+    void set_w(std::vector<double> _w) { w=_w; }
+""" ,
 
-    std::vector<int> post_rank ;
-    std::vector<double> w ;
+            # Export the connectivity matrix
+            'export_connectivity': """
+        # Connectivity
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_rank()
+        void set_post_rank(vector[int])
+        void set_pre_rank(vector[vector[int]])
+        vector[double] get_w()
+        void set_w(vector[double])
+""",
 
-    void init_projection() {
+            # Arguments to the wrapper constructor
+            'wrapper_args': "weights",
 
-    }
+            # Initialize the wrapper connectivity matrix
+            'wrapper_init_connectivity': """
+        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
+        proj%(id_proj)s.set_w(weights)
+""" % {'id_proj': self.id, 'size_post': self.post.size},
 
-    void update_synapse() {
-    
-    }
-};  
-""" % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target}
-
-        # PYX header
-        self.generator['omp']['pyx_proj_struct'] = """
-    # Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-    cdef struct ProjStruct%(id_proj)s :
-        vector[int] post_rank
-        vector[double] w
-""" % {'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target}
-
-        # Pyx class
-        proj_class = """
-# Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-cdef class proj%(id_proj)s_wrapper :
-    def __cinit__(self, weights):
-        proj%(id_proj)s.post_rank = list(range(%(size_post)s))
-        proj%(id_proj)s.w = weights
-
-    property size:
-        def __get__(self):
-            return %(size_post)s
-    def nb_synapses(self, int n):
-        return 0
-
+            # Wrapper access to connectivity matrix
+            'wrapper_access_connectivity': """
+    # Connectivity
     def post_rank(self):
-        return proj%(id_proj)s.post_rank
+        return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
         return 0
+            """ % {'id_proj': self.id},
 
-    # Kernel
-    def get_w(self):
-        return proj%(id_proj)s.w
-    def set_w(self, value):
-        proj%(id_proj)s.w = value
+            # Wrapper access to variables
+            'wrapper_access_parameters_variables' : "",
 
-"""
-        self.generator['omp']['pyx_proj_class'] = proj_class % { 
-            'id_proj': self.id, 'target': self.target, 
-            'name_pre': self.pre.name, 
-            'name_post': self.post.name, 
-            'size_post': self.post.size,
+            # Variables for the psp code
+            'psp_prefix': """
+        double sum=0.0;"""
         }
-
-        # No need to initialize anything (no recordable variable, no learning)
-        self.generator['omp']['body_proj_init'] = " "
 
         # Compute sum
         dim_post_0 = self.post.geometry[0]
@@ -219,37 +207,34 @@ cdef class proj%(id_proj)s_wrapper :
         dim_pre_1 = self.pre.geometry[1]
 
         wsum =  """
-    // Diagonal proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
-    if(pop%(id_post)s._active){
-        int proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f, proj%(id_proj)s_start;
-        std::vector<double> proj%(id_proj)s_w = proj%(id_proj)s.w;
-        std::vector<double> proj%(id_proj)s_pre_r = pop%(id_pre)s.r;"""
+        int _idx_0, _idx_1, _idx_f, _start;
+        std::vector<double> _w = w;
+        std::vector<double> _pre_r = pop%(id_pre)s.r;"""
         if Global.config['num_threads'] > 1:
             wsum += """
-        #pragma omp parallel for private(sum, proj%(id_proj)s_idx_0, proj%(id_proj)s_idx_1, proj%(id_proj)s_idx_f, proj%(id_proj)s_start) firstprivate(proj%(id_proj)s_w, proj%(id_proj)s_pre_r)"""
+        #pragma omp parallel for private(sum, _idx_0, _idx_1, _idx_f, _start) firstprivate(_w, _pre_r)"""
         wsum += """
         for(int idx = 0; idx < %(dim_post_1)s; idx++){
             sum = 0.0;
-            proj%(id_proj)s_start = (idx %(inc0)s %(offset)s ) ;
-            //std::cout << "Neuron: " << idx << " : " << proj%(id_proj)s_start << std::endl;
+            _start = (idx %(inc0)s %(offset)s ) ;
+            //std::cout << "Neuron: " << idx << " : " << _start << std::endl;
             for(int idx_1 = 0; idx_1 < %(dim_pre_1)s; idx_1++){
-                proj%(id_proj)s_idx_0 = idx_1;
-                proj%(id_proj)s_idx_1 = proj%(id_proj)s_start + %(inc1)s idx_1;
-                if ((proj%(id_proj)s_idx_1 < 0) || (proj%(id_proj)s_idx_1 > %(dim_pre_1)s-1))
+                _idx_0 = idx_1;
+                _idx_1 = _start + %(inc1)s idx_1;
+                if ((_idx_1 < 0) || (_idx_1 > %(dim_pre_1)s-1))
                     continue;
-                //std::cout << proj%(id_proj)s_idx_0 << " " << proj%(id_proj)s_idx_1 << std::endl;
+                //std::cout << _idx_0 << " " << _idx_1 << std::endl;
                 for(int idx_f=0; idx_f < %(size_filter)s; idx_f++){
-                    proj%(id_proj)s_idx_f = (proj%(id_proj)s_idx_1 + (idx_f - %(center_filter)s) );
-                    if ((proj%(id_proj)s_idx_f < 0) || (proj%(id_proj)s_idx_f > %(dim_pre_1)s-1))
+                    _idx_f = (_idx_1 + (idx_f - %(center_filter)s) );
+                    if ((_idx_f < 0) || (_idx_f > %(dim_pre_1)s-1))
                         continue;
-                    sum += proj%(id_proj)s_w[idx_f] * proj%(id_proj)s_pre_r[proj%(id_proj)s_idx_f + %(dim_pre_1)s * proj%(id_proj)s_idx_0];
+                    sum += _w[idx_f] * _pre_r[_idx_f + %(dim_pre_1)s * _idx_0];
                 }
             }
             for(int idx_1 = 0; idx_1 < %(dim_post_0)s; idx_1++){
                 pop%(id_post)s._sum_%(target)s[idx + %(dim_post_1)s*idx_1] += sum;
             }
         }
-    }// active
 """ 
 
         if self.slope == 1 :
@@ -268,7 +253,7 @@ cdef class proj%(id_proj)s_wrapper :
             inc0 = "+"
             inc1 = ' - ' + str(-self.slope) + '*'
 
-        self.generator['omp']['body_compute_psp'] = wsum % {'id_proj': self.id, 
+        self._specific_template['psp_code'] = wsum % {'id_proj': self.id, 
             'target': self.target,  
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
@@ -282,66 +267,65 @@ cdef class proj%(id_proj)s_wrapper :
           }
 
     def _generate_omp_2d_gaussian(self):
-
-        # C++ header
-        self.generator['omp']['header_proj_struct'] = """
-// Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-struct ProjStruct%(id_proj)s{
-
-    std::vector<int> post_rank ;
+        # Specific template for generation
+        self._specific_template = {
+            # Declare the connectivity matrix
+            'declare_connectivity_matrix': """
+    std::vector<int> post_rank;
     std::map<std::pair<int, int>, double > w ;
+""",
 
-};  
-""" % { 'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target}
+            # Accessors for the connectivity matrix
+            'accessor_connectivity_matrix': """
+    // Accessor to connectivity data
+    std::vector<int> get_post_rank() { return post_rank; }
+    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
+    int nb_synapses(int n) { return w.size(); }
+    // Weights w
+    std::map<std::pair<int, int>, double > get_w() { return w; }
+    void set_w(std::map<std::pair<int, int>, double > _w) { w=_w; }
+""" ,
 
-        # PYX header
-        self.generator['omp']['pyx_proj_struct'] = """
-    # Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-    cdef struct ProjStruct%(id_proj)s :
-        vector[int] post_rank
-        map[pair[int, int], double] w
-""" % {'id_proj': self.id, 'name_pre': self.pre.name, 'name_post': self.post.name, 'target': self.target}
+            # Export the connectivity matrix
+            'export_connectivity': """
+        # Connectivity
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_rank()
+        void set_post_rank(vector[int])
+        void set_pre_rank(vector[vector[int]])
+        map[pair[int, int], double] get_w()
+        void set_w(map[pair[int, int], double])
 
-        # Pyx class
-        proj_class = """
-# Shared projection %(name_pre)s -> %(name_post)s, target %(target)s
-cdef class proj%(id_proj)s_wrapper :
-    def __cinit__(self, weights):
-        proj%(id_proj)s.post_rank = list(range(%(size_post)s))
-        proj%(id_proj)s.w = weights
+""",
 
-    property size:
-        def __get__(self):
-            return %(size_post)s
-    def nb_synapses(self, int n):
-        return 0
+            # Arguments to the wrapper constructor
+            'wrapper_args': "weights",
 
+            # Initialize the wrapper connectivity matrix
+            'wrapper_init_connectivity': """
+        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
+        proj%(id_proj)s.set_w(weights)
+""" % {'id_proj': self.id, 'size_post': self.post.size},
+
+            # Wrapper access to connectivity matrix
+            'wrapper_access_connectivity': """
+    # Connectivity
     def post_rank(self):
-        return proj%(id_proj)s.post_rank
+        return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
         return 0
+            """ % {'id_proj': self.id},
 
-    # Kernel
-    def get_w(self):
-        return proj%(id_proj)s.w
-    def set_w(self, value):
-        proj%(id_proj)s.w = value
+            # Wrapper access to variables
+            'wrapper_access_parameters_variables' : "",
 
-"""
-        self.generator['omp']['pyx_proj_class'] = proj_class % { 
-            'id_proj': self.id, 'target': self.target, 
-            'name_pre': self.pre.name, 
-            'name_post': self.post.name, 
-            'size_post': self.post.size,
+            # Variables for the psp code
+            'psp_prefix': """
+        double sum=0.0;"""
         }
-
-        # No need to initialize anything (no recordable variable, no learning)
-        self.generator['omp']['body_proj_init'] = " "
 
         # Compute sum
         wsum =  """
-    // Diagonal proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target %(target)s. 
-    if(pop%(id_post)s._active){
         std::vector<double> result(%(postdim2)s*%(postdim3)s, 0.0);"""
 
         if Global.config['num_threads'] > 1:
@@ -375,16 +359,13 @@ cdef class proj%(id_proj)s_wrapper :
                 pop%(id_post)s._sum_%(target)s[j + i*(%(postdim2)s*%(postdim3)s)] += result[j];
             }
         }
-    }// active
 """ 
-
-
         if self.max_distance != 0.0:
             wgd = "&& abs(dist_w) < %(mgd)s && abs(dist_h) < %(mgd)s" % {'mgd': self.max_distance}
         else:
             wgd=""
 
-        self.generator['omp']['body_compute_psp'] = wsum % {
+        self._specific_template['psp_code'] = wsum % {
             'id_proj': self.id, 
             'target': self.target,  
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 

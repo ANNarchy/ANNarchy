@@ -144,6 +144,10 @@ class Projection(object):
         # additional code
         self._specific_template = {}
 
+    def _generate(self):
+        "Overriden by specific projections to generate the code"
+        pass
+
     def _instantiate(self, module):
         "Instantiates the projection after compilation."
         self._connect(module)
