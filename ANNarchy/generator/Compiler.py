@@ -265,7 +265,7 @@ class Compiler(object):
         libs = ""
         for l in extra_libs:
             libs += str(l) + ' '
-
+        
         # Python version
         py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
                                                'minor': sys.version_info[1] }

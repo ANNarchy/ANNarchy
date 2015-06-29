@@ -1,7 +1,7 @@
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
-from ANNarchy.generator.Generator import extra_libs 
+from ANNarchy.generator.Compiler import extra_libs 
 
 try:
     from PIL import Image
@@ -239,6 +239,9 @@ cdef class pop%(id)s_wrapper :
 
     def activate(self, bool val):
         pop%(id)s._active = val
+
+    def reset(self):
+        pop%(id)s.r = vector[double](pop%(id)s.size, 0.0)
 
     # Local parameter r
     cpdef np.ndarray get_r(self):

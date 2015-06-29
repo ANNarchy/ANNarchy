@@ -338,7 +338,7 @@ class Equation(object):
 
         # Check the steady state is not dependent on other variables
         for var in self.variables:
-            if self.local_dict[var] in steadystate:
+            if self.local_dict[var] in steadystate.atoms():
                 _print(self.expression)
                 _error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
                 exit(0)
@@ -407,7 +407,7 @@ class Equation(object):
     
         # Steady state A
         steadystate = together(real_tau * grad_var + self.local_dict[self.name] - normalized)
-    
+
         # Stepsize
         stepsize = together(self.local_dict['dt']/real_tau)
     
