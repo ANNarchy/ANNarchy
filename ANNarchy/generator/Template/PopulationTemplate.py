@@ -29,132 +29,72 @@
 #    id: id of the population
 #    additional: neuron specific definitions
 #    accessors: set of functions to export population data to python
-header_struct = {
-    'openmp': {
-    'rate' :
-"""#pragma once
-#include<random>
-
+header_struct_omp = """#pragma once
+#include <random>
+%(include_additional)s
 extern double dt;
 extern long int t;
 extern std::mt19937 rng;
-
-%(gl_ops_extern)s
-
-struct PopStruct%(id)s{
-    // Number of neurons
-    int size;
-
-    // Active
-    bool _active;
-
-%(additional)s
-
+%(extern_global_operations)s
+%(struct_additional)s
+///////////////////////////////////////////////////////////////
+// Main Structure for the population of id %(id)s (%(name)s)
+///////////////////////////////////////////////////////////////
+struct PopStruct%(id)s{  
+    int size; // Number of neurons
+    bool _active; // Allows to shut down the whole population
     // Access functions used by cython wrapper
     int get_size() { return size; }
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
+%(declare_spike_arrays)s
+    // Neuron specific parameters and variables
+%(declare_parameters_variables)s
+%(declare_delay)s
+%(declare_additional)s
+    // Access methods to the parameters and variables
+%(access_parameters_variables)s
 
-    // Neuron specific
-%(accessor)s
-
+    // Method called to initialize the data structures
     void init_population() {
-%(init)s
+        size = %(size)s;
+        _active = true;
+%(init_parameters_variables)s
+%(init_spike)s
+%(init_delay)s
+%(init_additional)s
     }
 
+    // Method called to reset the population
     void reset() {
-%(reset)s
+%(reset_spike)s
+%(reset_delay)s
+%(reset_additional)s
     }
 
+    // Method to draw new random numbers
     void update_rng() {
-        if (_active){
-            for(int i = 0; i < size; i++) {
 %(update_rng)s
-            }
-        }
     }
 
+    // Method to update global operations on the population (min/max/mean...)
     void update_global_ops() {
-        if (_active){
 %(update_global_ops)s
-        }
     }
 
+    // Method to enqueue output variables in case outgoing projections have non-zero delay
     void update_delay() {
 %(update_delay)s
     }
 
+    // Main method to update neural variables
     void update() {
-%(update)s
-    }
-};
-""",
-    'spike':
-"""#pragma once
-#include<random>
-
-extern double dt;
-extern long int t;
-extern std::mt19937 rng;
-
-struct PopStruct%(id)s{
-    // Number of neurons
-    int size;
-
-    // Active
-    bool _active;
-
-%(additional)s
-
-    // Spiking events
-    std::vector<long int> last_spike;
-    std::vector<int> spiked;
-    std::vector<int> refractory;
-    std::vector<int> refractory_remaining;
-    bool record_spike;
-    std::vector<std::vector<long> > recorded_spike;
-
-    // Access functions used by cython wrapper
-    int get_size() { return size; }
-    bool is_active() { return _active; }
-    void set_active(bool val) { _active = val; }
-
-    // Neuron specific
-%(accessor)s
-
-    void init_population() {
-%(init)s
-    }
-
-    void reset() {
-%(reset)s
-    }
-
-    void update_rng() {
-        if (_active){
-            for(int i = 0; i < size; i++) {
-%(update_rng)s
-            }
-        }
-    }
-
-    void update_global_ops() {
-        if (_active){
-%(update_global_ops)s
-        }
-    }
-
-    void update_delay() {
-%(update_delay)s
-    }
-
-    void update() {
-%(update)s
+%(update_variables)s
     }
 };
 """
-    },
-    'cuda': {
+
+header_struct_cuda = {
     'rate' :
 """#pragma once
 
@@ -208,7 +148,6 @@ struct PopStruct%(id)s{
 """,
     'spike': """
 """
-    }
 }
 
 # c like definition of neuron attributes, whereas 'local' is used if values can vary across
@@ -398,9 +337,9 @@ attribute_cpp_init = {
 attribute_delayed = {
     'openmp':{
         'local': """
-    _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""",
+        _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""",
         'global': """
-    _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""",
+        _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""",
         'reset' : """
         for ( int i = 0; i < _delayed_%(var)s.size(); i++ ) {
             _delayed_%(var)s[i] = %(var)s;
@@ -513,20 +452,37 @@ cuda_pop_kernel_call =\
 #
 #     id: id of the population
 #     target: target name (e. g. FF, LAT ...)
-model_specific_init = {
-    'spike_event':
-"""
-        // Spiking event and refractory
-        refractory = std::vector<int>(size, 0);
+spike_specific = {
+    'declare_spike': """    
+    // Structures for managing spikes
+    std::vector<long int> last_spike;
+    std::vector<int> spiked;
+""",
+    'init_spike': """
+        // Spiking variables
         spiked = std::vector<int>(0, 0);
         last_spike = std::vector<long int>(size, -10000L);
+""",
+    'declare_refractory': """    
+    // Refractory period
+    std::vector<int> refractory;
+    std::vector<int> refractory_remaining;""",
+    'init_refractory': """
+        // Refractory period
+        refractory = std::vector<int>(size, 0);
         refractory_remaining = std::vector<int>(size, 0);
 """,
-}
-
-refractoriness = {
-    'reset': """
-    refractory_remaining = std::vector<int>(size, 0);
+    'init_event-driven': """
+        last_spike = std::vector<long int>(size, -10000L);
+""",
+    'reset_spike': """
+        spiked.clear();
+        last_spike.clear();
+        last_spike = std::vector<long int>(size, -10000L);
+""",
+    'reset_refractory': """
+        refractory_remaining.clear();
+        refractory_remaining = std::vector<int>(size, 0);
 """
 }
 

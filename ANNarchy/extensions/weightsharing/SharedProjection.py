@@ -867,7 +867,7 @@ class SharedProjection(Projection):
 """ + filter_definition.strip(),
 
             # Accessors for the connectivity matrix
-            'accessor_connectivity_matrix': """
+            'access_connectivity_matrix': """
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_rank; }
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
@@ -914,7 +914,7 @@ class SharedProjection(Projection):
 
         # Kernel-based method: specify w with the correct dimension
         if kernel:
-            self._specific_template['accessor_connectivity_matrix'] += """
+            self._specific_template['access_connectivity_matrix'] += """
     // Local parameter w
     %(type_w)s get_w() { return w; }
     void set_w(%(type_w)s value) { w = value; }
@@ -996,7 +996,7 @@ class SharedProjection(Projection):
             # Declare the connectivity matrix
             'declare_connectivity_matrix': "",
             # Accessors for the connectivity matrix
-            'accessor_connectivity_matrix': "",
+            'access_connectivity_matrix': "",
             # No initiaization of the connectivity matrix
             'init_connectivity_matrix': "",
             # Export the connectivity matrix

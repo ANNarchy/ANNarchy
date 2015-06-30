@@ -201,97 +201,37 @@ class SpikeSourceArray(Population):
 
         self.init['spike_times'] = times
 
-        # Skip the normal code generation process
-        self._specific = True
-
-        self.generator['omp']['pyx_pop_struct'] = """
-    cdef struct PopStruct%(id)s :
-        int size
-        bool _active
-        void reset()
-
-        # Local parameter spike_times
-        vector[vector[double]] spike_times
-"""
-
-        self.generator['omp']['pyx_pop_class'] = """
-cdef class pop%(id)s_wrapper :
-    def __cinit__(self, size, times):
-        pop%(id)s.size = size
-        pop%(id)s.spike_times = times
-
-    def reset(self):
-        pop%(id)s.reset()
-
-    property size:
-        def __get__(self):
-            return pop%(id)s.size
-
-    def activate(self, bool val):
-        pop%(id)s._active = val
-
-    # Local parameter spike_times
-    cpdef get_spike_times(self):
-        return pop%(id)s.spike_times
-    cpdef set_spike_times(self, value):
-        pop%(id)s.spike_times = value
-"""
-
-    def generate(self):
-        # Generate the Code
-        code = """#pragma once
-
-extern long int t;
-extern double dt;
-
-// Spike array
-struct PopStruct%(id)s{
-    // Number of neurons
-    int size;
-    bool _active;
-
-    // Spiking population
-    std::deque< std::vector<int> > _delayed_spike;
-    std::vector<long int> last_spike;
-    std::vector<int> spiked;
-
-    // Local parameter spike_times
+    def _generate(self):
+        "Code generation"
+        # Do not generate default parameters and variables
+        self._specific_template['declare_parameters_variables'] = """
+    // Custom local parameter spike_times
     std::vector< std::vector< double > > spike_times ;
     std::vector< double >  next_spike ;
     std::vector< int > idx_next_spike;
+"""
+        self._specific_template['access_parameters_variables'] = ""
 
-    int get_size() { return size; }
-
-    bool is_active() { return _active; }
-    void set_active(bool value) { _active = value; }
-
-    void init_population() {
-        size = %(size)s;
-
-        spiked = std::vector<int>();
-        last_spike = std::vector<long int>(size, -10000L);
+        self._specific_template['init_parameters_variables'] ="""
+        spike_times = std::vector< std::vector< double > >(size, std::vector<double>());
         next_spike = std::vector<double>(size, -10000.0);
         for(int i=0; i< size; i++){
             if(!spike_times[i].empty())
                 next_spike[i] = spike_times[i][0];
         }
         idx_next_spike = std::vector<int>(size, 0);
-        _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
-    }
+"""
 
-    void reset() {
-        last_spike = std::vector<long int>(size, -10000L);
+        self._specific_template['reset_additional'] ="""
         next_spike = std::vector<double>(size, -10000.0);
         for(int i=0; i< size; i++){
             if(!spike_times[i].empty())
                 next_spike[i] = spike_times[i][0];
         }
         idx_next_spike = std::vector<int>(size, 0);
-        _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());
-    }
+"""
 
-    void update() {
-        // Updating the local variables of SpikeArray population %(id)s
+        self._specific_template['update_variables'] ="""
         if(_active){
             spiked.clear();
             for(int i = 0; i < size; i++){
@@ -305,18 +245,23 @@ struct PopStruct%(id)s{
                 }
             }
         }
-    }
+"""
 
-    void update_delay() {
-        if ( _active ) {
-            _delayed_spike.push_front(spiked);
-            _delayed_spike.pop_back();
-        }
-    }
-};
-""" % { 'id': self.id, 'size': self.size, 'delay': self.max_delay }
+        self._specific_template['export_parameters_variables'] ="""
+        vector[vector[double]] spike_times
+"""
 
-        return code
+        self._specific_template['wrapper_args'] = "size, times"
+        self._specific_template['wrapper_init'] = "        pop%(id)s.spike_times = times" % {'id': self.id}
+
+        self._specific_template['wrapper_access_parameters_variables'] = """
+    # Local parameter spike_times
+    cpdef get_spike_times(self):
+        return pop%(id)s.spike_times
+    cpdef set_spike_times(self, value):
+        pop%(id)s.spike_times = value
+""" % {'id': self.id}
+
         
     def _instantiate(self, module):
         # Create the Cython instance 

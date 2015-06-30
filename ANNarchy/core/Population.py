@@ -159,7 +159,7 @@ class Population(object):
         self._monitor = None
 
         # Is overwritten by SpecificPopulations
-        self._specific = False
+        self._specific_template = {}
         
     def _generate(self):
         "Overriden by specific populations to generate the code."

@@ -153,7 +153,7 @@ class DiagonalProjection(Projection):
 """,
 
             # Accessors for the connectivity matrix
-            'accessor_connectivity_matrix': """
+            'access_connectivity_matrix': """
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_rank; }
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
@@ -276,7 +276,7 @@ class DiagonalProjection(Projection):
 """,
 
             # Accessors for the connectivity matrix
-            'accessor_connectivity_matrix': """
+            'access_connectivity_matrix': """
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_rank; }
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }

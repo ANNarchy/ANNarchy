@@ -132,83 +132,67 @@ class PyxGenerator(object):
         """
         Generate population struct definition, mimics the c++ class.
         """
-        # Is it a specific population?
-        if pop.generator['omp']['pyx_pop_struct']:
-            return pop.generator['omp']['pyx_pop_struct'] %{'id': pop.id}
 
-        code = """
-    # Population %(id)s (%(name)s)
-    cdef struct PopStruct%(id)s :
-        int get_size()
-        bool is_active()
-        void set_active(bool)
-        void reset()
-"""
         # Spiking neurons have additional data
+        export_refractory = ""
         if pop.neuron_type.type == 'spike':
-            code += """
+            if pop.neuron_type.refractory or pop.refractory:
+                export_refractory = """
         vector[int] refractory
 """
-        # Parameters
+        # Parameters and variables
+        export_parameters_variables = ""
         for var in pop.neuron_type.description['parameters']:
-            code += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
-
-        # Variables
+            export_parameters_variables += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         for var in pop.neuron_type.description['variables']:
-            code += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            export_parameters_variables += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+        if 'export_parameters_variables' in pop._specific_template.keys():
+            export_parameters_variables = pop._specific_template['export_parameters_variables']
 
         # Arrays for the presynaptic sums of rate-coded neurons
+        export_targets = ""
         if pop.neuron_type.type == 'rate':
-            code += """
-        # Targets
-"""
+            export_targets += """
+        # Targets"""
             for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
-                code += """        vector[double] _sum_%(target)s
+                export_targets += """        vector[double] _sum_%(target)s
 """ % {'target' : target}
+        if 'export_targets' in pop._specific_template.keys():
+            export_targets = pop._specific_template['export_targets']
+
+        # Additional exports
+        export_additional = ""
+        if 'export_additional' in pop._specific_template.keys():
+            export_additional = pop._specific_template['export_additional']
 
         # Finalize the code
-        return code % {'id': pop.id, 'name': pop.name}
+        return PyxTemplate.pop_pyx_struct % {
+            'id': pop.id, 'name': pop.name,
+            'export_refractory': export_refractory,
+            'export_parameters_variables': export_parameters_variables,
+            'export_targets': export_targets,
+            'export_additional': export_additional,
+        }
+
 
     @staticmethod
     def _pop_wrapper(pop):
         """
         Generate population wrapper definition.
         """
-        # Is it a specific population?
-        if pop.generator['omp']['pyx_pop_class']:
-            return pop.generator['omp']['pyx_pop_class'] %{'id': pop.id}
+        wrapper_args = "size"
+        wrapper_init = """
+        pop%(id)s = size""" % {'id': pop.id}
+        wrapper_access_parameters_variables = ""
+        wrapper_access_refractory = ""
+        wrapper_access_additional = ""
 
-        # Init
-        code = """
-# Population %(id)s (%(name)s)
-cdef class pop%(id)s_wrapper :
-
-    def __cinit__(self, size):
-        pass
-"""% {'id': pop.id, 'name': pop.name}
-
-        # Size property
-        code += """
-
-    def reset(self):
-        pop%(id)s.reset()
-
-    property size:
-        def __get__(self):
-            return pop%(id)s.get_size()
-""" % {'id': pop.id}
-
-        # Activate population
-        code += """
-
-    def activate(self, bool val):
-        pop%(id)s.set_active( val )
-""" % {'id': pop.id}
 
         # Spiking neurons have aditional data
         if pop.neuron_type.type == 'spike':
-            code += """
-    # Spiking neuron
+            if pop.neuron_type.refractory or pop.refractory:
+                wrapper_access_refractory += """
+    # Refractory period
     cpdef np.ndarray get_refractory(self):
         return pop%(id)s.refractory
     cpdef set_refractory(self, np.ndarray value):
@@ -217,13 +201,31 @@ cdef class pop%(id)s_wrapper :
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            code += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
-
-        # Variables
+            wrapper_access_parameters_variables += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
         for var in pop.neuron_type.description['variables']:
-            code += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
+            wrapper_access_parameters_variables += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
-        return code
+        # Specific populations can overwrite
+        if 'wrapper_args' in pop._specific_template.keys():
+            wrapper_args = pop._specific_template['wrapper_args']
+        if 'wrapper_init' in pop._specific_template.keys():
+            wrapper_init = pop._specific_template['wrapper_init']
+        if 'wrapper_access_refractory' in pop._specific_template.keys():
+            wrapper_access_refractory = pop._specific_template['wrapper_access_refractory']
+        if 'wrapper_access_parameters_variables' in pop._specific_template.keys():
+            wrapper_access_parameters_variables = pop._specific_template['wrapper_access_parameters_variables']
+        if 'wrapper_access_additional' in pop._specific_template.keys():
+            wrapper_access_additional = pop._specific_template['wrapper_access_additional']
+
+        # Finalize the code
+        return PyxTemplate.pop_pyx_wrapper % {
+            'id': pop.id, 'name': pop.name,
+            'wrapper_args' : wrapper_args,
+            'wrapper_init' : wrapper_init,
+            'wrapper_access_parameters_variables' : wrapper_access_parameters_variables,
+            'wrapper_access_refractory' : wrapper_access_refractory,
+            'wrapper_access_additional' : wrapper_access_additional,
+        }
 
 #######################################################################
 ############## Projection #############################################
@@ -257,39 +259,30 @@ cdef class pop%(id)s_wrapper :
         sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
 
         # Export connectivity matrix
-        if 'export_connectivity' in proj._specific_template.keys():
-            export_connectivity_matrix = proj._specific_template['export_connectivity']
-        else:
-            export_connectivity_matrix = connectivity_tpl['pyx_struct']
+        export_connectivity_matrix = connectivity_tpl['pyx_struct']
 
         # Delay 
         export_delay=""
         if has_delay:
-            if 'export_delay' in proj._specific_template.keys():
-                export_delay = proj._specific_template['export_delay']
-            else:
-                export_delay = ProjTemplate.delay['pyx_struct'] % {'id': proj.id} if has_delay else ""
+            export_delay = ProjTemplate.delay['pyx_struct'] % {'id': proj.id} 
 
         # Event-driven
         export_event_driven = ""
         if has_event_driven:
-            if 'export_event_driven' in proj._specific_template.keys():
-                export_event_driven = proj._specific_template['export_event_driven']
-            else:
-                export_event_driven = ProjTemplate.event_driven['pyx_struct']
+            export_event_driven = ProjTemplate.event_driven['pyx_struct']
 
         # Determine all export methods
-        export = ""
+        export_parameters_variables = ""
         # Parameters
         for var in proj.synapse.description['parameters']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
-            export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         # Variables
         for var in proj.synapse.description['variables']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
-            export += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Structural plasticity
         structural_plasticity = ""
@@ -308,12 +301,23 @@ cdef class pop%(id)s_wrapper :
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
 
+        # Specific projections can overwrite
+        if 'export_connectivity' in proj._specific_template.keys():
+            export_connectivity_matrix = proj._specific_template['export_connectivity']
+        if 'export_delay' in proj._specific_template.keys() and has_delay:
+            export_delay = proj._specific_template['export_delay']
+        if 'export_event_driven' in proj._specific_template.keys() and has_event_driven:
+            export_event_driven = proj._specific_template['export_event_driven']
+        if 'export_parameters_variables' in proj._specific_template.keys():
+            export_parameters_variables = proj._specific_template['export_parameters_variables']
+                
+
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
             'export_connectivity': export_connectivity_matrix,
             'export_delay': export_delay,
             'export_event_driven': export_event_driven,
-            'export_parameters_variables': export,
+            'export_parameters_variables': export_parameters_variables,
             'export_structural_plasticity': structural_plasticity,
             'export_additional': proj._specific_template['export_additional'] if 'export_additional' in proj._specific_template.keys() else ""
         }
@@ -350,61 +354,40 @@ cdef class pop%(id)s_wrapper :
         sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
 
         # Arguments to the wrapper (default: synapses)
-        if 'wrapper_args' in proj._specific_template.keys():
-            wrapper_args = proj._specific_template['wrapper_args']
-        else:
-            wrapper_args = connectivity_tpl['pyx_wrapper_args']
+        wrapper_args = connectivity_tpl['pyx_wrapper_args']
 
         # Wrapper constructor
-        if 'wrapper_init_connectivity' in proj._specific_template.keys():
-            wrapper_init = proj._specific_template['wrapper_init_connectivity']
-        else:
-            wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
+        wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
 
         # Wrapper sccess to connectivity matrix 
-        if 'wrapper_access_connectivity' in proj._specific_template.keys():
-            wrapper_access_connectivity = proj._specific_template['wrapper_access_connectivity']
-        else:
-            wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+        wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
 
         # Delays
         wrapper_init_delay = ""; wrapper_access_delay=""
         if has_delay:
             # Initialize the wrapper
-            if 'wrapper_init_delay' in proj._specific_template.keys():
-                wrapper_init_delay = proj._specific_template['wrapper_init_delay']
-            else:
-                wrapper_init_delay = ProjTemplate.delay['pyx_wrapper_init'] % {'id': proj.id}
+            wrapper_init_delay = ProjTemplate.delay['pyx_wrapper_init'] % {'id_proj': proj.id}
             # Access in wrapper
-            if 'wrapper_access_delay' in proj._specific_template.keys():
-                wrapper_access_delay = proj._specific_template['wrapper_access_delay']
-            else:
-                wrapper_access_delay = ProjTemplate.delay['pyx_wrapper_accessor'] % {'id': proj.id}
+            wrapper_access_delay = ProjTemplate.delay['pyx_wrapper_accessor'] % {'id_proj': proj.id}
 
         # Event-driven
         wrapper_init_event_driven = ""
         if has_event_driven:
-            if 'wrapper_init_event_driven' in proj._specific_template.keys():
-                wrapper_init_event_driven = proj._specific_template['wrapper_init_event_driven']
-            else:
-                wrapper_init_event_driven = ProjTemplate.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id}
+            wrapper_init_event_driven = ProjTemplate.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id}
 
         # Determine all accessor methods
-        if 'wrapper_access_parameters_variables' in proj._specific_template.keys():
-            accessor = proj._specific_template['wrapper_access_parameters_variables']
-        else:
-            accessor = ""
-            for var in proj.synapse.description['parameters']:
-                if var['name'] == 'w': # Already defined by the connectivity matrix
-                    continue
-                accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
-            for var in proj.synapse.description['variables']:
-                if var['name'] == 'w': # Already defined by the connectivity matrix
-                    continue
-                accessor += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
+        wrapper_access_parameters_variables = ""
+        for var in proj.synapse.description['parameters']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+            wrapper_access_parameters_variables += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
+        for var in proj.synapse.description['variables']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+            wrapper_access_parameters_variables += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
         # Additional declarations
-        additional_declarations = proj._specific_template['wrapper_access_additional'] if 'wrapper_access_additional' in proj._specific_template.keys() else ""
+        additional_declarations = ""
 
         # Structural plasticity (TODO: not templated yet)
         structural_plasticity = ""
@@ -428,7 +411,24 @@ cdef class pop%(id)s_wrapper :
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
 
-        
+        # Specific projections can overwrite
+        if 'wrapper_args' in proj._specific_template.keys():
+            wrapper_args = proj._specific_template['wrapper_args']
+        if 'wrapper_init_connectivity' in proj._specific_template.keys():
+            wrapper_init = proj._specific_template['wrapper_init_connectivity']
+        if 'wrapper_access_connectivity' in proj._specific_template.keys():
+            wrapper_access_connectivity = proj._specific_template['wrapper_access_connectivity']
+        if 'wrapper_init_delay' in proj._specific_template.keys() and has_delay:
+            wrapper_init_delay = proj._specific_template['wrapper_init_delay']          
+        if 'wrapper_access_delay' in proj._specific_template.keys() and has_delay:
+            wrapper_access_delay = proj._specific_template['wrapper_access_delay']
+        if 'wrapper_init_event_driven' in proj._specific_template.keys() and has_event_driven:
+            wrapper_init_event_driven = proj._specific_template['wrapper_init_event_driven']
+        if 'wrapper_access_parameters_variables' in proj._specific_template.keys():
+            wrapper_access_parameters_variables = proj._specific_template['wrapper_access_parameters_variables']
+        if 'wrapper_access_additional' in proj._specific_template.keys():
+            additional_declarations = proj._specific_template['wrapper_access_additional']
+
         return PyxTemplate.proj_pyx_wrapper % {
             'id_proj': proj.id,
             'wrapper_args': wrapper_args, 
@@ -437,7 +437,7 @@ cdef class pop%(id)s_wrapper :
             'wrapper_init_event_driven': wrapper_init_event_driven,
             'wrapper_access_connectivity': wrapper_access_connectivity,
             'wrapper_access_delay': wrapper_access_delay,
-            'wrapper_access_parameters_variables': accessor,
+            'wrapper_access_parameters_variables': wrapper_access_parameters_variables,
             'wrapper_access_structural_plasticity': structural_plasticity,
             'wrapper_access_additional': additional_declarations
         }

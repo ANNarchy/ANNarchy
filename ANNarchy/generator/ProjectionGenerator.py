@@ -63,14 +63,16 @@ class ProjectionGenerator(object):
             'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
         }
 
+        # Generate declarations and accessors for the variables
         decl, accessor = self._generate_decl_and_acc(proj)
 
         # Definiton of synaptic equations, initialization
-        init = self.init_projection(proj)
+        init_parameters_variables = self.init_projection(proj)
         update_prefix, update_variables = self.update_synapse(proj)
         update_rng = self.update_random_distributions(proj)
         post_event_prefix, post_event = self.postevent(proj)
 
+        # Compute sum is the trickiest part
         if proj.synapse.type == 'rate': 
             if Global.config['paradigm'] == "openmp":
                 psp_prefix, psp_code = self._computesum_rate_openmp(proj)
@@ -84,28 +86,41 @@ class ProjectionGenerator(object):
                 exit(0)
 
         # Exact integration
-        has_exact = False
+        has_event_driven = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
-                has_exact = True
+                has_event_driven = True
 
         # Delays
         has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
+
+        # Connectivity matrix
         connectivity_matrix = self._connectivity(proj) 
+
+        # Additional info (overwritten)
+        include_additional = ""; struct_additional = ""; init_additional = ""; access_additional = ""
+        if 'include_additional' in proj._specific_template.keys():
+            include_additional = proj._specific_template['include_additional']
+        if 'struct_additional' in proj._specific_template.keys():
+            struct_additional = proj._specific_template['struct_additional']
+        if 'init_additional' in proj._specific_template.keys():
+            init_additional = proj._specific_template['init_additional']
+        if 'access_additional' in proj._specific_template.keys():
+            access_additional = proj._specific_template['access_additional']
         
         final_code = ProjTemplate.header_struct % {
-            'include_additional': "",
-            'struct_additional': "",
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'id_proj': proj.id,
             'name_pre': proj.pre.name,
             'name_post': proj.post.name,
             'target': proj.target,
+            'include_additional': include_additional,
+            'struct_additional': struct_additional,
             'declare_connectivity_matrix': connectivity_matrix['declare'],
             'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
-            'declare_delay': decl['delay'],
-            'declare_event_driven': decl['event_driven'],
+            'declare_delay': decl['delay'] if has_delay else "",
+            'declare_event_driven': decl['event_driven']if has_event_driven else "",
             'declare_rng': decl['rng'],
             'declare_parameters_variables': decl['parameters_variables'],
             'declare_cuda_stream': decl['cuda_stream'],
@@ -113,8 +128,8 @@ class ProjectionGenerator(object):
             'init_connectivity_matrix': connectivity_matrix['init'],
             'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'],
             'init_event_driven': "",
-            'init_parameters_variables': init,
-            'init_additional': "" if not 'init_additional' in proj._specific_template.keys() else proj._specific_template['init_additional'],
+            'init_parameters_variables': init_parameters_variables,
+            'init_additional': init_additional,
             'psp_prefix': psp_prefix if Global.config['paradigm'] == "openmp" else "",
             'psp_code': psp_code if Global.config['paradigm'] == "openmp" else "",
             'update_rng': update_rng,
@@ -122,9 +137,9 @@ class ProjectionGenerator(object):
             'update_variables': update_variables,
             'post_event_prefix': post_event_prefix,
             'post_event': post_event,
-            'accessor_connectivity_matrix': connectivity_matrix['accessor'],
-            'accessor_parameters_variables': accessor,
-            'accessor_additional': "",
+            'access_connectivity_matrix': connectivity_matrix['accessor'],
+            'access_parameters_variables': accessor,
+            'access_additional': access_additional,
             'cuda_flattening': ProjTemplate.cuda_flattening if Global.config['paradigm'] == "cuda" else ""
         }
         
@@ -176,39 +191,41 @@ class ProjectionGenerator(object):
         """
         declare_connectivity_matrix = ""
         init_connectivity_matrix = ""
-        accessor_connectivity_matrix = ""
+        access_connectivity_matrix = ""
         declare_inverse_connectivity_matrix = ""
         init_inverse_connectivity_matrix = ""
         
+        # Retrieve the template
         connectivity_matrix_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.connectivity_matrix_cuda
         
-        # Connectivity, overwritten if the specific fields are filled
-        if 'declare_connectivity_matrix' in proj._specific_template.keys():
-            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix'] 
-        else:
-            declare_connectivity_matrix = connectivity_matrix_tpl['declare'] 
-
-        if 'accessor_connectivity_matrix' in proj._specific_template.keys():
-            accessor_connectivity_matrix = proj._specific_template['accessor_connectivity_matrix']
-        else:
-            accessor_connectivity_matrix = connectivity_matrix_tpl['accessor']
-
-        if 'init_connectivity_matrix' in proj._specific_template.keys():
-            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix'] 
-        else:
-            init_connectivity_matrix = connectivity_matrix_tpl['init']
+        # Connectivity
+        declare_connectivity_matrix = connectivity_matrix_tpl['declare'] 
+        access_connectivity_matrix = connectivity_matrix_tpl['accessor']
+        init_connectivity_matrix = connectivity_matrix_tpl['init']
 
         # Spiking model require inverted ranks 
         if proj.synapse.type == "spike":
             inv_connectivity_matrix_tpl = ProjTemplate.inverse_connectivity_matrix if Global.config['paradigm']=="openmp" else {}
-
             declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare'] 
             init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
+
+        # Specific projections can overwrite
+        if 'declare_connectivity_matrix' in proj._specific_template.keys():
+            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix'] 
+        if 'access_connectivity_matrix' in proj._specific_template.keys():
+            access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
+        if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
+            declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix'] 
+        if 'access_connectivity_matrix' in proj._specific_template.keys():
+            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix'] 
+        if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
+            init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix'] 
+
         
         return {
             'declare' : declare_connectivity_matrix,
             'init' : init_connectivity_matrix,
-            'accessor' : accessor_connectivity_matrix,
+            'accessor' : access_connectivity_matrix,
             'declare_inverse': declare_inverse_connectivity_matrix,
             'init_inverse': init_inverse_connectivity_matrix
         }
@@ -234,6 +251,9 @@ class ProjectionGenerator(object):
         decl_template = ProjTemplate.attribute_decl[Global.config['paradigm']]
         acc_template = ProjTemplate.attribute_acc[Global.config['paradigm']]
 
+        # Delays
+        declare_delay = ProjTemplate.delay['header_struct']
+
         # Code for declarations and accessors
         accessor = ""
         # Parameters
@@ -250,30 +270,29 @@ class ProjectionGenerator(object):
             declare_parameters_variables += decl_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
             accessor += acc_template[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
 
-        # if no psp is defined, it's event-driven
+        # If no psp is defined, it's event-driven
         has_event_driven = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
                 break
-
         if has_event_driven:
             declare_event_driven = ProjTemplate.event_driven['header_struct']
 
         # Arrays for the random numbers
-        declare_rng += """
+        if len(proj.synapse.description['random_distributions']) > 0:
+            declare_rng += """
     // Random numbers
 """
-        for rd in proj.synapse.description['random_distributions']:
-            declare_rng += """    std::vector< std::vector<double> > %(rd_name)s;
+            for rd in proj.synapse.description['random_distributions']:
+                declare_rng += """    std::vector< std::vector<double> > %(rd_name)s;
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
         # Local functions
         if len(proj.synapse.description['functions'])>0:
             declare_parameters_variables += """
-    // Local functions
-"""
+    // Local functions"""
             for func in proj.synapse.description['functions']:
                 declare_parameters_variables += ' '*4 + func['cpp'] + '\n'
 
@@ -281,12 +300,27 @@ class ProjectionGenerator(object):
         if Global.config['structural_plasticity']:
             declare_parameters_variables += self.header_structural_plasticity(proj)
 
+        # Specific projections can overwrite
+        if 'declare_parameters_variables' in proj._specific_template.keys():
+            declare_parameters_variables  = proj._specific_template['declare_parameters_variables']
+        if 'declare_rng' in proj._specific_template.keys():
+            declare_rng = proj._specific_template['declare_rng']
+        if 'declare_event_driven' in proj._specific_template.keys():
+            declare_event_driven = proj._specific_template['declare_event_driven']
+        if 'declare_delay' in proj._specific_template.keys():
+            declare_delay = proj._specific_template['declare_delay']
+        if 'declare_additional' in proj._specific_template.keys():
+            declare_additional = proj._specific_template['declare_additional']
+        if 'access_parameters_variables' in proj._specific_template.keys():
+            accessor = proj._specific_template['access_parameters_variables']
+
+        # Finalize the declarations
         declaration = {
             'delay': declare_delay,
             'event_driven': declare_event_driven,
             'rng': declare_rng,
-            'parameters_variables': declare_parameters_variables if not 'declare_parameters_variables' in proj._specific_template.keys() else proj._specific_template['declare_parameters_variables'],
-            'additional': "" if not 'declare_additional' in proj._specific_template.keys() else proj._specific_template['declare_additional'],
+            'parameters_variables': declare_parameters_variables,
+            'additional': declare_additional,
             'cuda_stream': ProjTemplate.cuda_stream if Global.config['paradigm']=="cuda" else ""
         }
         

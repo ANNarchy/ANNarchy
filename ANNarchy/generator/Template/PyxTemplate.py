@@ -122,7 +122,63 @@ def set_number_threads(int n):
     setNumberThreads(n)
 '''
 
+# Export for populations
+pop_pyx_struct = """
+    # Export Population %(id)s (%(name)s)
+    cdef struct PopStruct%(id)s :
+        int get_size()
+        bool is_active()
+        void set_active(bool)
+        void reset()
+%(export_refractory)s
+%(export_parameters_variables)s
+%(export_targets)s
+%(export_additional)s
+"""
+
+# Wrapper for populations
+pop_pyx_wrapper = """
+# Wrapper for population %(id)s (%(name)s)
+cdef class pop%(id)s_wrapper :
+
+    def __cinit__(self, %(wrapper_args)s):
+%(wrapper_init)s
+
+    property size:
+        def __get__(self):
+            return pop%(id)s.get_size()
+    def reset(self):
+        pop%(id)s.reset()
+    def activate(self, bool val):
+        pop%(id)s.set_active(val)
+
+%(wrapper_access_parameters_variables)s
+%(wrapper_access_refractory)s
+%(wrapper_access_additional)s
+
+"""
+
+# Export for projections
+proj_pyx_struct = """
+    # Export Projection %(id_proj)s
+    cdef struct ProjStruct%(id_proj)s :
+        bool _learning
+
+        int get_size()
+        int nb_synapses(int)
+        void set_size(int)
+
+%(export_connectivity)s
+%(export_delay)s
+%(export_event_driven)s
+%(export_parameters_variables)s
+%(export_structural_plasticity)s
+%(export_additional)s
+"""
+
+# Wrapper for projections
 proj_pyx_wrapper = """
+# Wrapper for projection %(id_proj)s
 cdef class proj%(id_proj)s_wrapper :
 
     def __cinit__(self, %(wrapper_args)s):
@@ -146,20 +202,4 @@ cdef class proj%(id_proj)s_wrapper :
 %(wrapper_access_structural_plasticity)s
 %(wrapper_access_additional)s
 
-"""
-
-proj_pyx_struct = """
-    cdef struct ProjStruct%(id_proj)s :
-        bool _learning
-
-        int get_size()
-        int nb_synapses(int)
-        void set_size(int)
-
-%(export_connectivity)s
-%(export_delay)s
-%(export_event_driven)s
-%(export_parameters_variables)s
-%(export_structural_plasticity)s
-%(export_additional)s
 """

@@ -27,17 +27,15 @@ header_struct = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
 #include "pop%(id_post)s.hpp"
-
 %(include_additional)s
 
 extern PopStruct%(id_pre)s pop%(id_pre)s;
 extern PopStruct%(id_post)s pop%(id_post)s;
-
 %(struct_additional)s
 
-/////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-/////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 struct ProjStruct%(id_proj)s{
     // Number of dendrites
     int size;
@@ -90,10 +88,10 @@ struct ProjStruct%(id_proj)s{
     int get_size() { return size; }
     void set_size(int new_size) { size = new_size; }
 
-    // Additional accessors
-%(accessor_connectivity_matrix)s
-%(accessor_parameters_variables)s
-%(accessor_additional)s
+    // Additional access methods
+%(access_connectivity_matrix)s
+%(access_parameters_variables)s
+%(access_additional)s
 
 %(cuda_flattening)s
 };
@@ -490,19 +488,18 @@ public:
 
 delay = {
     'header_struct': """
-    std::vector< std::vector< int > > delay ;
-""",
+    // Non-uniform delay
+    std::vector< std::vector< int > > delay ;""",
     'pyx_struct':
 """
-        vector[vector[int]] delay
-""",
+        # Non-uniform delay
+        vector[vector[int]] delay""",
     'pyx_wrapper_init':
 """
-        proj%(id)s.delay = syn.delay
-""",
+        proj%(id_proj)s.delay = syn.delay""",
     'pyx_wrapper_accessor':
 """
-    # Access to delay
+    # Access to non-uniform delay
     def get_delay(self):
         return proj%(id_proj)s.delay
     def get_dendrite_delay(self, idx):

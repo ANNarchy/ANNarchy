@@ -124,22 +124,21 @@ class VideoPopulation(ImagePopulation):
         # Create the population     
         ImagePopulation.__init__(self, geometry = geometry, name=name )
 
-        # Code generator        
+    def _generate(self):
+        "Code generation"      
+        # Add corresponding libs to the Makefile
         extra_libs.append('-lopencv_core')
         extra_libs.append('-lopencv_imgproc')
         extra_libs.append('-lopencv_highgui')
         extra_libs.append('-lopencv_objdetect')
         extra_libs.append('-lopencv_video')
 
-        self._specific = True
-
-    def generate(self):
-        return self._code
-
-    def _generate(self):
-        self._code = """#pragma once
-#include <opencv2/opencv.hpp>
+        # Include opencv
+        self._specific_template['include_additional'] = """#include <opencv2/opencv.hpp>
 using namespace cv;
+"""
+        # Class for the camera device
+        self._specific_template['struct_additional'] = """
 // VideoPopulation
 class CameraDeviceCPP : public cv::VideoCapture {
 public:
@@ -187,12 +186,9 @@ protected:
     // Vector of floats for the returned image
     vector<double> img_;
 };
+"""
 
-struct PopStruct%(id)s{
-    int size;
-    bool _active;
-    // Rate
-    std::vector< double > r ;
+        self._specific_template['declare_additional'] = """
     // Camera
     CameraDeviceCPP* camera_;
     void StartCamera(int id, int width, int height, int depth){
@@ -206,53 +202,16 @@ struct PopStruct%(id)s{
             r = camera_->GrabImage();   
         }
     };
+"""
 
-    void init_population() {
-        _active = true;
-    }
+        self._specific_template['update_variables'] = ""
 
-    void update() {}
-}; 
-""" % {'id': self.id}
-
-        self.generator['omp']['pyx_pop_struct'] = """
-    # Population %(id)s (VideoPopulation)
-    cdef struct PopStruct%(id)s  :
-        int size
-        bool _active
-        vector[double] r
+        self._specific_template['export_additional'] = """
         void StartCamera(int id, int width, int height, int depth)
         void GrabImage()
-""" % {'id': self.id}
+""" 
 
-        self.generator['omp']['pyx_pop_class'] = """
-# Population %(id)s (VideoPopulation)
-cdef class pop%(id)s_wrapper :
-
-    def __cinit__(self, size):
-        pop%(id)s.size = size
-        pop%(id)s.r = vector[double](size, 0.0)
-
-    property size:
-        def __get__(self):
-            return pop%(id)s.size
-
-    def activate(self, bool val):
-        pop%(id)s._active = val
-
-    def reset(self):
-        pop%(id)s.r = vector[double](pop%(id)s.size, 0.0)
-
-    # Local parameter r
-    cpdef np.ndarray get_r(self):
-        return np.array(pop%(id)s.r)
-    cpdef set_r(self, np.ndarray value):
-        pop%(id)s.r = value
-    cpdef double get_single_r(self, int rank):
-        return pop%(id)s.r[rank]
-    cpdef set_single_r(self, int rank, value):
-        pop%(id)s.r[rank] = value
-
+        self._specific_template['wrapper_access_additional'] = """
     # CameraDevice
     def start_camera(self, int id, int width, int height, int depth):
         pop%(id)s.StartCamera(id, width, height, depth)
