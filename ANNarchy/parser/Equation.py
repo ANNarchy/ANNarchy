@@ -27,10 +27,6 @@ from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 import re
 
-
-# Predefined symbols which must not be declared by the user, but used in the equations
-_predefined = ['w']
-
 class Equation(object):
     '''
     Class to analyse one equation.
@@ -76,14 +72,15 @@ class Equation(object):
         self.local_dict = {
             'dt' : Symbol('dt'),
             't' : Symbol('double(t)*dt'),
-            'w' : Symbol('proj%(id_proj)s.w'+index), 
+            'w' : Symbol('w'+index), 
             'g_target': Symbol('sum'),
-            't_pre': Symbol('(double)(pop%(id_pre)s.last_spike[proj%(id_proj)s.pre_rank[i][j]])*dt'),
-            't_post': Symbol('(double)(pop%(id_post)s.last_spike[proj%(id_proj)s.post_rank[i]])*dt'),
+            't_pre': Symbol('(double)(pop%(id_pre)s.last_spike[pre_rank[i][j]])*dt'),
+            't_post': Symbol('(double)(pop%(id_post)s.last_spike[post_rank[i]])*dt'),
             'pos': Function('positive'),
             'positive': Function('positive'), 
             'neg': Function('negative'), 
             'negative': Function('negative'), 
+            'clip': Function('clip'), 
             'True': Symbol('true'), 
             'False': Symbol('false'), 
         }
@@ -92,8 +89,6 @@ class Equation(object):
             if var in self.local_attributes:
                 self.local_dict[var] = Symbol(prefix + sep + var + index)
             elif var in self.global_attributes:
-                if var in _predefined:
-                    continue
                 self.local_dict[var] = Symbol(prefix + sep + var + global_index)
                 
         for var in self.untouched: # Add each untouched variable
@@ -347,9 +342,9 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
         steady = self.c_code(steadystate)
         if steady == '0':
-            code = variable_name + '*= exp(dt*(proj%(id_proj)s._last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+            code = variable_name + '*= exp(dt*(_last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
         else:
-            code = variable_name + ' = ' + steady + ' + (' + variable_name + ' - ' + steady + ')*exp(dt*(proj%(id_proj)s._last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+            code = variable_name + ' = ' + steady + ' + (' + variable_name + ' - ' + steady + ')*exp(dt*(_last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
         return code
     
     def standardize_ODE(self, expression):

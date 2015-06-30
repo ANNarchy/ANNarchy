@@ -24,6 +24,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 import Template.ProjectionTemplate as ProjTemplate
+from .Utils import generate_equation_code, add_padding
 
 class ProjectionGenerator(object):
 
@@ -56,6 +57,7 @@ class ProjectionGenerator(object):
             header_struct: basic template
 
         """
+        # Dictionary for inclusions in ANNarchy.cpp
         proj_desc = {
             'include': """#include "proj%(id)s.hpp"\n""" % { 'id': proj.id },
             'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% { 'id': proj.id },
@@ -64,20 +66,27 @@ class ProjectionGenerator(object):
         }
 
         # Generate declarations and accessors for the variables
-        decl, accessor = self._generate_decl_and_acc(proj)
+        decl, accessor = self.declaration_accessors(proj)
 
-        # Definiton of synaptic equations, initialization
-        init_parameters_variables = self.init_projection(proj)
+        # Initiliaze the projection
+        init_parameters_variables = self.init_parameters_variables(proj)
+
+        # Update the variables
         update_prefix, update_variables = self.update_synapse(proj)
+
+        # Update the random distributions
+        init_rng = self.init_random_distributions(proj)
         update_rng = self.update_random_distributions(proj)
+
+        # Spiking networks may have a post_spike arguement
         post_event_prefix, post_event = self.postevent(proj)
 
         # Compute sum is the trickiest part
         if proj.synapse.type == 'rate': 
             if Global.config['paradigm'] == "openmp":
-                psp_prefix, psp_code = self._computesum_rate_openmp(proj)
+                psp_prefix, psp_code = self.computesum_rate_openmp(proj)
             else:
-                psp_header, psp_body, psp_call = self._computesum_rate_cuda(proj)
+                psp_header, psp_body, psp_call = self.computesum_rate_cuda(proj)
         else:
             if Global.config['paradigm'] == "openmp":
                 psp_prefix, psp_code = self.computesum_spiking(proj)
@@ -85,17 +94,17 @@ class ProjectionGenerator(object):
                 Global._error("Spiking networks are not supported on CUDA yet ...")
                 exit(0)
 
-        # Exact integration
+        # Detect event-driven variables
         has_event_driven = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
 
-        # Delays
+        # Detect non.uniform delays to eventually generate the code
         has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Connectivity matrix
-        connectivity_matrix = self._connectivity(proj) 
+        connectivity_matrix = self.connectivity(proj) 
 
         # Additional info (overwritten)
         include_additional = ""; struct_additional = ""; init_additional = ""; access_additional = ""
@@ -128,6 +137,7 @@ class ProjectionGenerator(object):
             'init_connectivity_matrix': connectivity_matrix['init'],
             'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'],
             'init_event_driven': "",
+            'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
             'init_additional': init_additional,
             'psp_prefix': psp_prefix if Global.config['paradigm'] == "openmp" else "",
@@ -170,7 +180,7 @@ class ProjectionGenerator(object):
 
         return proj_desc
 
-    def _connectivity(self, proj):
+    def connectivity(self, proj):
         """
         Create codes for connectivity, comprising usually of post_rank and pre_rank.
         In case of spiking models they are extended by an inv_rank data field. The
@@ -230,7 +240,7 @@ class ProjectionGenerator(object):
             'init_inverse': init_inverse_connectivity_matrix
         }
         
-    def _generate_decl_and_acc(self, proj):
+    def declaration_accessors(self, proj):
         """
         Generate declaration and accessor code for variables/parameters of the projection.
         
@@ -327,31 +337,78 @@ class ProjectionGenerator(object):
         return declaration, accessor
 
 #######################################################################
-############## BODY ###################################################
+############## Initialize projection OMP ##############################
 #######################################################################
-    def _computesum_rate_openmp(self, proj):
+    def init_parameters_variables(self, proj):
+
+        # Is it a specific projection?
+        if 'init_parameters_variables' in proj._specific_template.keys():
+            return proj._specific_template['init_parameters_variables']
+
+        # Learning by default
+        code = ""
+
+        # In case of GPUs we need to pre-allocate data fields
+        # on the GPU, the weight variable w must be added additionally
+        if Global.config['paradigm'] == "cuda":
+            code += ProjTemplate.cuda_proj_base_data % {'id': proj.id}
+
+        # choose initialization templates based on chosen paradigm
+        attr_init_tpl = ProjTemplate.attribute_cpp_init[Global.config['paradigm']]
+
+        # Initialize parameters
+        for var in proj.synapse.description['parameters']:
+            if var['name'] == 'w':
+                continue
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_init_tpl[var['locality']] % { 'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter' }
+
+        # Initialize variables
+        for var in proj.synapse.description['variables']:
+            if var['name'] == 'w':
+                continue
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_init_tpl[var['locality']] % { 'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable' }
+
+        # Pruning
+        if Global.config['structural_plasticity']:
+            if 'pruning' in proj.synapse.description.keys():
+                code +="""
+    // Pruning
+    proj%(id_proj)s._pruning = false;
+    proj%(id_proj)s._pruning_period = 1;
+    proj%(id_proj)s._pruning_offset = 0;
+"""% {'id_proj': proj.id}
+            if 'creating' in proj.synapse.description.keys():
+                code +="""
+    // Creating
+    proj%(id_proj)s._creating = false;
+    proj%(id_proj)s._creating_period = 1;
+    proj%(id_proj)s._creating_offset = 0;
+"""% {'id_proj': proj.id}
+
+        return code
+
+#######################################################################
+############## Compute sum rate-coded OMP #############################
+#######################################################################
+    def computesum_rate_openmp(self, proj):
         code = ""    
         ids = {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
+        # Default variables needed in psp_code
+        psp_prefix = """
+        int nb_post; double sum;"""
+        if 'psp_prefix' in proj._specific_template.keys():
+            psp_prefix = proj._specific_template['psp_prefix']
+
         # Specific projection
         if 'psp_code' in proj._specific_template.keys():
-            final_code = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
-    if (pop%(id_post)s._active){
-%(code)s
-    } // active
-        """ % {'id_proj' : proj.id, 'target': proj.target,
-               'name_post': proj.post.name, 'name_pre': proj.pre.name,
-               'id_post': proj.post.id,
-               'code': proj._specific_template['psp_code'],
-               }
-            return proj._specific_template['psp_prefix'], final_code
+            return psp_prefix, proj._specific_template['psp_code']
 
-        # default variables needed in psp_code
-        psp_prefix = "\tint nb_post;\n\tdouble sum;"
 
         # Retrieve the psp code
-        if Global.config['num_threads'] == 1 or proj.post.size <= Global.OMP_MIN_NB_NEURONS: # No need to copy the pre-synaptic firing rates
+        if Global.config['num_threads'] < 2 or proj.post.size <= Global.OMP_MIN_NB_NEURONS: # No need to copy the pre-synaptic firing rates
             if not 'psp' in  proj.synapse.description.keys(): # default
                 psp = """w[i][j] * pop%(id_pre)s.r[rk_pre];""" % ids
             else: # custom psp
@@ -388,7 +445,8 @@ class ProjectionGenerator(object):
                                 'pop%(id_pre)s._delayed_%(var)s[%(delay)s]' % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
                             )
 
-            psp = psp.replace('[rk_pre]', '[pre_rank[i][j]]'% ids)
+            psp = psp.replace('[rk_pre]', '[pre_rank[i][j]]')
+            psp = psp.replace('[rk_post]', '[post_rank[i]]')
             omp_code = ""
             pre_copy = ""
 
@@ -402,7 +460,8 @@ class ProjectionGenerator(object):
                 if proj.uniform_delay == -1 : # Non-uniform delays
                     for var in list(set(proj.synapse.description['dependencies']['pre'])):
                         if var in proj.pre.neuron_type.description['local']:
-                            psp = psp.replace('pop%(id_pre)s.%(var)s[rk_pre]'% {'id_pre': proj.pre.id, 'var': var}, 'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1][rk_pre]' % {'id_pre': proj.pre.id, 'id_proj' : proj.id, 'var': var})
+                            psp = psp.replace(  'pop%(id_pre)s.%(var)s[rk_pre]'% {'id_pre': proj.pre.id, 'var': var}, 
+                                                'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1][rk_pre]' % {'id_pre': proj.pre.id, 'id_proj' : proj.id, 'var': var})
                         else:
                             Global._error('The psp accesses a global variable with a non-uniform delay!')
                             Global._print(proj.synapse.description['psp']['eq'])
@@ -436,110 +495,33 @@ class ProjectionGenerator(object):
 
                 omp_code += "nb_post) schedule(dynamic)"
             # Modify the index
-            psp = psp.replace('[rk_pre]', '[pre_rank[i][j]]'% ids)
+            psp = psp.replace('[rk_pre]', '[pre_rank[i][j]]')
+            psp = psp.replace('[rk_post]', '[post_rank[i]]')
         
         # Generate the code depending on the operation
-        if proj.synapse.operation == 'sum': # normal summation
-            code+= """
-%(pre_copy)s
-        nb_post = post_rank.size();
-        %(omp_code)s
-        for(int i = 0; i < nb_post; i++) {
-            sum = 0.0;
-            for(int j = 0; j < pre_rank[i].size(); j++) {
-                sum += %(psp)s
-            }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+        sum_code = ProjTemplate.summation_operation[proj.synapse.operation] %{
+            'pre_copy': pre_copy,
+            'omp_code': omp_code,
+            'psp': psp.replace(';', ''), 
+            'id_post': proj.post.id,
+            'target': proj.target,
         }
-"""%{ 'id_proj' : proj.id, 'target': proj.target, 
-      'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-      'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-      'psp': psp, 
-      'omp_code': omp_code,
-      'pre_copy': pre_copy
-    }
 
-        elif proj.synapse.operation == 'max': # max pooling
-            code+= """
-        %(pre_copy)s
-        nb_post = post_rank.size();
-        %(omp_code)s
-        for(int i = 0; i < nb_post; i++){
-            int j = 0;
-            sum = %(psp)s ;
-            for(int j = 1; j < pre_rank[i].size(); j++){
-                if(%(psp)s > sum){
-                    sum = %(psp)s ;
-                }
-            }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
-        }
-"""%{'id_proj' : proj.id, 'target': proj.target, 
-     'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-     'psp': psp.replace(';', ''), 'omp_code': omp_code,
-     'pre_copy': pre_copy}
-
-        elif proj.synapse.operation == 'min': # max pooling
-            code+= """
-        %(pre_copy)s
-        nb_post = post_rank.size();
-        %(omp_code)s
-        for(int i = 0; i < nb_post; i++){
-            int j= 0;
-            sum = %(psp)s ;
-            for(int j = 1; j < pre_rank[i].size(); j++){
-                if(%(psp)s < sum){
-                    sum = %(psp)s ;
-                }
-            }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
-        }
-"""%{'id_proj' : proj.id, 'target': proj.target, 
-    'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'psp': psp.replace(';', ''), 'omp_code': omp_code,
-     'pre_copy': pre_copy}
-
-        elif proj.synapse.operation == 'mean': # max pooling
-            code+= """
-        %(pre_copy)s
-        nb_post = post_rank.size();
-        %(omp_code)s
-        for(int i = 0; i < nb_post; i++){
-            sum = 0.0 ;
-            for(int j = 0; j < pre_rank[i].size(); j++){
-                sum += %(psp)s ;
-            }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum / (double)(pre_rank[i].size());
-        }
-"""%{ 'id_proj' : proj.id, 'target': proj.target,
-      'id_post': proj.post.id, 'id_pre': proj.pre.id,
-      'psp': psp.replace(';', ''), 'omp_code': omp_code,
-      'pre_copy': pre_copy }
-
-        # Profiling code
-        if Global.config['profiling']:
-            from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
-
-        # annotate code
-        if self._prof_gen:
-            code = self._prof_gen.annotate_computesum_rate_omp(code)
-
-        # finish the code
+        # Finish the code
         code = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
-    if (pop%(id_post)s._active){
+        if (pop%(id_post)s._active){
 %(code)s
-    } // active
-        """ % {'id_proj' : proj.id, 'target': proj.target,
-               'name_post': proj.post.name, 'name_pre': proj.pre.name,
-               'id_post': proj.post.id,
-               'code': code,
+        } // active
+        """ % {'id_post': proj.post.id,
+               'code': add_padding(sum_code, 3),
                }
 
         return psp_prefix, code
 
-    def _computesum_rate_cuda(self, proj):
+#######################################################################
+############## Compute sum rate-coded CUDA ############################
+#######################################################################
+    def computesum_rate_cuda(self, proj):
         """
         returns all data needed for compute postsynaptic sum kernels:
 
@@ -583,303 +565,321 @@ class ProjectionGenerator(object):
 
         return header_code, body_code, call_code
 
+
+#######################################################################
+############## Compute sum spiking OMP ################################
+#######################################################################
     def computesum_spiking(self, proj):
+        # Needed variables
+        psp_prefix = """
+        int nb_post, i, j, rk_j, rk_post, rk_pre;
+        double sum;"""
+        if 'psp_prefix' in proj._specific_template.keys():
+            psp_prefix = proj._specific_template['psp_prefix']
+
         # Specific projection
         if 'psp_code' in proj._specific_template.keys():
-            final_code = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. operation = mean
-    if (pop%(id_post)s._active){
-%(code)s
-    } // active
-        """ % {'id_proj' : proj.id, 'target': proj.target,
-               'name_post': proj.post.name, 'name_pre': proj.pre.name,
-               'id_post': proj.post.id,
-               'code': proj._specific_template['psp_code'],
-               }
-            return proj._specific_template['psp_prefix'], final_code
+            return psp_prefix, proj._specific_template['psp_code']
 
+        # Basic tags
         ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target} 
-        psp_prefix = "\tint nb_post, i, j, rk_j, rk_post, rk_pre;\n\tdouble sum;"
+
+        # Determine the mode of synaptic transmission
+        continous_transmission = False
+        if 'psp' in  proj.synapse.description.keys(): # continous
+            continous_transmission = True
+
+        ####################################################
+        # Event-driven summation of g_target
+        ####################################################
+        # Strings
+        updated_variables_list = []
+        g_target = ""; g_target_bounds = ""
+        g_target_code = ""    
 
         # Analyse all elements of pre_spike
-        pre_event = ""
-        pre_event_list = []
-        learning = ""
-        psp = ""; psp_bounds = ""
-
         for eq in proj.synapse.description['pre_spike']:
-            if eq['name'] == 'w':
-                bounds = ""                
-                for line in get_bounds(eq).splitlines():
-                    bounds += ' ' * 24 + line % ids + '\n'
-                learning = """                    if(_learning){
-                        %(eq)s 
-%(bounds)s
-                    }
-""" % {'id_proj' : proj.id, 'eq': eq['cpp'] % ids, 'bounds': bounds % ids}
-            elif eq['name'] == 'g_target':
-                psp = eq['cpp'].split('=')[1]
+            # g_target is treated differently
+            # Must be at the end of the equations
+            if eq['name'] == 'g_target': 
+                g_target = eq['cpp'].split('=')[1]
+                g_target_code = """
+            // Increase the post-synaptic conductance %(eq)s
+            pop%(id_post)s.g_%(target)s[post_rank[i]] += %(g_target)s ;
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'g_target': g_target % ids, 'eq': eq['eq']}
+                # Determine bounds
                 for key, val in eq['bounds'].items():
+                    if not key in ['min', 'max']:
+                        continue
                     try:
                         value = str(float(val))
                     except:
                         value = "%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse.description['global'] else '[i][j]'}
-                    psp_bounds += """
-                if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
-                    pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
+                    g_target += """
+if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
+    pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'op': "<" if key == 'min' else '>', 'val': value }
-            else:
-                pre_event_list.append(eq)
 
-        # Is the summation event-based or psp-based?
-        event_based = True
-        psp_sum = None
-        if 'psp' in  proj.synapse.description.keys(): # not event-based
-            event_based = False
-            psp_code = ""            
-            # Event-based summation of psp
-        elif psp == "": # default g_target += w
-            psp_code = """pop%(id_post)s.g_%(target)s[post_rank[i]] += w[i][j]
+            elif eq['name'] == 'w': # Surround it by the learning flag
+                updated_variables_list += """
+// Plasticity of w can be disabled
+if(_learning){
+    // %(eq)s
+    %(cpp)s 
+    %(bounds)s
+}
+""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
+
+            else: # Normal synaptic variable
+                updated_variables_list += """
+// %(eq)s
+%(cpp)s 
+%(bounds)s""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
+
+
+        # Generate the default post-conductance increase
+        # default g_target += w
+        if not continous_transmission and g_target == "": 
+            g_target_code = """
+            // Increase the post-synaptic conductance g_target += w
+            pop%(id_post)s.g_%(target)s[post_rank[i]] += w[i][j];
 """ % ids
-        else:
-            psp_code = """pop%(id_post)s.g_%(target)s[post_rank[i]] += %(psp)s
-""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'psp': psp % ids}
 
 
-        # Exact integration
+        # Event-driven integration of synaptic variables
         has_exact = False
-        exact_code = ''
+        event_driven_code = ''
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
                 has_exact = True
-                exact_code += """
-                // Exact integration of synaptic variables
-                %(exact)s
-""" % {'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id}}
+                event_driven_code += """
+            // %(eq)s
+            %(exact)s
+""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id}}
         if has_exact:
-                event_based = False # to avoid the if not post.spike
-                exact_code += """
-                // Update the last event for the synapse 
-                _last_event[i][j] = t;
+                event_driven_code += """
+            // Update the last event for the synapse 
+            _last_event[i][j] = t;
 """ % {'id_proj' : proj.id, 'exact': var['cpp']}
 
             
-        # Other event-driven variables
-        if len(pre_event_list) > 0 or learning != "": # There are other variables to update than g_target
+        # Generate code for pre-spike variables
+        pre_event = ""
+        if len(updated_variables_list) > 0: 
             code = ""
-            for eq in pre_event_list:
-                code += ' ' * 20 + eq['cpp'] % ids + '\n'
-                for line in get_bounds(eq).splitlines():
-                    code += ' ' * 20 + line % ids + '\n'
-
-
-            if event_based:
+            for var in updated_variables_list:
+                code += var
+            code = add_padding(code, 4)
+            if not has_exact:
                 pre_event += """
-                // Event-based variables should not be updated when the postsynaptic neuron fires.
-                if(pop%(id_post)s.last_spike[post_rank[i]] != t-1){
-                    // Pre-spike events
+            // Event-based variables should not be updated when the postsynaptic neuron fires.
+            if(pop%(id_post)s.last_spike[post_rank[i]] != t-1){
 %(pre_event)s
-                    // Plasticity of w can be disabled
-%(learning)s
-                }
-"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
+            }
+"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
             else:
                 pre_event += """
-                // Pre-spike events with exact integration should always be evaluated...
-                {
-                    // Pre-spike events
+            // Pre-spike events with exact integration should always be evaluated...
+            {
 %(pre_event)s
-                    // Plasticity of w can be disabled
-%(learning)s
-                }
-"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code, 'learning': learning}
+            }
+"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
 
         # Take delays into account if any
         if proj.max_delay > 1:
             if proj.uniform_delay == -1 : # Non-uniform delays
                 Global._error('Non-uniform delays are not yet possible for spiking networks.')
-                exit()
+                exit(0)
             else: # Uniform delays
                 pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
         else:
             pre_array = "pop%(id_pre)s.spiked" % ids
 
-        # No need for openmp if less than 10 neurons
+        # No need for openmp if less than 100 post neurons
         omp_code = ""
         if Global.config['num_threads']>1:
-            if proj.post.size > Global.OMP_MIN_NB_NEURONS and (len(pre_event_list) > 0 or learning != ""):
+            if proj.post.size > Global.OMP_MIN_NB_NEURONS and len(updated_variables_list) > 0:
                 omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id}  
-            
-        if psp == "" and pre_event == "":
-            code = ""
-        else:
+        
+        # Generate the whole code block
+        code = ""    
+        if g_target_code != "" or pre_event != "": 
             code = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. event-based
-    if (pop%(id_post)s._active){
-        std::vector< std::pair<int, int> > proj%(id_proj)s_inv_post;
-        // Iterate over all incoming spikes
-        for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
-            rk_j = %(pre_array)s[_idx_j];
-            proj%(id_proj)s_inv_post = inv_rank[rk_j];
-            nb_post = proj%(id_proj)s_inv_post.size();
-            // Iterate over connected post neurons
-            %(omp_code)s
-            for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
-                // Retrieve the correct indices
-                i = proj%(id_proj)s_inv_post[_idx_i].first;
-                j = proj%(id_proj)s_inv_post[_idx_i].second;
-%(exact)s
-                // Increase the post-synaptic conductance
-                %(psp)s
-                %(psp_bounds)s
-%(pre_event)s
-            }
-        }
-    } // active
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'pre_array': pre_array,
-    'pre_event': pre_event, 'psp': psp_code , 'psp_bounds': psp_bounds, 'omp_code': omp_code,
-    'exact': exact_code }
-
-        # Not even-driven summation of psp
-        if 'psp' in  proj.synapse.description.keys(): # not event-based
-            if Global.config['num_threads']>1:
-                omp_code = """#pragma omp parallel for private(sum)""" if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-            else:
-                omp_code = ""
-
-            # Code
-            psp_sum = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s. sum of psp
-    if (pop%(id_post)s._active){
+// Event-based summation
+if (pop%(id_post)s._active){
+    std::vector< std::pair<int, int> > inv_post;
+    // Iterate over all incoming spikes
+    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
+        rk_j = %(pre_array)s[_idx_j];
+        inv_post = inv_rank[rk_j];
+        nb_post = inv_post.size();
+        // Iterate over connected post neurons
         %(omp_code)s
-        for(int i = 0; i < post_rank.size(); i++){
-            sum = 0.0;
-            for(int j = 0; j < pre_rank[i].size(); j++){
-                rk_post = post_rank[i];
-                rk_pre = pre_rank[i][j];
-                sum += %(psp)s
-            }
-            pop%(id_post)s.g_%(target)s[post_rank[i]] += sum;
+        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+            // Retrieve the correct indices
+            i = inv_post[_idx_i].first;
+            j = inv_post[_idx_i].second;
+%(event_driven)s
+%(g_target)s
+%(pre_event)s
         }
-    } // active
-""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 
-       'name_post': proj.post.name, 'name_pre': proj.pre.name, 
-       'psp': proj.synapse.description['psp']['cpp'] % ids, 'omp_code': omp_code}
+    }
+} // active
+"""%{   'id_post': proj.post.id, 
+        'pre_array': pre_array,
+        'pre_event': pre_event, 
+        'g_target': g_target_code, 
+        'omp_code': omp_code,
+        'event_driven': event_driven_code 
+    }
 
-            code += psp_sum
+        # Add tabs
+        code = add_padding(code, 2)
 
-        # annotate code
+        ####################################################
+        # Not even-driven summation of psp: like rate-coded
+        ####################################################
+        if 'psp' in  proj.synapse.description.keys(): # not event-based
+            # Compute it as if it were rate-coded
+            psp_code = self.computesum_rate_openmp(proj)[1]
+            # Change _sum_target into g_target
+            psp_code = psp_code.replace(
+                'pop%(id_post)s._sum_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target},
+                'pop%(id_post)s.g_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target}
+            )
+            # Add it to the main code
+            code += """
+        // PSP-based summation"""
+            code += psp_code
+
+        # Annotate code
         if self._prof_gen:
             code = self._prof_gen.annotate_computesum_spiking_omp(code)
 
-        # TODO: adjust in parser
-        # proj%(id)s._last_event is wrong
-        code = code.replace('proj'+str(proj.id)+'.','')
-
         return psp_prefix, code
 
+#######################################################################
+############## Post-synaptic event spiking OMP ########################
+#######################################################################
     def postevent(self, proj):
-        code = ""
         if proj.synapse.type == "rate":
             return "",""
 
         if proj.synapse.description['post_spike'] == []:
             return "",""
 
-        post_code = ""
-        post_event_prefix = "int i, j, _idx_i;"
+        post_event_prefix = """
+        int i, j, _idx_i;"""
 
-        # Exact integration
-        has_exact = False
+        # Event-driven integration
+        has_event = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
-                has_exact = True
-                post_code += """
-                // Exact integration
-                %(exact)s
-""" % {'exact': var['cpp'] %{'id_proj' : proj.id}}
-        if has_exact:
-            post_code += """
-                // Update the last event for the synapse
-                _last_event[i][j] = t;
-""" % {'id_proj' : proj.id, 'exact': var['cpp']}
+                has_event_driven = True
+
+        # Generate event-driven code
+        event_driven_code = ""
+        if has_event_driven:
+            for var in proj.synapse.description['variables']:
+                if var['method'] == 'event-driven':
+                    event_driven_code += var['cpp'] %{'id_proj' : proj.id} + '\n'
+            event_driven_code += """
+// Update the last event for the synapse
+_last_event[i][j] = t;
+""" 
+            event_driven_code = add_padding(event_driven_code, 3)
 
         # Gather the equations
-        post_code += """
-                // Post-spike events
-"""
+        post_code = ""
         for eq in proj.synapse.description['post_spike']:
-            post_code += ' ' * 16 + eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
-            for line in get_bounds(eq).splitlines():
-                post_code += ' ' * 16 + line % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
+            post_code += eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
+            post_code += get_bounds(eq) % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
+        post_code = add_padding(post_code, 3)
 
-        # Generate the code
-        if post_code != "":
-            if Global.config['num_threads']>1:
-                omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-            else:
-                omp_code = ""
-            code += """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    if(_learning && pop%(id_post)s._active){
-        for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-            i = pop%(id_post)s.spiked[_idx_i];
-            // Test if the post neuron has connections in this projection (PopulationView)
-            if(std::find(post_rank.begin(), post_rank.end(), i) == post_rank.end())
-                continue;
-            // Iterate over all synapse to this neuron
-            %(omp_code)s 
-            for(j = 0; j < pre_rank[i].size(); j++){
+        # OMP code
+        if Global.config['num_threads']>1:
+            omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+        else:
+            omp_code = ""
+
+        # Generate the code block
+        code = """
+if(_learning && pop%(id_post)s._active){
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        i = pop%(id_post)s.spiked[_idx_i];
+        // Test if the post neuron has connections in this projection (PopulationView)
+        if(std::find(post_rank.begin(), post_rank.end(), i) == post_rank.end())
+            continue;
+        // Iterate over all synapse to this neuron
+        %(omp_code)s 
+        for(j = 0; j < pre_rank[i].size(); j++){
+%(event_driven)s
 %(post_event)s
-            }
         }
     }
-"""%{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-    'name_post': proj.post.name, 'name_pre': proj.pre.name,
-    'post_event': post_code, 'omp_code': omp_code}
+}
+"""%{'id_post': proj.post.id, 
+    'post_event': post_code, 
+    'event_driven': event_driven_code,
+    'omp_code': omp_code}
 
-        # TODO: adjust in parser
-        # proj%(id)s._last_event is wrong
-        code = code.replace('proj'+str(proj.id)+'.','')
+        return post_event_prefix, add_padding(code, 2)
 
-        return post_event_prefix, code
 
+#######################################################################
+############## Synaptic variables OMP #################################
+#######################################################################
     def update_synapse(self, proj):
-        prefix = "int rk_post, rk_pre;"
-        code = ""
-        from .Utils import generate_equation_code
+        prefix = """
+        int rk_post, rk_pre;"""
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=3) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
 
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=4) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
+        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
 
-        # Generate the code
-        if local_eq.strip() != '' or global_eq.strip() != '' :
-            if Global.config['num_threads']>1:
-                omp_code = '#pragma omp parallel for private(rk_pre, rk_post)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
-            else:
-                omp_code = ""
+        # Skip generation if 
+        if local_eq.strip() == '' and global_eq.strip() == '' :
+            return "", ""
 
-            code+= """
-        %(omp_code)s
-        for(int i = 0; i < post_rank.size(); i++){
-            rk_post = post_rank[i];
-%(global)s
-"""%{'id_proj' : proj.id, 'global': global_eq, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'name_post': proj.post.name, 'name_pre': proj.pre.name, 'omp_code': omp_code}
+        # OpenMP
+        omp_code = ""
+        if Global.config['num_threads']>1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
+            omp_code = '#pragma omp parallel for private(rk_pre, rk_post)'
 
-            if local_eq.strip() != "": 
-                code+= """
-            for(int j = 0; j < pre_rank[i].size(); j++){
-                rk_pre = pre_rank[i][j];
-                %(local)s
-            }
-"""%{'id_proj' : proj.id, 'local': local_eq}
-
-            code += """
+        # Code template  
+        if local_eq.strip() != "": # local synapses are updated
+            code = """
+if(_learning && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int i = 0; i < post_rank.size(); i++){
+        rk_post = post_rank[i];
+    %(global)s
+        for(int j = 0; j < pre_rank[i].size(); j++){
+            rk_pre = pre_rank[i][j];
+    %(local)s
         }
-"""
+    }
+}
+"""%{   'global': global_eq, 
+        'local': local_eq,
+        'id_post': proj.post.id, 
+        'omp_code': omp_code
+    }
+        else: # Only global variables
+            code = """
+if(_learning && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int i = 0; i < post_rank.size(); i++){
+        rk_post = post_rank[i];
+    %(global)s
+    }
+}
+"""%{   'global': global_eq, 
+        'id_post': proj.post.id, 
+        'omp_code': omp_code
+    }
 
         # Take delays into account if any
         if proj.max_delay > 1:
@@ -895,6 +895,7 @@ class ProjectionGenerator(object):
                             'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
                             'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
                         )
+                # Access to spike arrays should also be delayed? TODO check
                 code = code.replace(
                     'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
                     'pop%(id_pre)s._delayed_spike[delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
@@ -911,6 +912,7 @@ class ProjectionGenerator(object):
                             'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
                             'pop%(id_pre)s._delayed_%(var)s[%(delay)s]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var, 'delay': str(proj.uniform_delay-1)}
                         )
+                # Access to spike arrays should also be delayed? TODO check
                 code = code.replace(
                     'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
                     'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
@@ -920,23 +922,17 @@ class ProjectionGenerator(object):
         if self._prof_gen:
             code = self._prof_gen.annotate_update_synapse_omp(code)
 
-        # finish the code block
-        if code != "":
-            final_code = """
-    // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
-    if(_learning && pop%(id_post)s._active){
-%(code)s
-    } // active
-""" % { 'name_pre': proj.pre.name, 'name_post': proj.post.name, 'target': proj.target,
-        'id_proj': proj.id, 'id_post': proj.post.id, 'code': code }
-            return prefix, final_code
-        else:
-            return "", ""
+        # Return the code block
+        return prefix, add_padding(code, 2)
 
+
+#######################################################################
+############## Random Distributions OMP ###############################
+#######################################################################
     def init_random_distributions(self, proj):
         # Is it a specific population?
-        if proj.generator['omp']['body_random_dist_init']:
-            return proj.generator['omp']['body_random_dist_init'] %{'id_proj': proj.id}
+        if 'init_rng' in proj._specific_template.keys():
+            return proj._specific_template['init_rng']
 
         code = ""
         for rd in proj.synapse.description['random_distributions']:
@@ -950,8 +946,8 @@ class ProjectionGenerator(object):
 
     def update_random_distributions(self, proj):
         # Is it a specific population?
-        if proj.generator['omp']['body_random_dist_update']:
-            return proj.generator['omp']['body_random_dist_update'] %{'id': pop.id}
+        if 'update_rng' in proj._specific_template.keys():
+            return proj._specific_template['update_rng']
 
         code = ""
         if len(proj.synapse.description['random_distributions']) > 0:
@@ -969,63 +965,6 @@ class ProjectionGenerator(object):
         }
     }
 """
-        return code
-
-    def init_projection(self, proj):
-
-        # Is it a specific projection?
-        if proj.generator['omp']['body_proj_init']:
-            return proj.generator['omp']['body_proj_init']
-
-        # Learning by default
-        code = """
-    _learning = true;
-""" % { 'id_proj': proj.id, 'target': proj.target,
-        'id_post': proj.post.id, 'id_pre': proj.pre.id,
-        'name_post': proj.post.name, 'name_pre': proj.pre.name}
-
-        # In case of GPUs we need to pre-allocate data fields
-        # on the GPU, the weight variable w must be added additionally
-        if Global.config['paradigm'] == "cuda":
-            code += ProjTemplate.cuda_proj_base_data % {'id': proj.id}
-
-        # choose initialization templates based on chosen paradigm
-        attr_init_tpl = ProjTemplate.attribute_cpp_init[Global.config['paradigm']]
-
-        # Initialize parameters
-        for var in proj.synapse.description['parameters']:
-            if var['name'] == 'w':
-                continue
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_init_tpl[var['locality']] % { 'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter' }
-
-        # Initialize variables
-        for var in proj.synapse.description['variables']:
-            if var['name'] == 'w':
-                continue
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_init_tpl[var['locality']] % { 'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable' }
-
-        # Random numbers
-        code += self.init_random_distributions(proj)
-
-        # Pruning
-        if Global.config['structural_plasticity']:
-            if 'pruning' in proj.synapse.description.keys():
-                code +="""
-    // Pruning
-    proj%(id_proj)s._pruning = false;
-    proj%(id_proj)s._pruning_period = 1;
-    proj%(id_proj)s._pruning_offset = 0;
-"""% {'id_proj': proj.id}
-            if 'creating' in proj.synapse.description.keys():
-                code +="""
-    // Creating
-    proj%(id_proj)s._creating = false;
-    proj%(id_proj)s._creating_period = 1;
-    proj%(id_proj)s._creating_offset = 0;
-"""% {'id_proj': proj.id}
-
         return code
 
 
@@ -1212,6 +1151,9 @@ class ProjectionGenerator(object):
         
         return pruning
 
+#######################################################################
+############## CUDA stuff #############################################
+#######################################################################
     def _cuda_memory_transfers(self, proj):
         host_device_transfer = ""
         device_host_transfer = ""

@@ -54,10 +54,12 @@ struct ProjStruct%(id_proj)s{
 
     // Method called to initialize the projection
     void init_projection() {
+        _learning = true;
 %(init_connectivity_matrix)s
 %(init_inverse_connectivity_matrix)s
 %(init_event_driven)s
 %(init_parameters_variables)s
+%(init_rng)s
 %(init_additional)s
     }
 
@@ -238,12 +240,71 @@ inverse_connectivity_matrix = {
     std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
 """,
     'init': """
-    inv_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
-    for(int i=0; i<pre_rank.size(); i++){
-        for(int j=0; j<pre_rank[i].size(); j++){
-            inv_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
+        inv_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
+        for(int i=0; i<pre_rank.size(); i++){
+            for(int j=0; j<pre_rank[i].size(); j++){
+                inv_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
+            }
+        }
+"""
+}
+
+# Summation operations performed for rate-coded networks and OMP
+# sum, min, max, mean
+summation_operation = {
+    'sum' : """
+%(pre_copy)s
+nb_post = post_rank.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++) {
+    sum = 0.0;
+    for(int j = 0; j < pre_rank[i].size(); j++) {
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+}
+""",
+    'max': """
+%(pre_copy)s
+nb_post = post_rank.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++){
+    int j = 0;
+    sum = %(psp)s ;
+    for(int j = 1; j < pre_rank[i].size(); j++){
+        if(%(psp)s > sum){
+            sum = %(psp)s ;
         }
     }
+    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+}
+""",
+    'min': """
+%(pre_copy)s
+nb_post = post_rank.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++){
+    int j= 0;
+    sum = %(psp)s ;
+    for(int j = 1; j < pre_rank[i].size(); j++){
+        if(%(psp)s < sum){
+            sum = %(psp)s ;
+        }
+    }
+    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+}
+""",
+    'mean': """
+%(pre_copy)s
+nb_post = post_rank.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++){
+    sum = 0.0 ;
+    for(int j = 0; j < pre_rank[i].size(); j++){
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum / (double)(pre_rank[i].size());
+}
 """
 }
 

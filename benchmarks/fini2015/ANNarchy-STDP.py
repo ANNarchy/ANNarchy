@@ -50,8 +50,8 @@ STDP = Synapse(
         alpha = 0.012 : postsynaptic
     """,
     equations = """
-        tau_stdp * dApre/dt = -Apre : exact
-        tau_stdp * dApost/dt = -Apost : exact
+        tau_stdp * dApre/dt = -Apre : event-driven
+        tau_stdp * dApost/dt = -Apost : event-driven
     """,
     pre_spike="""
         g_target += w

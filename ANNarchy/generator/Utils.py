@@ -56,8 +56,7 @@ def generate_equation_code(id, desc, locality='local', obj='pop', conductance_on
     #########################
     if len(pre_odes) > 0:
         code += """
-// Before the ODES
-"""
+// Before the ODES"""
         for param in pre_odes: 
             if conductance_only: # skip the variables which do not start with g_
                 if not param['name'].startswith('g_'):
@@ -96,12 +95,10 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
     # Iterate over all steps
     if len(odes) > 0:
         code += """
-// ODES
-"""
+// ODES"""
         for step in range(nb_step):
             code += """
-// Step %(step)s
-        """ % {'step' : str(step+1)}
+// Step %(step)s""" % {'step' : str(step+1)}
             for param in odes:
                 if conductance_only: # skip the variables which do not start with g_
                     if not param['name'].startswith('g_'):
@@ -120,8 +117,7 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
 
         # Generate the switch code
         code += """    
-// Switch values
-"""
+// Switch values"""
         for param in odes: 
             if conductance_only: # skip the variables which do not start with g_
                 if not param['name'].startswith('g_'):
@@ -152,8 +148,7 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
     #######################
     if len(post_odes) > 0:
         code += """
-// After the ODES
-"""
+// After the ODES"""
         for param in post_odes:           
             if conductance_only: # skip the variables which do not start with g_
                 if not param['name'].startswith('g_'):
@@ -180,14 +175,14 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
        }
 
     # Add the padding to each line
-    padded_code = reindentBlock(code, 4*padding)
+    padded_code = add_padding(code, padding)
 
     return padded_code
 
-def indentLine(line, spaces=4):
-    return (' ' * spaces) + line
+def indentLine(line, spaces=1):
+    return (' ' * 4 * spaces) + line
 
-def reindentBlock(s, numSpaces):
+def add_padding(s, numSpaces):
     import string
     s = string.split(s, '\n')
     s = map(lambda a, ns=numSpaces: indentLine(a, ns), s)
