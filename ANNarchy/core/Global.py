@@ -184,6 +184,18 @@ def get_population(name, net_id=0):
     _error("get_population(): the population", name, "does not exist.")
     return None
     
+def populations(net_id=0):
+    """
+    Returns a list of all declared populations.
+    """
+    return _network[net_id]['populations']
+
+def projections(net_id=0):
+    """
+    Returns a list of all declared projections.
+    """
+    return _network[net_id]['projections']
+
 def add_function(function):
     """
     Defines a global function which can be used by all neurons and synapses.
