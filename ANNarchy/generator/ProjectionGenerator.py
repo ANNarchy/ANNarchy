@@ -711,7 +711,7 @@ if (pop%(id_post)s._active){
     // Iterate over all incoming spikes
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
         rk_j = %(pre_array)s[_idx_j];
-        inv_post = inv_rank[rk_j];
+        inv_post = inv_pre_rank[rk_j];
         nb_post = inv_post.size();
         // Iterate over connected post neurons
         %(omp_code)s
@@ -769,7 +769,7 @@ if (pop%(id_post)s._active){
             return "",""
 
         post_event_prefix = """
-        int i, j, rk_post;"""
+        int i, j, rk_post, nb_pre;"""
 
         # Event-driven integration
         has_event = False
@@ -800,7 +800,7 @@ _last_event[i][j] = t;
 
         # OMP code
         if Global.config['num_threads']>1:
-            omp_code = '#pragma omp parallel for private(j) firstprivate(i)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            omp_code = '#pragma omp parallel for private(j) firstprivate(i, nb_pre)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
         else:
             omp_code = ""
 
@@ -811,18 +811,12 @@ if(_learning && pop%(id_post)s._active){
         // Rank of the postsynaptic neuron which fired
         rk_post = pop%(id_post)s.spiked[_idx_i];
         // Find its index in the projection
-        i = -1;
-        for(int f=0; f<post_rank.size(); f++){
-            if(post_rank[f] == rk_post){
-                i = f;
-                break;
-            }
-        }
-        if(i == -1)
-            continue;
+        i = inv_post_rank[rk_post];
+        if(!i) continue;
         // Iterate over all synapse to this neuron
+        nb_pre = pre_rank[i].size();
         %(omp_code)s 
-        for(j = 0; j < pre_rank[i].size(); j++){
+        for(j = 0; j < nb_pre; j++){
 %(event_driven)s
 %(post_event)s
         }
@@ -1022,7 +1016,7 @@ if(_learning && pop%(id_post)s._active){
         if proj.max_delay > 1 and proj.uniform_delay == -1:
             delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
         
-        # Spiking networks must update the inv_rank array
+        # Spiking networks must update the inv_pre_rank array
         spiking_addcode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_addcode']
         spiking_removecode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_removecode']
 

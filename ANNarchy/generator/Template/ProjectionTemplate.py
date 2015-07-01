@@ -237,14 +237,19 @@ connectivity_matrix_cuda = {
 
 inverse_connectivity_matrix = {
     'declare': """
-    std::map< int, std::vector< std::pair<int, int> > > inv_rank ;
+    std::map< int, std::vector< std::pair<int, int> > > inv_pre_rank ;
+    std::map< int, int > inv_post_rank ;
 """,
     'init': """
-        inv_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
+        inv_pre_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
         for(int i=0; i<pre_rank.size(); i++){
             for(int j=0; j<pre_rank[i].size(); j++){
-                inv_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
+                inv_pre_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
             }
+        }
+        inv_post_rank =  std::map< int, int > ();
+        for(int i=0; i<post_rank.size(); i++){
+            inv_post_rank[post_rank[i]] = i;
         }
 """
 }
@@ -639,7 +644,7 @@ structural_plasticity = {
     long int _creating_offset;
 """,
         'spiking_addcode': """
-        // Add the corresponding pair in inv_rank
+        // Add the corresponding pair in inv_pre_rank
         int idx_post = 0;
         for(int i=0; i<post_rank.size(); i++){
             if(post_rank[i] == post){
@@ -647,14 +652,14 @@ structural_plasticity = {
                 break;
             }
         }
-        inv_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
+        inv_pre_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
 """,
         'spiking_removecode': """
-        // Remove the corresponding pair in inv_rank
+        // Remove the corresponding pair in inv_pre_rank
         int pre = pre_rank[post][idx];
-        for(int i=0; i<inv_rank[pre].size(); i++){
-            if(inv_rank[pre][i].second == idx){
-                inv_rank[pre].erase(inv_rank[pre].begin() + i);
+        for(int i=0; i<inv_pre_rank[pre].size(); i++){
+            if(inv_pre_rank[pre][i].second == idx){
+                inv_pre_rank[pre].erase(inv_pre_rank[pre].begin() + i);
                 break;
             }
         }
