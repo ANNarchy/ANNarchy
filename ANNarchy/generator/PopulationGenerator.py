@@ -209,11 +209,11 @@ class PopulationGenerator(object):
         reset = ""
         if pop.max_delay > 1:
             delay_init, delay_update, delay_reset = self._delay_code(pop)
-            delay_update = delay_update.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+            #delay_update = delay_update.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
             init += delay_init
             reset += delay_reset
 
-        update_rng = self.update_random_distributions(pop).replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
+        update_rng = self.update_random_distributions(pop)#.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
         if pop.neuron_type.type == 'rate':
             body, header, update_call = self._update_rate_neuron_cuda(pop)
@@ -584,7 +584,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 %(eqs)s
     }
 """ % {'id': pop.id, 'eqs': eqs }
-            glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
+            #glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
 
         # Local variables
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}

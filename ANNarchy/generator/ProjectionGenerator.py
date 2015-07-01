@@ -532,7 +532,7 @@ class ProjectionGenerator(object):
         code = ""
 
         psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-        psp = psp.replace('rk_pre', 'rank_pre[j]')
+        psp = psp.replace('[rk_pre]', '[rank_pre[j]]')
 
         body_code = ProjTemplate.cuda_psp_kernel % {
                                    'id': proj.id,
@@ -769,7 +769,7 @@ if (pop%(id_post)s._active){
             return "",""
 
         post_event_prefix = """
-        int i, j, _idx_i;"""
+        int i, j, rk_post;"""
 
         # Event-driven integration
         has_event = False
@@ -782,6 +782,7 @@ if (pop%(id_post)s._active){
         if has_event_driven:
             for var in proj.synapse.description['variables']:
                 if var['method'] == 'event-driven':
+                    event_driven_code += '// ' + var['eq'] + '\n'
                     event_driven_code += var['cpp'] %{'id_proj' : proj.id} + '\n'
             event_driven_code += """
 // Update the last event for the synapse
@@ -792,6 +793,7 @@ _last_event[i][j] = t;
         # Gather the equations
         post_code = ""
         for eq in proj.synapse.description['post_spike']:
+            post_code += '// ' + eq['eq'] + '\n'
             post_code += eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
             post_code += get_bounds(eq) % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
         post_code = add_padding(post_code, 3)
@@ -806,9 +808,17 @@ _last_event[i][j] = t;
         code = """
 if(_learning && pop%(id_post)s._active){
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        i = pop%(id_post)s.spiked[_idx_i];
-        // Test if the post neuron has connections in this projection (PopulationView)
-        if(std::find(post_rank.begin(), post_rank.end(), i) == post_rank.end())
+        // Rank of the postsynaptic neuron which fired
+        rk_post = pop%(id_post)s.spiked[_idx_i];
+        // Find its index in the projection
+        i = -1;
+        for(int f=0; f<post_rank.size(); f++){
+            if(post_rank[f] == rk_post){
+                i = f;
+                break;
+            }
+        }
+        if(i == -1)
             continue;
         // Iterate over all synapse to this neuron
         %(omp_code)s 

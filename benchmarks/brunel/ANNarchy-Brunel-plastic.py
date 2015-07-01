@@ -15,7 +15,7 @@ plot_all = True
 g       = 5.0    # Ratio of IPSP to EPSP amplitude: J_I/J_E
 delay   = 1.5    # synaptic delay in ms
 V_th    = 20.0   # Spike threshold in mV
-simtime = 300.   # how long shall we simulate [ms]
+simtime = 300.0   # how long shall we simulate [ms]
 Nrec    = 50     # Number of neurons to record 
 
 NE = 8000
@@ -87,7 +87,7 @@ noise = PoissonPopulation(geometry=10000, rates=20.0)
 ee = Projection(PE, PE, 'exc', STDP).connect_fixed_number_pre(number=CE, weights=Uniform(0.5*JE, 1.5*JE), delays=delay)
 ei = Projection(PE, PI, 'exc').connect_fixed_number_pre(number=CE, weights=Uniform(0.5*JE, 1.5*JE), delays=delay)
 ii = Projection(PI, P , 'inh').connect_fixed_number_pre(number=CI, weights=JI, delays=delay)
-noise = Projection(noise, P, 'exc').connect_fixed_number_pre(number=1000, weights=JE, delays=delay)
+noisy = Projection(noise, P, 'exc').connect_fixed_number_pre(number=1000, weights=JE, delays=delay)
 
 compile()
 
