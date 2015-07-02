@@ -135,7 +135,7 @@ class ProjectionGenerator(object):
             'declare_cuda_stream': decl['cuda_stream'],
             'declare_additional': decl['additional'],
             'init_connectivity_matrix': connectivity_matrix['init'],
-            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'],
+            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_pre': proj.pre.id},
             'init_event_driven': "",
             'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
@@ -811,8 +811,9 @@ if(_learning && pop%(id_post)s._active){
         // Rank of the postsynaptic neuron which fired
         rk_post = pop%(id_post)s.spiked[_idx_i];
         // Find its index in the projection
-        i = inv_post_rank[rk_post];
-        if(!i) continue;
+        i = inv_post_rank.at(rk_post);
+        // Leave if the neuron is not part of the projection
+        if (i==-1) continue;
         // Iterate over all synapse to this neuron
         nb_pre = pre_rank[i].size();
         %(omp_code)s 

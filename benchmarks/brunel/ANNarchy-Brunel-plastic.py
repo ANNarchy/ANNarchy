@@ -20,11 +20,11 @@ Nrec    = 50     # Number of neurons to record
 
 NE = 8000
 NI = 2000
-N = NE+NI
-CE    = int(NE/10) # number of excitatory synapses per neuron
-CI    = int(NI/10) # number of inhibitory synapses per neuron
-JE  = 0.1
-JI  = -g*JE
+N  = NE+NI
+CE = int(NE/10) # number of excitatory synapses per neuron
+CI = int(NI/10) # number of inhibitory synapses per neuron
+JE = 0.1
+JI = -g*JE
 
 # ###########################################
 # Neuron model
@@ -84,10 +84,14 @@ noise = PoissonPopulation(geometry=10000, rates=20.0)
 # ###########################################
 # Projections
 # ###########################################
-ee = Projection(PE, PE, 'exc', STDP).connect_fixed_number_pre(number=CE, weights=Uniform(0.5*JE, 1.5*JE), delays=delay)
-ei = Projection(PE, PI, 'exc').connect_fixed_number_pre(number=CE, weights=Uniform(0.5*JE, 1.5*JE), delays=delay)
-ii = Projection(PI, P , 'inh').connect_fixed_number_pre(number=CI, weights=JI, delays=delay)
-noisy = Projection(noise, P, 'exc').connect_fixed_number_pre(number=1000, weights=JE, delays=delay)
+ee = Projection(PE, PE, 'exc', STDP)
+ee.connect_fixed_number_pre(number=CE, weights=Uniform(0.5*JE, 1.5*JE), delays=delay)
+ei = Projection(PE, PI, 'exc')
+ei.connect_fixed_number_pre(number=CE, weights=Uniform(0.5*JE, 1.5*JE), delays=delay)
+ii = Projection(PI, P , 'inh')
+ii.connect_fixed_number_pre(number=CI, weights=JI, delays=delay)
+noisy = Projection(noise, P, 'exc')
+noisy.connect_fixed_number_pre(number=1000, weights=JE, delays=delay)
 
 compile()
 

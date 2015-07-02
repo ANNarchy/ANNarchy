@@ -238,7 +238,7 @@ connectivity_matrix_cuda = {
 inverse_connectivity_matrix = {
     'declare': """
     std::map< int, std::vector< std::pair<int, int> > > inv_pre_rank ;
-    std::map< int, int > inv_post_rank ;
+    std::vector< int > inv_post_rank ;
 """,
     'init': """
         inv_pre_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
@@ -247,7 +247,7 @@ inverse_connectivity_matrix = {
                 inv_pre_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
             }
         }
-        inv_post_rank =  std::map< int, int > ();
+        inv_post_rank =  std::vector< int > (pop%(id_pre)s.size, -1);
         for(int i=0; i<post_rank.size(); i++){
             inv_post_rank[post_rank[i]] = i;
         }
