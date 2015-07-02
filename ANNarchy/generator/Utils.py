@@ -175,14 +175,14 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
        }
 
     # Add the padding to each line
-    padded_code = add_padding(code, padding)
+    padded_code = tabify(code, padding)
 
     return padded_code
 
 def indentLine(line, spaces=1):
     return (' ' * 4 * spaces) + line
 
-def add_padding(s, numSpaces):
+def tabify(s, numSpaces):
     import string
     s = string.split(s, '\n')
     s = map(lambda a, ns=numSpaces: indentLine(a, ns), s)

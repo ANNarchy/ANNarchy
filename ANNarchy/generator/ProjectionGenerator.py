@@ -24,7 +24,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 import Template.ProjectionTemplate as ProjTemplate
-from .Utils import generate_equation_code, add_padding
+from .Utils import generate_equation_code, tabify
 
 class ProjectionGenerator(object):
 
@@ -513,7 +513,7 @@ class ProjectionGenerator(object):
 %(code)s
         } // active
         """ % {'id_post': proj.post.id,
-               'code': add_padding(sum_code, 3),
+               'code': tabify(sum_code, 3),
                }
 
         return psp_prefix, code
@@ -669,7 +669,7 @@ if(_learning){
             code = ""
             for var in updated_variables_list:
                 code += var
-            code = add_padding(code, 4)
+            code = tabify(code, 4)
             if not has_exact:
                 pre_event += """
             // Event-based variables should not be updated when the postsynaptic neuron fires.
@@ -699,7 +699,7 @@ if(_learning){
         omp_code = ""
         if Global.config['num_threads']>1:
             if proj.post.size > Global.OMP_MIN_NB_NEURONS and len(updated_variables_list) > 0:
-                omp_code = """#pragma omp parallel for firstprivate(nb_post, proj%(id_proj)s_inv_post) private(i, j)"""%{'id_proj' : proj.id}  
+                omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""%{'id_proj' : proj.id}  
         
         # Generate the whole code block
         code = ""    
@@ -734,7 +734,7 @@ if (pop%(id_post)s._active){
     }
 
         # Add tabs
-        code = add_padding(code, 2)
+        code = tabify(code, 2)
 
         ####################################################
         # Not even-driven summation of psp: like rate-coded
@@ -788,7 +788,7 @@ if (pop%(id_post)s._active){
 // Update the last event for the synapse
 _last_event[i][j] = t;
 """ 
-            event_driven_code = add_padding(event_driven_code, 3)
+            event_driven_code = tabify(event_driven_code, 3)
 
         # Gather the equations
         post_code = ""
@@ -796,7 +796,7 @@ _last_event[i][j] = t;
             post_code += '// ' + eq['eq'] + '\n'
             post_code += eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
             post_code += get_bounds(eq) % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
-        post_code = add_padding(post_code, 3)
+        post_code = tabify(post_code, 3)
 
         # OMP code
         if Global.config['num_threads']>1:
@@ -828,7 +828,7 @@ if(_learning && pop%(id_post)s._active){
     'event_driven': event_driven_code,
     'omp_code': omp_code}
 
-        return post_event_prefix, add_padding(code, 2)
+        return post_event_prefix, tabify(code, 2)
 
 
 #######################################################################
@@ -928,7 +928,7 @@ if(_learning && pop%(id_post)s._active){
             code = self._prof_gen.annotate_update_synapse_omp(code)
 
         # Return the code block
-        return prefix, add_padding(code, 2)
+        return prefix, tabify(code, 2)
 
 
 #######################################################################
