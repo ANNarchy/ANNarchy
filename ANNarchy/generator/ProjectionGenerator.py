@@ -226,7 +226,7 @@ class ProjectionGenerator(object):
             access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
         if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
             declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix'] 
-        if 'access_connectivity_matrix' in proj._specific_template.keys():
+        if 'init_connectivity_matrix' in proj._specific_template.keys():
             init_connectivity_matrix = proj._specific_template['init_connectivity_matrix'] 
         if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
             init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix'] 

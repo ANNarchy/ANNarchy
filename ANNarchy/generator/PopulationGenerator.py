@@ -826,7 +826,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             stop_code = """
     // Stop condition (all)
     bool stop_condition(){
-        for(int i=0; i<pop%(id)s.size; i++)
+        for(int i=0; i<size; i++)
         {
             if(!(%(condition)s)){
                 return false;
