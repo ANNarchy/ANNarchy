@@ -60,20 +60,19 @@ class DecodingProjection(Projection):
 """ % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size }
 
         self._specific_template['psp_code'] = """
-        // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s with target exc. event-based
         if (pop%(id_post)s._active){
-            std::vector< std::pair<int, int> > proj%(id_proj)s_inv_post;
+            std::vector< std::pair<int, int> > inv_post;
             std::vector<double> rates = std::vector<double>(%(post_size)s, 0.0);
             // Iterate over all incoming spikes
             for(int _idx_j = 0; _idx_j < pop%(id_pre)s.spiked.size(); _idx_j++){
                 rk_j = pop%(id_pre)s.spiked[_idx_j];
-                proj%(id_proj)s_inv_post = inv_rank[rk_j];
-                nb_post = proj%(id_proj)s_inv_post.size();
+                inv_post = inv_pre_rank[rk_j];
+                nb_post = inv_post.size();
                 // Iterate over connected post neurons
                 for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
                     // Retrieve the correct indices
-                    i = proj%(id_proj)s_inv_post[_idx_i].first;
-                    j = proj%(id_proj)s_inv_post[_idx_i].second;
+                    i = inv_post[_idx_i].first;
+                    j = inv_post[_idx_i].second;
 
                     // Increase the post-synaptic conductance
                     rates[post_rank[i]] +=  w[i][j];

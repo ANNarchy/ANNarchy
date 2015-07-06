@@ -226,7 +226,7 @@ class ProjectionGenerator(object):
             access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
         if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
             declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix'] 
-        if 'access_connectivity_matrix' in proj._specific_template.keys():
+        if 'init_connectivity_matrix' in proj._specific_template.keys():
             init_connectivity_matrix = proj._specific_template['init_connectivity_matrix'] 
         if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
             init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix'] 
@@ -394,7 +394,7 @@ class ProjectionGenerator(object):
 #######################################################################
     def computesum_rate_openmp(self, proj):
         code = ""    
-        ids = {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+        ids = {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'local_index': "[i][j]", 'global_index': '[i]'}
 
         # Default variables needed in psp_code
         psp_prefix = """
@@ -582,7 +582,7 @@ class ProjectionGenerator(object):
             return psp_prefix, proj._specific_template['psp_code']
 
         # Basic tags
-        ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target} 
+        ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'local_index': "[i][j]", 'global_index': '[i]'} 
 
         # Determine the mode of synaptic transmission
         continous_transmission = False
@@ -602,19 +602,20 @@ class ProjectionGenerator(object):
             # g_target is treated differently
             # Must be at the end of the equations
             if eq['name'] == 'g_target': 
-                g_target = eq['cpp'].split('=')[1]
+                g_target = eq['cpp'].split('=')[1] % ids
                 g_target_code = """
             // Increase the post-synaptic conductance %(eq)s
             pop%(id_post)s.g_%(target)s[post_rank[i]] += %(g_target)s ;
-""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'g_target': g_target % ids, 'eq': eq['eq']}
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'g_target': g_target, 'eq': eq['eq']}
                 # Determine bounds
                 for key, val in eq['bounds'].items():
                     if not key in ['min', 'max']:
                         continue
                     try:
                         value = str(float(val))
-                    except:
+                    except: # TODO: more complex operations
                         value = "%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse.description['global'] else '[i][j]'}
+
                     g_target += """
 if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
     pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
@@ -655,7 +656,7 @@ if(_learning){
                 event_driven_code += """
             // %(eq)s
             %(exact)s
-""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id}}
+""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id, 'local_index': "[i][j]", 'global_index': '[i]'}}
         if has_exact:
                 event_driven_code += """
             // Update the last event for the synapse 
@@ -784,7 +785,7 @@ if (pop%(id_post)s._active){
             for var in proj.synapse.description['variables']:
                 if var['method'] == 'event-driven':
                     event_driven_code += '// ' + var['eq'] + '\n'
-                    event_driven_code += var['cpp'] %{'id_proj' : proj.id} + '\n'
+                    event_driven_code += var['cpp'] %{'id_proj' : proj.id, 'local_index': "[i][j]", 'global_index': '[i]'} + '\n'
             event_driven_code += """
 // Update the last event for the synapse
 _last_event[i][j] = t;
@@ -795,7 +796,7 @@ _last_event[i][j] = t;
         post_code = ""
         for eq in proj.synapse.description['post_spike']:
             post_code += '// ' + eq['eq'] + '\n'
-            post_code += eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
+            post_code += eq['cpp'] %{'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'local_index': "[i][j]", 'global_index': '[i]'} + '\n'
             post_code += get_bounds(eq) % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id} + '\n'
         post_code = tabify(post_code, 3)
 
@@ -840,10 +841,10 @@ if(_learning && pop%(id_post)s._active){
         int rk_post, rk_pre;"""
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
+        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'local_index': "[i][j]", 'global_index': '[i]'}
 
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id} 
+        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3) %{'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'local_index': "[i][j]", 'global_index': '[i]'} 
 
         # Skip generation if 
         if local_eq.strip() == '' and global_eq.strip() == '' :
@@ -1210,19 +1211,17 @@ if(_learning && pop%(id_post)s._active){
 ######################################
 def get_bounds(param):
     "Analyses the bounds of a variable and returns the corresponding code."
-    from ANNarchy.parser.SingleAnalysis import pattern_omp as pattern
     code = ""
     # Min-Max bounds
     for bound, val in param['bounds'].items():
         if bound == "init":
             continue
 
-        code += """if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
-""" % {'obj': pattern['proj_prefix'],
-       'sep': pattern['proj_sep'],
-       'index': pattern['proj_index'],
-       'var' : param['name'], 'val' : val, 'id': id, 
+        code += """if(%(var)s%(index)s %(operator)s %(val)s)
+    %(var)s%(index)s = %(val)s;
+""" % {'index': "[i][j]" ,
+       'var' : param['name'], 
+       'val' : val, 
        'operator': '<' if bound=='min' else '>'
        }
     return code

@@ -276,7 +276,6 @@ omp_run_until_template = {
 
 omp_initialize_template = """
 %(prof_init)s
-
     // Internal variables
     dt = _dt;
     t = (long int)(0);

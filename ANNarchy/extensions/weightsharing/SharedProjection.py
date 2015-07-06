@@ -583,11 +583,15 @@ class SharedProjection(Projection):
                 rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the increment
-        psp = self.synapse.description['psp']['cpp']
+        psp = self.synapse.description['psp']['cpp'] % {
+            'id_pre': self.pre.id, 
+            'id_post': self.post.id, 
+            'local_index':'[i][j]', 
+            'global_index': '[i]'}
         index = ""
         for dim in range(self.dim_kernel):
             index += '[' + indices[dim] + '_w]'
-        increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
+        increment = psp.replace('[i][j]', index)
 
 
         # Delays
@@ -688,11 +692,15 @@ class SharedProjection(Projection):
             rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the increment
-        psp = self.synapse.description['psp']['cpp']
+        psp = self.synapse.description['psp']['cpp'] % {
+            'id_pre': self.pre.id, 
+            'id_post': self.post.id, 
+            'local_index':'[i][j]', 
+            'global_index': '[i]'}
         index = "[coord["+str(self.dim_pre)+"]]"
         for dim in range(self.dim_kernel-1):
             index += '[' + indices[dim] + '_w]'
-        increment = psp.replace('[i][j]', index).replace('proj%(id_proj)s.w', 'proj%(id_proj)s_w')
+        increment = psp.replace('[i][j]', index)
 
 
         # Delays
@@ -775,7 +783,11 @@ class SharedProjection(Projection):
                 rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the value to pool
-        psp = self.synapse.description['psp']['cpp']
+        psp = self.synapse.description['psp']['cpp']% {
+            'id_pre': self.pre.id, 
+            'id_post': self.post.id, 
+            'local_index':'[i][j]', 
+            'global_index': '[i]'}
 
         # Delays
         if self.delays > Global.config['dt']:
@@ -947,12 +959,7 @@ class SharedProjection(Projection):
         # OMP code
         omp_code = ""
         if Global.config['num_threads'] > 1:
-            if filter_definition != "":
-                omp_code = """
-        %(copy_filter)s
-        #pragma omp parallel for private(sum, rk_pre, coord) firstprivate(_w)"""% {'id_proj': self.id, 'copy_filter': filter_definition.replace('w', '_w = w')}
-            else: # no need to firstprivate it
-                omp_code = """
+            omp_code = """
         #pragma omp parallel for private(sum, rk_pre, coord) """          
 
         # Compute sum
@@ -1039,14 +1046,20 @@ class SharedProjection(Projection):
             omp_code = ""
 
         # PSP
-        psp = self.synapse.description['psp']['cpp'].replace('%(id_proj)s', '%(id)s').replace('rk_pre', 'pre_rank[i][j]').replace(';', '') % {'id' : self.projection.id, 'id_post': self.post.id, 'id_pre': self.pre.id}
+        psp = self.synapse.description['psp']['cpp']% {
+            'id_proj': self.id,
+            'id_pre': self.pre.id, 
+            'id_post': self.post.id, 
+            'local_index':'[i][j]', 
+            'global_index': '[i]'}
+        psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
             
         # Take delays into account if any
         if self.projection.max_delay > 1:
             if self.projection.uniform_delay == -1 : # Non-uniform delays
                 psp = psp.replace(
                     'pop%(id_pre)s.r['%{'id_pre': self.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[delay[i][j]-1]['%{'id' : self.projection.id, 'id_pre': self.pre.id}
+                    'pop%(id_pre)s._delayed_r[delay[i][j]-1]['%{'id_pre': self.pre.id}
                 )
             else: # Uniform delays
                 psp = psp.replace(

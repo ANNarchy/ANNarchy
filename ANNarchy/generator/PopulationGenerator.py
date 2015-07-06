@@ -356,7 +356,7 @@ class PopulationGenerator(object):
         if len(pop.global_operations)==0:
             return ""
 
-        code = "//Initialize global operations\n"
+        code = "// Initialize global operations\n"
         for op in pop.global_operations:
             if Global.config['paradigm'] == "openmp":
                 code += """    _%(op)s_%(var)s = 0.0;
@@ -506,7 +506,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         code = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
         if eqs.strip() != "":
             code += """
             // Updating the global variables
@@ -514,7 +514,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 """ % {'eqs': eqs}
 
         # Local variables, evaluated in parallel
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         code += """
             // Updating the local variables
@@ -580,7 +580,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 
         #Global variables
         glob_eqs = ""
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
         if eqs.strip() != "":
             glob_eqs = """
     if ( threadIdx.x == 0)
@@ -591,7 +591,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             #glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
 
         # Local variables
-        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id}
+        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in pop.neuron_type.description['random_distributions']:
@@ -676,7 +676,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
-            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id}
+            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
             code = """
             if( refractory_remaining[i] > 0){ // Refractory period
 %(eqs)s
@@ -691,7 +691,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             refrac_inc = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
         if eqs.strip() != "":
             global_code = eqs
         else:
@@ -702,7 +702,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
 
         # Local variables, evaluated in parallel
-        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id}
+        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
         # if profiling enabled, annotate with profiling code
         if Global.config['profiling']:
@@ -711,14 +711,14 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             code = pGen.annotate_update_neuron_omp(code)
 
         # Process the condition
-        cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id}
+        cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
         # reset equations
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
                 %(reset)s
-""" % {'reset': eq['cpp'] % {'id': pop.id}}
+""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
 
         # Gather code
         spike_gather = """
@@ -807,7 +807,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             pattern = pattern_omp
 
         extract_stop_condition(pop.neuron_type.description, pattern)
-        condition = pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}
+        condition = pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
         if pop.neuron_type.description['stop_condition']['type'] == 'any':
             stop_code = """
@@ -826,7 +826,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             stop_code = """
     // Stop condition (all)
     bool stop_condition(){
-        for(int i=0; i<pop%(id)s.size; i++)
+        for(int i=0; i<size; i++)
         {
             if(!(%(condition)s)){
                 return false;

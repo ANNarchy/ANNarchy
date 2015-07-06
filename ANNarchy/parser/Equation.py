@@ -33,8 +33,7 @@ class Equation(object):
     '''
     def __init__(self, name, expression, description, 
                  untouched = [], 
-                 method='explicit', type=None, 
-                 index='[i]', global_index=''):
+                 method='explicit', type=None):
         '''
         Parameters:
         
@@ -45,7 +44,6 @@ class Equation(object):
         * global_variables: a list of the global variables
         * method: the numerical method to use for ODEs
         * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
-        * index: index to be used for variables (default: [i])
         * untouched: list of terms which should not be modified
         '''
         # Store attributes
@@ -69,7 +67,7 @@ class Equation(object):
         self.local_dict = {
             'dt' : Symbol('dt'),
             't' : Symbol('double(t)*dt'),
-            'w' : Symbol('w'+index), 
+            'w' : Symbol('w%(local_index)s'), 
             'g_target': Symbol('sum'),
             't_pre': Symbol('(double)(pop%(id_pre)s.last_spike[pre_rank[i][j]])*dt'),
             't_post': Symbol('(double)(pop%(id_post)s.last_spike[post_rank[i]])*dt'),
@@ -84,9 +82,9 @@ class Equation(object):
 
         for var in self.attributes: # Add each variable of the neuron
             if var in self.local_attributes:
-                self.local_dict[var] = Symbol(var + index)
+                self.local_dict[var] = Symbol(var + '%(local_index)s')
             elif var in self.global_attributes:
-                self.local_dict[var] = Symbol(var + global_index)
+                self.local_dict[var] = Symbol(var + '%(global_index)s')
                 
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)
@@ -372,8 +370,9 @@ class Equation(object):
         self.analysed = analysed
     
         # Collect factor on the gradient and main variable A*dV/dt + B*V = C
-        expanded = analysed.expand(modulus=None, power_base=False, power_exp=False, 
-                                   mul=True, log=False, multinomial=False)
+        expanded = analysed.expand(
+            modulus=None, power_base=False, power_exp=False, 
+            mul=True, log=False, multinomial=False)
 
         # Make sure the expansion went well
         collected_var = collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
