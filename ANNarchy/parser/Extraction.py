@@ -412,10 +412,9 @@ def extract_spike_variable(description, pattern):
         _print(description['raw_spike'])
         exit(0)
         
-    translator = Equation('raw_spike_cond', cond[0].strip(), 
-                          description, 
-                          index=pattern['pop_index'],
-                          global_index=pattern['pop_globalindex'])
+    translator = Equation('raw_spike_cond', 
+                            cond[0].strip(), 
+                            description)
     raw_spike_code = translator.parse()
     
     reset_desc = []
@@ -423,9 +422,7 @@ def extract_spike_variable(description, pattern):
         reset_desc = process_equations(description['raw_reset'])
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'], 
-                                  description,
-                                  index=pattern['pop_index'],
-                                  global_index=pattern['pop_globalindex'])
+                                  description)
             var['cpp'] = translator.parse() 
     
     return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
@@ -447,7 +444,9 @@ def extract_pre_spike_variable(description, pattern):
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq ,
-                                'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
+                                'bounds': bounds, 
+                                'flags':flags, 'ctype' : ctype, 
+                                'init' : init} )
 
     return pre_spike_var 
 
@@ -487,9 +486,7 @@ def extract_stop_condition(pop, pattern):
     # Convert the expression
     translator = Equation('stop_cond', eq, 
                           pop, 
-                          type = 'cond',
-                          index=pattern['pop_index'],
-                          global_index=pattern['pop_globalindex'])
+                          type = 'cond')
     code = translator.parse()
     pop['stop_condition']['cpp'] = '(' + code + ')'
 
@@ -554,9 +551,7 @@ def extract_structural_plasticity(statement, description, pattern):
     translator = Equation('test', eq, 
                           description, 
                           method = 'cond', 
-                          untouched = {},
-                          index=pattern['proj_index'],
-                          global_index=pattern['proj_globalindex'])
+                          untouched = {})
 
     code = translator.parse()
 

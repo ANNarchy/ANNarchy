@@ -163,39 +163,43 @@ def analyse_neuron(neuron):
         # Process the bounds
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
-                translator = Equation(variable['name'], variable['bounds']['min'], 
-                                      description, 
-                                      type = 'return',
-                                      untouched = untouched.keys(),
-                                      index=pattern['pop_index'],
-                                      global_index=pattern['pop_globalindex'],
-                                      )
+                translator = Equation(
+                                variable['name'], 
+                                variable['bounds']['min'], 
+                                description, 
+                                type = 'return',
+                                untouched = untouched
+                                )
                 variable['bounds']['min'] = translator.parse().replace(';', '')
 
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
-                translator = Equation(variable['name'], variable['bounds']['max'], 
-                                      description, 
-                                      type = 'return',
-                                      untouched = untouched.keys(),
-                                      index=pattern['pop_index'],
-                                      global_index=pattern['pop_globalindex'],)
+                translator = Equation(
+                                variable['name'], 
+                                variable['bounds']['max'], 
+                                description, 
+                                type = 'return',
+                                untouched = untouched)
                 variable['bounds']['max'] = translator.parse().replace(';', '')
         
         # Analyse the equation
         if condition == []:
-            translator = Equation(variable['name'], eq, 
-                                  description, 
-                                  method = method,
-                                  untouched = untouched.keys(),
-                                  index=pattern['pop_index'],
-                                  global_index=pattern['pop_globalindex'],)
+            translator = Equation(  
+                                    variable['name'], 
+                                    eq, 
+                                    description, 
+                                    method = method,
+                                    untouched = untouched
+                            )
             code = translator.parse()
             dependencies = translator.dependencies()
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, description, untouched,
-                                  index=pattern['pop_index'],
-                                  global_index=pattern['pop_globalindex'])
+            code = translate_ITE(
+                        variable['name'], 
+                        eq, 
+                        condition, 
+                        description, 
+                        untouched )
             dependencies = []
 
         
@@ -395,9 +399,7 @@ def analyse_synapse(synapse):
                 translator = Equation(variable['name'], variable['bounds']['min'], 
                                       description, 
                                       type = 'return',
-                                      untouched = untouched.keys(),
-                                      index=pattern['proj_index'],
-                                      global_index=pattern['proj_globalindex'])
+                                      untouched = untouched.keys())
                 variable['bounds']['min'] = translator.parse().replace(';', '')
                 
         if 'max' in variable['bounds'].keys():
@@ -405,9 +407,7 @@ def analyse_synapse(synapse):
                 translator = Equation(variable['name'], variable['bounds']['max'], 
                                       description, 
                                       type = 'return',
-                                      untouched = untouched.keys(),
-                                      index=pattern['proj_index'],
-                                      global_index=pattern['proj_globalindex'])
+                                      untouched = untouched.keys())
                 variable['bounds']['max'] = translator.parse().replace(';', '')
             
         # Analyse the equation
@@ -415,17 +415,13 @@ def analyse_synapse(synapse):
             translator = Equation(variable['name'], eq, 
                                   description, 
                                   method = method, 
-                                  untouched = untouched.keys(),
-                                  index=pattern['proj_index'],
-                                  global_index=pattern['proj_globalindex'])
+                                  untouched = untouched.keys())
             code = translator.parse()
             dependencies = translator.dependencies()
                 
         else: # An if-then-else statement
             code = translate_ITE(variable['name'], eq, condition, description, 
-                    untouched,
-                    index=pattern['proj_index'],
-                    global_index=pattern['proj_globalindex'])
+                    untouched)
             dependencies = []
 
         if isinstance(code, str):
@@ -485,14 +481,10 @@ def analyse_synapse(synapse):
                                   description, 
                                   method = 'explicit', 
                                   untouched = untouched.keys(),
-                                  type='return',
-                                  index=pattern['proj_index'],
-                                  global_index=pattern['proj_globalindex'])
+                                  type='return')
             code = translator.parse()
         else:
-            code = translate_ITE('psp', eq, condition, description, untouched,
-                                  index=pattern['proj_index'],
-                                  global_index=pattern['proj_globalindex'], 
+            code = translate_ITE('psp', eq, condition, description, untouched, 
                                   split=False)
 
         # Replace untouched variables with their original name
@@ -514,37 +506,32 @@ def analyse_synapse(synapse):
                 translator = Equation(variable['name'], eq, 
                                       description, 
                                       method = 'explicit', 
-                                      untouched = {},
-                                      index=pattern['proj_index'],
-                                      global_index=pattern['proj_globalindex'])
+                                      untouched = {})
                 code = translator.parse()
             else:
-                code = translate_ITE(variable['name'], eq, condition, description, {},
-                                      index=pattern['proj_index'],
-                                      global_index=pattern['proj_globalindex'], 
-                                      split=True)
+                code = translate_ITE(variable['name'], eq, condition, description, {}, split=True)
             # Store the result
             variable['cpp'] = code # the C++ equation
 
             # Process the bounds
             if 'min' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['min'], str):
-                    translator = Equation(variable['name'], variable['bounds']['min'], 
-                                          description, 
-                                          type = 'return',
-                                          untouched = untouched.keys(),
-                                          index=pattern['proj_index'],
-                                          global_index=pattern['proj_globalindex'])
+                    translator = Equation(
+                                    variable['name'], 
+                                    variable['bounds']['min'], 
+                                    description, 
+                                    type = 'return',
+                                    untouched = untouched )
                     variable['bounds']['min'] = translator.parse().replace(';', '')
                     
             if 'max' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['max'], str):
-                    translator = Equation(variable['name'], variable['bounds']['max'], 
-                                          description, 
-                                          type = 'return',
-                                          untouched = untouched.keys(),
-                                          index=pattern['proj_index'],
-                                          global_index=pattern['proj_globalindex'])
+                    translator = Equation(
+                                    variable['name'], 
+                                    variable['bounds']['max'], 
+                                    description, 
+                                    type = 'return',
+                                    untouched = untouched)
                     variable['bounds']['max'] = translator.parse().replace(';', '')
 
     # Structural plasticity

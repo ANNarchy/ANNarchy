@@ -29,7 +29,7 @@ from ANNarchy.parser.StringManipulation import *
 from pprint import pprint
 import re
 
-def translate_ITE(name, eq, condition, description, untouched, index, global_index='', split=True):
+def translate_ITE(name, eq, condition, description, untouched, split=True):
     " Recursively processes the different parts of an ITE statement"
     def process_ITE(condition):
         if_statement = condition[0]
@@ -38,21 +38,19 @@ def translate_ITE(name, eq, condition, description, untouched, index, global_ind
 
         if_code = Equation(name, if_statement, description, 
                           untouched = untouched.keys(),
-                          type='cond', 
-                          index=index, global_index=global_index).parse()
+                          type='cond').parse()
         if isinstance(then_statement, list): # nested conditional
             then_code =  process_ITE(then_statement)
         else:
             then_code = Equation(name, then_statement, description, 
                           untouched = untouched.keys(),
-                          type='return', 
-                          index=index, global_index=global_index).parse().split(';')[0]
+                          type='return').parse().split(';')[0]
         if isinstance(else_statement, list): # nested conditional
             else_code =  process_ITE(else_statement)
         else:
             else_code = Equation(name, else_statement, description, 
                           untouched = untouched.keys(),
-                          type='return', index=index, global_index=global_index).parse().split(';')[0]
+                          type='return').parse().split(';')[0]
                           
         code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
         return code
@@ -60,7 +58,7 @@ def translate_ITE(name, eq, condition, description, untouched, index, global_ind
     if split:
         # Main equation, where the right part is __conditional__
         translator = Equation(name, eq, description, 
-                              untouched = untouched.keys(), index=index, global_index=global_index)
+                              untouched = untouched.keys())
         code = translator.parse() 
     else:
         code = '__conditional__'
