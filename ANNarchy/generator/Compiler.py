@@ -312,7 +312,7 @@ seq:
 clean:
 \trm -rf build/net%(net_id)s/*.o
 \trm -rf build/net%(net_id)s/*.so
-""" % {'cpu_flags': cpu_flags, 'libs': libs, 'py_version': py_version, 'numpy_include': numpy_include, 'net_id': self.net_id}
+""" % {'cpu_flags': cpu_flags, 'libs': libs, 'py_version': py_version, 'numpy_include': numpy_include, 'major': py_major, 'net_id': self.net_id}
 
         else: # Windows: to test....
             Global._warning("Compilation on windows is not supported yet.")
