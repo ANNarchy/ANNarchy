@@ -35,20 +35,16 @@ def generate_bound_code(param, obj, pattern):
     code = "" 
     if param['locality'] == 'local':   
         prefix_dict = {
-        'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
-        'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
         'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index']
     }   
     else: # global
         prefix_dict = {
-        'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
-        'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
         'index': pattern['pop_globalindex'] if obj == 'pop' else pattern['proj_globalindex']
     }
     for bound, val in param['bounds'].items():
         if bound in ['min', 'max']:
-            code += """if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+            code += """if(%(var)s%(index)s %(operator)s %(val)s)
+    %(var)s%(index)s = %(val)s;
 """ % dict(prefix_dict.items()+ {
         'var' : param['name'], 'val' : val, 
         'operator': '<' if bound=='min' else '>'}.items()
@@ -65,7 +61,7 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only, pattern):
 %(comment)s
 %(cpp)s
 %(bounds)s
-""" % { 'comment': '// '+param['eq'],
+""" % { 'comment': '// ' + param['eq'],
         'cpp': param['cpp'],
         'bounds': generate_bound_code(param, obj, pattern) }
 

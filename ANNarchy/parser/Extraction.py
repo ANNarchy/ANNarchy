@@ -59,9 +59,9 @@ def extract_randomdist(description, pattern):
                     except: # A global parameter
                         if arguments[idx].strip() in description['global']:
                             if description['object'] == 'neuron':
-                                arg = pattern['pop_prefix'] + pattern['pop_sep'] + arguments[idx].strip() 
+                                arg = arguments[idx].strip() 
                             else:
-                                arg = pattern['proj_prefix'] + pattern['proj_sep'] + arguments[idx].strip() 
+                                arg = arguments[idx].strip() 
                         else:
                             _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
                             exit(0)
@@ -107,7 +107,7 @@ def extract_globalops_neuron(name, eq, description, pattern):
                 oldname = op + '(' + var + ')'
                 newname = '_' + op + '_' + var.strip() 
                 eq = eq.replace(oldname, newname)
-                untouched[newname] = pattern['pop_prefix'] + pattern['pop_sep'] + '_' + op + '_' + var.strip()
+                untouched[newname] = '_' + op + '_' + var.strip()
             else:
                 _error(eq+'\nThere is no local attribute '+var+'.')
                 exit(0)
@@ -131,13 +131,13 @@ def extract_globalops_synapse(name, eq, desc, pattern):
             globs['pre'].append({'function': op, 'variable': var.strip()})
             newname =  '__pre_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*pre\.([\w]+)\s*\)', newname, eq)
-            untouched[newname] = pattern['proj_preprefix'] + pattern['proj_sep'] + '_' + op + '_' + var
+            untouched[newname] = pattern['proj_preprefix'] + '_' + op + '_' + var
 
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var.strip()})
             newname = '__post_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
-            untouched[newname] = pattern['proj_postprefix'] + pattern['proj_sep'] + '_' + op + '_' + var 
+            untouched[newname] = pattern['proj_postprefix'] + '_' + op + '_' + var 
 
     return eq, untouched, globs
     
@@ -161,7 +161,7 @@ def extract_prepost(name, eq, description, pattern):
                     exit(0)
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
-                untouched[rep] = pattern['proj_preprefix'] + pattern['proj_sep'] + pattern['pop_sum'] +target+ pattern['proj_preindex']
+                untouched[rep] = pattern['pop_sum'] +target+ pattern['proj_preindex']
                 return rep
 
             eq = re.sub(r'pre\.sum\(([\s\w]+)\)', idx_target, eq)
@@ -169,7 +169,7 @@ def extract_prepost(name, eq, description, pattern):
             dependencies['pre'].append(var)
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var)
-            untouched['_pre_'+var] = pattern['proj_preprefix'] + pattern['proj_sep'] + var + pattern['proj_preindex']
+            untouched['_pre_'+var] = pattern['proj_preprefix'] + var + pattern['proj_preindex']
 
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
@@ -182,14 +182,14 @@ def extract_prepost(name, eq, description, pattern):
                     exit(0)
                 dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target.strip()
-                untouched[rep] = pattern['proj_postprefix'] + pattern['proj_sep'] + pattern['pop_sum']+ target + pattern['proj_postindex']
+                untouched[rep] = pattern['proj_postprefix'] + pattern['pop_sum']+ target + pattern['proj_postindex']
                 return rep
             eq = re.sub(r'post\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var)
-            untouched['_post_'+var] = pattern['proj_postprefix'] + pattern['proj_sep'] + var + pattern['proj_postindex']
+            untouched['_post_'+var] = pattern['proj_postprefix'] + var + pattern['proj_postindex']
 
     return eq, untouched, dependencies
                    
@@ -414,8 +414,6 @@ def extract_spike_variable(description, pattern):
         
     translator = Equation('raw_spike_cond', cond[0].strip(), 
                           description, 
-                          prefix=pattern['pop_prefix'],
-                          sep=pattern['pop_sep'],
                           index=pattern['pop_index'],
                           global_index=pattern['pop_globalindex'])
     raw_spike_code = translator.parse()
@@ -426,8 +424,6 @@ def extract_spike_variable(description, pattern):
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'], 
                                   description,
-                                  prefix=pattern['pop_prefix'],
-                                  sep=pattern['pop_sep'],
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'])
             var['cpp'] = translator.parse() 
@@ -492,8 +488,6 @@ def extract_stop_condition(pop, pattern):
     translator = Equation('stop_cond', eq, 
                           pop, 
                           type = 'cond',
-                          prefix=pattern['pop_prefix'],
-                          sep=pattern['pop_sep'],
                           index=pattern['pop_index'],
                           global_index=pattern['pop_globalindex'])
     code = translator.parse()
@@ -561,8 +555,6 @@ def extract_structural_plasticity(statement, description, pattern):
                           description, 
                           method = 'cond', 
                           untouched = {},
-                          prefix=pattern['proj_prefix'],
-                          sep=pattern['proj_sep'],
                           index=pattern['proj_index'],
                           global_index=pattern['proj_globalindex'])
 

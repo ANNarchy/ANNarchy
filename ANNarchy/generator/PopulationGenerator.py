@@ -73,7 +73,7 @@ class PopulationGenerator(object):
         base_template = PopTemplate.header_struct_omp
 
         # Generate declaration and accessors of all parameters and variables
-        declaration_parameters_variables, access_parameters_variables = self._generate_decl_and_acc(pop)
+        declaration_parameters_variables, access_parameters_variables = self.generate_decl_and_acc(pop)
 
         # Additional includes and structures
         include_additional = ""; struct_additional = ""
@@ -103,7 +103,7 @@ class PopulationGenerator(object):
         # Process eventual delay
         declare_delay = ""; init_delay = ""; update_delay=""; reset_delay = ""
         if pop.max_delay > 1:
-            declare_delay, init_delay, update_delay, reset_delay = self._delay_code(pop)
+            declare_delay, init_delay, update_delay, reset_delay = self.delay_code(pop)
 
         # Update random distributions
         update_rng = self.update_random_distributions(pop)
@@ -116,6 +116,9 @@ class PopulationGenerator(object):
             update_variables = self.update_rate_neuron_openmp(pop)
         else:
             update_variables = self.update_spike_neuron(pop)
+
+        # Stop condition
+        stop_condition = self.stop_condition(pop)
 
         ## When everything is generated, we override the fields defined by the specific population
         if 'include_additional' in pop._specific_template.keys():
@@ -179,7 +182,8 @@ class PopulationGenerator(object):
                                  'update_variables': update_variables,
                                  'update_rng': update_rng,
                                  'update_delay': update_delay,
-                                 'update_global_ops': update_global_ops
+                                 'update_global_ops': update_global_ops,
+                                 'stop_condition': stop_condition
                                 }
 
         # Store the complete header definition in a single file
@@ -250,7 +254,7 @@ class PopulationGenerator(object):
 
         return pop_desc
 
-    def _generate_decl_and_acc(self, pop):
+    def generate_decl_and_acc(self, pop):
         # Pick basic template based on neuron type
         attr_template = PopTemplate.attribute_decl[Global.config['paradigm']]
         acc_template = PopTemplate.attribute_acc[Global.config['paradigm']]
@@ -339,7 +343,7 @@ class PopulationGenerator(object):
                     code += PopTemplate.cuda_rng['init'] % {'id': pop.id, 'rd_name': rd['name'] }
 
         # Global operations
-        code += self._init_globalops(pop)
+        code += self.init_globalops(pop)
 
         # Targets
         if pop.neuron_type.type == 'rate':
@@ -348,7 +352,7 @@ class PopulationGenerator(object):
 
         return code
 
-    def _init_globalops(self, pop):
+    def init_globalops(self, pop):
         if len(pop.global_operations)==0:
             return ""
 
@@ -364,7 +368,7 @@ class PopulationGenerator(object):
 
         return code
 
-    def _delay_code(self, pop):
+    def delay_code(self, pop):
         """
         Generate code for delayed variables, comprising of initialization
         and update codes.
@@ -789,11 +793,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
     def stop_condition(self, pop):
         if not pop.stop_condition: # no stop condition has been defined
-            return """
-                case %(id)s:
-                    pop_stop = false;
-                    break;
-""" % {'id': pop.id}
+            return ""
 
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
 
@@ -807,31 +807,36 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             pattern = pattern_omp
 
         extract_stop_condition(pop.neuron_type.description, pattern)
+        condition = pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}
 
         if pop.neuron_type.description['stop_condition']['type'] == 'any':
             stop_code = """
-                    pop_stop = false;
-                    for(int i=0; i<pop%(id)s.size; i++)
-                    {
-                        if(%(condition)s)
-                            pop_stop = true;
-                    }
-    """ % {'id': pop.id, 'condition': pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}}
+    // Stop condition (any)
+    bool stop_condition(){
+        for(int i=0; i<size; i++)
+        {
+            if(%(condition)s){
+                return true;
+            }
+        }
+        return false;
+    }
+    """ % {'id': pop.id, 'condition': condition}
         else:
             stop_code = """
-                    pop_stop = true;
-                    for(int i=0; i<pop%(id)s.size; i++)
-                    {
-                        if(!(%(condition)s))
-                            pop_stop = false;
-                    }
-    """ % {'id': pop.id, 'condition': pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id}}
+    // Stop condition (all)
+    bool stop_condition(){
+        for(int i=0; i<pop%(id)s.size; i++)
+        {
+            if(!(%(condition)s)){
+                return false;
+            }
+        }
+        return true;
+    }
+    """ % {'id': pop.id, 'condition': condition}
 
-        return """
-                case %(id)s:
-%(stop_code)s
-                    break;
-""" % {'id': pop.id, 'stop_code': stop_code}
+        return stop_code
 
     def update_random_distributions(self, pop):
         if len(pop.neuron_type.description['random_distributions']) == 0:

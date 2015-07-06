@@ -43,6 +43,7 @@ class FunctionParser(object):
             'positive': Function('positive'), 
             'neg': Function('negative'), 
             'negative': Function('negative'), 
+            'clip': Function('clip'), 
         }
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)

@@ -34,7 +34,6 @@ class Equation(object):
     def __init__(self, name, expression, description, 
                  untouched = [], 
                  method='explicit', type=None, 
-                 prefix='', sep = '',
                  index='[i]', global_index=''):
         '''
         Parameters:
@@ -46,7 +45,6 @@ class Equation(object):
         * global_variables: a list of the global variables
         * method: the numerical method to use for ODEs
         * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
-        * prefix: term to prepend to the attibutes names (default: $(pop)s)
         * index: index to be used for variables (default: [i])
         * untouched: list of terms which should not be modified
         '''
@@ -60,7 +58,6 @@ class Equation(object):
         self.variables = [var['name'] for var in self.description['variables']]
         self.untouched = untouched
         self.method = method
-        self.prefix = prefix 
         
         # Determine the type of the equation
         if not type:
@@ -87,9 +84,9 @@ class Equation(object):
 
         for var in self.attributes: # Add each variable of the neuron
             if var in self.local_attributes:
-                self.local_dict[var] = Symbol(prefix + sep + var + index)
+                self.local_dict[var] = Symbol(var + index)
             elif var in self.global_attributes:
-                self.local_dict[var] = Symbol(prefix + sep + var + global_index)
+                self.local_dict[var] = Symbol(var + global_index)
                 
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)

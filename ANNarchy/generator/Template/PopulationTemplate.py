@@ -91,6 +91,8 @@ struct PopStruct%(id)s{
     void update() {
 %(update_variables)s
     }
+
+    %(stop_condition)s
 };
 """
 

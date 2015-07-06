@@ -490,7 +490,7 @@ class CodeGenerator(object):
             if ops == []:
                 return ""
 
-            from .GlobalOperationTemplate import global_operation_templates_openmp as template
+            from .Template.GlobalOperationTemplate import global_operation_templates_openmp as template
             code = ""
             for op in list(set(ops)):
                 code += template[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
@@ -503,7 +503,7 @@ class CodeGenerator(object):
             header = ""
             body = ""
 
-            from .GlobalOperationTemplate import global_operation_templates_cuda as template
+            from .Template.GlobalOperationTemplate import global_operation_templates_cuda as template
             for op in list(set(ops)):
                 header += template[op]['header']
                 body += template[op]['body']
@@ -527,7 +527,8 @@ class CodeGenerator(object):
         # a condition has been defined, so we generate corresponding code
         cond_code = ""
         for pop in self._populations:
-            cond_code += self._popgen.stop_condition(pop)
+            if pop.stop_condition:
+                cond_code += tpl['single_pop'] % {'id': pop.id}
 
         return tpl['body'] % {'run_until': cond_code}
 

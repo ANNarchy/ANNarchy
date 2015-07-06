@@ -28,31 +28,22 @@ from .CoupledEquations import CoupledEquations
 # Specific code generation for the chosen paradigm
 pattern_omp = {
     # Populations
-    'pop_prefix': '',
-    'pop_sep': '',
     'pop_index': '[i]',
     'pop_globalindex': '',
     'pop_sum': '_sum_',
     # Projections
-    'proj_prefix': '',
-    'proj_sep': '',
     'proj_index': '[i][j]',
     'proj_globalindex': '[i]',
     'proj_preprefix': 'pop%(id_pre)s.',
     'proj_postprefix': 'pop%(id_post)s.',
     'proj_preindex': '[rk_pre]',
-    'proj_postindex': '[rk_post]',
-}
+    'proj_postindex': '[rk_post]',}
 pattern_cuda = {
     # Populations
-    'pop_prefix': '',
-    'pop_sep': '',
     'pop_index': '[i]',
     'pop_globalindex': '',
     'pop_sum': '_sum_',
     # Projections
-    'proj_prefix': '',
-    'proj_sep': '',
     'proj_index': '[j]',
     'proj_globalindex': '[i]',
     'proj_preprefix': 'pre_',
@@ -152,7 +143,7 @@ def analyse_neuron(neuron):
         # Replace sum(target) with pop%(id)s.sum_exc[i]
         for target in description['targets']:
             eq = re.sub('sum\(\s*'+target+'\s*\)', '__sum_'+target+'__', eq)
-            untouched['__sum_'+target+'__'] = pattern['pop_prefix'] + pattern['pop_sep'] + pattern['pop_sum'] + target + pattern['pop_index']
+            untouched['__sum_'+target+'__'] = pattern['pop_sum'] + target + pattern['pop_index']
         
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description, pattern)
@@ -176,8 +167,6 @@ def analyse_neuron(neuron):
                                       description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      prefix=pattern['pop_prefix'],
-                                      sep=pattern['pop_sep'],
                                       index=pattern['pop_index'],
                                       global_index=pattern['pop_globalindex'],
                                       )
@@ -189,8 +178,6 @@ def analyse_neuron(neuron):
                                       description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      prefix=pattern['pop_prefix'],
-                                      sep=pattern['pop_sep'],
                                       index=pattern['pop_index'],
                                       global_index=pattern['pop_globalindex'],)
                 variable['bounds']['max'] = translator.parse().replace(';', '')
@@ -201,16 +188,12 @@ def analyse_neuron(neuron):
                                   description, 
                                   method = method,
                                   untouched = untouched.keys(),
-                                  prefix=pattern['pop_prefix'],
-                                  sep=pattern['pop_sep'],
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'],)
             code = translator.parse()
             dependencies = translator.dependencies()
         else: # An if-then-else statement
             code = translate_ITE(variable['name'], eq, condition, description, untouched,
-                                  prefix=pattern['pop_prefix'],
-                                  sep=pattern['pop_sep'],
                                   index=pattern['pop_index'],
                                   global_index=pattern['pop_globalindex'])
             dependencies = []
@@ -237,7 +220,7 @@ def analyse_neuron(neuron):
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+pattern['pop_prefix'] + pattern['pop_sep'] + f['name'] + '(', ' ' + cpp_eq).strip()
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+f['name'] + '(', ' ' + cpp_eq).strip()
 
         # Store the result
         variable['cpp'] = cpp_eq # the C++ equation
@@ -413,8 +396,6 @@ def analyse_synapse(synapse):
                                       description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      prefix=pattern['proj_prefix'],
-                                      sep=pattern['proj_sep'],
                                       index=pattern['proj_index'],
                                       global_index=pattern['proj_globalindex'])
                 variable['bounds']['min'] = translator.parse().replace(';', '')
@@ -425,8 +406,6 @@ def analyse_synapse(synapse):
                                       description, 
                                       type = 'return',
                                       untouched = untouched.keys(),
-                                      prefix=pattern['proj_prefix'],
-                                      sep=pattern['proj_sep'],
                                       index=pattern['proj_index'],
                                       global_index=pattern['proj_globalindex'])
                 variable['bounds']['max'] = translator.parse().replace(';', '')
@@ -437,19 +416,16 @@ def analyse_synapse(synapse):
                                   description, 
                                   method = method, 
                                   untouched = untouched.keys(),
-                                  prefix=pattern['proj_prefix'],
-                                  sep=pattern['proj_sep'],
                                   index=pattern['proj_index'],
                                   global_index=pattern['proj_globalindex'])
             code = translator.parse()
             dependencies = translator.dependencies()
                 
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, description, untouched,
-                                  prefix=pattern['proj_prefix'],
-                                  sep=pattern['proj_sep'],
-                                  index=pattern['proj_index'],
-                                  global_index=pattern['proj_globalindex'])
+            code = translate_ITE(variable['name'], eq, condition, description, 
+                    untouched,
+                    index=pattern['proj_index'],
+                    global_index=pattern['proj_globalindex'])
             dependencies = []
 
         if isinstance(code, str):
@@ -465,7 +441,7 @@ def analyse_synapse(synapse):
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+pattern['proj_prefix'] + pattern['proj_sep'] + f['name'] + '(', ' ' + cpp_eq).strip()     
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+ f['name'] + '(', ' ' + cpp_eq).strip()     
         
         # Store the result
         variable['cpp'] = cpp_eq # the C++ equation
@@ -510,15 +486,11 @@ def analyse_synapse(synapse):
                                   method = 'explicit', 
                                   untouched = untouched.keys(),
                                   type='return',
-                                  prefix=pattern['proj_prefix'],
-                                  sep=pattern['proj_sep'],
                                   index=pattern['proj_index'],
                                   global_index=pattern['proj_globalindex'])
             code = translator.parse()
         else:
             code = translate_ITE('psp', eq, condition, description, untouched,
-                                  prefix=pattern['proj_prefix'],
-                                  sep=pattern['proj_sep'],
                                   index=pattern['proj_index'],
                                   global_index=pattern['proj_globalindex'], 
                                   split=False)
@@ -543,15 +515,11 @@ def analyse_synapse(synapse):
                                       description, 
                                       method = 'explicit', 
                                       untouched = {},
-                                      prefix=pattern['proj_prefix'],
-                                      sep=pattern['proj_sep'],
                                       index=pattern['proj_index'],
                                       global_index=pattern['proj_globalindex'])
                 code = translator.parse()
             else:
                 code = translate_ITE(variable['name'], eq, condition, description, {},
-                                      prefix=pattern['proj_prefix'],
-                                      sep=pattern['proj_sep'],
                                       index=pattern['proj_index'],
                                       global_index=pattern['proj_globalindex'], 
                                       split=True)
@@ -565,8 +533,6 @@ def analyse_synapse(synapse):
                                           description, 
                                           type = 'return',
                                           untouched = untouched.keys(),
-                                          prefix=pattern['proj_prefix'],
-                                          sep=pattern['proj_sep'],
                                           index=pattern['proj_index'],
                                           global_index=pattern['proj_globalindex'])
                     variable['bounds']['min'] = translator.parse().replace(';', '')
@@ -577,8 +543,6 @@ def analyse_synapse(synapse):
                                           description, 
                                           type = 'return',
                                           untouched = untouched.keys(),
-                                          prefix=pattern['proj_prefix'],
-                                          sep=pattern['proj_sep'],
                                           index=pattern['proj_index'],
                                           global_index=pattern['proj_globalindex'])
                     variable['bounds']['max'] = translator.parse().replace(';', '')
