@@ -113,7 +113,7 @@ class PopulationGenerator(object):
 
         # Update the neural variables
         if pop.neuron_type.type == 'rate':
-            update_variables = self._update_rate_neuron_openmp(pop)
+            update_variables = self.update_rate_neuron_openmp(pop)
         else:
             update_variables = self.update_spike_neuron(pop)
 
@@ -216,7 +216,7 @@ class PopulationGenerator(object):
         update_rng = self.update_random_distributions(pop)#.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
 
         if pop.neuron_type.type == 'rate':
-            body, header, update_call = self._update_rate_neuron_cuda(pop)
+            body, header, update_call = self.update_rate_neuron_cuda(pop)
         else:
             Global._error("Spiking neurons on GPUs are currently not supported")
             exit(0)
@@ -492,7 +492,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 #######################################################################
 ############## BODY: update variables codes ###########################
 #######################################################################
-    def _update_rate_neuron_openmp(self, pop):
+    def update_rate_neuron_openmp(self, pop):
         """
         Generate the code template for neural update step, more precise updating of variables.
         The code comprise of two major parts: global and local update, second one parallelized
@@ -502,32 +502,32 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         code = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id}
         if eqs.strip() != "":
             code += """
-    // Updating the global variables
+            // Updating the global variables
 %(eqs)s
 """ % {'eqs': eqs}
 
         # Local variables, evaluated in parallel
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id}
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         code += """
-        // Updating the local variables
-        %(omp_code)s
-        for(int i = 0; i < %(size)s; i++){
+            // Updating the local variables
+            %(omp_code)s
+            for(int i = 0; i < %(size)s; i++){
 %(eqs)s
-        }
+            }
 """ % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs, 'omp_code': omp_code}
 
         # finish code
         return """
-    if( _active ) {
+        if( _active ) {
 %(code)s
-    } // active
+        } // active
 """ % {'code': code}
 
-    def _update_rate_neuron_cuda(self, pop):
+    def update_rate_neuron_cuda(self, pop):
         """
         Generate the code template for neural update step, more precise updating of variables.
         The code comprise of several parts: creating of local and global update code, generating

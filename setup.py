@@ -87,6 +87,13 @@ if sys.platform.startswith("darwin"):
     os.system("make clean && make")
     os.chdir(cwd)
     package_data.append('core/cython_ext/*.so')
+    ext_modules = None
+else: # linux
+    ext_modules = cythonize(
+            [   "ANNarchy/core/cython_ext/Connector.pyx", 
+                "ANNarchy/core/cython_ext/Coordinates.pyx",
+                "ANNarchy/core/cython_ext/Transformations.pyx"]
+        )
 
 
 setup(  name='ANNarchy',
@@ -114,11 +121,7 @@ setup(  name='ANNarchy',
         keywords='neural simulator',
         packages=find_packages(),
         package_data={'ANNarchy': package_data},
-        ext_modules = cythonize(
-            [   "ANNarchy/core/cython_ext/Connector.pyx", 
-                "ANNarchy/core/cython_ext/Coordinates.pyx",
-                "ANNarchy/core/cython_ext/Transformations.pyx"]
-        ),
+        ext_modules = ext_modules,
         include_dirs=[numpy.get_include()],
         zip_safe = False
 )

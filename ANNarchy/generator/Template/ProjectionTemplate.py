@@ -247,7 +247,7 @@ inverse_connectivity_matrix = {
                 inv_pre_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
             }
         }
-        inv_post_rank =  std::vector< int > (pop%(id_pre)s.size, -1);
+        inv_post_rank =  std::vector< int > (pop%(id_post)s.size, -1);
         for(int i=0; i<post_rank.size(); i++){
             inv_post_rank[post_rank[i]] = i;
         }

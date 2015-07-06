@@ -310,8 +310,8 @@ seq:
 \tclang++ -stdlib=libc++ -std=c++11 -fPIC -shared %(cpu_flags)s -fpermissive -I. -I/usr/include/python%(py_version)s -I/usr/include/python%(py_version)sm -I %(numpy_include)s build/net%(net_id)s/*.cpp -lpython %(libs)s -o ANNarchyCore%(net_id)s.so
 
 clean:
-\trm -rf build/*.o
-\trm -rf build/*.so
+\trm -rf build/net%(net_id)s/*.o
+\trm -rf build/net%(net_id)s/*.so
 """ % {'cpu_flags': cpu_flags, 'libs': libs, 'py_version': py_version, 'numpy_include': numpy_include, 'net_id': self.net_id}
 
         else: # Windows: to test....

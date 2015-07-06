@@ -135,7 +135,7 @@ class ProjectionGenerator(object):
             'declare_cuda_stream': decl['cuda_stream'],
             'declare_additional': decl['additional'],
             'init_connectivity_matrix': connectivity_matrix['init'],
-            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_pre': proj.pre.id},
+            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_pre': proj.pre.id, 'id_post': proj.post.id},
             'init_event_driven': "",
             'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
@@ -725,7 +725,8 @@ if (pop%(id_post)s._active){
         }
     }
 } // active
-"""%{   'id_post': proj.post.id, 
+"""%{   'id_pre': proj.pre.id, 
+        'id_post': proj.post.id, 
         'pre_array': pre_array,
         'pre_event': pre_event, 
         'g_target': g_target_code, 

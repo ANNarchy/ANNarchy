@@ -30,10 +30,16 @@ input_population  = SpikeSourceArray(list(spike_times))
 
 # Output population
 output_population = Population(2, IF_curr_alpha)
-output_population.set( { 'tau_refrac': 2.0, 'v_thresh': -50.0,'tau_syn_E': 2.0, 'tau_syn_I': 2.0 })
+output_population.set( { 
+    'tau_refrac': 2.0, 
+    'v_thresh': -50.0,
+    'tau_syn_E': 2.0, 
+    'tau_syn_I': 2.0 
+})
 
 # Excitatory projection
-projection = Projection(input_population, output_population, 'exc').connect_all_to_all(weights=1.0)
+proj = Projection(input_population, output_population, 'exc')
+proj.connect_all_to_all(weights=1.0)
 
 # Compile the network
 compile()
@@ -49,7 +55,7 @@ plot(dt*np.arange(tstop/dt), data['v'][:, 0])
 xlabel('Time (ms)')
 ylabel('Vm (mV)')
 ylim([-66.0, -48.0])
-title('simpleNetwork')
+title('Simple Network')
 show()
 
 

@@ -2,10 +2,7 @@ from ..parser.SingleAnalysis import pattern_omp, pattern_cuda
 from ..core.Global import config
  
 def sort_odes(desc, locality='local'):
-    pre_odes = []
-    odes = []
-    post_odes=[]
-    is_pre_ode = True
+    equations = []
     is_ode = False
     for param in desc['variables']: 
         if param['cpp'] == '':
@@ -13,77 +10,71 @@ def sort_odes(desc, locality='local'):
         if param['method'] == 'event-driven':
             continue
         if param['name'] in desc[locality]: 
-            if is_pre_ode: # look if it is an ode or not
-                if param['switch']: # ODE
-                    is_pre_ode = False
+            if param['switch']: # ODE
+                if is_ode: # was already ODE
+                    if len(equations) ==0:
+                        equations.append(('ode', [param]))
+                    else:
+                        equations[-1][1].append(param)
+                else: # new block
                     is_ode = True
-                    odes.append(param)
-                else: # still pre_ode
-                    pre_odes.append(param)
-            elif is_ode: # in the ODE section
-                if param['switch']: # ODE
-                    odes.append(param)
-                else: # switch to post_ode
+                    equations.append(('ode', [param]))
+            else: # non-ODE
+                if is_ode:
                     is_ode = False
-                    post_odes.append(param)
-            else: # post_ode
-                if param['switch']: # ODE after a post equation, shift it above
-                    odes.append(param)
+                    equations.append(('non-ode', [param]))
                 else:
-                    post_odes.append(param)
+                    if len(equations) == 0:
+                        equations.append(('non-ode', [param]))
+                    else:
+                        equations[-1][1].append(param)
 
-    return pre_odes, odes, post_odes
+    return equations
 
-def generate_equation_code(id, desc, locality='local', obj='pop', conductance_only=False, padding=3):
-    
-    # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'openmp':
-        pattern = pattern_omp
-    else:
-        pattern = pattern_cuda
-    
-    # Separate ODEs from the pre- and post- equations
-    pre_odes, odes, post_odes = sort_odes(desc, locality)
-    
-    if (pre_odes, odes, post_odes) == ([], [], []): # No equations
-        return ""
+def generate_bound_code(param, obj, pattern):
+    code = "" 
+    if param['locality'] == 'local':   
+        prefix_dict = {
+        'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
+        'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
+        'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index']
+    }   
+    else: # global
+        prefix_dict = {
+        'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
+        'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
+        'index': pattern['pop_globalindex'] if obj == 'pop' else pattern['proj_globalindex']
+    }
+    for bound, val in param['bounds'].items():
+        if bound in ['min', 'max']:
+            code += """if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
+    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
+""" % dict(prefix_dict.items()+ {
+        'var' : param['name'], 'val' : val, 
+        'operator': '<' if bound=='min' else '>'}.items()
+    )
+    return code
 
-    # Generate code
-    code = ""  
-
-    #########################       
-    # Pre-ODE equations
-    #########################
-    if len(pre_odes) > 0:
+def generate_non_ODE_block(variables, locality, obj, conductance_only, pattern):
+    code = ""
+    for param in variables: 
+        if conductance_only: # skip the variables which do not start with g_
+            if not param['name'].startswith('g_'):
+                continue
         code += """
-// Before the ODES"""
-        for param in pre_odes: 
-            if conductance_only: # skip the variables which do not start with g_
-                if not param['name'].startswith('g_'):
-                    continue
-            code += """
 %(comment)s
 %(cpp)s
+%(bounds)s
 """ % { 'comment': '// '+param['eq'],
-        'cpp': param['cpp'] }
-            # Min-Max bounds
-            for bound, val in param['bounds'].items():
-                if bound == "init":
-                    continue
+        'cpp': param['cpp'],
+        'bounds': generate_bound_code(param, obj, pattern) }
 
-                code += """
-if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
-""" % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
-       'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
-       'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
-       'var' : param['name'], 'val' : val, 'id': id, 
-       'operator': '<' if bound=='min' else '>'
-       }
+    return code
 
-    #################
-    # ODE equations
-    #################
+
+def generate_ODE_block(odes, locality, obj, conductance_only, pattern):
+    code = ""
+
     # Count how many steps (midpoint has more than one step)
     nb_step = 0
     for param in odes: 
@@ -94,11 +85,7 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
 
     # Iterate over all steps
     if len(odes) > 0:
-        code += """
-// ODES"""
         for step in range(nb_step):
-            code += """
-// Step %(step)s""" % {'step' : str(step+1)}
             for param in odes:
                 if conductance_only: # skip the variables which do not start with g_
                     if not param['name'].startswith('g_'):
@@ -116,8 +103,6 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
                 'cpp': eq }
 
         # Generate the switch code
-        code += """    
-// Switch values"""
         for param in odes: 
             if conductance_only: # skip the variables which do not start with g_
                 if not param['name'].startswith('g_'):
@@ -128,51 +113,35 @@ if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
 """ % { 'comment': '// '+param['eq'],
         'switch' : param['switch']}
 
-            # Min-Max bounds
-            for bound, val in param['bounds'].items():
-                if bound == "init":
-                    continue
+            # Min-Max bounds,
+            code += generate_bound_code(param, obj, pattern)
 
-                code += """
-if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
-""" % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
-       'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
-       'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
-       'var' : param['name'], 'val' : val, 'id': id, 
-       'operator': '<' if bound=='min' else '>'
-       }
+    return code
 
-    #######################
-    # Post-ODE equations
-    #######################
-    if len(post_odes) > 0:
-        code += """
-// After the ODES"""
-        for param in post_odes:           
-            if conductance_only: # skip the variables which do not start with g_
-                if not param['name'].startswith('g_'):
-                    continue
-            code += """
-%(comment)s
-%(cpp)s
-""" % { 'comment': '// '+param['eq'],
-        'cpp': param['cpp'] }
+def generate_equation_code(id, desc, locality='local', obj='pop', conductance_only=False, padding=3):
+    
+    # Find the paradigm OMP or CUDA
+    if config['paradigm'] == 'openmp':
+        pattern = pattern_omp
+    else:
+        pattern = pattern_cuda
+    
+    # Separate ODEs from the pre- and post- equations
+    odes = sort_odes(desc, locality)
+    
+    if odes == []: # No equations
+        return ""
 
-            # Min-Max bounds
-            for bound, val in param['bounds'].items():
-                if bound == "init":
-                    continue
+    # Generate code
+    code = ""  
 
-                code += """
-if(%(obj)s%(sep)s%(var)s%(index)s %(operator)s %(val)s)
-    %(obj)s%(sep)s%(var)s%(index)s = %(val)s;
-""" % {'obj': pattern['pop_prefix'] if obj == 'pop' else pattern['proj_prefix'],
-       'sep': pattern['pop_sep'] if obj == 'pop' else pattern['proj_sep'],
-       'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index'],
-       'var' : param['name'], 'val' : val, 'id': id, 
-       'operator': '<' if bound=='min' else '>'
-       }
+    for type_block, block in odes:
+        if type_block == 'ode':
+            code += generate_ODE_block(block, locality, obj, 
+            conductance_only, pattern)
+        else:
+            code += generate_non_ODE_block(block, locality, obj, 
+            conductance_only, pattern)
 
     # Add the padding to each line
     padded_code = tabify(code, padding)

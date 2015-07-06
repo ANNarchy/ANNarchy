@@ -213,7 +213,6 @@ class SpikeSourceArray(Population):
         self._specific_template['access_parameters_variables'] = ""
 
         self._specific_template['init_parameters_variables'] ="""
-        spike_times = std::vector< std::vector< double > >(size, std::vector<double>());
         next_spike = std::vector<double>(size, -10000.0);
         for(int i=0; i< size; i++){
             if(!spike_times[i].empty())
@@ -234,7 +233,7 @@ class SpikeSourceArray(Population):
         self._specific_template['update_variables'] ="""
         if(_active){
             spiked.clear();
-            for(int i = 0; i < size; i++){
+            for(int i = 0; i < %(size)s; i++){
                 // Emit spike
                 if( t == (long int)(next_spike[i]/dt) ){
                     last_spike[i] = t;
@@ -245,7 +244,7 @@ class SpikeSourceArray(Population):
                 }
             }
         }
-"""
+""" % {'size': self.size}
 
         self._specific_template['export_parameters_variables'] ="""
         vector[vector[double]] spike_times
