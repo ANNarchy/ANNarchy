@@ -405,7 +405,8 @@ class ProjectionGenerator(object):
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                 'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'delay_nu' : '[delay[i][j]-1]' # non-uniform delay
+                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
         # Default variables needed in psp_code
@@ -435,12 +436,6 @@ class ProjectionGenerator(object):
             delayed_variables = proj.pre.population.delayed_variables
         else:
             delayed_variables = proj.pre.delayed_variables
-
-        # Constant delay
-        if proj.max_delay > 1 and proj.uniform_delay != -1:
-            ids['delay_u'] = '[' + str(proj.uniform_delay-1) + ']'
-        else: # should not be used
-            ids['delay_u'] = ''
 
         # Delays
         if proj.max_delay > 1: # There is non-zero delay            
@@ -473,7 +468,7 @@ class ProjectionGenerator(object):
         omp_code = ""
         pre_copy = ""
 
-        # OMP: make a local copy of pre.r for each thread if the delays are constant
+        # OMP: make a local copy of local variables for each thread if the delays are constant
         if with_openmp: 
             if proj.max_delay > 1: # there is a delay
                 if proj.uniform_delay == -1 : # Non-uniform delays: do nothing
@@ -488,12 +483,7 @@ class ProjectionGenerator(object):
                                 '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s',
                                 '_pre_'+var+'%(pre_index)s'
                             )
-                        else: # Global delayed variable
-                            pre_copy += "double _pre_" + var + "%(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
-                            psp = psp.replace(  '%(pre_prefix)s_delayed_'+var+'%(delay_u)s', 
-                                                '_pre_%(var)s')
-
-                        omp_code += '_pre_%(var)s, ' % {'var': var}
+                            omp_code += '_pre_%(var)s, ' % {'var': var}
 
                     omp_code += "nb_post) schedule(dynamic)"
 
@@ -506,11 +496,7 @@ class ProjectionGenerator(object):
                             '%(pre_prefix)s'+var+'%(pre_index)s',
                             '_pre_'+var+'%(pre_index)s'
                         )
-                    else:
-                        pre_copy += "double _pre_" + var + "%(pre_prefix)s" + var + ";"
-                        psp = psp.replace(  '%(pre_prefix)s'+var, 
-                                            '_pre_%(var)s')
-                    omp_code += '_pre_%(var)s, ' % {'var': var}
+                        omp_code += '_pre_%(var)s, ' % {'var': var}
 
                 omp_code += "nb_post) schedule(dynamic)"
         
@@ -886,7 +872,8 @@ if(_learning && pop%(id_post)s._active){
                 'post_index': '[rk_post]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                 'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'delay_nu' : '[delay[i][j]-1]' # non-uniform delay
+                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
         # Global variables
@@ -913,13 +900,6 @@ if(_learning && pop%(id_post)s._active){
             delayed_variables = proj.pre.population.delayed_variables
         else:
             delayed_variables = proj.pre.delayed_variables
-
-        # Constant delay
-        if proj.max_delay > 1 and proj.uniform_delay != -1:
-            ids['delay_u'] = '[' + str(proj.uniform_delay-1) + ']'
-        else: # should not be used
-            ids['delay_u'] = ''
-
 
         # Take delays into account if any
         if proj.max_delay > 1:
