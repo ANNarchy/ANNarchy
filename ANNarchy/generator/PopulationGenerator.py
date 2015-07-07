@@ -795,11 +795,17 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         if not pop.stop_condition: # no stop condition has been defined
             return ""
 
+        # Process the stop condition
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
-
         extract_stop_condition(pop.neuron_type.description)
-        condition = pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
+        # Retrieve the code
+        condition = pop.neuron_type.description['stop_condition']['cpp']% {
+            'id': pop.id, 
+            'local_index': "[i]", 
+            'global_index': ''}
+
+        # Generate the function
         if pop.neuron_type.description['stop_condition']['type'] == 'any':
             stop_code = """
     // Stop condition (any)

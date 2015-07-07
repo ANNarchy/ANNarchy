@@ -1,6 +1,6 @@
 """
 
-    SSingleAnalysis.py
+    SingleAnalysis.py
 
     This file is part of ANNarchy.
 
@@ -25,42 +25,9 @@ from ANNarchy.core.Global import _error, _warning, config
 from .Extraction import *
 from .CoupledEquations import CoupledEquations
 
-# Specific code generation for the chosen paradigm
-pattern_omp = {
-    # Populations
-    'pop_index': '[i]',
-    'pop_globalindex': '',
-    'pop_sum': '_sum_',
-    # Projections
-    'proj_index': '[i][j]',
-    'proj_globalindex': '[i]',
-    'proj_preprefix': 'pop%(id_pre)s.',
-    'proj_postprefix': 'pop%(id_post)s.',
-    'proj_preindex': '[rk_pre]',
-    'proj_postindex': '[rk_post]',}
-pattern_cuda = {
-    # Populations
-    'pop_index': '[i]',
-    'pop_globalindex': '',
-    'pop_sum': '_sum_',
-    # Projections
-    'proj_index': '[j]',
-    'proj_globalindex': '[i]',
-    'proj_preprefix': 'pre_',
-    'proj_postprefix': 'post_',
-    'proj_preindex': '[rk_pre]',
-    'proj_postindex': '[rk_post]',
-}
-
 def analyse_neuron(neuron):
     """ Performs the initial analysis for a single neuron type."""
     concurrent_odes = []
-
-    # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'openmp':
-        pattern = pattern_omp
-    else:
-        pattern = pattern_cuda
 
     # Store basic information
     description = {
@@ -143,7 +110,7 @@ def analyse_neuron(neuron):
         # Replace sum(target) with pop%(id)s.sum_exc[i]
         for target in description['targets']:
             eq = re.sub('sum\(\s*'+target+'\s*\)', '__sum_'+target+'__', eq)
-            untouched['__sum_'+target+'__'] = pattern['pop_sum'] + target + pattern['pop_index']
+            untouched['__sum_'+target+'__'] = '_sum_' + target + '%(local_index)s'
         
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description)
@@ -250,13 +217,7 @@ def analyse_neuron(neuron):
 
 def analyse_synapse(synapse):  
     """ Performs the analysis for a single synapse."""  
-    concurrent_odes = []
- 
-    # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'openmp':
-        pattern = pattern_omp
-    else:
-        pattern = pattern_cuda  
+    concurrent_odes = [] 
 
     # Store basic information
     description = {
@@ -366,12 +327,12 @@ def analyse_synapse(synapse):
             continue
         
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description, pattern)
+        eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description)
         description['pre_global_operations'] += global_ops['pre']
         description['post_global_operations'] += global_ops['post']
         
         # Extract pre- and post_synaptic variables
-        eq, untouched_var, dependencies = extract_prepost(variable['name'], eq, description, pattern)
+        eq, untouched_var, dependencies = extract_prepost(variable['name'], eq, description)
 
         description['dependencies']['pre'] += dependencies['pre']
         description['dependencies']['post'] += dependencies['post']
@@ -463,11 +424,11 @@ def analyse_synapse(synapse):
     if 'raw_psp' in description.keys():                
         psp = {'eq' : description['raw_psp'].strip() }
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description, pattern)
+        eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description)
         description['pre_global_operations'] += global_ops['pre']
         description['post_global_operations'] += global_ops['post']
         # Replace pre- and post_synaptic variables
-        eq, untouched, dependencies = extract_prepost('psp', eq, description, pattern)
+        eq, untouched, dependencies = extract_prepost('psp', eq, description)
         description['dependencies']['pre'] += dependencies['pre']
         description['dependencies']['post'] += dependencies['post']
         for name, val in untouched_globs.items():

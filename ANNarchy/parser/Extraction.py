@@ -113,7 +113,7 @@ def extract_globalops_neuron(name, eq, description):
                 exit(0)
     return eq, untouched, globs
     
-def extract_globalops_synapse(name, eq, desc, pattern):
+def extract_globalops_synapse(name, eq, desc):
     """ 
     Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
     returns a dictionary of changes.
@@ -131,17 +131,17 @@ def extract_globalops_synapse(name, eq, desc, pattern):
             globs['pre'].append({'function': op, 'variable': var.strip()})
             newname =  '__pre_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*pre\.([\w]+)\s*\)', newname, eq)
-            untouched[newname] = pattern['proj_preprefix'] + '_' + op + '_' + var
+            untouched[newname] = 'pop%(id_pre)s_' + op + '_' + var
 
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var.strip()})
             newname = '__post_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
-            untouched[newname] = pattern['proj_postprefix'] + '_' + op + '_' + var 
+            untouched[newname] = 'pop%(id_post)s_' + op + '_' + var 
 
     return eq, untouched, globs
     
-def extract_prepost(name, eq, description, pattern):
+def extract_prepost(name, eq, description):
     " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."  
 
     dependencies = {'pre': [], 'post': []}
@@ -161,7 +161,7 @@ def extract_prepost(name, eq, description, pattern):
                     exit(0)
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
-                untouched[rep] = pattern['pop_sum'] +target+ pattern['proj_preindex']
+                untouched[rep] = '_sum_' +target+ '%(pre_index)s'
                 return rep
 
             eq = re.sub(r'pre\.sum\(([\s\w]+)\)', idx_target, eq)
@@ -169,7 +169,7 @@ def extract_prepost(name, eq, description, pattern):
             dependencies['pre'].append(var)
             target = 'pre.' + var
             eq = eq.replace(target, ' _pre_'+var)
-            untouched['_pre_'+var] = pattern['proj_preprefix'] + var + pattern['proj_preindex']
+            untouched['_pre_'+var] = '%(pre_prefix)s' + var + '%(pre_index)s'
 
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
@@ -182,14 +182,14 @@ def extract_prepost(name, eq, description, pattern):
                     exit(0)
                 dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target.strip()
-                untouched[rep] = pattern['proj_postprefix'] + pattern['pop_sum']+ target + pattern['proj_postindex']
+                untouched[rep] = '%(post_prefix)s_sum_' + target + '%(post_index)s'
                 return rep
             eq = re.sub(r'post\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
             target = 'post.' + var
             eq = eq.replace(target, ' _post_'+var)
-            untouched['_post_'+var] = pattern['proj_postprefix'] + var + pattern['proj_postindex']
+            untouched['_post_'+var] = '%(post_prefix)s' + var +'%(post_index)s'
 
     return eq, untouched, dependencies
                    
@@ -545,7 +545,7 @@ def extract_structural_plasticity(statement, description):
         eq = eq.replace(rd['origin'], 'rd(rng)')
 
     # Extract pre/post dependencies
-    eq, untouched, dependencies = extract_prepost('test', eq, description, pattern)
+    eq, untouched, dependencies = extract_prepost('test', eq, description)
 
     # Parse code
     translator = Equation('test', eq, 

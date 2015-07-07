@@ -1,4 +1,3 @@
-from ..parser.SingleAnalysis import pattern_omp, pattern_cuda
 from ..core.Global import config
  
 def sort_odes(desc, locality='local'):
@@ -31,15 +30,15 @@ def sort_odes(desc, locality='local'):
 
     return equations
 
-def generate_bound_code(param, obj, pattern):
+def generate_bound_code(param, obj):
     code = "" 
     if param['locality'] == 'local':   
         prefix_dict = {
-        'index': pattern['pop_index'] if obj == 'pop' else pattern['proj_index']
+        'index': '%(local_index)s'
     }   
     else: # global
         prefix_dict = {
-        'index': pattern['pop_globalindex'] if obj == 'pop' else pattern['proj_globalindex']
+        'index': '%(global_index)s'
     }
     for bound, val in param['bounds'].items():
         if bound in ['min', 'max']:
@@ -51,7 +50,7 @@ def generate_bound_code(param, obj, pattern):
     )
     return code
 
-def generate_non_ODE_block(variables, locality, obj, conductance_only, pattern):
+def generate_non_ODE_block(variables, locality, obj, conductance_only):
     code = ""
     for param in variables: 
         if conductance_only: # skip the variables which do not start with g_
@@ -63,12 +62,12 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only, pattern):
 %(bounds)s
 """ % { 'comment': '// ' + param['eq'],
         'cpp': param['cpp'],
-        'bounds': generate_bound_code(param, obj, pattern) }
+        'bounds': generate_bound_code(param, obj) }
 
     return code
 
 
-def generate_ODE_block(odes, locality, obj, conductance_only, pattern):
+def generate_ODE_block(odes, locality, obj, conductance_only):
     code = ""
 
     # Count how many steps (midpoint has more than one step)
@@ -110,17 +109,11 @@ def generate_ODE_block(odes, locality, obj, conductance_only, pattern):
         'switch' : param['switch']}
 
             # Min-Max bounds,
-            code += generate_bound_code(param, obj, pattern)
+            code += generate_bound_code(param, obj)
 
     return code
 
 def generate_equation_code(id, desc, locality='local', obj='pop', conductance_only=False, padding=3):
-    
-    # Find the paradigm OMP or CUDA
-    if config['paradigm'] == 'openmp':
-        pattern = pattern_omp
-    else:
-        pattern = pattern_cuda
     
     # Separate ODEs from the pre- and post- equations
     odes = sort_odes(desc, locality)
@@ -134,10 +127,10 @@ def generate_equation_code(id, desc, locality='local', obj='pop', conductance_on
     for type_block, block in odes:
         if type_block == 'ode':
             code += generate_ODE_block(block, locality, obj, 
-            conductance_only, pattern)
+            conductance_only)
         else:
             code += generate_non_ODE_block(block, locality, obj, 
-            conductance_only, pattern)
+            conductance_only)
 
     # Add the padding to each line
     padded_code = tabify(code, padding)

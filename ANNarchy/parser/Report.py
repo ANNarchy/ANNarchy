@@ -1,7 +1,6 @@
 from ANNarchy.core.Global import _network, _objects, _warning, _error, _print
 from ANNarchy.core.Random import RandomDistribution
 from .Extraction import *
-from .SingleAnalysis import pattern_omp
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
