@@ -404,7 +404,8 @@ class ProjectionGenerator(object):
                 'pre_index': '[pre_rank[i][j]]',
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                'delay_nu' : '[delay[i][j]-1]' # non-uniform delay
         }
 
         # Default variables needed in psp_code
@@ -417,98 +418,108 @@ class ProjectionGenerator(object):
         if 'psp_code' in proj._specific_template.keys():
             return psp_prefix, proj._specific_template['psp_code']
 
+        # Retrieve the PSP
+        if not 'psp' in  proj.synapse.description.keys(): # default
+            psp = """w%(local_index)s * %(preprefix)s.r%(pre_index)s;"""
+        else: # custom psp
+            psp = (proj.synapse.description['psp']['cpp'])
 
-        # Retrieve the psp code
-        if Global.config['num_threads'] < 2 or proj.post.size <= Global.OMP_MIN_NB_NEURONS: # No need to copy the pre-synaptic firing rates
-            if not 'psp' in  proj.synapse.description.keys(): # default
-                psp = """w[i][j] * pop%(id_pre)s.r[pre_rank[i][j]];""" % ids
-            else: # custom psp
-                psp = (proj.synapse.description['psp']['cpp'] % ids)
+        # OpenMP
+        with_openmp = Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS
 
-            # Take delays into account if any
-            if proj.max_delay > 1: # There is non-zero delay
-                if isinstance(proj.pre, PopulationView):
-                    delayed_variables = proj.pre.population.delayed_variables
-                else:
-                    delayed_variables = proj.pre.delayed_variables
-                if proj.uniform_delay == -1 : # Non-uniform delays
-                    for var in delayed_variables:
-                        if var in proj.pre.neuron_type.description['local']:
-                            psp = psp.replace(
-                                'pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% dict({'var': var}.items() + ids.items()), 
-                                'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1][pre_rank[i][j]]'% dict({'var': var}.items() + ids.items())
-                            )
-                        else:
-                            psp = psp.replace(
-                                'pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% dict({'var': var}.items() + ids.items()), 
-                                'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1]'% dict({'var': var}.items() + ids.items())
-                            )
+        # Dependencies
+        dependencies = list(set(proj.synapse.description['dependencies']['pre']))
 
-                else: # Uniform delays
-                    for var in delayed_variables:
-                        if var in proj.pre.neuron_type.description['local']:
-                            psp = psp.replace(
-                                'pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% dict({'var': var}.items() + ids.items()), 
-                                'pop%(id_pre)s._delayed_%(var)s[%(delay)s][pre_rank[i][j]]' % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
-                            )
-                        else:
-                            psp = psp.replace(
-                                'pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% dict({'var': var}.items() + ids.items()), 
-                                'pop%(id_pre)s._delayed_%(var)s[%(delay)s]' % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
-                            )
+        # Delayed variables
+        if isinstance(proj.pre, PopulationView):
+            delayed_variables = proj.pre.population.delayed_variables
+        else:
+            delayed_variables = proj.pre.delayed_variables
 
-            omp_code = ""
-            pre_copy = ""
+        # Constant delay
+        if proj.max_delay > 1 and proj.uniform_delay != -1:
+            ids['delay_u'] = '[' + str(proj.uniform_delay-1) + ']'
+        else: # should not be used
+            ids['delay_u'] = ''
 
-        else: # OMP: make a local copy of pre.r for each thread
-            if not 'psp' in  proj.synapse.description.keys(): # default
-                psp = """w[i][j] * pop%(id_pre)s.r[pre_rank[i][j]];""" % ids
-            else: # custom psp
-                psp = (proj.synapse.description['psp']['cpp'] % ids)
-            # Take delays into account if any
+        # Delays
+        if proj.max_delay > 1: # There is non-zero delay            
+            if proj.uniform_delay == -1 : # Non-uniform delays
+                for var in delayed_variables:
+                    if var in proj.pre.neuron_type.description['local']:
+                        psp = psp.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
+                        )
+                    else:
+                        Global._error('The psp accesses a global variable with a non-uniform delay!')
+                        Global._print(proj.synapse.description['psp']['eq'])
+                        exit(0)
+
+            else: # Uniform delays
+                for var in delayed_variables:
+                    if var in proj.pre.neuron_type.description['local']:
+                        psp = psp.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s'
+                        )
+                    else:
+                        psp = psp.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
+                        )
+
+        # Generate OMP code and eventually a pre-copy
+        omp_code = ""
+        pre_copy = ""
+
+        # OMP: make a local copy of pre.r for each thread if the delays are constant
+        if with_openmp: 
             if proj.max_delay > 1: # there is a delay
-                if proj.uniform_delay == -1 : # Non-uniform delays
-                    for var in list(set(proj.synapse.description['dependencies']['pre'])):
-                        if var in proj.pre.neuron_type.description['local']:
-                            psp = psp.replace(  
-                                'pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% {'id_pre': proj.pre.id, 'var': var}, 
-                                'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1][pre_rank[i][j]]' % {'id_pre': proj.pre.id, 'id_proj' : proj.id, 'var': var})
-                        else:
-                            Global._error('The psp accesses a global variable with a non-uniform delay!')
-                            Global._print(proj.synapse.description['psp']['eq'])
-                            exit(0)
-                    pre_copy = ""
-                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)'% ids 
+                if proj.uniform_delay == -1 : # Non-uniform delays: do nothing
+                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)' 
 
                 else: # Uniform delays
-                    pre_copy = ""; omp_code = "#pragma omp parallel for private(sum) firstprivate("
-                    for var in list(set(proj.synapse.description['dependencies']['pre'])):
+                    omp_code = "#pragma omp parallel for private(sum) firstprivate("
+                    for var in dependencies:
                         if var in proj.pre.neuron_type.description['local']:
-                            pre_copy += """std::vector<double> _pre_%(var)s = pop%(id_pre)s._delayed_%(var)s[%(delay)s];\n""" %{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
-                            psp = psp.replace('pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% {'id_pre': proj.pre.id, 'var': var}, '_pre_%(var)s[pre_rank[i][j]]' % {'id_proj': proj.id, 'var': var})
-                        else:
-                            pre_copy += """double _pre_%(var)s = pop%(id_pre)s._delayed_%(var)s[%(delay)s];\n""" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1), 'var': var}
-                            psp = psp.replace('pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% {'id_pre': proj.pre.id, 'var': var}, '_pre_%(var)s' % {'id_proj': proj.id, 'var': var})
+                            pre_copy += "std::vector<double> _pre_" + var + " = %(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
+                            psp = psp.replace(
+                                '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s',
+                                '_pre_'+var+'%(pre_index)s'
+                            )
+                        else: # Global delayed variable
+                            pre_copy += "double _pre_" + var + "%(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
+                            psp = psp.replace(  '%(pre_prefix)s_delayed_'+var+'%(delay_u)s', 
+                                                '_pre_%(var)s')
 
-                        omp_code += '_pre_%(var)s, ' % {'id_proj': proj.id, 'var': var}
+                        omp_code += '_pre_%(var)s, ' % {'var': var}
 
                     omp_code += "nb_post) schedule(dynamic)"
+
             else: # No delay
                 pre_copy = ""; omp_code = "#pragma omp parallel for private(sum) firstprivate("
-                for var in list(set(proj.synapse.description['dependencies']['pre'])):
+                for var in dependencies:
                     if var in proj.pre.neuron_type.description['local']:
-                        pre_copy += """        std::vector<double> _pre_%(var)s = pop%(id_pre)s.%(var)s;\n""" %{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
-                        psp = psp.replace('pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% {'id_pre': proj.pre.id, 'var': var}, '_pre_%(var)s[pre_rank[i][j]]' % {'id_proj': proj.id, 'var': var})
+                        pre_copy += "std::vector<double> _pre_" + var + " = %(pre_prefix)s" + var + ";"
+                        psp = psp.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
+                            '_pre_'+var+'%(pre_index)s'
+                        )
                     else:
-                        pre_copy += """        double _pre_%(var)s = pop%(id_pre)s.%(var)s;\n""" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
-                        psp = psp.replace('pop%(id_pre)s.%(var)s[pre_rank[i][j]]'% {'id_pre': proj.pre.id, 'var': var}, '_pre_%(var)s' % {'id_proj': proj.id, 'var': var})
-
-                    omp_code += '_pre_%(var)s, ' % {'id_proj': proj.id, 'var': var}
+                        pre_copy += "double _pre_" + var + "%(pre_prefix)s" + var + ";"
+                        psp = psp.replace(  '%(pre_prefix)s'+var, 
+                                            '_pre_%(var)s')
+                    omp_code += '_pre_%(var)s, ' % {'var': var}
 
                 omp_code += "nb_post) schedule(dynamic)"
         
+        # Finalize the psp with the correct ids
+        psp = psp % ids
+        pre_copy = pre_copy % ids
+
         # Generate the code depending on the operation
-        sum_code = ProjTemplate.summation_operation[proj.synapse.operation] %{
+        sum_code = ProjTemplate.summation_operation[proj.synapse.operation] % {
             'pre_copy': pre_copy,
             'omp_code': omp_code,
             'psp': psp.replace(';', ''), 
