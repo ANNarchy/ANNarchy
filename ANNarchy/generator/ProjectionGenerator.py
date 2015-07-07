@@ -874,8 +874,8 @@ if(_learning && pop%(id_post)s._active){
         prefix = """
         int rk_post, rk_pre;"""
 
-        # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2) %{
+        # Dictionary of pre/suffixes
+        ids = {
                 'id_proj' : proj.id, 
                 'target': proj.target, 
                 'id_post': proj.post.id, 
@@ -885,22 +885,15 @@ if(_learning && pop%(id_post)s._active){
                 'pre_index': '[rk_pre]',
                 'post_index': '[rk_post]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                'delay_nu' : '[delay[i][j]-1]' # non-uniform delay
         }
 
+        # Global variables
+        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2) 
+
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3) %{
-                'id_proj' : proj.id, 
-                'target': proj.target, 
-                'id_post': proj.post.id, 
-                'id_pre': proj.pre.id, 
-                'local_index': "[i][j]", 
-                'global_index': '[i]',
-                'pre_index': '[rk_pre]',
-                'post_index': '[rk_post]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
-        } 
+        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3)
 
         # Skip generation if 
         if local_eq.strip() == '' and global_eq.strip() == '' :
@@ -908,10 +901,54 @@ if(_learning && pop%(id_post)s._active){
 
         # OpenMP
         omp_code = ""
-        if Global.config['num_threads']>1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
+        if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
             omp_code = '#pragma omp parallel for private(rk_pre, rk_post)'
 
-        # Code template  
+
+        # Dependencies
+        dependencies = list(set(proj.synapse.description['dependencies']['pre']))
+
+        # Delayed variables
+        if isinstance(proj.pre, PopulationView):
+            delayed_variables = proj.pre.population.delayed_variables
+        else:
+            delayed_variables = proj.pre.delayed_variables
+
+        # Constant delay
+        if proj.max_delay > 1 and proj.uniform_delay != -1:
+            ids['delay_u'] = '[' + str(proj.uniform_delay-1) + ']'
+        else: # should not be used
+            ids['delay_u'] = ''
+
+
+        # Take delays into account if any
+        if proj.max_delay > 1:
+            if proj.uniform_delay == -1 : # Non-uniform delays
+                for var in dependencies:
+                    if var in proj.pre.neuron_type.description['local']:
+                        local_eq = local_eq.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
+                        )
+                    else:
+                        local_eq = local_eq.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s'
+                        )
+            else: # Uniform delays
+                for var in dependencies:
+                    if var in proj.pre.neuron_type.description['local']:
+                        local_eq = local_eq.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s'
+                        )
+                    else:
+                        local_eq = local_eq.replace(
+                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
+                        )
+
+        # Fill the code template  
         if local_eq.strip() != "": # local synapses are updated
             code = """
 if(_learning && pop%(id_post)s._active){
@@ -925,8 +962,8 @@ if(_learning && pop%(id_post)s._active){
         }
     }
 }
-"""%{   'global': global_eq, 
-        'local': local_eq,
+"""%{   'global': global_eq % ids, 
+        'local': local_eq % ids,
         'id_post': proj.post.id, 
         'omp_code': omp_code
     }
@@ -939,51 +976,10 @@ if(_learning && pop%(id_post)s._active){
     %(global)s
     }
 }
-"""%{   'global': global_eq, 
+"""%{   'global': global_eq % ids, 
         'id_post': proj.post.id, 
         'omp_code': omp_code
     }
-
-        # Take delays into account if any
-        if proj.max_delay > 1:
-            if proj.uniform_delay == -1 : # Non-uniform delays
-                for var in list(set(proj.synapse.description['dependencies']['pre'])):
-                    if var in proj.pre.neuron_type.description['local']:
-                        code = code.replace(
-                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
-                            'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1][rk_pre]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
-                        )
-                    else:
-                        code = code.replace(
-                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
-                            'pop%(id_pre)s._delayed_%(var)s[delay[i][j]-1]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var}
-                        )
-                # Access to spike arrays should also be delayed? TODO check
-                code = code.replace(
-                    'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
-                    'pop%(id_pre)s._delayed_spike[delay[i][j]-1]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id}
-                )
-            else: # Uniform delays
-                for var in list(set(proj.synapse.description['dependencies']['pre'])):
-                    if var in proj.pre.neuron_type.description['local']:
-                        code = code.replace(
-                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
-                            'pop%(id_pre)s._delayed_%(var)s[%(delay)s][rk_pre]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var, 'delay': str(proj.uniform_delay-1)}
-                        )
-                    else:
-                        code = code.replace(
-                            'pop%(id_pre)s.%(var)s[rk_pre]'%{'id_pre': proj.pre.id, 'var': var}, 
-                            'pop%(id_pre)s._delayed_%(var)s[%(delay)s]'%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'var': var, 'delay': str(proj.uniform_delay-1)}
-                        )
-                # Access to spike arrays should also be delayed? TODO check
-                code = code.replace(
-                    'pop%(id_pre)s.spiked['%{'id_pre': proj.pre.id},
-                    'pop%(id_pre)s._delayed_spike[%(delay)s]['%{'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
-                )
-
-        # profiling annotation
-        if self._prof_gen:
-            code = self._prof_gen.annotate_update_synapse_omp(code)
 
         # Return the code block
         return prefix, tabify(code, 2)
