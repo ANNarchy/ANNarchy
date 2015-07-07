@@ -125,12 +125,12 @@ def analyse_neuron(neuron):
                 description['local'].append('g_'+target)
 
     # Extract RandomDistribution objects
-    random_distributions = extract_randomdist(description, pattern)
+    random_distributions = extract_randomdist(description)
     description['random_distributions'] = random_distributions
 
     # Extract the spike condition if any
     if neuron.type == 'spike':
-        description['spike'] = extract_spike_variable(description, pattern)
+        description['spike'] = extract_spike_variable(description)
 
     # Global operation TODO
     description['global_operations'] = []
@@ -146,7 +146,7 @@ def analyse_neuron(neuron):
             untouched['__sum_'+target+'__'] = pattern['pop_sum'] + target + pattern['pop_index']
         
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description, pattern)
+        eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description)
 
         # Add the untouched variables to the global list
         for name, val in untouched_globs.items():
@@ -315,12 +315,12 @@ def analyse_synapse(synapse):
     description['post_global_operations'] = []
 
     # Extract RandomDistribution objects
-    description['random_distributions'] = extract_randomdist(description, pattern)
+    description['random_distributions'] = extract_randomdist(description)
     
     # Extract event-driven info
     if description['type'] == 'spike':  
         # pre_spike event       
-        description['pre_spike'] = extract_pre_spike_variable(description, pattern)
+        description['pre_spike'] = extract_pre_spike_variable(description)
         for var in description['pre_spike']:
             if var['name'] in ['g_target', 'w']: # Already dealt with
                 continue
@@ -337,7 +337,7 @@ def analyse_synapse(synapse):
                 description['attributes'].append(var['name'])
 
         # post_spike event
-        description['post_spike'] = extract_post_spike_variable(description, pattern)
+        description['post_spike'] = extract_post_spike_variable(description)
         for var in description['post_spike']:
             if var['name'] in ['g_target', 'w']: # Already dealt with
                 continue
@@ -536,8 +536,8 @@ def analyse_synapse(synapse):
 
     # Structural plasticity
     if synapse.pruning:
-        description['pruning'] = extract_structural_plasticity(synapse.pruning, description, pattern)
+        description['pruning'] = extract_structural_plasticity(synapse.pruning, description)
     if synapse.creating:
-        description['creating'] = extract_structural_plasticity(synapse.creating, description, pattern)
+        description['creating'] = extract_structural_plasticity(synapse.creating, description)
 
     return description     

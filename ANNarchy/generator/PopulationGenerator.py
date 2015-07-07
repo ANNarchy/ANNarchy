@@ -797,16 +797,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
 
-        from ANNarchy.parser.Extraction import extract_stop_condition
-        from ANNarchy.parser.SingleAnalysis import pattern_omp, pattern_cuda
-
-        # Find the paradigm OMP or CUDA
-        if Global.config['paradigm'] == 'cuda':
-            pattern = pattern_cuda
-        else:
-            pattern = pattern_omp
-
-        extract_stop_condition(pop.neuron_type.description, pattern)
+        extract_stop_condition(pop.neuron_type.description)
         condition = pop.neuron_type.description['stop_condition']['cpp']% {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
         if pop.neuron_type.description['stop_condition']['type'] == 'any':
@@ -821,7 +812,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         }
         return false;
     }
-    """ % {'id': pop.id, 'condition': condition}
+    """ % {'condition': condition}
         else:
             stop_code = """
     // Stop condition (all)
@@ -834,7 +825,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         }
         return true;
     }
-    """ % {'id': pop.id, 'condition': condition}
+    """ % {'condition': condition}
 
         return stop_code
 

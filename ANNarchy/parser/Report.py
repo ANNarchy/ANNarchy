@@ -503,7 +503,7 @@ def _process_neuron_equations(neuron):
     \\begin{enumerate}
         \\item Emit a spike at time $t^*$"""
     
-    reset_vars = extract_spike_variable(neuron.description, pattern_omp)['spike_reset']
+    reset_vars = extract_spike_variable(neuron.description)['spike_reset']
     for var in reset_vars:
         eq = var['eq']
         spike_code += """
@@ -591,7 +591,7 @@ def _process_synapse_equations(synapse):
 
     # Pre-event
     if synapse.type == 'spike':
-        for var in extract_pre_spike_variable(synapse.description, pattern_omp):
+        for var in extract_pre_spike_variable(synapse.description):
             eq = var['eq']
             # pre/post variables
             eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
@@ -606,7 +606,7 @@ def _process_synapse_equations(synapse):
 \\]
 """ % {'eq': var_code}
 
-        for var in extract_post_spike_variable(synapse.description, pattern_omp):
+        for var in extract_post_spike_variable(synapse.description):
             eq = var['eq']
             # pre/post variables
             eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)

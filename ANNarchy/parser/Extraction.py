@@ -30,7 +30,7 @@ from ANNarchy.parser.ITE import *
 
 import re
 
-def extract_randomdist(description, pattern):
+def extract_randomdist(description):
     " Extracts RandomDistribution objects from all variables"
     rk_rand = 0
     random_objects = []
@@ -91,7 +91,7 @@ def extract_randomdist(description, pattern):
         
     return random_objects
     
-def extract_globalops_neuron(name, eq, description, pattern):
+def extract_globalops_neuron(name, eq, description):
     """ Replaces global operations (mean(r), etc)  with arbitrary names and 
     returns a dictionary of changes.
     """
@@ -404,7 +404,7 @@ def extract_targets(variables):
 
     return list(set(targets))
 
-def extract_spike_variable(description, pattern):
+def extract_spike_variable(description):
 
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
@@ -427,7 +427,7 @@ def extract_spike_variable(description, pattern):
     
     return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
 
-def extract_pre_spike_variable(description, pattern):
+def extract_pre_spike_variable(description):
     pre_spike_var = []
 
     # For all variables influenced by a presynaptic spike
@@ -450,7 +450,7 @@ def extract_pre_spike_variable(description, pattern):
 
     return pre_spike_var 
 
-def extract_post_spike_variable(description, pattern):
+def extract_post_spike_variable(description):
     post_spike_var = []
     if not description['raw_post_spike']:
         return post_spike_var
@@ -471,7 +471,7 @@ def extract_post_spike_variable(description, pattern):
 
     return post_spike_var  
 
-def extract_stop_condition(pop, pattern):
+def extract_stop_condition(pop):
     eq = pop['stop_condition']['eq']
     pop['stop_condition']['type'] = 'any'
     # Check the flags
@@ -490,7 +490,7 @@ def extract_stop_condition(pop, pattern):
     code = translator.parse()
     pop['stop_condition']['cpp'] = '(' + code + ')'
 
-def extract_structural_plasticity(statement, description, pattern):
+def extract_structural_plasticity(statement, description):
     # Extract flags
     try:
         eq, constraint = statement.rsplit(':', 1)
