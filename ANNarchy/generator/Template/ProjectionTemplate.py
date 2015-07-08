@@ -104,7 +104,6 @@ connectivity_matrix_omp = {
     // Connectivity
     std::vector<int> post_rank;
     std::vector< std::vector< int > > pre_rank;
-    std::vector< std::vector< double > > w;
 """,
     'accessor': """
     // Accessor to connectivity data
@@ -113,6 +112,40 @@ connectivity_matrix_omp = {
     std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
     void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
     int nb_synapses(int n) { return pre_rank[n].size(); }
+""",
+    'init': """
+""",
+    'pyx_struct': """
+        # Connectivity
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_rank()
+        void set_post_rank(vector[int])
+        void set_pre_rank(vector[vector[int]])
+""",
+    'pyx_wrapper_args': "synapses",
+    'pyx_wrapper_init': """        
+        cdef CSR syn = synapses
+        cdef int size = syn.size
+        cdef int nb_post = syn.post_rank.size()
+        proj%(id_proj)s.set_size( size )
+        proj%(id_proj)s.set_post_rank( syn.post_rank )
+        proj%(id_proj)s.set_pre_rank( syn.pre_rank )
+""",
+    'pyx_wrapper_accessor': """
+    # Connectivity
+    def post_rank(self):
+        return proj%(id_proj)s.get_post_rank()
+    def pre_rank(self, int n):
+        return proj%(id_proj)s.get_pre_rank()[n]
+"""
+}
+
+weight_matrix_omp = {
+    'declare': """
+    // LIL weights
+    std::vector< std::vector< double > > w;
+""",
+    'accessor': """
     // Local parameter w
     std::vector<std::vector< double > > get_w() { return w; }
     std::vector<double> get_dendrite_w(int rk) { return w[rk]; }
@@ -124,11 +157,6 @@ connectivity_matrix_omp = {
     'init': """
 """,
     'pyx_struct': """
-        # Connectivity
-        vector[int] get_post_rank()
-        vector[vector[int]] get_pre_rank()
-        void set_post_rank(vector[int])
-        void set_pre_rank(vector[vector[int]])
         # Local variable w
         vector[vector[double]] get_w()
         vector[double] get_dendrite_w(int)
@@ -137,22 +165,11 @@ connectivity_matrix_omp = {
         void set_dendrite_w(int, vector[double])
         void set_synapse_w(int, int, double)
 """,
-    'pyx_wrapper_args': "synapses",
+    'pyx_wrapper_args': "",
     'pyx_wrapper_init': """        
-        cdef CSR syn = synapses
-        cdef int size = syn.size
-        cdef int nb_post = syn.post_rank.size()
-        proj%(id_proj)s.set_size( size )
-        proj%(id_proj)s.set_post_rank( syn.post_rank )
-        proj%(id_proj)s.set_pre_rank( syn.pre_rank )
         proj%(id_proj)s.set_w(syn.w)
 """,
     'pyx_wrapper_accessor': """
-    # Connectivity
-    def post_rank(self):
-        return proj%(id_proj)s.get_post_rank()
-    def pre_rank(self, int n):
-        return proj%(id_proj)s.get_pre_rank()[n]
     # Local variable w
     def get_w(self):
         return proj%(id_proj)s.get_w()
@@ -166,6 +183,39 @@ connectivity_matrix_omp = {
         return proj%(id_proj)s.get_synapse_w(rank_post, rank_pre)
     def set_synapse_w(self, int rank_post, int rank_pre, double value):
         proj%(id_proj)s.set_synapse_w(rank_post, rank_pre, value)
+"""
+}
+
+singleweight_matrix_omp = {
+    'declare': """
+    // Single weight in the projection
+    double w;
+""",
+    'accessor': "",
+    'init': "",
+    'pyx_struct': """
+        # Local variable w
+        double w
+""",
+    'pyx_wrapper_args': "",
+    'pyx_wrapper_init': """      
+        # Use only the first weight  
+        proj%(id_proj)s.w = syn.w[0][0]
+""",
+    'pyx_wrapper_accessor': """
+    # Local variable w
+    def get_w(self):
+        return proj%(id_proj)s.w
+    def set_w(self, value):
+        proj%(id_proj)s.w = value[0][0]
+    def get_dendrite_w(self, int rank):
+        return proj%(id_proj)s.w
+    def set_dendrite_w(self, int rank, vector[double] value):
+        proj%(id_proj)s.w = value[0]
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return proj%(id_proj)s.w
+    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+        proj%(id_proj)s.w = value
 """
 }
 
@@ -233,6 +283,16 @@ connectivity_matrix_cuda = {
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()[n]
 """
+}
+
+weight_matrix_cuda = {
+    'declare': """,
+    'accessor': """,
+    'init': """,
+    'pyx_struct': """,
+    'pyx_wrapper_args': "",
+    'pyx_wrapper_init': "",
+    'pyx_wrapper_accessor': ""
 }
 
 inverse_connectivity_matrix = {

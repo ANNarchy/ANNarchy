@@ -246,7 +246,7 @@ class SharedProjection(Projection):
 
         # Change the psp by default
         if self.synapse.description['raw_psp'] == "w * pre.r":
-            self.synapse.description['psp']['cpp'] = "pop%(id_pre)s.r[rk_pre]"
+            self.synapse.description['psp']['cpp'] = "%(pre_prefix)sr%(pre_index)s"
 
         # Check dimensions of populations 
         self.dim_pre = self.pre.dimension
@@ -583,16 +583,20 @@ class SharedProjection(Projection):
                 rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the increment
-        psp = self.synapse.description['psp']['cpp'] % {
-            'id_pre': self.pre.id, 
-            'id_post': self.post.id, 
-            'local_index':'[i][j]', 
-            'global_index': '[i]'}
         index = ""
         for dim in range(self.dim_kernel):
             index += '[' + indices[dim] + '_w]'
-        increment = psp.replace('[i][j]', index)
 
+        increment = self.synapse.description['psp']['cpp'] % {
+            'id_pre': self.pre.id, 
+            'id_post': self.post.id, 
+            'local_index': index, 
+            'global_index': '[i]',
+            'pre_index': '[rk_pre]',
+            'post_index': '[rk_post]',
+            'pre_prefix': 'pop'+str(self.pre.id)+'.',
+            'post_prefix': 'pop'+str(self.post.id)+'.'
+        }
 
         # Delays
         if self.delays > Global.config['dt']:
@@ -623,8 +627,12 @@ class SharedProjection(Projection):
 
         impl_code = code % {'id_proj': self.id, 
             'target': self.target,  
-            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
-            'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size
+            'id_pre': self.pre.id, 
+            'name_pre': self.pre.name, 
+            'size_pre': self.pre.size, 
+            'id_post': self.post.id, 
+            'name_post': self.post.name, 
+            'size_post': self.post.size
           }
 
         # sum code
@@ -692,15 +700,19 @@ class SharedProjection(Projection):
             rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the increment
-        psp = self.synapse.description['psp']['cpp'] % {
-            'id_pre': self.pre.id, 
-            'id_post': self.post.id, 
-            'local_index':'[i][j]', 
-            'global_index': '[i]'}
         index = "[coord["+str(self.dim_pre)+"]]"
         for dim in range(self.dim_kernel-1):
             index += '[' + indices[dim] + '_w]'
-        increment = psp.replace('[i][j]', index)
+
+        increment = self.synapse.description['psp']['cpp'] % {
+            'id_pre': self.pre.id, 
+            'id_post': self.post.id, 
+            'local_index': index, 
+            'global_index': '[i]',
+            'pre_index': '[rk_pre]',
+            'post_index': '[rk_post]',
+            'pre_prefix': 'pop'+str(self.pre.id)+'.',
+            'post_prefix': 'pop'+str(self.post.id)+'.'}
 
 
         # Delays
@@ -783,11 +795,16 @@ class SharedProjection(Projection):
                 rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the value to pool
-        psp = self.synapse.description['psp']['cpp']% {
+        psp = self.synapse.description['psp']['cpp'] % {
             'id_pre': self.pre.id, 
             'id_post': self.post.id, 
             'local_index':'[i][j]', 
-            'global_index': '[i]'}
+            'global_index': '[i]',
+            'pre_index': '[rk_pre]',
+            'post_index': '[rk_post]',
+            'pre_prefix': 'pop'+str(self.pre.id)+'.',
+            'post_prefix': 'pop'+str(self.post.id)+'.'
+            }
 
         # Delays
         if self.delays > Global.config['dt']:
@@ -1046,12 +1063,15 @@ class SharedProjection(Projection):
             omp_code = ""
 
         # PSP
-        psp = self.synapse.description['psp']['cpp']% {
-            'id_proj': self.id,
+        psp = self.synapse.description['psp']['cpp']  % {
             'id_pre': self.pre.id, 
             'id_post': self.post.id, 
             'local_index':'[i][j]', 
-            'global_index': '[i]'}
+            'global_index': '[i]',
+            'pre_index': '[pre_rank[i][j]]',
+            'post_index': '[post_rank[i]]',
+            'pre_prefix': 'pop'+str(self.pre.id)+'.',
+            'post_prefix': 'pop'+str(self.post.id)+'.'}
         psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
             
         # Take delays into account if any

@@ -63,6 +63,9 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None):
     self.connector_name = "One-to-One"
     self.connector_description = "One-to-One, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
 
+    if isinstance(weights, (int, float)):
+        self._single_constant_weight = True
+
     self._store_connectivity(Connector.one_to_one, (weights, delays, shift), delays)
     return self
 
@@ -81,6 +84,9 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
 
     self.connector_name = "All-to-All"
     self.connector_description = "All-to-All, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
+
+    if isinstance(weights, (int, float)):
+        self._single_constant_weight = True
 
     self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections), delays)
     return self
@@ -166,6 +172,9 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     self.connector_name = "Random"
     self.connector_description = "Random, sparseness %(proba)s, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays), 'proba': probability}
 
+    if isinstance(weights, (int, float)):
+        self._single_constant_weight = True
+
     self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
     return self
 
@@ -194,6 +203,9 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     
     self.connector_name = "Random Convergent"
     self.connector_description = "Random Convergent %(number)s $\\rightarrow$ 1, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
+
+    if isinstance(weights, (int, float)):
+        self._single_constant_weight = True
 
     self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections), delays)
 
@@ -225,6 +237,9 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
 
     self.connector_name = "Random Divergent"
     self.connector_description = "Random Divergent 1 $\\rightarrow$ %(number)s, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
+
+    if isinstance(weights, (int, float)):
+        self._single_constant_weight = True
 
     self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections), delays)
     return self
@@ -276,12 +291,6 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
     # Store the synapses
     self.connector_name = "Connectivity matrix"
     self.connector_description = "Connectivity matrix"
-    self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays)
-
-    return self
-
-def _load_from_matrix(self, pre, post, weights, delays, pre_post):
-    csr = Connector.CSR()
 
     if isinstance(weights, list):
         try:
@@ -289,6 +298,13 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
             exit(0)
+
+    self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays)
+
+    return self
+
+def _load_from_matrix(self, pre, post, weights, delays, pre_post):
+    csr = Connector.CSR()
 
     uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
@@ -362,6 +378,10 @@ def connect_from_sparse(self, weights, delays=0.0):
         Global._error("connect_from_sparse(): only constant delays are allowed for sparse matrices.")
         exit(0)
 
+    weights = csc_matrix(weights)
+
+    if weights[weights.nonzero()].max() == weights[weights.nonzero()].min() :
+        self._single_constant_weight = True
 
     # Store the synapses
     self.connector_name = "Sparse connectivity matrix"
@@ -387,12 +407,11 @@ def _load_from_sparse(self, pre, post, weights, delays):
         offset_post = 0
     
     # Process the sparse matrix and fill the csr
-    W = csc_matrix(weights)
-    W.sort_indices()
-    (pre, post) = W.shape
+    weights.sort_indices()
+    (pre, post) = weights.shape
     for idx_post in range(post):
-        pre_rank = W.getcol(idx_post).indices
-        w = W.getcol(idx_post).data
+        pre_rank = weights.getcol(idx_post).indices
+        w = weights.getcol(idx_post).data
         csr.add(idx_post + offset_post, pre_rank + offset_pre, w, [float(delays)])
 
     return csr        

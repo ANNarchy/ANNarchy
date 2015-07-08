@@ -32,10 +32,6 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 import ANNarchy.core.Connectors as ConnectorMethods
 
-try:
-    import ANNarchy.core.cython_ext.Connector as Connector
-except:
-    pass
 
 class Projection(object):
     """
@@ -132,6 +128,9 @@ class Projection(object):
         self._connection_args = None
         self._connection_delay = None
         self._connector = None
+
+        # If a single weight value is used
+        self._single_constant_weight = False
 
         # Recorded variables
         self.recorded_variables = {}
@@ -243,6 +242,10 @@ class Projection(object):
             csr.add(rk_post, self.cyInstance.pre_rank(idx), self.cyInstance.get_dendrite_w(idx), delay)
 
         return csr  
+
+    def _has_single_weight(self):
+        "if a single weight should be generated instead of a LIL"
+        return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse.description['plasticity'] and Global.config['paradigm']=="openmp"
 
 
     def reset(self, synapses=False):

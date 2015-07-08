@@ -354,7 +354,7 @@ clean:
             Global._print(msg)
             Global._error('Compilation failed.')
             try:
-                os.remove('ANNarchyCore'+self.net_id+'.so')
+                os.remove('ANNarchyCore'+str(self.net_id)+'.so')
             except:
                 pass
             exit(0)

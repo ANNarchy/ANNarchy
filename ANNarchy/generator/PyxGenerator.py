@@ -256,10 +256,17 @@ class PyxGenerator(object):
 
         # Import templates
         connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
+        weight_tpl = ProjTemplate.weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.weight_matrix_cuda
         sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
+
+
+        # Special case for single weights
+        if proj._has_single_weight():
+            weight_tpl = ProjTemplate.singleweight_matrix_omp  
 
         # Export connectivity matrix
         export_connectivity_matrix = connectivity_tpl['pyx_struct']
+        export_connectivity_matrix += weight_tpl['pyx_struct']
 
         # Delay 
         export_delay=""
@@ -348,19 +355,32 @@ class PyxGenerator(object):
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Import templates
+        # Import attributes templates
         pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
+
+        # Import connectivity matrix template
         connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
+
+        # Import weight array template
+        weight_tpl = ProjTemplate.weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.weight_matrix_cuda
+        
+        # Special case for single weights
+        if proj._has_single_weight():
+            weight_tpl = ProjTemplate.singleweight_matrix_omp            
+
         sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
 
         # Arguments to the wrapper (default: synapses)
         wrapper_args = connectivity_tpl['pyx_wrapper_args']
+        wrapper_args += weight_tpl['pyx_wrapper_args']
 
         # Wrapper constructor
         wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
+        wrapper_init += weight_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
 
         # Wrapper sccess to connectivity matrix 
         wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+        wrapper_access_connectivity += weight_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
 
         # Delays
         wrapper_init_delay = ""; wrapper_access_delay=""

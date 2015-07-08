@@ -25,6 +25,7 @@ import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 import Template.ProjectionTemplate as ProjTemplate
 from .Utils import generate_equation_code, tabify
+import re
 
 class ProjectionGenerator(object):
 
@@ -205,13 +206,25 @@ class ProjectionGenerator(object):
         declare_inverse_connectivity_matrix = ""
         init_inverse_connectivity_matrix = ""
         
-        # Retrieve the template
+        # Retrieve the templates
         connectivity_matrix_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.connectivity_matrix_cuda
+
+        # Default weight matrix as LIL
+        weight_matrix_tpl = ProjTemplate.weight_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.weight_matrix_cuda
+
+        # Special case when the weight have a single value
+        if proj._has_single_weight():
+            weight_matrix_tpl = ProjTemplate.singleweight_matrix_omp            
         
         # Connectivity
         declare_connectivity_matrix = connectivity_matrix_tpl['declare'] 
         access_connectivity_matrix = connectivity_matrix_tpl['accessor']
         init_connectivity_matrix = connectivity_matrix_tpl['init']
+
+        # Weight array
+        declare_connectivity_matrix += weight_matrix_tpl['declare'] 
+        access_connectivity_matrix += weight_matrix_tpl['accessor'] 
+        init_connectivity_matrix += weight_matrix_tpl['init'] 
 
         # Spiking model require inverted ranks 
         if proj.synapse.type == "spike":
@@ -500,6 +513,15 @@ class ProjectionGenerator(object):
 
                 omp_code += "nb_post) schedule(dynamic)"
         
+        # Special case where w is a single value
+        if proj._has_single_weight():
+            #psp = psp.replace('w%(local_index)s', 'w') 
+            psp = re.sub(
+                r'([^\w]+)w%(local_index)s', 
+                r'\1w', 
+                psp
+            )
+
         # Finalize the psp with the correct ids
         psp = psp % ids
         pre_copy = pre_copy % ids
@@ -652,6 +674,13 @@ if(_learning){
             pop%(id_post)s.g_%(target)s[post_rank[i]] += w[i][j];
 """ % ids
 
+        # Special case where w is a single value      
+        if proj._has_single_weight():
+            g_target_code = re.sub(
+                r'([^\w]+)w\[i\]\[j\]', 
+                r'\1w', 
+                g_target_code
+            )
 
         # Event-driven integration of synaptic variables
         has_exact = False

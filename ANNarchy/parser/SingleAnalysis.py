@@ -245,6 +245,7 @@ def analyse_synapse(synapse):
     functions = extract_functions(synapse.functions, False)
         
     # Check the presence of w
+    description['plasticity'] = False
     for var in parameters + variables:
         if var['name'] == 'w':
             break
@@ -254,6 +255,12 @@ def analyse_synapse(synapse):
             #      a better solution instead of the hard-coded 'w' ... [hdin: 26.05.2015]
             {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'}
         )
+
+    # Find out a plasticity rule
+    for var in variables:
+        if var['name'] == 'w': 
+            description['plasticity'] = True
+            break
 
     # Build lists of all attributes (param+var), which are local or global
     attributes, local_var, global_var = get_attributes(parameters, variables)
@@ -459,6 +466,10 @@ def analyse_synapse(synapse):
     # Process event-driven info
     if description['type'] == 'spike':  
         for variable in description['pre_spike'] + description['post_spike']:
+            # Find plasticity
+            if variable['name'] == 'w':
+                description['plasticity'] = True
+            # Retrieve the equation
             eq = variable['eq']
             # Extract if-then-else statements
             eq, condition = extract_ite(variable['name'], eq, description)        
