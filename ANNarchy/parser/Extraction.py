@@ -131,13 +131,13 @@ def extract_globalops_synapse(name, eq, desc):
             globs['pre'].append({'function': op, 'variable': var.strip()})
             newname =  '__pre_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*pre\.([\w]+)\s*\)', newname, eq)
-            untouched[newname] = 'pop%(id_pre)s_' + op + '_' + var
+            untouched[newname] = '%(pre_prefix)s_' + op + '_' + var
 
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var.strip()})
             newname = '__post_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
-            untouched[newname] = 'pop%(id_post)s_' + op + '_' + var 
+            untouched[newname] = '%(post_prefix)s_' + op + '_' + var 
 
     return eq, untouched, globs
     

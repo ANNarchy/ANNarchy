@@ -22,7 +22,6 @@
 
 """
 from ANNarchy.core import Global
-from ANNarchy import SpikeSourceArray
 
 import Template.PopulationTemplate as PopTemplate
 from Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
@@ -797,6 +796,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         # Process the stop condition
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
+        from ANNarchy.parser.Extraction import extract_stop_condition
         extract_stop_condition(pop.neuron_type.description)
 
         # Retrieve the code

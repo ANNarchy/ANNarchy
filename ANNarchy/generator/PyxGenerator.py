@@ -255,14 +255,15 @@ class PyxGenerator(object):
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Import templates
-        connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
-        weight_tpl = ProjTemplate.weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.weight_matrix_cuda
-        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
+        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
 
+        weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
+
+        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
 
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.singleweight_matrix_omp  
+            weight_tpl = ProjTemplate.single_weight_matrix_omp  
 
         # Export connectivity matrix
         export_connectivity_matrix = connectivity_tpl['pyx_struct']
@@ -359,14 +360,14 @@ class PyxGenerator(object):
         pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
 
         # Import connectivity matrix template
-        connectivity_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
+        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
 
         # Import weight array template
-        weight_tpl = ProjTemplate.weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.weight_matrix_cuda
+        weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
         
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.singleweight_matrix_omp            
+            weight_tpl = ProjTemplate.single_weight_matrix_omp            
 
         sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
 

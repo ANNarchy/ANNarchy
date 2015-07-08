@@ -207,14 +207,14 @@ class ProjectionGenerator(object):
         init_inverse_connectivity_matrix = ""
         
         # Retrieve the templates
-        connectivity_matrix_tpl = ProjTemplate.connectivity_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.connectivity_matrix_cuda
+        connectivity_matrix_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.csr_connectivity_matrix_cuda
 
         # Default weight matrix as LIL
-        weight_matrix_tpl = ProjTemplate.weight_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.weight_matrix_cuda
+        weight_matrix_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.csr_weight_matrix_cuda
 
         # Special case when the weight have a single value
         if proj._has_single_weight():
-            weight_matrix_tpl = ProjTemplate.singleweight_matrix_omp            
+            weight_matrix_tpl = ProjTemplate.single_weight_matrix_omp            
         
         # Connectivity
         declare_connectivity_matrix = connectivity_matrix_tpl['declare'] 
@@ -407,6 +407,21 @@ class ProjectionGenerator(object):
 #######################################################################
     def computesum_rate_openmp(self, proj):
         code = ""    
+
+        # Default variables needed in psp_code
+        psp_prefix = """
+        int nb_post; double sum;"""
+        if 'psp_prefix' in proj._specific_template.keys():
+            psp_prefix = proj._specific_template['psp_prefix']
+
+        # Specific projection
+        if 'psp_code' in proj._specific_template.keys():
+            return psp_prefix, proj._specific_template['psp_code']
+
+        # Choose the relevant summation template
+        template =  ProjTemplate.lil_summation_operation
+
+        # Dictionary of keywords to transform the parsed equations
         ids = {
                 'id_proj' : proj.id, 
                 'target': proj.target, 
@@ -422,21 +437,19 @@ class ProjectionGenerator(object):
                 'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
-        # Default variables needed in psp_code
-        psp_prefix = """
-        int nb_post; double sum;"""
-        if 'psp_prefix' in proj._specific_template.keys():
-            psp_prefix = proj._specific_template['psp_prefix']
-
-        # Specific projection
-        if 'psp_code' in proj._specific_template.keys():
-            return psp_prefix, proj._specific_template['psp_code']
-
         # Retrieve the PSP
         if not 'psp' in  proj.synapse.description.keys(): # default
             psp = """w%(local_index)s * %(preprefix)s.r%(pre_index)s;"""
         else: # custom psp
             psp = (proj.synapse.description['psp']['cpp'])
+
+        # Special case where w is a single value
+        if proj._has_single_weight():
+            psp = re.sub(
+                r'([^\w]+)w%(local_index)s', 
+                r'\1w', 
+                psp
+            )
 
         # OpenMP
         with_openmp = Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS
@@ -512,22 +525,13 @@ class ProjectionGenerator(object):
                         omp_code += '_pre_%(var)s, ' % {'var': var}
 
                 omp_code += "nb_post) schedule(dynamic)"
-        
-        # Special case where w is a single value
-        if proj._has_single_weight():
-            #psp = psp.replace('w%(local_index)s', 'w') 
-            psp = re.sub(
-                r'([^\w]+)w%(local_index)s', 
-                r'\1w', 
-                psp
-            )
 
         # Finalize the psp with the correct ids
         psp = psp % ids
         pre_copy = pre_copy % ids
 
         # Generate the code depending on the operation
-        sum_code = ProjTemplate.summation_operation[proj.synapse.operation] % {
+        sum_code = template[proj.synapse.operation] % {
             'pre_copy': pre_copy,
             'omp_code': omp_code,
             'psp': psp.replace(';', ''), 
@@ -637,6 +641,7 @@ class ProjectionGenerator(object):
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'g_target': g_target, 'eq': eq['eq']}
                 # Determine bounds
                 for key, val in eq['bounds'].items():
+                    print key, val
                     if not key in ['min', 'max']:
                         continue
                     try:

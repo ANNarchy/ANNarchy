@@ -23,6 +23,9 @@
 """
 from ANNarchy.generator.Template.PopulationTemplate import attribute_pyx_wrapper
 
+######################################
+### Main template
+######################################
 header_struct = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -99,7 +102,11 @@ struct ProjStruct%(id_proj)s{
 };
 """
 
-connectivity_matrix_omp = {
+
+######################################
+### Connectivity matrix OMP
+######################################
+lil_connectivity_matrix_omp = {
     'declare': """
     // Connectivity
     std::vector<int> post_rank;
@@ -116,7 +123,7 @@ connectivity_matrix_omp = {
     'init': """
 """,
     'pyx_struct': """
-        # Connectivity
+        # LIL Connectivity
         vector[int] get_post_rank()
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
@@ -140,7 +147,7 @@ connectivity_matrix_omp = {
 """
 }
 
-weight_matrix_omp = {
+lil_weight_matrix_omp = {
     'declare': """
     // LIL weights
     std::vector< std::vector< double > > w;
@@ -186,7 +193,7 @@ weight_matrix_omp = {
 """
 }
 
-singleweight_matrix_omp = {
+single_weight_matrix_omp = {
     'declare': """
     // Single weight in the projection
     double w;
@@ -219,7 +226,31 @@ singleweight_matrix_omp = {
 """
 }
 
-connectivity_matrix_cuda = {
+
+inverse_connectivity_matrix = {
+    'declare': """
+    std::map< int, std::vector< std::pair<int, int> > > inv_pre_rank ;
+    std::vector< int > inv_post_rank ;
+""",
+    'init': """
+        inv_pre_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
+        for(int i=0; i<pre_rank.size(); i++){
+            for(int j=0; j<pre_rank[i].size(); j++){
+                inv_pre_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
+            }
+        }
+        inv_post_rank =  std::vector< int > (pop%(id_post)s.size, -1);
+        for(int i=0; i<post_rank.size(); i++){
+            inv_post_rank[post_rank[i]] = i;
+        }
+"""
+}
+
+
+######################################
+### Connectivity matrix CUDA
+######################################
+csr_connectivity_matrix_cuda = {
     'declare': """
     // Connectivity
     std::vector<int> post_rank ;
@@ -285,7 +316,7 @@ connectivity_matrix_cuda = {
 """
 }
 
-weight_matrix_cuda = {
+csr_weight_matrix_cuda = {
     'declare': """,
     'accessor': """,
     'init': """,
@@ -295,28 +326,13 @@ weight_matrix_cuda = {
     'pyx_wrapper_accessor': ""
 }
 
-inverse_connectivity_matrix = {
-    'declare': """
-    std::map< int, std::vector< std::pair<int, int> > > inv_pre_rank ;
-    std::vector< int > inv_post_rank ;
-""",
-    'init': """
-        inv_pre_rank =  std::map< int, std::vector< std::pair<int, int> > > ();
-        for(int i=0; i<pre_rank.size(); i++){
-            for(int j=0; j<pre_rank[i].size(); j++){
-                inv_pre_rank[pre_rank[i][j]].push_back(std::pair<int, int>(i,j));
-            }
-        }
-        inv_post_rank =  std::vector< int > (pop%(id_post)s.size, -1);
-        for(int i=0; i<post_rank.size(); i++){
-            inv_post_rank[post_rank[i]] = i;
-        }
-"""
-}
 
-# Summation operations performed for rate-coded networks and OMP
+
+######################################
+### Summation OMP
+######################################
 # sum, min, max, mean
-summation_operation = {
+lil_summation_operation = {
     'sum' : """
 %(pre_copy)s
 nb_post = post_rank.size();
@@ -373,6 +389,58 @@ for(int i = 0; i < nb_post; i++){
 """
 }
 
+
+######################################
+### Delay
+######################################
+delay = {
+    'header_struct': """
+    // Non-uniform delay
+    std::vector< std::vector< int > > delay ;""",
+    'pyx_struct':
+"""
+        # Non-uniform delay
+        vector[vector[int]] delay""",
+    'pyx_wrapper_init':
+"""
+        proj%(id_proj)s.delay = syn.delay""",
+    'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay[idx]
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+"""
+}
+
+
+######################################
+### Event-driven
+######################################
+event_driven = {
+    'header_struct': """
+    std::vector<std::vector<long> > _last_event;
+""",
+    'cpp_init': """
+""",
+    'pyx_struct': """
+        vector[vector[long]] _last_event
+""",
+    'pyx_wrapper_init':
+"""
+        proj%(id_proj)s._last_event = vector[vector[long]](nb_post, vector[long]())
+        for n in range(nb_post):
+            proj%(id_proj)s._last_event[n] = vector[long](proj%(id_proj)s.nb_synapses(n), -10000)
+"""
+}
+
+
+######################################
+### Attributes
+######################################
 # c like definition of synaptic attributes, whereas 'local' is used if values can vary across
 # synapses, consequently 'global' is used if values are common to all synapses within a dendrite.
 # Please note, that one projection represents a collection of dendrites.
@@ -557,6 +625,10 @@ attribute_pyx_wrapper = {
 """
 }
 
+
+######################################
+### Monitoring
+######################################
 # Code templates for recorder class.
 #
 #    struct: base template
@@ -612,46 +684,10 @@ public:
     }
 }
 
-delay = {
-    'header_struct': """
-    // Non-uniform delay
-    std::vector< std::vector< int > > delay ;""",
-    'pyx_struct':
-"""
-        # Non-uniform delay
-        vector[vector[int]] delay""",
-    'pyx_wrapper_init':
-"""
-        proj%(id_proj)s.delay = syn.delay""",
-    'pyx_wrapper_accessor':
-"""
-    # Access to non-uniform delay
-    def get_delay(self):
-        return proj%(id_proj)s.delay
-    def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.delay[idx]
-    def set_delay(self, value):
-        proj%(id_proj)s.delay = value
-"""
-}
 
-event_driven = {
-    'header_struct': """
-    std::vector<std::vector<long> > _last_event;
-""",
-    'cpp_init': """
-""",
-    'pyx_struct': """
-        vector[vector[long]] _last_event
-""",
-    'pyx_wrapper_init':
-"""
-        proj%(id_proj)s._last_event = vector[vector[long]](nb_post, vector[long]())
-        for n in range(nb_post):
-            proj%(id_proj)s._last_event[n] = vector[long](proj%(id_proj)s.nb_synapses(n), -10000)
-"""
-}
-
+######################################
+### Structural plasticity
+######################################
 # All code templates needed for structural plasticity.
 structural_plasticity = {
     'header_struct': {
@@ -780,6 +816,11 @@ structural_plasticity = {
     }
 }
 
+
+
+######################################
+### CUDA stuff
+######################################
 cuda_stream = """
     // stream
     cudaStream_t stream;
@@ -853,6 +894,11 @@ cuda_flattening = """
     }
 """
 
+
+
+######################################
+### Summation CUDA
+######################################
 # Comment to if (tid < 32) block:
 #
 # now that we are using warp-synchronous programming (below)
