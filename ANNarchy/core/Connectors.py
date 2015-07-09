@@ -77,7 +77,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
     
         * **weights**: synaptic values, either a single value or a random distribution object.
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-        * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default=False).
+        * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -85,9 +85,15 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
     self.connector_name = "All-to-All"
     self.connector_description = "All-to-All, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
 
+    # Does the projection define a single non-plastic weight?
     if isinstance(weights, (int, float)):
         self._single_constant_weight = True
 
+    # Is it a dense connectivity matrix?
+    if allow_self_connections and not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
+        self._dense_matrix = True
+
+    # Store the connectivity
     self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections), delays)
     return self
 

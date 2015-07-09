@@ -331,7 +331,7 @@ csr_weight_matrix_cuda = {
 ######################################
 ### Summation OMP
 ######################################
-# sum, min, max, mean
+# Default LiL
 lil_summation_operation = {
     'sum' : """
 %(pre_copy)s
@@ -389,6 +389,112 @@ for(int i = 0; i < nb_post; i++){
 """
 }
 
+# Dense matrix
+dense_summation_operation = {
+    'sum' : """
+%(pre_copy)s
+%(omp_code)s
+for(int i = 0; i < pop%(id_post)s.size; i++) {
+    sum = 0.0;
+    for(int j = 0; j < pop%(id_pre)s.size; j++) {
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s[i] += sum;
+}
+""",
+    'max': """
+%(pre_copy)s
+%(omp_code)s
+for(int i = 0; i < pop%(id_post)s.size; i++){
+    int j = 0;
+    sum = %(psp)s ;
+    for(int j = 1; j < pop%(id_pre)s.size; j++){
+        if(%(psp)s > sum){
+            sum = %(psp)s ;
+        }
+    }
+    pop%(id_post)s._sum_%(target)s[i] += sum;
+}
+""",
+    'min': """
+%(pre_copy)s
+%(omp_code)s
+for(int i = 0; i < pop%(id_post)s.size; i++){
+    int j= 0;
+    sum = %(psp)s ;
+    for(int j = 1; j < pop%(id_pre)s.size; j++){
+        if(%(psp)s < sum){
+            sum = %(psp)s ;
+        }
+    }
+    pop%(id_post)s._sum_%(target)s[i] += sum;
+}
+""",
+    'mean': """
+%(pre_copy)s
+%(omp_code)s
+for(int i = 0; i < pop%(id_post)s.size; i++){
+    sum = 0.0 ;
+    for(int j = 0; j < pop%(id_pre)s.size; j++){
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s[i] += sum / (double)(pop%(id_pre)s.size);
+}
+"""
+}
+
+######################################
+### Update synaptic variables
+######################################
+lil_update_variables = {
+    'local': """
+if(_learning && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int i = 0; i < post_rank.size(); i++){
+        rk_post = post_rank[i];
+    %(global)s
+        for(int j = 0; j < pre_rank[i].size(); j++){
+            rk_pre = pre_rank[i][j];
+    %(local)s
+        }
+    }
+}
+""",
+    'global': """
+if(_learning && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int i = 0; i < post_rank.size(); i++){
+        rk_post = post_rank[i];
+    %(global)s
+    }
+}
+"""
+}
+
+dense_update_variables = {
+    'local': """
+if(_learning && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int i = 0; i < pop%(id_post)s.size; i++){
+        rk_post = i;
+    %(global)s
+        for(int j = 0; j < pop%(id_pre)s.size; j++){
+            rk_pre = j;
+    %(local)s
+        }
+    }
+}
+""",
+    'global': """
+if(_learning && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int i = 0; i < pop%(id_post)s.size; i++){
+        rk_post = i;
+    %(global)s
+    }
+}
+"""
+}
 
 ######################################
 ### Delay

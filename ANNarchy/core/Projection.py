@@ -132,6 +132,9 @@ class Projection(object):
         # If a single weight value is used
         self._single_constant_weight = False
 
+        # If a dense matrix should be used instead of LIL
+        self._dense_matrix = False
+
         # Recorded variables
         self.recorded_variables = {}
 

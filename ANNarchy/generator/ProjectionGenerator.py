@@ -419,7 +419,10 @@ class ProjectionGenerator(object):
             return psp_prefix, proj._specific_template['psp_code']
 
         # Choose the relevant summation template
-        template =  ProjTemplate.lil_summation_operation
+        if proj._dense_matrix: # Dense connectivity
+            template =  ProjTemplate.dense_summation_operation
+        else: # Default LiL
+            template =  ProjTemplate.lil_summation_operation
 
         # Dictionary of keywords to transform the parsed equations
         ids = {
@@ -437,18 +440,23 @@ class ProjectionGenerator(object):
                 'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
+        # Special keywords based on the data structure
+        if proj._dense_matrix: # Dense connectivity
+            ids['pre_index'] = "[j]"
+            ids['post_index'] = "[i]"
+
         # Retrieve the PSP
         if not 'psp' in  proj.synapse.description.keys(): # default
-            psp = """w%(local_index)s * %(preprefix)s.r%(pre_index)s;"""
+            psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
         else: # custom psp
             psp = (proj.synapse.description['psp']['cpp'])
 
         # Special case where w is a single value
         if proj._has_single_weight():
             psp = re.sub(
-                r'([^\w]+)w%(local_index)s', 
+                r'([^\w]+)w%\(local_index\)s', 
                 r'\1w', 
-                psp
+                ' ' + psp
             )
 
         # OpenMP
@@ -535,6 +543,7 @@ class ProjectionGenerator(object):
             'pre_copy': pre_copy,
             'omp_code': omp_code,
             'psp': psp.replace(';', ''), 
+            'id_pre': proj.post.id,
             'id_post': proj.post.id,
             'target': proj.target,
         }
@@ -923,7 +932,7 @@ if(_learning && pop%(id_post)s._active){
         # OpenMP
         omp_code = ""
         if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
-            omp_code = '#pragma omp parallel for private(rk_pre, rk_post)'
+            omp_code = '#pragma omp parallel for private(rk_pre, rk_post) schedule(dynamic)'
 
 
         # Dependencies
@@ -962,38 +971,27 @@ if(_learning && pop%(id_post)s._active){
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
                         )
 
+        # Choose the template
+        if proj._dense_matrix: # Dense matrix
+            template = ProjTemplate.dense_update_variables
+        else: # Default: LIL
+            template = ProjTemplate.lil_update_variables
+        
         # Fill the code template  
         if local_eq.strip() != "": # local synapses are updated
-            code = """
-if(_learning && pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < post_rank.size(); i++){
-        rk_post = post_rank[i];
-    %(global)s
-        for(int j = 0; j < pre_rank[i].size(); j++){
-            rk_pre = pre_rank[i][j];
-    %(local)s
-        }
-    }
-}
-"""%{   'global': global_eq % ids, 
-        'local': local_eq % ids,
-        'id_post': proj.post.id, 
-        'omp_code': omp_code
-    }
+            code = template['local'] % {   
+                'global': global_eq % ids, 
+                'local': local_eq % ids,
+                'id_post': proj.post.id, 
+                'id_pre': proj.pre.id, 
+                'omp_code': omp_code
+            }
         else: # Only global variables
-            code = """
-if(_learning && pop%(id_post)s._active){
-    %(omp_code)s
-    for(int i = 0; i < post_rank.size(); i++){
-        rk_post = post_rank[i];
-    %(global)s
-    }
-}
-"""%{   'global': global_eq % ids, 
-        'id_post': proj.post.id, 
-        'omp_code': omp_code
-    }
+            code = template['global'] % {   
+                'global': global_eq % ids, 
+                'id_post': proj.post.id, 
+                'omp_code': omp_code
+            }
 
         # Return the code block
         return prefix, tabify(code, 2)
