@@ -23,7 +23,7 @@
 """
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
-import Template.ProjectionTemplate as ProjTemplate
+import ANNarchy.generator.Template.ProjectionTemplate as ProjTemplate
 from .Utils import generate_equation_code, tabify
 import re
 
@@ -650,7 +650,6 @@ class ProjectionGenerator(object):
 """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'g_target': g_target, 'eq': eq['eq']}
                 # Determine bounds
                 for key, val in eq['bounds'].items():
-                    print key, val
                     if not key in ['min', 'max']:
                         continue
                     try:

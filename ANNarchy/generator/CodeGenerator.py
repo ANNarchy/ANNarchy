@@ -187,7 +187,7 @@ class CodeGenerator(object):
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
         if Global.config['paradigm']=="openmp":
-            from Template.BaseTemplate import omp_header_template
+            from .Template.BaseTemplate import omp_header_template
             return omp_header_template % {
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
@@ -284,7 +284,7 @@ class CodeGenerator(object):
         number_threads = "omp_set_num_threads(threads);" if Global.config['num_threads'] > 1 else ""
 
         #Profiling
-        from Profile.Template import profile_generator_omp_template
+        from .Profile.Template import profile_generator_omp_template
         prof_include = "" if not Global.config["profiling"] else profile_generator_omp_template['include']
         prof_step_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['step_pre']
         prof_run_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
@@ -297,7 +297,7 @@ class CodeGenerator(object):
 
         # Generate cpp code for the analysed pops and projs
         if Global.config['paradigm']=="openmp":
-            from Template.BaseTemplate import omp_body_template
+            from .Template.BaseTemplate import omp_body_template
             return omp_body_template % {
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
@@ -412,7 +412,7 @@ class CodeGenerator(object):
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        from Profile.Template import profile_generator_omp_template
+        from .Profile.Template import profile_generator_omp_template
         profiling_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
 
         # Initialize populations
@@ -426,9 +426,9 @@ class CodeGenerator(object):
             projection_init += proj['init']
 
         if Global.config['paradigm']=="openmp":
-            from Template.BaseTemplate import omp_initialize_template as init_tpl
+            from .Template.BaseTemplate import omp_initialize_template as init_tpl
         else:
-            from Template.BaseTemplate import cuda_initialize_template as init_tpl
+            from .Template.BaseTemplate import cuda_initialize_template as init_tpl
 
         return init_tpl % { 'prof_init': profiling_init,
                             'pop_init': population_init,
@@ -514,7 +514,7 @@ class CodeGenerator(object):
         """
         Generate the code for conditioned stop of simulation
         """
-        from Template.BaseTemplate import omp_run_until_template as tpl
+        from .Template.BaseTemplate import omp_run_until_template as tpl
 
         # Check if it is useful to generate anything at all
         for pop in self._populations:

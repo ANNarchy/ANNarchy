@@ -2,7 +2,7 @@ from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
 from .Record import Monitor
-import Global
+import ANNarchy.core.Global as Global
 import ANNarchy.generator.Compiler as Compiler
 
 import os, shutil, sys

@@ -396,7 +396,7 @@ class Monitor(object):
         nb_bins = int(duration*Global.config['dt']/bins)
         
         # Initialize histogram
-        histo = [0 for t in xrange(nb_bins)]
+        histo = [0 for t in range(nb_bins)]
     
         # Compute histogram
         for neuron in range(nb_neurons):

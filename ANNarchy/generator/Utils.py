@@ -141,8 +141,7 @@ def indentLine(line, spaces=1):
     return (' ' * 4 * spaces) + line
 
 def tabify(s, numSpaces):
-    import string
-    s = string.split(s, '\n')
+    s = s.split('\n')
     s = map(lambda a, ns=numSpaces: indentLine(a, ns), s)
-    s = string.join(s, '\n')
+    s = '\n'.join(s)
     return s

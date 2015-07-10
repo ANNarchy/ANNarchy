@@ -23,8 +23,8 @@
 """
 from ANNarchy.core import Global
 
-import Template.PopulationTemplate as PopTemplate
-from Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
+import ANNarchy.generator.Template.PopulationTemplate as PopTemplate
+from .Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 
 class PopulationGenerator(object):
 #######################################################################

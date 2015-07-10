@@ -21,8 +21,8 @@
 
 """
 from ANNarchy.core import Global
-import Template.ProjectionTemplate as ProjTemplate
-import Template.RecordTemplate as RecTemplate
+import ANNarchy.generator.Template.ProjectionTemplate as ProjTemplate
+import ANNarchy.generator.Template.RecordTemplate as RecTemplate
 
 class RecordGenerator:
     """

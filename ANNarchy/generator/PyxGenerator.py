@@ -22,9 +22,9 @@
 """
 from ANNarchy.core import Global
 
-import Template.PopulationTemplate as PopTemplate
-import Template.ProjectionTemplate as ProjTemplate
-import Template.PyxTemplate as PyxTemplate
+import ANNarchy.generator.Template.PopulationTemplate as PopTemplate
+import ANNarchy.generator.Template.ProjectionTemplate as ProjTemplate
+import ANNarchy.generator.Template.PyxTemplate as PyxTemplate
 
 class PyxGenerator(object):
     """
@@ -116,7 +116,7 @@ class PyxGenerator(object):
         for proj in self._projections:
             monitor_class += self._proj_monitor_wrapper(proj)
 
-        from Template.PyxTemplate import pyx_template
+        from .Template.PyxTemplate import pyx_template
         return pyx_template % {
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
