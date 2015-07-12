@@ -32,22 +32,15 @@ def sort_odes(desc, locality='local'):
 
 def generate_bound_code(param, obj):
     code = "" 
-    if param['locality'] == 'local':   
-        prefix_dict = {
-        'index': '%(local_index)s'
-    }   
-    else: # global
-        prefix_dict = {
-        'index': '%(global_index)s'
-    }
     for bound, val in param['bounds'].items():
         if bound in ['min', 'max']:
             code += """if(%(var)s%(index)s %(operator)s %(val)s)
     %(var)s%(index)s = %(val)s;
-""" % dict(prefix_dict.items()+ {
+""" % {
+        'index': '%(local_index)s' if param['locality'] == 'local' else '%(global_index)s',
         'var' : param['name'], 'val' : val, 
-        'operator': '<' if bound=='min' else '>'}.items()
-    )
+        'operator': '<' if bound=='min' else '>'
+    }
     return code
 
 def generate_non_ODE_block(variables, locality, obj, conductance_only):

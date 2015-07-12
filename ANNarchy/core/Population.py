@@ -53,31 +53,31 @@ class Population(object):
         if isinstance(geometry, int): 
             # 1D
             self.geometry = (geometry, )
-            self.width = geometry
-            self.height = 1
-            self.depth = 1
-            self.dimension = 1
+            self.width = int(geometry)
+            self.height = int(1)
+            self.depth = int(1)
+            self.dimension = int(1)
         else: 
             # a tuple is given, can be 1 .. N dimensional
             self.geometry = geometry
-            self.width = geometry[0]
+            self.width = int(geometry[0])
             if len(geometry)>=2:
-                self.height = geometry[1]
+                self.height = int(geometry[1])
             else:
-                self.height = 1
+                self.height = int(1)
             if len(geometry)>=3:                
-                self.depth = geometry[2]
+                self.depth = int(geometry[2])
             else:
-                self.depth = 1
+                self.depth = int(1)
                 
             self.dimension = len(geometry)
 
         # Compute the size
-        size = 1        
+        size = int(1)        
         for i in range(len(self.geometry)):
-            size *= self.geometry[i]
+            size *= int(self.geometry[i])
             
-        self.size = size
+        self.size = int(size)
         
         # Store the neuron type
         if inspect.isclass(neuron):

@@ -372,8 +372,8 @@ class SharedProjection(Projection):
         idx_range= []
         for dim in range(self.dim_pre):
             if dim < self.dim_post:
-                pre_size = self.pre.geometry[dim]
-                post_size = self.post.geometry[dim]
+                pre_size = int(self.pre.geometry[dim])
+                post_size = int(self.post.geometry[dim])
                 sample = int(pre_size/post_size)
                 if post_size * sample != pre_size:
                     Global._error('The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')

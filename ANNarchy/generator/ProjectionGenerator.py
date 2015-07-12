@@ -543,7 +543,7 @@ class ProjectionGenerator(object):
             'pre_copy': pre_copy,
             'omp_code': omp_code,
             'psp': psp.replace(';', ''), 
-            'id_pre': proj.post.id,
+            'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'target': proj.target,
         }
