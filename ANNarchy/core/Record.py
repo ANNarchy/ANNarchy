@@ -484,7 +484,7 @@ class Monitor(object):
         import ANNarchy.core.cython_ext.Transformations as Transformations
         return Transformations.smoothed_rate(
             {
-                'data': data.values(), 
+                'data': data, 
                 'start': self._recorded_variables['spike']['start'][-1], 
                 'stop': self._recorded_variables['spike']['stop'][-1]
             }, 
