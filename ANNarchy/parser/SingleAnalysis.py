@@ -117,7 +117,7 @@ def analyse_neuron(neuron):
 
         # Add the untouched variables to the global list
         for name, val in untouched_globs.items():
-            if not untouched.has_key(name):
+            if not name in untouched.keys():
                 untouched[name] = val
         description['global_operations'] += global_ops
         
@@ -349,10 +349,10 @@ def analyse_synapse(synapse):
         
         # Add the untouched variables to the global list
         for name, val in untouched_globs.items():
-            if not untouched.has_key(name):
+            if not name in untouched.keys():
                 untouched[name] = val
         for name, val in untouched_var.items():
-            if not untouched.has_key(name):
+            if not name in untouched.keys():
                 untouched[name] = val
                 
         # Save the tranformed equation 
