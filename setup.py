@@ -98,7 +98,7 @@ else: # linux
 
 setup(  name='ANNarchy',
         version='4.5.1',
-        download_url = 'https://bitbucket.org/annarchy/annarchy/get/4.5.1.zip' 
+        download_url = 'https://bitbucket.org/annarchy/annarchy/get/4.5.1.zip',
         license='GPLv2+',
         platforms='GNU/Linux; MacOSX',
         description='Artificial Neural Networks architect',
