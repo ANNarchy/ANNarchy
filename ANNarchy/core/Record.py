@@ -210,11 +210,12 @@ class Monitor(object):
         self.cyInstance = None
 
 
-    def get(self, variables=None, keep=False, force_dict=False):
+    def get(self, variables=None, keep=False, reshape=False, force_dict=False):
         """
         Returns the recorded variables as a Numpy array (first dimension is time, second is neuron index).
 
-        If a single variable name is provided, the recorded values for this variable are directly returned. If a list is provided or the argument left empty, a dictionary with all recorded variables is returned. 
+        If a single variable name is provided, the recorded values for this variable are directly returned. 
+        If a list is provided or the argument left empty, a dictionary with all recorded variables is returned. 
 
         The ``spike`` variable of a population will be returned as a dictionary of lists, where the spike times (in steps) for each recorded neurons are returned.
 
@@ -223,13 +224,22 @@ class Monitor(object):
         * **variables**: (list of) variables. By default, a dictionary with all variables is returned.
 
         * **keep**: defines if the content in memory for each variable should be kept (default: False).
+
+        * **reshape**: transforms the second axis of the array to match the population's geometry (default: False).
         """
+
+        def reshape_recording(self, data):
+            if not reshape:
+                return data
+            else:
+                return data.reshape((data.shape[0],) + self.object.geometry)
 
         def return_variable(self, name, keep):
             if isinstance(self.object, (Population, PopulationView)):
-                return self._get_population(self.object, name, keep)
+                return reshape_recording(self, self._get_population(self.object, name, keep))
             elif isinstance(self.object, Dendrite):
                 return self._get_dendrite(self.object, name, keep)
+
 
         if variables:
             if not isinstance(variables, list):
