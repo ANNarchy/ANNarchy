@@ -98,6 +98,7 @@ else: # linux
 
 setup(  name='ANNarchy',
         version='4.5.1',
+        download_url = 'https://bitbucket.org/annarchy/annarchy/get/4.5.1.zip' 
         license='GPLv2+',
         platforms='GNU/Linux; MacOSX',
         description='Artificial Neural Networks architect',
@@ -121,7 +122,14 @@ setup(  name='ANNarchy',
         keywords='neural simulator',
         packages=find_packages(),
         package_data={'ANNarchy': package_data},
+        install_requires=[
+          'numpy',
+          'scipy',
+          'matplotlib',
+          'cython',
+          'sympy',
+        ],
         ext_modules = ext_modules,
-        include_dirs=[numpy.get_include()],
+        include_dirs = [numpy.get_include()],
         zip_safe = False
 )
