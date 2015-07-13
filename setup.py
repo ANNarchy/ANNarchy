@@ -7,8 +7,8 @@ from pkg_resources import parse_version
 
 # check python version
 import sys
-if not sys.version_info[:2] >= (2, 6):
-    print('Error : ANNarchy requires at least Python 2.6.')
+if not sys.version_info[:2] >= (2, 7):
+    print('Error : ANNarchy requires at least Python 2.7.')
     exit(0) 
 
 # setuptools
@@ -31,7 +31,7 @@ try:
         exit(0)
 except:
     print('Checking for sympy... NO')
-    print('Error : Python package "sympy" is required.')
+    print('Error : Python package "sympy" >= 0.7.4 is required.')
     print('You can install it from pip or: http://www.sympy.org')
     exit(0)
     

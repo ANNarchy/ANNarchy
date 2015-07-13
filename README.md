@@ -16,15 +16,13 @@ A forum for discussion is set at:
 **Authors**:
 
 * Julien Vitay (julien.vitay@informatik.tu-chemnitz.de). 
-
 * Helge Ülo Dinkelbach (helge-uelo.dinkelbach@informatik.tu-chemnitz.de). 
-
 * Fred Hamker (fred.hamker@informatik.tu-chemnitz.de). 
 
 
 **Installation**:
 
-ANNarchy can be installed using one of the following commmands:
+ANNarchy can be installed using one of the following commands:
 
 * With administrator permissions:
 
@@ -50,29 +48,20 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 **Platforms**:
 
 * GNU/Linux
-
 * MacOS X
 
 **Dependencies**:
 
 * g++ >= 4.6
-
-* Python 2.7
-
+* Python 2.7 or >= 3.3
 * Cython >= 0.19
-
 * Setuptools >= 0.6
-
 * Numpy >= 1.8
-
 * Sympy >= 0.7.4
 
 Recommended: 
 
 * lxml >= 3.0
-
 * Scipy >= 0.12
-
 * Matplotlib >= 1.1
-
 * PyQtGraph >= 0.9.8
