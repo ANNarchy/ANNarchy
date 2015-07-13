@@ -25,7 +25,7 @@ ANNarchy depends on a number of packages which should be easily accessible on re
 
     * g++ >= 4.6 (4.7 or above is recommended) 
     * make >= 3.0
-    * python == 2.7 (with the development files)
+    * python == 2.7 or >= 3.3 (with the development files)
     * cython >= 0.19
     * setuptools >= 0.6
     * numpy >= 1.8
@@ -42,7 +42,7 @@ For CUDA:
 
     * the CUDA-SDK is available on the official website: https://developer.nvidia.com/cuda-downloads (we recommend to use at least a SDK version > 6.x)
     
-The version requirement on Sympy is rather new (as of May 2014) and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
+The version requirement on Sympy is rather newand may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
 
     sudo easy_install pip
     sudo pip install cython numpy sympy pyqtgraph matplotlib lxml scipy
@@ -51,7 +51,9 @@ The version requirement on Sympy is rather new (as of May 2014) and may not be a
 
      On fresh installs of Ubuntu 14.04 and **Linux Mint Debian Edition** 64 bits, the following commands successfully install everything you need::
      
-        sudo apt-get install g++ gfortran git python-dev python-setuptools python-numpy python-scipy python-matplotlib cython python-opengl python-qt4-gl python-lxml python-pip python-tk
+        sudo apt-get install g++ gfortran git python-dev python-setuptools \
+            python-numpy python-scipy python-matplotlib cython python-opengl \
+            python-qt4-gl python-lxml python-pip python-tk
 
         sudo pip install sympy
         
@@ -87,7 +89,7 @@ This simply installs a Python egg in ``/usr/local/lib/python2.7/dist-packages/``
         
 **Specific installation**
 
-If you want to install ANNarchy in another directory (let's say in ``/path/to/repertory``), you should first set your python path to this directory::
+If you want to install ANNarchy in another directory (let's say in ``/path/to/repertory``), you should first set your Python path to this directory::
 
     user@Machine:~/annarchy-4.0$ export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python2.7/site-packages
     
