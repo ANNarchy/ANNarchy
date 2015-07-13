@@ -146,7 +146,7 @@ if __name__=='__main__':
         Input_Feature: { 'num_threads': 192, 'stream': 0 },
         Feature_Feature: { 'num_threads': 96, 'stream': 1 }
     }
-    set_cuda_config(config)
+    #set_cuda_config(config)
 
     compile()
 
