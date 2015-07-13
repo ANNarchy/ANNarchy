@@ -370,11 +370,6 @@ class ProjectionGenerator(object):
         # Learning by default
         code = ""
 
-        # In case of GPUs we need to pre-allocate data fields
-        # on the GPU, the weight variable w must be added additionally
-        if Global.config['paradigm'] == "cuda":
-            code += ProjTemplate.cuda_proj_base_data % {'id': proj.id}
-
         # choose initialization templates based on chosen paradigm
         attr_init_tpl = ProjTemplate.attribute_cpp_init[Global.config['paradigm']]
 
@@ -1158,7 +1153,7 @@ if(_learning && pop%(id_post)s._active){
             'post': proj.post.id,
          }
 
-        header = """__global__ void cuProj%(id)s_step( int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
+        header = """__global__ void cuProj%(id)s_step( int* post_rank, int *pre_rank, int *nb_synapses, int *offsets, double dt%(var)s%(par)s);
 """ % { 'id': proj.id,
         'var': var,
         'par': par
@@ -1446,6 +1441,11 @@ if(_learning && pop%(id_post)s._active){
         {
             std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
             cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "Transfer of proj%(id)s.gpu_%(name)s: " << cudaGetErrorString(err) << std::endl;
+        #endif
             flat_proj%(id)s_%(name)s.clear();
         }
 """ % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
@@ -1455,6 +1455,10 @@ if(_learning && pop%(id_post)s._active){
         if ( proj%(id)s.%(name)s_dirty )
         {
             cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "Transfer of proj%(id)s.gpu_%(name)s: " << cudaGetErrorString(err) << std::endl;
         }
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
 
