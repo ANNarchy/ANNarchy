@@ -672,7 +672,7 @@ class Population(object):
                 }
             else:
                 if not var == 'spike':
-                    mat1 = var_data.reshape((var_data.shape[0],)+self.geometry)
+                    mat1 = np.array(var_data).reshape((np.array(var_data).shape[0],)+self.geometry)
                     data[var] = {
                         'start': var_times[var]['start'] if len(var_times[var]['start']) >1 else var_times[var]['start'][0],
                         'stop' : var_times[var]['stop'] if len(var_times[var]['stop']) >1 else var_times[var]['stop'][0] ,
