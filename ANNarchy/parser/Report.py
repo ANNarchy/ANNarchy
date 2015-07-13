@@ -546,7 +546,7 @@ def _process_synapse_equations(synapse):
 
     # PSP
     if synapse.psp:
-        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description, pattern_omp)
+        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description)
         for dep in dependencies['post']:
             local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
         for dep in dependencies['pre']:
@@ -564,7 +564,7 @@ def _process_synapse_equations(synapse):
         # Retrieve the equation
         eq = var['eq']
         # pre/post variables
-        eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
+        eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
         for dep in dependencies['post']:
             local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
         for dep in dependencies['pre']:
@@ -589,11 +589,11 @@ def _process_synapse_equations(synapse):
 """ % {'eq': var_code}
 
     # Pre-event
-    if synapse.type == 'spike':
+    if synapse.type == 'spike' and synapse.description:
         for var in extract_pre_spike_variable(synapse.description):
             eq = var['eq']
             # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
+            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
             for dep in dependencies['post']:
                 local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
             for dep in dependencies['pre']:
@@ -608,7 +608,7 @@ def _process_synapse_equations(synapse):
         for var in extract_post_spike_variable(synapse.description):
             eq = var['eq']
             # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, pattern_omp)
+            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
             for dep in dependencies['post']:
                 local_dict['_post_'+dep] = Symbol("{" + dep + "^\\text{post}}(t)")
             for dep in dependencies['pre']:

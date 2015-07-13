@@ -449,11 +449,6 @@ class CodeGenerator(object):
         code = ""
         # Sum over all synapses
         for proj in self._projections:
-            # Is it a specific projection?
-            if proj.generator['omp']['body_compute_psp']:
-                code += proj.generator['omp']['body_compute_psp']
-                continue
-
             # Call the comput_psp method
             code += """    proj%(id)s.compute_psp();
 """ % {'id' : proj.id}

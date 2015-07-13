@@ -57,15 +57,15 @@ class Synapse(object):
         self.pruning = pruning
         self.creating = creating
 
-        # Type of the synapse
+        # Type of the synapse TODO: smarter
         self.type = 'spike' if pre_spike else 'rate'
 
         # Check the operation
         if self.type == 'spike' and self.operation != 'sum':
-            _error('spiking synapses can only perform a sum of presynaptic potentials.')
+            _error('Spiking synapses can only perform a sum of presynaptic potentials.')
             exit(0)
         if not self.operation in ['sum', 'min', 'max', 'mean']:
-            _error('the only operations permitted are: sum (default), min, max, mean.')
+            _error('The only operations permitted are: sum (default), min, max, mean.')
             exit(0)
 
         # Description
@@ -80,11 +80,14 @@ class Synapse(object):
         if name:
             self.name = name
         else:
-            self.name = 'Standard spiking synapse' if self.type == 'spike' else 'Standard rate-coded synapse'
+            self.name = 'Event-driven synapse' if self.type == 'spike' else 'Rate-coded synapse'
         if description:
             self.short_description = description
         else:
-            self.short_description = "Instantaneous increase of the post-synaptic conductance after a spike is received." if self.type == 'spike' else "Summation of the pre-synaptic firing rate weighted by the synaptic efficiency."
+            if self.type == 'spike':
+                self.short_description = "Instantaneous increase of the post-synaptic conductance after a spike is received."
+            else:
+                self.short_description = "Weighted sum of firing rates."
 
     def _analyse(self):
         # Analyse the synapse type

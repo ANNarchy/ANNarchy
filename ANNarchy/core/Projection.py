@@ -82,18 +82,25 @@ class Projection(object):
             # No synapse attached assume default synapse based on
             # presynaptic population.
             if self.pre.neuron_type.type == 'rate':
-                self.synapse = Synapse(psp = "w*pre.r")
+                from ANNarchy.models.Synapses import DefaultRateCodedSynapse
+                self.synapse = DefaultRateCodedSynapse()
+                self.synapse.type = 'rate'
             else:
-                self.synapse = Synapse(equations = "", pre_spike="g_target += w", post_spike="")
+                from ANNarchy.models.Synapses import DefaultSpikingSynapse
+                self.synapse = DefaultSpikingSynapse()
+                self.synapse.type = 'spike'
+
         elif inspect.isclass(synapse):
             self.synapse = synapse()
+            self.synapse.type = self.pre.neuron_type.type
         else:
             self.synapse = copy.deepcopy(synapse)
-        self.synapse.type = self.pre.neuron_type.type
+            self.synapse.type = self.pre.neuron_type.type
 
+        print(self.synapse.type)
+
+        # Analyse the parameters and variables
         self.synapse._analyse()
-        from ANNarchy.generator.Templates import proj_generator_template
-        self.generator = copy.deepcopy(proj_generator_template)
 
         # Create a default name
         self.id = len(Global._network[0]['projections'])

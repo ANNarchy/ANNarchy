@@ -6,6 +6,38 @@ def list_standard_synapses():
     "Returns a list of standard neuron models available."
     return [STP, STDP, Hebb, Oja, IBCM]
 
+
+###############################
+### Default rate-coded Synapse
+###############################
+class DefaultRateCodedSynapse(Synapse):
+    # For reporting
+    _instantiated = []
+    def __init__(self):
+        Synapse.__init__(self, 
+            equations="",
+            psp="w * pre.r",
+            name="Static weight", 
+            description="Standard weighted sum of firing rates."
+        )
+        # For reporting
+        self._instantiated.append(True)
+
+###############################
+### Default spiking Synapse
+###############################
+class DefaultSpikingSynapse(Synapse):
+    # For reporting
+    _instantiated = []
+    def __init__(self):
+        Synapse.__init__(self, 
+            pre_spike = "g_target += w",
+            name="Event-driven synapse", 
+            description="Increases the post-synaptic conductance from the synaptic efficency after each pre-synaptic spike."
+        )
+        # For reporting
+        self._instantiated.append(True)
+
 ##################
 ### Hebb
 ##################
@@ -23,6 +55,8 @@ class Hebb(Synapse):
 
         dw/dt = eta * pre.r * post.r
     """
+    # For reporting
+    _instantiated = []
 
     def __init__(self, eta=0.01):
 
@@ -36,6 +70,8 @@ class Hebb(Synapse):
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="Hebbian Plasticity", description="Simple Hebbian learning rule")
+        # For reporting
+        self._instantiated.append(True)
 
 ##################
 ### Oja
@@ -56,6 +92,8 @@ class Oja(Synapse):
 
         dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w )
     """
+    # For reporting
+    _instantiated = []
 
     def __init__(self, eta=0.01, alpha=1.0):
 
@@ -70,6 +108,8 @@ class Oja(Synapse):
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="Oja plasticity", description="Regularized Hebbian learning rule.")
+        # For reporting
+        self._instantiated.append(True)
 
 ##################
 ### IBCM
@@ -94,6 +134,8 @@ class IBCM(Synapse):
 
         dw/dt = eta * post.r * (post.r - theta) * pre.r 
     """
+    # For reporting
+    _instantiated = []
 
     def __init__(self, eta=0.01):
 
@@ -109,6 +151,8 @@ class IBCM(Synapse):
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="IBCM", description="Intrator and Cooper (1992) learning rule.")
+        # For reporting
+        self._instantiated.append(True)
 
 ##################
 ### STP
@@ -145,6 +189,8 @@ class STP(Synapse):
         x *= (1 - u)
         u += U * (1 - u)
     """
+    # For reporting
+    _instantiated = []
 
     def __init__(self, tau_rec=100.0, tau_facil=0.01, U=0.5):
 
@@ -169,6 +215,8 @@ class STP(Synapse):
 
         Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike,
             name="Short-term plasticity", description="Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.")
+        # For reporting
+        self._instantiated.append(True)
         
 
 ##################
@@ -217,6 +265,8 @@ class STDP(Synapse):
         
         w = clip(w + x, w_min , w_max)
     """
+    # For reporting
+    _instantiated = []
 
     def __init__(self, tau_plus=20.0, tau_minus=20.0, A_plus=0.01, A_minus=0.01, w_min=0.0, w_max=1.0):
 
@@ -245,5 +295,7 @@ class STDP(Synapse):
 
         Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike, post_spike=post_spike,
             name="Spike-timing dependent plasticity", description="Synapse exhibiting spike-timing dependent plasticity.")
+        # For reporting
+        self._instantiated.append(True)
 
 
