@@ -421,8 +421,7 @@ void removeRecorder(Monitor* recorder);
 /*
  * Simulation methods
  *
-*/
-
+ */
 void initialize(double _dt, long seed) ;
 
 void run(int nbSteps);

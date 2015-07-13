@@ -73,7 +73,12 @@ class ProjectionGenerator(object):
         init_parameters_variables = self.init_parameters_variables(proj)
 
         # Update the variables
-        update_prefix, update_variables = self.update_synapse(proj)
+        if Global.config['paradigm'] == "openmp":
+            update_prefix, update_variables = self.update_synapse_openmp(proj)
+        else:
+            update_variables_body, update_variables_header, update_variables_call = self.update_synapse_cuda(proj)
+            update_prefix = ""
+            update_variables = ""
 
         # Update the random distributions
         init_rng = self.init_random_distributions(proj)
@@ -173,6 +178,10 @@ class ProjectionGenerator(object):
             proj_desc['psp_header'] = psp_header
             proj_desc['psp_body'] = psp_body
             proj_desc['psp_call'] = psp_call
+
+            proj_desc['update_synapse_header'] = update_variables_header
+            proj_desc['update_synapse_body'] = update_variables_body
+            proj_desc['update_synapse_call'] = update_variables_call
 
             host_device_transfer, device_host_transfer = self._cuda_memory_transfers(proj)
 
@@ -426,10 +435,10 @@ class ProjectionGenerator(object):
 
         # Dictionary of keywords to transform the parsed equations
         ids = {
-                'id_proj' : proj.id, 
-                'target': proj.target, 
-                'id_post': proj.post.id, 
-                'id_pre': proj.pre.id, 
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
                 'local_index': "[i][j]", 
                 'global_index': '[i]',
                 'pre_index': '[pre_rank[i][j]]',
@@ -572,8 +581,59 @@ class ProjectionGenerator(object):
         """
         code = ""
 
-        psp = proj.synapse.description['psp']['cpp'] % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id}
-        psp = psp.replace('[rk_pre]', '[rank_pre[j]]')
+        # Default variables needed in psp_code
+        psp_prefix = """
+        int nb_post; double sum;"""
+        if 'psp_prefix' in proj._specific_template.keys():
+            psp_prefix = proj._specific_template['psp_prefix']
+
+        # Specific projection
+        if 'psp_code' in proj._specific_template.keys():
+            return psp_prefix, proj._specific_template['psp_code']
+
+        # Choose the relevant summation template
+        # TODO:
+        #if proj._dense_matrix: # Dense connectivity
+        #    template =  ProjTemplate.dense_summation_operation
+        #else: # Default LiL
+        #    template =  ProjTemplate.lil_summation_operation
+
+        # Dictionary of keywords to transform the parsed equations
+        ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': "[j]",
+                'global_index': '[i]',
+                'pre_index': '[rank_pre[j]]',
+                'post_index': '[post_rank[i]]',
+                'pre_prefix': 'pre_',
+                'post_prefix': 'post_',
+                'delay_nu' : '[delay[j]-1]', # non-uniform delay
+                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+        }
+
+        # Special keywords based on the data structure
+        #if proj._dense_matrix: # Dense connectivity
+        #    ids['pre_index'] = "[j]"
+        #    ids['post_index'] = "[i]"
+
+        # Retrieve the PSP
+        if not 'psp' in  proj.synapse.description.keys(): # default
+            psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
+        else: # custom psp
+            psp = (proj.synapse.description['psp']['cpp'])
+
+        # Special case where w is a single value
+        if proj._has_single_weight():
+            psp = re.sub(
+                r'([^\w]+)w%\(local_index\)s',
+                r'\1w',
+                ' ' + psp
+            )
+
+        psp = proj.synapse.description['psp']['cpp'] % ids
 
         body_code = ProjTemplate.cuda_psp_kernel % {
                                    'id': proj.id,
@@ -898,16 +958,16 @@ if(_learning && pop%(id_post)s._active){
 #######################################################################
 ############## Synaptic variables OMP #################################
 #######################################################################
-    def update_synapse(self, proj):
+    def update_synapse_openmp(self, proj):
         prefix = """
         int rk_post, rk_pre;"""
 
         # Dictionary of pre/suffixes
         ids = {
-                'id_proj' : proj.id, 
-                'target': proj.target, 
-                'id_post': proj.post.id, 
-                'id_pre': proj.pre.id, 
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
                 'local_index': '[i][j]', 
                 'global_index': '[i]',
                 'pre_index': '[rk_pre]',
@@ -995,6 +1055,154 @@ if(_learning && pop%(id_post)s._active){
         # Return the code block
         return prefix, tabify(code, 2)
 
+    def update_synapse_cuda(self, proj):
+        # Global variables
+        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj')
+
+        # Local variables
+        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj')
+
+        if global_eq.strip() == '' and local_eq.strip() == '':
+            return "", "", ""
+
+        # pre- and postsynaptic global operations
+        pre_global_ops = []
+        for pre_glob in proj.synapse.description['pre_global_operations']:
+            pre_global_ops.append( """_%(func)s_%(name)s""" % { 'func': pre_glob['function'], 'name': pre_glob['variable'] } )
+
+        post_global_ops = []
+        for post_glob in proj.synapse.description['post_global_operations']:
+            post_global_ops.append( """_%(func)s_%(name)s""" % { 'func': post_glob['function'], 'name': post_glob['variable'] } )
+
+        # remove doubled entries
+        pre_dependencies = list(set(proj.synapse.description['dependencies']['pre']))
+        pre_global_ops = list(set(pre_global_ops))
+        post_dependencies = list(set(proj.synapse.description['dependencies']['post']))
+        post_global_ops = list(set(post_global_ops))
+
+        var = ""
+        par = ""
+
+        # synaptic variables / parameters
+        for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+            var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
+
+        # replace pre- and postsynaptic global operations / variable accesses
+        if  (proj.pre.id !=  proj.post.id):
+            for pre_var in pre_dependencies:
+                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
+            for g_op in pre_global_ops:
+                par += """, double pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
+            for post_var in post_dependencies:
+                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.post.id, 'name': post_var}
+            for g_op in post_global_ops:
+                old = """, double pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': g_op}
+        else:
+            for pre_var in list(set(pre_dependencies + post_dependencies)):
+                var += """, double* pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': pre_var}
+            for g_op in list(set(pre_global_ops+post_global_ops)):
+                par += """, double pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
+
+        # random variables
+        for rd in proj.synapse.description['random_distributions']:
+            par += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
+
+        # we replace the rand_%(id)s by the corresponding curand... term
+        for rd in proj.synapse.description['random_distributions']:
+            if rd['dist'] == "Uniform":
+                term = """curand_uniform_double( &%(rd)s[i]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                local_eq = local_eq.replace(rd['name']+"[j]", term)
+            elif rd['dist'] == "Normal":
+                term = """curand_normal_double( &%(rd)s[i])""" % { 'rd': rd['name'] };
+                local_eq = local_eq.replace(rd['name']+"[j]", term)
+            elif rd['dist'] == "LogNormal":
+                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                local_eq = local_eq.replace(rd['name']+"[j]", term)
+            else:
+                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        # remove all types
+        repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
+        var_wo_types = var
+        par_wo_types = par
+        for type in repl_types:
+            var_wo_types = var_wo_types.replace(type, "")
+            par_wo_types = par_wo_types.replace(type, "")
+
+        # Dictionary of pre/suffixes
+        ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': '[j]',
+                'global_index': '[i]',
+                'pre_index': '[rk_pre]',
+                'post_index': '[rk_post]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '_',
+                'post_prefix': 'pop'+ str(proj.post.id) + '_',
+                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+        }
+
+        body = ProjTemplate.cuda_synapse_kernel % {
+            'id': proj.id,
+            'par': par,
+            'par2': par_wo_types,
+            'var': var,
+            'var2': var_wo_types,
+            'global_eqs': global_eq % ids,
+            'local_eqs': local_eq % ids,
+            'target': proj.target,
+            'pre': proj.pre.id,
+            'post': proj.post.id,
+         }
+
+        header = """__global__ void cuProj%(id)s_step( int* post_rank, int *pre_rank, int *offsets, int *nb_synapses, double dt%(var)s%(par)s);
+""" % { 'id': proj.id,
+        'var': var,
+        'par': par
+}
+
+        #
+        # calling entity
+        local = ""
+        for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+            local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
+
+        if (proj.pre.id == proj.post.id):
+            for var in list(set(pre_dependencies + post_dependencies)):
+                if var in pre_dependencies:
+                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
+                else:
+                    local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+        else:
+            for pre_var in pre_dependencies:
+                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.pre.id, 'name': pre_var }
+            for post_var in post_dependencies:
+                local += """, pop%(id)s.gpu_%(name)s """ % { 'id': proj.post.id, 'name': post_var }
+
+        glob = ""
+        for g_op in pre_global_ops:
+            glob += """, pop%(id)s.%(name)s """ % { 'id': proj.pre.id, 'name': g_op }
+        for g_op in post_global_ops:
+            glob += """, pop%(id)s.%(name)s """ % { 'id': proj.post.id, 'name': g_op }
+
+        # random variables
+        for rd in proj.synapse.description['random_distributions']:
+            glob += """, proj%(id)s.gpu_%(rd_name)s""" % { 'id': proj.id, 'rd_name' : rd['name'] }
+
+        # generate code
+        call = ProjTemplate.cuda_synapse_kernel_call % {
+            'id_proj': proj.id,
+            'post': proj.post.id,
+            'pre': proj.pre.id,
+            'target': proj.target,
+            'local': local,
+            'global': glob
+        }
+
+        return body, header, call
 
 #######################################################################
 ############## Random Distributions OMP ###############################

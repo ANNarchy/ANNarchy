@@ -96,10 +96,7 @@ struct PopStruct%(id)s{
 };
 """
 
-header_struct_cuda = {
-    'rate' :
-"""#pragma once
-
+header_struct_cuda = """#pragma once
 extern double dt;
 extern long int t;
 
@@ -107,50 +104,70 @@ extern long int t;
 extern long seed;
 extern void init_curand_states( int N, curandState* states, unsigned long seed );
 
+%(include_additional)s
+%(extern_global_operations)s
+%(struct_additional)s
+
+///////////////////////////////////////////////////////////////
+// Main Structure for the population of id %(id)s (%(name)s)
+///////////////////////////////////////////////////////////////
 struct PopStruct%(id)s{
-    // Number of neurons
-    int size;
-
-    // Active
-    bool _active;
-
-    // assigned stream for concurrent kernel execution ( CC > 2.x )
-    cudaStream_t stream;
-
-%(additional)s
+    int size; // Number of neurons
+    bool _active; // Allows to shut down the whole population
+    cudaStream_t stream; // assigned stream for concurrent kernel execution ( CC > 2.x )
 
     // Access functions used by cython wrapper
     int get_size() { return size; }
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
+%(declare_spike_arrays)s
+    // Neuron specific parameters and variables
+%(declare_parameters_variables)s
+%(declare_delay)s
+%(declare_additional)s
+    // Access methods to the parameters and variables
+%(access_parameters_variables)s
 
-    // Neuron specific
-%(accessor)s
-
+    // Method called to initialize the data structures
     void init_population() {
-%(init)s
+        size = %(size)s;
+        _active = true;
+%(init_parameters_variables)s
+%(init_spike)s
+%(init_delay)s
+%(init_additional)s
     }
 
+    // Method called to reset the population
     void reset() {
-%(reset)s
+%(reset_spike)s
+%(reset_delay)s
+%(reset_additional)s
     }
 
+    // Method to draw new random numbers
     void update_rng() {
-        if (_active){
-            for(int i = 0; i < size; i++) {
 %(update_rng)s
-            }
-        }
     }
 
+    // Method to update global operations on the population (min/max/mean...)
+    void update_global_ops() {
+%(update_global_ops)s
+    }
+
+    // Method to enqueue output variables in case outgoing projections have non-zero delay
     void update_delay() {
 %(update_delay)s
     }
+
+    // Main method to update neural variables
+    void update() {
+%(update_variables)s
+    }
+
+    %(stop_condition)s
 };
-""",
-    'spike': """
 """
-}
 
 # c like definition of neuron attributes, whereas 'local' is used if values can vary across
 # neurons, consequently 'global' is used if values are common to all neurons.Currently two
