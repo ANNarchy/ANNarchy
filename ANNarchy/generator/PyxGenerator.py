@@ -154,7 +154,7 @@ class PyxGenerator(object):
         if pop.neuron_type.type == 'rate':
             export_targets += """
         # Targets"""
-            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 export_targets += """        vector[double] _sum_%(target)s
 """ % {'target' : target}
         if 'export_targets' in pop._specific_template.keys():

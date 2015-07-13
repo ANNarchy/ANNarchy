@@ -276,7 +276,7 @@ class PopulationGenerator(object):
     // Targets
 """
         if pop.neuron_type.type == 'rate':
-            for target in list(set(pop.neuron_type.description['targets']+pop.targets)):
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 declaration += PopTemplate.rate_psp[Global.config['paradigm']]['decl'] % {'target': target}
 
         # Global operations
@@ -346,7 +346,7 @@ class PopulationGenerator(object):
 
         # Targets
         if pop.neuron_type.type == 'rate':
-            for target in list(set(pop.neuron_type.description['targets'] + pop.targets)):
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 code += PopTemplate.rate_psp[Global.config['paradigm']]['init'] % {'id': pop.id, 'target': target}
 
         return code
@@ -574,7 +574,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
 
         # targets
-        for target in pop.neuron_type.description['targets']:
+        for target in sorted(pop.neuron_type.description['targets']):
             tar += """, double* _sum_%(target)s""" % {'target' : target}
 
         #Global variables
@@ -653,7 +653,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             var += """, pop%(id)s.gpu_%(rd_name)s""" % { 'id': pop.id, 'rd_name' : rd['name'] }
 
         # targets
-        for target in pop.neuron_type.description['targets']:
+        for target in sorted(pop.neuron_type.description['targets']):
             tar += """, pop%(id)s.gpu_sum_%(target)s""" % { 'id': pop.id, 'target' : target}
 
         # global operations
@@ -757,7 +757,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
     def reset_computesum(self, pop):
         code = ""
-        for target in pop.targets:
+        for target in sorted(pop.targets):
             code += """
     if (pop%(id)s._active)
         memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
