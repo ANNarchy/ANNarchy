@@ -100,4 +100,6 @@ cpdef np.ndarray population_rate(dict data, float smooth):
     delta = dt/smooth
     for t in xrange(d-1):
         smoothed_rate[t+1] = smoothed_rate[t] + (rates[t+1] - smoothed_rate[t])*delta
+
     return smoothed_rate
+
