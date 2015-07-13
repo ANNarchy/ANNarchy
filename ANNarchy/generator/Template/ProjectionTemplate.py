@@ -313,17 +313,54 @@ csr_connectivity_matrix_cuda = {
         return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()[n]
-"""
+""",
+    'pyx_wrapper_args': " syn",
 }
 
 csr_weight_matrix_cuda = {
-    'declare': """,
-    'accessor': """,
-    'init': """,
-    'pyx_struct': """,
+    'declare': """
+    // Local variable w
+    std::vector<std::vector<double> > w;
+    double *gpu_w;
+    bool w_dirty;
+    """,
+    'accessor': """
+    // Local variable w
+    std::vector<std::vector< double > > get_w() { return w; }
+    std::vector<double> get_dendrite_w(int rk) { return w[rk]; }
+    double get_synapse_w(int rk_post, int rk_pre) { return w[rk_post][rk_pre]; }
+    void set_w(std::vector<std::vector< double > >value) { w = value; w_dirty = true; }
+    void set_dendrite_w(int rk, std::vector<double> value) { w[rk] = value; w_dirty = true; }
+    void set_synapse_w(int rk_post, int rk_pre, double value) { w[rk_post][rk_pre] = value; w_dirty = true; }
+    """,
+    'init': "",
+    'pyx_struct': """
+        vector[ vector[ double] ] get_w()
+        vector[ double ] get_dendrite_w(int)
+        double get_synapse_w(int, int)
+        void set_w(vector[ vector[ double] ])
+        void set_dendrite_w( int, vector[double])
+        void set_synapse_w(int, int, double)
+    """,
     'pyx_wrapper_args': "",
-    'pyx_wrapper_init': "",
-    'pyx_wrapper_accessor': ""
+    'pyx_wrapper_init': """
+        proj%(id_proj)s.set_w(syn.w)
+    """,
+    'pyx_wrapper_accessor': """
+    # Local variable w
+    def get_w(self):
+        return proj%(id_proj)s.get_w()
+    def set_w(self, value):
+        proj%(id_proj)s.set_w( value )
+    def get_dendrite_w(self, int rank):
+        return proj%(id_proj)s.get_dendrite_w(rank)
+    def set_dendrite_w(self, int rank, vector[double] value):
+        proj%(id_proj)s.set_dendrite_w(rank, value)
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return proj%(id_proj)s.get_synapse_w(rank_post, rank_pre)
+    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+        proj%(id_proj)s.set_synapse_w(rank_post, rank_pre, value)
+"""
 }
 
 
@@ -581,6 +618,8 @@ attribute_decl = {
 """
     // Global %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
+    %(type)s* gpu_%(name)s;
+    bool %(name)s_dirty;
 """
     }
 }
@@ -1072,11 +1111,57 @@ cuda_psp_kernel_call =\
     }
 """
 
+######################################
+### Update synaptic variables CUDA
+######################################
+cuda_synapse_kernel=\
+"""
+// gpu device kernel for projection %(id)s
+__global__ void cuProj%(id)s_step( /* default params */
+                              int *post_rank, int *pre_rank, int* nb_synapses, int* offsets, double dt
+                              /* additional params */
+                              %(var)s%(par)s )
+{
+    int i = blockIdx.x;
+    int j = offsets[i] + threadIdx.x;
+    int C = offsets[i]+ nb_synapses[i];
+    int rk_post = post_rank[i];
+
+    // Updating global variables of projection %(id)s
+    if ( threadIdx.x == 0)
+    {
+%(global_eqs)s
+    }
+
+    // Updating local variables of projection %(id)s
+    while ( j < C )
+    {
+        int rk_pre = pre_rank[j];
+
+%(local_eqs)s
+
+        j += blockDim.x;
+    }
+}
+"""
+
+cuda_synapse_kernel_call =\
+"""
+    cuProj%(id_proj)s_step<<< pop1.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
+        proj%(id_proj)s.gpu_post_rank,
+        proj%(id_proj)s.gpu_pre_rank,
+        proj%(id_proj)s.gpu_off_synapses, 
+        proj%(id_proj)s.gpu_nb_synapses,
+        dt
+        %(local)s
+        %(global)s
+    );
+"""
+
 cuda_proj_base_data =\
 """
-    // Initialize device memory for proj%(id)s
-
-    // weights
-    cudaMalloc((void**)&gpu_w, overallSynapses * sizeof(double));
-    w_dirty = true; // enforce update
+        // Initialize device memory for proj%(id)s
+        // weights
+        cudaMalloc((void**)&gpu_w, overallSynapses * sizeof(double));
+        w_dirty = true; // enforce update
 """

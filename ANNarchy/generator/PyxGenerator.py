@@ -255,7 +255,7 @@ class PyxGenerator(object):
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Import templates
-        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
+        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_connectivity_matrix_cuda
 
         weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
 
@@ -360,7 +360,7 @@ class PyxGenerator(object):
         pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
 
         # Import connectivity matrix template
-        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.connectivity_matrix_cuda
+        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_connectivity_matrix_cuda
 
         # Import weight array template
         weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda

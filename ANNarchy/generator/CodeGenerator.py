@@ -350,6 +350,7 @@ class CodeGenerator(object):
             pop_kernel = ""
             for pop in self._pop_desc:
                 pop_kernel += pop['update_body']
+
             psp_kernel = ""
             for proj in self._proj_desc:
                 psp_kernel += proj['psp_body']
@@ -359,11 +360,20 @@ class CodeGenerator(object):
                 kernel_def += pop['update_header']
             for proj in self._proj_desc:
                 kernel_def += proj['psp_header']
+                kernel_def += proj['update_synapse_header']
 
             delay_code = ""
             for pop in self._pop_desc:
                 if 'update_delay' in pop.keys():
                     delay_code += pop['update_delay']
+
+            syn_kernel = ""
+            for proj in self._proj_desc:
+                syn_kernel += proj['update_synapse_body']
+
+            syn_call = ""
+            for proj in self._proj_desc:
+                syn_call += proj['update_synapse_call']
 
             # global operations
             glob_ops_header, glob_ops_body = self.body_def_glops()
@@ -385,7 +395,7 @@ class CodeGenerator(object):
                 'compute_sums' : psp_call,
                 'update_neuron' : update_neuron,
                 'update_globalops' : update_globalops,
-                'update_synapse' : "",
+                'update_synapse' : syn_call,
                 'delay_code': delay_code,
                 'initialize' : self._body_initialize(),
                 'post_event' : post_event,
@@ -401,7 +411,7 @@ class CodeGenerator(object):
                 'kernel_config': threads_per_kernel,
                 'pop_kernel': pop_kernel, #update_neuron_body,
                 'psp_kernel': psp_kernel,
-                'syn_kernel': "", #update_synapse_body,
+                'syn_kernel': syn_kernel, #update_synapse_body,
                 'glob_ops_kernel': glob_ops_body,
                 'custom_func': "", #custom_func            
             }

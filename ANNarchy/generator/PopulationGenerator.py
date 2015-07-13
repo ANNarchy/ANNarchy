@@ -59,17 +59,13 @@ class PopulationGenerator(object):
             'init': """    pop%(id)s.init_population();\n""" % {'id': pop.id}
         }
 
-        if Global.config['paradigm'] == "openmp":
-            return self._generate_omp(pop, pop_desc, annarchy_dir)
-
-        elif Global.config['paradigm'] == "cuda":
-            return self._generate_cuda(pop, pop_desc, annarchy_dir)
-
-    def _generate_omp(self, pop, pop_desc, annarchy_dir):
-        "Generate complete code corresponding to OMP"
         ## We first make a normal generation
         # Retrieve the correct template
-        base_template = PopTemplate.header_struct_omp
+        if Global.config['paradigm'] == "openmp":
+            base_template = PopTemplate.header_struct_omp
+
+        elif Global.config['paradigm'] == "cuda":
+            base_template = PopTemplate.header_struct_cuda
 
         # Generate declaration and accessors of all parameters and variables
         declaration_parameters_variables, access_parameters_variables = self.generate_decl_and_acc(pop)
@@ -111,10 +107,18 @@ class PopulationGenerator(object):
         update_global_ops = self.update_globalops(pop)
 
         # Update the neural variables
-        if pop.neuron_type.type == 'rate':
-            update_variables = self.update_rate_neuron_openmp(pop)
+        if Global.config['paradigm']== "openmp":
+            if pop.neuron_type.type == 'rate':
+                update_variables = self.update_rate_neuron_openmp(pop)
+            else:
+                update_variables = self.update_spike_neuron(pop)
         else:
-            update_variables = self.update_spike_neuron(pop)
+            if pop.neuron_type.type == 'rate':
+                body, header, update_call = self.update_rate_neuron_cuda(pop)
+                update_variables = ""
+            else:
+                Global._error("Spiking neurons on GPUs are currently not supported")
+                exit(0)
 
         # Stop condition
         stop_condition = self.stop_condition(pop)
@@ -190,23 +194,43 @@ class PopulationGenerator(object):
             ofile.write(code)
 
         # Generate the calls to be made in the main ANNarchy.cpp
-        if len(pop.neuron_type.description['variables']) > 0 or 'update_variables' in pop._specific_template.keys():
-            pop_desc['update'] = """    pop%(id)s.update();\n""" % { 'id': pop.id }
+        if Global.config['paradigm'] == "openmp":
+            if len(pop.neuron_type.description['variables']) > 0 or 'update_variables' in pop._specific_template.keys():
+                pop_desc['update'] = """    pop%(id)s.update();\n""" % { 'id': pop.id }
 
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-            pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
+            if len(pop.neuron_type.description['random_distributions']) > 0:
+                pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
 
-        if pop.max_delay > 1:
-            pop_desc['delay_update'] = """    pop%(id)s.update_delay();\n""" % { 'id': pop.id }
+            if pop.max_delay > 1:
+                pop_desc['delay_update'] = """    pop%(id)s.update_delay();\n""" % { 'id': pop.id }
 
-        if len(pop.global_operations) > 0:
-            pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % { 'id': pop.id }
+            if len(pop.global_operations) > 0:
+                pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % { 'id': pop.id }
+        else:
+            pop_desc['update'] = update_call
+            pop_desc['update_body'] =  body
+            pop_desc['update_header'] =  header
+            pop_desc['update_delay'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
+
+            if len(pop.global_operations) > 0:
+                update_global_ops = self.update_globalops(pop)
+                pop_desc['gops_update'] = update_global_ops % { 'id': pop.id }
+
+            host_to_device, device_to_host = self._cuda_memory_transfers(pop)
+            pop_desc['host_to_device'] = host_to_device
+            pop_desc['device_to_host'] = device_to_host
 
         return pop_desc
 
     def _generate_cuda(self, pop, pop_desc, annarchy_dir):
         "Generate complete code corresponding to CUDA"
         glops_extern = ""
+        ## We first make a normal generation
+        # Retrieve the correct template
+        base_template = PopTemplate.header_struct_cuda
+
+        # Generate declaration and accessors of all parameters and variables
+        declaration_parameters_variables, access_parameters_variables = self.generate_decl_and_acc(pop)
 
         init = self.init_population(pop)
         reset = ""
@@ -225,13 +249,28 @@ class PopulationGenerator(object):
             exit(0)
 
         code = base_template % { 'id': pop.id,
-                                 'gl_ops_extern': glops_extern,
-                                 'additional': declaration,
-                                 'accessor': accessors,
-                                 'init': init,
-                                 'reset': reset,
+                                 'name': pop.name,
+                                 'size': pop.size,
+                                 'include_additional': include_additional,
+                                 'struct_additional': struct_additional,
+                                 'extern_global_operations': extern_global_operations,
+                                 'declare_spike_arrays': declare_spike,
+                                 'declare_parameters_variables': declaration_parameters_variables,
+                                 'declare_additional': declare_additional,
+                                 'declare_delay': declare_delay,
+                                 'access_parameters_variables': access_parameters_variables,
+                                 'init_parameters_variables': init_parameters_variables,
+                                 'init_spike': init_spike,
+                                 'init_delay': init_delay,
+                                 'init_additional': init_additional,
+                                 'reset_spike': reset_spike,
+                                 'reset_delay': reset_delay,
+                                 'reset_additional': reset_additional,
+                                 'update_variables': update_variables,
                                  'update_rng': update_rng,
-                                 'update_delay': delay_update if pop.max_delay > 1 else ""
+                                 'update_delay': update_delay,
+                                 'update_global_ops': update_global_ops,
+                                 'stop_condition': stop_condition
                                 }
 
         # Store the complete header definition in a single file
