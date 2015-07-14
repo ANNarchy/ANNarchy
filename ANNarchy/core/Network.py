@@ -213,7 +213,7 @@ class Network(object):
         """
         return Global.simulate_until(max_duration, population, operator, measure_time, self.id)
     
-    def step():
+    def step(self):
         """
         Performs a single simulation step (duration = ``dt``). 
         """
