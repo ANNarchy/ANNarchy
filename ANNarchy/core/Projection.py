@@ -97,8 +97,6 @@ class Projection(object):
             self.synapse = copy.deepcopy(synapse)
             self.synapse.type = self.pre.neuron_type.type
 
-        print(self.synapse.type)
-
         # Analyse the parameters and variables
         self.synapse._analyse()
 
