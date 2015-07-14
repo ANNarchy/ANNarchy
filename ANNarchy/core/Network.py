@@ -220,7 +220,7 @@ class Network(object):
         Global.step(self.id)
 
 
-    def reset(populations=True, projections=False, synapses = False):
+    def reset(self, populations = True, projections = False, synapses = False):
         """
         Reinitialises the network to its state before the call to compile.
 
@@ -232,30 +232,30 @@ class Network(object):
         """
         Global.reset(populations,  projections, synapses, self.id)
 
-    def get_time(net_id=0):
+    def get_time(self, net_id=0):
         "Returns the current time in ms."
         return Global.get_time(self.id)
 
-    def set_time(t, net_id=0):
+    def set_time(self, t, net_id=0):
         """Sets the current time in ms.
 
-    .. warning::
+        .. warning::
 
-        Can be dangerous for some spiking models.
-    """
+            Can be dangerous for some spiking models.
+        """
         Global.set_time(t, self.id)
 
-    def get_current_step(net_id=0):
+    def get_current_step(self, net_id=0):
         "Returns the current simulation step."
         return Global.get_current_step(self.id)
 
-    def set_current_step(t, net_id=0):
+    def set_current_step(self, t, net_id=0):
         """Sets the current simulation step.
 
-    .. warning::
+        .. warning::
 
-        Can be dangerous for some spiking models.
-    """
+            Can be dangerous for some spiking models.
+        """
         Global.set_current_step(t, self.id)
 
     def enable_learning(self, projections=None):
