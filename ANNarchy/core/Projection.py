@@ -231,28 +231,8 @@ class Projection(object):
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
 
-    def _get_csr(self):
-        "Returns the CSR object used for creating the projection, even if it was erased by compile()"
-        if self._synapses:
-            return self._synapses
-
-        try:
-            from ANNarchy.core.cython_ext.Connector import CSR
-        except:
-            Global._error('CSR: ANNarchy was not successfully installed.')
-            exit(0)
-        csr = CSR()   
-        for idx, rk_post in enumerate(self.post_ranks):
-            if self.uniform_delay:
-                delay = [self.max_delay]
-            else:
-                delay = [self.max_delay] # TODO: real delay!
-            csr.add(rk_post, self.cyInstance.pre_rank(idx), self.cyInstance.get_dendrite_w(idx), delay)
-
-        return csr  
-
     def _has_single_weight(self):
-        "if a single weight should be generated instead of a LIL"
+        "If a single weight should be generated instead of a LIL"
         return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse.description['plasticity'] and Global.config['paradigm']=="openmp"
 
 

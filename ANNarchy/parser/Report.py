@@ -206,19 +206,25 @@ def _generate_summary(net_id):
     neuron_models = ""
     synapse_models = ""
 
+    # List the names of all populations
     for pop in _network[net_id]['populations']:
         # population name
         population_names += pop_name(pop.name) + ", "
-    for neur in _objects['neurons']:
-        neuron_models += neur.name + ', '
     population_names = population_names[:-2] # suppress the last ,
+
+    # List all neuron types
+    neuron_model_names = []
+    for neur in _objects['neurons']:
+        neuron_model_names.append(neur.name)
+    for neur in list(set(neuron_model_names)):
+        neuron_models += neur + ', '
     neuron_models = neuron_models[:-2] # suppress the last ,
 
     list_connectivity = []
     list_synapse_models = []
     for proj in _network[net_id]['projections']:
         list_connectivity.append(proj.connector_name)
-        if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
+        if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse', 'Static weight']:
             list_synapse_models.append(proj.synapse.name)
     for con in list(set(list_connectivity)):
         connectivity += con + ', '
@@ -351,7 +357,7 @@ def _generate_neuron_models(net_id):
 
         # Build the dictionary
         desc = {
-            'name': neuron.name,
+            'name': pop_name(neuron.name),
             'description': neuron.short_description,
             'firstneuron': firstneuron if idx ==0 else "",
             'variables': eqs,
@@ -420,7 +426,7 @@ def _generate_synapse_models(net_id):
 
         # Build the dictionary
         desc = {
-            'name': synapse.name,
+            'name': pop_name(synapse.name),
             'description': synapse.short_description,
             'firstsynapse': firstsynapse if idx == 0 else "",
             'variables': variables,
@@ -444,6 +450,22 @@ def _process_random(val):
         return val.latex()
     else:
         return str(val)
+
+# Really crappy...
+# When target has a number (ff1), sympy thinks the 1 is a number
+# the target is replaced by a text to avoid this
+target_replacements = [
+    'firsttarget',
+    'secondtarget',
+    'thirdtarget',
+    'fourthtarget',
+    'fifthtarget',
+    'sixthtarget',
+    'seventhtarget',
+    'eighthtarget',
+    'ninthtarget',
+    'tenthtarget',
+]
 
 def _process_neuron_equations(neuron):
     code = ""
@@ -473,8 +495,19 @@ def _process_neuron_equations(neuron):
     for var in variables:
         # Retrieve the equation
         eq = var['eq']
-        # Parse the equation
         eq = eq.replace(' ', '') # supress spaces
+
+        # Extract sum(target)
+        targets = []
+        target_list = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', eq)
+        for l, t in target_list:
+            if t.strip() == '':
+                continue
+            targets.append((t.strip(), target_replacements[len(targets)]))
+        for target, repl in targets:
+            eq = eq.replace('sum('+target+')', repl)
+
+        # Parse the equation
         ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
         if len(ode) > 0:
             name = ode[0][1]
@@ -484,6 +517,11 @@ def _process_neuron_equations(neuron):
             tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
 
         var_code = _analyse_equation(eq, local_dict, tex_dict)
+
+        # Replace the targets
+        for target, repl in targets:
+            var_code = var_code.replace(repl, '\\sum_\\text{'+target+'} \\text{psp}')
+
 
         # Add the code
         code += """\\[
