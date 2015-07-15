@@ -39,12 +39,12 @@ Documenting the network
 
 The report is generated based entirely on the Python script. For it to make sense, the user has to provide the necessary information while defining the network:
 
-1. Populations must be assigned a unique name. If no name is given, generic names such as ``pop0`` or ``pop1`` will be given. If two populations have the same name, the connectivity will be unreadable::
+1. Populations must be assigned a unique name. If no name is given, generic names such as ``pop0`` or ``pop1`` will be used. If two populations have the same name, the connectivity will be unreadable::
 
     pop1 = Population(geometry=(100, 100), neuron=Izhikevich, name="Excitatory")
     pop2 = Population(geometry=(20, 20), neuron=Izhikevich, name="Inhibitory")
 
-2. User-defined neuron and synapse models should be assigned a name and description. The name should be relatively short and generic (e.g. "Izhikevich", "BCM learning rule"), while the description should be more specific. It can contain LaTeX code, but remember to double the ``\`` which is the escape symbol in Python strings:
+2. User-defined neuron and synapse models should be assigned a name and description. The name should be relatively short and generic (e.g. "Izhikevich", "BCM learning rule"), while the description should be more specific. They can contain LaTeX code, but remember to double the ``\`` which is the escape symbol in Python strings:
 
 .. code-block:: python
 
@@ -75,3 +75,4 @@ The report is generated based entirely on the Python script. For it to make sens
     ) 
 
 3. Choose simple parameter and variable names for the description of equations. If a parameter/variable name uses only one character, it will be treated as a mathematical variable in the equations (ex: ``v`` becomes :math:`v`), otherwise the plain text representation will be used (ugly). If the name corresponds to a greek letter (``alpha``, ``tau``, etc.), it will be represented by the corresponding greek letter (:math:`\alpha`, :math:`\tau`). If the name is composed of two terms separated by an underscore (``tau_exc``), a subscript will be used (:math:`\tau_\text{exc}`). If more than one underscore is used, the text representation is used instead (LaTeX does not allow multiple subscripts).
+
