@@ -74,7 +74,7 @@ vals = parallel_run(method=run_network, networks=[net, net2], measure_time=True,
 vals = parallel_run(method=run_network, networks=[net, net2], measure_time=True)
 
 # Using just a number of networks to create
-vals = parallel_run(method=run_network, number=2, measure_time=True)
+vals = parallel_run(method=run_network, number=4, measure_time=True)
 
 # Data analysis
 t, n = vals[0]

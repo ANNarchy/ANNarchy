@@ -339,7 +339,7 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
 
     # Number of processes to create
     if max_processes < 0:
-        max_processes = multiprocessing.cpu_count()
+        max_processes = min(len(networks), multiprocessing.cpu_count())
 
     # Simulation
     if not sequential:
@@ -387,7 +387,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential):
 
     # Number of processes to create
     if max_processes < 0:
-        max_processes = multiprocessing.cpu_count()
+        max_processes = min(number, multiprocessing.cpu_count())
 
     # Simulation
     if not sequential:
