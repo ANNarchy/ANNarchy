@@ -5,6 +5,8 @@
 *.csv
 *.tar.gz
 examples/*/annarchy
+benchmarks/*/annarchy
+benchmarks/*/COBA
 tests/
 build/
 dist/

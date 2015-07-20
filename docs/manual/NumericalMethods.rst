@@ -1,6 +1,9 @@
-**************************
+***********************************
+Equations and numerical methods
+***********************************
+
 Numerical methods
-**************************
+*****************
 
 First-order ordinary differential equations (ODE) can be solved using different numerical methods. The method can be declared globally in the ``setup()`` call and used in all ODEs of the network::
 
@@ -214,3 +217,79 @@ If :math:`v` has the value :math:`V_0` at time :math:`t`,, its value at time :ma
 .. note::
 
     If the synapse defines a ``psp`` argument (synaptic transmission is continuous), it is not possible to use event-driven integration.
+
+
+Order of evaluation
+**********************
+
+The values of variables are stored in a single array in order to save some memory. Special care therefore has to be taken on whether the update of a variable depends on the value of another variable at the previous time step or in the same step. 
+
+Systems of ODEs
+===============
+
+Systems of ODEs are integrated concurrently, which means that the following system::
+
+    tau*dv/dt = I - v - u 
+    tau*du/dt = v - u
+
+would be numerized using the explicit Euler method as::
+
+    v[t+1] = v[t] + dt*(I - v[t] - u[t])/tau
+    u[t+1] = u[t] + dt*(v[t] - u[t])/tau
+
+
+As we use a single array, the generated code is similar to::
+
+    new_v = v + dt*(I - v - u)/tau
+    new_u = u + dt*(v - u)/tau
+
+    v = new_v
+    u = new_u
+
+This way, we ensure that the interdependent ODEs use the correct value for the other variables.
+
+Assignments
+============
+
+When assignments (``=``, ``+=``...) are used in an ``equations`` field, the order of valuation is different:
+
+* Assigments occurring before or after a system of ODEs are updated sequentially.
+* Systems of ODEs are updated concurrently.
+
+Let's consider the following dummy equations::
+
+    # Process the inputs
+    Exc = some_function(sum(exc))
+    Inh = another_function(sum(inh))
+    I = Exc - Inh
+    # ODE for the membrane potential, with a recovery variable
+    tau*dv/dt = I - v - u
+    tau*du/dt = v - u
+    # Firing rate is the positive part of v
+    r = pos(v)
+
+Here,  ``Exc`` and ``Inh`` represent the inputs to the neuron at the current time ``t``. The new values should be immediately available for updating ``I``, whose value should similarly be immediately used in the ODE of ``v``. Similarly, the value of ``r`` should be the positive part of the value of ``v`` that was just calculated, not at the previous time step. Doing otherwise would introduce a lag in the neuron: changes in ``sum(exc)`` at ``t`` would be reflected in ``Exc`` at ``t+1``, in ``I`` at ``t+2``, in ``v`` at ``t+3`` and finally in ``r`` at ``t+4``. This is generally unwanted.
+
+The generated code is therefore equivalent to::
+
+    # Process the inputs
+    Exc = some_function(sum(exc))
+    Inh = another_function(sum(inh))
+    I = Exc - Inh
+    # ODE for the membrane potential, with a recovery variable
+    new_v = v + dt*(I - v - u)/tau
+    new_u = u + dt*(v - u)/tau
+    v = new_v
+    u = new_u
+    # Firing rate is the positive part of v
+    r = pos(v)
+
+
+One can even define multiple groups of assignments and systems of ODEs: systems of ODEs separated by at least one assignment will be evaluated sequentially (but concurrently inside each system). For example, in::
+
+    tau*du/dt = v - u
+    I = g_exc - g_inh
+    tau*dk/dt = v - k
+    tau*dv/dt = I - v - u + k
+
+``u`` and ``k`` are updated using the previous value of ``v``, while ``v`` uses the new values of both ``I`` and ``u``, but the previous one of ``k``.
