@@ -891,7 +891,7 @@ if (pop%(id_post)s._active){
         int i, j, rk_post, nb_pre;"""
 
         # Event-driven integration
-        has_event = False
+        has_event_driven = False
         for var in proj.synapse.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
