@@ -145,6 +145,8 @@ class SharedProjection(Projection):
 
         # Process the delays
         self.delays = delays
+        if not isinstance(delays, (int, float)):
+            Global._error('Shared projections can only have uniform delays.')
 
 
         # Check dimensions of populations and weight matrix
@@ -600,7 +602,10 @@ class SharedProjection(Projection):
 
         # Delays
         if self.delays > Global.config['dt']:
-            increment = increment.replace('pop%(id_pre)s.r[rk_pre]', 'pop%(id_pre)s._delayed_r['+str(int(self.delays/Global.config['dt'])-1)+'][rk_pre]')
+            increment = increment.replace(
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+            )
 
         # Apply the operation
         if operation == "sum":
@@ -714,10 +719,12 @@ class SharedProjection(Projection):
             'pre_prefix': 'pop'+str(self.pre.id)+'.',
             'post_prefix': 'pop'+str(self.post.id)+'.'}
 
-
         # Delays
         if self.delays > Global.config['dt']:
-            increment = increment.replace('pop%(id_pre)s.r[rk_pre]', 'pop%(id_pre)s._delayed_r['+str(int(self.delays/Global.config['dt'])-1)+'][rk_pre]')
+            increment = increment.replace(
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+            )
 
         # Apply the operation
         if operation == "sum":
@@ -808,7 +815,10 @@ class SharedProjection(Projection):
 
         # Delays
         if self.delays > Global.config['dt']:
-            psp = psp.replace('pop%(id_pre)s.r[rk_pre]', 'pop%(id_pre)s._delayed_r['+str(int(self.delays/Global.config['dt'])-1)+'][rk_pre]')
+            increment = increment.replace(
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+            )
 
         # Apply the operation
         if operation == "sum":
@@ -869,7 +879,7 @@ class SharedProjection(Projection):
 
             # Generate the code
             self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
-            self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+            #self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
 
         elif self._operation_type == 'pooling':
             # Filter definition
@@ -893,7 +903,7 @@ class SharedProjection(Projection):
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
     std::vector< std::vector<int> > pre_rank;
-""" + filter_definition.strip(),
+    """ + filter_definition.strip(),
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -1001,17 +1011,10 @@ class SharedProjection(Projection):
 
 
     def _generate_cuda(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
+        "TODO"
 
-        # C++ header
-        self.generator['cuda']['header_proj_struct'] = ""
-
-        # PYX header
-        self.generator['cuda']['pyx_proj_struct'] = ""
-
-        # Pyx class
-        self.generator['cuda']['pyx_proj_class'] = ""
-
-        self.generator['cuda']['body_compute_psp'] = ""
+        # Template
+        self._specific_template = {}
 
     def _generate_copy(self):
 
@@ -1075,17 +1078,11 @@ class SharedProjection(Projection):
         psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
             
         # Take delays into account if any
-        if self.projection.max_delay > 1:
-            if self.projection.uniform_delay == -1 : # Non-uniform delays
-                psp = psp.replace(
-                    'pop%(id_pre)s.r['%{'id_pre': self.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[delay[i][j]-1]['%{'id_pre': self.pre.id}
-                )
-            else: # Uniform delays
-                psp = psp.replace(
-                    'pop%(id_pre)s.r['%{'id_pre': self.pre.id}, 
-                    'pop%(id_pre)s._delayed_r[%(delay)s]['%{'id_pre': self.pre.id, 'delay': str(self.projection.uniform_delay-1)}
-                )
+        if self.delays > Global.config['dt']:
+            psp = psp.replace(
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+            )
 
         # Operation to be performed: sum, max, min, mean
         operation = self.synapse.operation
@@ -1153,12 +1150,13 @@ class SharedProjection(Projection):
         else:
             sum_code = ""
 
-        self.generator['omp']['body_compute_psp'] = sum_code % { 'id_proj': self.id, 'target': self.target, 
-        'id_pre': self.pre.id, 'name_pre': self.pre.name, 
-        'id_post': self.post.id, 'name_post': self.post.name,
-        'id': self.projection.id,
-        'omp_code': omp_code,
-        'psp': psp
+        self.generator['omp']['body_compute_psp'] = sum_code % { 
+            'id_proj': self.id, 'target': self.target, 
+            'id_pre': self.pre.id, 'name_pre': self.pre.name, 
+            'id_post': self.post.id, 'name_post': self.post.name,
+            'id': self.projection.id,
+            'omp_code': omp_code,
+            'psp': psp
         }
 
 
