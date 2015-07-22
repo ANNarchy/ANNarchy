@@ -341,7 +341,8 @@ clean:
         
             if sys.platform == "darwin":
                 Global._warning("OpenMP is not supported on Mac OS yet")
-                exit(0)
+                Global.config['num_threads'] = 1
+                make_process = subprocess.Popen("make seq -j4" + verbose, shell=True)
             else:
                 make_process = subprocess.Popen("make omp -j4" + verbose, shell=True)
 
