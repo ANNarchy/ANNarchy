@@ -88,12 +88,21 @@ if sys.platform.startswith("darwin"):
     os.chdir(cwd)
     package_data.append('core/cython_ext/*.so')
     ext_modules = None
+    dependencies = []
+    print('Warning: on  MacOSX, dependencies are not automatically installed when using pip.')
 else: # linux
     ext_modules = cythonize(
             [   "ANNarchy/core/cython_ext/Connector.pyx", 
                 "ANNarchy/core/cython_ext/Coordinates.pyx",
                 "ANNarchy/core/cython_ext/Transformations.pyx"]
         )
+    dependencies = [
+          'numpy',
+          'scipy',
+          'matplotlib',
+          'cython',
+          'sympy'
+        ]
 
 
 setup(  name='ANNarchy',
@@ -122,13 +131,7 @@ setup(  name='ANNarchy',
         keywords='neural simulator',
         packages=find_packages(),
         package_data={'ANNarchy': package_data},
-        install_requires=[
-          'numpy',
-          'scipy',
-          'matplotlib',
-          'cython',
-          'sympy'
-        ],
+        install_requires=dependencies,
         ext_modules = ext_modules,
         include_dirs = [numpy.get_include()],
         zip_safe = False
