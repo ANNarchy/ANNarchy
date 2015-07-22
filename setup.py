@@ -74,7 +74,7 @@ else:
 ################################################
 # Perform the installation
 ################################################
-print('Installing ANNarchy on your system')
+import ANNarchy
 
 package_data = ['core/cython_ext/*.pxd','generator/CudaCheck/cuda_check.so']
 
@@ -106,8 +106,8 @@ else: # linux
 
 
 setup(  name='ANNarchy',
-        version='4.5.1',
-        download_url = 'https://bitbucket.org/annarchy/annarchy/get/4.5.1.zip',
+        version=ANNarchy.__release__,
+        download_url = 'https://bitbucket.org/annarchy/annarchy/get/'+ANNarchy.__release__+'.zip',
         license='GPLv2+',
         platforms='GNU/Linux; MacOSX',
         description='Artificial Neural Networks architect',
