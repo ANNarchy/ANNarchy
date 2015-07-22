@@ -127,8 +127,7 @@ setup(  name='ANNarchy',
           'scipy',
           'matplotlib',
           'cython',
-          'sympy',
-          'lxml'
+          'sympy'
         ],
         ext_modules = ext_modules,
         include_dirs = [numpy.get_include()],
