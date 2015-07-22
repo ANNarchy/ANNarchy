@@ -145,6 +145,11 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     # Compiling directory
     annarchy_dir = os.getcwd() + '/' + directory
 
+    # Trun OMP off for MacOS
+    if (Global.config['paradigm']=="openmp" and Global.config['num_threads']>1 and sys.platform == "darwin"):
+        Global._warning("OpenMP is not supported on Mac OS yet")
+        Global.config['num_threads'] = 1
+
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
     from pkg_resources import parse_version
     if os.path.isfile(annarchy_dir+'/release'):
@@ -338,13 +343,7 @@ clean:
                 make_process = subprocess.Popen("make cuda_20 -j4 "+ verbose, shell=True)
 
         elif (Global.config['paradigm']=="openmp" and Global.config['num_threads']>1):
-        
-            if sys.platform == "darwin":
-                Global._warning("OpenMP is not supported on Mac OS yet")
-                Global.config['num_threads'] = 1
-                make_process = subprocess.Popen("make seq -j4" + verbose, shell=True)
-            else:
-                make_process = subprocess.Popen("make omp -j4" + verbose, shell=True)
+            make_process = subprocess.Popen("make omp -j4" + verbose, shell=True)
 
         else:
             make_process = subprocess.Popen("make seq -j4" + verbose, shell=True)
