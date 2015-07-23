@@ -214,11 +214,11 @@ single_weight_matrix_omp = {
     def get_w(self):
         return proj%(id_proj)s.w
     def set_w(self, value):
-        proj%(id_proj)s.w = value[0][0]
+        proj%(id_proj)s.w = value
     def get_dendrite_w(self, int rank):
         return proj%(id_proj)s.w
-    def set_dendrite_w(self, int rank, vector[double] value):
-        proj%(id_proj)s.w = value[0]
+    def set_dendrite_w(self, int rank, double value):
+        proj%(id_proj)s.w = value
     def get_synapse_w(self, int rank_post, int rank_pre):
         return proj%(id_proj)s.w
     def set_synapse_w(self, int rank_post, int rank_pre, double value):

@@ -115,18 +115,23 @@ def _save_data(filename, data):
     
     if not path == '':
         if not os.path.isdir(path):
-            Global._print('creating folder', path)
+            Global._print('Creating folder', path)
             os.mkdir(path)
     
     extension = os.path.splitext(fname)[1]
     
     if extension == '.mat':
-        Global._debug("Save in Matlab format.")
-        import scipy.io as sio
-        sio.savemat(filename, data)
+        Global._print("Saving network in Matlab format...")
+        try:
+            import scipy.io as sio
+            sio.savemat(filename, data)
+        except Exception as e:
+            Global._error('Error while saving in Matlab format.')
+            Global._print(e)
+            return
         
     elif extension == '.gz':
-        Global._debug("Save in gunzipped binary format.")
+        Global._print("Saving network in gunzipped binary format...")
         try:
             import gzip
         except:
@@ -141,9 +146,9 @@ def _save_data(filename, data):
                 return
         
     else:
-        Global._debug("Save in text format.")
+        Global._print("Saving network in text format...")
         # save in Pythons pickle format
-        with open(filename, mode = 'w') as w_file:
+        with open(filename, mode = 'wb') as w_file:
             try:
                 pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
@@ -211,7 +216,7 @@ def _load_data(filename):
 
     else:
         try:
-            with open(filename, mode = 'r') as r_file:
+            with open(filename, mode = 'rb') as r_file:
                 desc = pickle.load(r_file)
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
@@ -307,7 +312,10 @@ def _load_proj_data(proj, desc):
             if var in ['rank', 'delay']:
                 continue
             try:
-                getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
+                if isinstance(dendrite[var], (int, float)): # uniform weights
+                    getattr(proj.cyInstance, 'set_' + var)(dendrite[var])
+                else:
+                    getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
             except Exception as e:
                 Global._print(e)
                 Global._error('Can not set attribute ' + var + ' in the projection.')

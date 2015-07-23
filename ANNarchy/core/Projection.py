@@ -766,6 +766,7 @@ class Projection(object):
         
         desc['dendrites'] = dendrites
         desc['number_of_synapses'] = synapse_count
+
         return desc
     
     def save(self, filename):
