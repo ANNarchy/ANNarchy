@@ -92,11 +92,8 @@ class SharedProjection(Projection):
         else:
             return tuple(self.pre_coordinates[rank])
 
-    ################################
-    ## Save/load methods
-    ################################
-
     def _data(self):
+        "Disable saving."
         desc = {}
         desc['post_ranks'] = self.post_ranks
         desc['attributes'] = self.attributes
