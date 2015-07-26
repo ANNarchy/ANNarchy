@@ -17,10 +17,10 @@ class SharedProjection(Projection):
         """
         Projection based on shared weights: each post-synaptic neuron uses the same weights, so they need to be instantiated only once to save memory.
 
-        Learning is not possible for now. The ``synapse`` argument is removed, replaced by a single ``psp`` argument to modified what is summed and ``operation`` to replace the summation operation by max-pooling or similar.. 
+        Learning is not possible for now. The ``synapse`` argument is removed, replaced by a single ``psp`` argument to modified what is summed and ``operation`` to replace the summation operation by max-pooling or similar..
 
         *Parameters*:
-                
+
             * **pre**: pre-synaptic population (either its name or a ``Population`` object).
             * **post**: post-synaptic population (either its name or a ``Population`` object).
             * **target**: type of the connection.
@@ -29,7 +29,7 @@ class SharedProjection(Projection):
         """
         # Create the description, but it will not be used for generation
         Projection.__init__(
-            self, 
+            self,
             pre,
             post,
             target,
@@ -57,11 +57,11 @@ class SharedProjection(Projection):
         self.connector_description = "Shared weights"
         self._store_connectivity(self._load_from_csr, (csr, ), self.delays)
 
-    
+
     def _connect(self, module):
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
-        """        
+        """
         if not self._connection_method:
             Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
             exit(0)
@@ -74,7 +74,7 @@ class SharedProjection(Projection):
         self.post_ranks = list(range(self.post.size))
 
     def center(self, *args, **kwds):
-        """ 
+        """
         Returns the coordinates in the pre-synaptic population of the center of the kernel corresponding to the post-synaptic with the given rank or coordinates.
 
         *Parameters*
@@ -92,6 +92,20 @@ class SharedProjection(Projection):
         else:
             return tuple(self.pre_coordinates[rank])
 
+    ################################
+    ## Save/load methods
+    ################################
+
+    def _data(self):
+        desc = {}
+        desc['post_ranks'] = self.post_ranks
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+
+        desc['dendrites'] = []
+        desc['number_of_synapses'] = 0
+        return desc
 
     ################################
     ### Connection methods
@@ -107,27 +121,27 @@ class SharedProjection(Projection):
 
         * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
 
-        * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example). In this case, you must set ``keep_last_dimension`` to True.  
+        * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example). In this case, you must set ``keep_last_dimension`` to True.
 
         * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population. Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True.
 
-        Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel. 
+        Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
 
 
         *Parameters*:
 
             * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
 
-            * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons. 
-            
+            * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
+
             * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
-            
+
             * **keep_last_dimension**: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
 
             * **multiple**: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
-            
+
             * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
-            
+
             * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. dDfault: None.
         """
         self._operation_type = 'convolve'
@@ -212,8 +226,8 @@ class SharedProjection(Projection):
 
         Each post-synaptic neuron is associated to a region of the pre-synaptic one, over which the result of the operation on firing rates will be assigned to sum(target).
 
-        If the SharedProjection does not define an operation, the default is "sum". If you want max-pooling, you should set it to "max". 
-        
+        If the SharedProjection does not define an operation, the default is "sum". If you want max-pooling, you should set it to "max".
+
         *Parameters*:
 
             * **delays**: delays (in ms) in synaptic transmission. Must be a single value for all neurons.
@@ -250,7 +264,7 @@ class SharedProjection(Projection):
         if self.synapse.description['raw_psp'] == "w * pre.r":
             self.synapse.description['psp']['cpp'] = "%(pre_prefix)sr%(pre_index)s"
 
-        # Check dimensions of populations 
+        # Check dimensions of populations
         self.dim_pre = self.pre.dimension
         self.dim_post = self.post.dimension
 
@@ -298,7 +312,7 @@ class SharedProjection(Projection):
         # Dummy weights
         self.weights = None
         self.pre_coordinates = []
-        
+
         # Finish building the synapses
         self._create()
         return self
@@ -573,7 +587,7 @@ class SharedProjection(Projection):
                     sum += %(padding)s;
                     continue;
                 }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
-            
+
             else: # min, max
                 code += """
                 if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
@@ -590,9 +604,9 @@ class SharedProjection(Projection):
             index += '[' + indices[dim] + '_w]'
 
         increment = self.synapse.description['psp']['cpp'] % {
-            'id_pre': self.pre.id, 
-            'id_post': self.post.id, 
-            'local_index': index, 
+            'id_pre': self.pre.id,
+            'id_post': self.post.id,
+            'local_index': index,
             'global_index': '[i]',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
@@ -603,7 +617,7 @@ class SharedProjection(Projection):
         # Delays
         if self.delays > Global.config['dt']:
             increment = increment.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
             )
 
@@ -628,15 +642,15 @@ class SharedProjection(Projection):
         # Close for loops
         for dim in range(self.dim_kernel):
             code += """
-            }""" 
+            }"""
 
-        impl_code = code % {'id_proj': self.id, 
-            'target': self.target,  
-            'id_pre': self.pre.id, 
-            'name_pre': self.pre.name, 
-            'size_pre': self.pre.size, 
-            'id_post': self.post.id, 
-            'name_post': self.post.name, 
+        impl_code = code % {'id_proj': self.id,
+            'target': self.target,
+            'id_pre': self.pre.id,
+            'name_pre': self.pre.name,
+            'size_pre': self.pre.size,
+            'id_post': self.post.id,
+            'name_post': self.post.name,
             'size_post': self.post.size
           }
 
@@ -693,7 +707,7 @@ class SharedProjection(Projection):
                 sum += %(padding)s;
                 continue;
             }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
-            
+
             else: # min, max
                 code += """
             if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
@@ -710,9 +724,9 @@ class SharedProjection(Projection):
             index += '[' + indices[dim] + '_w]'
 
         increment = self.synapse.description['psp']['cpp'] % {
-            'id_pre': self.pre.id, 
-            'id_post': self.post.id, 
-            'local_index': index, 
+            'id_pre': self.pre.id,
+            'id_post': self.post.id,
+            'local_index': index,
             'global_index': '[i]',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
@@ -722,7 +736,7 @@ class SharedProjection(Projection):
         # Delays
         if self.delays > Global.config['dt']:
             increment = increment.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
             )
 
@@ -747,11 +761,11 @@ class SharedProjection(Projection):
         # Close for loops
         for dim in range(self.dim_kernel-1):
             code += """
-        }""" 
+        }"""
 
-        impl_code = code % {'id_proj': self.id, 
-            'target': self.target,  
-            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
+        impl_code = code % {'id_proj': self.id,
+            'target': self.target,
+            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size
           }
 
@@ -803,9 +817,9 @@ class SharedProjection(Projection):
 
         # Compute the value to pool
         psp = self.synapse.description['psp']['cpp'] % {
-            'id_pre': self.pre.id, 
-            'id_post': self.post.id, 
-            'local_index':'[i][j]', 
+            'id_pre': self.pre.id,
+            'id_post': self.post.id,
+            'local_index':'[i][j]',
             'global_index': '[i]',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
@@ -816,7 +830,7 @@ class SharedProjection(Projection):
         # Delays
         if self.delays > Global.config['dt']:
             increment = increment.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
             )
 
@@ -842,14 +856,14 @@ class SharedProjection(Projection):
         for dim in range(self.dim_pre):
             if self.extent[dim] >1:
                 code += """
-            }""" 
+            }"""
 
-        impl_code = code % {'id_proj': self.id, 
-            'target': self.target,  
-            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
+        impl_code = code % {'id_proj': self.id,
+            'target': self.target,
+            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'psp': psp
-          }  
+          }
 
         if operation == "mean":
             size = 1
@@ -957,7 +971,7 @@ class SharedProjection(Projection):
     // Local parameter w
     %(type_w)s get_w() { return w; }
     void set_w(%(type_w)s value) { w = value; }
-""" % {'type_w': filter_definition.replace(' w;', '')} 
+""" % {'type_w': filter_definition.replace(' w;', '')}
             self._specific_template['export_connectivity'] += """
         # Local variable w
         %(type_w)s get_w()
@@ -987,7 +1001,7 @@ class SharedProjection(Projection):
         omp_code = ""
         if Global.config['num_threads'] > 1:
             omp_code = """
-        #pragma omp parallel for private(sum, rk_pre, coord) """          
+        #pragma omp parallel for private(sum, rk_pre, coord) """
 
         # Compute sum
         wsum =  """
@@ -998,12 +1012,12 @@ class SharedProjection(Projection):
 """ + convolve_code + """
             pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
         }
-""" 
-        
+"""
+
         self._specific_template['psp_code'] = wsum % \
-        {   'id_proj': self.id, 
-            'target': self.target,  
-            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size, 
+        {   'id_proj': self.id,
+            'target': self.target,
+            'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'omp_code': omp_code,
             'convolve_code': convolve_code
@@ -1067,20 +1081,20 @@ class SharedProjection(Projection):
 
         # PSP
         psp = self.synapse.description['psp']['cpp']  % {
-            'id_pre': self.pre.id, 
-            'id_post': self.post.id, 
-            'local_index':'[i][j]', 
+            'id_pre': self.pre.id,
+            'id_post': self.post.id,
+            'local_index':'[i][j]',
             'global_index': '[i]',
             'pre_index': '[pre_rank[i][j]]',
             'post_index': '[post_rank[i]]',
             'pre_prefix': 'pop'+str(self.pre.id)+'.',
             'post_prefix': 'pop'+str(self.post.id)+'.'}
         psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
-            
+
         # Take delays into account if any
         if self.delays > Global.config['dt']:
             psp = psp.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id}, 
+                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
             )
 
@@ -1150,15 +1164,11 @@ class SharedProjection(Projection):
         else:
             sum_code = ""
 
-        self.generator['omp']['body_compute_psp'] = sum_code % { 
-            'id_proj': self.id, 'target': self.target, 
-            'id_pre': self.pre.id, 'name_pre': self.pre.name, 
+        self.generator['omp']['body_compute_psp'] = sum_code % {
+            'id_proj': self.id, 'target': self.target,
+            'id_pre': self.pre.id, 'name_pre': self.pre.name,
             'id_post': self.post.id, 'name_post': self.post.name,
             'id': self.projection.id,
             'omp_code': omp_code,
             'psp': psp
         }
-
-
-
-
