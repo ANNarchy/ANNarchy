@@ -15,10 +15,10 @@ import numpy as np
 
 header = """
 %  LaTeX file for generating the Model Description Table in Fig. 5 of
-%  
-%  Nordlie E, Gewaltig M-O, Plesser HE (2009) 
+%
+%  Nordlie E, Gewaltig M-O, Plesser HE (2009)
 %  Towards Reproducible Descriptions of Neuronal Network Models.
-%  PLoS Comput Biol 5(8): e1000456. 
+%  PLoS Comput Biol 5(8): e1000456.
 %
 %  Paper URL : http://dx.doi.org/10.1371/journal.pcbi.1000456
 %  Figure URL: http://dx.doi.org/10.1371/journal.pcbi.1000456.g005
@@ -42,20 +42,20 @@ header = """
 
 preamble = """
 \\documentclass{article}
-\\usepackage[margin=1in]{geometry} 
-\\usepackage{tabularx}  
-\\usepackage{multirow}  
-\\usepackage{colortbl} 
+\\usepackage[margin=1in]{geometry}
+\\usepackage{tabularx}
+\\usepackage{multirow}
+\\usepackage{colortbl}
 
-\\usepackage[fleqn]{amsmath} 
+\\usepackage[fleqn]{amsmath}
 \\setlength{\\mathindent}{0em}
 %%\\usepackage{mathpazo}
-\\usepackage{breqn} 
+\\usepackage{breqn}
 
 \\usepackage[scaled=.95]{helvet}
 \\renewcommand\\familydefault{\\sfdefault}
 
-\\renewcommand\\arraystretch{1.2}  
+\\renewcommand\\arraystretch{1.2}
 \\pagestyle{empty}
 
 \\newcommand{\hdr}[3]{
@@ -154,14 +154,14 @@ footer = """
 ##################################
 
 def report(filename="./report.tex", standalone=True, net_id=0):
-    """ Generates a .tex file describing the network according to: 
+    """ Generates a .tex file describing the network according to:
     Nordlie E, Gewaltig M-O, Plesser HE (2009). Towards Reproducible Descriptions of Neuronal Network Models. PLoS Comput Biol 5(8): e1000456.
 
     **Parameters:**
 
     * *filename*: name of the .tex file where the report will be written (default: "./report.tex")
-    * *standalone*: tells if the generated file should be directly compilable or only includable (default: True) 
-    * *net_id*: id of the network to be used for reporting (default: 0, everything that was declared) 
+    * *standalone*: tells if the generated file should be directly compilable or only includable (default: True)
+    * *net_id*: id of the network to be used for reporting (default: 0, everything that was declared)
     """
 
     # stdout
@@ -203,7 +203,7 @@ def report(filename="./report.tex", standalone=True, net_id=0):
 def _generate_summary(net_id):
     "part A"
 
-    population_names = str(len(_network[net_id]['populations'])) + ': ' 
+    population_names = str(len(_network[net_id]['populations'])) + ': '
     connectivity = ""
     neuron_models = ""
     synapse_models = ""
@@ -286,7 +286,7 @@ def _generate_projections(net_id):
     proj_tpl = """
     %(pre)s & %(post)s & %(target)s & %(synapse)s &
     %(description)s \\\\ \\hline
-"""        
+"""
     for proj in _network[net_id]['projections']:
         if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
             name = proj.synapse.name
@@ -338,7 +338,7 @@ def _generate_neuron_models(net_id):
 \\textbf{Name} & %(name)s \\\\ \\hline
 \\textbf{Type} & %(description)s\\\\ \\hline
 \\textbf{%(equation_type)s} &
-%(variables)s 
+%(variables)s
 \\\\ \\hline
 \\end{tabularx}
 \\vspace{2ex}
@@ -351,7 +351,7 @@ def _generate_neuron_models(net_id):
         if neuron.type == 'spike':
             spike_extra = """
 \\\\ \\hline
-\\textbf{Spiking} & 
+\\textbf{Spiking} &
 %(spike)s
 """
             eqs += spike_extra % {'spike': spike_txt}
@@ -401,14 +401,14 @@ def _generate_synapse_models(net_id):
         if psp != "":
             psp_code = """
 \\textbf{PSP} & %(psp)s\\\\ \\hline""" % {'psp': psp}
-        else: 
+        else:
             psp_code = ""
 
         # Spiking neurons have extra fields for the event-driven
         if synapse.type == 'spike':
             if pre_desc != "":
                 preevent = """
-\\textbf{Pre-synaptic event} & 
+\\textbf{Pre-synaptic event} &
 %(preevent)s
 \\\\ \\hline
 """ % {'preevent': pre_desc}
@@ -416,7 +416,7 @@ def _generate_synapse_models(net_id):
                 preevent = ""
             if post_desc != "":
                 postevent = """
-\\textbf{Post-synaptic event} & 
+\\textbf{Post-synaptic event} &
 %(postevent)s
 \\\\ \\hline
 """ % {'postevent': post_desc}
@@ -518,7 +518,7 @@ def _process_neuron_equations(neuron):
             local_dict['_grad_'+name] = grad_symbol
             tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
 
-        var_code = _analyse_equation(eq, local_dict, tex_dict)
+        var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
 
         # Replace the targets
         for target, repl in targets:
@@ -541,12 +541,12 @@ def _process_neuron_equations(neuron):
     spike_code += """
     \\begin{enumerate}
         \\item Emit a spike at time $t^*$"""
-    
+
     reset_vars = extract_spike_variable(neuron.description)['spike_reset']
     for var in reset_vars:
         eq = var['eq']
         spike_code += """
-        \\item $""" + _analyse_equation(eq, local_dict, tex_dict) + "$"
+        \\item $""" + _analyse_equation(var['eq'], eq, local_dict, tex_dict) + "$"
 
     spike_code += """
     \\end{enumerate}"""
@@ -633,7 +633,7 @@ def _process_synapse_equations(synapse):
             tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
 
         # Analyse
-        var_code = _analyse_equation(eq, local_dict, tex_dict)
+        var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
 
         # replace targets
         for target in targets:
@@ -657,7 +657,7 @@ def _process_synapse_equations(synapse):
             for dep in dependencies['pre']:
                 local_dict['_pre_'+dep] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
 
-            var_code = _analyse_equation(eq, local_dict, tex_dict)
+            var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
             pre_event += """\\begin{dmath*}
 %(eq)s
 \\end{dmath*}
@@ -672,7 +672,7 @@ def _process_synapse_equations(synapse):
             for dep in dependencies['pre']:
                 local_dict['_pre_'+dep] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
 
-            var_code = _analyse_equation(eq, local_dict, tex_dict)
+            var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
             post_event += """\\begin{dmath*}
 %(eq)s
 \\end{dmath*}
@@ -682,27 +682,30 @@ def _process_synapse_equations(synapse):
     return psp, code, pre_event, post_event
 
 # Splits an equation into two parts, caring for the increments
-def _analyse_equation(eq, local_dict, tex_dict):
+def _analyse_equation(orig, eq, local_dict, tex_dict):
 
     left = eq.split('=')[0]
     if left[-1] in ['+', '-', '*', '/']:
         op = left[-1]
         try:
             left = _analyse_part(left[:-1], local_dict, tex_dict)
-        except:
-            _warning('can not transform the left side of ' + eq+' to LaTeX, you have to it by hand...')
+        except Exception as e:
+            _print(e)
+            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to it by hand...')
             left = left[:-1]
         operator = " = " + left +  " " + op + (" (" if op != '+' else '')
     else:
         try:
             left = _analyse_part(left, local_dict, tex_dict)
-        except:
-            _warning('can not transform the left side of ' + eq+' to LaTeX, you have to it by hand...')
+        except Exception as e:
+            _print(e)
+            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to it by hand...')
         operator = " = "
     try:
         right = _analyse_part(eq.split('=')[1], local_dict, tex_dict)
-    except:
-        _warning('can not transform the right side of ' + eq+' to LaTeX, you have to it by hand...')
+    except Exception as e:
+        _print(e)
+        _warning('can not transform the right side of ' + orig +' to LaTeX, you have to it by hand...')
         right = eq.split('=')[1]
 
     return left + operator + right + (" )" if operator.endswith('(') else "")
@@ -710,26 +713,38 @@ def _analyse_equation(eq, local_dict, tex_dict):
 
 # Analyses and transform to latex a single part of an equation
 def _analyse_part(expr, local_dict, tex_dict):
+
     def regular_expr(expr):
         analysed = parse_expr(expr,
             local_dict = local_dict,
-            #transformations = None#(standard_transformations + (convert_xor,)) 
+            transformations = (standard_transformations + (convert_xor,))
             )
         return latex(analysed, symbol_names = tex_dict, mul_symbol="dot")
-    
+
     def _condition(condition):
         condition = condition.replace('and', ' & ')
         condition = condition.replace('or', ' | ')
         return regular_expr(condition)
 
-    # Extract if/then/else
-    if 'else:' in expr:
+    def _extract_conditional(expr):
         condition = re.findall(r'if(.*?):', expr)[0]
         condition_expr = _condition(condition)
-        then = re.findall(':(.*?)else:', expr)[0]
-        else_st = expr.split('else:')[1]
-        return "\\begin{cases}" + regular_expr(then) + "\qquad \\text{if} \quad " + condition_expr + "\\\\ "+ regular_expr(else_st) +" \qquad \\text{otherwise.} \end{cases}"
-    
+        then = re.findall(':(.*)else:', expr)[-1]
+        if 'else:' in then:
+            then = _extract_conditional(then)
+        else:
+            then  = regular_expr(then)
+        else_st = expr.split('else:')[-1]
+        if 'else:' in else_st:
+            else_st = _extract_conditional(else_st)
+        else:
+            else_st = regular_expr(else_st)
+        return "\\begin{cases}" + then + "\qquad \\text{if} \quad " + condition_expr + "\\\\ "+ else_st +" \qquad \\text{otherwise.} \end{cases}"
+
+    # Extract if/then/else
+    if 'else:' in expr:
+        return _extract_conditional(expr)
+
     # return the transformed equation
     return regular_expr(expr)
 
@@ -756,7 +771,7 @@ def _latexify_name(name, local):
             if len(p) == 1:
                 equiv += '' + p + '_'
             elif p in greek:
-                equiv += '\\' + p + '_'            
+                equiv += '\\' + p + '_'
             else:
                 equiv += '{\\text{' + p + '}}' + '_'
         equiv = equiv[:-1]

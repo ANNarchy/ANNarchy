@@ -2,6 +2,7 @@
 
 * Fixed save/load methods
 * parallel_run() has now control over the seeds.
+* report(): fixed nested conditionals and power functions
 
 **4.5.1:**
 
