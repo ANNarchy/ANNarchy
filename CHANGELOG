@@ -1,3 +1,24 @@
+**4.5.2:**
+
+* Fixed save/load methods
+* parallel_run() has now control over the seeds.
+
+**4.5.1:**
+
+* Fixed compilation on MacOSX
+* Fixed compatibility with Python 3.4
+* Refactoring of the generation templates
+* Fixed bug introduced by Sympy 0.7.6
+* Multiple blocks of ODEs and assignments can now be used in the equations field.
+* Parser simplified
+* Dense all-to-all connectivity matrices use indices instead of vectors, improves performance.
+* Projections initialized with a single weight value and without plasticity now use a double for the weight instead of vector<vector<double>>
+* Regression on get_record(reshape=True) fixed.
+* CUDA backend improved.
+* parallel_run() now uses the minimum between the number of available cores and the total number of networks.
+* Several bugs in report.
+
+
 **4.5.0:**
 
 * A ``Network`` object has been added to run multiple simulations in parallel (``parallel_run()``). See :doc:`../manual/Network`.
@@ -8,13 +29,13 @@
 * Change in hybrid populations. ``PoissonPopulation`` should be used for rate-to-spike conversion, ``DecodingProjection`` for spike-to-rate. See :doc:`../manual/Hybrid`.
 * Bug when using conditionals in pre-spike and post-spike.
 * Bug when using t_pre and t_post explicitly.
-* Speed-up of connect_fixed_number_pre/post. 
+* Speed-up of connect_fixed_number_pre/post.
 
 **4.4.0:**
 
 * Experimental support for CUDA backend for rate-coded networks.
 * Any pre-synaptic variable can be delayed if used in the synapse.
-* ``g_target`` can define min/max flags. 
+* ``g_target`` can define min/max flags.
 * Support for MacOS X.
 * Parallel performance for OpenMP and spiking networks improved.
 * Sequential code (1T) does not use OMP.
@@ -45,22 +66,22 @@
 * Different modes for Spike2Rate conversion.
 * Extension for shared projections (convolution/pooling) improved.
 
-**4.3.1:** 
+**4.3.1:**
 
 * CUDA implementation for rate-coded networks with small restrictions.
 
-**4.3.1:** 
+**4.3.1:**
 
 * Weight-sharing for convolutions and pooling.
 * Possibility to create projections using a dense connection matrix or data saved in a file.
 * A seed can be defined for the random number generators.
 
-**4.3.0:** 
+**4.3.0:**
 
-* Simplified internal structure for the generated code. 
+* Simplified internal structure for the generated code.
 * Major speed-up for compilation and execution times.
 * Rate-coded projections can perform other functions than sum (min/max/mean) over the connected synapses.
-  
+
 **4.2.4:**
 
 * Neuron and Synapse replace RateNeuron, SpikeNeuron, RateSynapse, SpikeSynapse in the main interface (kept for backward compatibility).
@@ -108,7 +129,7 @@
 * Spiking neurons have a refractory period.
 * Added clip() functions for emi-linear transfer functions.
 * Added smoothed_firing_rate() method for visualizing spiking networks.
-  
+
 **4.1.0:**
 
 * First stable release with both rate-coded and spiking networks.

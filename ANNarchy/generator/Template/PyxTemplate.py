@@ -31,10 +31,11 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(double, long)
+    void setSeed(long)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
     void step()
-    
+
     # Time
     long getTime()
     void setTime(long)
@@ -120,6 +121,10 @@ def get_dt():
 # Set number of threads
 def set_number_threads(int n):
     setNumberThreads(n)
+
+# Set seed
+def set_seed(long seed):
+    setSeed(seed)
 '''
 
 # Export for populations

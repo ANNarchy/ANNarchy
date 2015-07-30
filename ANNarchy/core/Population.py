@@ -1,9 +1,9 @@
 """
 
     Population.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 """
 import ANNarchy.core.Global as Global
 
@@ -36,28 +36,28 @@ class Population(object):
     """
 
     def __init__(self, geometry, neuron, name=None, stop_condition=None):
-        """        
+        """
         *Parameters*:
-        
+
             * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
 
-            * **neuron**: instance of ``ANNarchy.Neuron`` 
-            
+            * **neuron**: instance of ``ANNarchy.Neuron``
+
             * **name**: unique name of the population (optional).
 
             * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
-        
+
         """
         # Store the provided geometry
         # automatically defines w, h, d, size
-        if isinstance(geometry, int): 
+        if isinstance(geometry, (int, float)):
             # 1D
-            self.geometry = (geometry, )
+            self.geometry = (int(geometry), )
             self.width = int(geometry)
             self.height = int(1)
             self.depth = int(1)
             self.dimension = int(1)
-        else: 
+        else:
             # a tuple is given, can be 1 .. N dimensional
             self.geometry = geometry
             self.width = int(geometry[0])
@@ -65,20 +65,20 @@ class Population(object):
                 self.height = int(geometry[1])
             else:
                 self.height = int(1)
-            if len(geometry)>=3:                
+            if len(geometry)>=3:
                 self.depth = int(geometry[2])
             else:
                 self.depth = int(1)
-                
+
             self.dimension = len(geometry)
 
         # Compute the size
-        size = int(1)        
+        size = int(1)
         for i in range(len(self.geometry)):
             size *= int(self.geometry[i])
-            
+
         self.size = int(size)
-        
+
         # Store the neuron type
         if inspect.isclass(neuron):
             self.neuron_type = neuron()
@@ -87,22 +87,22 @@ class Population(object):
         self.neuron_type._analyse()
         from ANNarchy.generator.Templates import pop_generator_template
         self.generator = copy.deepcopy(pop_generator_template)
-        
+
         # Store the stop condition
         self.stop_condition = stop_condition
 
         # Attribute a name if not provided
         self.id = len(Global._network[0]['populations'])
         self.class_name = 'pop'+str(self.id)
-        
+
         if name:
             self.name = name
         else:
             self.name = self.class_name
-                
+
         # Add the population to the global variable
         Global._network[0]['populations'].append(self)
-        
+
         # Get a list of parameters and variables
         self.parameters = []
         self.variables = []
@@ -118,13 +118,13 @@ class Population(object):
             self.init[param['name']] = param['init']
         for var in self.neuron_type.description['variables']:
             self.init[var['name']] = var['init']
-        
+
         # List of targets actually connected
         self.targets = []
 
         # List of global operations needed by connected projections
         self.global_operations = []
-                
+
         # Maximum delay of connected projections
         self.max_delay = 0
 
@@ -134,7 +134,7 @@ class Population(object):
         self._activated = True
 
         # Rank <-> Coordinates methods
-        # for the one till three dimensional case we use cython optimized functions. 
+        # for the one till three dimensional case we use cython optimized functions.
         import ANNarchy.core.cython_ext.Coordinates as Coordinates
         if self.dimension==1:
             self._rank_from_coord = Coordinates.get_rank_from_1d_coord
@@ -160,24 +160,24 @@ class Population(object):
 
         # Is overwritten by SpecificPopulations
         self._specific_template = {}
-        
+
     def _generate(self):
         "Overriden by specific populations to generate the code."
         pass
 
     def _instantiate(self, module):
-        # Create the Cython instance 
+        # Create the Cython instance
         self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
 
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
-        self.initialized = True  
+        self.initialized = True
         self.set(self.init)
         self.cyInstance.activate(self._activated)
         self.cyInstance.reset()
 
-        # If the spike population has a refractory period:    
+        # If the spike population has a refractory period:
         if self.neuron_type.type == 'spike' and self.neuron_type.description['refractory']:
             if isinstance(self.neuron_type.description['refractory'], str): # a global variable
                 try:
@@ -232,7 +232,7 @@ class Population(object):
             else:
                 return object.__getattribute__(self, name)
         return object.__getattribute__(self, name)
-        
+
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
@@ -245,21 +245,21 @@ class Population(object):
                     else:
                         self.init[name] = value
                 else:
-                    self._set_cython_attribute(name, value)      
+                    self._set_cython_attribute(name, value)
             else:
-                object.__setattr__(self, name, value)     
+                object.__setattr__(self, name, value)
         else:
             object.__setattr__(self, name, value)
-        
+
     def _get_cython_attribute(self, attribute):
         """
-        Returns the value of the given attribute for all neurons in the population, 
+        Returns the value of the given attribute for all neurons in the population,
         as a NumPy array having the same geometry as the population if it is local.
-        
+
         Parameter:
-        
+
         * *attribute*: should be a string representing the variables's name.
-        
+
         """
         try:
             if attribute in self.neuron_type.description['local']:
@@ -269,17 +269,17 @@ class Population(object):
         except Exception as e:
             Global._print(e)
             Global._error('Error: the variable ' +  attribute +  ' does not exist in this population.')
-        
+
     def _set_cython_attribute(self, attribute, value):
         """
-        Sets the value of the given attribute for all neurons in the population, 
+        Sets the value of the given attribute for all neurons in the population,
         as a NumPy array having the same geometry as the population if it is local.
-        
+
         Parameter:
-        
+
         * *attribute*: should be a string representing the variables's name.
         * *value*: a value or Numpy array of the right size.
-        
+
         """
         try:
             if attribute in self.neuron_type.description['local']:
@@ -294,39 +294,39 @@ class Population(object):
         except Exception as e:
             Global._print(e)
             Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have the right size.')
-        
+
     def __len__(self):
         """
         Number of neurons in the population.
         """
         return self.size
- 
+
 
     def set(self, values):
         """
         Sets the value of neural variables and parameters.
-        
+
         *Parameter*:
-        
+
         * **values**: dictionary of attributes to be updated.
-            
+
         .. code-block:: python
-            
+
             set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
         """
         for name, value in values.items():
             self.__setattr__(name, value)
-        
+
     def get(self, name):
         """
         Returns the value of neural variables and parameters.
-        
+
         *Parameter*:
-        
+
         * **name**: attribute name as a string.
         """
         return self.__getattr__(name)
-            
+
 
 
     ################################
@@ -363,10 +363,10 @@ class Population(object):
     ################################
     ## Access to individual neurons
     ################################
-    def neuron(self, *coord):  
+    def neuron(self, *coord):
         """
         Returns an ``IndividualNeuron`` object wrapping the neuron with the provided rank or coordinates.
-        """  
+        """
         # Transform arguments
         if len(coord) == 1:
             if isinstance(coord[0], int):
@@ -384,30 +384,30 @@ class Population(object):
                 return None
         # Return corresponding neuron
         return IndividualNeuron(self, rank)
-        
-    @property   
+
+    @property
     def neurons(self):
         """ Returns iteratively each neuron in the population.
-        
+
         For instance, if you want to iterate over all neurons of a population:
-        
+
         >>> for neur in pop.neurons:
         ...     neur.r = 0.0
-            
+
         Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:
-        
+
         >>> for neur in pop:
-        ...     neur.r = 0.0              
+        ...     neur.r = 0.0
         """
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)
-            
+
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """ Returns neuron of coordinates (width, height, depth) in the population. 
-        
-        If only one argument is given, it is a rank. 
-        
+        """ Returns neuron of coordinates (width, height, depth) in the population.
+
+        If only one argument is given, it is a rank.
+
         If slices are given, it returns a PopulationView object.
         """
         indices =  args[0]
@@ -430,7 +430,7 @@ class Population(object):
                     slices = True
             if not slices: # return one neuron
                 return self.neuron(indices)
-            else: # Compute a list of ranks from the slices 
+            else: # Compute a list of ranks from the slices
                 coords = []
                 # Expand the slices
                 for rank in range(len(indices)):
@@ -461,11 +461,11 @@ class Population(object):
                     Global._error("Indices do not match the geometry of the population", self.geometry)
                     return None
                 return PopulationView(self, ranks)
-                
+
     def __iter__(self):
         " Returns iteratively each neuron in the population in ascending rank order."
         for neur_rank in range(self.size):
-            yield self.neuron(neur_rank) 
+            yield self.neuron(neur_rank)
 
     ################################
     ## Coordinate transformations
@@ -473,9 +473,9 @@ class Population(object):
     def rank_from_coordinates(self, coord):
         """
         Returns the rank of a neuron based on coordinates.
-        
+
         *Parameter*:
-        
+
             * **coord**: coordinate tuple, can be multidimensional.
         """
         try:
@@ -495,14 +495,14 @@ class Population(object):
         Returns the coordinates of a neuron based on its rank.
 
         *Parameter*:
-                
+
             * **rank**: rank of the neuron.
         """
         # Check the rank
         if not rank < self.size:
             Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
             exit(0)
-        
+
         try:
             coord = self._coord_from_rank( rank, self.geometry )
         except:
@@ -513,26 +513,26 @@ class Population(object):
 
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """
-        Returns normalized coordinates of a neuron based on its rank. The geometry of the population is mapped to the hypercube [0, 1]^d. 
-        
+        Returns normalized coordinates of a neuron based on its rank. The geometry of the population is mapped to the hypercube [0, 1]^d.
+
         *Parameters*:
-        
+
         * **rank**: rank of the neuron
         * **norm**: norm of the cube (default = 1.0)
-        
+
         """
         try:
             normal = self._norm_coord_dict[self.dimension](rank, self.geometry)
         except KeyError:
             coord = self.coordinates_from_rank(rank)
-                
+
             normal = tuple()
             for dim in range(self.dimension):
                 if self._geometry[dim] > 1:
                     normal += ( norm * float(coord[dim])/float(self.geometry[dim]-1), )
                 else:
                     normal += (float(rank)/(float(self.size)-1.0),) # default?
-     
+
         return normal
 
 
@@ -542,12 +542,12 @@ class Population(object):
     def start_record(self, variable, period = None, ranks='all'):
         """
         **Deprecated!!**
-        
+
         Start recording neural variables.
-        
+
         Parameter:
-            
-            * **variable**: single variable name or list of variable names.  
+
+            * **variable**: single variable name or list of variable names.
 
             * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable.
 
@@ -556,9 +556,9 @@ class Population(object):
         Example::
 
             pop1.start_record('r')
-            pop2.start_record(['mp', 'r'], period=10.0)  
-            pop3.start_record(['spike'])    
-            pop4.start_record(['r'], ranks=range(10, 100))      
+            pop2.start_record(['mp', 'r'], period=10.0)
+            pop3.start_record(['spike'])
+            pop4.start_record(['r'], ranks=range(10, 100))
         """
         Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         from .Record import Monitor
@@ -589,13 +589,13 @@ class Population(object):
         Pauses the recording of variables (can be resumed later with resume_record()).
 
         *Parameter*:
-            
+
         * **variable**: single variable name or list of variable names. If no argument is provided all recordings will pause.
 
         Example::
 
             pop1.pause_record('r')
-            pop2.pause_record(['mp', 'r'])  
+            pop2.pause_record(['mp', 'r'])
         """
         Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if self._monitor:
@@ -606,15 +606,15 @@ class Population(object):
         **Deprecated!!**
 
         Resume recording the previous defined variables.
-        
+
         *Parameter*:
-            
-            * **variable**: single variable name or list of variable names.  
+
+            * **variable**: single variable name or list of variable names.
 
         Example::
 
             pop1.resume_record('r')
-            pop2.resume_record(['mp', 'r'])        
+            pop2.resume_record(['mp', 'r'])
         """
         Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if self._monitor:
@@ -635,10 +635,10 @@ class Population(object):
         .. warning::
 
             Once get_record is called, the recorded data is internally erased.
-        
+
         *Parameters*:
-            
-        * **variable**: single variable name or list of variable names. If no argument provided, all currently recorded data are returned.  
+
+        * **variable**: single variable name or list of variable names. If no argument provided, all currently recorded data are returned.
         * **reshape**: by default this functions returns the data as a 2D matrix (number of neurons * time). If *reshape* is set to True, the population data will be reshaped into its geometry (geometry[0], ... , geometry[n], time)
         """
         Global._warning("recording from a Population is deprecated, use a Monitor instead.")
@@ -661,7 +661,7 @@ class Population(object):
 
         data = {}
 
-        for var in variables: 
+        for var in variables:
             if not reshape:
                 data[var] = {
                     'start': var_times[var]['start'] if len(var_times[var]['start']) >1 else var_times[var]['start'][0],
@@ -691,31 +691,31 @@ class Population(object):
     ################################
     def set_variable_flags(self, name, value):
         """ Sets the flags of a variable for the population.
-        
+
         If the variable ``r`` is defined in the Neuron description through::
-        
-            r = sum(exc) : max=1.0  
-            
+
+            r = sum(exc) : max=1.0
+
         one can change its maximum value with::
-        
+
             pop.set_variable_flags('r', {'max': 2.0})
-            
-        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value. 
-        
+
+        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value.
+
         For positional flags (population, implicit), the value in the dictionary must be set to the empty string ''::
-        
+
             pop.set_variable_flags('r', {'implicit': ''})
-        
+
         A None value in the dictionary deletes the corresponding flag::
-        
+
             pop.set_variable_flags('r', {'max': None})
-            
+
         """
         rk_var = self._find_variable_index(name)
         if rk_var == -1:
             Global._error('The population '+self.name+' has no variable called ' + name)
             return
-            
+
         for key, val in value.items():
             if val == '': # a flag
                 try:
@@ -730,38 +730,38 @@ class Population(object):
                         self.neuron_type.description['variables'][rk_var]['bounds'].pop(key)
             else: # new value for init, min, max...
                 if key == 'init':
-                    self.neuron_type.description['variables'][rk_var]['init'] = val 
-                    self.init[name] = val              
+                    self.neuron_type.description['variables'][rk_var]['init'] = val
+                    self.init[name] = val
                 else:
                     self.neuron_type.description['variables'][rk_var]['bounds'][key] = val
-                
-       
-            
+
+
+
     def set_variable_equation(self, name, equation):
         """ Changes the equation of a variable for the population.
-        
+
         If the variable ``r`` is defined in the Neuron description through::
-        
-            tau * dr/dt + r  = sum(exc) : max=1.0  
-            
+
+            tau * dr/dt + r  = sum(exc) : max=1.0
+
         one can change the equation with::
-        
+
             pop.set_variable_equation('r', 'r = sum(exc)')
-            
+
         Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
-        
+
         .. warning::
-            
-            This method should be used with great care, it is advised to define another Neuron object instead. 
-            
-        """         
+
+            This method should be used with great care, it is advised to define another Neuron object instead.
+
+        """
         rk_var = self._find_variable_index(name)
         if rk_var == -1:
             Global._error('The population '+self.name+' has no variable called ' + name)
-            return         
-        self.neuron_type.description['variables'][rk_var]['eq'] = equation    
-            
-            
+            return
+        self.neuron_type.description['variables'][rk_var]['eq'] = equation
+
+
     def _find_variable_index(self, name):
         " Returns the index of the variable name in self.description['variables']"
         for idx in range(len(self.neuron_type.description['variables'])):
@@ -782,13 +782,13 @@ class Population(object):
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
-        # Save all attributes           
+        # Save all attributes
         for var in self.attributes:
             try:
                 desc[var] = getattr(self.cyInstance, 'get_'+var)()
             except:
-                Global._error('Can not save the attribute ' + var + 'in the population ' + self.name + '.')              
-        return desc 
+                Global._error('Can not save the attribute ' + var + 'in the population ' + self.name + '.')
+        return desc
 
     def save(self, filename):
         """
@@ -799,17 +799,17 @@ class Population(object):
         * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
-        
+
         *Parameter*:
-        
+
         * **filename**: filename, may contain relative or absolute path.
-        
-            .. warning:: 
+
+            .. warning::
 
                 The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
         Example::
-        
+
             pop.save('pop1.txt')
 
         """
@@ -822,13 +822,13 @@ class Population(object):
         Load the saved state of the population.
 
         Warning: Matlab data can not be loaded.
-        
+
         *Parameters*:
-        
+
         * **filename**: the filename with relative or absolute path.
-        
+
         Example::
-        
+
             pop.load('pop1.txt')
 
         """

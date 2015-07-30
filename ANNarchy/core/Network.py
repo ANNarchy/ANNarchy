@@ -9,7 +9,7 @@ import os, shutil, sys
 import numpy as np
 
 class Network(object):
-    """ 
+    """
     A network gathers already defined populations, projections and monitors in order to run them independently.
 
     This is particularly useful when varying single parameters of a network and comparing the results.
@@ -45,7 +45,7 @@ class Network(object):
         """
         *Parameters:*
 
-        * **everything**: defines if all existing populations and projections should be automatically added (default: False). 
+        * **everything**: defines if all existing populations and projections should be automatically added (default: False).
         """
         self.id = len(Global._network)
         self.everything = everything
@@ -71,7 +71,7 @@ class Network(object):
         Adds a Population, Projection or Monitor to the network.
 
         *Parameters:*
-        
+
         * **objects**: A single object or a list to add to the network.
         """
         if isinstance(objects, list):
@@ -126,7 +126,7 @@ class Network(object):
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
             self.projections.append(proj)
-            
+
         elif isinstance(obj, Monitor):
             m = Monitor(obj.object, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
             # Add the copy to the local network (the monitor writes itself already in the right network)
@@ -187,7 +187,7 @@ class Network(object):
             Global.simulate(duration, net_id=self.id)
         """
         Global.simulate(duration, measure_time, self.id)
-    
+
     def simulate_until(self, max_duration, population, operator='and', measure_time = False):
         """
         Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
@@ -212,10 +212,10 @@ class Network(object):
         * the actual duration of the simulation in milliseconds.
         """
         return Global.simulate_until(max_duration, population, operator, measure_time, self.id)
-    
+
     def step(self):
         """
-        Performs a single simulation step (duration = ``dt``). 
+        Performs a single simulation step (duration = ``dt``).
         """
         Global.step(self.id)
 
@@ -232,7 +232,7 @@ class Network(object):
         """
         Global.reset(populations,  projections, synapses, self.id)
 
-    def get_time(self, net_id=0):
+    def get_time(self):
         "Returns the current time in ms."
         return Global.get_time(self.id)
 
@@ -245,11 +245,11 @@ class Network(object):
         """
         Global.set_time(t, self.id)
 
-    def get_current_step(self, net_id=0):
+    def get_current_step(self):
         "Returns the current simulation step."
         return Global.get_current_step(self.id)
 
-    def set_current_step(self, t, net_id=0):
+    def set_current_step(self, t):
         """Sets the current simulation step.
 
         .. warning::
@@ -258,12 +258,18 @@ class Network(object):
         """
         Global.set_current_step(t, self.id)
 
+    def set_seed(self, seed):
+        """
+        Sets the seed of the random number generators for this network.
+        """
+        Global.set_seed(seed, self.id)
+
     def enable_learning(self, projections=None):
         """
         Enables learning for all projections.
-        
+
         *Parameter*:
-        
+
         * **projections**: the projections whose learning should be enabled. By default, all the existing projections are disabled.
         """
         if not projections:
@@ -274,9 +280,9 @@ class Network(object):
     def disable_learning(self, projections=None):
         """
         Disables learning for all projections.
-        
+
         *Parameter*:
-        
+
         * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
         """
         if not projections:
@@ -285,13 +291,13 @@ class Network(object):
             proj.disable_learning()
 
 
-def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False):
+def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False):
     """
     Allows to run multiple networks in parallel using multiprocessing.
 
     If the ``networks`` argument is provided as a list of Network objects, the given method will be executed for each of these networks.
 
-    If ``number`` is given instead, the same number of networks will be created and the method is applied. 
+    If ``number`` is given instead, the same number of networks will be created and the method is applied.
 
     **Returns**:
 
@@ -304,8 +310,9 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
     * **method**: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
     * **networks**: a list of networks to simulate in parallel.
     * **max_processes**: maximal number of processes to start concurrently (default: the available number of cores on the machine).
-    * **measure_time**: if the total simulation time should be printed out. 
-    * **sequential**: if True, runs the simulations sequentially instead of in parallel (default: False). 
+    * **measure_time**: if the total simulation time should be printed out.
+    * **sequential**: if True, runs the simulations sequentially instead of in parallel (default: False).
+    * **same_seed**: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default).
     """
     # Check inputs
     if not networks and number < 1:
@@ -318,21 +325,21 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
         return []
 
     if not networks: # The magic network will run N times
-        return _parallel_multi(method, number, max_processes, measure_time, sequential)
+        return _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed)
 
     if not isinstance(networks, list):
         Global._error('parallel_run(): the networks argument must be a list.')
         return []
 
     # Simulate the different networks
-    return _parallel_networks(method, networks, max_processes, measure_time, sequential)
+    return _parallel_networks(method, networks, max_processes, measure_time, sequential, same_seed)
 
-def _parallel_networks(method, networks, max_processes, measure_time, sequential):
+def _parallel_networks(method, networks, max_processes, measure_time, sequential, same_seed):
     " Method when different networks are provided"
     import multiprocessing
     from multiprocessing.dummy import Pool
 
-    # Time measurement    
+    # Time measurement
     from time import time
     if measure_time:
         ts = time()
@@ -375,12 +382,12 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
     return results
 
 
-def _parallel_multi(method, number, max_processes, measure_time, sequential):
+def _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed):
     "Method when the same network must be simulated multiple times."
     import multiprocessing
     from multiprocessing import Pool
 
-    # Time measurement    
+    # Time measurement
     from time import time
     if measure_time:
         ts = time()
@@ -389,11 +396,19 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential):
     if max_processes < 0:
         max_processes = min(number, multiprocessing.cpu_count())
 
+    # Seed
+    if same_seed and Global.config['seed'] > -1: # use the global seed
+        seed =  Global.config['seed']
+    elif same_seed and Global.config['seed'] == -1: # not defined, but should be the same for all networks
+        seed = np.random.get_state()[1][0] # not the current seed, but close enough...
+    else: # draw it everytime with time(0)
+        seed = -1
+
     # Simulation
     if not sequential:
         try:
             pool = Pool(max_processes)
-            results = pool.map(_create_and_run_method, [(n, method) for n in range(number)] )
+            results = pool.map(_create_and_run_method, [(n, method, seed) for n in range(number)] )
             pool.close()
             pool.join()
         except Exception as e:
@@ -404,7 +419,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential):
         results = []
         try:
             for n in range(number):
-                results.append(_create_and_run_method((n, method)))
+                results.append(_create_and_run_method((n, method, seed)))
         except Exception as e:
             Global._print(e)
             Global._error('parallel_run(): running ' + str(number) + ' networks failed.')
@@ -419,15 +434,19 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential):
             msg += ' sequentially '
         msg += 'took: ' + str(time()-ts)
         Global._print(msg)
-        
+
     return results
 
 def _create_and_run_method(args):
     "method called to wrap the user-defined method"
-    n, method = args
+    n, method, seed = args
     net = Network(True)
-    np.random.seed() # TODO: if seed is declared
     Compiler._instantiate(net.id, 0)
+    if seed == -1:
+        net.set_seed(seed)
+        np.random.seed() # Would set -1 otherwise
+    else:
+        net.set_seed(seed)
     res = method(n, net)
     del net
     return res
