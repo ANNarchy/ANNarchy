@@ -2,8 +2,6 @@
 Projections
 ======================
 
-
-
 Declaring the projections
 =========================
 
@@ -12,24 +10,24 @@ Once the populations are created, one can connect them by creating ``Projection`
 .. code-block:: python
 
     proj = Projection(
-        pre = pop1, 
-        post = "pop2", 
+        pre = pop1,
+        post = "pop2",
         target = "exc",
         synapse = Oja
    )
-                         
+
 * ``pre`` is either the name of the pre-synaptic population or the corresponding *Population* object.
 
 * ``post`` is either the name of the post-synaptic population or the corresponding *Population* object.
 
-* ``target`` is the type of the connection. 
+* ``target`` is the type of the connection.
 
 .. warning::
 
     The post-synaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
-    
+
 * ``synapse`` is an optional argument requiring a *Synapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
-  
+
     * the default rate-coded synapse defines ``psp = w * pre.r``,
     * the default spiking synapse defines ``g_target += w``.
 
@@ -45,8 +43,8 @@ The pattern can be applied either directly at the creation of the Projection:
 .. code-block:: python
 
     proj = Projection(
-        pre = pop1, 
-        post = pop2, 
+        pre = pop1,
+        post = pop2,
         target = "exc",
         synapse = Oja
     ).connect_all_to_all( weights = 1.0 )
@@ -56,15 +54,15 @@ or afterwards:
 .. code-block:: python
 
     proj = Projection(
-        pre = pop1, 
-        post = pop2, 
+        pre = pop1,
+        post = pop2,
         target = "exc",
         synapse = Oja
     )
-    proj.connect_all_to_all( weights = 1.0 ) 
+    proj.connect_all_to_all( weights = 1.0 )
 
 The connector method must be called before the network is compiled.
- 
+
 
 Projection attributes
 =====================
@@ -74,19 +72,19 @@ Let's suppose the ``Oja`` synapse is used to create the Projection ``proj`` (spi
 .. code-block:: python
 
     Oja = Synapse(
-        parameters= """   
+        parameters= """
             tau = 5000.0 : post-synaptic
             alpha = 8.0 : post-synaptic
         """,
         equations = """
             tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w
         """
-    ) 
+    )
 
-    
-    
+
+
 Global attributes
-------------------    
+------------------
 
 The global parameters and variables of a projection (i.e. defined with the ``post-synaptic`` flag) can be accessed directly through attributes:
 
@@ -101,7 +99,7 @@ The global parameters and variables of a projection (i.e. defined with the ``pos
             5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
             5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
             5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.])
-            
+
 Contrary to population attributes, there is one value per post-synaptic neuron for global parameters. You can change these values, either before or after compilation, by providing:
 
 * a single value, which will be the same for all post-synaptic neurons.
@@ -132,7 +130,7 @@ Local attributes can also be accessed globally through attributes. It will retur
 
 The first index represents the post-synaptic neurons. It has the same length as `proj.post_ranks`. Beware that if some post-synaptic neurons do not receive any connection, this index will not correspond to the ranks.
 
-The second index addresses the pre-synaptic neurons. If the connection is sparse, it also is unrelated to the ranks of the pre-synaptic neurons in their populations. 
+The second index addresses the pre-synaptic neurons. If the connection is sparse, it also is unrelated to the ranks of the pre-synaptic neurons in their populations.
 
 .. warning::
 
@@ -141,12 +139,12 @@ The second index addresses the pre-synaptic neurons. If the connection is sparse
 
 **At the post-synaptic level**
 
-The local parameters and variables of a projection (synapse-specific) should better be accessed through the **Dendrite** object, which gathers for a single post-synaptic neuron all synapses belonging to the projection. 
+The local parameters and variables of a projection (synapse-specific) should better be accessed through the **Dendrite** object, which gathers for a single post-synaptic neuron all synapses belonging to the projection.
 
 .. warning::
 
     As projections are only instantiated after the call to ``compile()``, local attributes of a Projection are only available then. Trying to access them before compilation will lead to an error!
-    
+
 
 Each dendrite stores the parameters and variables of the corresponding synapses as attributes, as populations do for neurons. You can loop over all post-synaptic neurons receiving synapses with the ``dendrites`` iterator:
 
@@ -158,13 +156,13 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
         print dendrite.tau
         print dendrite.alpha
         print dendrite.w
-        
+
 ``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered post-synaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a list (``dendrite.w``).
 
 .. note::
 
     You can even omit the ``.dendrites`` part of the iterator:
-    
+
     .. code-block:: python
 
         for dendrite in proj:
@@ -173,25 +171,25 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
             print dendrite.tau
             print dendrite.alpha
             print dendrite.w
-        
+
 You can also access the dendrites individually, either by specifying the rank of the post-synaptic neuron:
 
 .. code-block:: python
 
     dendrite = proj.dendrite(13)
     print dendrite.w
-    
+
 or its coordinates:
 
 .. code-block:: python
 
     dendrite = proj.dendrite(5, 5)
     print dendrite.w
-    
+
 .. warning::
 
-    You should make sure that the dendrite actually exists before accessing it through its rank, because it is otherwise a ``None`` object.        
-        
+    You should make sure that the dendrite actually exists before accessing it through its rank, because it is otherwise a ``None`` object.
+
 Connecting population views
 ============================
 
@@ -211,37 +209,49 @@ They can then be simply used to create a projection:
 .. code-block:: python
 
     proj = Projection(
-        pre = pop1_center, 
-        post = pop2_center, 
+        pre = pop1_center,
+        post = pop2_center,
         target = "exc",
         synapse = Oja
     ).connect_all_to_all( weights = 1.0 )
 
-Each neuron of ``pop2_center`` will receive synapses from all neurons of ``pop1_center``, and only them. Neurons of ``pop2`` which are not in ``pop2_center`` will not receive any synapse. 
+Each neuron of ``pop2_center`` will receive synapses from all neurons of ``pop1_center``, and only them. Neurons of ``pop2`` which are not in ``pop2_center`` will not receive any synapse.
 
 .. warning::
 
-    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. Full ``Population`` objects do not have a ``ranks`` attribute. 
-        
+    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. Full ``Population`` objects do not have a ``ranks`` attribute.
+
 Specifying delays in synaptic transmission
 ==============================================
 
-By default, synaptic transmission is considered to be instantaneous (or more precisely, it takes one simulation step (``dt``) for a newly computed firing rate to be taken into account by post-synaptic neurons). 
+By default, synaptic transmission is considered to be instantaneous (or more precisely, it takes one simulation step (``dt``) for a newly computed firing rate to be taken into account by post-synaptic neurons).
 
 In order to take longer propagation times into account in the transmission of information between two populations, one has the possibility to define synaptic delays for a projection. All the built-in connector methods take an argument ``delays`` (default=``dt``), which can be a float (in milliseconds) or a random number generator.
 
 
 .. code-block:: python
 
-    proj.connect_all_to_all( weights = 1.0, delays = 10.0) 
-    proj.connect_all_to_all( weights = 1.0, delays = Uniform(1.0, 10.0)) 
-     
+    proj.connect_all_to_all( weights = 1.0, delays = 10.0)
+    proj.connect_all_to_all( weights = 1.0, delays = Uniform(1.0, 10.0))
+
 If the delay is not a multiple of the simulation time step (``dt = 1.0`` by default), it will be rounded to the closest multiple. The same is true for the values returned by a random number generator.
 
 .. hint::
 
-    Per design, the minimal possible delay is equal to ``dt``: values smaller than ``dt`` will be replaced by ``dt``. Negative values do not make any sense.
+    Per design, the minimal possible delay is equal to ``dt``: values smaller than ``dt`` will be replaced by ``dt``. Negative values do not make any sense and are ignored.
 
 .. warning::
 
-    Spiking projections do not accept yet variable delays.
+    Spiking projections do not accept non-uniform delays yet.
+
+Lesioning and blocking projections
+===================================
+
+It is possible to selectively control synaptic transmission and plasticity at the projection level. The boolean flags ``transmission`` and ``plasticity`` can be set for that purpose::
+
+    proj.transmission = False
+    proj.plasticity = False
+
+* If ``transmission`` is ``False``, the projection is totally shut down: it does not transmit any information to the post-synaptic population (the corresponding weighted sums or conductances are constantly 0) and all synaptic variables are frozen (including synaptic weights ``w``).
+
+* If only ``plasticity`` is ``False``, synaptic transmission and synaptic variable updates occur normally, but changes to the synaptic weight ``w`` are ignored.

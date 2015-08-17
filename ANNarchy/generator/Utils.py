@@ -1,14 +1,14 @@
 from ..core.Global import config
- 
+
 def sort_odes(desc, locality='local'):
     equations = []
     is_ode = False
-    for param in desc['variables']: 
+    for param in desc['variables']:
         if param['cpp'] == '':
             continue
         if param['method'] == 'event-driven':
             continue
-        if param['name'] in desc[locality]: 
+        if param['name'] in desc[locality]:
             if param['switch']: # ODE
                 if is_ode: # was already ODE
                     if len(equations) ==0:
@@ -31,25 +31,37 @@ def sort_odes(desc, locality='local'):
     return equations
 
 def generate_bound_code(param, obj):
-    code = "" 
+    code = ""
     for bound, val in param['bounds'].items():
         if bound in ['min', 'max']:
             code += """if(%(var)s%(index)s %(operator)s %(val)s)
     %(var)s%(index)s = %(val)s;
 """ % {
         'index': '%(local_index)s' if param['locality'] == 'local' else '%(global_index)s',
-        'var' : param['name'], 'val' : val, 
+        'var' : param['name'], 'val' : val,
         'operator': '<' if bound=='min' else '>'
     }
     return code
 
-def generate_non_ODE_block(variables, locality, obj, conductance_only):
+def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w):
     code = ""
-    for param in variables: 
+    for param in variables:
         if conductance_only: # skip the variables which do not start with g_
             if not param['name'].startswith('g_'):
                 continue
-        code += """
+        if wrap_w and param['name'] == "w":
+            code += """
+%(comment)s
+if(%(wrap)s){
+%(cpp)s
+%(bounds)s
+}
+""" % { 'comment': '// ' + param['eq'],
+        'cpp': param['cpp'],
+        'wrap': wrap_w,
+        'bounds': generate_bound_code(param, obj) }
+        else:
+            code += """
 %(comment)s
 %(cpp)s
 %(bounds)s
@@ -60,70 +72,84 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only):
     return code
 
 
-def generate_ODE_block(odes, locality, obj, conductance_only):
+def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w):
     code = ""
 
     # Count how many steps (midpoint has more than one step)
     nb_step = 0
-    for param in odes: 
+    for param in odes:
         if isinstance(param['cpp'], list):
             nb_step = max(len(param['cpp']), nb_step)
         else:
             nb_step = max(1, nb_step)
 
+    if len(odes) == 0:
+        return ""
+
     # Iterate over all steps
-    if len(odes) > 0:
-        for step in range(nb_step):
-            for param in odes:
-                if conductance_only: # skip the variables which do not start with g_
-                    if not param['name'].startswith('g_'):
-                        continue
-                if isinstance(param['cpp'], list) and step < len(param['cpp']):
-                    eq = param['cpp'][step]
-                elif isinstance(param['cpp'], str) and step == 0: 
-                    eq = param['cpp']
-                else:
-                    eq = ''
+    for step in range(nb_step):
+        for param in odes:
+            if conductance_only: # skip the variables which do not start with g_
+                if not param['name'].startswith('g_'):
+                    continue
+            # Retrieve equation
+            if isinstance(param['cpp'], list) and step < len(param['cpp']):
+                eq = param['cpp'][step]
+            elif isinstance(param['cpp'], str) and step == 0:
+                eq = param['cpp']
+            else:
+                eq = ''
+            # Generate code
+            if wrap_w and param['name'] == "w":
+                code += """
+%(comment)s
+if(%(wrap)s){
+%(cpp)s
+}
+""" % { 'comment': '// '+param['eq'],
+        'wrap': wrap_w,
+        'cpp': eq }
+            else:
                 code += """
 %(comment)s
 %(cpp)s
 """ % { 'comment': '// '+param['eq'],
-                'cpp': eq }
+            'cpp': eq }
 
-        # Generate the switch code
-        for param in odes: 
-            if conductance_only: # skip the variables which do not start with g_
-                if not param['name'].startswith('g_'):
-                    continue
-            code += """
+    # Generate the switch code
+    for param in odes:
+        if conductance_only: # skip the variables which do not start with g_
+            if not param['name'].startswith('g_'):
+                continue
+        code += """
 %(comment)s
-%(switch)s 
+%(switch)s
 """ % { 'comment': '// '+param['eq'],
-        'switch' : param['switch']}
+    'switch' : param['switch']}
 
-            # Min-Max bounds,
-            code += generate_bound_code(param, obj)
+        # Min-Max bounds,
+        code += generate_bound_code(param, obj)
 
     return code
 
-def generate_equation_code(id, desc, locality='local', obj='pop', conductance_only=False, padding=3):
-    
+def generate_equation_code(id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
+
     # Separate ODEs from the pre- and post- equations
     odes = sort_odes(desc, locality)
-    
+
     if odes == []: # No equations
         return ""
 
     # Generate code
-    code = ""  
+    code = ""
 
     for type_block, block in odes:
         if type_block == 'ode':
-            code += generate_ODE_block(block, locality, obj, 
-            conductance_only)
+            code += generate_ODE_block(block, locality, obj,
+            conductance_only, wrap_w)
         else:
-            code += generate_non_ODE_block(block, locality, obj, 
-            conductance_only)
+            code += generate_non_ODE_block(block, locality, obj,
+            conductance_only, wrap_w)
 
     # Add the padding to each line
     padded_code = tabify(code, padding)

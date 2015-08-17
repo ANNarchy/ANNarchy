@@ -43,8 +43,8 @@ struct ProjStruct%(id_proj)s{
     // Number of dendrites
     int size;
 
-    // Learning flag
-    bool _learning;
+    // Transmission and plasticity flags
+    bool _transmission, _plasticity;
 
 %(declare_connectivity_matrix)s
 %(declare_inverse_connectivity_matrix)s
@@ -57,7 +57,8 @@ struct ProjStruct%(id_proj)s{
 
     // Method called to initialize the projection
     void init_projection() {
-        _learning = true;
+        _transmission = true;
+        _plasticity = true;
 %(init_connectivity_matrix)s
 %(init_inverse_connectivity_matrix)s
 %(init_event_driven)s
@@ -71,7 +72,7 @@ struct ProjStruct%(id_proj)s{
 %(psp_prefix)s
 %(psp_code)s
     }
-    
+
     // Draws random numbers
     void update_rng() {
 %(update_rng)s
@@ -130,7 +131,7 @@ lil_connectivity_matrix_omp = {
         void set_pre_rank(vector[vector[int]])
 """,
     'pyx_wrapper_args': "synapses",
-    'pyx_wrapper_init': """        
+    'pyx_wrapper_init': """
         cdef CSR syn = synapses
         cdef int size = syn.size
         cdef int nb_post = syn.post_rank.size()
@@ -173,7 +174,7 @@ lil_weight_matrix_omp = {
         void set_synapse_w(int, int, double)
 """,
     'pyx_wrapper_args': "",
-    'pyx_wrapper_init': """        
+    'pyx_wrapper_init': """
         proj%(id_proj)s.set_w(syn.w)
 """,
     'pyx_wrapper_accessor': """
@@ -205,8 +206,8 @@ single_weight_matrix_omp = {
         double w
 """,
     'pyx_wrapper_args': "",
-    'pyx_wrapper_init': """      
-        # Use only the first weight  
+    'pyx_wrapper_init': """
+        # Use only the first weight
         proj%(id_proj)s.w = syn.w[0][0]
 """,
     'pyx_wrapper_accessor': """
@@ -492,7 +493,7 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 ######################################
 lil_update_variables = {
     'local': """
-if(_learning && pop%(id_post)s._active){
+if(_transmission && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
@@ -505,7 +506,7 @@ if(_learning && pop%(id_post)s._active){
 }
 """,
     'global': """
-if(_learning && pop%(id_post)s._active){
+if(_transmission && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
@@ -517,7 +518,7 @@ if(_learning && pop%(id_post)s._active){
 
 dense_update_variables = {
     'local': """
-if(_learning && pop%(id_post)s._active){
+if(_transmission && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;
@@ -530,7 +531,7 @@ if(_learning && pop%(id_post)s._active){
 }
 """,
     'global': """
-if(_learning && pop%(id_post)s._active){
+if(_transmission && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;
@@ -1159,7 +1160,7 @@ __global__ void cuProj%(id)s_step( /* default params */
 cuda_synapse_kernel_call =\
 """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
-    if ( pop%(post)s._active && proj%(id_proj)s._learning ) {
+    if ( pop%(post)s._active && proj%(id_proj)s._plasticity ) {
         cuProj%(id_proj)s_step<<< pop1.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.gpu_post_rank,
             proj%(id_proj)s.gpu_pre_rank,

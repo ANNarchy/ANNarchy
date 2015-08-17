@@ -88,7 +88,7 @@ class ProjectionGenerator(object):
         post_event_prefix, post_event = self.postevent(proj)
 
         # Compute sum is the trickiest part
-        if proj.synapse.type == 'rate': 
+        if proj.synapse.type == 'rate':
             if Global.config['paradigm'] == "openmp":
                 psp_prefix, psp_code = self.computesum_rate_openmp(proj)
             else:
@@ -110,7 +110,7 @@ class ProjectionGenerator(object):
         has_delay = ( proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Connectivity matrix
-        connectivity_matrix = self.connectivity(proj) 
+        connectivity_matrix = self.connectivity(proj)
 
         # Additional info (overwritten)
         include_additional = ""; struct_additional = ""; init_additional = ""; access_additional = ""
@@ -122,7 +122,7 @@ class ProjectionGenerator(object):
             init_additional = proj._specific_template['init_additional']
         if 'access_additional' in proj._specific_template.keys():
             access_additional = proj._specific_template['access_additional']
-        
+
         final_code = ProjTemplate.header_struct % {
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
@@ -158,8 +158,8 @@ class ProjectionGenerator(object):
             'access_additional': access_additional,
             'cuda_flattening': ProjTemplate.cuda_flattening if Global.config['paradigm'] == "cuda" else ""
         }
-        
-        # Store file    
+
+        # Store file
         with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
             ofile.write(final_code)
 
@@ -195,26 +195,26 @@ class ProjectionGenerator(object):
         Create codes for connectivity, comprising usually of post_rank and pre_rank.
         In case of spiking models they are extended by an inv_rank data field. The
         extension SharedProjection as well as SpecificProjection members overwrite
-        the _specific_template member variable of the Projection object, to 
+        the _specific_template member variable of the Projection object, to
         replace directly the default codes.
-        
+
         Returns:
-            
-            a dictionary containing the following fields: *declare*, *init*, 
+
+            a dictionary containing the following fields: *declare*, *init*,
             *accessor*, *declare_inverse*, *init_inverse*
 
         TODO:
 
             maybe we should make a forced linkage between the declare, accessor and init fields.
             Currently it could be, that one overwrite only the declare field and leave the others
-            untouched which causes errors. 
+            untouched which causes errors.
         """
         declare_connectivity_matrix = ""
         init_connectivity_matrix = ""
         access_connectivity_matrix = ""
         declare_inverse_connectivity_matrix = ""
         init_inverse_connectivity_matrix = ""
-        
+
         # Retrieve the templates
         connectivity_matrix_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm']=="openmp" else ProjTemplate.csr_connectivity_matrix_cuda
 
@@ -223,37 +223,37 @@ class ProjectionGenerator(object):
 
         # Special case when the weight have a single value
         if proj._has_single_weight():
-            weight_matrix_tpl = ProjTemplate.single_weight_matrix_omp            
-        
+            weight_matrix_tpl = ProjTemplate.single_weight_matrix_omp
+
         # Connectivity
-        declare_connectivity_matrix = connectivity_matrix_tpl['declare'] 
+        declare_connectivity_matrix = connectivity_matrix_tpl['declare']
         access_connectivity_matrix = connectivity_matrix_tpl['accessor']
         init_connectivity_matrix = connectivity_matrix_tpl['init']
 
         # Weight array
-        declare_connectivity_matrix += weight_matrix_tpl['declare'] 
-        access_connectivity_matrix += weight_matrix_tpl['accessor'] 
-        init_connectivity_matrix += weight_matrix_tpl['init'] 
+        declare_connectivity_matrix += weight_matrix_tpl['declare']
+        access_connectivity_matrix += weight_matrix_tpl['accessor']
+        init_connectivity_matrix += weight_matrix_tpl['init']
 
-        # Spiking model require inverted ranks 
+        # Spiking model require inverted ranks
         if proj.synapse.type == "spike":
             inv_connectivity_matrix_tpl = ProjTemplate.inverse_connectivity_matrix if Global.config['paradigm']=="openmp" else {}
-            declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare'] 
+            declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare']
             init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
 
         # Specific projections can overwrite
         if 'declare_connectivity_matrix' in proj._specific_template.keys():
-            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix'] 
+            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
         if 'access_connectivity_matrix' in proj._specific_template.keys():
             access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
         if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
-            declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix'] 
+            declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix']
         if 'init_connectivity_matrix' in proj._specific_template.keys():
-            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix'] 
+            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix']
         if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
-            init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix'] 
+            init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix']
 
-        
+
         return {
             'declare' : declare_connectivity_matrix,
             'init' : init_connectivity_matrix,
@@ -261,15 +261,15 @@ class ProjectionGenerator(object):
             'declare_inverse': declare_inverse_connectivity_matrix,
             'init_inverse': init_inverse_connectivity_matrix
         }
-        
+
     def declaration_accessors(self, proj):
         """
         Generate declaration and accessor code for variables/parameters of the projection.
-        
+
         Returns:
             (dict, str): first return value contain declaration code and last one the accessor code.
-            
-            The declaration dictionary has the following fields: 
+
+            The declaration dictionary has the following fields:
                 delay, event_driven, rng, parameters_variables, additional, cuda_stream
         """
         # create the code for non-specific projections
@@ -355,7 +355,7 @@ class ProjectionGenerator(object):
             'additional': declare_additional,
             'cuda_stream': ProjTemplate.cuda_stream if Global.config['paradigm']=="cuda" else ""
         }
-        
+
         return declaration, accessor
 
 #######################################################################
@@ -410,7 +410,7 @@ class ProjectionGenerator(object):
 ############## Compute sum rate-coded OMP #############################
 #######################################################################
     def computesum_rate_openmp(self, proj):
-        code = ""    
+        code = ""
 
         # Default variables needed in psp_code
         psp_prefix = """
@@ -434,7 +434,7 @@ class ProjectionGenerator(object):
                 'target': proj.target,
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
-                'local_index': "[i][j]", 
+                'local_index': "[i][j]",
                 'global_index': '[i]',
                 'pre_index': '[pre_rank[i][j]]',
                 'post_index': '[post_rank[i]]',
@@ -458,8 +458,8 @@ class ProjectionGenerator(object):
         # Special case where w is a single value
         if proj._has_single_weight():
             psp = re.sub(
-                r'([^\w]+)w%\(local_index\)s', 
-                r'\1w', 
+                r'([^\w]+)w%\(local_index\)s',
+                r'\1w',
                 ' ' + psp
             )
 
@@ -476,12 +476,12 @@ class ProjectionGenerator(object):
             delayed_variables = proj.pre.delayed_variables
 
         # Delays
-        if proj.max_delay > 1: # There is non-zero delay            
+        if proj.max_delay > 1: # There is non-zero delay
             if proj.uniform_delay == -1 : # Non-uniform delays
                 for var in delayed_variables:
                     if var in proj.pre.neuron_type.description['local']:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
                         )
                     else:
@@ -493,12 +493,12 @@ class ProjectionGenerator(object):
                 for var in delayed_variables:
                     if var in proj.pre.neuron_type.description['local']:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s'
                         )
                     else:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
                         )
 
@@ -507,10 +507,10 @@ class ProjectionGenerator(object):
         pre_copy = ""
 
         # OMP: make a local copy of local variables for each thread if the delays are constant
-        if with_openmp: 
+        if with_openmp:
             if proj.max_delay > 1: # there is a delay
                 if proj.uniform_delay == -1 : # Non-uniform delays: do nothing
-                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)' 
+                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)'
 
                 else: # Uniform delays
                     omp_code = "#pragma omp parallel for private(sum) firstprivate("
@@ -546,7 +546,7 @@ class ProjectionGenerator(object):
         sum_code = template[proj.synapse.operation] % {
             'pre_copy': pre_copy,
             'omp_code': omp_code,
-            'psp': psp.replace(';', ''), 
+            'psp': psp.replace(';', ''),
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'target': proj.target,
@@ -554,7 +554,7 @@ class ProjectionGenerator(object):
 
         # Finish the code
         code = """
-        if (pop%(id_post)s._active){
+        if (_transmission && pop%(id_post)s._active){
 %(code)s
         } // active
         """ % {'id_post': proj.post.id,
@@ -678,7 +678,7 @@ class ProjectionGenerator(object):
             return psp_prefix, proj._specific_template['psp_code']
 
         # Basic tags
-        ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'local_index': "[i][j]", 'global_index': '[i]'} 
+        ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'local_index': "[i][j]", 'global_index': '[i]'}
 
         # Determine the mode of synaptic transmission
         continous_transmission = False
@@ -691,13 +691,13 @@ class ProjectionGenerator(object):
         # Strings
         updated_variables_list = []
         g_target = ""; g_target_bounds = ""
-        g_target_code = ""    
+        g_target_code = ""
 
         # Analyse all elements of pre_spike
         for eq in proj.synapse.description['pre_spike']:
             # g_target is treated differently
             # Must be at the end of the equations
-            if eq['name'] == 'g_target': 
+            if eq['name'] == 'g_target':
                 g_target = eq['cpp'].split('=')[1] % ids
                 g_target_code = """
             // Increase the post-synaptic conductance %(eq)s
@@ -720,9 +720,9 @@ if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
             elif eq['name'] == 'w': # Surround it by the learning flag
                 updated_variables_list += """
 // Plasticity of w can be disabled
-if(_learning){
+if(_plasticity){
     // %(eq)s
-    %(cpp)s 
+    %(cpp)s
     %(bounds)s
 }
 """ % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
@@ -730,23 +730,23 @@ if(_learning){
             else: # Normal synaptic variable
                 updated_variables_list += """
 // %(eq)s
-%(cpp)s 
+%(cpp)s
 %(bounds)s""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
 
 
         # Generate the default post-conductance increase
         # default g_target += w
-        if not continous_transmission and g_target == "": 
+        if not continous_transmission and g_target == "":
             g_target_code = """
             // Increase the post-synaptic conductance g_target += w
             pop%(id_post)s.g_%(target)s[post_rank[i]] += w[i][j];
 """ % ids
 
-        # Special case where w is a single value      
+        # Special case where w is a single value
         if proj._has_single_weight():
             g_target_code = re.sub(
-                r'([^\w]+)w\[i\]\[j\]', 
-                r'\1w', 
+                r'([^\w]+)w\[i\]\[j\]',
+                r'\1w',
                 g_target_code
             )
 
@@ -762,14 +762,14 @@ if(_learning){
 """ % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id, 'local_index': "[i][j]", 'global_index': '[i]'}}
         if has_exact:
                 event_driven_code += """
-            // Update the last event for the synapse 
+            // Update the last event for the synapse
             _last_event[i][j] = t;
 """ % {'id_proj' : proj.id, 'exact': var['cpp']}
 
-            
+
         # Generate code for pre-spike variables
         pre_event = ""
-        if len(updated_variables_list) > 0: 
+        if len(updated_variables_list) > 0:
             code = ""
             for var in updated_variables_list:
                 code += var
@@ -803,14 +803,14 @@ if(_learning){
         omp_code = ""
         if Global.config['num_threads']>1:
             if proj.post.size > Global.OMP_MIN_NB_NEURONS and len(updated_variables_list) > 0:
-                omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""%{'id_proj' : proj.id}  
-        
+                omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""%{'id_proj' : proj.id}
+
         # Generate the whole code block
-        code = ""    
-        if g_target_code != "" or pre_event != "": 
+        code = ""
+        if g_target_code != "" or pre_event != "":
             code = """
 // Event-based summation
-if (pop%(id_post)s._active){
+if (_transmission && pop%(id_post)s._active){
     std::vector< std::pair<int, int> > inv_post;
     // Iterate over all incoming spikes
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
@@ -829,13 +829,13 @@ if (pop%(id_post)s._active){
         }
     }
 } // active
-"""%{   'id_pre': proj.pre.id, 
-        'id_post': proj.post.id, 
+"""%{   'id_pre': proj.pre.id,
+        'id_post': proj.post.id,
         'pre_array': pre_array,
-        'pre_event': pre_event, 
-        'g_target': g_target_code, 
+        'pre_event': pre_event,
+        'g_target': g_target_code,
         'omp_code': omp_code,
-        'event_driven': event_driven_code 
+        'event_driven': event_driven_code
     }
 
         # Add tabs
@@ -875,11 +875,11 @@ if (pop%(id_post)s._active){
 
 
         ids = {
-                'id_proj' : proj.id, 
-                'target': proj.target, 
-                'id_post': proj.post.id, 
-                'id_pre': proj.pre.id, 
-                'local_index': "[i][j]", 
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': "[i][j]",
                 'global_index': '[i]',
                 'pre_index': '[pre_rank[i][j]]',
                 'post_index': '[post_rank[i]]',
@@ -906,13 +906,15 @@ if (pop%(id_post)s._active){
             event_driven_code += """
 // Update the last event for the synapse
 _last_event[i][j] = t;
-""" 
+"""
             event_driven_code = tabify(event_driven_code, 3)
 
         # Gather the equations
         post_code = ""
         for eq in proj.synapse.description['post_spike']:
             post_code += '// ' + eq['eq'] + '\n'
+            if eq['name'] == 'w':
+                post_code += "if(_plasticity)\n"
             post_code += eq['cpp'] % ids + '\n'
             post_code += get_bounds(eq) % ids + '\n'
         post_code = tabify(post_code, 3)
@@ -925,7 +927,7 @@ _last_event[i][j] = t;
 
         # Generate the code block
         code = """
-if(_learning && pop%(id_post)s._active){
+if(_transmission && pop%(id_post)s._active){
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
         rk_post = pop%(id_post)s.spiked[_idx_i];
@@ -935,15 +937,15 @@ if(_learning && pop%(id_post)s._active){
         if (i==-1) continue;
         // Iterate over all synapse to this neuron
         nb_pre = pre_rank[i].size();
-        %(omp_code)s 
+        %(omp_code)s
         for(j = 0; j < nb_pre; j++){
 %(event_driven)s
 %(post_event)s
         }
     }
 }
-"""%{'id_post': proj.post.id, 
-    'post_event': post_code, 
+"""%{'id_post': proj.post.id,
+    'post_event': post_code,
     'event_driven': event_driven_code,
     'omp_code': omp_code}
 
@@ -963,7 +965,7 @@ if(_learning && pop%(id_post)s._active){
                 'target': proj.target,
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
-                'local_index': '[i][j]', 
+                'local_index': '[i][j]',
                 'global_index': '[i]',
                 'pre_index': '[rk_pre]',
                 'post_index': '[rk_post]',
@@ -974,12 +976,12 @@ if(_learning && pop%(id_post)s._active){
         }
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2) 
+        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3)
+        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
 
-        # Skip generation if 
+        # Skip generation if
         if local_eq.strip() == '' and global_eq.strip() == '' :
             return "", ""
 
@@ -1004,24 +1006,24 @@ if(_learning && pop%(id_post)s._active){
                 for var in dependencies:
                     if var in proj.pre.neuron_type.description['local']:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
                         )
                     else:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s'
                         )
             else: # Uniform delays
                 for var in dependencies:
                     if var in proj.pre.neuron_type.description['local']:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s'
                         )
                     else:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s', 
+                            '%(pre_prefix)s'+var+'%(pre_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
                         )
 
@@ -1030,20 +1032,20 @@ if(_learning && pop%(id_post)s._active){
             template = ProjTemplate.dense_update_variables
         else: # Default: LIL
             template = ProjTemplate.lil_update_variables
-        
-        # Fill the code template  
+
+        # Fill the code template
         if local_eq.strip() != "": # local synapses are updated
-            code = template['local'] % {   
-                'global': global_eq % ids, 
+            code = template['local'] % {
+                'global': global_eq % ids,
                 'local': local_eq % ids,
-                'id_post': proj.post.id, 
-                'id_pre': proj.pre.id, 
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
                 'omp_code': omp_code
             }
         else: # Only global variables
-            code = template['global'] % {   
-                'global': global_eq % ids, 
-                'id_post': proj.post.id, 
+            code = template['global'] % {
+                'global': global_eq % ids,
+                'id_post': proj.post.id,
                 'omp_code': omp_code
             }
 
@@ -1265,7 +1267,7 @@ if(_learning && pop%(id_post)s._active){
         if 'creating' in proj.synapse.description.keys():
             code += header_tpl['creating']
 
-        # Retrieve the names of extra attributes   
+        # Retrieve the names of extra attributes
         extra_args = ""
         add_code = ""
         remove_code = ""
@@ -1279,12 +1281,12 @@ if(_learning && pop%(id_post)s._active){
                 extra_args += ', ' + var['ctype'] + ' _' +  var['name'] +'='+str(init)
                 add_code += ' '*8 + var['name'] + '[post].insert('+var['name']+'[post].begin() + idx, _' + var['name'] + ');\n'
                 remove_code += ' '*8 + var['name'] + '[post].erase(' + var['name'] + '[post].begin() + idx);\n'
-        
+
         # Delays
         delay_code = ""
         if proj.max_delay > 1 and proj.uniform_delay == -1:
             delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
-        
+
         # Spiking networks must update the inv_pre_rank array
         spiking_addcode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_addcode']
         spiking_removecode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_removecode']
@@ -1295,11 +1297,11 @@ if(_learning && pop%(id_post)s._active){
             rd_addcode += """
         %(name)s[post].insert(%(name)s[post].begin() + idx, 0.0);
 """ % {'name': rd['name']}
-            
+
             rd_removecode += """
         %(name)s[post].erase(%(name)s[post].begin() + idx);
 """ % {'name': rd['name']}
-            
+
 
         # Generate the code
         code += header_tpl['header'] % { 'extra_args': extra_args, 'delay_code': delay_code,
@@ -1371,16 +1373,16 @@ if(_learning && pop%(id_post)s._active){
             }
         }
     }
-""" % { 'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 
-        'eq': creating_structure['eq'], 'modulo': '%', 
-        'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 
+""" % { 'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
+        'eq': creating_structure['eq'], 'modulo': '%',
+        'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target,
         'id_post': proj.post.id, 'id_pre': proj.pre.id},
         'omp_code': omp_code,
         'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
         'proba' : proba, 'proba_init': proba_init,
         'delay': delay
         }
-        
+
         return creating
 
     def pruning(self, proj):
@@ -1415,13 +1417,13 @@ if(_learning && pop%(id_post)s._active){
             }
         }
     }
-""" % { 'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%', 
-        'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 
+""" % { 'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%',
+        'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target,
         'id_post': proj.post.id, 'id_pre': proj.pre.id},
         'omp_code': omp_code,
         'proba' : proba, 'proba_init': proba_init
         }
-        
+
         return pruning
 
 #######################################################################
@@ -1495,8 +1497,8 @@ def get_bounds(param):
         code += """if(%(var)s%(index)s %(operator)s %(val)s)
     %(var)s%(index)s = %(val)s;
 """ % {'index': "[i][j]" ,
-       'var' : param['name'], 
-       'val' : val, 
+       'var' : param['name'],
+       'val' : val,
        'operator': '<' if bound=='min' else '>'
        }
     return code

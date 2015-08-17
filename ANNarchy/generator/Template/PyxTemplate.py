@@ -167,8 +167,10 @@ cdef class pop%(id)s_wrapper :
 proj_pyx_struct = """
     # Export Projection %(id_proj)s
     cdef struct ProjStruct%(id_proj)s :
-        bool _learning
-
+        # Flags
+        bool _transmission
+        bool _plasticity
+        # Size
         int get_size()
         int nb_synapses(int)
         void set_size(int)
@@ -198,8 +200,17 @@ cdef class proj%(id_proj)s_wrapper :
     def nb_synapses(self, int n):
         return proj%(id_proj)s.nb_synapses(n)
 
-    def _set_learning(self, bool l):
-        proj%(id_proj)s._learning = l
+    # Transmission flag
+    def _get_transmission(self):
+        return proj%(id_proj)s._transmission
+    def _set_transmission(self, bool l):
+        proj%(id_proj)s._transmission = l
+
+    # Plasticity flag
+    def _get_plasticity(self):
+        return proj%(id_proj)s._plasticity
+    def _set_plasticity(self, bool l):
+        proj%(id_proj)s._plasticity = l
 
 %(wrapper_access_connectivity)s
 %(wrapper_access_delay)s
