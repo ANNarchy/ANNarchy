@@ -691,7 +691,7 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
             left = _analyse_part(left[:-1], local_dict, tex_dict)
         except Exception as e:
             _print(e)
-            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to it by hand...')
+            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
             left = left[:-1]
         operator = " = " + left +  " " + op + (" (" if op != '+' else '')
     else:
@@ -699,13 +699,13 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
             left = _analyse_part(left, local_dict, tex_dict)
         except Exception as e:
             _print(e)
-            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to it by hand...')
+            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
         operator = " = "
     try:
         right = _analyse_part(eq.split('=')[1], local_dict, tex_dict)
     except Exception as e:
         _print(e)
-        _warning('can not transform the right side of ' + orig +' to LaTeX, you have to it by hand...')
+        _warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
         right = eq.split('=')[1]
 
     return left + operator + right + (" )" if operator.endswith('(') else "")
@@ -726,27 +726,70 @@ def _analyse_part(expr, local_dict, tex_dict):
         condition = condition.replace('or', ' | ')
         return regular_expr(condition)
 
-    def _extract_conditional(expr):
-        condition = re.findall(r'if(.*?):', expr)[0]
-        condition_expr = _condition(condition)
-        then = re.findall(':(.*)else:', expr)[-1]
-        if 'else:' in then:
-            then = _extract_conditional(then)
+    def _extract_conditional(condition):
+        if_statement = condition[0]
+        then_statement = condition[1]
+        else_statement = condition[2]
+        # IF condition
+        if_code = _condition(if_statement)
+        # THEN
+        if isinstance(then_statement, list): # nested conditional
+            then_code =  _extract_conditional(then_statement)
         else:
-            then  = regular_expr(then)
-        else_st = expr.split('else:')[-1]
-        if 'else:' in else_st:
-            else_st = _extract_conditional(else_st)
+            then_code = regular_expr(then_statement)
+        # ELSE
+        if isinstance(else_statement, list): # nested conditional
+            else_code =  _extract_conditional(else_statement)
         else:
-            else_st = regular_expr(else_st)
-        return "\\begin{cases}" + then + "\qquad \\text{if} \quad " + condition_expr + "\\\\ "+ else_st +" \qquad \\text{otherwise.} \end{cases}"
+            else_code = regular_expr(else_statement)
+        return "\\begin{cases}" + then_code + "\qquad \\text{if} \quad " + if_code + "\\\\ "+ else_code +" \qquad \\text{otherwise.} \end{cases}"
 
     # Extract if/then/else
     if 'else:' in expr:
-        return _extract_conditional(expr)
+        ite_code = extract_ite(expr)
+        return _extract_conditional(ite_code)
 
     # return the transformed equation
     return regular_expr(expr)
+
+def extract_ite(eq):
+    def transform(code):
+        " Transforms the code into a list of lines."
+        res = []
+        items = []
+        for arg in code.split(':'):
+            items.append( arg.strip())
+        for i in range(len(items)):
+            if items[i].startswith('if '):
+                res.append( items[i].strip() )
+            elif items[i].endswith('else'):
+                res.append(items[i].split('else')[0].strip() )
+                res.append('else' )
+            else: # the last then
+                res.append( items[i].strip() )
+        return res
+
+
+    def parse(lines):
+        " Recursive analysis of if-else statements"
+        result = []
+        while lines:
+            if lines[0].startswith('if'):
+                block = [lines.pop(0).split('if')[1], parse(lines)]
+                if lines[0].startswith('else'):
+                    lines.pop(0)
+                    block.append(parse(lines))
+                result.append(block)
+            elif not lines[0].startswith(('else')):
+                result.append(lines.pop(0))
+            else:
+                break
+        return result[0]
+
+    # Process the equation
+    multilined = transform(eq)
+    condition = parse(multilined)
+    return condition
 
 # Latexify names
 greek = ['alpha', 'beta', 'gamma', 'epsilon', 'eta', 'kappa', 'delta', 'lambda', 'mu', 'nu', 'zeta', 'sigma', 'phi', 'psi', 'rho', 'omega', 'xi', 'tau',
