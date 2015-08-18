@@ -100,35 +100,38 @@ def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w):
             else:
                 eq = ''
             # Generate code
-            if wrap_w and param['name'] == "w":
-                code += """
+            code += """
 %(comment)s
-if(%(wrap)s){
 %(cpp)s
-}
 """ % { 'comment': '// '+param['eq'],
-        'wrap': wrap_w,
         'cpp': eq }
-            else:
-                code += """
-%(comment)s
-%(cpp)s
-""" % { 'comment': '// '+param['eq'],
-            'cpp': eq }
 
     # Generate the switch code
     for param in odes:
+        bounds = generate_bound_code(param, obj)
         if conductance_only: # skip the variables which do not start with g_
             if not param['name'].startswith('g_'):
                 continue
-        code += """
+        if wrap_w and param['name'] == "w":
+            code += """
+%(comment)s
+if(%(wrap)s){
+%(switch)s
+%(bounds)s
+}
+""" % { 'comment': '// '+param['eq'],
+        'wrap': wrap_w,
+        'bounds': bounds,
+        'switch' : param['switch']}
+        else:
+            code += """
 %(comment)s
 %(switch)s
+%(bounds)s
 """ % { 'comment': '// '+param['eq'],
-    'switch' : param['switch']}
+        'bounds': bounds,
+        'switch' : param['switch']}
 
-        # Min-Max bounds,
-        code += generate_bound_code(param, obj)
 
     return code
 
