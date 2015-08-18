@@ -560,31 +560,46 @@ class Projection(object):
     ################################
     ## Learning flags
     ################################
-    def enable_learning(self, params={ 'period': 1, 'offset': 0} ):
+    def enable_learning(self, period=None, offset=None):
         """
         Enables learning for all the synapses of this projection.
 
-        *Parameter*:
+        *Parameters*:
 
-        * **params**: optional dictionary to configure the learning behaviour:
+        * **period** determines how often the synaptic variables will be updated.
+        * **offset** determines the offset at which the synaptic variables will be updated relative to the current time.
 
-            * the key 'period' determines the period at which the synaptic plasticity-related methods will be called.
-            * the key 'offset' determines the offset at which the synaptic plasticity-related methods will be called relative to the current time.
+        For example, providing the following parameters at time 10 ms::
 
-        For example::
+            enable_learning(period=10., offset=5.)
 
-            { 'period': 10., 'offset': 5.}
+        would call the updating methods at times 15, 25, 35, etc...
 
-        would call the learning methods at times 5, 15, 25, etc...
-
-        The default behaviour is that the learning methods are called at each time step.
+        The default behaviour is that the synaptic variables are updated at each time step. The parameters must be multiple of ``dt``
         """
-        self.cyInstance._set_update(True)
-        self.cyInstance._set_plasticity(True)
-        # TODO
-        Global._warning('learning frequency and offset are not implemented yet.')
-        # self.cyInstance._set_learn_frequency(params['period'])
-        # self.cyInstance._set_learn_offset(params['offset'])
+        # Check arguments
+        if period != None and offset!=None:
+            if offset >= period:
+                Global._error('enable_learning(): the offset must be smaller than the period.')
+                exit(0)
+        if period == None and offset!=None:
+            Global._error('enable_learning(): if you define an offset, you have to define a period.')
+            exit(0)
+        try:
+            self.cyInstance._set_update(True)
+            self.cyInstance._set_plasticity(True)
+            if period != None:
+                self.cyInstance._set_update_period(int(period/Global.config['dt']))
+            else:
+                self.cyInstance._set_update_period(int(1))
+                period = Global.config['dt']
+            if offset != None:
+                relative_offset = Global.get_time() % period + offset
+                self.cyInstance._set_update_offset(int(relative_offset%period))
+            else:
+                self.cyInstance._set_update_offset(int(0))
+        except:
+            Global._warning('Enable_learning() is only possible after compile()')
 
     def disable_learning(self, update=None):
         """

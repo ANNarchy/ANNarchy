@@ -171,6 +171,8 @@ proj_pyx_struct = """
         bool _transmission
         bool _plasticity
         bool _update
+        int _update_period
+        long _update_offset
         # Size
         int get_size()
         int nb_synapses(int)
@@ -218,6 +220,18 @@ cdef class proj%(id_proj)s_wrapper :
         return proj%(id_proj)s._plasticity
     def _set_plasticity(self, bool l):
         proj%(id_proj)s._plasticity = l
+
+    # Update period
+    def _get_update_period(self):
+        return proj%(id_proj)s._update_period
+    def _set_update_period(self, int l):
+        proj%(id_proj)s._update_period = l
+
+    # Update offset
+    def _get_update_offset(self):
+        return proj%(id_proj)s._update_offset
+    def _set_update_offset(self, long l):
+        proj%(id_proj)s._update_offset = l
 
 %(wrapper_access_connectivity)s
 %(wrapper_access_delay)s

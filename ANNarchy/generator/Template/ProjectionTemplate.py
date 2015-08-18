@@ -45,6 +45,8 @@ struct ProjStruct%(id_proj)s{
 
     // Transmission and plasticity flags
     bool _transmission, _plasticity, _update;
+    int _update_period;
+    long int _update_offset;
 
 %(declare_connectivity_matrix)s
 %(declare_inverse_connectivity_matrix)s
@@ -60,6 +62,8 @@ struct ProjStruct%(id_proj)s{
         _transmission = true;
         _update = true;
         _plasticity = true;
+        _update_period = 1;
+        _update_offset = 0L;
 %(init_connectivity_matrix)s
 %(init_inverse_connectivity_matrix)s
 %(init_event_driven)s
@@ -494,7 +498,7 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 ######################################
 lil_update_variables = {
     'local': """
-if(_transmission && _update && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
@@ -507,7 +511,7 @@ if(_transmission && _update && pop%(id_post)s._active){
 }
 """,
     'global': """
-if(_transmission && _update && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
@@ -519,7 +523,7 @@ if(_transmission && _update && pop%(id_post)s._active){
 
 dense_update_variables = {
     'local': """
-if(_transmission && _update && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;
@@ -532,7 +536,7 @@ if(_transmission && _update && pop%(id_post)s._active){
 }
 """,
     'global': """
-if(_transmission && _update && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;

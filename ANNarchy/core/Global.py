@@ -324,7 +324,7 @@ def disable_learning(projections=None, net_id=0):
 def get_time(net_id=0):
     "Returns the current time in ms."
     try:
-        t = _network[net_id]['instance'].get_time()/config['dt']
+        t = _network[net_id]['instance'].get_time()*config['dt']
     except:
         t = 0.0
     return t
@@ -337,7 +337,7 @@ def set_time(t, net_id=0):
         Can be dangerous for some spiking models.
     """
     try:
-        _network[net_id]['instance'].set_time(int(t*config['dt']))
+        _network[net_id]['instance'].set_time(int(t/config['dt']))
     except:
         _warning('Time can only be set when the network is compiled.')
 
