@@ -4,7 +4,9 @@
 * parallel_run() has now control over the seeds.
 * report(): fixed nested conditionals and power functions
 * Synaptic transmission can be stopped using proj.transmission = False
+* Synaptic update can be disabled using proj.update = False
 * Synaptic plasticity can be disabled using proj.plasticity = False
+* enable_learning() accepts period and offset arguments.
 
 **4.5.1:**
 
