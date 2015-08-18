@@ -23,7 +23,7 @@ Bug reports should be done through the `Issue Tracker <https://bitbucket.org/ann
 
 If you use ANNarchy for your research, we would appreciate if you cite the following paper:
 
-    Vitay, J, Dinkelbach, HÜ and Hamker, FH (2015). ANNarchy: a code generation approach to neural simulations on parallel hardware. *Frontiers in Neuroinformatics* 9:19. `doi:10.3389/fninf.2015.00019 <http://dx.doi.org/10.3389/fninf.2015.00019>`_
+    Vitay J, Dinkelbach HÜ and Hamker FH (2015). ANNarchy: a code generation approach to neural simulations on parallel hardware. *Frontiers in Neuroinformatics* 9:19. `doi:10.3389/fninf.2015.00019 <http://dx.doi.org/10.3389/fninf.2015.00019>`_
 
 
 .. toctree::
