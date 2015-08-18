@@ -247,6 +247,8 @@ If the delay is not a multiple of the simulation time step (``dt = 1.0`` by defa
 Controlling projections
 ===================================
 
+**Synaptic transmission, update and plasticity**
+
 It is possible to selectively control synaptic transmission and plasticity at the projection level. The boolean flags ``transmission``, ``update`` and ``plasticity`` can be set for that purpose::
 
     proj.transmission = False
@@ -258,3 +260,18 @@ It is possible to selectively control synaptic transmission and plasticity at th
 * If ``update`` is ``False``, synaptic transmission occurs normally, but the synaptic variables are not updated. For spiking synapses, this includes traces when they are computed at each step, but not when they are integrated in an event-driven manner (flag ``event-driven``). Beware: continous synaptic transmission as in `NMDA synapses <SpikeSynapse.html#continuous-synaptic-transmission>`_ will not work in this mode, as internal variables are not updated.
 
 * If only ``plasticity`` is ``False``, synaptic transmission and synaptic variable updates occur normally, but changes to the synaptic weight ``w`` are ignored.
+
+**Disabling learning**
+
+Alternatively, one can use the ``enable_learning()`` and ``disable_learning()`` methods of ``Projection``. The effect of ``disable_learning()`` depends on the type of the projection:
+
+* for rate-coded projections, ``disable_learning()`` is equivalent to ``update=False``: no synaptic variables is updated.
+* for spiking projections, it is equivalent to ``plasticity=False``: only the weights are blocked.
+
+The reason of this difference is to allow continuous synaptic transmission and computation of traces. Calling ``enable_learning()`` without arguments resumes the default learning behaviour.
+
+**Periodic learning**
+
+``enable_learning()`` also accepts two arguments ``period`` and ``offset``. ``period`` defines the interval in ms between two evaluations of the synaptic variables. This can be useful when learning should only occur once at the end of a trial. It is recommended not to use ODEs in the equations in this case, as they are numerized according to a fixed time step. ``offset`` defines the time inside the period at which the evaluation should occur. By default, it is 0, so the variable updates will occur at the next step, then after ``period`` ms, and so on. Setting it to -1 will shift the update at the end of the period.
+
+Note that spiking synapses using online evaluation will not be affected by these parameters, as they are event-driven.
