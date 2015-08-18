@@ -44,7 +44,7 @@ struct ProjStruct%(id_proj)s{
     int size;
 
     // Transmission and plasticity flags
-    bool _transmission, _plasticity;
+    bool _transmission, _plasticity, _update;
 
 %(declare_connectivity_matrix)s
 %(declare_inverse_connectivity_matrix)s
@@ -58,6 +58,7 @@ struct ProjStruct%(id_proj)s{
     // Method called to initialize the projection
     void init_projection() {
         _transmission = true;
+        _update = true;
         _plasticity = true;
 %(init_connectivity_matrix)s
 %(init_inverse_connectivity_matrix)s
@@ -493,7 +494,7 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 ######################################
 lil_update_variables = {
     'local': """
-if(_transmission && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
@@ -506,7 +507,7 @@ if(_transmission && pop%(id_post)s._active){
 }
 """,
     'global': """
-if(_transmission && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
@@ -518,7 +519,7 @@ if(_transmission && pop%(id_post)s._active){
 
 dense_update_variables = {
     'local': """
-if(_transmission && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;
@@ -531,7 +532,7 @@ if(_transmission && pop%(id_post)s._active){
 }
 """,
     'global': """
-if(_transmission && pop%(id_post)s._active){
+if(_transmission && _update && pop%(id_post)s._active){
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;

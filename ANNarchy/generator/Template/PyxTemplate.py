@@ -170,6 +170,7 @@ proj_pyx_struct = """
         # Flags
         bool _transmission
         bool _plasticity
+        bool _update
         # Size
         int get_size()
         int nb_synapses(int)
@@ -205,6 +206,12 @@ cdef class proj%(id_proj)s_wrapper :
         return proj%(id_proj)s._transmission
     def _set_transmission(self, bool l):
         proj%(id_proj)s._transmission = l
+
+    # Update flag
+    def _get_update(self):
+        return proj%(id_proj)s._update
+    def _set_update(self, bool l):
+        proj%(id_proj)s._update = l
 
     # Plasticity flag
     def _get_plasticity(self):

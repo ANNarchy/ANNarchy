@@ -219,7 +219,7 @@ Each neuron of ``pop2_center`` will receive synapses from all neurons of ``pop1_
 
 .. warning::
 
-    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. Full ``Population`` objects do not have a ``ranks`` attribute.
+    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. Full ``Population`` objects do not have a ``ranks`` attribute, it is implicitely ``range(pop.size)``.
 
 Specifying delays in synaptic transmission
 ==============================================
@@ -244,14 +244,17 @@ If the delay is not a multiple of the simulation time step (``dt = 1.0`` by defa
 
     Spiking projections do not accept non-uniform delays yet.
 
-Lesioning and blocking projections
+Controlling projections
 ===================================
 
-It is possible to selectively control synaptic transmission and plasticity at the projection level. The boolean flags ``transmission`` and ``plasticity`` can be set for that purpose::
+It is possible to selectively control synaptic transmission and plasticity at the projection level. The boolean flags ``transmission``, ``update`` and ``plasticity`` can be set for that purpose::
 
     proj.transmission = False
+    proj.update = False
     proj.plasticity = False
 
-* If ``transmission`` is ``False``, the projection is totally shut down: it does not transmit any information to the post-synaptic population (the corresponding weighted sums or conductances are constantly 0) and all synaptic variables are frozen (including synaptic weights ``w``).
+* If ``transmission`` is ``False``, the projection is totally shut down: it does not transmit any information to the post-synaptic population (the corresponding weighted sums or conductances are constantly 0) and all synaptic variables are frozen to their current value (including the synaptic weights ``w``).
+
+* If ``update`` is ``False``, synaptic transmission occurs normally, but the synaptic variables are not updated. For spiking synapses, this includes traces when they are computed at each step, but not when they are integrated in an event-driven manner (flag ``event-driven``). Beware: continous synaptic transmission as in `NMDA synapses <SpikeSynapse.html#continuous-synaptic-transmission>`_ will not work in this mode, as internal variables are not updated.
 
 * If only ``plasticity`` is ``False``, synaptic transmission and synaptic variable updates occur normally, but changes to the synaptic weight ``w`` are ignored.

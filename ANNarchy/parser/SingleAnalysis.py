@@ -42,7 +42,7 @@ def analyse_neuron(neuron):
         description['raw_reset'] = neuron.reset
         description['raw_spike'] = neuron.spike
         description['refractory'] = neuron.refractory
-        
+
     # Extract parameters and variables names
     parameters = extract_parameters(neuron.parameters, neuron.extra_values)
     variables = extract_variables(neuron.equations)
@@ -56,7 +56,7 @@ def analyse_neuron(neuron):
                 break
         else:
             _error('Rate-coded neurons must define the variable "r".')
-            exit(0) 
+            exit(0)
 
     # Extract functions
     functions = extract_functions(neuron.functions, False)
@@ -72,7 +72,7 @@ def analyse_neuron(neuron):
     description['attributes'] = attributes
     description['local'] = local_var
     description['global'] = global_var
-    
+
     # Extract all targets
     targets = extract_targets(variables)
     description['targets'] = targets
@@ -106,12 +106,12 @@ def analyse_neuron(neuron):
     for variable in description['variables']:
         eq = variable['transformed_eq']
         untouched={}
-        
+
         # Replace sum(target) with pop%(id)s.sum_exc[i]
         for target in description['targets']:
             eq = re.sub('sum\(\s*'+target+'\s*\)', '__sum_'+target+'__', eq)
             untouched['__sum_'+target+'__'] = '_sum_' + target + '%(local_index)s'
-        
+
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description)
 
@@ -120,20 +120,20 @@ def analyse_neuron(neuron):
             if not name in untouched.keys():
                 untouched[name] = val
         description['global_operations'] += global_ops
-        
+
         # Extract if-then-else statements
         eq, condition = extract_ite(variable['name'], eq, description)
-        
+
         # Find the numerical method if any
-        method = find_method(variable) 
+        method = find_method(variable)
 
         # Process the bounds
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
                 translator = Equation(
-                                variable['name'], 
-                                variable['bounds']['min'], 
-                                description, 
+                                variable['name'],
+                                variable['bounds']['min'],
+                                description,
                                 type = 'return',
                                 untouched = untouched
                                 )
@@ -142,19 +142,19 @@ def analyse_neuron(neuron):
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
                 translator = Equation(
-                                variable['name'], 
-                                variable['bounds']['max'], 
-                                description, 
+                                variable['name'],
+                                variable['bounds']['max'],
+                                description,
                                 type = 'return',
                                 untouched = untouched)
                 variable['bounds']['max'] = translator.parse().replace(';', '')
-        
+
         # Analyse the equation
         if condition == []:
-            translator = Equation(  
-                                    variable['name'], 
-                                    eq, 
-                                    description, 
+            translator = Equation(
+                                    variable['name'],
+                                    eq,
+                                    description,
                                     method = method,
                                     untouched = untouched
                             )
@@ -162,14 +162,14 @@ def analyse_neuron(neuron):
             dependencies = translator.dependencies()
         else: # An if-then-else statement
             code = translate_ITE(
-                        variable['name'], 
-                        eq, 
-                        condition, 
-                        description, 
+                        variable['name'],
+                        eq,
+                        condition,
+                        description,
                         untouched )
             dependencies = []
 
-        
+
         if isinstance(code, str):
             cpp_eq = code
             switch = None
@@ -215,9 +215,9 @@ def analyse_neuron(neuron):
 
     return description
 
-def analyse_synapse(synapse):  
-    """ Performs the analysis for a single synapse."""  
-    concurrent_odes = [] 
+def analyse_synapse(synapse):
+    """ Performs the analysis for a single synapse."""
+    concurrent_odes = []
 
     # Store basic information
     description = {
@@ -243,7 +243,7 @@ def analyse_synapse(synapse):
 
     # Extract functions
     functions = extract_functions(synapse.functions, False)
-        
+
     # Check the presence of w
     description['plasticity'] = False
     for var in parameters + variables:
@@ -258,7 +258,7 @@ def analyse_synapse(synapse):
 
     # Find out a plasticity rule
     for var in variables:
-        if var['name'] == 'w': 
+        if var['name'] == 'w':
             description['plasticity'] = True
             break
 
@@ -284,10 +284,10 @@ def analyse_synapse(synapse):
 
     # Extract RandomDistribution objects
     description['random_distributions'] = extract_randomdist(description)
-    
+
     # Extract event-driven info
-    if description['type'] == 'spike':  
-        # pre_spike event       
+    if description['type'] == 'spike':
+        # pre_spike event
         description['pre_spike'] = extract_pre_spike_variable(description)
         for var in description['pre_spike']:
             if var['name'] in ['g_target', 'w']: # Already dealt with
@@ -297,7 +297,7 @@ def analyse_synapse(synapse):
                     break
             else: # not defined already
                 description['variables'].append(
-                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'], 
+                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
                  'flags': [], 'transformed_eq': '', 'eq': '',
                  'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
                 )
@@ -314,7 +314,7 @@ def analyse_synapse(synapse):
                     break
             else: # not defined already
                 description['variables'].append(
-                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'], 
+                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
                  'flags': [], 'transformed_eq': '', 'eq': '',
                  'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
                 )
@@ -322,9 +322,9 @@ def analyse_synapse(synapse):
                 description['attributes'].append(var['name'])
 
     # Variables names for the parser which should be left untouched
-    untouched = {}   
+    untouched = {}
     description['dependencies'] = {'pre': [], 'post': []}
-                   
+
     # Iterate over all variables
     for variable in description['variables']:
         eq = variable['transformed_eq']
@@ -332,21 +332,21 @@ def analyse_synapse(synapse):
         # Event-driven variables
         if eq.strip() == '':
             continue
-        
+
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description)
         description['pre_global_operations'] += global_ops['pre']
         description['post_global_operations'] += global_ops['post']
-        
+
         # Extract pre- and post_synaptic variables
         eq, untouched_var, dependencies = extract_prepost(variable['name'], eq, description)
 
         description['dependencies']['pre'] += dependencies['pre']
         description['dependencies']['post'] += dependencies['post']
-        
+
         # Extract if-then-else statements
         eq, condition = extract_ite(variable['name'], eq, description)
-        
+
         # Add the untouched variables to the global list
         for name, val in untouched_globs.items():
             if not name in untouched.keys():
@@ -354,41 +354,41 @@ def analyse_synapse(synapse):
         for name, val in untouched_var.items():
             if not name in untouched.keys():
                 untouched[name] = val
-                
-        # Save the tranformed equation 
+
+        # Save the tranformed equation
         variable['transformed_eq'] = eq
-                
+
         # Find the numerical method if any
         method = find_method(variable)
 
         # Process the bounds
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
-                translator = Equation(variable['name'], variable['bounds']['min'], 
-                                      description, 
+                translator = Equation(variable['name'], variable['bounds']['min'],
+                                      description,
                                       type = 'return',
                                       untouched = untouched.keys())
                 variable['bounds']['min'] = translator.parse().replace(';', '')
-                
+
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
-                translator = Equation(variable['name'], variable['bounds']['max'], 
-                                      description, 
+                translator = Equation(variable['name'], variable['bounds']['max'],
+                                      description,
                                       type = 'return',
                                       untouched = untouched.keys())
                 variable['bounds']['max'] = translator.parse().replace(';', '')
-            
+
         # Analyse the equation
         if condition == []: # Call Equation
-            translator = Equation(variable['name'], eq, 
-                                  description, 
-                                  method = method, 
+            translator = Equation(variable['name'], eq,
+                                  description,
+                                  method = method,
                                   untouched = untouched.keys())
             code = translator.parse()
             dependencies = translator.dependencies()
-                
+
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, description, 
+            code = translate_ITE(variable['name'], eq, condition, description,
                     untouched)
             dependencies = []
 
@@ -405,15 +405,15 @@ def analyse_synapse(synapse):
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+ f['name'] + '(', ' ' + cpp_eq).strip()     
-        
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+ f['name'] + '(', ' ' + cpp_eq).strip()
+
         # Store the result
         variable['cpp'] = cpp_eq # the C++ equation
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
         variable['dependencies'] = dependencies # may be needed later
-        
+
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
         if method in ['implicit', 'midpoint']:
             concurrent_odes.append(variable)
@@ -426,9 +426,9 @@ def analyse_synapse(synapse):
             for new_eq in new_eqs:
                 if variable['name'] == new_eq['name']:
                     description['variables'][idx] = new_eq
-                    
+
     # Translate the psp code if any
-    if 'raw_psp' in description.keys():                
+    if 'raw_psp' in description.keys():
         psp = {'eq' : description['raw_psp'].strip() }
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description)
@@ -445,26 +445,26 @@ def analyse_synapse(synapse):
         eq, condition = extract_ite('psp', eq, description, split=False)
         # Analyse the equation
         if condition == []:
-            translator = Equation('psp', eq, 
-                                  description, 
-                                  method = 'explicit', 
+            translator = Equation('psp', eq,
+                                  description,
+                                  method = 'explicit',
                                   untouched = untouched.keys(),
                                   type='return')
             code = translator.parse()
         else:
-            code = translate_ITE('psp', eq, condition, description, untouched, 
+            code = translate_ITE('psp', eq, condition, description, untouched,
                                   split=False)
 
         # Replace untouched variables with their original name
         for prev, new in untouched.items():
-            code = code.replace(prev, new) 
+            code = code.replace(prev, new)
 
         # Store the result
         psp['cpp'] = code
-        description['psp'] = psp   
+        description['psp'] = psp
 
     # Process event-driven info
-    if description['type'] == 'spike':  
+    if description['type'] == 'spike':
         for variable in description['pre_spike'] + description['post_spike']:
             # Find plasticity
             if variable['name'] == 'w':
@@ -472,12 +472,12 @@ def analyse_synapse(synapse):
             # Retrieve the equation
             eq = variable['eq']
             # Extract if-then-else statements
-            eq, condition = extract_ite(variable['name'], eq, description)        
+            eq, condition = extract_ite(variable['name'], eq, description)
             # Analyse the equation
             if condition == []:
-                translator = Equation(variable['name'], eq, 
-                                      description, 
-                                      method = 'explicit', 
+                translator = Equation(variable['name'], eq,
+                                      description,
+                                      method = 'explicit',
                                       untouched = {})
                 code = translator.parse()
             else:
@@ -489,19 +489,19 @@ def analyse_synapse(synapse):
             if 'min' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['min'], str):
                     translator = Equation(
-                                    variable['name'], 
-                                    variable['bounds']['min'], 
-                                    description, 
+                                    variable['name'],
+                                    variable['bounds']['min'],
+                                    description,
                                     type = 'return',
                                     untouched = untouched )
                     variable['bounds']['min'] = translator.parse().replace(';', '')
-                    
+
             if 'max' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['max'], str):
                     translator = Equation(
-                                    variable['name'], 
-                                    variable['bounds']['max'], 
-                                    description, 
+                                    variable['name'],
+                                    variable['bounds']['max'],
+                                    description,
                                     type = 'return',
                                     untouched = untouched)
                     variable['bounds']['max'] = translator.parse().replace(';', '')
@@ -512,4 +512,4 @@ def analyse_synapse(synapse):
     if synapse.creating:
         description['creating'] = extract_structural_plasticity(synapse.creating, description)
 
-    return description     
+    return description
