@@ -1054,10 +1054,10 @@ if(_transmission && pop%(id_post)s._active){
 
     def update_synapse_cuda(self, proj):
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj')
+        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj')
+        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3, wrap_w="plasticity")
 
         if global_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
@@ -1155,7 +1155,7 @@ if(_transmission && pop%(id_post)s._active){
             'post': proj.post.id,
          }
 
-        header = """__global__ void cuProj%(id)s_step( int* post_rank, int *pre_rank, int *nb_synapses, int *offsets, double dt%(var)s%(par)s);
+        header = """__global__ void cuProj%(id)s_step( int* post_rank, int *pre_rank, int *nb_synapses, int *offsets, double dt%(var)s%(par)s, bool plasticity);
 """ % { 'id': proj.id,
         'var': var,
         'par': par

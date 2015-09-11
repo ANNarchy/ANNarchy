@@ -1137,7 +1137,9 @@ cuda_synapse_kernel=\
 __global__ void cuProj%(id)s_step( /* default params */
                               int *post_rank, int *pre_rank, int* nb_synapses, int* offsets, double dt
                               /* additional params */
-                              %(var)s%(par)s )
+                              %(var)s%(par)s,
+                              /* plasticity enabled */
+                              bool plasticity )
 {
     int i = blockIdx.x;
     int j = offsets[i] + threadIdx.x;
@@ -1174,6 +1176,7 @@ cuda_synapse_kernel_call =\
             dt
             %(local)s
             %(global)s
+            , proj%(id_proj)s._plasticity
         );
 
     #ifdef _DEBUG
