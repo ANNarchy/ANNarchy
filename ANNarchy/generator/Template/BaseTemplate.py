@@ -461,8 +461,8 @@ void setDt(double dt_);
 /*
  * Seed for the RNG
  *
-*/
-void setSeed(long int seed){printf("Setting seed not implemented on CUDA")};
+ */
+inline void setSeed(long int seed){ printf("Setting seed not implemented on CUDA"); }
 
 #endif
 """
