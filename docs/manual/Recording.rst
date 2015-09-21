@@ -64,7 +64,7 @@ The recorded values are obtained through the ``get()`` method. If no argument is
 
     m = Monitor(pop, ['r', 'v'])
     simulate(100.)
-    data = get()
+    data = m.get()
     simulate(100.)
     r = m.get('r')
     v = m.get('v')
