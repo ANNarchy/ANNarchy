@@ -366,7 +366,8 @@ attribute_delayed = {
         """
     },
     'cuda':{
-        'local':"""    gpu_delayed_%(var)s = std::deque< double* >(%(delay)s, NULL);
+        'local': """
+    gpu_delayed_%(var)s = std::deque< double* >(%(delay)s, NULL);
     for ( int i = 0; i < %(delay)s; i++ )
         cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(double) * size);
 """,
