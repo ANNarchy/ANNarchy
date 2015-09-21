@@ -1,6 +1,6 @@
 """
 
-    test_ProjectionCUDA.py
+    test_Projection.py
 
     This file is part of ANNarchy.
 

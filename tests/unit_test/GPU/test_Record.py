@@ -1,6 +1,6 @@
 """
 
-    test_RecordCUDA.py
+    test_Record.py
 
     This file is part of ANNarchy.
 

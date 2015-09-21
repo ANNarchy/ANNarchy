@@ -1,6 +1,6 @@
 """
 
-    test_Population2CUDA.py
+    test_Population2.py
 
     This file is part of ANNarchy.
 

@@ -1,6 +1,6 @@
 """
 
-    test_SpikingNeuronCUDA.py
+    test_SpikingNeuron.py
 
     This file is part of ANNarchy.
 

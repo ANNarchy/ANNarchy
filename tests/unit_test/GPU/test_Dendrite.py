@@ -1,6 +1,6 @@
 """
 
-    test_DendriteCUDA.py
+    test_Dendrite.py
 
     This file is part of ANNarchy.
 
