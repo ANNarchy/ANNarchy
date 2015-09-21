@@ -1,6 +1,6 @@
 """
 
-    test_StructuralPlasticityCUDA.py
+    test_StructuralPlasticity.py
 
     This file is part of ANNarchy.
 
