@@ -1168,7 +1168,7 @@ cuda_synapse_kernel_call =\
 """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity ) {
-        cuProj%(id_proj)s_step<<< pop1.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
+        cuProj%(id_proj)s_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.gpu_post_rank,
             proj%(id_proj)s.gpu_pre_rank,
             proj%(id_proj)s.gpu_nb_synapses,
