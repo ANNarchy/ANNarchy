@@ -71,11 +71,11 @@ double norm2_value(const double* array, int n)
 }
 
 global_operation_templates_extern = {
-    'max': "extern double max_value(const double*, int);",
-    'min': "extern double min_value(const double*, int);",
-    'mean': "extern double mean_value(const double*, int);",
-    'norm1': "extern double norm1_value(const double*, int);",
-    'norm2': "extern double norm2_value(const double*, int);"
+    'max': "extern double max_value(const double*, int);\n",
+    'min': "extern double min_value(const double*, int);\n",
+    'mean': "extern double mean_value(const double*, int);\n",
+    'norm1': "extern double norm1_value(const double*, int);\n",
+    'norm2': "extern double norm2_value(const double*, int);\n"
 }
 
 #

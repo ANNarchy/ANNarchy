@@ -64,8 +64,11 @@ compile(clean=True)
 
 class test_Projection(unittest.TestCase):
 
-
-
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        reset()
 
     def test_get_tau(self):
         """

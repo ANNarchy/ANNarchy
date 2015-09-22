@@ -66,13 +66,19 @@ compile(clean=True)
 
 
 class test_StructuralPlasticity(unittest.TestCase):
-       
+
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        reset()
 
     def test_delete_create(self):
         """
         checks if *Synapse* is there, deletes it and creates it with a different weight
         """
-        
+        #TODO: distinct tests for create and pruning of synapses
+
         self.assertEqual(proj.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7])
         self.assertTrue(numpy.allclose(proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
 

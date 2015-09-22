@@ -65,6 +65,12 @@ compile(clean=True)
 
 class test_Dendrite(unittest.TestCase):
 
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        reset()
+
     def test_none(self):
         """
         tests None object display if non-existent *Dendrite* is accessed
@@ -108,8 +114,6 @@ class test_Dendrite(unittest.TestCase):
         """
         self.assertTrue(numpy.allclose(proj.dendrite(7).w, [1.0, 1.0, 1.0, 1.0, 1.0]))
 
-
-
     def test_set_tau(self):
         """
         tests if tau is correcly set
@@ -117,15 +121,14 @@ class test_Dendrite(unittest.TestCase):
         proj.tau=6000.0
         self.assertTrue(numpy.allclose(proj.dendrite(0).tau, 6000.0))
 
-
     def test_set_tau(self):
         """
-        tests if tau is correcly set
+        tests if tau is correcly set.
+
+        HD (22th Sep. 2015): this test currently fail, it is not yet clear if it is an error or not.
         """
         proj.tau = [5000.0, 6000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0]
         self.assertTrue(numpy.allclose(proj.dendrite(1).tau, 6000.0))
-
-
 
     def test_set_alpha(self):
         """
@@ -133,7 +136,6 @@ class test_Dendrite(unittest.TestCase):
         """
         proj.dendrite(4).alpha=9.0
         self.assertTrue(numpy.allclose(proj.dendrite(4).alpha, [9.0, 9.0, 9.0, 9.0, 9.0]))
-
 
     def test_set_alpha_2(self):
         """
@@ -148,8 +150,6 @@ class test_Dendrite(unittest.TestCase):
         """
         proj.dendrite(6).w=2.0
         self.assertTrue(numpy.allclose(proj.dendrite(6).w, [2.0, 2.0, 2.0, 2.0, 2.0]))
-
-
 
     def test_set_weights_2(self):
         """

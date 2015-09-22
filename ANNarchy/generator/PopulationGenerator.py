@@ -818,10 +818,11 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         if Global.config['paradigm'] == "openmp":
             for op in pop.global_operations:
-                code += """            _%(op)s_%(var)s = %(op)s_value(%(var)s.data(), size);
+                code += """
+            _%(op)s_%(var)s = %(op)s_value(%(var)s.data(), size);
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
         else:
-            from .GlobalOperationTemplate import global_operation_templates_cuda as template
+            from Template.GlobalOperationTemplate import global_operation_templates_cuda as template
             for op in pop.global_operations:
                 code += template[op['function']]['call'] % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
 

@@ -53,41 +53,37 @@ tc3_pop2 = Population((3,3,3), neuron2)
 compile(clean=True)
 
 #
-# TODO: I would prefer seperate test classes for 1 up to 3 dimensions
-#       getter/setter for higher dimensionial populations should use identity
-#       matrices to test correct transformation of stored data. Maybe one could
-#       use alternatively non-symetric population shapes.
+# TODO: Maybe one could use alternatively non-symetric population shapes.
 #
-#       Secondly, please setup a test for reset of populations.
-#
-
-#
-# Comments: when refering to keywords, e. g. population use * * to mark them (will appear italic in the documentation
-#           when refering to ANNarchy objects, use correct spelling, e. g. PopulationView
-#
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 class test_Population1D(unittest.TestCase):
     """
-    Test *Population* data storage, access methods for one-dimensional populations.
+    Test several functions of the *Population* object in this particular test, we focus on one-dimensional case:
+    
+        * access methods for variables and parameters
+        * coordinate transformations
+
     """
     def setUp(self):
-        reset()
+        """
+        Automatically called before each test method, basically to reset the network after every test.
+        """
+        reset() # network reset
 
     #
     # Coordinate transformations
     #
     def test_coordinates_from_rank(self):
         """
-        tests coordinates_from_rank method
+        ANNarchy allows two types of indexing, coordinates and ranks. In this test we prove
+        coordinate to rank transformation.
         """
         self.assertSequenceEqual(tc1_pop1.coordinates_from_rank(1), (1, ))
         
     def test_rank_from_coordinates(self):
         """
-        tests rank_from_coordinates method
+        ANNarchy allows two types of indexing, coordinates and ranks. In this test we prove
+        rank to coordinate transformation.
         """
         self.assertEqual(tc1_pop1.rank_from_coordinates((1, )), 1)
 
@@ -96,13 +92,15 @@ class test_Population1D(unittest.TestCase):
     #
     def test_get_tau(self):
         """
-        test access to parameter
+        Test retrieval of parameter *tau* from population *tc1_pop1* by directly access.
+        As population has the size 3 there should be 3 entries with value 10.
         """
         self.assertTrue(numpy.allclose(tc1_pop1.tau, [10.0, 10.0, 10.0]))
 
     def test_get_tau2(self):
         """
-        test access to parameter
+        Test retrieval of parameter *tau* from population *tc1_pop1* by *get()* method.
+        As population has the size 3 there should be 3 entries with value 10.
         """
         self.assertTrue(numpy.allclose(tc1_pop1.get('tau'), [10.0, 10.0, 10.0]))
 
@@ -232,6 +230,9 @@ class test_Population2D(unittest.TestCase):
     Test *Population* data storage, access methods two-dimensional populations.
     """
     def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
         reset()
 
     #
@@ -427,6 +428,9 @@ class test_Population3D(unittest.TestCase):
     Test *Population* data storage, access methods three-dimensional populations.
     """
     def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
         reset()
 
     #

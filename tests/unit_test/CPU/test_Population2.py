@@ -41,27 +41,46 @@ neuron = Neuron(
 pop1 = Population (6, neuron)
 
 compile(clean=True)
-pop1.r = [2.0, 1.0, 0.0, -5.0, -3.0, -1.0]
-simulate(2)
 
+# TODO: 2nd class with asymetric 2D population
 
 class test_Population2(unittest.TestCase):
+    # TODO: missing class comment
 
+    def setUp(self):
+        """
+        basic setUp() method to initialize variables before test
+        """
+        # reset() set all variables to init value (default 0), which is 
+        # unfortunatly meaningless for mean/max/min. So we set here some
+        # better values
+        pop1.r = [2.0, 1.0, 0.0, -5.0, -3.0, -1.0]
+
+        # 1st step: calculate mean/max/min and store in intermediate
+        #           variables
+        # 2nd step: write intermediate variables to accessible variables.
+        simulate(2)
+
+    def tearDown(self):
+        """
+        reset the network after every test.
+        """
+        reset()
 
     def test_get_mean_r(self):
         """
         tests access to mean_r
         """
-        self.assertTrue(numpy.allclose(pop1.mean_r, -1.0))
+        self.assertTrue( numpy.allclose( pop1.mean_r, -1.0 ) )
 
     def test_get_max_r(self):
         """
         tests access to max_r
         """
-        self.assertTrue(numpy.allclose(pop1.max_r, 2.0))
+        self.assertTrue( numpy.allclose(pop1.max_r, 2.0) )
 
     def test_get_min_r(self):
         """
         tests access to min_r
         """
-        self.assertTrue(numpy.allclose(pop1.min_r, -5.0))
+        self.assertTrue( numpy.allclose(pop1.min_r, -5.0) )

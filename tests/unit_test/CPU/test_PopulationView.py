@@ -43,7 +43,13 @@ compile(clean=True)
 
 
 class test_PopulationView(unittest.TestCase):
+    # TODO: missing class comment
 
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        reset()
 
     def test_get_r(self):
         """
