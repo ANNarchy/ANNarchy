@@ -55,4 +55,7 @@ call(['python', '-m', 'unittest', 'test_Record'], cwd = 'CPU')
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_Connectivity<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
 call(['python', '-m', 'unittest', 'test_Connectivity'], cwd = 'CPU')
 
+print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_RateTransmission<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
+call(['python', '-m', 'unittest', 'test_RateTransmission'], cwd = 'CPU')
+
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nFINISHED TESTING! HAVE SOME CAKE!\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'

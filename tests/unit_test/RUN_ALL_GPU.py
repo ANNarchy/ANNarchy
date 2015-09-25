@@ -55,4 +55,7 @@ call(['python', '-m', 'unittest', 'test_Record'], cwd = 'GPU')
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_ConnectivityCUDA<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
 call(['python', '-m', 'unittest', 'test_Connectivity'], cwd = 'GPU')
 
+print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_RateTransmissionCUDA<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
+call(['python', '-m', 'unittest', 'test_RateTransmission'], cwd = 'GPU')
+
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nFINISHED TESTING! HAVE SOME CAKE!\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'

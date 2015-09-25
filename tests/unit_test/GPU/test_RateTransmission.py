@@ -1,6 +1,6 @@
 """
 
-    test_Connectivity.py
+    test_RateTransmission.py
 
     This file is part of ANNarchy.
 
@@ -25,37 +25,51 @@ import unittest
 import numpy
 
 from ANNarchy import *
+setup(paradigm="cuda")
 
 neuron = Neuron(
-    equations="r = 1"
+    equations="r = 1+t: init = -1"
 )
 
 neuron2 = Neuron(
-    equations="r = sum(exc)"
+    equations="""
+	sum1 = sum(one2one)
+        sum2 = sum(all2all)
+        sum3 = sum(del_one2one)
+        r =  sum1 + sum2 + sum3
+    """
 )
 
 pop1 = Population((3, 3), neuron)
 pop2 = Population((3, 3), neuron2)
 
-proj1 = Projection(
+proj = Projection(
      pre = pop1,
      post = pop2,
-     target = "exc",
+     target = "one2one"
 )
 
 proj2 = Projection(
      pre = pop1,
      post = pop2,
-     target = "exc",
+     target = "all2all"
 )
 
-proj1.connect_one_to_one(weights = 1.0)
+
+proj3 = Projection(
+     pre = pop1,
+     post = pop2,
+     target = "del_one2one"
+)
+
+proj.connect_one_to_one(weights = 1.0)
 proj2.connect_all_to_all(weights = 1.0)
+proj3.connect_one_to_one(weights = 1.0, delays = 10.0)
 
 compile(clean=True)
 
 
-class test_Connectivity(unittest.TestCase):
+class test_RateTransmission(unittest.TestCase):
 
     def setUp(self):
         """
@@ -67,12 +81,33 @@ class test_Connectivity(unittest.TestCase):
         """
         tests functionality of the one_to_one connectivity pattern
         """
-        self.assertEqual(proj1.dendrite(3).rank, [3])
-        self.assertTrue(numpy.allclose(proj1.dendrite(3).w, [1.0]))
+        # sum up r = 1
+	simulate(2)
+        self.assertTrue(numpy.allclose(pop2.sum1, 1.0))
 
     def test_all_to_all(self):
         """
         tests functionality of the all_to_all connectivity pattern
         """
-        self.assertEqual(proj2.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertTrue(numpy.allclose(proj2.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
+	# sum up r = 1, 9 neurons
+	simulate(2)
+        self.assertTrue(numpy.allclose(pop2.sum2, 9.0))
+
+    def test_delay(self):
+        """
+        tests the delay functionality. 
+        """
+	# The first ten steps, we have 
+        # initialization value
+        simulate(10)
+        self.assertTrue(numpy.allclose(pop2.sum3, -1.0))
+
+        # at 11th step we have the first queue 
+        # value in our case t = 0
+	simulate(1)
+        self.assertTrue(numpy.allclose(pop2.sum3, 1.0))
+
+        # at 20th -> t = 9
+        simulate(9)
+        self.assertTrue(numpy.allclose(pop2.sum3, 10.0))
+
