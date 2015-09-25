@@ -1068,7 +1068,7 @@ cuda_flattening = """
 # doesn't reorder stores to it and induce incorrect behavior.
 cuda_psp_kernel=\
 """
-__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* rank_pre, int *nb_synapses, int* offsets, double *pre_r, double* w, double *sum_%(target)s ) {
+__global__ void cu_proj%(id)s_psp( int* rank_pre, int *nb_synapses, int* offsets, double *pre_r, double* w, double *sum_%(target)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int j = tid+offsets[blockIdx.x];
 
@@ -1118,7 +1118,7 @@ cuda_psp_kernel_call =\
     if ( pop%(post)s._active ) {
         int sharedMemSize = __pop%(pre)s_pop%(post)s_%(target)s__ * 64;
 
-        cuPop%(pre)s_Pop%(post)s_%(target)s_psp<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, sharedMemSize>>>(
+        cu_proj%(id)s_psp<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, sharedMemSize>>>(
                        /* ranks and offsets */
                        proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
                        /* computation data */

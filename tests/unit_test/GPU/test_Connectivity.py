@@ -31,14 +31,14 @@ proj = Projection(
      pre = pop1,
      post = pop2,
      target = "exc",
-     synapse = Oja
+#     synapse = Oja
 )
 
 proj2 = Projection(
      pre = pop1,
      post = pop2,
      target = "exc",
-     synapse = Oja
+#     synapse = Oja
 )
 
 
@@ -46,7 +46,7 @@ proj3 = Projection(
      pre = pop1,
      post = pop2,
      target = "exc",
-     synapse = Oja
+#     synapse = Oja
 )
 
 proj.connect_one_to_one(weights = 1.0)

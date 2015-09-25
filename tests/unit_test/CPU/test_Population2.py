@@ -91,7 +91,7 @@ class test_Population2(unittest.TestCase):
         """
         tests access to l1_norm_r
         """
-        self.assertTrue(numpy.allclose(pop1.l1, -6.0))
+        self.assertTrue(numpy.allclose(pop1.l1, 12.0))
 
     def test_get_l2_norm(self):
         """

@@ -638,10 +638,9 @@ class ProjectionGenerator(object):
                                    'psp': psp
                                   }
 
-        header_code = """__global__ void cuPop%(pre)s_Pop%(post)s_%(target)s_psp( int* pre_rank, int* nb_synapses, int *offsets, double *pre_r, double* w, double *sum_%(target)s );
-""" % { 'pre': proj.pre.id,
-        'post': proj.post.id,
-        'target': proj.target,
+        header_code = """__global__ void cu_proj%(id)s_psp( int* pre_rank, int* nb_synapses, int *offsets, double *pre_r, double* w, double *sum_%(target)s );
+""" % { 'id': proj.id,
+        'target': proj.target
       }
 
         call_code = ProjTemplate.cuda_psp_kernel_call % {
