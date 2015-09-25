@@ -31,45 +31,34 @@ neuron = Neuron(
     equations="r += 1/tau * t"
 )
 
-neuron2 = Neuron(
-    parameters = "tau = 10: population",
-    equations="r += 1/tau * t: init = 1.0"
-)
-
 pop1 = Population((8, 8), neuron)
-pop2 = Population((8, 8), neuron2)
 
 compile(clean=True)
 
 
 class test_PopulationView(unittest.TestCase):
-    # TODO: missing class comment
+    """
+    This class tests the functionality of the *PopulationView* object, which hold references to different neurons of the same *Population*.
+    """
 
     def setUp(self):
         """
-        basic setUp() method to reset the network after every test
+        In our *setUp()* function we call *reset()* to reset the network before every test.
         """
         reset()
 
     def test_get_r(self):
         """
-        tests access to r
+        Tests the direct access of the variable *r* of a *PopulationView* object.
         """
         
         self.assertTrue(numpy.allclose((pop1[2, 2] + pop1[3,3] + pop1[4,4]).r, [0.0, 0.0, 0.0]))
 
     def test_set_r(self):
         """
-        tests setting of r
+        Tests the setting of *r* through direct access.
         """
         (pop1[2, 2] + pop1[3,3] + pop1[4,4]).r = 1.0
         self.assertTrue(numpy.allclose((pop1[2, 2] + pop1[3,3] + pop1[4,4]).r, [1.0, 1.0, 1.0]))
-
-    def test_set_r_2(self):
-        """
-        tests setting of r for different neurons
-        """
-        pop1[2:5, 4:6].r = 2.0
-        self.assertTrue(numpy.allclose(pop1[2:5, 4:6].r, [2.0, 2.0, 2.0, 2.0, 2.0, 2.0]))
 
 

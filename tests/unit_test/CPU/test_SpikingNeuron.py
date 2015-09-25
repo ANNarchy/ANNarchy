@@ -54,16 +54,21 @@ m = Monitor(pop1, 'r')
 n = Monitor(pop2, 'r')
 
 class test_SpikingNeuron(unittest.TestCase):
+	"""
+	This class tests the functionality of neurons with a defined *spike* condition.
+	The functionality of the optional *refractory* period is also tested.
+	"""
+
 
 	def setUp(self):
 		"""
-		setUp method to reset network state and time to test different monitors
+		In our *setUp()* method we call *reset()* to reset the network.
 		"""
 		reset()
 
 	def test_r(self):
 		"""
-		tests if spike and reset occur at the set conditions
+		After every time step we check if the evolution of the variable *r* fits the defined conditions of the neuron.
 		"""
 
 		self.assertTrue(numpy.allclose(pop1.neuron(0).r, 0.0))
@@ -82,7 +87,7 @@ class test_SpikingNeuron(unittest.TestCase):
 
 	def test_r_ref(self):
 		"""
-		tests if the optional recraftory period works correctly
+		After every time step we check if the evolution of the variable *r* fits the defined conditions of the neuron, which also contain the optional *refractory* period.
 		"""
 		self.assertTrue(numpy.allclose(pop2.neuron(0).r, 0.0))
 		simulate(1)
