@@ -35,6 +35,8 @@ neuron = Neuron(
                 mean_r = mean(r)
                 max_r = max(r)
                 min_r = min(r)
+		l1 = norm1(r)
+		l2 = norm2(r)
               """
 )
 
@@ -84,3 +86,19 @@ class test_Population2(unittest.TestCase):
         tests access to min_r
         """
         self.assertTrue( numpy.allclose(pop1.min_r, -5.0) )
+
+    def test_get_l1_norm(self):
+        """
+        tests access to l1_norm_r
+        """
+        self.assertTrue(numpy.allclose(pop1.l1, -6.0))
+
+    def test_get_l2_norm(self):
+        """
+        tests access to l2_norm_r
+        """
+        # compute control value
+        l2norm = np.linalg.norm(pop1.r, ord=2)
+
+        # test
+        self.assertTrue(numpy.allclose(pop1.l2, l2norm))

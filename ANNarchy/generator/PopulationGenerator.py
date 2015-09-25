@@ -813,9 +813,8 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         """
         if len(pop.global_operations) == 0:
             return ""
-        code =   """        if (_active){
-        """
 
+        code = ""
         if Global.config['paradigm'] == "openmp":
             for op in pop.global_operations:
                 code += """
@@ -826,8 +825,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             for op in pop.global_operations:
                 code += template[op['function']]['call'] % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
 
-        code += """
-        }"""
         return code
 
     def stop_condition(self, pop):

@@ -128,7 +128,6 @@ __global__ void cuMaxValue(double* result, double *gpu_array, int N)
 """,
         'call' : """
     if ( pop%(id)s._active ) {
-        double *tmp_pop%(id)s_%(op)s_%(var)s;
         cuMaxValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
         cudaMemcpy(&pop%(id)s._max_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
@@ -231,45 +230,117 @@ __global__ void cuMeanValue(double* result, double *gpu_array, int N)
     }
 }
 """,
-        'call' : """
+    'call' : """
     if ( pop%(id)s._active ) {
         cuMeanValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._mean_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+    }
+"""
+    },
+
+    # Computes the L1-norm of an array
+    'norm1' : {
+        'header' : """__global__ void cuNorm1(double* result, double *gpu_array, int N);""",
+        'body' : """// Computes the L1-norm value of an array
+__global__ void cuNorm1(double* result, double *gpu_array, int N)
+{
+    unsigned int tid = threadIdx.x;
+    unsigned int i = tid;
+
+    extern double __shared__ sdata[];
+    double localSum = 0.0;
+
+    while(i < N)
+    {
+        localSum += gpu_array[i];
+        i+= blockDim.x;
+    }
+
+    sdata[tid] = localSum;
+    __syncthreads();
+
+    // do reduction in shared mem
+    if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+    if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+    if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+
+    if (tid < 32)
+    {
+        volatile double* smem = sdata;
+
+        if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
+        if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
+        if (blockDim.x >=  16) { smem[tid] = localSum = localSum + smem[tid +  8]; }
+        if (blockDim.x >=   8) { smem[tid] = localSum = localSum + smem[tid +  4]; }
+        if (blockDim.x >=   4) { smem[tid] = localSum = localSum + smem[tid +  2]; }
+        if (blockDim.x >=   2) { smem[tid] = localSum = localSum + smem[tid +  1]; }
+    }
+
+    // write back result
+    if (tid == 0)
+    {
+        *result = sdata[0];
+    }
+}
+""",
+    'call' : """
+    if ( pop%(id)s._active ) {
+        cuNorm1 <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+    }
+"""
+    },
+
+    # Computes the L2-norm (Euclidian) of an array
+    'norm2' : {
+        'header' : """__global__ void cuNorm2(double* result, double *gpu_array, int N);""",
+        'body' : """// Computes the L2-norm value of an array
+__global__ void cuNorm2(double* result, double *gpu_array, int N)
+{
+    unsigned int tid = threadIdx.x;
+    unsigned int i = tid;
+
+    extern double __shared__ sdata[];
+    double localSum = 0.0;
+
+    while(i < N)
+    {
+        localSum += pow(gpu_array[i], 2);
+        i+= blockDim.x;
+    }
+
+    sdata[tid] = localSum;
+    __syncthreads();
+
+    // do reduction in shared mem
+    if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+    if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+    if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+
+    if (tid < 32)
+    {
+        volatile double* smem = sdata;
+
+        if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
+        if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
+        if (blockDim.x >=  16) { smem[tid] = localSum = localSum + smem[tid +  8]; }
+        if (blockDim.x >=   8) { smem[tid] = localSum = localSum + smem[tid +  4]; }
+        if (blockDim.x >=   4) { smem[tid] = localSum = localSum + smem[tid +  2]; }
+        if (blockDim.x >=   2) { smem[tid] = localSum = localSum + smem[tid +  1]; }
+    }
+
+    // write back result
+    if (tid == 0)
+    {
+        *result = sqrt(sdata[0]);
+    }
+}
+""",
+    'call' : """
+    if ( pop%(id)s._active ) {
+        cuNorm2 <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
     }
 """
     }
-
-    #
-    # NOT IMPLEMENTED YET:
-    #
-    #===========================================================================
-    # norm1_template = """
-    # // Computes the L1-norm of an array
-    # double norm1_value(std::vector<double> &array)
-    # {
-    #     double sum = 0.0;
-    #     #pragma omp parallel reduction(+:sum)
-    #     for(int i=0; i<array.size(); i++)
-    #     {
-    #         sum += fabs(array[i]);
-    #     }
-    #
-    #     return sum;
-    # }
-    # """
-    # norm2_template = """
-    # // Computes the L2-norm (Euclidian) of an array
-    # double norm2_value(std::vector<double> &array)
-    # {
-    #     double sum = 0.0;
-    #     #pragma omp parallel reduction(+:sum)
-    #     for(int i=0; i<array.size(); i++)
-    #     {
-    #         sum += pow(array[i], 2.0);
-    #     }
-    #
-    #     return sqrt(sum);
-    # }
-    # """
-    #===========================================================================
 }
