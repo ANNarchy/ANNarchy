@@ -86,16 +86,22 @@ t = Monitor(pop4, ['r', 'spike'])
 
 
 class test_Record(unittest.TestCase):
-    
+    """
+    This class tests the selective recording of the evolution of neural or synaptic variables during a simulation.
+    To do so, the *Monitor* object is used.
+    *Population*, *PopulationView* and *Dendrite* objects can be recorded.
+
+    A number of *Monitors* is defined to test specific recording preferences.
+    """
     def setUp(self):
         """
-        setUp method to reset network state and time to test different recordings with the same time period
+        In our *setUp()* function we call *reset()* to reset the network.
         """
         reset()
 
     def tearDown(self):
         """
-        clears recordings so that next test can be run properly
+        Since all tests are independent, after every test we use the *get()* method for every monotor to clear all recordings.
         """
         m.get()
         n.get()
@@ -108,7 +114,7 @@ class test_Record(unittest.TestCase):
 
     def test_r_sim_10(self):
         """
-        tests if r is recorded correctly with simulate(10)
+        Tests the recording of the variable *r* of a *Population* of 3 neurons for 10 time steps.
         """
         simulate(10)
         datam = m.get()
@@ -116,7 +122,7 @@ class test_Record(unittest.TestCase):
 
     def test_r_first_neurons(self):
         """
-        tests if r of the first 2 neurons is recorded correctly
+        Tests the recording of the variable *r* of the first 2 neurons of a *Population* for 10 time steps.
         """
         simulate(10)
         datan = n.get()
@@ -126,7 +132,7 @@ class test_Record(unittest.TestCase):
 
     def test_r_sim_100_p_10(self):
         """
-        tests if r is recorded correctly with simulate(100) and period = 10.0
+        Tests the recording of the variable *r* of a *Population* of 3 neurons for 100 time steps and a set *period* of 10.0.
         """
         simulate(100)
         datao = o.get()
@@ -134,7 +140,8 @@ class test_Record(unittest.TestCase):
 
     def test_startrec(self):
         """
-        tests the manual start function of a monitor
+        Tests the *start()* method of a *Monitor*, which *start* parameter has been set to "false". 
+        That *Monitor* won't record until *start()* is called.
         """
         simulate(10)
         p.start()
@@ -144,7 +151,7 @@ class test_Record(unittest.TestCase):
 
     def test_a_pauserec(self):
         """
-        tests the manual pause function of a monitor
+        Tests the *pause()* and *resume()* methods of a *Monitor*, which are designed so one can stop recording and resume whenever it is necessary.
         """
 
         m.pause()
@@ -153,12 +160,12 @@ class test_Record(unittest.TestCase):
         simulate(10)
 
         datam = m.get()
-        #print m.times()
+
         self.assertTrue(numpy.allclose(datam['r'], [[10.0, 10.0, 10.0], [11.0, 11.0, 11.0], [12.0, 12.0, 12.0], [13.0, 13.0, 13.0], [14.0, 14.0, 14.0], [15.0, 15.0, 15.0], [16.0, 16.0, 16.0], [17.0, 17.0, 17.0], [18.0, 18.0, 18.0], [19.0, 19.0, 19.0]])) 
 
     def test_r_after_5(self):
         """
-        tests access to recordings at specific moments
+        Tests the access to a recording of the variable *r* made at a specific time step.
         """
         simulate(10)
         datam = m.get()
@@ -167,7 +174,7 @@ class test_Record(unittest.TestCase):
 
     def test_r_from_rank(self):
         """
-        tests access to recordings of specific neurons (specified by rank)
+        Tests the access to the recording of the variable *r* belonging to a neuron, which is specified by rank.
         """
         simulate(10)
         datam = m.get()
@@ -176,7 +183,7 @@ class test_Record(unittest.TestCase):
 
     def test_popview(self):
         """
-        tests if r of the chosen population view is correctly recorded
+        One can also record variables of a *PopulationView* object. This is tested here.
         """
         simulate(10)
         dataq = q.get()
@@ -184,7 +191,7 @@ class test_Record(unittest.TestCase):
 
     def test_dendrite(self):
         """
-        tests if dendrites can be recorded
+        Tests the recording of the parameter *w* (weights) of a *Dendrite*.
         """
         simulate(10)
         datar = r.get()
@@ -194,7 +201,7 @@ class test_Record(unittest.TestCase):
 
     def test_spike(self):
         """
-        tests if spikes are correctly recorded
+        Tests if the time steps of *spikes* of a *Population* of spiking neurons are correctly recorded.
         """
         simulate(10)
         datas = s.get('spike')
@@ -203,7 +210,7 @@ class test_Record(unittest.TestCase):
 
     def test_r_ref(self):
         """
-        tests if r is correctly recorded (neuron with refractory)
+        Tests if the variable *r* of a *Population* consisting of neurons with a defined *refractory* period is correctly recorded.
         """
         
         simulate(10)
@@ -212,7 +219,7 @@ class test_Record(unittest.TestCase):
 
     def test_spike_ref(self):
         """
-        tests if spikes are correctly recorded (neuron with refractory)
+        Tests if the time steps of *spikes* of a *Population* of spiking neurons with a defined *refractory* period are correctly recorded.
         """
         simulate(10)
         datat = t.get('spike')

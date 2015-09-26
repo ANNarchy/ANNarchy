@@ -59,7 +59,6 @@ class test_SpikingNeuron(unittest.TestCase):
 	The functionality of the optional *refractory* period is also tested.
 	"""
 
-
 	def setUp(self):
 		"""
 		In our *setUp()* method we call *reset()* to reset the network.

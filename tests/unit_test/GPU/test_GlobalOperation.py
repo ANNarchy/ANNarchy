@@ -1,6 +1,6 @@
 """
 
-    test_Population2.py
+    test_GlobalOperation.py
 
     This file is part of ANNarchy.
 
@@ -25,7 +25,7 @@ import unittest
 import numpy
 
 from ANNarchy import *
-
+setup(paradigm="cuda")
 
 neuron = Neuron(
     parameters = """

@@ -27,7 +27,6 @@ import numpy
 from ANNarchy import *
 setup(paradigm="cuda")
 
-
 neuron = Neuron(
     parameters = "tau = 10",
     equations="r += 1/tau * t"
@@ -66,96 +65,102 @@ compile(clean=True)
 
 
 class test_Dendrite(unittest.TestCase):
+    """
+    This class tests the *Dendrite* object, which gathers all synapses belonging to a post-synaptic neuron in a *Projection*:
+
+        *access to parameters
+        *the *rank* method
+        *the *size* method
+    """
+    def setUp(self):
+        """
+        In our *setUp()* function we call *reset()* to reset the network.
+        """
+        reset()
 
     def test_none(self):
         """
-        tests None object display if non-existent *Dendrite* is accessed
+        If a non-existent *Dendrite* is accessed, a *None* object should be displayed. This is tested here.
         """
         self.assertEqual(proj.dendrite(14), None)
 
     def test_rank(self):
         """
-        tests correct display of the list of pre-synaptic neuron ranks
+        Tests the *rank* method, which returns the ranks of the pre-synaptic neurons belonging to the accessed *Dendrite*.
         """
         self.assertEqual(proj.dendrite(5).rank, [0, 1, 2, 3, 4])
 
     def test_dendrite_size(self):
         """
-        tests if *Dendrite* size is displayed correctly
+        Tests the *size* method, which returns the number of pre-synaptic neurons belonging to the accessed *Dendrite*.
         """
         self.assertEqual(proj.dendrite(3).size, 5)
 
     def test_get_dendrite_tau(self):
         """
-        tests if list of tau of pre-synaptic neurons is correctly displayed
+        Tests the direct access of the parameter *tau* of a *Dendrite*.
         """
         self.assertTrue(numpy.allclose(proj.dendrite(1).tau, 5000.0))
 
     def test_get_dendrite_tau_2(self):
         """
-        tests if list of tau of pre-synaptic neurons is correctly displayed (with a different method)
+        Tests the access of the parameter *tau* with the *get()* method.
         """
         self.assertTrue(numpy.allclose(proj.dendrite(1).get('tau'), 5000.0))
 
 
     def test_get_dendrite_alpha(self):
         """
-        tests if list of alpha of pre-synaptic neurons is correctly displayed
+        Tests the direct access of the parameter *alpha* of a *Dendrite*.
         """
         self.assertTrue(numpy.allclose(proj.dendrite(0).alpha, [8.0, 8.0, 8.0, 8.0, 8.0]))
 
     def test_get_dendrite_weights(self):
         """
-        tests if list of weights is correctly displayed
+        Tests the direct access of the parameter *w* (weights) of a *Dendrite*.
         """
         self.assertTrue(numpy.allclose(proj.dendrite(7).w, [1.0, 1.0, 1.0, 1.0, 1.0]))
 
-
-
     def test_set_tau(self):
         """
-        tests if tau is correcly set
+        Tests the setting of the parameter *tau* for the whole *Projection* through a single value.
         """
         proj.tau=6000.0
         self.assertTrue(numpy.allclose(proj.dendrite(0).tau, 6000.0))
 
-
     def test_set_tau(self):
         """
-        tests if tau is correcly set
+        Tests the setting of the parameter *tau* for the whole *Projection* through a list of values, which is the same size as the number of post-synaptic neurons recieving synapses.
+
+        HD (22th Sep. 2015): this test currently fail, it is not yet clear if it is an error or not.
         """
         proj.tau = [5000.0, 6000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0]
         self.assertTrue(numpy.allclose(proj.dendrite(1).tau, 6000.0))
 
-
-
     def test_set_alpha(self):
         """
-        tests if alpha is correcly set
+        Tests the setting of the parameter *alpha* of a *Dendrite*.
         """
         proj.dendrite(4).alpha=9.0
         self.assertTrue(numpy.allclose(proj.dendrite(4).alpha, [9.0, 9.0, 9.0, 9.0, 9.0]))
 
-
     def test_set_alpha_2(self):
         """
-        tests if alpha is correcly set
+        Tests the setting of the parameter *alpha* of a specific synapse in a *Dendrite*.
         """
         proj.dendrite(4)[1].alpha=10.0
         self.assertTrue(numpy.allclose(proj.dendrite(4).alpha, [9.0, 10.0, 9.0, 9.0, 9.0]))
 
     def test_set_weights(self):
         """
-        tests if weights are correcly set
+        Tests the setting of the parameter *w* (weights) of a *Dendrite*.
         """
         proj.dendrite(6).w=2.0
         self.assertTrue(numpy.allclose(proj.dendrite(6).w, [2.0, 2.0, 2.0, 2.0, 2.0]))
 
-
-
     def test_set_weights_2(self):
         """
-        tests if weights are correcly set
+        Tests the setting of the parameter *w* (weights) of a specific synapse in a *Dendrite*.
         """
         proj.dendrite(6)[2].w=3.0
         self.assertTrue(numpy.allclose(proj.dendrite(6).w, [2.0, 2.0, 3.0, 2.0, 2.0]))

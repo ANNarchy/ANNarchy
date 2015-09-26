@@ -34,8 +34,8 @@ call(['python', '-m', 'unittest', 'test_SpikingNeuron'], cwd = 'CPU')
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_Population<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
 call(['python', '-m', 'unittest', 'test_Population'], cwd = 'CPU')
 
-print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_Population2<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
-call(['python', '-m', 'unittest', 'test_Population2'], cwd = 'CPU')
+print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_GlobalOperation<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
+call(['python', '-m', 'unittest', 'test_GlobalOperation'], cwd = 'CPU')
 
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_PopulationView<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
 call(['python', '-m', 'unittest', 'test_PopulationView'], cwd = 'CPU')

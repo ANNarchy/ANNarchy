@@ -34,8 +34,8 @@ call(['python', '-m', 'unittest', 'test_SpikingNeuron'], cwd = 'GPU')
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_PopulationCUDA<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
 call(['python', '-m', 'unittest', 'test_Population'], cwd = 'GPU')
 
-print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_Population2CUDA<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
-call(['python', '-m', 'unittest', 'test_Population2'], cwd = 'GPU')
+print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_GlobalOperationCUDA<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
+call(['python', '-m', 'unittest', 'test_GlobalOperation'], cwd = 'GPU')
 
 print '\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>test_PopulationViewCUDA<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n'
 call(['python', '-m', 'unittest', 'test_PopulationView'], cwd = 'GPU')
