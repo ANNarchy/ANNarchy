@@ -328,9 +328,13 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     shape = weights.shape
     if shape != (self.post.size, self.pre.size):
         if not pre_post:
-            Global._error('connect_from_matrix(): wrong size for for the matrix, should be', str((self.post.size, self.pre.size)))
+            Global._error("connect_from_matrix(): the matrix does not have the correct dimensions.")
+            Global._print('Expected:', (self.post.size, self.pre.size))
+            Global._print('Received:', shape)
         else:
-            Global._error('connect_from_matrix(): wrong size for for the matrix, should be', str((self.pre.size, self.post.size)))
+            Global._error("connect_from_matrix(): the matrix does not have the correct dimensions.")
+            Global._print('Expected:', (self.pre.size, self.post.size))
+            Global._print('Received:', shape)
         exit(0)
 
     for i in range(self.post.size):
@@ -404,21 +408,30 @@ def _load_from_sparse(self, pre, post, weights, delays):
 
     # Find offsets
     if isinstance(self.pre, PopulationView):
-        offset_pre = self.pre.ranks[0]
+        pre_ranks = self.pre.ranks
     else:
-        offset_pre = 0
+        pre_ranks = [i for i in range(self.pre.size)]
+
     if isinstance(self.post, PopulationView):
-        offset_post = self.post.ranks[0]
+        post_ranks = self.post.ranks
     else:
-        offset_post = 0
+        post_ranks = [i for i in range(self.post.size)]
     
     # Process the sparse matrix and fill the csr
     weights.sort_indices()
     (pre, post) = weights.shape
+
+    if (pre, post) != (len(pre_ranks), len(post_ranks)):
+        Global._error("connect_from_sparse(): the sparse matrix does not have the correct dimensions.")
+        Global._print('Expected:', (len(pre_ranks), len(post_ranks)))
+        Global._print('Received:', (pre, post))
+        exit(0)
+
     for idx_post in range(post):
-        pre_rank = weights.getcol(idx_post).indices
+        idx_pre = weights.getcol(idx_post).indices
         w = weights.getcol(idx_post).data
-        csr.add(idx_post + offset_post, pre_rank + offset_pre, w, [float(delays)])
+        pr = [pre_ranks[i] for i in idx_pre]
+        csr.add(post_ranks[idx_post], pr, w, [float(delays)])
 
     return csr        
 
