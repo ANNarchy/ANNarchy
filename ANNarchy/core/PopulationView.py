@@ -43,7 +43,7 @@ class PopulationView(object):
         # For people using Individual neuron
         if self.size == 1:
             self.rank = self.ranks[0]
-        else
+        else:
             self.rank = self.ranks
 
         self.neuron_type = self.population.neuron_type
@@ -119,7 +119,7 @@ class PopulationView(object):
         def _set_single(name, rank, value):
             if not self.population.initialized:
                 if not name in self.population.neuron_type.description['local']:
-                    _error('can not set the value of a global attribute from a PopulationView.')
+                    Global._error('can not set the value of a global attribute from a PopulationView.')
                     return
                 if isinstance(self.population.init[name], np.ndarray):
                     self.population.init[name][rank] = value
