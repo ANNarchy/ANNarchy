@@ -181,25 +181,12 @@ There exists a purely semantic access to individual neurons of a population. The
       mp = 0.0
       r = 0.0
 
-It is also possible to index directly the population, as if it were a Numpy array:
-
-.. code-block:: python
-
-    >>> print pop1[2, 2]
-    Neuron of the population pop1 with rank 18 (coordinates (2, 2)).
-    Parameters:
-      tau = 10.0
-      baseline = -0.2
-
-    Variables:
-      mp = 0.0
-      r = 0.0
 
 The individual neurons can be manipulated individually:
 
 .. code-block:: python
 
-    >>> my_neuron = pop1[2, 2]
+    >>> my_neuron = pop1.neuron(2, 2)
     >>> my_neuron.rate = 1.0
     >>> print my_neuron
     Neuron of the population pop1 with rank 18 (coordinates (2, 2)).
@@ -222,7 +209,7 @@ Individual neurons can be grouped into ``PopulationView`` objects, which hold re
 
 .. code-block:: python
 
-    >>> popview = pop1[2,2] + pop1[3,3] + pop1[4,4]
+    >>> popview = pop1.neuron(2,2) + pop1.neuron(3,3) + pop1.neuron(4,4)
     >>> popview
     PopulationView of pop1
       Ranks: [18, 27, 36]
@@ -293,7 +280,7 @@ or:
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
 
-``PopulationView`` objects can also be used to create projections.
+``PopulationView`` objects can be used to create projections.
 
 .. warning::
 

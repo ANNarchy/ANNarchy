@@ -412,7 +412,7 @@ class Population(object):
         """
         indices =  args[0]
         if isinstance(indices, int): # a single neuron
-            return IndividualNeuron(self, indices)
+            return PopulationView(self, [indices])
         elif isinstance(indices, slice): # a slice of ranks
             start, stop, step = indices.start, indices.stop, indices.step
             if indices.start is None:

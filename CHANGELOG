@@ -1,3 +1,8 @@
+**4.5.3:**
+
+* Bugfix: pop[0] now returns a PopulationView containing the neuron 0, not an IndividualNeuron (accessed through pop.neuron(0))
+* Various bugfixes in CUDA.
+
 **4.5.2:**
 
 * Fixed save/load methods
