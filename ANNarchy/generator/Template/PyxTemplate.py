@@ -94,7 +94,8 @@ def pyx_run(int nb_steps):
             with nogil:
                 run(batch)
             PyErr_CheckSignals()
-        run(rest)
+        if rest > 0:
+            run(rest)
 
 # Simulation for the given number of steps except if a criterion is reached
 def pyx_run_until(int nb_steps, list populations, bool mode):
