@@ -21,7 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.generator.Template.PopulationTemplate import attribute_pyx_wrapper
 
 ######################################
 ### Main template
@@ -31,6 +30,7 @@ header_struct = """#pragma once
 #include "pop%(id_pre)s.hpp"
 #include "pop%(id_post)s.hpp"
 %(include_additional)s
+%(include_profile)s
 
 extern PopStruct%(id_pre)s pop%(id_pre)s;
 extern PopStruct%(id_post)s pop%(id_post)s;
@@ -56,6 +56,7 @@ struct ProjStruct%(id_proj)s{
 %(declare_parameters_variables)s
 %(declare_cuda_stream)s
 %(declare_additional)s
+%(declare_profile)s
 
     // Method called to initialize the projection
     void init_projection() {
@@ -70,6 +71,7 @@ struct ProjStruct%(id_proj)s{
 %(init_parameters_variables)s
 %(init_rng)s
 %(init_additional)s
+%(init_profile)s
     }
 
     // Computes the weighted sum of inputs or updates the conductances

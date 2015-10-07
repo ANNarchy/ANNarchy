@@ -294,6 +294,7 @@ class CodeGenerator(object):
         from .Template.ProfileTemplate import profile_template
         prof_include = "" if not Global.config["profiling"] else profile_template['include']
         prof_step_pre = "" if not Global.config["profiling"] else profile_template['step_pre']
+        prof_step_post = "" if not Global.config["profiling"] else profile_template['step_post']
         prof_run_pre = "" if not Global.config["profiling"] else profile_template['run_pre']
         prof_run_post = "" if not Global.config["profiling"] else profile_template['run_post']
 
@@ -323,6 +324,7 @@ class CodeGenerator(object):
                 'set_number_threads' : number_threads,
                 'prof_include': prof_include,
                 'prof_step_pre': prof_step_pre,
+                'prof_step_post': prof_step_post,
                 'prof_run_pre': prof_run_pre,
                 'prof_run_post': prof_run_post
             }

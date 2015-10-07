@@ -582,11 +582,17 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 """ % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs, 'omp_code': omp_code}
 
         # finish code
-        return """
+        final_code = """
         if( _active ) {
 %(code)s
         } // active
 """ % {'code': code}
+
+        # if profiling enabled, annotate with profiling code
+        if self._prof_gen:
+            final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+
+        return final_code
 
     def update_rate_neuron_cuda(self, pop):
         """

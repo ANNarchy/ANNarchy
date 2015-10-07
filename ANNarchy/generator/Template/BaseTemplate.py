@@ -236,6 +236,8 @@ void step()
     // Increase internal time
     ////////////////////////////////
     t++;
+
+%(prof_step_post)s
 }
 
 

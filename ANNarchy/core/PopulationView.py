@@ -22,7 +22,6 @@
 
 """    
 from ANNarchy.core import Global as Global
-from ANNarchy.core.Random import RandomDistribution
 import numpy as np
 
 class PopulationView(object):

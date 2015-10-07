@@ -48,6 +48,13 @@ public:
         _raw_data.push_back(double(_stop-_start));
     }
 
+    void reset() {
+        debug_cout("Reset Measurement object");
+        _raw_data.clear();
+        _mean = 0.0;
+        _std = 0.0;
+    }
+
     void evaluate() {
         if (_raw_data.empty())
             return;
@@ -73,20 +80,6 @@ public:
 
     friend std::ostream& operator << (std::ostream& stream, const Measurement& measure);
 };
-
-inline std::ostream& operator << (std::ostream& stream, const Measurement& measure) {
-    if ( measure._raw_data.empty() )
-        return stream;
-
-    stream << "mean: " << measure._mean << ", "
-           << "std: " << measure._std << " ( over " << measure._raw_data.size() << " measurements )"
-           << std::endl;
-    
-    //for ( auto it = measure._raw_data.begin(); it != measure._raw_data.end(); it++ )
-    //    stream << *it << std::endl;
-
-    return stream;
-}
 
 /**
  *  \brief      Profiling class
@@ -173,7 +166,50 @@ public:
         return _datasets[idx->second];
     }
 
+    /**
+     *  \brief      Clear performance data of registered functions.
+     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *              and a function name. We iterate over all datasets and clear them seperatly.
+     */
+    void reset() {
+        for( auto it = _datasets.begin(); it != _datasets.end(); it++ )
+            (*it)->reset();
+    }
+
+    /**
+     *  \brief      Evaluate registered functions.
+     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *              and a function name. We iterate over all datasets and evaluate them seperatly.
+     */
+    void evaluate() {
+        for( auto it = _datasets.begin(); it != _datasets.end(); it++ )
+            (*it)->evaluate();
+    }
+
+    friend std::ostream& operator << (std::ostream& stream, const Profiling& profiling);
 };
+
+// out stream operators
+inline std::ostream& operator << (std::ostream& stream, const Measurement& measure) {
+    if ( measure._raw_data.empty() )
+        return stream;
+
+    stream << "mean: " << measure._mean << ", "
+           << "std: " << measure._std << " ( over " << measure._raw_data.size() << " measurements )";
+
+    return stream;
+}
+
+inline std::ostream& operator << (std::ostream& stream, const Profiling& profiling) {
+    if ( profiling._datasets.empty() )
+        return stream;
+
+    for ( auto it = profiling._identifier.begin(); it != profiling._identifier.end(); it++ ) {
+        stream << "  (" << it->first.first << ", " << it->first.second << ") - " << *(profiling._datasets[ it->second ]) << std::endl;
+    }
+
+    return stream;
+}
 """
 
 profile_template = {
@@ -186,27 +222,30 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     auto profiler = Profiling::get_instance();
     profiler->register_function("net", "step");
     """,
-    'step_pre': """
-    """,
-    'run_pre': """// before
+    'step_pre': """// before
     auto measure = Profiling::get_instance()->get_measurement("net", "step");
     measure->start_wall_time();
     """,
-    'run_post': """// after
+    'step_post': """// after
     measure->stop_wall_time();
-    measure->evaluate();
+    """,
+    'run_pre': """
+    Profiling::get_instance()->reset();
+    """,
+    'run_post': """
+    Profiling::get_instance()->evaluate();
     std::cout << "run " << nbSteps << " steps: " << std::endl;
-    std::cout << "    " << *measure << std::endl;
+    std::cout << *Profiling::get_instance() << std::endl;
     """,
     #
     # Operations
     'compute_psp': {
-        'before' : "",
-        'after' : ""
+        'before' : "measure_psp->start_wall_time();",
+        'after' : "measure_psp->stop_wall_time();"
     },
     'update_synapse': {
-        'before' : "",
-        'after' : ""
+        'before' : "measure_step->start_wall_time();",
+        'after' : "measure_step->stop_wall_time();"
     },
     'update_neuron': {
         'before' : "measure_step->start_wall_time();",
@@ -216,5 +255,4 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
         'before' : "measure_prop->start_wall_time();",
         'after' : "measure_prop->stop_wall_time();"
     }
-    
 }
