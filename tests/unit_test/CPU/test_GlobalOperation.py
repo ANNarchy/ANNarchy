@@ -179,13 +179,3 @@ class test_GlobalOps_2D(unittest.TestCase):
         Tests the result of *norm1(r)* for *pop2*.
         """
         self.assertTrue(numpy.allclose(pop2.l1, 12.0))
-
-    def test_get_l2_norm(self):
-        """
-        Tests the result of *norm2(r)* for *pop2*.
-        """
-        # compute control value
-        l2norm = np.linalg.norm(pop2.r, ord=2)
-        
-        # test
-        self.assertTrue(numpy.allclose(pop2.l2, l2norm))

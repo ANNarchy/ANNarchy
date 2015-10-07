@@ -29,12 +29,8 @@ import re
 
 class ProjectionGenerator(object):
 
-    def __init__(self):
-        if Global.config['profiling']:
-            from .Profile.ProfileGenerator import ProfileGenerator
-            self._prof_gen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
-        else:
-            self._prof_gen = None
+    def __init__(self, profile_generator):
+        self._prof_gen = profile_generator
 
 #######################################################################
 ############## HEADER #################################################
@@ -858,7 +854,7 @@ if (_transmission && pop%(id_post)s._active){
 
         # Annotate code
         if self._prof_gen:
-            code = self._prof_gen.annotate_computesum_spiking_omp(code)
+            code = self._prof_gen.annotate_computesum_spiking_omp(proj, code)
 
         return psp_prefix, code
 
