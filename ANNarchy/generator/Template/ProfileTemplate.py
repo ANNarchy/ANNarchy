@@ -8,6 +8,8 @@ profile_header=\
 #include <vector>
 #include <map>
 #include <ostream>
+#include <fstream>
+#include <iomanip>
 #include <papi.h>
 #include <math.h>
 
@@ -19,6 +21,7 @@ profile_header=\
 
 class Measurement{
     std::vector<double> _raw_data;
+    std::vector<long long> _start_data;
     double _mean;
     double _std;
     long_long _start;
@@ -32,15 +35,18 @@ public:
         _start = 0.0;
         _stop = 0.0;
         _raw_data = std::vector<double>();
+        _start_data = std::vector<long long>();
     }
 
     ~Measurement() {
         debug_cout("Destroy Measurement object");
         _raw_data.clear();
+        _start_data.clear();
     }
 
     inline void start_wall_time() {
         _start = PAPI_get_real_usec();
+        _start_data.push_back(_start);
     }
 
     inline void stop_wall_time() {
@@ -51,6 +57,7 @@ public:
     void reset() {
         debug_cout("Reset Measurement object");
         _raw_data.clear();
+        _start_data.clear();
         _mean = 0.0;
         _std = 0.0;
     }
@@ -79,6 +86,7 @@ public:
     }
 
     friend std::ostream& operator << (std::ostream& stream, const Measurement& measure);
+    friend class Profiling;
 };
 
 /**
@@ -91,6 +99,8 @@ class Profiling {
     static std::unique_ptr<Profiling> _instance;    ///< reference to this class, created on first call of Profiling::get_instance()
     std::vector<Measurement*> _datasets;    ///< Instances of measurement objects. The index for correct access is retrieved from Profiling::_identifier
     std::map<std::pair<std::string, std::string>, int > _identifier;    ///< maps a (obj, func) descriptor to index for Profiling::_datasets
+    std::ofstream _out_file;
+    long_long _profiler_start;
 
     /**
      *  \brief  Constructor
@@ -101,6 +111,9 @@ class Profiling {
         // initialize PAPI
         if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
             exit(1);
+
+        _profiler_start = PAPI_get_real_usec();
+        _out_file.open("results.xml", std::ofstream::out | std::ofstream::trunc);
     }
 
 public:
@@ -186,6 +199,26 @@ public:
             (*it)->evaluate();
     }
 
+    void store() {
+        for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
+            _out_file << "<dataset>" << std::endl;
+            _out_file << "  <obj>" << it->first.first << "</obj>" << std::endl;
+            _out_file << "  <func>" << it->first.second << "</func>" << std::endl;
+            _out_file << "  <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
+            _out_file << "  <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
+            _out_file << "  <raw_start>";
+            for(auto it2 = _datasets[it->second]->_start_data.begin(); it2 != _datasets[it->second]->_start_data.end(); it2++)
+                _out_file << std::fixed << std::setprecision(4) << *it2 - _profiler_start << " ";
+            _out_file << "  </raw_start>" << std::endl;
+
+            _out_file << "  <raw_data>";
+            for(auto it2 = _datasets[it->second]->_raw_data.begin(); it2 != _datasets[it->second]->_raw_data.end(); it2++)
+                _out_file << std::fixed << std::setprecision(4) << *it2 << " ";
+            _out_file << "  </raw_data>" << std::endl;
+            _out_file << "</dataset>" << std::endl;
+        }
+    }
+
     friend std::ostream& operator << (std::ostream& stream, const Profiling& profiling);
 };
 
@@ -234,6 +267,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'run_post': """
     Profiling::get_instance()->evaluate();
+    Profiling::get_instance()->store();
     std::cout << "run " << nbSteps << " steps: " << std::endl;
     std::cout << *Profiling::get_instance() << std::endl;
     """,
