@@ -428,7 +428,11 @@ class ProjectionGenerator(object):
 
         # Specific projection
         if 'psp_code' in proj._specific_template.keys():
-            return psp_prefix, proj._specific_template['psp_code']
+            psp_code = proj._specific_template['psp_code']
+            if self._prof_gen:
+                psp_code = self._prof_gen.annotate_computesum_rate_omp(proj, psp_code)
+           
+            return psp_prefix, psp_code
 
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity

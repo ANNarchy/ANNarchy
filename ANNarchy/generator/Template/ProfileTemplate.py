@@ -20,6 +20,7 @@ profile_header=\
 #endif
 
 class Measurement{
+    std::string _type;
     std::vector<double> _raw_data;
     std::vector<long long> _start_data;
     double _mean;
@@ -28,8 +29,9 @@ class Measurement{
     long_long _stop;
 
 public:
-    Measurement() {
+    Measurement(std::string type) {
         debug_cout("Create Measurement object");
+        _type = type;
         _mean = 0.0;
         _std = 0.0;
         _start = 0.0;
@@ -82,7 +84,7 @@ public:
             var += (*it-_mean)*(*it-_mean);
         }
 
-        _std = sqrt(var);
+        _std = sqrt(var/double(num_elem));
     }
 
     friend std::ostream& operator << (std::ostream& stream, const Measurement& measure);
@@ -113,7 +115,8 @@ class Profiling {
             exit(1);
 
         _profiler_start = PAPI_get_real_usec();
-        _out_file.open("results.xml", std::ofstream::out | std::ofstream::trunc);
+        _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
+        _out_file << "<root>" << std::endl;
     }
 
 public:
@@ -125,6 +128,9 @@ public:
 
         for(auto it = _datasets.begin(); it != _datasets.end(); it++ )
             delete *it;
+
+        _out_file << "</root>" << std::endl;
+        _out_file.close();
     }
 
     /**
@@ -143,17 +149,18 @@ public:
      *  \brief      Add a function to measurement dataset
      *  \details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. The provided items will be used as key for the internal data map.
+     *  \param[IN]  obj type as string (either pop, proj or net)
      *  \param[IN]  obj object name as string
      *  \param[IN]  func function name as string
      *  \return     Instance of measurement class. If the function is called multiple times no additional 
      *              object will be created.
      */
-    Measurement* register_function(std::string obj, std::string func) {
+    Measurement* register_function(std::string type, std::string obj, std::string func) {
         auto pair = std::pair<std::string, std::string>(obj, func);
 
         if ( _identifier.count(pair) == 0) { // not in list
             _identifier.insert(std::pair< std::pair<std::string, std::string>, int >(pair, _datasets.size()));
-            _datasets.push_back(new Measurement());
+            _datasets.push_back(new Measurement(type));
 
             debug_cout( "(" + pair.first + ", " + pair.second + ") added to dataset." );
         }
@@ -201,21 +208,27 @@ public:
 
     void store() {
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            _out_file << "<dataset>" << std::endl;
-            _out_file << "  <obj>" << it->first.first << "</obj>" << std::endl;
-            _out_file << "  <func>" << it->first.second << "</func>" << std::endl;
-            _out_file << "  <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
-            _out_file << "  <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
-            _out_file << "  <raw_start>";
+            if ( _datasets[it->second]->_raw_data.empty() )
+                continue;    // nothing recorded, omit dataset
+
+            _out_file << "  <dataset>" << std::endl;
+            _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
+            _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
+            _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
+            _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
+            _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
+
+            _out_file << "    <raw_start>";
             for(auto it2 = _datasets[it->second]->_start_data.begin(); it2 != _datasets[it->second]->_start_data.end(); it2++)
                 _out_file << std::fixed << std::setprecision(4) << *it2 - _profiler_start << " ";
-            _out_file << "  </raw_start>" << std::endl;
+            _out_file << "</raw_start>" << std::endl;
 
-            _out_file << "  <raw_data>";
+            _out_file << "    <raw_data>";
             for(auto it2 = _datasets[it->second]->_raw_data.begin(); it2 != _datasets[it->second]->_raw_data.end(); it2++)
                 _out_file << std::fixed << std::setprecision(4) << *it2 << " ";
-            _out_file << "  </raw_data>" << std::endl;
-            _out_file << "</dataset>" << std::endl;
+            _out_file << "</raw_data>" << std::endl;
+
+            _out_file << "  </dataset>" << std::endl;
         }
     }
 
@@ -253,10 +266,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'init': """
     //initialize profiler, create singleton instance
     auto profiler = Profiling::get_instance();
-    profiler->register_function("net", "step");
+    profiler->register_function("net", "network", "step");
     """,
     'step_pre': """// before
-    auto measure = Profiling::get_instance()->get_measurement("net", "step");
+    auto measure = Profiling::get_instance()->get_measurement("network", "step");
     measure->start_wall_time();
     """,
     'step_post': """// after

@@ -27,7 +27,7 @@ class ProfileGenerator(object):
     Measurement* measure_step;
 """
         init = """        // Profiling
-        measure_step = Profiling::get_instance()->register_function("%(name)s", "step");
+        measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", "step");
 """ % { 'name': pop.name }
 
         return declare, init
@@ -41,8 +41,8 @@ class ProfileGenerator(object):
     Measurement* measure_step;
 """
         init = """        // Profiling
-        measure_psp = Profiling::get_instance()->register_function("proj%(id_proj)s", "psp");
-        measure_step = Profiling::get_instance()->register_function("proj%(id_proj)s", "step");
+        measure_psp = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "psp");
+        measure_step = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "step");
 """ % { 'id_proj': proj.id }
 
         return declare, init
@@ -125,7 +125,9 @@ class ProfileGenerator(object):
         generate Profiling.h
         """
         from .Template.ProfileTemplate import profile_header
+
         if Global.config["paradigm"] == "openmp":
-            return profile_header
+            config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
+            return profile_header % { 'config': config }
         else:
             return ""
