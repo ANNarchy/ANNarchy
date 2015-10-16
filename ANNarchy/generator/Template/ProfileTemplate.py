@@ -117,6 +117,8 @@ class Profiling {
         _profiler_start = PAPI_get_real_usec();
         _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
         _out_file << "<root>" << std::endl;
+
+        %(config_xml)s
     }
 
 public:
@@ -281,7 +283,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'run_post': """
     Profiling::get_instance()->evaluate();
     Profiling::get_instance()->store();
-    std::cout << "run " << nbSteps << " steps: " << std::endl;
+    std::cout << "profiling results: " << std::endl;
     std::cout << *Profiling::get_instance() << std::endl;
     """,
     #

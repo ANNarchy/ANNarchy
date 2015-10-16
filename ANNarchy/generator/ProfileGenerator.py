@@ -127,7 +127,13 @@ class ProfileGenerator(object):
         from .Template.ProfileTemplate import profile_header
 
         if Global.config["paradigm"] == "openmp":
+            config_xml = """
+        _out_file << "  <config>" << std::endl;
+        _out_file << "    <paradigm>%(paradigm)s</paradigm>" << std::endl;
+        _out_file << "    <num_threads>%(num_threads)s</num_threads>" << std::endl;
+        _out_file << "  </config>" << std::endl;
+        """ % { 'paradigm': Global.config["paradigm"], 'num_threads': Global.config["num_threads"]}
             config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
-            return profile_header % { 'config': config }
+            return profile_header % { 'config': config, 'config_xml': config_xml }
         else:
             return ""

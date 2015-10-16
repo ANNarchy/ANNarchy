@@ -618,7 +618,7 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             increment = increment.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'delayed_r[rk_pre]'
             )
 
         # Apply the operation
@@ -734,7 +734,7 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             increment = increment.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'delayed_r[rk_pre]'
             )
 
         # Apply the operation
@@ -999,9 +999,21 @@ class SharedProjection(Projection):
             omp_code = """
         #pragma omp parallel for private(sum, rk_pre, coord) """
 
+        # HD ( 16.10.2015 ):
+        # pre-load delayed firing rate in a local array, so we
+        # prevent multiple accesses to pop%(id_pre)s._delayed_r[%(delay)s]
+        if self.delays > Global.config['dt']:
+            pre_load_r = """
+        // pre-load delayed firing rate
+        auto delayed_r = pop%(id_pre)s._delayed_r[%(delay)s];
+        """% {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+        else:
+            pre_load_r = ""
+
         # Compute sum
         wsum =  """
         std::vector<int> coord;
+""" + pre_load_r + """
         %(omp_code)s
         for(int i = 0; i < %(size_post)s; i++){
             coord = pre_rank[i];
