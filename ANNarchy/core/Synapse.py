@@ -29,6 +29,9 @@ class Synapse(object):
     """
     Base class to define a synapse.
     """
+    # Default name and description for reporting
+    _default_names = {'rate': "Standard rate-coded synapse", 'spike': "Standard spiking synapse"}
+
     def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
         """ 
         *Parameters*:
@@ -80,7 +83,8 @@ class Synapse(object):
         if name:
             self.name = name
         else:
-            self.name = 'Event-driven synapse' if self.type == 'spike' else 'Rate-coded synapse'
+            self.name = self._default_names[self.type]
+
         if description:
             self.short_description = description
         else:

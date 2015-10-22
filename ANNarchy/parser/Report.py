@@ -1,6 +1,7 @@
 from ANNarchy.core.Global import _network, _objects, _warning, _error, _print
 from ANNarchy.core.Random import RandomDistribution
 from .Extraction import *
+from ANNarchy.core.Synapse import Synapse
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
@@ -153,14 +154,16 @@ footer = """
 ### Main method
 ##################################
 
-def report(filename="./report.tex", standalone=True, net_id=0):
+def report(filename="./report.tex", standalone=True, gather_subprojections=False, net_id=0):
     """ Generates a .tex file describing the network according to:
+
     Nordlie E, Gewaltig M-O, Plesser HE (2009). Towards Reproducible Descriptions of Neuronal Network Models. PLoS Comput Biol 5(8): e1000456.
 
     **Parameters:**
 
     * *filename*: name of the .tex file where the report will be written (default: "./report.tex")
     * *standalone*: tells if the generated file should be directly compilable or only includable (default: True)
+    * *gather_subprojections*: if a projection between two populations has been implemented as a multiple of projections between sub-populations, this flag allows to group them in the summary (default: False).
     * *net_id*: id of the network to be used for reporting (default: 0, everything that was declared)
     """
 
@@ -171,8 +174,8 @@ def report(filename="./report.tex", standalone=True, net_id=0):
     summary = _generate_summary(net_id)
     # Generate the populations
     populations = _generate_populations(net_id)
-    # Generate the populations
-    projections = _generate_projections(net_id)
+    # Generate the projections
+    projections = _generate_projections(net_id, gather_subprojections)
     # Generate the neuron models
     neuron_models = _generate_neuron_models(net_id)
     # Generate the synapse models
@@ -180,7 +183,7 @@ def report(filename="./report.tex", standalone=True, net_id=0):
     # Generate the population parameters
     pop_parameters = _generate_population_parameters(net_id)
     # Generate the population parameters
-    proj_parameters = _generate_projection_parameters(net_id)
+    proj_parameters = _generate_projection_parameters(net_id, gather_subprojections)
 
     with open(filename, 'w') as wfile:
         if standalone:
@@ -226,7 +229,7 @@ def _generate_summary(net_id):
     list_synapse_models = []
     for proj in _network[net_id]['projections']:
         list_connectivity.append(proj.connector_name)
-        if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse', 'Static weight']:
+        if not proj.synapse.name in list(Synapse._default_names.values()) + ['Static weight']:
             list_synapse_models.append(proj.synapse.name)
     for con in list(set(list_connectivity)):
         connectivity += con + ', '
@@ -281,14 +284,25 @@ def _generate_population_parameters(net_id):
 
     return txt
 
-def _generate_projections(net_id):
+def _generate_projections(net_id, gather_subprojections):
     txt = ""
     proj_tpl = """
     %(pre)s & %(post)s & %(target)s & %(synapse)s &
     %(description)s \\\\ \\hline
 """
-    for proj in _network[net_id]['projections']:
-        if not proj.synapse.name in ['Standard spiking synapse', 'Standard rate-coded synapse']:
+    if gather_subprojections:
+        projections = []
+        for proj in _network[net_id]['projections']:
+            for existing_proj in projections:
+                if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
+                    break
+            else:
+                projections.append(proj)
+    else:
+        projections = _network[net_id]['projections']
+
+    for proj in projections:
+        if not proj.synapse.name in Synapse._default_names.values():
             name = proj.synapse.name
         else:
             name = "-"
@@ -300,13 +314,24 @@ def _generate_projections(net_id):
 
 
 
-def _generate_projection_parameters(net_id):
+def _generate_projection_parameters(net_id, gather_subprojections):
     txt = ""
     proj_tpl = """
     %(name)s & $%(param)s$        & %(value)s  \\\\ \\hline
 """
+    if gather_subprojections:
+        projections = []
+        for proj in _network[net_id]['projections']:
+            for existing_proj in projections:
+                if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
+                    break
+            else:
+                projections.append(proj)
+    else:
+        projections = _network[net_id]['projections']
+
     first = True
-    for rk, proj in enumerate(_network[net_id]['projections']):
+    for rk, proj in enumerate(projections):
         parameters = ""
         for idx, param in enumerate(proj.parameters):
             if param == 'w':
