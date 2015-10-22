@@ -32,6 +32,7 @@
 header_struct_omp = """#pragma once
 #include <random>
 %(include_additional)s
+%(include_profile)s
 extern double dt;
 extern long int t;
 extern std::mt19937 rng;
@@ -52,6 +53,7 @@ struct PopStruct%(id)s{
 %(declare_parameters_variables)s
 %(declare_delay)s
 %(declare_additional)s
+%(declare_profile)s
     // Access methods to the parameters and variables
 %(access_parameters_variables)s
 
@@ -63,6 +65,7 @@ struct PopStruct%(id)s{
 %(init_spike)s
 %(init_delay)s
 %(init_additional)s
+%(init_profile)s
     }
 
     // Method called to reset the population

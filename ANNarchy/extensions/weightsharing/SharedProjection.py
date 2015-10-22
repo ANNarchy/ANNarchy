@@ -3,8 +3,7 @@ from ANNarchy.core.Synapse import Synapse
 import ANNarchy.core.Global as Global
 
 import numpy as np
-from math import floor
-import pprint
+from ANNarchy.generator.Utils import tabify # _generate_bank_code, _generate_convolve_code
 
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
@@ -49,7 +48,7 @@ class SharedProjection(Projection):
         try:
             from ANNarchy.core.cython_ext.Connector import CSR
         except:
-            _error('ANNarchy was not successfully installed.')
+            Global._error('ANNarchy was not successfully installed.')
         csr = CSR()
         csr.max_delay = self.delays
         csr.uniform_delay = self.delays
@@ -553,47 +552,51 @@ class SharedProjection(Projection):
         operation = self.synapse.operation
 
         # Main code
-        code = """
-            sum = 0.0;
-"""
+        code = tabify("sum = 0.0;", 3)
 
         # Generate for loops
         for dim in range(self.dim_kernel):
-            code += """            for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++){
-    """ % { 'index': indices[dim], 'size': self.weights.shape[dim]}
+            if dim == self.dim_kernel-1:
+                inner_idx = ""
+                for i in range(self.dim_kernel-1):
+                    inner_idx += "["+indices[i]+"_w]"
+                code += "auto inner_line = w"+inner_idx+".data();\n"
 
-        # Compute indices
-        for dim in range(self.dim_pre):
+            code += tabify("""
+            for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
+            """ % { 'index': indices[dim], 'size': self.weights.shape[dim]}, dim)
+
+            # Compute indices
             if dim < self.dim_kernel:
-                code += """
-                int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim])}
+                code += tabify("""int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim])}, 1)
             else:
-                code += """
-                int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
+                code += tabify("""int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}, 1)
 
-        # Check indices
-        for dim in range(self.dim_kernel):
+            # Check indices
             if operation in ['sum', 'mean']:
                 if isinstance(self.padding, str): # 'border'
-                        code += """
+                        code += tabify("""
                 if (%(index)s_pre < 0) %(index)s_pre = 0 ;
-                if (%(index)s_pre > %(max_size)s) %(index)s_pre = %(max_size)s ;""" % { 'index': indices[dim], 'dim': dim, 'max_size': self.pre.geometry[dim] -1}
+                if (%(index)s_pre > %(max_size)s) %(index)s_pre = %(max_size)s ;
+                """ % { 'index': indices[dim], 'dim': dim, 'max_size': self.pre.geometry[dim] -1}, dim)
                 else:
-                    code += """
-                if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
+                    code += tabify("""
+                if ((%(index)s_pre < 0) || (%(index)s_pre > %(max_size)s)){
                     sum += %(padding)s;
                     continue;
-                }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
+                }
+                """ % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}, dim)
 
             else: # min, max
                 code += """
-                if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
+                if ((%(index)s_pre < 0) || (%(index)s_pre > %(max_size)s)) {
                     continue;
-                }""" % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
+                }
+                """ % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
 
         # Compute pre-synaptic rank
-        code +="""
-                rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
+        code += tabify("""
+                rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}, dim)
 
         # Compute the increment
         index = ""
@@ -615,31 +618,31 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             increment = increment.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'delayed_r[rk_pre]'
             )
 
         # Apply the operation
         if operation == "sum":
-            code += """
-                sum += %(increment)s""" % {'increment': increment}
+            code += tabify("""
+                sum += %(increment)s""" % {'increment': increment.replace('w'+inner_idx, 'inner_line')}, dim)
         elif operation == "max":
-            code += """
+            code += tabify("""
                 double _psp = %(increment)s
-                if(_psp > sum) sum = _psp;""" % {'increment': increment}
+                if(_psp > sum) sum = _psp;""" % {'increment': increment}, dim)
         elif operation == "min":
-            code += """
+            code += tabify("""
                 double _psp = %(increment)s
-                if(_psp < sum) sum = _psp;""" % {'increment': increment}
+                if(_psp < sum) sum = _psp;""" % {'increment': increment}, dim)
         elif operation == "mean":
-            code += """
-                sum += %(increment)s""" % {'increment': increment}
+            code += tabify("""
+                sum += %(increment)s""" % {'increment': increment}, dim)
         else:
             Global._error('Operation', operation, 'is not implemented yet for shared projections.')
 
         # Close for loops
         for dim in range(self.dim_kernel):
-            code += """
-            }"""
+            code += tabify("""
+            }""", self.dim_kernel-1-dim)
 
         impl_code = code % {'id_proj': self.id,
             'target': self.target,
@@ -672,48 +675,45 @@ class SharedProjection(Projection):
         operation = self.synapse.operation
 
         # Main code
-        code = """
-        sum = 0.0;
-"""
+        code = tabify("sum = 0.0;", 3)
 
         # Generate for loops
         for dim in range(self.dim_kernel-1):
-            code += """        for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++){
-    """ % { 'index': indices[dim], 'size': self.weights.shape[dim+1]}
+            code += tabify("""
+            for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
+            """ % { 'index': indices[dim], 'size': self.weights.shape[dim+1]}, dim)
 
-        # Compute indices
-        for dim in range(self.dim_pre):
+            # Compute indices
             if dim < self.dim_kernel:
-                code += """
-            int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim+1])}
+                code += tabify("""int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim+1])}, 1)
             else:
-                code += """
-            int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}
+                code += tabify("""int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}, 1)
 
-
-        # Check indices
-        for dim in range(self.dim_kernel-1):
+            # Check indices
             if operation in ['sum', 'mean']:
                 if isinstance(self.padding, str): # 'border'
-                        code += """
+                    code += tabify("""
             if (%(index)s_pre < 0) %(index)s_pre = 0 ;
-            if (%(index)s_pre > %(max_size)s) %(index)s_pre = %(max_size)s ;""" % { 'index': indices[dim], 'dim': dim, 'max_size': self.pre.geometry[dim] -1}
+            if (%(index)s_pre > %(max_size)s) %(index)s_pre = %(max_size)s ;
+            """ % { 'index': indices[dim], 'dim': dim, 'max_size': self.pre.geometry[dim] -1}, 1+dim)
                 else:
-                    code += """
-            if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
+                    code += tabify("""
+            if ((%(index)s_pre < 0) || (%(index)s_pre > %(max_size)s)) {
                 sum += %(padding)s;
                 continue;
-            }""" % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}
+            }
+            """ % { 'index': indices[dim], 'padding': self.padding, 'max_size': self.pre.geometry[dim] -1}, 1+dim)
 
             else: # min, max
-                code += """
-            if ((%(index)s_pre < 0) ||(%(index)s_pre > %(max_size)s)){
+                code += tabify("""
+            if ((%(index)s_pre < 0) || (%(index)s_pre > %(max_size)s)){
                 continue;
-            }""" % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
+            }
+            """ % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}, 1+dim)
 
         # Compute pre-synaptic rank
-        code +="""
-            rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
+        code +=tabify("""
+            rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}, 1+dim)
 
         # Compute the increment
         index = "[coord["+str(self.dim_pre)+"]]"
@@ -734,40 +734,39 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             increment = increment.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'delayed_r[rk_pre]'
             )
 
         # Apply the operation
         if operation == "sum":
-            code += """
-            sum += %(increment)s""" % {'increment': increment}
+            code += tabify("""
+            sum += %(increment)s""" % {'increment': increment}, 1+dim)
         elif operation == "max":
-            code += """
+            code += tabify("""
             double _psp = %(increment)s
-            if(_psp > sum) sum = _psp;""" % {'increment': increment}
+            if(_psp > sum) sum = _psp;""" % {'increment': increment}, 1+dim)
         elif operation == "min":
-            code += """
+            code += tabify("""
             double _psp = %(increment)s
-            if(_psp < sum) sum = _psp;""" % {'increment': increment}
+            if(_psp < sum) sum = _psp;""" % {'increment': increment}, 1+dim)
         elif operation == "mean":
-            code += """
-            sum += %(increment)s""" % {'increment': increment}
+            code += tabify("""
+            sum += %(increment)s""" % {'increment': increment}, 1+dim)
         else:
             Global._error('Operation', operation, 'is not implemented yet for shared projections.')
 
         # Close for loops
         for dim in range(self.dim_kernel-1):
-            code += """
-        }"""
+            code += tabify("""
+        }""", self.dim_kernel-1-dim)
 
         impl_code = code % {'id_proj': self.id,
             'target': self.target,
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size
-          }
+        }
 
         # sum code
-        self.weights.size
         if operation == "mean":
             sum_code = """sum/%(filter_size)s""" % {'filter_size': self.weights.size}
         else:
@@ -1000,9 +999,21 @@ class SharedProjection(Projection):
             omp_code = """
         #pragma omp parallel for private(sum, rk_pre, coord) """
 
+        # HD ( 16.10.2015 ):
+        # pre-load delayed firing rate in a local array, so we
+        # prevent multiple accesses to pop%(id_pre)s._delayed_r[%(delay)s]
+        if self.delays > Global.config['dt']:
+            pre_load_r = """
+        // pre-load delayed firing rate
+        auto delayed_r = pop%(id_pre)s._delayed_r[%(delay)s];
+        """% {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+        else:
+            pre_load_r = ""
+
         # Compute sum
         wsum =  """
         std::vector<int> coord;
+""" + pre_load_r + """
         %(omp_code)s
         for(int i = 0; i < %(size_post)s; i++){
             coord = pre_rank[i];

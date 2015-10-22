@@ -27,6 +27,13 @@ import ANNarchy.generator.Template.PopulationTemplate as PopTemplate
 from .Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 
 class PopulationGenerator(object):
+
+    def __init__(self, profile_generator):
+        """
+        Initialize PopulationGenerator.
+        """
+        self._prof_gen = profile_generator
+
 #######################################################################
 ############## HEADER #################################################
 #######################################################################
@@ -123,6 +130,15 @@ class PopulationGenerator(object):
         # Stop condition
         stop_condition = self.stop_condition(pop)
 
+        # Profiling
+        if self._prof_gen:
+            include_profile = """#include "Profiling.h"\n"""
+            declare_profile, init_profile = self._prof_gen.generate_init_population(pop)
+        else:
+            include_profile = ""
+            init_profile = ""
+            declare_profile = ""
+
         ## When everything is generated, we override the fields defined by the specific population
         if 'include_additional' in pop._specific_template.keys():
             include_additional = pop._specific_template['include_additional']
@@ -168,17 +184,20 @@ class PopulationGenerator(object):
                                  'name': pop.name,
                                  'size': pop.size,
                                  'include_additional': include_additional,
+                                 'include_profile': include_profile,
                                  'struct_additional': struct_additional,
                                  'extern_global_operations': extern_global_operations,
                                  'declare_spike_arrays': declare_spike,
                                  'declare_parameters_variables': declaration_parameters_variables,
                                  'declare_additional': declare_additional,
                                  'declare_delay': declare_delay,
+                                 'declare_profile': declare_profile,
                                  'access_parameters_variables': access_parameters_variables,
                                  'init_parameters_variables': init_parameters_variables,
                                  'init_spike': init_spike,
                                  'init_delay': init_delay,
                                  'init_additional': init_additional,
+                                 'init_profile': init_profile,
                                  'reset_spike': reset_spike,
                                  'reset_delay': reset_delay,
                                  'reset_additional': reset_additional,
@@ -563,11 +582,17 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 """ % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs, 'omp_code': omp_code}
 
         # finish code
-        return """
+        final_code = """
         if( _active ) {
 %(code)s
         } // active
 """ % {'code': code}
+
+        # if profiling enabled, annotate with profiling code
+        if self._prof_gen:
+            final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+
+        return final_code
 
     def update_rate_neuron_cuda(self, pop):
         """
@@ -742,12 +767,6 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         # Local variables, evaluated in parallel
         code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
-        # if profiling enabled, annotate with profiling code
-        if Global.config['profiling']:
-            from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
-            code = pGen.annotate_update_neuron_omp(code)
-
         # Process the condition
         cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
@@ -774,16 +793,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         'refrac_inc': refrac_inc,
         'omp_critical_code': omp_critical_code} 
 
-        # if profiling enabled, annotate with profiling code
-        if Global.config['profiling']:
-            from ..Profile.ProfileGenerator import ProfileGenerator
-            pGen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
-            spike_gather = pGen.annotate_spike_propagation_omp(spike_gather)
-
         code += spike_gather
 
         # finish code
-        return """
+        final_code = """
     if( _active ) {
         spiked.clear();
 %(global_code)s
@@ -793,6 +806,12 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         }
     } // active
 """ % {'id': pop.id, 'size': pop.size, 'name': pop.name, 'code': code, 'global_code': global_code, 'omp_code': omp_code }
+
+        # if profiling enabled, annotate with profiling code
+        if self._prof_gen:
+            final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+
+        return final_code
 
     def reset_computesum(self, pop):
         code = ""

@@ -29,12 +29,8 @@ import re
 
 class ProjectionGenerator(object):
 
-    def __init__(self):
-        if Global.config['profiling']:
-            from .Profile.ProfileGenerator import ProfileGenerator
-            self._prof_gen = ProfileGenerator(Global._network[0]['populations'], Global._network[0]['projections'])
-        else:
-            self._prof_gen = None
+    def __init__(self, profile_generator):
+        self._prof_gen = profile_generator
 
 #######################################################################
 ############## HEADER #################################################
@@ -112,6 +108,15 @@ class ProjectionGenerator(object):
         # Connectivity matrix
         connectivity_matrix = self.connectivity(proj)
 
+        # Profiling
+        if self._prof_gen:
+            include_profile = """#include "Profiling.h"\n"""
+            declare_profile, init_profile = self._prof_gen.generate_init_projection(proj)
+        else:
+            include_profile = ""
+            init_profile = ""
+            declare_profile = ""
+
         # Additional info (overwritten)
         include_additional = ""; struct_additional = ""; init_additional = ""; access_additional = ""
         if 'include_additional' in proj._specific_template.keys():
@@ -131,6 +136,7 @@ class ProjectionGenerator(object):
             'name_post': proj.post.name,
             'target': proj.target,
             'include_additional': include_additional,
+            'include_profile': include_profile,
             'struct_additional': struct_additional,
             'declare_connectivity_matrix': connectivity_matrix['declare'],
             'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
@@ -140,12 +146,14 @@ class ProjectionGenerator(object):
             'declare_parameters_variables': decl['parameters_variables'],
             'declare_cuda_stream': decl['cuda_stream'],
             'declare_additional': decl['additional'],
+            'declare_profile': declare_profile,
             'init_connectivity_matrix': connectivity_matrix['init'],
             'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_pre': proj.pre.id, 'id_post': proj.post.id},
             'init_event_driven': "",
             'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
             'init_additional': init_additional,
+            'init_profile': init_profile,
             'psp_prefix': psp_prefix if Global.config['paradigm'] == "openmp" else "",
             'psp_code': psp_code if Global.config['paradigm'] == "openmp" else "",
             'update_rng': update_rng,
@@ -420,7 +428,11 @@ class ProjectionGenerator(object):
 
         # Specific projection
         if 'psp_code' in proj._specific_template.keys():
-            return psp_prefix, proj._specific_template['psp_code']
+            psp_code = proj._specific_template['psp_code']
+            if self._prof_gen:
+                psp_code = self._prof_gen.annotate_computesum_rate_omp(proj, psp_code)
+           
+            return psp_prefix, psp_code
 
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity
@@ -553,7 +565,7 @@ class ProjectionGenerator(object):
         }
 
         # Finish the code
-        code = """
+        final_code = """
         if (_transmission && pop%(id_post)s._active){
 %(code)s
         } // active
@@ -561,7 +573,10 @@ class ProjectionGenerator(object):
                'code': tabify(sum_code, 3),
                }
 
-        return psp_prefix, code
+        if self._prof_gen:
+            final_code = self._prof_gen.annotate_computesum_rate_omp(proj, final_code)
+
+        return psp_prefix, final_code
 
 #######################################################################
 ############## Compute sum rate-coded CUDA ############################
@@ -858,7 +873,7 @@ if (_transmission && pop%(id_post)s._active){
 
         # Annotate code
         if self._prof_gen:
-            code = self._prof_gen.annotate_computesum_spiking_omp(code)
+            code = self._prof_gen.annotate_computesum_spiking_omp(proj, code)
 
         return psp_prefix, code
 
@@ -1047,6 +1062,9 @@ if(_transmission && pop%(id_post)s._active){
                 'id_post': proj.post.id,
                 'omp_code': omp_code
             }
+
+        if self._prof_gen:
+            code = self._prof_gen.annotate_update_synapse_omp(proj, code)
 
         # Return the code block
         return prefix, tabify(code, 2)

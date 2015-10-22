@@ -57,8 +57,15 @@ class CodeGenerator(object):
         for proj in self._projections:
             proj._generate()
 
-        self._popgen = PopulationGenerator()
-        self._projgen = ProjectionGenerator()
+        if Global.config['profiling']:
+            from .ProfileGenerator import ProfileGenerator
+            self._profgen = ProfileGenerator(self._annarchy_dir)
+            self._profgen.generate()
+        else:
+            self._profgen = None
+
+        self._popgen = PopulationGenerator(self._profgen)
+        self._projgen = ProjectionGenerator(self._profgen)
 
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
         self._recordgen = RecordGenerator(annarchy_dir, populations, projections, net_id)
@@ -284,11 +291,12 @@ class CodeGenerator(object):
         number_threads = "omp_set_num_threads(threads);" if Global.config['num_threads'] > 1 else ""
 
         #Profiling
-        from .Profile.Template import profile_generator_omp_template
-        prof_include = "" if not Global.config["profiling"] else profile_generator_omp_template['include']
-        prof_step_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['step_pre']
-        prof_run_pre = "" if not Global.config["profiling"] else profile_generator_omp_template['run_pre']
-        prof_run_post = "" if not Global.config["profiling"] else profile_generator_omp_template['run_post']
+        from .Template.ProfileTemplate import profile_template
+        prof_include = "" if not Global.config["profiling"] else profile_template['include']
+        prof_step_pre = "" if not Global.config["profiling"] else profile_template['step_pre']
+        prof_step_post = "" if not Global.config["profiling"] else profile_template['step_post']
+        prof_run_pre = "" if not Global.config["profiling"] else profile_template['run_pre']
+        prof_run_post = "" if not Global.config["profiling"] else profile_template['run_post']
 
         #
         # Generate the ANNarchy.cpp code, the corrsponding template differs greatly
@@ -316,6 +324,7 @@ class CodeGenerator(object):
                 'set_number_threads' : number_threads,
                 'prof_include': prof_include,
                 'prof_step_pre': prof_step_pre,
+                'prof_step_post': prof_step_post,
                 'prof_run_pre': prof_run_pre,
                 'prof_run_post': prof_run_post
             }
@@ -422,8 +431,8 @@ class CodeGenerator(object):
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        from .Profile.Template import profile_generator_omp_template
-        profiling_init = "" if not Global.config["profiling"] else profile_generator_omp_template['init']
+        from .Template.ProfileTemplate import profile_template
+        profiling_init = "" if not Global.config["profiling"] else profile_template['init']
 
         # Initialize populations
         population_init = "    // Initialize populations\n"
