@@ -142,7 +142,7 @@ It is also possible to build a connection pattern using data saved during a prec
 * pre-learning is done in another context;
 * a connector method for static synapses is particularly slow (e.g. DoG), but loading the result from a file is faster.
   
-The connectivity of a projection can be saved (before or after ``compile()``) using: 
+The connectivity of a projection can be saved (after ``compile()``) using: 
 
 .. code-block:: python
 

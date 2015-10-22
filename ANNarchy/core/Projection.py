@@ -38,7 +38,7 @@ class Projection(object):
     Represents all synapses of the same type between two populations.
     """
 
-    def __init__(self, pre, post, target, synapse=None):
+    def __init__(self, pre, post, target, synapse=None, name=None):
         """
         *Parameters*:
 
@@ -46,8 +46,9 @@ class Projection(object):
             * **post**: post-synaptic population (either its name or a ``Population`` object).
             * **target**: type of the connection.
             * **synapse**: a ``Synapse`` instance.
+            * **name**: unique name of the projection (optional).
 
-        By default, the synapse only ensures synaptic transmission:
+        By default, the synapse only ensures linear synaptic transmission:
 
         * For rate-coded populations: ``psp = w * pre.r``
         * For spiking populations: ``g_target += w``
@@ -102,7 +103,10 @@ class Projection(object):
 
         # Create a default name
         self.id = len(Global._network[0]['projections'])
-        self.name = 'proj'+str(self.id)
+        if name:
+            self.name = name
+        else:
+            self.name = 'proj'+str(self.id)
 
         # Get a list of parameters and variables
         self.parameters = []
@@ -199,6 +203,7 @@ class Projection(object):
         self.post_ranks = self.cyInstance.post_rank()
 
     def _store_connectivity(self, method, args, delay):
+
         self._connection_method = method
         self._connection_args = args
         self._connection_delay = delay
@@ -645,6 +650,7 @@ class Projection(object):
             return
         else:
             data = {
+                'name': self.name,
                 'post_ranks': self.post_ranks,
                 'pre_ranks': [self.cyInstance.pre_rank(n) for n in range(self.size)],
                 'w': self.cyInstance.get_w(),
@@ -770,6 +776,7 @@ class Projection(object):
 
     def _data(self):
         desc = {}
+        desc['name'] = self.name
         desc['post_ranks'] = self.post_ranks
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters

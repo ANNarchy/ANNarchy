@@ -1,8 +1,9 @@
 **4.5.3:**
 
-* Bugfix: pop[0] now returns a PopulationView containing the neuron 0, not an IndividualNeuron (accessed through pop.neuron(0))
+* Bugfix: pop[0] now returns a PopulationView containing the neuron 0, not an IndividualNeuron (accessible through pop.neuron(0))
 * Various bugfixes in CUDA.
 * Bugfix: connect_from_sparse now works with popviews whose ranks are not linearly increasing (e.g. columns)
+* Projections can be assigned a name.
 
 **4.5.2:**
 
