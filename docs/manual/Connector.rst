@@ -132,6 +132,13 @@ For each post-synaptic neuron, there is a fixed probability that it forms a conn
     proj.connect_fixed_probability(probability = 0.2, weights=1.0) 
 
 
+.. important::
+
+    If a single value is used for the ``weights`` argument of ``connect_all_to_all``, ``connect_one_to_one``, ``connect_fixed_probability``, ``connect_fixed_number_pre`` and ``connect_fixed_number_post``, and the default synapse is used (no synaptic plasticity), ANNarchy will generate a single weight value for all the synapses of the projection, not one per synapse.
+
+    This allows to save a lot of memory and improve performance. However, if you wish to manually change the weights of some of the synapses after the creation, you need to force the creation of one value per synapse by setting ``force_multiple_weights=True`` in the call to the connector.
+
+
 .. _saved_connectivity:
 
 Saved connectivity

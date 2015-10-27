@@ -161,10 +161,10 @@ class Izhikevich(Neuron):
     du/dt = a * (b*v - u) : init= %(u)s
 """ % { 'conductance' : conductance, 'c':c , 'u': b*c}
 
-        # Default behavior for the conductances (avoid warning)
-        for target in targets:
-            equations += """
-    g_%(target)s = 0.0""" % {'target' : target}
+    #     # Default behavior for the conductances (avoid warning)
+    #     for target in targets:
+    #         equations += """
+    # g_%(target)s = 0.0""" % {'target' : target}
 
         spike = """
     v > v_thresh

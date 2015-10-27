@@ -42,7 +42,7 @@ except:
 ## Connector methods
 ################################   
 
-def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None):
+def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple_weights=False):
     """
     Builds a one-to-one connection pattern between the two populations.
     
@@ -51,6 +51,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None):
         * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
         * **shift**: specifies if the ranks of the presynaptic population should be shifted to match the start of the post-synaptic population ranks. Particularly useful for PopulationViews. Does not work yet for populations with geometry. Default: if the two populations have the same number of neurons, it is set to True. If not, it is set to False (only the ranks count).
+        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
         shift=False # no need
@@ -63,13 +64,13 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None):
     self.connector_name = "One-to-One"
     self.connector_description = "One-to-One, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
 
-    if isinstance(weights, (int, float)):
+    if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
     self._store_connectivity(Connector.one_to_one, (weights, delays, shift), delays)
     return self
 
-def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
+def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
     """
     Builds an all-to-all connection pattern between the two populations.
     
@@ -78,6 +79,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
         * **weights**: synaptic values, either a single value or a random distribution object.
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
         * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
+        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -86,7 +88,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False):
     self.connector_description = "All-to-All, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
 
     # Does the projection define a single non-plastic weight?
-    if isinstance(weights, (int, float)):
+    if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
     # Is it a dense connectivity matrix?
@@ -156,7 +158,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self._store_connectivity(Connector.dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections), delays)
     return self
 
-def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False):
+def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
     """ 
     Builds a probabilistic connection pattern between the two populations.
 
@@ -164,13 +166,11 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
 
     *Parameters*:
     
-    * **probability**: probability that a synapse is created.
-    
-    * **weights**: either a single value for all synapses or a RandomDistribution object.
-    
-    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-    
-    * **allow_self_connections** : defines if self-connections are allowed (default=False).
+        * **probability**: probability that a synapse is created.    
+        * **weights**: either a single value for all synapses or a RandomDistribution object.
+        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+        * **allow_self_connections** : defines if self-connections are allowed (default=False).
+        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """         
     if self.pre!=self.post:
         allow_self_connections = True
@@ -178,13 +178,13 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     self.connector_name = "Random"
     self.connector_description = "Random, sparseness %(proba)s, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays), 'proba': probability}
 
-    if isinstance(weights, (int, float)):
+    if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
     self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
     return self
 
-def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False):
+def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
     """ 
     Builds a connection pattern between the two populations with a fixed number of pre-synaptic neurons.
 
@@ -192,13 +192,11 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
 
     *Parameters*:
     
-    * **number**: number of synapses per postsynaptic neuron.
-    
-    * **weights**: either a single value for all synapses or a RandomDistribution object.
-    
-    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-    
-    * **allow_self_connections** : defines if self-connections are allowed (default=False).
+        * **number**: number of synapses per postsynaptic neuron.
+        * **weights**: either a single value for all synapses or a RandomDistribution object.
+        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+        * **allow_self_connections** : defines if self-connections are allowed (default=False).
+        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -210,14 +208,14 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     self.connector_name = "Random Convergent"
     self.connector_description = "Random Convergent %(number)s $\\rightarrow$ 1, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
 
-    if isinstance(weights, (int, float)):
+    if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
     self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections), delays)
 
     return self
         
-def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False):
+def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
     """
     Builds a connection pattern between the two populations with a fixed number of post-synaptic neurons.
 
@@ -225,14 +223,11 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
 
     *Parameters*:
     
-    * **number**: number of synapses per pre-synaptic neuron.
-    
-    * **weights**: either a single value for all synapses or a RandomDistribution object.
-    
-    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-    
-    * **allow_self_connections** : defines if self-connections are allowed (default=False).
-
+        * **number**: number of synapses per pre-synaptic neuron.        
+        * **weights**: either a single value for all synapses or a RandomDistribution object.        
+        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)        
+        * **allow_self_connections** : defines if self-connections are allowed (default=False)
+        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -244,7 +239,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     self.connector_name = "Random Divergent"
     self.connector_description = "Random Divergent 1 $\\rightarrow$ %(number)s, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
 
-    if isinstance(weights, (int, float)):
+    if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
     self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections), delays)
@@ -390,8 +385,8 @@ def connect_from_sparse(self, weights, delays=0.0):
 
     weights = csc_matrix(weights)
 
-    if weights[weights.nonzero()].max() == weights[weights.nonzero()].min() :
-        self._single_constant_weight = True
+    # if weights[weights.nonzero()].max() == weights[weights.nonzero()].min() :
+    #     self._single_constant_weight = True
 
     # Store the synapses
     self.connector_name = "Sparse connectivity matrix"
