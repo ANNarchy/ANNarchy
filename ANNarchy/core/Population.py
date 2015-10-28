@@ -411,8 +411,20 @@ class Population(object):
         If slices are given, it returns a PopulationView object.
         """
         indices =  args[0]
+        try:
+            if np.issubdtype(indices, int):
+                indices = int(indices)
+        except:
+            pass
         if isinstance(indices, int): # a single neuron
-            return PopulationView(self, [indices])
+            return PopulationView(self, [int(indices)])
+        elif isinstance(indices, (list, np.ndarray)):
+            if isinstance(indices, (np.ndarray)):
+                if indices.ndim != 1:
+                    Global._error('only one-dimensional lists/arrays are allowed to address a population.')
+                    return None
+                indices = list(indices.astype(int))
+            return PopulationView(self, list(indices))
         elif isinstance(indices, slice): # a slice of ranks
             start, stop, step = indices.start, indices.stop, indices.step
             if indices.start is None:
@@ -461,6 +473,8 @@ class Population(object):
                     Global._error("Indices do not match the geometry of the population", self.geometry)
                     return None
                 return PopulationView(self, ranks)
+        Global._warning('can not address the population with', indices)
+        return None
 
     def __iter__(self):
         " Returns iteratively each neuron in the population in ascending rank order."

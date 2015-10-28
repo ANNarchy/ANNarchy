@@ -4,6 +4,11 @@
 * Various bugfixes in CUDA.
 * Bugfix: connect_from_sparse now works with popviews whose ranks are not linearly increasing (e.g. columns)
 * Projections can be assigned a name.
+* A list or Numpy array can be used to slice a Population::
+
+    neurons = [1, 4, 17, 34]
+    subpop = pop[neurons]
+    
 
 **4.5.2:**
 
