@@ -466,6 +466,8 @@ class Monitor(object):
 
     def smoothed_rate(self, spikes=None, smooth=0.):
         """ Computes the smoothed firing rate of the recorded spiking neurons.
+
+        The first axis is the neuron index, the second is time.
         
         *Parameters*:
         
