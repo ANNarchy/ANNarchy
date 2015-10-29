@@ -286,27 +286,39 @@ class Projection(object):
         for idx, n in enumerate(self.post_ranks):
             yield Dendrite(self, n, idx)
 
-    def dendrite(self, pos):
+    def dendrite(self, post):
         """
         Returns the dendrite of a postsynaptic neuron according to its rank.
 
         *Parameters*:
 
-            * **pos**: can be either the rank or the coordinates of the postsynaptic neuron
+            * **post**: can be either the rank or the coordinates of the postsynaptic neuron
         """
         if not self.initialized:
             Global._error('dendrites can only be accessed after compilation.')
             exit(0)
-        if isinstance(pos, int):
-            rank = pos
+        if isinstance(post, int):
+            rank = post
         else:
-            rank = self.post.rank_from_coordinates(pos)
+            rank = self.post.rank_from_coordinates(post)
 
         if rank in self.post_ranks:
             return Dendrite(self, rank, self.post_ranks.index(rank))
         else:
             Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
             return None
+
+    # def synapse(self, pre, post):
+    #     """
+    #     Returns the synapse between a pre- and a post-synaptic neuron if it exists, None otherwise.
+
+    #     *Parameters*:
+
+    #         * **pre**: rank of the pre-synaptic neuron.
+    #         * **post**: rank of the post-synaptic neuron.
+    #     """
+    #     print(TODO)
+    #     # synapse() overlaps with the synapse attribute! rename it to synapse_type (like neuron_type) ?
 
 
     # Iterators
