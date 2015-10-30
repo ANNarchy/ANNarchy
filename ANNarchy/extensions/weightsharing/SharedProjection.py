@@ -35,6 +35,7 @@ class SharedProjection(Projection):
             synapse = Synapse(psp=psp, operation=operation)
         )
 
+        self._omp_config['psp_schedule'] = 'schedule(dynamic)'
         if not Global.config["paradigm"] == "openmp":
             Global._error('Weight sharing is only implemented for the OpenMP paradigm.')
             exit(0)
@@ -825,7 +826,7 @@ class SharedProjection(Projection):
 
         # Delays
         if self.delays > Global.config['dt']:
-            increment = increment.replace(
+            psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
             )
@@ -997,7 +998,7 @@ class SharedProjection(Projection):
         omp_code = ""
         if Global.config['num_threads'] > 1:
             omp_code = """
-        #pragma omp parallel for private(sum, rk_pre, coord) """
+        #pragma omp parallel for private(sum, rk_pre, coord) %(psp_schedule)s""" % {'psp_schedule': "" if not 'psp_schedule' in self._omp_config.keys() else self._omp_config['psp_schedule']}
 
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we

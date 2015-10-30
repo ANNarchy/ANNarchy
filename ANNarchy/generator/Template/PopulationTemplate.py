@@ -82,9 +82,7 @@ struct PopStruct%(id)s{
 
     // Method to update global operations on the population (min/max/mean...)
     void update_global_ops() {
-        if (_active){
 %(update_global_ops)s
-        }
     }
 
     // Method to enqueue output variables in case outgoing projections have non-zero delay

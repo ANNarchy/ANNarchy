@@ -418,8 +418,9 @@ class ProjectionGenerator(object):
 ############## Compute sum rate-coded OMP #############################
 #######################################################################
     def computesum_rate_openmp(self, proj):
-        code = ""
-
+        """
+        Create the c++ code for post-synaptic potential computation.
+        """
         # Default variables needed in psp_code
         psp_prefix = """
         int nb_post; double sum;"""
@@ -520,9 +521,11 @@ class ProjectionGenerator(object):
 
         # OMP: make a local copy of local variables for each thread if the delays are constant
         if with_openmp:
+            omp_schedule = "" if not 'psp_schedule' in proj._omp_config.keys() else proj._omp_config['psp_schedule']
+
             if proj.max_delay > 1: # there is a delay
                 if proj.uniform_delay == -1 : # Non-uniform delays: do nothing
-                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) schedule(dynamic)'
+                    omp_code = '#pragma omp parallel for private(sum) firstprivate(nb_post) %(schedule)s' % {'schedule': omp_schedule}
 
                 else: # Uniform delays
                     omp_code = "#pragma omp parallel for private(sum) firstprivate("
@@ -535,7 +538,7 @@ class ProjectionGenerator(object):
                             )
                             omp_code += '_pre_%(var)s, ' % {'var': var}
 
-                    omp_code += "nb_post) schedule(dynamic)"
+                    omp_code += "nb_post) %(schedule)s" % { 'schedule': omp_schedule }
 
             else: # No delay
                 pre_copy = ""; omp_code = "#pragma omp parallel for private(sum) firstprivate("
@@ -548,7 +551,7 @@ class ProjectionGenerator(object):
                         )
                         omp_code += '_pre_%(var)s, ' % {'var': var}
 
-                omp_code += "nb_post) schedule(dynamic)"
+                omp_code += "nb_post) %(schedule)s" % { 'schedule': omp_schedule }
 
         # Finalize the psp with the correct ids
         psp = psp % ids
