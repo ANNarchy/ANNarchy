@@ -1,5 +1,5 @@
 """
-    OMPGenerator.py
+    CodeGenerator.py
     
     This file is part of ANNarchy.
     
