@@ -85,8 +85,6 @@ class Population(object):
         else:
             self.neuron_type = copy.deepcopy(neuron)
         self.neuron_type._analyse()
-        from ANNarchy.generator.Templates import pop_generator_template
-        self.generator = copy.deepcopy(pop_generator_template)
 
         # Store the stop condition
         self.stop_condition = stop_condition

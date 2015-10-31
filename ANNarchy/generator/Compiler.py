@@ -1,6 +1,6 @@
 """
 
-    Generator.py
+    Compiler.py
     
     This file is part of ANNarchy.
     

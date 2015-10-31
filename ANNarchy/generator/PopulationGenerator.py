@@ -215,7 +215,8 @@ class PopulationGenerator(object):
         # Generate the calls to be made in the main ANNarchy.cpp
         if Global.config['paradigm'] == "openmp":
             if len(pop.neuron_type.description['variables']) > 0 or 'update_variables' in pop._specific_template.keys():
-                pop_desc['update'] = """    pop%(id)s.update();\n""" % { 'id': pop.id }
+                if update_variables != "":
+                    pop_desc['update'] = """    pop%(id)s.update();\n""" % { 'id': pop.id }
 
             if len(pop.neuron_type.description['random_distributions']) > 0:
                 pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % { 'id': pop.id }
@@ -557,7 +558,8 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         """
         Generate the code template for neural update step, more precise updating of variables.
         The code comprise of two major parts: global and local update, second one parallelized
-        with an openmp for construct, if number of threads is greater than one.
+        with an openmp for construct, if number of threads is greater than one and the number
+        of neurons exceed a minimum amount of neurons ( defined as Global.OMP_MIN_NB_NEURONS)
         """
         from .Utils import generate_equation_code
         code = ""
@@ -572,8 +574,9 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 
         # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
-        code += """
+        if eqs.strip() != "":
+            omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+            code += """
             // Updating the local variables
             %(omp_code)s
             for(int i = 0; i < %(size)s; i++){
@@ -581,16 +584,19 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             }
 """ % {'id': pop.id, 'size': pop.size, 'name' : pop.name, 'eqs': eqs, 'omp_code': omp_code}
 
-        # finish code
-        final_code = """
+        if code != "":
+            # finish code
+            final_code = """
         if( _active ) {
 %(code)s
         } // active
 """ % {'code': code}
 
-        # if profiling enabled, annotate with profiling code
-        if self._prof_gen:
-            final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+            # if profiling enabled, annotate with profiling code
+            if self._prof_gen:
+                final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+        else:
+            final_code = ""
 
         return final_code
 
@@ -828,7 +834,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         functions defined in GlobalOperationTemplate. In case of
         OpenMP this calls will take place in the population header.
         In case of CUDA the call semantic will be placed in ANNarchy.cu
-        file.
+        file as part of the host section.
         """
         if len(pop.global_operations) == 0:
             return ""
@@ -844,7 +850,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
             for op in pop.global_operations:
                 code += template[op['function']]['call'] % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
 
-        return code
+        return """
+    if (_active){
+%(code)s
+}""" % {'code':code}
 
     def stop_condition(self, pop):
         if not pop.stop_condition: # no stop condition has been defined

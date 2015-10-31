@@ -26,8 +26,7 @@ import math
 import copy, inspect
 
 from ANNarchy.core import Global
-from ANNarchy.core.Random import RandomDistribution, Uniform
-from ANNarchy.core.Synapse import Synapse
+from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 import ANNarchy.core.Connectors as ConnectorMethods
@@ -154,6 +153,16 @@ class Projection(object):
         # Overwritten by derived classes, to add
         # additional code
         self._specific_template = {}
+
+        # To allow case-specific adjustment of parallelization
+        # parameters, e. g. openMP schedule, we introduce a
+        # dictionary read by the ProjectionGenerator.
+        #
+        # Will be overwritten either by inherited classes or
+        # by an omp_config provided to the compile() method.
+        self._omp_config = {
+            #'psp_schedule': 'schedule(dynamic)'
+        }
 
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one
