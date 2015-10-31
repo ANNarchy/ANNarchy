@@ -1,14 +1,18 @@
 **4.5.3:**
 
-* Bugfix: pop[0] now returns a PopulationView containing the neuron 0, not an IndividualNeuron (accessible through pop.neuron(0))
-* Various bugfixes in CUDA.
-* Bugfix: connect_from_sparse now works with popviews whose ranks are not linearly increasing (e.g. columns)
 * Projections can be assigned a name.
 * A list or Numpy array can be used to slice a Population::
 
     neurons = [1, 4, 17, 34]
     subpop = pop[neurons]
+
+* Synapses can be accessed directly at the Projection level with::
     
+    proj.synapse(pre, post) # equivalent to proj[post][pre]
+    
+* Bugfix: pop[0] now returns a PopulationView containing the neuron 0, not an IndividualNeuron (accessible through pop.neuron(0))
+* Various bugfixes in CUDA.
+* Bugfix: connect_from_sparse now works with popviews whose ranks are not linearly increasing (e.g. columns)
 
 **4.5.2:**
 

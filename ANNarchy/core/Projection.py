@@ -317,17 +317,18 @@ class Projection(object):
             Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
             return None
 
-    # def synapse(self, pre, post):
-    #     """
-    #     Returns the synapse between a pre- and a post-synaptic neuron if it exists, None otherwise.
+    def synapse(self, pre, post):
+        """
+        Returns the synapse between a pre- and a post-synaptic neuron if it exists, None otherwise.
 
-    #     *Parameters*:
+        *Parameters*:
 
-    #         * **pre**: rank of the pre-synaptic neuron.
-    #         * **post**: rank of the post-synaptic neuron.
-    #     """
-    #     print(TODO)
-    #     # synapse() overlaps with the synapse attribute! rename it to synapse_type (like neuron_type) ?
+            * **pre**: rank of the pre-synaptic neuron.
+            * **post**: rank of the post-synaptic neuron.
+        """
+        if not isinstance(pre, int) or not isinstance(post, int):
+            Global._error('Projection.synapse() only accepts rnaks for the pre and post neurons.')
+        return self.dendrite(post).synapse(pre)
 
 
     # Iterators
