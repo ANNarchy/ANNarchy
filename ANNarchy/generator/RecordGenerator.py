@@ -150,7 +150,7 @@ class RecordGenerator:
         recording_code = ""
         struct_code = ""
 
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             struct_code += tpl_code[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
             init_code += tpl_code[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
             recording_code += tpl_code[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}

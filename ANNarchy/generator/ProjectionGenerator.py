@@ -84,7 +84,7 @@ class ProjectionGenerator(object):
         post_event_prefix, post_event = self.postevent(proj)
 
         # Compute sum is the trickiest part
-        if proj.synapse.type == 'rate':
+        if proj.synapse_type.type == 'rate':
             if Global.config['paradigm'] == "openmp":
                 psp_prefix, psp_code = self.computesum_rate_openmp(proj)
             else:
@@ -98,7 +98,7 @@ class ProjectionGenerator(object):
 
         # Detect event-driven variables
         has_event_driven = False
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
 
@@ -244,7 +244,7 @@ class ProjectionGenerator(object):
         init_connectivity_matrix += weight_matrix_tpl['init']
 
         # Spiking model require inverted ranks
-        if proj.synapse.type == "spike":
+        if proj.synapse_type.type == "spike":
             inv_connectivity_matrix_tpl = ProjTemplate.inverse_connectivity_matrix if Global.config['paradigm']=="openmp" else {}
             declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare']
             init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
@@ -297,14 +297,14 @@ class ProjectionGenerator(object):
         # Code for declarations and accessors
         accessor = ""
         # Parameters
-        for var in proj.synapse.description['parameters']:
+        for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
             declare_parameters_variables += decl_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
             accessor += acc_template[var['locality']]% {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter' }
 
         # Variables
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
             declare_parameters_variables += decl_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable' }
@@ -312,7 +312,7 @@ class ProjectionGenerator(object):
 
         # If no psp is defined, it's event-driven
         has_event_driven = False
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
                 break
@@ -320,20 +320,20 @@ class ProjectionGenerator(object):
             declare_event_driven = ProjTemplate.event_driven['header_struct']
 
         # Arrays for the random numbers
-        if len(proj.synapse.description['random_distributions']) > 0:
+        if len(proj.synapse_type.description['random_distributions']) > 0:
             declare_rng += """
     // Random numbers
 """
-            for rd in proj.synapse.description['random_distributions']:
+            for rd in proj.synapse_type.description['random_distributions']:
                 declare_rng += """    std::vector< std::vector<double> > %(rd_name)s;
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
         # Local functions
-        if len(proj.synapse.description['functions'])>0:
+        if len(proj.synapse_type.description['functions'])>0:
             declare_parameters_variables += """
     // Local functions"""
-            for func in proj.synapse.description['functions']:
+            for func in proj.synapse_type.description['functions']:
                 declare_parameters_variables += ' '*4 + func['cpp'] + '\n'
 
         # Structural plasticity
@@ -382,14 +382,14 @@ class ProjectionGenerator(object):
         attr_init_tpl = ProjTemplate.attribute_cpp_init[Global.config['paradigm']]
 
         # Initialize parameters
-        for var in proj.synapse.description['parameters']:
+        for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w':
                 continue
             init = 0.0 if var['ctype'] == 'double' else 0
             code += attr_init_tpl[var['locality']] % { 'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter' }
 
         # Initialize variables
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w':
                 continue
             init = 0.0 if var['ctype'] == 'double' else 0
@@ -397,14 +397,14 @@ class ProjectionGenerator(object):
 
         # Pruning
         if Global.config['structural_plasticity']:
-            if 'pruning' in proj.synapse.description.keys():
+            if 'pruning' in proj.synapse_type.description.keys():
                 code +="""
     // Pruning
     proj%(id_proj)s._pruning = false;
     proj%(id_proj)s._pruning_period = 1;
     proj%(id_proj)s._pruning_offset = 0;
 """% {'id_proj': proj.id}
-            if 'creating' in proj.synapse.description.keys():
+            if 'creating' in proj.synapse_type.description.keys():
                 code +="""
     // Creating
     proj%(id_proj)s._creating = false;
@@ -463,10 +463,10 @@ class ProjectionGenerator(object):
             ids['post_index'] = "[i]"
 
         # Retrieve the PSP
-        if not 'psp' in  proj.synapse.description.keys(): # default
+        if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
         else: # custom psp
-            psp = (proj.synapse.description['psp']['cpp'])
+            psp = (proj.synapse_type.description['psp']['cpp'])
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -480,7 +480,7 @@ class ProjectionGenerator(object):
         with_openmp = Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS
 
         # Dependencies
-        dependencies = list(set(proj.synapse.description['dependencies']['pre']))
+        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
 
         # Delayed variables
         if isinstance(proj.pre, PopulationView):
@@ -499,7 +499,7 @@ class ProjectionGenerator(object):
                         )
                     else:
                         Global._error('The psp accesses a global variable with a non-uniform delay!')
-                        Global._print(proj.synapse.description['psp']['eq'])
+                        Global._print(proj.synapse_type.description['psp']['eq'])
                         exit(0)
 
             else: # Uniform delays
@@ -558,7 +558,7 @@ class ProjectionGenerator(object):
         pre_copy = pre_copy % ids
 
         # Generate the code depending on the operation
-        sum_code = template[proj.synapse.operation] % {
+        sum_code = template[proj.synapse_type.operation] % {
             'pre_copy': pre_copy,
             'omp_code': omp_code,
             'psp': psp.replace(';', ''),
@@ -633,10 +633,10 @@ class ProjectionGenerator(object):
         #    ids['post_index'] = "[i]"
 
         # Retrieve the PSP
-        if not 'psp' in  proj.synapse.description.keys(): # default
+        if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
         else: # custom psp
-            psp = (proj.synapse.description['psp']['cpp'])
+            psp = (proj.synapse_type.description['psp']['cpp'])
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -646,7 +646,7 @@ class ProjectionGenerator(object):
                 ' ' + psp
             )
 
-        psp = proj.synapse.description['psp']['cpp'] % ids
+        psp = proj.synapse_type.description['psp']['cpp'] % ids
 
         body_code = ProjTemplate.cuda_psp_kernel % {
                                    'id': proj.id,
@@ -699,7 +699,7 @@ class ProjectionGenerator(object):
 
         # Determine the mode of synaptic transmission
         continous_transmission = False
-        if 'psp' in  proj.synapse.description.keys(): # continous
+        if 'psp' in  proj.synapse_type.description.keys(): # continous
             continous_transmission = True
 
         ####################################################
@@ -711,7 +711,7 @@ class ProjectionGenerator(object):
         g_target_code = ""
 
         # Analyse all elements of pre_spike
-        for eq in proj.synapse.description['pre_spike']:
+        for eq in proj.synapse_type.description['pre_spike']:
             # g_target is treated differently
             # Must be at the end of the equations
             if eq['name'] == 'g_target':
@@ -727,7 +727,7 @@ class ProjectionGenerator(object):
                     try:
                         value = str(float(val))
                     except: # TODO: more complex operations
-                        value = "%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse.description['global'] else '[i][j]'}
+                        value = "%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse_type.description['global'] else '[i][j]'}
 
                     g_target += """
 if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
@@ -770,7 +770,7 @@ if(_plasticity){
         # Event-driven integration of synaptic variables
         has_exact = False
         event_driven_code = ''
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['method'] == 'event-driven':
                 has_exact = True
                 event_driven_code += """
@@ -861,7 +861,7 @@ if (_transmission && pop%(id_post)s._active){
         ####################################################
         # Not even-driven summation of psp: like rate-coded
         ####################################################
-        if 'psp' in  proj.synapse.description.keys(): # not event-based
+        if 'psp' in  proj.synapse_type.description.keys(): # not event-based
             # Compute it as if it were rate-coded
             psp_code = self.computesum_rate_openmp(proj)[1]
             # Change _sum_target into g_target
@@ -884,10 +884,10 @@ if (_transmission && pop%(id_post)s._active){
 ############## Post-synaptic event spiking OMP ########################
 #######################################################################
     def postevent(self, proj):
-        if proj.synapse.type == "rate":
+        if proj.synapse_type.type == "rate":
             return "",""
 
-        if proj.synapse.description['post_spike'] == []:
+        if proj.synapse_type.description['post_spike'] == []:
             return "",""
 
 
@@ -909,14 +909,14 @@ if (_transmission && pop%(id_post)s._active){
 
         # Event-driven integration
         has_event_driven = False
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
 
         # Generate event-driven code
         event_driven_code = ""
         if has_event_driven:
-            for var in proj.synapse.description['variables']:
+            for var in proj.synapse_type.description['variables']:
                 if var['method'] == 'event-driven':
                     event_driven_code += '// ' + var['eq'] + '\n'
                     event_driven_code += var['cpp'] % ids + '\n'
@@ -928,7 +928,7 @@ _last_event[i][j] = t;
 
         # Gather the equations
         post_code = ""
-        for eq in proj.synapse.description['post_spike']:
+        for eq in proj.synapse_type.description['post_spike']:
             post_code += '// ' + eq['eq'] + '\n'
             if eq['name'] == 'w':
                 post_code += "if(_plasticity)\n"
@@ -993,10 +993,10 @@ if(_transmission && pop%(id_post)s._active){
         }
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
+        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
+        local_eq =  generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
 
         # Skip generation if
         if local_eq.strip() == '' and global_eq.strip() == '' :
@@ -1009,7 +1009,7 @@ if(_transmission && pop%(id_post)s._active){
 
 
         # Dependencies
-        dependencies = list(set(proj.synapse.description['dependencies']['pre']))
+        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
 
         # Delayed variables
         if isinstance(proj.pre, PopulationView):
@@ -1074,34 +1074,34 @@ if(_transmission && pop%(id_post)s._active){
 
     def update_synapse_cuda(self, proj):
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse.description, 'global', 'proj', padding=2, wrap_w="plasticity")
+        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
-        local_eq =  generate_equation_code(proj.id, proj.synapse.description, 'local', 'proj', padding=3, wrap_w="plasticity")
+        local_eq =  generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="plasticity")
 
         if global_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
 
         # pre- and postsynaptic global operations
         pre_global_ops = []
-        for pre_glob in proj.synapse.description['pre_global_operations']:
+        for pre_glob in proj.synapse_type.description['pre_global_operations']:
             pre_global_ops.append( """_%(func)s_%(name)s""" % { 'func': pre_glob['function'], 'name': pre_glob['variable'] } )
 
         post_global_ops = []
-        for post_glob in proj.synapse.description['post_global_operations']:
+        for post_glob in proj.synapse_type.description['post_global_operations']:
             post_global_ops.append( """_%(func)s_%(name)s""" % { 'func': post_glob['function'], 'name': post_glob['variable'] } )
 
         # remove doubled entries
-        pre_dependencies = list(set(proj.synapse.description['dependencies']['pre']))
+        pre_dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
         pre_global_ops = list(set(pre_global_ops))
-        post_dependencies = list(set(proj.synapse.description['dependencies']['post']))
+        post_dependencies = list(set(proj.synapse_type.description['dependencies']['post']))
         post_global_ops = list(set(post_global_ops))
 
         var = ""
         par = ""
 
         # synaptic variables / parameters
-        for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+        for attr in proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters']:
             var += """, %(type)s* %(name)s """ % { 'type': attr['ctype'], 'name': attr['name'] }
 
         # replace pre- and postsynaptic global operations / variable accesses
@@ -1121,11 +1121,11 @@ if(_transmission && pop%(id_post)s._active){
                 par += """, double pop%(id)s_%(name)s""" % { 'id': proj.pre.id, 'name': g_op}
 
         # random variables
-        for rd in proj.synapse.description['random_distributions']:
+        for rd in proj.synapse_type.description['random_distributions']:
             par += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
 
         # we replace the rand_%(id)s by the corresponding curand... term
-        for rd in proj.synapse.description['random_distributions']:
+        for rd in proj.synapse_type.description['random_distributions']:
             if rd['dist'] == "Uniform":
                 term = """curand_uniform_double( &%(rd)s[i]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
                 local_eq = local_eq.replace(rd['name']+"[j]", term)
@@ -1184,7 +1184,7 @@ if(_transmission && pop%(id_post)s._active){
         #
         # calling entity
         local = ""
-        for attr in proj.synapse.description['variables'] + proj.synapse.description['parameters']:
+        for attr in proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters']:
             local += """, proj%(id)s.gpu_%(name)s """ % { 'id': proj.id, 'name': attr['name'] }
 
         if (proj.pre.id == proj.post.id):
@@ -1206,7 +1206,7 @@ if(_transmission && pop%(id_post)s._active){
             glob += """, pop%(id)s.%(name)s """ % { 'id': proj.post.id, 'name': g_op }
 
         # random variables
-        for rd in proj.synapse.description['random_distributions']:
+        for rd in proj.synapse_type.description['random_distributions']:
             glob += """, proj%(id)s.gpu_%(rd_name)s""" % { 'id': proj.id, 'rd_name' : rd['name'] }
 
         # generate code
@@ -1230,7 +1230,7 @@ if(_transmission && pop%(id_post)s._active){
             return proj._specific_template['init_rng']
 
         code = ""
-        for rd in proj.synapse.description['random_distributions']:
+        for rd in proj.synapse_type.description['random_distributions']:
             code += """    %(rd_name)s = std::vector< std::vector<double> >(post_rank.size(), std::vector<double>());
     for(int i=0; i<post_rank.size(); i++){
         %(rd_name)s[i] = std::vector<double>(pre_rank[i].size(), 0.0);
@@ -1245,14 +1245,14 @@ if(_transmission && pop%(id_post)s._active){
             return proj._specific_template['update_rng']
 
         code = ""
-        if len(proj.synapse.description['random_distributions']) > 0:
+        if len(proj.synapse_type.description['random_distributions']) > 0:
             code += """
     // RD of proj%(id_proj)s
     for(int i = 0; i < post_rank.size(); i++){
         for(int j = 0; j < pre_rank[i].size(); j++){
 """% {'id_proj': proj.id}
 
-            for rd in proj.synapse.description['random_distributions']:
+            for rd in proj.synapse_type.description['random_distributions']:
                 code += """
             %(rd_name)s[i][j] = dist_%(rd_name)s(rng);""" % {'id_proj': proj.id, 'rd_name': rd['name']}
 
@@ -1280,19 +1280,19 @@ if(_transmission && pop%(id_post)s._active){
 
         code = ""
         # Pruning defined in the synapse
-        if 'pruning' in proj.synapse.description.keys():
+        if 'pruning' in proj.synapse_type.description.keys():
             code += header_tpl['pruning']
 
         # Creating defined in the synapse
-        if 'creating' in proj.synapse.description.keys():
+        if 'creating' in proj.synapse_type.description.keys():
             code += header_tpl['creating']
 
         # Retrieve the names of extra attributes
         extra_args = ""
         add_code = ""
         remove_code = ""
-        for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
-            if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse_type.description['local']:
 
                 if not isinstance(proj.init[var['name']], (int, float, bool)):
                     init = var['init']
@@ -1308,12 +1308,12 @@ if(_transmission && pop%(id_post)s._active){
             delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
 
         # Spiking networks must update the inv_pre_rank array
-        spiking_addcode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_addcode']
-        spiking_removecode = "" if proj.synapse.type == 'rate' else header_tpl['spiking_removecode']
+        spiking_addcode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_addcode']
+        spiking_removecode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_removecode']
 
         # Randomdistributions
         rd_addcode = ""; rd_removecode = ""
-        for rd in proj.synapse.description['random_distributions']:
+        for rd in proj.synapse_type.description['random_distributions']:
             rd_addcode += """
         %(name)s[post].insert(%(name)s[post].begin() + idx, 0.0);
 """ % {'name': rd['name']}
@@ -1334,7 +1334,7 @@ if(_transmission && pop%(id_post)s._active){
 
 
     def creating(self, proj):
-        creating_structure = proj.synapse.description['creating']
+        creating_structure = proj.synapse_type.description['creating']
 
         # Random stuff
         proba = ""; proba_init = ""
@@ -1406,7 +1406,7 @@ if(_transmission && pop%(id_post)s._active){
         return creating
 
     def pruning(self, proj):
-        pruning_structure = proj.synapse.description['pruning']
+        pruning_structure = proj.synapse_type.description['pruning']
 
 
         proba = ""; proba_init = ""
@@ -1455,8 +1455,8 @@ if(_transmission && pop%(id_post)s._active){
 
         # transfer of variables
         host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
-        for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
-            if attr['name'] in proj.synapse.description['local']:
+        for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+            if attr['name'] in proj.synapse_type.description['local']:
                 host_device_transfer += """
         // %(name)s: local
         if ( proj%(id)s.%(name)s_dirty )
@@ -1486,8 +1486,8 @@ if(_transmission && pop%(id_post)s._active){
 
         device_host_transfer += """
     // device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
-        for attr in proj.synapse.description['parameters']+proj.synapse.description['variables']:
-            if attr['name'] in proj.synapse.description['local']:
+        for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+            if attr['name'] in proj.synapse_type.description['local']:
                 device_host_transfer += """
             // %(name)s: local
             std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);

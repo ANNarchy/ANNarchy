@@ -247,7 +247,7 @@ class PyxGenerator(object):
         """
         # Check for exact intgeration
         has_event_driven = False
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
                 break
@@ -283,12 +283,12 @@ class PyxGenerator(object):
         # Determine all export methods
         export_parameters_variables = ""
         # Parameters
-        for var in proj.synapse.description['parameters']:
+        for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
             export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         # Variables
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
             export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
@@ -297,15 +297,15 @@ class PyxGenerator(object):
         structural_plasticity = ""
         if Global.config['structural_plasticity']:
             # Pruning in the synapse
-            if 'pruning' in proj.synapse.description.keys():
+            if 'pruning' in proj.synapse_type.description.keys():
                 structural_plasticity += sp_tpl['pruning']
-            if 'creating' in proj.synapse.description.keys():
+            if 'creating' in proj.synapse_type.description.keys():
                 structural_plasticity += sp_tpl['creating']
 
             # Retrieve the names of extra attributes
             extra_args = ""
-            for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
-                if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+            for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+                if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse_type.description['local']:
                     extra_args += ', ' + var['ctype'] + ' ' +  var['name']
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
@@ -349,7 +349,7 @@ class PyxGenerator(object):
         """
         # Check for exact intgeration
         has_event_driven = False
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['method'] == 'event-driven':
                 has_event_driven = True
                 break
@@ -399,11 +399,11 @@ class PyxGenerator(object):
 
         # Determine all accessor methods
         wrapper_access_parameters_variables = ""
-        for var in proj.synapse.description['parameters']:
+        for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
             wrapper_access_parameters_variables += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
             wrapper_access_parameters_variables += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
@@ -415,18 +415,18 @@ class PyxGenerator(object):
         structural_plasticity = ""
         if Global.config['structural_plasticity']:
             # Pruning in the synapse
-            if 'pruning' in proj.synapse.description.keys():
+            if 'pruning' in proj.synapse_type.description.keys():
                 structural_plasticity += sp_tpl['pruning'] % {'id' : proj.id}
 
             # Creating in the synapse
-            if 'creating' in proj.synapse.description.keys():
+            if 'creating' in proj.synapse_type.description.keys():
                 structural_plasticity += sp_tpl['creating'] % {'id' : proj.id}
 
             # Retrieve the names of extra attributes
             extra_args = ""
             extra_values = ""
-            for var in proj.synapse.description['parameters'] + proj.synapse.description['variables']:
-                if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse.description['local']:
+            for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+                if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse_type.description['local']:
                     extra_args += ', ' + var['ctype'] + ' ' +  var['name']
                     extra_values += ', ' +  var['name']
 
@@ -542,12 +542,12 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
     cdef cppclass ProjRecorder%(id)s (Monitor):
         ProjRecorder%(id)s(vector[int], int, long) except +    
 """
-        for var in proj.synapse.description['variables']:
-            if var['name'] in proj.synapse.description['local']:
+        for var in proj.synapse_type.description['variables']:
+            if var['name'] in proj.synapse_type.description['local']:
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
         bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
-            elif var['name'] in proj.synapse.description['global']:
+            elif var['name'] in proj.synapse_type.description['global']:
                 tpl_code += """
         vector[%(type)s] %(name)s
         bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
@@ -567,7 +567,7 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
         self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
 """
 
-        for var in proj.synapse.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             tpl_code += """
     property %(name)s:
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s

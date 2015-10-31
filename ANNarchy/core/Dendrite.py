@@ -235,8 +235,8 @@ class Dendrite(object):
 
         # Set default values for the additional variables
         extra_attributes = {}
-        for var in self.proj.synapse.description['parameters'] + self.proj.synapse.description['variables']:
-            if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse.description['local']:
+        for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
+            if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse_type.description['local']:
                 if not isinstance(self.proj.init[var['name']], (int, float, bool)):
                     init = var['init']
                 else:
@@ -337,7 +337,7 @@ class IndividualSynapse(object):
         self.dendrite = dendrite
         self.rank = rank
         self.idx = self.dendrite.rank.index(rank)
-        self.attributes = self.dendrite.proj.synapse.description['local']
+        self.attributes = self.dendrite.proj.synapse_type.description['local']
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."

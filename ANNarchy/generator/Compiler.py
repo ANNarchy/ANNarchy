@@ -393,8 +393,8 @@ clean:
             # Reserved variable names
             for term in ['t', 'dt', 't_pre', 't_post']:
                 if term in proj.attributes:
-                    Global._print(proj.synapse.parameters)
-                    Global._print(proj.synapse.equations)
+                    Global._print(proj.synapse_type.parameters)
+                    Global._print(proj.synapse_type.equations)
                     Global._error(term + ' is a reserved variable name')
                     exit(0)
             # Check the connector method has been called
@@ -403,7 +403,7 @@ clean:
                 exit(0)
 
             # Check existing pre variables
-            for dep in  proj.synapse.description['dependencies']['pre']:
+            for dep in  proj.synapse_type.description['dependencies']['pre']:
                 if dep.startswith('sum('):
                     target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.pre.targets:
@@ -413,7 +413,7 @@ clean:
                 if not dep in proj.pre.attributes:
                     Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
                     exit(0)
-            for dep in  proj.synapse.description['dependencies']['post']:
+            for dep in  proj.synapse_type.description['dependencies']['post']:
                 if dep.startswith('sum('):
                     target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.post.targets:

@@ -135,7 +135,7 @@ class CodeGenerator(object):
 
         # Propagate the global operations from the projections to the populations
         for proj in self._projections:
-            for op in proj.synapse.description['pre_global_operations']:
+            for op in proj.synapse_type.description['pre_global_operations']:
                 if isinstance(proj.pre, PopulationView):
                     if not op in proj.pre.population.global_operations:
                         proj.pre.population.global_operations.append(op)
@@ -143,7 +143,7 @@ class CodeGenerator(object):
                     if not op in proj.pre.global_operations:
                         proj.pre.global_operations.append(op)
 
-            for op in  proj.synapse.description['post_global_operations']:
+            for op in  proj.synapse_type.description['post_global_operations']:
                 if isinstance(proj.post, PopulationView):
                     if not op in proj.post.population.global_operations:
                         proj.post.population.global_operations.append(op)
@@ -151,7 +151,7 @@ class CodeGenerator(object):
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
             if proj.max_delay > 1:
-                for var in proj.synapse.description['dependencies']['pre']:
+                for var in proj.synapse_type.description['dependencies']['pre']:
                     if isinstance(proj.pre, PopulationView):
                         proj.pre.population.delayed_variables.append(var)
                     else:
@@ -478,9 +478,9 @@ class CodeGenerator(object):
         creating = ""
         if Global.config['structural_plasticity']:
             for proj in self._projections:
-                if 'pruning' in proj.synapse.description.keys():
+                if 'pruning' in proj.synapse_type.description.keys():
                     pruning += self._projgen.pruning(proj)
-                if 'creating' in proj.synapse.description.keys():
+                if 'creating' in proj.synapse_type.description.keys():
                     creating += self._projgen.creating(proj)
 
         return creating + pruning

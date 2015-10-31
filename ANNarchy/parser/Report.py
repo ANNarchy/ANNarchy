@@ -229,8 +229,8 @@ def _generate_summary(net_id):
     list_synapse_models = []
     for proj in _network[net_id]['projections']:
         list_connectivity.append(proj.connector_name)
-        if not proj.synapse.name in list(Synapse._default_names.values()) + ['Static weight']:
-            list_synapse_models.append(proj.synapse.name)
+        if not proj.synapse_type.name in list(Synapse._default_names.values()) + ['Static weight']:
+            list_synapse_models.append(proj.synapse_type.name)
     for con in list(set(list_connectivity)):
         connectivity += con + ', '
     for syn in list(set(list_synapse_models)):
@@ -302,8 +302,8 @@ def _generate_projections(net_id, gather_subprojections):
         projections = _network[net_id]['projections']
 
     for proj in projections:
-        if not proj.synapse.name in Synapse._default_names.values():
-            name = proj.synapse.name
+        if not proj.synapse_type.name in Synapse._default_names.values():
+            name = proj.synapse_type.name
         else:
             name = "-"
         txt += proj_tpl % {'pre': pop_name(proj.pre.name), 'post': pop_name(proj.post.name), 'target': proj.target,

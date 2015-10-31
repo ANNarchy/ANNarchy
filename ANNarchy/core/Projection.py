@@ -83,22 +83,22 @@ class Projection(object):
             # presynaptic population.
             if self.pre.neuron_type.type == 'rate':
                 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
-                self.synapse = DefaultRateCodedSynapse()
-                self.synapse.type = 'rate'
+                self.synapse_type = DefaultRateCodedSynapse()
+                self.synapse_type.type = 'rate'
             else:
                 from ANNarchy.models.Synapses import DefaultSpikingSynapse
-                self.synapse = DefaultSpikingSynapse()
-                self.synapse.type = 'spike'
+                self.synapse_type = DefaultSpikingSynapse()
+                self.synapse_type.type = 'spike'
 
         elif inspect.isclass(synapse):
-            self.synapse = synapse()
-            self.synapse.type = self.pre.neuron_type.type
+            self.synapse_type = synapse()
+            self.synapse_type.type = self.pre.neuron_type.type
         else:
-            self.synapse = copy.deepcopy(synapse)
-            self.synapse.type = self.pre.neuron_type.type
+            self.synapse_type = copy.deepcopy(synapse)
+            self.synapse_type.type = self.pre.neuron_type.type
 
         # Analyse the parameters and variables
-        self.synapse._analyse()
+        self.synapse_type._analyse()
 
         # Create a default name
         self.id = len(Global._network[0]['projections'])
@@ -110,12 +110,12 @@ class Projection(object):
         # Get a list of parameters and variables
         self.parameters = []
         self.init = {}
-        for param in self.synapse.description['parameters']:
+        for param in self.synapse_type.description['parameters']:
             self.parameters.append(param['name'])
             self.init[param['name']] = param['init']
 
         self.variables = []
-        for var in self.synapse.description['variables']:
+        for var in self.synapse_type.description['variables']:
             self.variables.append(var['name'])
             self.init[var['name']] = var['init']
 
@@ -247,7 +247,7 @@ class Projection(object):
 
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
-        return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse.description['plasticity'] and Global.config['paradigm']=="openmp"
+        return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse_type.description['plasticity'] and Global.config['paradigm']=="openmp"
 
 
     def reset(self, synapses=False):
@@ -474,7 +474,7 @@ class Projection(object):
             for idx, n in enumerate(self.post_ranks):
                 getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value.get_values(self.cyInstance.nb_synapses(idx)))
         else: # a single value
-            if attribute in self.synapse.description['local']:
+            if attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
             else:
@@ -528,21 +528,21 @@ class Projection(object):
         for key, val in value.items():
             if val == '': # a flag
                 try:
-                    self.synapse.description['variables'][rk_var]['flags'].index(key)
+                    self.synapse_type.description['variables'][rk_var]['flags'].index(key)
                 except: # the flag does not exist yet, we can add it
-                    self.synapse.description['variables'][rk_var]['flags'].append(key)
+                    self.synapse_type.description['variables'][rk_var]['flags'].append(key)
             elif val == None: # delete the flag
                 try:
-                    self.synapse.description['variables'][rk_var]['flags'].remove(key)
+                    self.synapse_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
-                    if has_key(self.synapse.description['variables'][rk_var]['bounds'], key):
-                        self.synapse.description['variables'][rk_var]['bounds'].pop(key)
+                    if has_key(self.synapse_type.description['variables'][rk_var]['bounds'], key):
+                        self.synapse_type.description['variables'][rk_var]['bounds'].pop(key)
             else: # new value for init, min, max...
                 if key == 'init':
-                    self.synapse.description['variables'][rk_var]['init'] = val
+                    self.synapse_type.description['variables'][rk_var]['init'] = val
                     self.init[name] = val
                 else:
-                    self.synapse.description['variables'][rk_var]['bounds'][key] = val
+                    self.synapse_type.description['variables'][rk_var]['bounds'][key] = val
 
 
 
@@ -573,13 +573,13 @@ class Projection(object):
         if rk_var == -1:
             Global._error('The projection '+self.name+' has no variable called ' + name)
             return
-        self.synapse.description['variables'][rk_var]['eq'] = equation
+        self.synapse_type.description['variables'][rk_var]['eq'] = equation
 
 
     def _find_variable_index(self, name):
-        " Returns the index of the variable name in self.synapse.description['variables']"
-        for idx in range(len(self.synapse.description['variables'])):
-            if self.synapse.description['variables'][idx]['name'] == name:
+        " Returns the index of the variable name in self.synapse_type.description['variables']"
+        for idx in range(len(self.synapse_type.description['variables'])):
+            if self.synapse_type.description['variables'][idx]['name'] == name:
                 return idx
         return -1
 
@@ -640,7 +640,7 @@ class Projection(object):
         This method is useful when performing some tests on a trained network without messing with the learned weights.
         """
         try:
-            if self.synapse.type == 'rate':
+            if self.synapse_type.type == 'rate':
                 self.cyInstance._set_update(False)
             else:
                 self.cyInstance._set_plasticity(False)
