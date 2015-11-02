@@ -461,6 +461,13 @@ class PopulationGenerator(object):
     // Delays for spike population
     std::deque< std::vector<int> > _delayed_spike;
 """
+                for var in pop.delayed_variables:
+                    if var in pop.neuron_type.description['local']:
+                        declare_code += """
+    std::deque< std::vector<double> > _delayed_%(var)s; """ % {'var': var}
+                    else:
+                        declare_code += """
+    std::deque< double > _delayed_%(var)s; """ % {'var': var}
         else: #CUDA
             if pop.neuron_type.type == "rate":
                 for var in pop.delayed_variables:
