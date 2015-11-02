@@ -152,6 +152,8 @@ lil_connectivity_matrix_omp = {
         return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()[n]
+    def pre_rank_all(self):
+        return proj%(id_proj)s.get_pre_rank()
 """
 }
 
@@ -321,6 +323,8 @@ csr_connectivity_matrix_cuda = {
         return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()[n]
+    def pre_rank_all(self):
+        return proj%(id_proj)s.get_pre_rank()
 """,
     'pyx_wrapper_args': " syn",
 }

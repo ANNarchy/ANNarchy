@@ -674,7 +674,7 @@ class Projection(object):
             data = {
                 'name': self.name,
                 'post_ranks': self.post_ranks,
-                'pre_ranks': [self.cyInstance.pre_rank(n) for n in range(self.size)],
+                'pre_ranks': self.cyInstance.pre_rank_all(), # was: [self.cyInstance.pre_rank(n) for n in range(self.size)],
                 'w': self.cyInstance.get_w(),
                 'delay': self.cyInstance.get_delay() if hasattr(self.cyInstance, 'get_delay') else None,
                 'max_delay': self.max_delay,
