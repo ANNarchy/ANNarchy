@@ -291,12 +291,11 @@ class CodeGenerator(object):
         number_threads = "omp_set_num_threads(threads);" if Global.config['num_threads'] > 1 else ""
 
         #Profiling
-        from .Template.ProfileTemplate import profile_template
-        prof_include = "" if not Global.config["profiling"] else profile_template['include']
-        prof_step_pre = "" if not Global.config["profiling"] else profile_template['step_pre']
-        prof_step_post = "" if not Global.config["profiling"] else profile_template['step_post']
-        prof_run_pre = "" if not Global.config["profiling"] else profile_template['run_pre']
-        prof_run_post = "" if not Global.config["profiling"] else profile_template['run_post']
+        if self._profgen:
+            prof_dict = self._profgen.generate_body_dict()
+        else:
+            from .ProfileGenerator import ProfileGenerator
+            prof_dict = ProfileGenerator(self._annarchy_dir).generate_body_dict(True)
 
         #
         # Generate the ANNarchy.cpp code, the corrsponding template differs greatly
@@ -306,7 +305,7 @@ class CodeGenerator(object):
         # Generate cpp code for the analysed pops and projs
         if Global.config['paradigm']=="openmp":
             from .Template.BaseTemplate import omp_body_template
-            return omp_body_template % {
+            base_dict = {
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
@@ -322,13 +321,10 @@ class CodeGenerator(object):
                 'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
                 'set_number_threads' : number_threads,
-                'prof_include': prof_include,
-                'prof_step_pre': prof_step_pre,
-                'prof_step_post': prof_step_post,
-                'prof_run_pre': prof_run_pre,
-                'prof_run_post': prof_run_post
             }
 
+            base_dict.update( prof_dict )
+            return omp_body_template % base_dict
         else:
             # Implementation notice ( HD: 10. June, 2015 )
             #
@@ -349,9 +345,6 @@ class CodeGenerator(object):
             # This ensures a consistent interface in the generators and also in the generated
             # codes, but sometimes require additional overhead. Hopefully NVidia will improve
             # their linker in the next releases, so one could remove this overhead.
-            projection_init = ""
-            device_init = ""
-
             psp_call = ""
             for proj in self._proj_desc:
                 psp_call += proj['psp_call']
@@ -504,10 +497,10 @@ class CodeGenerator(object):
             if ops == []:
                 return ""
 
-            from .Template.GlobalOperationTemplate import global_operation_templates_openmp as template
+            from .Template.GlobalOperationTemplate import global_operation_templates_openmp as omp_template
             code = ""
             for op in list(set(ops)):
-                code += template[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
+                code += omp_template[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
 
             return code
         else:
@@ -517,10 +510,10 @@ class CodeGenerator(object):
             header = ""
             body = ""
 
-            from .Template.GlobalOperationTemplate import global_operation_templates_cuda as template
+            from .Template.GlobalOperationTemplate import global_operation_templates_cuda as cuda_template
             for op in list(set(ops)):
-                header += template[op]['header']
-                body += template[op]['body']
+                header += cuda_template[op]['header']
+                body += cuda_template[op]['body']
 
             return header, body
 

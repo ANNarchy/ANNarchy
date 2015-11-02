@@ -197,8 +197,10 @@ void singleStep()
     ////////////////////////////////
     // Presynaptic events
     ////////////////////////////////
+%(prof_proj_psp_pre)s
 %(reset_sums)s
 %(compute_sums)s
+%(prof_proj_psp_post)s
 
     ////////////////////////////////
     // Update random distributions
@@ -208,7 +210,9 @@ void singleStep()
     ////////////////////////////////
     // Update neural variables
     ////////////////////////////////
+%(prof_neur_step_pre)s
 %(update_neuron)s
+%(prof_neur_step_post)s
 
     ////////////////////////////////
     // Delay outputs

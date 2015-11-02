@@ -269,7 +269,26 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     //initialize profiler, create singleton instance
     auto profiler = Profiling::get_instance();
     profiler->register_function("net", "network", "step");
+    profiler->register_function("net", "network", "psp");
+    profiler->register_function("net", "network", "neur_step");
     """,
+    # Operations
+    'proj_psp_pre': """// measure synaptic transmission
+    auto measure_psp = Profiling::get_instance()->get_measurement("network", "psp");
+    measure_psp->start_wall_time();
+    """,
+    'proj_psp_post': """// done
+    measure_psp->stop_wall_time();
+    """,
+    'neur_step_pre': """// measure population update
+    auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
+    measure_neur_step->start_wall_time();
+    """,
+    'neur_step_post': """// done
+    measure_neur_step->stop_wall_time();
+    """,
+
+    # Overall and setup
     'step_pre': """// before
     auto measure = Profiling::get_instance()->get_measurement("network", "step");
     measure->start_wall_time();

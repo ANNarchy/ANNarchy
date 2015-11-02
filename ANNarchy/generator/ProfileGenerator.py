@@ -42,6 +42,23 @@ class ProfileGenerator(object):
         with open(self.annarchy_dir+'/generate/Profiling.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
+    def generate_body_dict(self, empty=False):
+        """
+        Creates a dictionary, contain profile code snippets.
+        """
+        body_dict = {
+            'prof_include': "" if empty else profile_template['include'],
+            'prof_step_pre': "" if empty else profile_template['step_pre'],
+            'prof_step_post': "" if empty else profile_template['step_post'],
+            'prof_run_pre': "" if empty else profile_template['run_pre'],
+            'prof_run_post': "" if empty else profile_template['run_post'],
+            'prof_proj_psp_pre': "" if empty else profile_template['proj_psp_pre'],
+            'prof_proj_psp_post': "" if empty else profile_template['proj_psp_post'],
+            'prof_neur_step_pre': "" if empty else profile_template['neur_step_pre'],
+            'prof_neur_step_post': "" if empty else profile_template['neur_step_post']
+        }
+        return body_dict
+
     def generate_init_population(self, pop):
         """
         Generate initialization code for population
