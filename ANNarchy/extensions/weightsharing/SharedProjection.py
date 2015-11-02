@@ -258,8 +258,8 @@ class SharedProjection(Projection):
         self.delays = delays
 
         # Change the psp by default
-        if self.synapse.description['raw_psp'] == "w * pre.r":
-            self.synapse.description['psp']['cpp'] = "%(pre_prefix)sr%(pre_index)s"
+        if self.synapse_type.description['raw_psp'] == "w * pre.r":
+            self.synapse_type.description['psp']['cpp'] = "%(pre_prefix)sr%(pre_index)s"
 
         # Check dimensions of populations
         self.dim_pre = self.pre.dimension
@@ -543,14 +543,8 @@ class SharedProjection(Projection):
 
     def _generate_convolve_code(self):
 
-        # Padding
-        if isinstance(self.padding, str):
-            padding = 0.0
-        else:
-            padding = self.padding
-
         # Operation to be performed: sum, max, min, mean
-        operation = self.synapse.operation
+        operation = self.synapse_type.operation
 
         # Main code
         code = tabify("sum = 0.0;", 3)
@@ -604,7 +598,7 @@ class SharedProjection(Projection):
         for dim in range(self.dim_kernel):
             index += '[' + indices[dim] + '_w]'
 
-        increment = self.synapse.description['psp']['cpp'] % {
+        increment = self.synapse_type.description['psp']['cpp'] % {
             'id_pre': self.pre.id,
             'id_post': self.post.id,
             'local_index': index,
@@ -666,14 +660,8 @@ class SharedProjection(Projection):
 
     def _generate_bank_code(self):
 
-        # Padding
-        if isinstance(self.padding, str):
-            padding = 0.0
-        else:
-            padding = self.padding
-
         # Operation to be performed: sum, max, min, mean
-        operation = self.synapse.operation
+        operation = self.synapse_type.operation
 
         # Main code
         code = tabify("sum = 0.0;", 3)
@@ -721,7 +709,7 @@ class SharedProjection(Projection):
         for dim in range(self.dim_kernel-1):
             index += '[' + indices[dim] + '_w]'
 
-        increment = self.synapse.description['psp']['cpp'] % {
+        increment = self.synapse_type.description['psp']['cpp'] % {
             'id_pre': self.pre.id,
             'id_post': self.post.id,
             'local_index': index,
@@ -778,7 +766,7 @@ class SharedProjection(Projection):
     def _generate_pooling_code(self):
 
         # Operation to be performed: sum, max, min, mean
-        operation = self.synapse.operation
+        operation = self.synapse_type.operation
 
         # Main code
         code = """
@@ -813,7 +801,7 @@ class SharedProjection(Projection):
                 rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}
 
         # Compute the value to pool
-        psp = self.synapse.description['psp']['cpp'] % {
+        psp = self.synapse_type.description['psp']['cpp'] % {
             'id_pre': self.pre.id,
             'id_post': self.post.id,
             'local_index':'[i][j]',
@@ -1089,7 +1077,7 @@ class SharedProjection(Projection):
             omp_code = ""
 
         # PSP
-        psp = self.synapse.description['psp']['cpp']  % {
+        psp = self.synapse_type.description['psp']['cpp']  % {
             'id_pre': self.pre.id,
             'id_post': self.post.id,
             'local_index':'[i][j]',
@@ -1108,7 +1096,7 @@ class SharedProjection(Projection):
             )
 
         # Operation to be performed: sum, max, min, mean
-        operation = self.synapse.operation
+        operation = self.synapse_type.operation
 
         if operation == 'sum':
             sum_code = """
