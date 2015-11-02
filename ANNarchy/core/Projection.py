@@ -670,8 +670,8 @@ class Projection(object):
         if not self.initialized:
             Global._error('save_connectivity(): the network has not been compiled yet.')
             return
-        else:
-            data = {
+        
+        data = {
                 'name': self.name,
                 'post_ranks': self.post_ranks,
                 'pre_ranks': self.cyInstance.pre_rank_all(), # was: [self.cyInstance.pre_rank(n) for n in range(self.size)],
@@ -797,45 +797,66 @@ class Projection(object):
     ################################
 
     def _data(self):
+
+        if not self.initialized:
+            Global._error('save_connectivity(): the network has not been compiled yet.')
+            return {}
+
         desc = {}
         desc['name'] = self.name
         desc['post_ranks'] = self.post_ranks
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
+        desc['pre_ranks'] = self.cyInstance.pre_rank_all()
 
-        synapse_count = []
-        dendrites = []
+        # Attributes to save
+        attributes = self.attributes
+        if not 'w' in self.attributes:
+            attributes.append('w')
 
-        for d in self.post_ranks:
-            dendrite_desc = {}
-            # Number of synapses in the dendrite
-            synapse_count.append(self.dendrite(d).size)
-            # Postsynaptic rank
-            dendrite_desc['post_rank'] = d
-            # Number of synapses
-            dendrite_desc['size'] = self.cyInstance.nb_synapses(d)
-            # Attributes
-            attributes = self.attributes
-            if not 'w' in self.attributes:
-                attributes.append('w')
-            # Save all attributes
-            for var in attributes:
-                try:
-                    dendrite_desc[var] = getattr(self.cyInstance, 'get_dendrite_'+var)(d)
-                except Exception as e:
-                    Global._error('Can not save the attribute ' + var + ' in the projection.')
-            # Add pre-synaptic ranks and delays
-            dendrite_desc['rank'] = self.cyInstance.pre_rank(d)
-            if hasattr(self.cyInstance, 'get_delay'):
-                dendrite_desc['delay'] = self.cyInstance.get_delay()
-            # Finish
-            dendrites.append(dendrite_desc)
-
-        desc['dendrites'] = dendrites
-        desc['number_of_synapses'] = synapse_count
+        # Save all attributes
+        for var in attributes:
+            try:
+                desc[var] = getattr(self.cyInstance, 'get_'+var)()
+            except Exception as e:
+                Global._error('Can not save the attribute ' + var + ' in the projection.')
 
         return desc
+
+
+        # synapse_count = []
+        # dendrites = []
+
+        # for d in self.post_ranks:
+        #     dendrite_desc = {}
+        #     # Number of synapses in the dendrite
+        #     synapse_count.append(self.dendrite(d).size)
+        #     # Postsynaptic rank
+        #     dendrite_desc['post_rank'] = d
+        #     # Number of synapses
+        #     dendrite_desc['size'] = self.cyInstance.nb_synapses(d)
+        #     # Attributes
+        #     attributes = self.attributes
+        #     if not 'w' in self.attributes:
+        #         attributes.append('w')
+        #     # Save all attributes
+        #     for var in attributes:
+        #         try:
+        #             dendrite_desc[var] = getattr(self.cyInstance, 'get_dendrite_'+var)(d)
+        #         except Exception as e:
+        #             Global._error('Can not save the attribute ' + var + ' in the projection.')
+        #     # Add pre-synaptic ranks and delays
+        #     dendrite_desc['rank'] = self.cyInstance.pre_rank(d)
+        #     if hasattr(self.cyInstance, 'get_delay'):
+        #         dendrite_desc['delay'] = self.cyInstance.get_delay()
+        #     # Finish
+        #     dendrites.append(dendrite_desc)
+
+        # desc['dendrites'] = dendrites
+        # desc['number_of_synapses'] = synapse_count
+
+        # return desc
 
     def save(self, filename):
         """

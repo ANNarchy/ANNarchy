@@ -304,20 +304,23 @@ def _load_proj_data(proj, desc):
         Global._error('The current projection has not the same number of postsynaptic neurons as in the saved file.')
         return
     if not 'attributes' in desc.keys():
-        _error('Saved with a too old version of ANNarchy (< 4.2).')
+        Global._error('Saved with a too old version of ANNarchy (< 4.2).')
         return
-    for dendrite in desc['dendrites']:
-        rk = dendrite['post_rank']
+    if hasattr(desc, 'dendrites'): # Saved before 4.5.3
+        for dendrite in desc['dendrites']:
+            rk = dendrite['post_rank']
+            for var in desc['attributes']:
+                if var in ['rank', 'delay']:
+                    continue
+                try:
+                    if isinstance(dendrite[var], (int, float)): # uniform weights
+                        getattr(proj.cyInstance, 'set_' + var)(dendrite[var])
+                    else:
+                        getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
+                except Exception as e:
+                    Global._print(e)
+                    Global._error('Can not set attribute ' + var + ' in the projection.')
+                    return
+    else: # Default since 4.5.3
         for var in desc['attributes']:
-            if var in ['rank', 'delay']:
-                continue
-            try:
-                if isinstance(dendrite[var], (int, float)): # uniform weights
-                    getattr(proj.cyInstance, 'set_' + var)(dendrite[var])
-                else:
-                    getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
-            except Exception as e:
-                Global._print(e)
-                Global._error('Can not set attribute ' + var + ' in the projection.')
-                return
-
+            getattr(proj.cyInstance, 'set_' + var)(desc[var])
