@@ -9,6 +9,25 @@ from ANNarchy.generator.Utils import tabify # _generate_bank_code, _generate_con
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
 
+###############################
+### Shared synapse for report()
+###############################
+class SharedSynapse(Synapse):
+    # For reporting
+    _instantiated = []
+    def __init__(self, psp, operation):
+        Synapse.__init__(self, 
+            psp=psp, operation=operation,
+            name="Shared Weight", 
+            description="Weight shared over all synapses of the projection."
+        )
+        # For reporting
+        self._instantiated.append(True)
+
+
+###############################
+### Shared projection
+###############################
 class SharedProjection(Projection):
     """
     """
@@ -32,7 +51,7 @@ class SharedProjection(Projection):
             pre,
             post,
             target,
-            synapse = Synapse(psp=psp, operation=operation)
+            synapse = SharedSynapse(psp=psp, operation=operation)
         )
 
         self._omp_config['psp_schedule'] = 'schedule(dynamic)'
