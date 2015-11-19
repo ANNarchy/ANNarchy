@@ -395,10 +395,13 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     # Build the backward matrix
     rk_mat = {i: [] for i in post_ranks}
     for r_pre in pre_ranks:
-        tmp = random.sample(post_ranks, number)
-        if not allow_self_connections:
-            if r_pre in tmp: # the post index is in the list
-                tmp.remove(r_pre)
+        if number >= len(post_ranks):
+            tmp = post_ranks
+        else:
+            tmp = random.sample(post_ranks, number)
+            if not allow_self_connections:
+                while r_pre in tmp: # the post index is in the list
+                    tmp = random.sample(post_ranks, number)
         for i in tmp:
             rk_mat[i].append(r_pre)
 
