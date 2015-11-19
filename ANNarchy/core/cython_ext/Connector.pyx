@@ -399,8 +399,8 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
         if not allow_self_connections:
             if r_pre in tmp: # the post index is in the list
                 tmp.remove(r_pre)
-        for i in list(range(number)):
-            rk_mat[tmp[i]].append(r_pre)
+        for i in tmp:
+            rk_mat[i].append(r_pre)
 
     # Create the dendrites
     for r_post in post_ranks:
