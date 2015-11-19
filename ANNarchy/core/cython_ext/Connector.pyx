@@ -348,8 +348,8 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
         if len(r) == 0:
             continue
         if not allow_self_connections:
-            if r_post in list(r): # the post index is in the list
-                r.remove(r_post)
+            while r_post in list(r): # the post index is in the list
+                r = random.sample(pre_ranks, number)
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
