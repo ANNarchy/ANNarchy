@@ -348,8 +348,8 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
         if len(r) == 0:
             continue
         if not allow_self_connections:
-            if r_post in list(r): # the post index is in the list
-                r.remove(r_post)
+            while r_post in list(r): # the post index is in the list
+                r = random.sample(pre_ranks, number)
         # Weights
         if isinstance(weights, (int, float)):
             weight = weights
@@ -395,12 +395,15 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     # Build the backward matrix
     rk_mat = {i: [] for i in post_ranks}
     for r_pre in pre_ranks:
-        tmp = random.sample(post_ranks, number)
-        if not allow_self_connections:
-            if r_pre in tmp: # the post index is in the list
-                tmp.remove(r_pre)
-        for i in list(range(number)):
-            rk_mat[tmp[i]].append(r_pre)
+        if number >= len(post_ranks):
+            tmp = post_ranks
+        else:
+            tmp = random.sample(post_ranks, number)
+            if not allow_self_connections:
+                while r_pre in tmp: # the post index is in the list
+                    tmp = random.sample(post_ranks, number)
+        for i in tmp:
+            rk_mat[i].append(r_pre)
 
     # Create the dendrites
     for r_post in post_ranks:
