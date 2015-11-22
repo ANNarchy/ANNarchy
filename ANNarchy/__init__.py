@@ -1,3 +1,8 @@
+# Generic imports
+from __future__ import print_function
+import os, sys
+import numpy as np
+
 # ANNarchy core
 from .core.Global import *
 from .core.Neuron import Neuron, RateNeuron, SpikeNeuron
@@ -25,10 +30,6 @@ except Exception as e:
 
 # ANNarchy compilation
 from .generator import compile
-
-# Generic imports
-import numpy as np
-import os, sys
 
 # Version
 __version__ = '4.5'
