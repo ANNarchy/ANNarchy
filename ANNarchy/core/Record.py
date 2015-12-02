@@ -355,6 +355,41 @@ class Monitor(object):
 
         return Global.dt()* np.array(times), np.array(ranks)
 
+    @staticmethod
+    def raster_plot_static(spikes):
+        """ Static method, returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
+
+        *Parameters*:
+
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+
+        Example::
+
+            spike_times, spike_ranks = Monitor.raster_plot()
+            plot(spike_times, spike_ranks, '.')
+
+        Hint::
+
+            For further information please refer to raster_plot method.
+        """
+        ranks = []
+        times = []
+        if not spikes:
+            Global._error( 'if raster_plot is called without class context, data must be provided as argument' )
+
+        if 'spike' in spikes.keys():
+            data = spikes['spike']
+        else:
+            data = spikes
+
+        # Compute raster
+        for n in data.keys():
+            for t in data[n]:
+                times.append(t)
+                ranks.append(n)
+
+        return Global.dt()* np.array(times), np.array(ranks)
+
     def histogram(self, spikes=None, bins=None):
         """ Returns a histogram for the recorded spikes in the population.
         
