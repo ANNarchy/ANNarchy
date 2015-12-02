@@ -4,28 +4,37 @@ import ANNarchy.core.Global as Global
 ######################
 # Plotting methods
 ######################
-def raster_plot(data):
-    """ 
-    **Deprecated!!**
-
+def raster_plot(spikes):
+    """
     Transforms recorded spikes to display easily a raster plot for a spiking population.
 
     It returns a (N, 2) Numpy array where each spike (first index) is represented by the corresponding time (first column) and the neuron index (second column).  It can be very easily plotted, for example with matplotlib::
 
-        >>> data = get_record()
-        >>> spikes = raster_plot(data[pop]['spike'])
+        >>> monitor = Monitor(Pop, 'spike')
+        >>> times, ranks = raster_plot( monitor.get('spike')
         >>> from pylab import *
-        >>> plot(spikes[:, 0], spikes[:, 1], 'o')
+        >>> plot(times, ranks, 'o')
         >>> show()
 
     *Parameters*:
 
-    * **data**: the dictionary returned by the get_record() method for the population. 
+    * **spikes**: the dictionary returned by the Monitor.get(...) method earlier.
     """
-    Global._warning("raster_plot() is deprecated, use a Monitor instead.")
-    import ANNarchy.core.cython_ext.Transformations as Transformations
-    return Transformations.raster_plot(data['data'])
-    #return np.array([ [t, neuron] for neuron in range(len(data['data'])) for t in data['data'][neuron] ] )
+    ranks = []
+    times = []
+
+    if 'spike' in spikes.keys():
+        data = spikes['spike']
+    else:
+        data = spikes
+
+    # Compute raster
+    for n in data.keys():
+        for t in data[n]:
+            times.append(t)
+            ranks.append(n)
+
+    return Global.dt()* np.array(times), np.array(ranks)
 
 def histogram(data, binsize=Global.config['dt']):
     """
