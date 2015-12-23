@@ -44,6 +44,8 @@ class FunctionParser(object):
             'neg': Function('negative'), 
             'negative': Function('negative'), 
             'clip': Function('clip'), 
+            'True': Symbol('true'), 
+            'False': Symbol('false'), 
         }
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)
@@ -51,10 +53,30 @@ class FunctionParser(object):
     def parse(self, part=None):
         if not part:
             part = self.eq
-        eq = parse_expr(transform_condition(part),
+
+        expression = transform_condition(part)
+
+        # Check if there is a == in the condition
+        if '==' in expression:
+            # Is it the only term, or are there other operations?
+            if '&' in expression or '|' in expression:
+                expression = re.sub(r'([\w\s.]+)==([\w\s.]+)', r'Equality(\1, \2)', expression)
+            else:
+                terms = expression.split('==')
+                expression = 'Equality(' + terms[0] + ', ' + terms[1] + ')'
+
+        # Check if there is a != in the condition
+        if '!=' in expression:
+            # Is it the only term, or are there other operations?
+            if '&' in expression or '|' in expression:
+                expression = re.sub(r'([\w\s.]+)!=([\w\s.]+)', r'Not(Equality(\1, \2))', expression)
+            else:
+                terms = expression.split('!=')
+                expression = 'Not(Equality(' + terms[0] + ', ' + terms[1] + '))'
+
+        eq = parse_expr(expression,
             local_dict = self.local_dict,
-            transformations = (standard_transformations + (convert_xor,)) 
-                                            # to use ^ for power functions
+            transformations = (standard_transformations + (convert_xor,))
         )
         return ccode(eq, precision=8)
         
