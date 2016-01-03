@@ -177,4 +177,24 @@ If ``dt = 0.1``, this means that the ``equations`` will not be evaluated for 50 
 
 It can be either a single value, a ``RandomDistribution`` object or a Numpy array of the same size/geometry as the population.
 
+Instantaneous firing rate
+---------------------------
 
+Spiking neurons define an additional variable ``t_last`` which represents the timestamp (in ms) of the last emitted spike (updated at the end of the ``reset`` statement). The time elapsed since the last spike is then ``t - t_last``.
+
+This can be used to update the instantaneous firing rate of a neuron, by inverting the inter-spike interval (ISI) during the ``reset`` statement following the emission of a spike::
+
+    neuron = Neuron(
+        parameters = "tau = 20.0; tauf = 1000.",
+        equations = """
+            tau * dv/dt + v = ...
+            tauf * df/dt = -f
+        """,
+        spike = "v > 1.0",
+        reset = """
+            v = 0.0
+            f = 1000./(t - t_last)
+        """
+    )
+
+Here a leaky integrator on f is needed to 1) smooth the firing rate and 2) slowly decay to 0 when the neuron stops firing.

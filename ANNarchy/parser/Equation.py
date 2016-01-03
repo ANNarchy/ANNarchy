@@ -69,6 +69,7 @@ class Equation(object):
             't' : Symbol('double(t)*dt'),
             'w' : Symbol('w%(local_index)s'), 
             'g_target': Symbol('sum'),
+            't_last': Symbol('(double)(last_spike[i])*dt'),
             't_pre': Symbol('(double)(pop%(id_pre)s.last_spike[pre_rank[i][j]])*dt'),
             't_post': Symbol('(double)(pop%(id_post)s.last_spike[post_rank[i]])*dt'),
             'pos': Function('positive'),
