@@ -235,7 +235,7 @@ class STDP(Synapse):
     * tau_plus = 20.0 : time constant of the pre-synaptic trace (ms)
     * tau_minus = 20.0 : time constant of the pre-synaptic trace (ms)
     * A_plus = 0.01 : increase of the pre-synaptic trace after a spike.
-    * A_minus = 0.01 : decrease of the post.synaptic trace after a spike. 
+    * A_minus = 0.01 : decrease of the post-synaptic trace after a spike. 
     * w_min = 0.0 : minimal value of the weight w.
     * w_max = 1.0 : maximal value of the weight w.
 

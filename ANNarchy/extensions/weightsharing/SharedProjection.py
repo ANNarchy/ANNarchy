@@ -1188,3 +1188,17 @@ class SharedProjection(Projection):
             'omp_code': omp_code,
             'psp': psp
         }
+
+    ##############################
+    ## Override useless methods
+    ##############################
+    def save_connectivity(self, filename):
+        Global._warning('Shared projections can not be saved.')
+    def save(self, filename):
+        Global._warning('Shared projections can not be saved.')
+    def load(self, filename):
+        Global._warning('Shared projections can not be loaded.')
+    def receptive_fields(self, variable = 'w', in_post_geometry = True):
+        Global._warning('Shared projections can not display receptive fields.')
+    def connectivity_matrix(self, fill=0.0):
+        Global._warning('Shared projections can not display connectivity matrices.')
