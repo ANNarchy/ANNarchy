@@ -266,7 +266,7 @@ class Population(object):
                 return getattr(self.cyInstance, 'get_'+attribute)()
         except Exception as e:
             Global._print(e)
-            Global._error('Error: the variable ' +  attribute +  ' does not exist in this population.')
+            Global._error(' the variable ' +  attribute +  ' does not exist in this population (' + self.name + ')')
 
     def _set_cython_attribute(self, attribute, value):
         """
@@ -290,8 +290,9 @@ class Population(object):
             else:
                 getattr(self.cyInstance, 'set_'+attribute)(value)
         except Exception as e:
-            Global._print(e)
-            Global._error('Error: either the variable ' +  attribute +  ' does not exist in this population, or the provided array does not have the right size.')
+            Global._debug(e)
+            err_msg = """either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
+            Global._error(err_msg  % { 'attr': attribute, 'pop': self.name } )
 
     def __len__(self):
         """
