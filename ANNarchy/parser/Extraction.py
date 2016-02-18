@@ -97,8 +97,8 @@ def extract_globalops_neuron(name, eq, description):
     """
     untouched = {}    
     globs = []  
+    # Global ops
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
-    
     for op in glop_names:
         matches = re.findall('([^\w]*)'+op+'\(([\s\w]*)\)', eq)
         for pre, var in matches:

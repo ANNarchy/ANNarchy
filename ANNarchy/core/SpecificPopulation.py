@@ -228,6 +228,7 @@ class SpikeSourceArray(Population):
         # Do not generate default parameters and variables
         self._specific_template['declare_parameters_variables'] = """
     // Custom local parameter spike_times
+    std::vector< double > r ;
     std::vector< std::vector< double > > spike_times ;
     std::vector< double >  next_spike ;
     std::vector< int > idx_next_spike;
@@ -235,6 +236,7 @@ class SpikeSourceArray(Population):
         self._specific_template['access_parameters_variables'] = ""
 
         self._specific_template['init_parameters_variables'] ="""
+        r = std::vector<double>(size, 0.0);
         next_spike = std::vector<double>(size, -10000.0);
         for(int i=0; i< size; i++){
             if(!spike_times[i].empty())
@@ -270,6 +272,7 @@ class SpikeSourceArray(Population):
 
         self._specific_template['export_parameters_variables'] ="""
         vector[vector[double]] spike_times
+        vector[double] r
 """
 
         self._specific_template['wrapper_args'] = "size, times"
@@ -281,6 +284,11 @@ class SpikeSourceArray(Population):
         return pop%(id)s.spike_times
     cpdef set_spike_times(self, value):
         pop%(id)s.spike_times = value
+    # Mean firing rate
+    cpdef get_r(self):
+        return pop%(id)s.r
+    cpdef set_r(self, value):
+        pop%(id)s.r = value
 """ % {'id': self.id}
 
         

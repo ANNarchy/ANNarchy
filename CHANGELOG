@@ -1,6 +1,7 @@
 **4.5.4:**
 
-* Spiking neurons now define the variable ``t_last`` storing the time (in ms) of the last emitted spike. Allows to compute the mean firing rate.
+* Spiking neurons now define the variable ``t_last`` storing the time (in ms) of the last emitted spike. 
+* Added a method `compute_firing_rate()` that allows spiking neurons to compute their mean firing rate over a prefined window and store the result (in Hz) into the reserved variable ``r``.
 * Fixed bug when using "if a == b".
 
 **4.5.3:**

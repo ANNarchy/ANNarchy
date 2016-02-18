@@ -126,6 +126,9 @@ class Population(object):
         # Maximum delay of connected projections
         self.max_delay = 0
 
+        # Spiking neurons: do they have to compute an average?
+        self._compute_mean_fr = -1.
+
         # Finalize initialization
         self.initialized = False
         self.cyInstance = None
@@ -358,6 +361,28 @@ class Population(object):
                 self.neuron_type.description['refractory'] = value
         else:
             Global._error('rate-coded neurons do not have refractory periods...')
+
+    ################################
+    ## Spiking neurons can compute a mean FR
+    ################################
+    def compute_firing_rate(self, window):
+        """
+        Tells spiking neurons in the population to compute their mean firing rate over the given window and store the values in the variable `r`.
+
+        **Warning:** spiking neurons only.
+
+        **Warning:** this method must be called before compile().
+
+        If this method is not called, `r` will always be 0.0. `r` can of course be accessed and recorded as any other variable.
+
+        *Parameter*:
+
+        * **window**: window in ms over which the spikes will be counted.
+        """
+        if self.neuron_type.type == 'rate':
+            _warning('compute_firing_rate(): the neuron is already rate-coded...')
+        else:
+            self._compute_mean_fr = float(window)
 
     ################################
     ## Access to individual neurons

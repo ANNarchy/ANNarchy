@@ -52,6 +52,7 @@ struct PopStruct%(id)s{
     // Neuron specific parameters and variables
 %(declare_parameters_variables)s
 %(declare_delay)s
+%(declare_FR)s
 %(declare_additional)s
 %(declare_profile)s
     // Access methods to the parameters and variables
@@ -64,6 +65,7 @@ struct PopStruct%(id)s{
 %(init_parameters_variables)s
 %(init_spike)s
 %(init_delay)s
+%(init_FR)s
 %(init_additional)s
 %(init_profile)s
     }

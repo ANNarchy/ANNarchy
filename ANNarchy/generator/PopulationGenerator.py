@@ -107,6 +107,9 @@ class PopulationGenerator(object):
         if pop.max_delay > 1:
             declare_delay, init_delay, update_delay, reset_delay = self.delay_code(pop)
 
+        # Process mean FR computations
+        declare_FR, init_FR = self.init_fr(pop)
+
         # Update random distributions
         update_rng = self.update_random_distributions(pop)
 
@@ -152,6 +155,8 @@ class PopulationGenerator(object):
             declaration_parameters_variables = pop._specific_template['declare_parameters_variables']
         if 'declare_additional' in pop._specific_template.keys():
             declare_additional = pop._specific_template['declare_additional']
+        if 'declare_FR' in pop._specific_template.keys():
+            declare_FR = pop._specific_template['declare_FR']
         if 'declare_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             declare_delay = pop._specific_template['declare_delay']
         if 'access_parameters_variables' in pop._specific_template.keys():
@@ -162,6 +167,8 @@ class PopulationGenerator(object):
             init_spike = pop._specific_template['init_spike']
         if 'init_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             init_delay = pop._specific_template['init_delay']
+        if 'init_FR' in pop._specific_template.keys():
+            init_FR = pop._specific_template['init_FR']
         if 'init_additional' in pop._specific_template.keys():
             init_additional = pop._specific_template['init_additional']
         if 'reset_spike' in pop._specific_template.keys():
@@ -191,11 +198,13 @@ class PopulationGenerator(object):
                                  'declare_parameters_variables': declaration_parameters_variables,
                                  'declare_additional': declare_additional,
                                  'declare_delay': declare_delay,
+                                 'declare_FR': declare_FR,
                                  'declare_profile': declare_profile,
                                  'access_parameters_variables': access_parameters_variables,
                                  'init_parameters_variables': init_parameters_variables,
                                  'init_spike': init_spike,
                                  'init_delay': init_delay,
+                                 'init_FR': init_FR,
                                  'init_additional': init_additional,
                                  'init_profile': init_profile,
                                  'reset_spike': reset_spike,
@@ -746,6 +755,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         return body, header, call
 
+    ################################
+    ### Spiking neurons
+    ################################
+
     def update_spike_neuron(self, pop):
         # Neural update
         from .Utils import generate_equation_code
@@ -790,6 +803,9 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
                 %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
 
+        # Mean Firing rate
+        mean_FR = self.update_fr(pop)
+
         # Gather code
         spike_gather = """
             if(%(condition)s){ // Emit a spike
@@ -800,10 +816,12 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
                 }
                 last_spike[i] = t;
                 %(refrac_inc)s
+                %(mean_FR)s
             }
 """% {  'id': pop.id, 'name': pop.name, 'size': pop.size, 
         'condition' : cond, 'reset': reset, 
         'refrac_inc': refrac_inc,
+        'mean_FR': mean_FR,
         'omp_critical_code': omp_critical_code} 
 
         code += spike_gather
@@ -826,6 +844,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         return final_code
 
+    ################################
+    ### Reset
+    ################################
+
     def reset_computesum(self, pop):
         code = ""
         for target in sorted(pop.targets):
@@ -834,6 +856,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
 """ % {'id': pop.id, 'target': target}
         return code
+
+    ################################
+    ### Global operations
+    ################################
 
     def update_globalops(self, pop):
         """
@@ -861,6 +887,50 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
     if (_active){
 %(code)s
 }""" % {'code':code}
+
+    ################################
+    ### Mean firing rate (spiking)
+    ################################
+    def init_fr(self, pop):
+        "Declares arrays for computing the mean FR of a spiking neuron"
+        declare_FR=""; init_FR = ""
+        if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
+            declare_FR = """
+    // Mean Firing rate
+    std::vector< std::vector<long int> > _spike_history;"""
+            init_FR = """
+        // Mean Firing Rate
+        _spike_history = std::vector< std::vector<long int> >(size, std::vector<long int>());"""
+        return declare_FR, init_FR
+
+    def update_fr(self, pop):
+        "Computes the average firing rate based on history"
+
+        mean_FR = ""
+        if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
+            window = pop._compute_mean_fr
+            mean_FR = """
+            _spike_history[i].push_back(t);
+            int _nb_spikes = 0;
+            long int _horizon = t -1 - (long int)(%(window)s/dt);
+            for(int j=0; j < _spike_history[i].size(); j++){
+                // Spike is within the window
+                if(_spike_history[i][j] >= _horizon ){
+                    _nb_spikes++;
+                }
+                else{ // Suppress this spike from the list
+                    _spike_history[i].erase(_spike_history[i].begin());
+                }
+            }
+            r[i] = %(freq)s * double(_nb_spikes);
+
+            """ % {'window': str(window), 'freq': str(1000.0/window)}
+
+        return mean_FR
+
+    ################################
+    ### Stop condition
+    ################################
 
     def stop_condition(self, pop):
         if not pop.stop_condition: # no stop condition has been defined
@@ -907,6 +977,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         return stop_code
 
+    ################################
+    ### Random distributions
+    ################################
+
     def update_random_distributions(self, pop):
         if len(pop.neuron_type.description['random_distributions']) == 0:
             return ""
@@ -924,6 +998,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
                 code += PopTemplate.cuda_rng['update']
 
         return res %{'update_rng': code}
+
+    ################################
+    ### CUDA
+    ################################
 
     def _cuda_memory_transfers(self, pop):
         """
