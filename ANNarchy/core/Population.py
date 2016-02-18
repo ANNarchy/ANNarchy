@@ -369,9 +369,9 @@ class Population(object):
         """
         Tells spiking neurons in the population to compute their mean firing rate over the given window and store the values in the variable `r`.
 
-        **Warning:** spiking neurons only.
+        This method has an impact on spiking neurons only.
 
-        **Warning:** this method must be called before compile().
+        **Warning:** this method must be called before compile() and the window can not be changed afterwards.
 
         If this method is not called, `r` will always be 0.0. `r` can of course be accessed and recorded as any other variable.
 

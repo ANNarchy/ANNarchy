@@ -897,10 +897,10 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
             declare_FR = """
     // Mean Firing rate
-    std::vector< std::vector<long int> > _spike_history;"""
+    std::vector< std::queue<long int> > _spike_history;"""
             init_FR = """
         // Mean Firing Rate
-        _spike_history = std::vector< std::vector<long int> >(size, std::vector<long int>());"""
+        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());"""
         return declare_FR, init_FR
 
     def update_fr(self, pop):
@@ -909,22 +909,16 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         mean_FR = ""
         if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
             window = pop._compute_mean_fr
+            window_int = long(window/Global.config['dt'])
             mean_FR = """
-            _spike_history[i].push_back(t);
-            int _nb_spikes = 0;
-            long int _horizon = t -1 - (long int)(%(window)s/dt);
-            for(int j=0; j < _spike_history[i].size(); j++){
-                // Spike is within the window
-                if(_spike_history[i][j] >= _horizon ){
-                    _nb_spikes++;
+                // Update the mean firing rate
+                _spike_history[i].push(t);
+                while(_spike_history[i].front() <= t - %(window)s){
+                    _spike_history[i].pop(); // Suppress spikes outside the window
                 }
-                else{ // Suppress this spike from the list
-                    _spike_history[i].erase(_spike_history[i].begin());
-                }
-            }
-            r[i] = %(freq)s * double(_nb_spikes);
+                r[i] = %(freq)s * double(_spike_history[i].size());
 
-            """ % {'window': str(window), 'freq': str(1000.0/window)}
+            """ % {'window': str(window_int), 'freq': str(1000.0/window)}
 
         return mean_FR
 

@@ -6,6 +6,7 @@ omp_header_template = """#ifndef __ANNARCHY_H__
 #include <algorithm>
 #include <map>
 #include <deque>
+#include <queue>
 #include <iostream>
 #include <sstream>
 #include <fstream>
