@@ -275,3 +275,41 @@ The reason of this difference is to allow continuous synaptic transmission and c
 ``enable_learning()`` also accepts two arguments ``period`` and ``offset``. ``period`` defines the interval in ms between two evaluations of the synaptic variables. This can be useful when learning should only occur once at the end of a trial. It is recommended not to use ODEs in the equations in this case, as they are numerized according to a fixed time step. ``offset`` defines the time inside the period at which the evaluation should occur. By default, it is 0, so the variable updates will occur at the next step, then after ``period`` ms, and so on. Setting it to -1 will shift the update at the end of the period.
 
 Note that spiking synapses using online evaluation will not be affected by these parameters, as they are event-driven.
+
+Multiple targets
+=================
+
+For spiking neurons, it may be desirable that a single synapses activates different currents (or conductances) in the post-synaptic neuron. One example are AMPA/NMDA synapses, where a single spike generates a "classical" AMPA current, plus a voltage-gated slower NMDA current. The following conductance-based Izhikevich is an example::
+
+    RSNeuron = Neuron(
+        parameters = """
+            a = 0.02
+            b = 0.2
+            c = -65.
+            d = 8.
+            tau_ampa = 5.
+            tau_nmda = 150.
+            vrev = 0.0
+        """ ,
+        equations="""
+            I = g_ampa * (vrev - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev -v)        
+            dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init=-65., midpoint
+            du/dt = a * (b*v - u) : init=-13.
+            tau_ampa * dg_ampa/dt = -g_ampa
+            tau_nmda * dg_nmda/dt = -g_nmda
+        """ , 
+        spike = """
+            v >= 30.
+        """, 
+        reset = """
+            v = c
+            u += d
+        """,
+        functions = """
+            nmda(v, t, s) = ((v-t)/(s))^2 / (1.0 + ((v-t)/(s))^2)
+        """
+    ) 
+
+However, ``g_ampa`` and ``g_nmda`` collect by default spikes from different projections, so the weights will not be shared between the "ampa" projection and the "nmda" one. It is therefore possible to specify a list of targets when building a projection, meaning that a single pre-synaptic spike will increase both ``g_ampa`` and ``g_nmda`` from the same weight::
+
+    proj = Projection(pop1, pop2, ['ampa', 'nmda'], STDP)

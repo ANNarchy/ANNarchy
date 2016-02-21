@@ -444,6 +444,7 @@ def extract_pre_spike_variable(description):
 
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq ,
+                                'locality': 'local',
                                 'bounds': bounds, 
                                 'flags':flags, 'ctype' : ctype, 
                                 'init' : init} )
@@ -467,6 +468,7 @@ def extract_post_spike_variable(description):
         #eq, condition = extract_ite(name, raw_eq, description)
 
         post_spike_var.append( { 'name': name, 'eq': eq, 'raw_eq' : eq,
+                                'locality': 'local',
                                 'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return post_spike_var  

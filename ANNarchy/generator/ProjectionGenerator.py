@@ -715,24 +715,32 @@ class ProjectionGenerator(object):
             # g_target is treated differently
             # Must be at the end of the equations
             if eq['name'] == 'g_target':
+                # PSP form
                 g_target = eq['cpp'].split('=')[1] % ids
-                g_target_code = """
+                # Check targets
+                if isinstance(proj.target, str):
+                    targets = [proj.target]
+                else:
+                    targets = proj.target
+                g_target_code = ""
+                for target in targets:
+                    g_target_code += """
             // Increase the post-synaptic conductance %(eq)s
             pop%(id_post)s.g_%(target)s[post_rank[i]] += %(g_target)s ;
-""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'g_target': g_target, 'eq': eq['eq']}
-                # Determine bounds
-                for key, val in eq['bounds'].items():
-                    if not key in ['min', 'max']:
-                        continue
-                    try:
-                        value = str(float(val))
-                    except: # TODO: more complex operations
-                        value = "%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse_type.description['global'] else '[i][j]'}
+    """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': target, 'g_target': g_target, 'eq': eq['eq']}
+                    # Determine bounds
+                    for key, val in eq['bounds'].items():
+                        if not key in ['min', 'max']:
+                            continue
+                        try:
+                            value = str(float(val))
+                        except: # TODO: more complex operations
+                            value = "%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse_type.description['global'] else '[i][j]'}
 
-                    g_target += """
-if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
-    pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
-""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'op': "<" if key == 'min' else '>', 'val': value }
+                        g_target_code += """
+    if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
+        pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
+    """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': target, 'op': "<" if key == 'min' else '>', 'val': value }
 
             elif eq['name'] == 'w': # Surround it by the learning flag
                 updated_variables_list += """
@@ -754,7 +762,15 @@ if(_plasticity){
         # Generate the default post-conductance increase
         # default g_target += w
         if not continous_transmission and g_target == "":
-            g_target_code = """
+            # Check targets
+            if isinstance(proj.target, str):
+                targets = [proj.target]
+            else:
+                targets = proj.target
+
+            g_target_code = ""
+            for target in targets:
+                g_target_code += """
             // Increase the post-synaptic conductance g_target += w
             pop%(id_post)s.g_%(target)s[post_rank[i]] += w[i][j];
 """ % ids
@@ -791,6 +807,13 @@ if(_plasticity){
             for var in updated_variables_list:
                 code += var
             code = tabify(code, 4)
+            # Special case where w is a single value
+            if proj._has_single_weight():
+                code = re.sub(
+                    r'([^\w]+)w\[i\]\[j\]',
+                    r'\1w',
+                    code
+                )
             if not has_exact:
                 pre_event += """
             // Event-based variables should not be updated when the postsynaptic neuron fires.

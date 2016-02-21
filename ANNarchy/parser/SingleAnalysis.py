@@ -308,6 +308,7 @@ def analyse_synapse(synapse):
             else: # not defined already
                 description['variables'].append(
                 {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
+                 'locality': var['locality'],
                  'flags': [], 'transformed_eq': '', 'eq': '',
                  'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
                 )
@@ -325,6 +326,7 @@ def analyse_synapse(synapse):
             else: # not defined already
                 description['variables'].append(
                 {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
+                 'locality': var['locality'],
                  'flags': [], 'transformed_eq': '', 'eq': '',
                  'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
                 )
