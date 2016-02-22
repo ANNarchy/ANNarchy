@@ -55,61 +55,61 @@ pop2.compute_firing_rate(5000.)
 
 # Regular STDP
 stdp = Synapse(
-        parameters="""
-            tau_plus = 20. : postsynaptic
-            tau_minus = 60. : postsynaptic
-            A_plus = 0.0002 : postsynaptic
-            A_minus = 0.000066 : postsynaptic
-            w_min = 0.0 : postsynaptic
-            w_max = 0.03 : postsynaptic
-        """,
-        equations = """
-            tau_plus  * dltp/dt = -ltp : event-driven
-            tau_minus * dltd/dt = -ltd : event-driven
-        """,
-        pre_spike="""
-            g_target += w
-            ltp += A_plus 
-            w = clip(w - ltd, w_min , w_max)
-        """,         
-        post_spike="""
-            ltd += A_minus 
-            w = clip(w + ltp, w_min , w_max)
-        """
+    parameters="""
+        tau_plus = 20. : postsynaptic
+        tau_minus = 60. : postsynaptic
+        A_plus = 0.0002 : postsynaptic
+        A_minus = 0.000066 : postsynaptic
+        w_min = 0.0 : postsynaptic
+        w_max = 0.03 : postsynaptic
+    """,
+    equations = """
+        tau_plus  * dltp/dt = -ltp : event-driven
+        tau_minus * dltd/dt = -ltd : event-driven
+    """,
+    pre_spike="""
+        g_target += w
+        ltp += A_plus 
+        w = clip(w - ltd, w_min , w_max)
+    """,         
+    post_spike="""
+        ltd += A_minus 
+        w = clip(w + ltp, w_min , w_max)
+    """
 )
 
 # STDP with homeostatic regulation
 homeo_stdp = Synapse(
-        parameters="""
-            # STDP
-            tau_plus = 20. : postsynaptic
-            tau_minus = 60. : postsynaptic
-            A_plus = 0.0002 : postsynaptic
-            A_minus = 0.000066 : postsynaptic
-            w_min = 0.0 : postsynaptic
-            w_max = 0.03 : postsynaptic
+    parameters="""
+        # STDP
+        tau_plus = 20. : postsynaptic
+        tau_minus = 60. : postsynaptic
+        A_plus = 0.0002 : postsynaptic
+        A_minus = 0.000066 : postsynaptic
+        w_min = 0.0 : postsynaptic
+        w_max = 0.03 : postsynaptic
 
-            # Homeostatic regulation
-            alpha = 0.1 : postsynaptic
-            beta = 1.0 : postsynaptic
-            gamma = 50. : postsynaptic
-            Rtarget = 35. : postsynaptic
-            T = 5000. : postsynaptic
-        """,
-        equations = """
-            tau_plus  * dltp/dt = -ltp
-            tau_minus * dltd/dt = -ltd
-            R = post.r
-            K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma))
-            dw/dt = (alpha * w * (1- R/Rtarget) + beta * (ltp-ltd) ) * K : min=w_min, max=w_max
-        """,
-        pre_spike="""
-            g_target += w
-            ltp += A_plus 
-        """,         
-        post_spike="""
-            ltd += A_minus 
-        """ 
+        # Homeostatic regulation
+        alpha = 0.1 : postsynaptic
+        beta = 1.0 : postsynaptic
+        gamma = 50. : postsynaptic
+        Rtarget = 35. : postsynaptic
+        T = 5000. : postsynaptic
+    """,
+    equations = """
+        tau_plus  * dltp/dt = -ltp
+        tau_minus * dltd/dt = -ltd
+        R = post.r
+        K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma))
+        dw/dt = (alpha * w * (1- R/Rtarget) + beta * (ltp-ltd) ) * K : min=w_min, max=w_max
+    """,
+    pre_spike="""
+        g_target += w
+        ltp += A_plus 
+    """,         
+    post_spike="""
+        ltd += A_minus 
+    """ 
 )
 
 # Projection without homeostatic mechanism
