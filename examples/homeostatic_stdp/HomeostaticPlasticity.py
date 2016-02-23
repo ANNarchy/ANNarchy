@@ -53,8 +53,8 @@ pop1.compute_firing_rate(5000.)
 pop2 = Population(1, RSNeuron)
 pop2.compute_firing_rate(5000.)
 
-# Regular STDP
-stdp = Synapse(
+# Nearest Neighbour STDP
+nearest_neighbour_stdp = Synapse(
     parameters="""
         tau_plus = 20. : postsynaptic
         tau_minus = 60. : postsynaptic
@@ -64,17 +64,18 @@ stdp = Synapse(
         w_max = 0.03 : postsynaptic
     """,
     equations = """
-        tau_plus  * dltp/dt = -ltp : event-driven
-        tau_minus * dltd/dt = -ltd : event-driven
+        # Traces
+        tau_plus  * dltp/dt = -ltp 
+        tau_minus * dltd/dt = -ltd
+        # Nearest-neighbour
+        w += if t_post >= t_pre: ltp else: - ltd : min=w_min, max=w_max
     """,
     pre_spike="""
         g_target += w
-        ltp += A_plus 
-        w = clip(w - ltd, w_min , w_max)
+        ltp = A_plus 
     """,         
     post_spike="""
-        ltd += A_minus 
-        w = clip(w + ltp, w_min , w_max)
+        ltd = A_minus 
     """
 )
 
@@ -97,23 +98,27 @@ homeo_stdp = Synapse(
         T = 5000. : postsynaptic
     """,
     equations = """
-        tau_plus  * dltp/dt = -ltp
-        tau_minus * dltd/dt = -ltd
-        R = post.r
-        K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma))
-        dw/dt = (alpha * w * (1- R/Rtarget) + beta * (ltp-ltd) ) * K : min=w_min, max=w_max
+        # Traces
+        tau_plus  * dltp/dt = -ltp 
+        tau_minus * dltd/dt = -ltd 
+        # Homeostatic values
+        R = post.r : postsynaptic
+        K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma)) : postsynaptic
+        # Nearest-neighbour
+        plast = if t_post >= t_pre: ltp else: - ltd 
+        dw/dt = (alpha * w * (1- R/Rtarget) + beta * (plast) ) * K : min=w_min, max=w_max
     """,
     pre_spike="""
         g_target += w
-        ltp += A_plus 
+        ltp = A_plus 
     """,         
     post_spike="""
-        ltd += A_minus 
+        ltd = A_minus 
     """ 
 )
 
 # Projection without homeostatic mechanism
-proj1 = Projection(inp, pop1, ['ampa', 'nmda'], synapse=stdp)
+proj1 = Projection(inp, pop1, ['ampa', 'nmda'], synapse=nearest_neighbour_stdp)
 proj1.connect_all_to_all(Uniform(0.01, 0.03))
 
 # Projection with homeostatic mechanism
@@ -124,31 +129,39 @@ proj2.connect_all_to_all(weights=Uniform(0.01, 0.03))
 compile()
 
 # Record
-m1 = Monitor(pop1, ['r'])
-m2 = Monitor(pop2, ['r'])
+m1 = Monitor(pop1, 'r')
+m2 = Monitor(pop2, 'r')
+m3 = Monitor(proj1[0], 'w', period=1000.)
+m4 = Monitor(proj2[0], 'w', period=1000.)
 
 # Simulate
 T = 1000 # 1000s
-simulate(T*1000.)
+simulate(T*1000., True)
 
 # Get the data
 data1 = m1.get('r')
 data2 = m2.get('r')
-w1 = proj1[0].w
-w2 = proj2[0].w
+data3 = m3.get('w')
+data4 = m4.get('w')
 print('Mean Firing Rate without homeostasis:', np.mean(data1[:, 0]))
 print('Mean Firing Rate with homeostasis:', np.mean(data2[:, 0]))
 
 from pylab import *
-subplot(211)
+subplot(311)
 plot(np.linspace(0, T, len(data1[:, 0])), data1[:, 0], 'r-', label="Without homeostasis")
 plot(np.linspace(0, T, len(data2[:, 0])), data2[:, 0], 'b-', label="With homeostasis")
 xlabel('Time (s)')
 ylabel('Firing rate (Hz)')
-subplot(212)
-plot(w1, 'r-')
-plot(w2, 'bx')
+subplot(312)
+plot(data3[-1, :], 'r-')
+plot(data4[-1, :], 'bx')
+axes = gca()
+axes.set_ylim([0., 0.035])
 xlabel('# neuron')
-ylabel('Weight')
+ylabel('Weights after 1000s')
+subplot(313)
+imshow(data4.T, aspect='auto', cmap='hot')
+xlabel('Time (s)')
+ylabel('# neuron')
 show()
 

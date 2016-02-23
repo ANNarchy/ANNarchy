@@ -300,7 +300,7 @@ def analyse_synapse(synapse):
         # pre_spike event
         description['pre_spike'] = extract_pre_spike_variable(description)
         for var in description['pre_spike']:
-            if var['name'] in ['g_target', 'w']: # Already dealt with
+            if var['name'] in ['g_target']: # Already dealt with
                 continue
             for avar in description['variables']:
                 if var['name'] == avar['name']:
