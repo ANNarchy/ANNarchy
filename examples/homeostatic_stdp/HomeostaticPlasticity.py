@@ -105,8 +105,8 @@ homeo_stdp = Synapse(
         R = post.r : postsynaptic
         K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma)) : postsynaptic
         # Nearest-neighbour
-        plast = if t_post >= t_pre: ltp else: - ltd 
-        dw/dt = (alpha * w * (1- R/Rtarget) + beta * (plast) ) * K : min=w_min, max=w_max
+        stdp = if t_post >= t_pre: ltp else: - ltd 
+        dw/dt = (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=w_min, max=w_max
     """,
     pre_spike="""
         g_target += w
