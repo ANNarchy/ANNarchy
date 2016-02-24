@@ -1020,6 +1020,7 @@ class SharedProjection(Projection):
 
         # Compute sum
         wsum =  """
+        if ( _transmission && pop%(id_pre)s._active ) {
         std::vector<int> coord;
 """ + pre_load_r + """
         %(omp_code)s
@@ -1027,7 +1028,8 @@ class SharedProjection(Projection):
             coord = pre_rank[i];
 """ + convolve_code + """
             pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
-        }
+        } // for
+        } // if
 """
 
         self._specific_template['psp_code'] = wsum % \
