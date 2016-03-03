@@ -24,11 +24,18 @@ RSNeuron = Neuron(
         vrev = 0.0
     """ ,
     equations="""
-        I = g_ampa * (vrev - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev -v)        
-        dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init=-65., midpoint
-        du/dt = a * (b*v - u) : init=-13.
-        tau_ampa * dg_ampa/dt = -g_ampa
-        tau_nmda * dg_nmda/dt = -g_nmda
+        # Inputs
+        I = g_ampa * (vrev - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev -v)  
+        # Midpoint scheme      
+        dv/dt = (0.04 * v + 5.0) * v + 140.0 - u + I : init=-65., midpoint
+        du/dt = a * (b*v - u) : init=-13., midpoint
+        # Izhikevich scheme
+        # new_v = v + 0.5*(0.04 * v^2 + 5.0 * v + 140.0 - u + I) : init=-65.
+        # v = new_v + 0.5*(0.04 * new_v^2 + 5.0 * new_v + 140.0 - u + I) : init=-65.
+        # u += a * (b*v - u) : init=-13.
+        # Conductances
+        tau_ampa * dg_ampa/dt = -g_ampa : exponential
+        tau_nmda * dg_nmda/dt = -g_nmda : exponential
     """ , 
     spike = """
         v >= 30.
@@ -65,7 +72,7 @@ nearest_neighbour_stdp = Synapse(
     """,
     equations = """
         # Traces
-        tau_plus  * dltp/dt = -ltp 
+        tau_plus  * dltp/dt = -ltp
         tau_minus * dltd/dt = -ltd
         # Nearest-neighbour
         w += if t_post >= t_pre: ltp else: - ltd : min=w_min, max=w_max
@@ -99,8 +106,8 @@ homeo_stdp = Synapse(
     """,
     equations = """
         # Traces
-        tau_plus  * dltp/dt = -ltp 
-        tau_minus * dltd/dt = -ltd 
+        tau_plus  * dltp/dt = -ltp
+        tau_minus * dltd/dt = -ltd  
         # Homeostatic values
         R = post.r : postsynaptic
         K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma)) : postsynaptic
