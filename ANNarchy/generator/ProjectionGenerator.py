@@ -888,9 +888,13 @@ if (_transmission && pop%(id_post)s._active){
             # Compute it as if it were rate-coded
             psp_code = self.computesum_rate_openmp(proj)[1]
             # Change _sum_target into g_target
-            psp_code = psp_code.replace(
+            psp_code = psp_code.replace( # for LIL
                 'pop%(id_post)s._sum_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target},
                 'pop%(id_post)s.g_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target}
+            )
+            psp_code = psp_code.replace( # for Dense
+                'pop%(id_post)s._sum_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target},
+                'pop%(id_post)s.g_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target}
             )
             # Add it to the main code
             code += """

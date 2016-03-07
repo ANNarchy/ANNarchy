@@ -6,8 +6,8 @@ from time import time
 # Parameters
 size = (32, 32) # input size
 freq = 1.2 # nb_cycles/half-image
-nb_stim = 40 # Number of grating per epoch
-nb_epochs = 20 # Number of epochs
+nb_stim = 10 # Number of grating per epoch
+nb_epochs = 10 # Number of epochs
 max_freq = 28. # Max frequency of the poisson neurons 
 
 # Izhikevich RS neuron
@@ -28,10 +28,15 @@ RSNeuron = Neuron(
     """ ,
     equations="""
         # Inputs
-        I = g_ampa * (vrev_ampa - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev_nmda -v) + g_gabaa * (vrev_gabaa - v) + g_gabab * (vrev_gabab -v)
+        # I = g_ampa * (vrev_ampa - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev_nmda -v) + g_gabaa * (vrev_gabaa - v) + g_gabab * (vrev_gabab -v)
         # Midpoint scheme      
-        dv/dt = (0.04 * v + 5.0) * v + 140.0 - u + I : init=-65., midpoint
+        dv/dt = (0.04 * v + 5.0) * v + 140.0 - u + g_ampa * (vrev_ampa - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev_nmda -v) + g_gabaa * (vrev_gabaa - v) + g_gabab * (vrev_gabab -v) : init=-65., min=-90., midpoint
         du/dt = a * (b*v - u) : init=-13., midpoint
+        # Izhikevich scheme
+        # new_v = v + 0.5*(0.04 * v^2 + 5.0 * v + 140.0 - u + I) : init=-65.
+        # new_I = g_ampa * (vrev_ampa - new_v) + g_nmda * nmda(new_v, -80.0, 60.0) * (vrev_nmda -new_v) + g_gabaa * (vrev_gabaa - new_v) + g_gabab * (vrev_gabab -new_v)
+        # v = new_v + 0.5*(0.04 * new_v^2 + 5.0 * new_v + 140.0 - u + new_I) : init=-65.
+        # u += a * (b*v - u) : init=-13.
         # Conductances
         tau_ampa * dg_ampa/dt = -g_ampa : exponential
         tau_nmda * dg_nmda/dt = -g_nmda : exponential
@@ -44,6 +49,10 @@ RSNeuron = Neuron(
     reset = """
         v = c
         u += d
+        g_ampa = 0.0
+        g_nmda = 0.0
+        g_gabaa = 0.0
+        g_gabab = 0.0
     """,
     functions = """
         nmda(v, t, s) = ((v-t)/(s))^2 / (1.0 + ((v-t)/(s))^2)
@@ -97,14 +106,14 @@ homeo_stdp = Synapse(
     """,
     equations = """
         # Traces
-        tau_plus  * dltp/dt = -ltp
-        tau_minus * dltd/dt = -ltd  
+        tau_plus  * dltp/dt = -ltp : exponential
+        tau_minus * dltd/dt = -ltd : exponential
         # Homeostatic values
         R = post.r : postsynaptic
         K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma)) : postsynaptic
         # Nearest-neighbour
         stdp = if t_post >= t_pre: ltp else: - ltd 
-        w += (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=w_min, max=w_max
+        dw/dt = (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=w_min, max=w_max
     """,
     pre_spike="""
         g_target += w
@@ -142,17 +151,17 @@ OffBufferExc = Projection(OffBuffer, Exc, ['ampa', 'nmda'], homeo_stdp)
 OffBufferExc.connect_all_to_all(Uniform(0.004, 0.015))
 
 # Competition
-ExcInh = Projection(Exc, Inh, ['ampa', 'nmda'], homeo_stdp)
-ExcInh.connect_all_to_all(Uniform(0.116, 0.403))
-ExcInh.Rtarget = 75.
-ExcInh.tau_plus = 51.
-ExcInh.tau_minus = 78.
-ExcInh.A_plus = -4.1e-5
-ExcInh.A_minus = -1.5e-5
-ExcInh.w_max = 1.0
+# ExcInh = Projection(Exc, Inh, ['ampa', 'nmda'], homeo_stdp)
+# ExcInh.connect_all_to_all(Uniform(0.116, 0.403))
+# ExcInh.Rtarget = 75.
+# ExcInh.tau_plus = 51.
+# ExcInh.tau_minus = 78.
+# ExcInh.A_plus = -4.1e-5
+# ExcInh.A_minus = -1.5e-5
+# ExcInh.w_max = 1.0
 
-InhExc = Projection(Inh, Exc, ['gabaa', 'gabab'])
-InhExc.connect_all_to_all(Uniform(0.065, 0.259))
+# InhExc = Projection(Inh, Exc, ['gabaa', 'gabab'])
+# InhExc.connect_all_to_all(Uniform(0.065, 0.259))
 
 compile()
 
@@ -170,22 +179,23 @@ w_off_start = OffBufferExc.w
 
 # Monitors
 m = Monitor(Exc, 'r')
+n = Monitor(Inh, 'r')
 
 # Learning procedure
 tstart = time()
+stim_order = list(range(nb_stim))
 for epoch in range(nb_epochs):
-    stim_order = list(range(nb_stim))
     random.shuffle(stim_order)
     for stim in stim_order:
         # Generate a grating randomly
         rates_on, rates_off = get_grating(np.pi*stim/float(nb_stim))
         # Set it as input to the poisson neurons
-        OnPoiss.rates = max_freq * rates_on
+        OnPoiss.rates  = max_freq * rates_on
         OffPoiss.rates = max_freq * rates_off
         # Simulate for 2s
         simulate(2000.)
         # Relax the Poisson inputs
-        OnPoiss.rates = 1.
+        OnPoiss.rates  = 1.
         OffPoiss.rates = 1.
         # Simulate for 500ms
         simulate(500.)
@@ -193,7 +203,8 @@ for epoch in range(nb_epochs):
 print('Done in ', time()-tstart)
 
 # Recordings
-data = m.get('r')
+datae = m.get('r')
+datai = n.get('r')
 
 # Final weights
 w_on_end = OnBufferExc.w
@@ -219,5 +230,6 @@ subplot(248)
 imshow((np.array(w_on_end[3])-np.array(w_off_end[3])).reshape((32,32)), aspect='auto', cmap='hot')
 show()
 
-plot(data[:, 0])
+plot(datae[:, 0])
+plot(datai[:, 0])
 show()
