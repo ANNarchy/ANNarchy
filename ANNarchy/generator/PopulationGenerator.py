@@ -804,7 +804,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 """ % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
 
         # Mean Firing rate
-        mean_FR = self.update_fr(pop)
+        mean_FR_push, mean_FR_update = self.update_fr(pop)
 
         # Gather code
         spike_gather = """
@@ -816,12 +816,14 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
                 }
                 last_spike[i] = t;
                 %(refrac_inc)s
-                %(mean_FR)s
+                %(mean_FR_push)s
             }
+            %(mean_FR_update)s
 """% {  'id': pop.id, 'name': pop.name, 'size': pop.size, 
         'condition' : cond, 'reset': reset, 
         'refrac_inc': refrac_inc,
-        'mean_FR': mean_FR,
+        'mean_FR_push': mean_FR_push,
+        'mean_FR_update': mean_FR_update,
         'omp_critical_code': omp_critical_code} 
 
         code += spike_gather
@@ -906,21 +908,22 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
     def update_fr(self, pop):
         "Computes the average firing rate based on history"
 
-        mean_FR = ""
+        mean_FR_push = ""; mean_FR_update = ""
         if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
             window = pop._compute_mean_fr
             window_int = long(window/Global.config['dt'])
-            mean_FR = """
+            mean_FR_push = """
                 // Update the mean firing rate
                 _spike_history[i].push(t);
-                while(_spike_history[i].front() <= t - %(window)s){
-                    _spike_history[i].pop(); // Suppress spikes outside the window
-                }
-                r[i] = %(freq)s * double(_spike_history[i].size());
-
+            """
+            mean_FR_update = """
+            while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - %(window)s)){
+                _spike_history[i].pop(); // Suppress spikes outside the window
+            }
+            r[i] = %(freq)s * double(_spike_history[i].size());
             """ % {'window': str(window_int), 'freq': str(1000.0/window)}
 
-        return mean_FR
+        return mean_FR_push, mean_FR_update
 
     ################################
     ### Stop condition
