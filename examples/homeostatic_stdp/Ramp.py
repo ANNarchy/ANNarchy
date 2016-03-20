@@ -1,7 +1,7 @@
 """
 Homeostatic STDP mechanism.
 
-Reimplementation of the model published in:
+Reimplementation of the Ramp model published in:
 
 Carlson, K.D.; Richert, M.; Dutt, N.; Krichmar, J.L., "Biologically plausible models of homeostasis and STDP: Stability and learning in spiking neural networks," in Neural Networks (IJCNN), The 2013 International Joint Conference on , vol., no., pp.1-8, 4-9 Aug. 2013. doi: 10.1109/IJCNN.2013.6706961
 
@@ -67,7 +67,6 @@ nearest_neighbour_stdp = Synapse(
         tau_minus = 60. : postsynaptic
         A_plus = 0.0002 : postsynaptic
         A_minus = 0.000066 : postsynaptic
-        w_min = 0.0 : postsynaptic
         w_max = 0.03 : postsynaptic
     """,
     equations = """
@@ -75,11 +74,11 @@ nearest_neighbour_stdp = Synapse(
         tau_plus  * dltp/dt = -ltp
         tau_minus * dltd/dt = -ltd
         # Nearest-neighbour
-        w += if t_post >= t_pre: ltp else: - ltd : min=w_min, max=w_max
+        w += if t_post >= t_pre: ltp else: - ltd : min=0.0, max=w_max
     """,
     pre_spike="""
         g_target += w
-        ltp = A_plus 
+        ltp = A_plus
     """,         
     post_spike="""
         ltd = A_minus 
@@ -107,17 +106,17 @@ homeo_stdp = Synapse(
     equations = """
         # Traces
         tau_plus  * dltp/dt = -ltp
-        tau_minus * dltd/dt = -ltd  
+        tau_minus * dltd/dt = -ltd
         # Homeostatic values
         R = post.r : postsynaptic
         K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma)) : postsynaptic
         # Nearest-neighbour
         stdp = if t_post >= t_pre: ltp else: - ltd 
-        dw/dt = (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=w_min, max=w_max
+        w += (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=w_min, max=w_max
     """,
     pre_spike="""
         g_target += w
-        ltp = A_plus 
+        ltp = A_plus
     """,         
     post_spike="""
         ltd = A_minus 
