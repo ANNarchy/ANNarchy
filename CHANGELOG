@@ -3,6 +3,7 @@
 * Spiking neurons now define the variable ``t_last`` storing the time (in ms) of the last emitted spike. 
 * Added a method ``compute_firing_rate()`` that allows spiking neurons to compute their mean firing rate over a prefined window and store the result (in Hz) into the reserved variable ``r``.
 * Fixed bug when using "if a == b".
+* Pre- and post-synaptic occuring at the same time are now both evaluated. The flag ``unless_post`` can be set in ``pre_spike`` to disable the evaluation of the pre-spike in that case (default behavior for simple_stdp example).
 
 **4.5.3:**
 
