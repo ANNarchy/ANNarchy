@@ -14,7 +14,6 @@ if not sys.version_info[:2] >= (2, 7):
 # setuptools
 try:
     from setuptools import setup, find_packages, Extension
-    from distutils.sysconfig import get_python_inc
     print('Checking for setuptools... OK')
 except:
     print('Checking for setuptools... NO')
@@ -22,18 +21,14 @@ except:
     print('You can install it from pip or: http://pypi.python.org/pypi/setuptools')
     exit(0)
 
-# sympy
+# distutils
 try:
-    import sympy
-    if parse_version(sympy.__version__) > parse_version('0.7.4'):
-        print('Checking for sympy... OK')
-    else:
-        print('Sympy ' + str(sympy.__version__) + ' is not sufficient, expected >= 0.7.4' )
-        exit(0)
+    from distutils.sysconfig import get_python_inc
+    print('Checking for distutils... OK')
 except:
-    print('Checking for sympy... NO')
-    print('Error : Python package "sympy" >= 0.7.4 is required.')
-    print('You can install it from pip or: http://www.sympy.org')
+    print('Checking for distutils... NO')
+    print('Error : Python package "distutils" is required.')
+    print('You can install it from pip or: http://pypi.python.org/pypi/distutils')
     exit(0)
     
 # numpy
@@ -80,16 +75,17 @@ import ANNarchy
 package_data = ['core/cython_ext/*.pxd','generator/CudaCheck/cuda_check.so']
 
 extensions = [
-              Extension("ANNarchy.core.cython_ext.Connector", ["ANNarchy/core/cython_ext/Connector.pyx"], include_dirs=[np.get_include()]),
-              Extension("ANNarchy.core.cython_ext.Coordinates", ["ANNarchy/core/cython_ext/Coordinates.pyx"], include_dirs=[np.get_include()]),
-              Extension("ANNarchy.core.cython_ext.Transformations", ["ANNarchy/core/cython_ext/Transformations.pyx"], include_dirs=[np.get_include()]),
-            ]
+    Extension("ANNarchy.core.cython_ext.Connector", ["ANNarchy/core/cython_ext/Connector.pyx"], include_dirs=[np.get_include()]),
+    Extension("ANNarchy.core.cython_ext.Coordinates", ["ANNarchy/core/cython_ext/Coordinates.pyx"], include_dirs=[np.get_include()]),
+    Extension("ANNarchy.core.cython_ext.Transformations", ["ANNarchy/core/cython_ext/Transformations.pyx"], include_dirs=[np.get_include()]),
+]
+
 dependencies = [
-          'numpy',
-          'scipy',
-          'matplotlib',
-          'cython',
-          'sympy'
+    'numpy',
+    'scipy',
+    'matplotlib',
+    'cython',
+    'sympy'
 ]
 
 
