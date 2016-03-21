@@ -13,7 +13,7 @@ if not sys.version_info[:2] >= (2, 7):
 
 # setuptools
 try:
-    from setuptools import setup, find_packages
+    from setuptools import setup, find_packages, Extension
     from distutils.sysconfig import get_python_inc
     print('Checking for setuptools... OK')
 except:
@@ -38,7 +38,7 @@ except:
     
 # numpy
 try:
-    import numpy
+    import numpy as np
     print('Checking for numpy... OK')
 except:
     print('Checking for numpy... NO')
@@ -79,52 +79,18 @@ import ANNarchy
 
 package_data = ['core/cython_ext/*.pxd','generator/CudaCheck/cuda_check.so']
 
-if sys.platform.startswith("darwin"):
-    #   11.02.2015 (hd)
-    #   On darwin-based platforms, the distutils package on python 2.x does not work properly. Building of the ext_modules does not chain to clang++, instead the C compiler (clang) is used. As we include e. g. vector classes from cython this lead to compilation errors.
-    #   As a solution we cythonize *.pyx and compile the resulting *.cpp to the corresponding shared libraries from hand. Afterwords the created libraries are copied.
-    Makefile_txt = """
-all:
-
-\tcython --cplus Connector.pyx
-\tclang++ -fno-strict-aliasing -fno-common -dynamic -pipe -DENABLE_DTRACE -DMACOSX -DNDEBUG -Wshorten-64-to-32 -fwrapv -Wall -Wstrict-prototypes %(numpy_include)s %(python_include)s --shared Connector.cpp -lpython -o Connector.so
-
-\tcython --cplus Coordinates.pyx
-\tclang++ -fno-strict-aliasing -fno-common -dynamic -pipe -DENABLE_DTRACE -DMACOSX -DNDEBUG -Wshorten-64-to-32 -fwrapv -Wall -Wstrict-prototypes %(numpy_include)s %(python_include)s --shared Coordinates.cpp -lpython -o Coordinates.so
-
-\tcython --cplus Transformations.pyx
-\tclang++ -fno-strict-aliasing -fno-common -dynamic -pipe -DENABLE_DTRACE -DMACOSX -DNDEBUG -Wshorten-64-to-32 -fwrapv -Wall -Wstrict-prototypes %(numpy_include)s %(python_include)s --shared Transformations.cpp -lpython -o Transformations.so
-
-clean:
-\trm -rf *.cpp    # results of 1st step
-\trm -rf *.so     # results of 2nd step
-    """ % {
-        'numpy_include': '-I'+numpy.get_include()[0],
-        'python_include': '-I'+get_python_inc() ,
-    }
-    cwd = os.getcwd()
-    with open(cwd+"/ANNarchy/core/cython_ext/Makefile", 'w') as wfile:
-        wfile.write(Makefile_txt)
-    os.chdir(cwd+"/ANNarchy/core/cython_ext")
-    os.system("make clean && make")
-    os.chdir(cwd)
-    package_data.append('core/cython_ext/*.so')
-    ext_modules = None
-    dependencies = []
-    print('Warning: on  MacOSX, dependencies are not automatically installed when using pip.')
-else: # linux
-    ext_modules = cythonize(
-            [   "ANNarchy/core/cython_ext/Connector.pyx", 
-                "ANNarchy/core/cython_ext/Coordinates.pyx",
-                "ANNarchy/core/cython_ext/Transformations.pyx"]
-        )
-    dependencies = [
+extensions = [
+              Extension("ANNarchy.core.cython_ext.Connector", ["ANNarchy/core/cython_ext/Connector.pyx"], include_dirs=[np.get_include()]),
+              Extension("ANNarchy.core.cython_ext.Coordinates", ["ANNarchy/core/cython_ext/Coordinates.pyx"], include_dirs=[np.get_include()]),
+              Extension("ANNarchy.core.cython_ext.Transformations", ["ANNarchy/core/cython_ext/Transformations.pyx"], include_dirs=[np.get_include()]),
+            ]
+dependencies = [
           'numpy',
           'scipy',
           'matplotlib',
           'cython',
           'sympy'
-        ]
+]
 
 
 setup(  name='ANNarchy',
@@ -154,7 +120,7 @@ setup(  name='ANNarchy',
         packages=find_packages(),
         package_data={'ANNarchy': package_data},
         install_requires=dependencies,
-        ext_modules = ext_modules,
-        include_dirs = [numpy.get_include()],
+        ext_modules = cythonize(extensions),
+        include_dirs = [np.get_include()],
         zip_safe = False
 )
