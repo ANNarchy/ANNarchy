@@ -125,7 +125,7 @@ def compile(    directory='annarchy',
     * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
     * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
-    * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code.
+    * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
     * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
     * **silent**: defines if the "Compiling... OK" should be printed.
 
@@ -348,6 +348,9 @@ class Compiler(object):
             omp_flag = "-fopenmp"
 
         # Cuda capability
+        #
+        # hdin (22.03.2016): we should verify in the future, if compute_35 remains as best
+        # configuration for Keplar and upwards.
         cuda_gen = ""
         gpu_flags = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
