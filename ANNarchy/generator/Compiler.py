@@ -217,13 +217,13 @@ class Compiler(object):
         self.check_structure()
 
         # Generate the code
-        self.code_generation(self.profile_enabled, self.clean)
+        self.code_generation()
 
         # Generate the Makefile
         self.generate_makefile()
 
         # Copy the files if needed
-        changed = self.copy_files(self.clean)
+        changed = self.copy_files()
         
         # Perform compilation if something has changed
         if changed or not os.path.isfile(self.annarchy_dir+'/ANNarchyCore'+str(self.net_id)+'.so'):
@@ -234,10 +234,10 @@ class Compiler(object):
         # Create the Python objects                
         _instantiate(self.net_id)    
 
-    def copy_files(self, clean):
+    def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
         changed = False
-        if clean:
+        if self.clean:
             for f in os.listdir(self.annarchy_dir+'/generate'):
                 if f == "Makefile": 
                     shutil.copy(self.annarchy_dir+'/generate/'+f, # src
@@ -413,7 +413,7 @@ class Compiler(object):
             wfile.write(makefile_template % makefile_flags)
 
 
-    def code_generation(self, profile_enabled, clean):
+    def code_generation(self):
         """ Code generation dependent on paradigm """
         from .CodeGenerator import CodeGenerator
         generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id)
