@@ -31,6 +31,7 @@ import re
 # ANNarchy core informations
 import ANNarchy
 import ANNarchy.core.Global as Global
+from .Template.MakefileTemplate import *
 
 from optparse import OptionParser
 from optparse import OptionGroup
@@ -103,7 +104,17 @@ def setup_parser():
 
     return parser
 
-def compile(directory='annarchy', clean=False, populations=None, projections=None, silent=False, cuda_config={'device': 0}, cpp_stand_alone=False, debug_build=False, profile_enabled = False, net_id=0):
+def compile(    directory='annarchy', 
+                clean=False, 
+                populations=None, 
+                projections=None,
+                compiler="default", 
+                silent=False, 
+                cuda_config={'device': 0}, 
+                cpp_stand_alone=False, 
+                debug_build=False, 
+                profile_enabled = False, 
+                net_id=0 ):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
     
@@ -113,7 +124,7 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
-    * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
+    * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
     * **silent**: defines if the "Compiling... OK" should be printed.
     * **cuda_config**: TODO
 
@@ -167,19 +178,29 @@ def compile(directory='annarchy', clean=False, populations=None, projections=Non
     _folder_management(annarchy_dir, profile_enabled, clean, net_id)
     
     # Create a Compiler object
-    compiler = Compiler(annarchy_dir, clean, silent, cuda_config, cpp_stand_alone, debug_build, profile_enabled, 
-                 populations, projections, net_id)
+    compiler = Compiler(    annarchy_dir=annarchy_dir, 
+                            clean=clean, 
+                            compiler=compiler, 
+                            silent=silent, 
+                            cuda_config=cuda_config, 
+                            cpp_stand_alone=cpp_stand_alone, 
+                            debug_build=debug_build, 
+                            profile_enabled=profile_enabled, 
+                            populations=populations, 
+                            projections=projections, 
+                            net_id=net_id  )
     compiler.generate()
     
 class Compiler(object):
     " Main class to generate C++ code efficiently"
       
-    def __init__(self, annarchy_dir, clean, silent, cuda_config, cpp_stand_alone, debug_build, profile_enabled, 
+    def __init__(self, annarchy_dir, clean, compiler, silent, cuda_config, cpp_stand_alone, debug_build, profile_enabled, 
                  populations, projections, net_id): 
         
         # Store arguments
         self.annarchy_dir = annarchy_dir
         self.clean = clean
+        self.compiler = compiler
         self.silent = silent
         self.cuda_config = cuda_config
         self.cpp_stand_alone = cpp_stand_alone
@@ -256,6 +277,14 @@ class Compiler(object):
             if Global.config['show_time']:
                 t0 = time.time()
 
+        # Compiler
+        if sys.platform.startswith('linux'): # Linux systems
+            if self.compiler == "default":
+                self.compiler = "g++"
+        elif sys.platform == "darwin":   # mac os
+            if self.compiler == "default":
+                self.compiler = "clang++"
+
         # flags are common to all platforms
         if not self.debug_build:
             cpu_flags = "-march=native -O2"
@@ -267,6 +296,21 @@ class Compiler(object):
         if self.profile_enabled:
             cpu_flags += " -g"
             extra_libs.append("-lpapi")
+
+        # OpenMP flag
+        omp_flag = ""
+        if Global.config['paradigm']=="openmp" and Global.config['num_threads']>1 and sys.platform != "darwin":
+            omp_flag = "-fopenmp"
+
+        # Cuda capability
+        cuda_gen = ""
+        if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
+            from .CudaCheck import CudaCheck
+            cu_version = CudaCheck().version()
+            if cu_version >= (3,0):
+                cuda_gen = "-gencode arch=compute_35,code=compute_35"
+            else:
+                cuda_gen = "-gencode arch=compute_20,code=compute_20"
 
         # Extra libs from extensions such as opencv
         libs = ""
@@ -286,63 +330,34 @@ class Compiler(object):
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
 
-        # switch to build-directory
+        # Gather all Makefile flags
+        makefile_flags = { 
+            'compiler': self.compiler,
+            'cpu_flags': cpu_flags, 
+            'cuda_gen': cuda_gen,
+            'gpu_flags': gpu_flags, 
+            'openmp': omp_flag,
+            'libs': libs, 
+            'py_version': py_version, 
+            'py_major': py_major, 
+            'python_include': python_include, 
+            'python_lib': python_lib,
+            'numpy_include': numpy_include, 
+            'net_id': self.net_id
+        }
+
+        # Switch to the build directory
         os.chdir(self.annarchy_dir)
 
-        # create Makefiles dependent on target platform
+        # Create Makefiles depending on the target platform and parallel framework
         if sys.platform.startswith('linux'): # Linux systems
-            src = """# Makefile generated by ANNarchy
-seq:
-\tcython -%(major)s build/net%(net_id)s/ANNarchyCore%(net_id)s.pyx --cplus
-\tg++ -march=native %(cpu_flags)s -shared -fPIC -fpermissive -std=c++0x %(python_include)s -I %(numpy_include)s build/net%(net_id)s/*.cpp %(libs)s -o ANNarchyCore%(net_id)s.so
-
-omp:
-\tcython -%(major)s build/net%(net_id)s/ANNarchyCore%(net_id)s.pyx --cplus
-\tg++ -march=native %(cpu_flags)s -shared -fPIC -fpermissive -std=c++0x  %(python_include)s -I %(numpy_include)s -fopenmp build/net%(net_id)s/*.cpp %(libs)s -o ANNarchyCore%(net_id)s.so
-
-# CC 2.0 (Tesla)
-cuda_20:
-\tcython -%(major)s build/net%(net_id)s/ANNarchyCore%(net_id)s.pyx --cplus
-\tnvcc -gencode arch=compute_20,code=compute_20 %(gpu_flags)s  %(python_include)s build/net%(net_id)s/*.cu build/net%(net_id)s/*.cpp -lpython%(py_version)s -Xcompiler -fPIC -shared -o ANNarchyCore%(net_id)s.so
-
-# CC 3.5 (Keplar)
-cuda_35:
-\tcython -%(major)s build/net%(net_id)s/ANNarchyCore%(net_id)s.pyx --cplus
-\tnvcc -gencode arch=compute_35,code=compute_35 %(gpu_flags)s  %(python_include)s build/net%(net_id)s/*.cu build/net%(net_id)s/*.cpp -lpython%(py_version)s -Xcompiler -fPIC -shared -o ANNarchyCore%(net_id)s.so
-
-clean:
-\trm -rf build/net%(net_id)s/*.o
-\trm -rf build/net%(net_id)s/*.so
-""" % { 'cpu_flags': cpu_flags, 
-        'gpu_flags': gpu_flags, 
-        'libs': libs, 
-        'py_version': py_version, 
-        'python_include': python_include, 
-        'python_lib': python_lib,
-        'numpy_include': numpy_include, 
-        'major': py_major, 
-        'net_id': self.net_id
-        }
+            if Global.config['paradigm'] == "cuda":
+                makefile_template = linux_cuda_template
+            else:
+                makefile_template = linux_omp_template
 
         elif sys.platform == "darwin":   # mac os
-            src = """# Makefile generated by ANNarchy
-seq:
-\tcython -%(major)s build/net%(net_id)s/ANNarchyCore%(net_id)s.pyx --cplus
-\tclang++ -stdlib=libc++ -std=c++11 -fPIC -shared %(cpu_flags)s -fpermissive %(python_include)s -I%(numpy_include)s build/net%(net_id)s/*.cpp %(python_lib)s %(libs)s -o ANNarchyCore%(net_id)s.so
-
-clean:
-\trm -rf build/net%(net_id)s/*.o
-\trm -rf build/net%(net_id)s/*.so
-""" % { 'cpu_flags': cpu_flags, 
-        'libs': libs, 
-        'py_version': py_version, 
-        'major': py_major, 
-        'python_include': python_include, 
-        'python_lib': python_lib, 
-        'numpy_include': numpy_include, 
-        'net_id': self.net_id
-        }
-
+            makefile_template = osx_seq_template
 
         else: # Windows: to test....
             Global._warning("Compilation on windows is not supported yet.")
@@ -350,27 +365,12 @@ clean:
 
         # Write the Makefile to the disk
         with open('Makefile', 'w') as wfile:
-            wfile.write(src)
+            wfile.write(makefile_template % makefile_flags)
 
         # Start the compilation
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not Global.config["verbose"] else ""
 
-        if Global.config['paradigm'] == "cuda":
-            from .CudaCheck import CudaCheck
-            cu_version = CudaCheck().version()
-
-            if cu_version >= (3,0):
-                Global._print("Using CUDA 3.x")
-                make_process = subprocess.Popen("make cuda_35 -j4 "+ verbose, shell=True)
-            else:
-                Global._print("Using CUDA 2.x")
-                make_process = subprocess.Popen("make cuda_20 -j4 "+ verbose, shell=True)
-
-        elif (Global.config['paradigm']=="openmp" and Global.config['num_threads']>1):
-            make_process = subprocess.Popen("make omp -j4" + verbose, shell=True)
-
-        else:
-            make_process = subprocess.Popen("make seq -j4" + verbose, shell=True)
+        make_process = subprocess.Popen("make all -j4" + verbose, shell=True)
 
         if make_process.wait() != 0:
             with open('compile_stderr.log', 'r') as rfile:
