@@ -10,6 +10,7 @@ Based on the Carlsim tutorial:
 http://www.socsci.uci.edu/~jkrichma/CARLsim/doc/tut3_plasticity.html
 
 """
+from __future__ import print_function
 from ANNarchy import *
 
 # Izhikevich RS neuron

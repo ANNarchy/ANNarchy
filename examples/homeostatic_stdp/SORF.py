@@ -1,3 +1,11 @@
+"""
+Homeostatic STDP mechanism.
+
+Reimplementation of the SORF model published in:
+
+Carlson, K.D.; Richert, M.; Dutt, N.; Krichmar, J.L., "Biologically plausible models of homeostasis and STDP: Stability and learning in spiking neural networks," in Neural Networks (IJCNN), The 2013 International Joint Conference on , vol., no., pp.1-8, 4-9 Aug. 2013. doi: 10.1109/IJCNN.2013.6706961
+
+"""
 from __future__ import print_function
 from ANNarchy import *
 import random
@@ -8,7 +16,7 @@ nb_neuron = 4 # Number of exc and inh neurons
 size = (32, 32) # input size
 freq = 1.2 # nb_cycles/half-image
 nb_stim = 40 # Number of grating per epoch
-nb_epochs = 100 # Number of epochs
+nb_epochs = 5 # Number of epochs
 max_freq = 28. # Max frequency of the poisson neurons 
 T = 10000. # Period for averaging the firing rate
 
@@ -65,11 +73,10 @@ homeo_stdp = Synapse(
         tau_minus = 90. : postsynaptic
         A_plus  = 0.000045 : postsynaptic
         A_minus = 0.00003 : postsynaptic
-        w_max = 10.0 : postsynaptic
 
         # Homeostatic regulation
         alpha = 0.1 : postsynaptic
-        beta = 50.0 : postsynaptic
+        beta = 50.0 : postsynaptic # <- Difference with the original implementation
         gamma = 50.0 : postsynaptic
         Rtarget = 10. : postsynaptic
         T = 10000. : postsynaptic
@@ -80,7 +87,7 @@ homeo_stdp = Synapse(
         K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma)) : postsynaptic
         # Nearest-neighbour
         stdp = if t_post >= t_pre: ltp else: - ltd 
-        w += (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=0.0, max=w_max
+        w += (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=0.0, max=10.0
         # Traces
         tau_plus  * dltp/dt = -ltp 
         tau_minus * dltd/dt = -ltd 
@@ -186,6 +193,9 @@ datal = p.get('w')
 # Final weights
 w_on_end = OnBufferExc.w
 w_off_end = OffBufferExc.w
+
+# Save recordings
+np.savez("weights.npz", ff_on=w_on_end, ff_off=w_off_end, ff_on_time=dataw, inh_time=datal)
 
 # Plot
 from pylab import *
