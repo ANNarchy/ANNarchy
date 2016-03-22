@@ -105,9 +105,27 @@ Again, replace '2.7' with your Python version. If this directory does not exist,
         sudo env "PATH=$PATH" "LIBRARY_PATH=$LIBRARY_PATH" python setup.py ...
 
 
-Installation on OSX systems
+Installation on MacOS X systems
 ============================
+
+Installation on MacOS X is in principle similar to GNU/Linux::
+
+    user@Machine:~/annarchy-4.0$ python setup.py install (--user or --prefix)
+
+
+We advise using a full Python distribution such as `Anaconda <https://www.continuum.io/why-anaconda>`_, which installs automatically all dependencies of ANNarchy, rather than using the old python provided by Apple.
+
+The only problem with Anaconda (and potentially other Python distributions, not tested) is that the compiler will use by default the Python shared library provided by Apple, leading to the following crash when simulating::
+
+    Fatal Python error: PyThreadState_Get: no current thread
+    Abort trap: 6
+
+The solution is to set the environment variable ``DYLIB_FALLBACK_LIBRARY_PATH`` to point at the correct library ``libpythonx.y.dylib`` in your ``.bash_profile``. For a standard Anaconda installation, this should be::
+
+    export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
 
 .. note::
 
-    Installation should be similar to Linux. ANNarchy should be able to use clang instead of gcc. Beware that OpenMP is not available by default on OSX...
+    The default compiler on OS X is clang-llvm. You should install the *command_line_tools* together with XCode in order to use it.
+
+    For some reasons, this compiler is not compatible with OpenMP, so the models will only run sequentially.

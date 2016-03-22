@@ -372,8 +372,11 @@ class Compiler(object):
 
         # Python includes and libs
         python_include = subprocess.Popen(["python-config", "--includes"], stdout=subprocess.PIPE).communicate()[0].strip()
-        python_lib = subprocess.Popen(["python-config", "--ldflags"], stdout=subprocess.PIPE).communicate()[0].strip()
-        python_lib.replace(' -O1 ', '')
+        python_lib = subprocess.Popen(["python-config", "--libs"], stdout=subprocess.PIPE).communicate()[0].strip()
+        if sys.platform == "darwin":   # non-standard python installs on osx create linker problems
+            # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
+            python_path = subprocess.Popen(["which", "python"], stdout=subprocess.PIPE).communicate()[0].strip()
+            python_lib += " -L" + python_path.replace('/bin/python', '/lib') + ' '
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
