@@ -170,7 +170,7 @@ Three types of updates are potentially executed at every time step:
 2. Synaptic variables defined by ``equations``.
 3. Post-synaptic events, defined by ``post_spike`` and triggered after each post-synaptic spike, without delay.
 
-These updates are conducted in that order. First, all spikes emitted in the previous step (or earlier if there are delays) are propagated to the corresponding synapses and influence variables there (especially conductance increases), then all synaptic variables are updated according to their ODE, then all neurons which have emitted a spike in the current step modify their synapses.
+These updates are conducted in that order at each time step. First, all spikes emitted in the previous step (or earlier if there are delays) are propagated to the corresponding synapses and influence variables there (especially conductance increases), then all synaptic variables are updated according to their ODE (after the neurons' equations are updated), then all neurons which have emitted a spike in the current step modify their synapses.
 
 A potential problem arises when a pre-synaptic and a post-synaptic spike are emitted at the same time. STDP-like plasticity rules are usually not defined when the spike time difference is 0, as the two spikes can not be correlated in that case (the pre-spike can not possibly be the cause of the post-spike). 
 

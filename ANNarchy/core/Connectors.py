@@ -34,8 +34,8 @@ from ANNarchy.parser.Report import _process_random
 
 try:
     import ANNarchy.core.cython_ext.Connector as Connector
-except:
-    pass
+except Exception as e:
+    Global._print(e)
 
 
 ################################
