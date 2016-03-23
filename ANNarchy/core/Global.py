@@ -93,7 +93,9 @@ authorized_keywords = [
     # Type
     'int',
     'bool',
-    'float'
+    'float',
+    # Event-based
+    'unless_post',
 ]
 
 # Dictionary of population variables being currently recorded

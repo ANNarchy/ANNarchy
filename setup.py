@@ -13,7 +13,7 @@ if not sys.version_info[:2] >= (2, 7):
 
 # setuptools
 try:
-    from setuptools import setup, find_packages
+    from setuptools import setup, find_packages, Extension
     print('Checking for setuptools... OK')
 except:
     print('Checking for setuptools... NO')
@@ -21,23 +21,19 @@ except:
     print('You can install it from pip or: http://pypi.python.org/pypi/setuptools')
     exit(0)
 
-# sympy
+# distutils
 try:
-    import sympy
-    if parse_version(sympy.__version__) > parse_version('0.7.4'):
-        print('Checking for sympy... OK')
-    else:
-        print('Sympy ' + str(sympy.__version__) + ' is not sufficient, expected >= 0.7.4' )
-        exit(0)
+    from distutils.sysconfig import get_python_inc
+    print('Checking for distutils... OK')
 except:
-    print('Checking for sympy... NO')
-    print('Error : Python package "sympy" >= 0.7.4 is required.')
-    print('You can install it from pip or: http://www.sympy.org')
+    print('Checking for distutils... NO')
+    print('Error : Python package "distutils" is required.')
+    print('You can install it from pip or: http://pypi.python.org/pypi/distutils')
     exit(0)
     
 # numpy
 try:
-    import numpy
+    import numpy as np
     print('Checking for numpy... OK')
 except:
     print('Checking for numpy... NO')
@@ -78,31 +74,19 @@ import ANNarchy
 
 package_data = ['core/cython_ext/*.pxd','generator/CudaCheck/cuda_check.so']
 
-if sys.platform.startswith("darwin"):
-    #   11.02.2015 (hd)
-    #   On darwin-based platforms, the distutils package on python 2.x does not work properly. Building of the ext_modules does not chain to clang++, instead the C compiler (clang) is used. As we include e. g. vector classes from cython this lead to compilation errors.
-    #   As a solution we cythonize *.pyx and compile the resulting *.cpp to the corresponding shared libraries from hand. Afterwords the created libraries are copied.
-    cwd = os.getcwd()
-    os.chdir(cwd+"/ANNarchy/core/cython_ext")
-    os.system("make clean && make")
-    os.chdir(cwd)
-    package_data.append('core/cython_ext/*.so')
-    ext_modules = None
-    dependencies = []
-    print('Warning: on  MacOSX, dependencies are not automatically installed when using pip.')
-else: # linux
-    ext_modules = cythonize(
-            [   "ANNarchy/core/cython_ext/Connector.pyx", 
-                "ANNarchy/core/cython_ext/Coordinates.pyx",
-                "ANNarchy/core/cython_ext/Transformations.pyx"]
-        )
-    dependencies = [
-          'numpy',
-          'scipy',
-          'matplotlib',
-          'cython',
-          'sympy'
-        ]
+extensions = [
+    Extension("ANNarchy.core.cython_ext.Connector", ["ANNarchy/core/cython_ext/Connector.pyx"], include_dirs=[np.get_include()]),
+    Extension("ANNarchy.core.cython_ext.Coordinates", ["ANNarchy/core/cython_ext/Coordinates.pyx"], include_dirs=[np.get_include()]),
+    Extension("ANNarchy.core.cython_ext.Transformations", ["ANNarchy/core/cython_ext/Transformations.pyx"], include_dirs=[np.get_include()]),
+]
+
+dependencies = [
+    'numpy',
+    'scipy',
+    'matplotlib',
+    'cython',
+    'sympy'
+]
 
 
 setup(  name='ANNarchy',
@@ -132,7 +116,7 @@ setup(  name='ANNarchy',
         packages=find_packages(),
         package_data={'ANNarchy': package_data},
         install_requires=dependencies,
-        ext_modules = ext_modules,
-        include_dirs = [numpy.get_include()],
+        ext_modules = cythonize(extensions),
+        include_dirs = [np.get_include()],
         zip_safe = False
 )

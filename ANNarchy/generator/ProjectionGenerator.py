@@ -742,18 +742,30 @@ class ProjectionGenerator(object):
         pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
     """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': target, 'op': "<" if key == 'min' else '>', 'val': value }
 
-            elif eq['name'] == 'w': # Surround it by the learning flag
-                updated_variables_list += """
-// Plasticity of w can be disabled
-if(_plasticity){
+            else:
+                condition = ""
+                # Check conditions to update the variable
+                if eq['name'] == 'w': # Surround it by the learning flag
+                    condition = "_plasticity" # Plasticity can be disabled
+                if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
+                    simultaneous = "pop%(id_pre)s.last_spike[pre_rank[i][j]] != pop%(id_post)s.last_spike[post_rank[i]]" % {'id_post': proj.post.id, 'id_pre': proj.pre.id}
+                    if condition == "":
+                        condition = simultaneous
+                    else:
+                        condition += "&&(" + simultaneous + ")" 
+                # Generate the code
+                if condition != "":
+                    updated_variables_list += """
+// unless_post can prevent evaluation of presynaptic variables
+if(%(condition)s){
     // %(eq)s
     %(cpp)s
     %(bounds)s
 }
-""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
+""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids, 'condition': condition}
 
-            else: # Normal synaptic variable
-                updated_variables_list += """
+                else: # Normal synaptic variable
+                    updated_variables_list += """
 // %(eq)s
 %(cpp)s
 %(bounds)s""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
@@ -801,33 +813,18 @@ if(_plasticity){
 
 
         # Generate code for pre-spike variables
-        pre_event = ""
+        pre_code = ""
         if len(updated_variables_list) > 0:
-            code = ""
             for var in updated_variables_list:
-                code += var
-            code = tabify(code, 4)
+                pre_code += var
+            pre_code = tabify(pre_code, 3)
             # Special case where w is a single value
             if proj._has_single_weight():
-                code = re.sub(
+                pre_code = re.sub(
                     r'([^\w]+)w\[i\]\[j\]',
                     r'\1w',
-                    code
+                    pre_code
                 )
-            if not has_exact:
-                pre_event += """
-            // Event-based variables should not be updated when the postsynaptic neuron fires.
-            if(pop%(id_post)s.last_spike[post_rank[i]] != t-1){
-%(pre_event)s
-            }
-"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
-            else:
-                pre_event += """
-            // Pre-spike events with exact integration should always be evaluated...
-            {
-%(pre_event)s
-            }
-"""% {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'pre_event': code}
 
         # Take delays into account if any
         if proj.max_delay > 1:
@@ -847,7 +844,7 @@ if(_plasticity){
 
         # Generate the whole code block
         code = ""
-        if g_target_code != "" or pre_event != "":
+        if g_target_code != "" or pre_code != "":
             code = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
@@ -872,7 +869,7 @@ if (_transmission && pop%(id_post)s._active){
 """%{   'id_pre': proj.pre.id,
         'id_post': proj.post.id,
         'pre_array': pre_array,
-        'pre_event': pre_event,
+        'pre_event': pre_code,
         'g_target': g_target_code,
         'omp_code': omp_code,
         'event_driven': event_driven_code
@@ -888,9 +885,13 @@ if (_transmission && pop%(id_post)s._active){
             # Compute it as if it were rate-coded
             psp_code = self.computesum_rate_openmp(proj)[1]
             # Change _sum_target into g_target
-            psp_code = psp_code.replace(
+            psp_code = psp_code.replace( # for LIL
                 'pop%(id_post)s._sum_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target},
                 'pop%(id_post)s.g_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target}
+            )
+            psp_code = psp_code.replace( # for Dense
+                'pop%(id_post)s._sum_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target},
+                'pop%(id_post)s.g_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target}
             )
             # Add it to the main code
             code += """

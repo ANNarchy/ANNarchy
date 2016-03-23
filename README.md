@@ -61,12 +61,13 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 * Python 2.7 or >= 3.3
 * Cython >= 0.19
 * Setuptools >= 0.6
+* Distutils >= 0.6
 * Numpy >= 1.8
 * Sympy >= 0.7.4
+* Scipy >= 0.12
 
 Recommended:
 
 * lxml >= 3.0
-* Scipy >= 0.12
 * Matplotlib >= 1.1
 * PyQtGraph >= 0.9.8

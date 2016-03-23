@@ -21,7 +21,7 @@ The default spiking synapse in ANNarchy is equivalent to:
         """     
     ) 
 
-The only thing it does is to increase the conductance ``g_target`` of the post-synaptic neuron (for example ``g_exc`` if the target is ``exc``) every time a pre-syanptic spike arrives at the synapse, proportionally to the synaptic efficiency ``w`` of the synapse. Note that ``w`` is implicitely defined in all synapses, you will never never needto define it.
+The only thing it does is to increase the conductance ``g_target`` of the post-synaptic neuron (for example ``g_exc`` if the target is ``exc``) every time a pre-syanptic spike arrives at the synapse, proportionally to the synaptic efficiency ``w`` of the synapse. Note that ``w`` is implicitely defined in all synapses, you will never need to define it explicitely.
 
 You can override this default behavior by providing a new ``Synapse`` object when building a ``Projection``. For example, you may want to implement a "fatigue" mechanism for the synapse, transciently reducing the synaptic efficiency when the pre-synaptic neuron fires too strongly. One solution would be to decrease a synaptic variable everytime a pre-synaptic spike  is received and increase the post-synaptic conductance proportionally to this value. When no spike is received, this ``trace`` variable should slowly return to its maximal value.
 
@@ -43,7 +43,7 @@ You can override this default behavior by providing a new ``Synapse`` object whe
    
 Each time a pre-synaptic spike occurs, the post-synaptic conductance is increased from ``w*trace``. As the baseline of ``trace`` is 1.0 (as defined in ``equations``), this means that a "fresh" synapse will use the full synaptic efficiency. However, after each pre-synaptic spike, trace is decreased from ``dec = 0.05``, meaning that the "real" synaptic efficiency can go down to 0.0 (the minimal value of trace) if the pre-synaptic neuron fires too often.
 
-It is important here to restrict ``trace`` to positive values with the flags ``min=0.0``, as it could otherwise transform an excitatory synapse into an inhibitory one...
+It is important here to restrict ``trace`` to positive values with the flags ``min=0.0``, as it could otherwise transform an excitatory synapse into an inhibitory one.
 
 .. hint:: 
 
@@ -53,7 +53,7 @@ It is important here to restrict ``trace`` to positive values with the flags ``m
 Synaptic plasticity
 ==========================
 
-In spiking networks, there are usually two ways to implement event-driven synaptic plasticity (see the entry on STDP at `Scholarpedia <http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity>`_):
+In spiking networks, there are usually two methods to implement event-driven synaptic plasticity (see the entry on STDP at `Scholarpedia <http://www.scholarpedia.org/article/Spike-timing_dependent_plasticity>`_):
 
 * by using the difference in spike times between the pre- and post-synaptic neurons;
 * by using online implementations.
@@ -128,9 +128,7 @@ This term defines the potentiation of a synapse when a pre-synaptic spike is fol
 Online version
 ---------------
 
-The online version of STDP requires two synaptic traces, which are increased whenever a pre- resp. post-synaptic spike is perceived, and decay with their own dynamics in between.
-
-Using the same vocabulary as Brian, such an implementation would be:
+The online version of STDP requires two synaptic traces, which are increased whenever a pre- resp. post-synaptic spike is perceived, and decay with their own dynamics in between. Using the same vocabulary as Brian, such an implementation would be:
 
 .. code-block:: python
 
@@ -149,7 +147,7 @@ Using the same vocabulary as Brian, such an implementation would be:
         pre_spike = """
             g_target += w
             Apre += cApre 
-            w = clip(w + Apost, 0.0 , wmax)
+            w = clip(w - Apost, 0.0 , wmax)
         """,                  
         post_spike = """
             Apost += cApost
@@ -162,6 +160,48 @@ The variables ``Apre`` and ``Apost`` are exponentially decreasing traces of pre-
 The effect of this online version is globally the same as the spike timing dependent version, except that the history of pre- and post-synaptic spikes is fully contained in the variables ``Apre`` and ``Apost``.
 
 The ``event-driven`` keyword allows event-driven integration of the variables ``Apre`` and ``Apost``. This means the equations are not updated at each time step, but only when a pre- or post-synaptic spike occurs at the synapse. This is only possible because the two variables follow linear first-order ODEs. The event-driven integration method allows to spare a lot of computations if the number of spikes is not too high in the network.
+
+Order of evaluation
+--------------------
+
+Three types of updates are potentially executed at every time step:
+
+1. Pre-synaptic events, defined by ``pre_spike`` and triggered after each pre-synaptic spike, after a delay of at least ``dt``.
+2. Synaptic variables defined by ``equations``.
+3. Post-synaptic events, defined by ``post_spike`` and triggered after each post-synaptic spike, without delay.
+
+These updates are conducted in that order. First, all spikes emitted in the previous step (or earlier if there are delays) are propagated to the corresponding synapses and influence variables there (especially conductance increases), then all synaptic variables are updated according to their ODE, then all neurons which have emitted a spike in the current step modify their synapses.
+
+A potential problem arises when a pre-synaptic and a post-synaptic spike are emitted at the same time. STDP-like plasticity rules are usually not defined when the spike time difference is 0, as the two spikes can not be correlated in that case (the pre-spike can not possibly be the cause of the post-spike). 
+
+By default, both event-driven updates (``pre_spike`` leading to LTD, ``post_spike`` leading to LTP) will be conducted when the spikes are emitted at the same time. This can be problematic for some plastic models, for example the ``simple_stdp`` example provided in the source code.
+
+To avoid this problem, the flag ``unless_post`` can be specified in ``pre_spike`` to indicate that the corresponding variable should be updated after each pre-synaptic spike, **unless** the post-synaptic neuron also fired at the previous time step. Without even-driven integration, the online STDP learning rule would become:
+
+.. code-block:: python
+
+    STDP_online = Synapse(
+        parameters = """
+            tau_pre = 10.0 : post-synaptic
+            tau_post = 10.0 : post-synaptic
+            cApre = 0.01 : post-synaptic
+            cApost = 0.0105 : post-synaptic
+            wmax = 0.01 : post-synaptic
+        """,
+        equations = """
+            tau_pre * dApre/dt = - Apre 
+            tau_post * dApost/dt = - Apost 
+        """,
+        pre_spike = """
+            g_target += w
+            Apre += cApre : unless_post
+            w = clip(w - Apost, 0.0 , wmax) : unless_post
+        """,                  
+        post_spike = """
+            Apost += cApost
+            w = clip(w + Apre, 0.0 , wmax)
+        """      
+    ) 
 
 
 Continuous synaptic transmission
