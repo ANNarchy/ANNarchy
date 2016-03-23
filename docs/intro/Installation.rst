@@ -106,7 +106,7 @@ Again, replace '2.7' with your Python version. If this directory does not exist,
 
 
 Installation on MacOS X systems
-============================
+================================
 
 Installation on MacOS X is in principle similar to GNU/Linux::
 

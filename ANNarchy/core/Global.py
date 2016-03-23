@@ -553,11 +553,16 @@ def _warning(*var_text):
     if not config['suppress_warnings']:
         print(text)
 
-def _error(*var_text):
+def _error(*var_text, **args):
     """
     Prints an error message to standard out.
+
+    When passing exit=True, the program will cleanly exit (needed for ipython notebooks)
     """
     text = 'ERROR: '
     for var in var_text:
         text += str(var) + ' '
     print(text)
+    if 'exit' in args.keys():
+        if args['exit']:
+            exit(0)

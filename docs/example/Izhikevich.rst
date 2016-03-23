@@ -1,22 +1,16 @@
-***********************************
+**************************************
 Izhikevich's pulse-coupled network
-***********************************
+**************************************
 
-The script ``Izhikevich.py`` in ``examples/izhikevich`` reproduces the simple pulse-coupled network proposed by Eugene Izhikevich in the article:
+This script reproduces the simple pulse-coupled network proposed by
+Eugene Izhikevich in the article:
 
-    **Izhikevich, E.M.** (2003). Simple Model of Spiking Neurons, *IEEE Transaction on Neural Networks, 14:6*.
-    
+**Izhikevich, E.M.** (2003). Simple Model of Spiking Neurons, *IEEE
+Transaction on Neural Networks, 14:6*.
 
-.. image:: ../_static/izhikevich.png
-    
-Description of the network
-==========================
+The original Matlab code is provided below:
 
-The proposed network is composed of two populations of spiking neurons: one population of 800 excitatory neurons and another of 200 inhibitory neurons, all identical except for some parameters. The network is fully connected with random weights.
-
-The article provides the matlab code for the simulation:
-
-.. code-block:: matlab
+.. code:: matlab
 
     % Created by Eugene M. Izhikevich, February 25, 2003
     % Excitatory neurons Inhibitory neurons
@@ -43,26 +37,36 @@ The article provides the matlab code for the simulation:
     end;
     plot(firings(:,1),firings(:,2),’.’)
 
+Neuron type
+-----------
 
+The network is composed of parameterized quadratic integrate-and-fire
+neurons, known as *Izhikevich* neurons. They are simply defined by the
+following equations:
 
-Defining the neuron type
-========================
+::
 
-The network is composed of parameterized quadratic integrate-and-fire neurons, known as *Izhikevich* neurons. They are simply defined by the following equations::
+        dv/dt = 0.04 * v^2 + 5 * v + 140.0 - u + I 
+        du/dt = a * (b*v - u)
 
-    dv/dt = 0.04 * v^2 + 5 * v + 140.0 - u + I 
-    du/dt = a * (b*v - u)
+        if v > 30.0:
+            emit_spike()
+            v = c
+            u = u + d
 
-    if v > 30.0:
-        emit_spike()
-        v = c
-        u = u + d
+where ``v`` is the membrane potential, ``u`` is the membrane recovery
+variable and ``a``, ``b``, ``c``, ``d`` are parameters allowing to
+reproduce many types of neural firing.
 
-where ``v`` is the membrane potential, ``u`` is the membrane recovery variable and ``a``, ``b``, ``c``, ``d`` are parameters allowing to repreduce many types of neural firing.
+``I`` is the input voltage to a neuron at each time ``t``. For the
+desired network, it is the sum of a random value taken from a normal
+distribution with mean 0.0 and variance 1.0 (multiplied by a scaling
+factor) and the net effect of incoming spikes (excitatory and
+inhibitory).
 
-``I`` is the input voltage to a neuron at each time ``t``. For the desired network, it is the sum of a random value taken from a normal distribution with mean 0.0 and variance 1.0 (multiplied by a scaling factor) and the net effect of incoming spikes (excitatory and inhibitory).
+Implementing such a neuron in ANNarchy is straightforward:
 
-Implementing such a neuron in ANNarchy is straightforward::
+.. code:: python
 
     Izhikevich = Neuron(
         parameters="""
@@ -87,137 +91,139 @@ Implementing such a neuron in ANNarchy is straightforward::
         """
     )
 
-The parameters ``a``, ``b``, ``c``, ``d`` as well as the noise amplitude ``noise`` are declared in the ``parameters`` argument, as their value is constant during the simulation. ``noise`` is declared as the same throughout the population with the ``population`` flag.
+The parameters ``a``, ``b``, ``c``, ``d`` as well as the noise amplitude
+``noise`` are declared in the ``parameters`` argument, as their value is
+constant during the simulation. ``noise`` is declared as the same
+throughout the population with the ``population`` flag.
 
-The equations for ``v`` and ``u`` are direct translations of their mathematical counterparts. Note the use of ``dx/dt`` for the time derivative and ``^2`` for the square function.
+The equations for ``v`` and ``u`` are direct translations of their
+mathematical counterparts. Note the use of ``dx/dt`` for the time
+derivative and ``^2`` for the square function.
 
-The input voltage ``I`` is defined as the sum of: 
+The input voltage ``I`` is defined as the sum of:
 
-* the total conductance of excitatory synapses ``g_exc``,
-* the total conductance of inhibitory synapses ``-g_inh`` (in this example, we consider all weights to be positive, so we need to invert ``g_inh`` in order to model inhibitory synapses),
-* a random number taken from the normal distribution :math:`N(0,1)` and multiplied by the noise scale ``noise``.
-  
-In the pulse-coupled network, synapses are considered as instantaneous, i.e. a pre-synaptic spikes increases immediately the post-synaptic conductance proportionally to the weight of the synapse, but does not leave further trace. As this is the default behavior in ANNarchy, nothing has to be specified in the neuron's equations (see :doc:`../manual/SpikeNeuron`).
+-  the total conductance of excitatory synapses ``g_exc``,
+-  the total conductance of inhibitory synapses ``-g_inh`` (in this
+   example, we consider all weights to be positive, so we need to invert
+   ``g_inh`` in order to model inhibitory synapses),
+-  a random number taken from the normal distribution :math:`N(0,1)` and
+   multiplied by the noise scale ``noise``.
 
-The ``spike`` argument specifies the condition for when a spike should be emitted (here the membrane potential ``v`` should be greater than ``v_thresh``). The ``reset`` argument specifies the changes to neural variables that should occur after a spike is emitted: here, the membrane potential is reset to the resting potential ``c`` and the membrane recovery variable ``u`` is increased from ``d``.
+In the pulse-coupled network, synapses are considered as instantaneous,
+i.e. a pre-synaptic spikes increases immediately the post-synaptic
+conductance proportionally to the weight of the synapse, but does not
+leave further trace. As this is the default behavior in ANNarchy,
+nothing has to be specified in the neuron's equations.
 
-.. note::
+The ``spike`` argument specifies the condition for when a spike should
+be emitted (here the membrane potential ``v`` should be greater than
+``v_thresh``). The ``reset`` argument specifies the changes to neural
+variables that should occur after a spike is emitted: here, the membrane
+potential is reset to the resting potential ``c`` and the membrane
+recovery variable ``u`` is increased from ``d``.
 
-    This neuron is already implemented in ANNarchy, so the script does not need to declare this neuron type.
+The ``Izhikevich`` neuron is already defined in ANNarchy, so we will use
+it directly.
 
+Defining the populations
+------------------------
 
-Creating the populations
-========================
+We start by defining a population of 1000 Izhikevich neurons and split
+it into 800 excitatory neurons and 200 inhibitory ones:
 
-We can now create two populations ``Exc`` and ``Inh`` representing the excitatory and inhibitory neurons. Note that we could have created a unique population containing all neurons, as they are of the same type, but splitting them into two populations will ease the definition of the projections.
+.. code:: python
 
-.. code-block:: python
-
-    # Create the excitatory population
-    Exc = Population(name='Exc', geometry=800, neuron=Izhikevich)
-    re = np.random.random(800)
-    Exc.noise = 5.0
-    Exc.a = 0.02
-    Exc.b = 0.2
-    Exc.c = -65.0 + 15.0 * re**2
-    Exc.d = 8.0 - 6.0 * re**2
-    Exc.v = -65.0
-    Exc.u = Exc.v * Exc.b
-
-
-    # Create the Inh population
-    Inh = Population(name='Inh', geometry=200, neuron=Izhikevich)
-    ri = np.random.random(200)
-    Inh.noise = 2.0
-    Inh.a = 0.02 + 0.08 * ri
-    Inh.b = 0.25 - 0.05 * ri
-    Inh.c = -65.0
-    Inh.d = 2.0 
-    Inh.v = -65.0
-    Inh.u = Inh.v * Inh.b
+    from ANNarchy import *
     
-After creating the two populations, we have to initialize the parameters and variables to the adequate values. Note that only parameters/variables whose value is different from the one defined in the neuron type need to be specified. Here, we systematically reinitialized all parameters/variables, but it is a waste of time. 
+    pop = Population(geometry=1000, neuron=Izhikevich)
+    Exc = pop[:800]
+    Inh = pop[800:]
 
-The values of the the parameters depend on random variables ``re`` and ``ri`` which are unique for each neuron of each population. Note that any operation is possible when initializing a variable (for example ``u = b*v``), as long as a Numpy array of the same size/geometry as the population is provided.
+``Exc`` and ``Inh`` are subsets of ``pop``, which have the same
+properties as a population. We can then set parameters differently for
+each population:
 
-Connecting the populations
-==========================
+.. code:: python
 
-Excitatory neurons project to all neurons in the network with a weight randomly initialized in [0, 0.5]. Inhibitory neurons also project to all neurons, with a weight initialized in [0, 1]. As we have 2 populations, we need to define four all-to-all projections:
+    re = np.random.random(800)      ; ri = np.random.random(200)
+    Exc.noise = 5.0                 ; Inh.noise = 2.0
+    Exc.a = 0.02                    ; Inh.a = 0.02 + 0.08 * ri
+    Exc.b = 0.2                     ; Inh.b = 0.25 - 0.05 * ri
+    Exc.c = -65.0 + 15.0 * re**2    ; Inh.c = -65.0
+    Exc.d = 8.0 - 6.0 * re**2       ; Inh.d = 2.0
+    Exc.v = -65.0                   ; Inh.v = -65.0
+    Exc.u = Exc.v * Exc.b           ; Inh.u = Inh.v * Inh.b
+    
+Defining the projections
+------------------------
 
-.. code-block:: python
+We can now define the connections within the network: 
 
-    exc_exc = Projection(
-        pre=Exc, 
-        post=Exc, 
-        target='exc'
-    ).connect_all_to_all(weights=Uniform(0.0, 0.5))
+1. The excitatory neurons are connected to all neurons with a weight randomly chosen in [0, 0.5] 
+2. The inhibitory neurons are connected to all neurons with a weight randomly chosen in [0, 1]
+
+.. code:: python
+
+    exc_proj = Projection(pre=Exc, post=pop, target='exc')
+    exc_proj.connect_all_to_all(weights=Uniform(0.0, 0.5))
        
-    exc_inh = Projection(
-        pre=Exc, 
-        post=Inh, 
-        target='exc',
-    ).connect_all_to_all(weights=Uniform(0.0, 0.5))
-      
-    inh_exc = Projection(
-        pre=Inh, 
-        post=Exc, 
-        target='inh'
-    ).connect_all_to_all(weights=Uniform(0.0, 1.0))
-      
-    inh_inh = Projection(
-        pre=Inh, 
-        post=Inh, 
-        target='inh'
-    ).connect_all_to_all(weights=Uniform(0.0, 1.0))
+    inh_proj = Projection(pre=Inh, post=pop, target='inh')
+    inh_proj.connect_all_to_all(weights=Uniform(0.0, 1.0))
 
-The netword uses standard non-plastic synapses, so no ``Synapse`` type needs to be provided. We specify the ``exc`` or ``inh`` targets when creating the projections, so that ``g_exc`` and ``g_inh`` in the post-synaptic neurons are increased proportionally to the weight after each pre-synaptic spike.
 
-Running the simulation
-======================
+The network is now ready, we can compile:
 
-Now that the populations and projections are created, we can compile the network::
+.. code:: python
 
     compile()
+    
+Running the simulation
+----------------------
 
-and run the simulation for 1 second. For analysis purpose, we need to record the spiking activity in both populations, as well as the evolution of the membrane potential in the excitatory population::
+We start by monitoring the spikes and membrane potential in the whole
+population:
 
-    Me = Monitor(Exc, ['spike', 'v'])
-    Mi = Monitor(Inh, 'spike')
+.. code:: python
 
-The simulation is executed by calling::
+    M = Monitor(pop, ['spike', 'v'])
+    
+We run the simulation for 1000 milliseconds:
+
+.. code:: python
 
     simulate(1000.0, measure_time=True)
 
-The duration is in milliseconds. ``measure_time`` allows to print the time needed to perform the simulation.
+We retrieve the recordings, generate a raster plot and the population
+firing rate:
 
-The analysis is performed using utility functions of ANNarchy (see :doc:`../API/Utilities`) and plotted using Matplotlib.
+.. code:: python
 
-The recordings are first retrieved::
+    spikes = M.get('spike')
+    v = M.get('v')
+    t, n = M.raster_plot(spikes)
+    fr = M.histogram(spikes)
+    
+We plot: 
 
-    exc_data = Me.get()
-    inh_data = Mi.get()
+1. The raster plot of population 
+2. The evolution of the membrane potential of a single excitatory neuron 
+3. The population firing rate
 
-Raster plots are generated for each population using the ``raster_plot()`` function of the monitors::
+.. code:: python
 
-    te, ne = Me.raster_plot(exc_data['spike'])
-    ti, ni = Mi.raster_plot(inh_data['spike'])
-
-The number of spikes per simulation step in the excitatory population is compued using the ``histogram()`` functions::
-
-    fr_exc = Me.histogram(exc_data['spike'])
-
-Finally, the raster plots for both populations, the evolution of the membrane potential of a single excitatory neuron and the evolution of the number of spikes in the excitatory poplation are plotted using Matplotlib::
-
-    import pylab as plt
     # First plot: raster plot
     ax = plt.subplot(3,1,1)
-    ax.plot(te, ne, '.', markersize=1.0)
-    ax.plot(ti, ni+800, '.', markersize=1.0)
+    ax.plot(t, n, 'b.')
     # Second plot: membrane potential of a single excitatory cell
     ax = plt.subplot(3,1,2)
-    ax.plot(exc_data['v'][:, 15]) # for example
+    ax.plot(v[:, 15]) # for example
     # Third plot: number of spikes per step in the population.
     ax = plt.subplot(3,1,3)
-    ax.plot(fr_exc)
+    ax.plot(fr)
     plt.show()
+
+
+.. image:: Izhikevich_files/Izhikevich_24_1.png
+
+
+    

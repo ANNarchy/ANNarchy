@@ -6,6 +6,7 @@
 * Pre- and post-synaptic occuring at the same time are now both evaluated. The flag ``unless_post`` can be set in ``pre_spike`` to disable the evaluation of the pre-spike in that case (default behavior for simple_stdp example).
 * Fixed code generation for MacOS X, especially when using a non-standard Python installation (e.g. anaconda).
 * ``compile()`` now accepts a different compiler (g++ or clang++) and custom flags.
+* Now works correctly in ipython notebooks.
 
 **4.5.3:**
 

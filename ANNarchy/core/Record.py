@@ -397,6 +397,7 @@ class Monitor(object):
             bins =  Global.config['dt']
 
         # Compute the duration of the recordings
+        t_start = self._recorded_variables['spike']['start'][-1]
         duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
         
         # Number of neurons
@@ -407,11 +408,11 @@ class Monitor(object):
         
         # Initialize histogram
         histo = [0 for t in range(nb_bins)]
-    
+
         # Compute histogram
         for neuron in range(nb_neurons):
             for t in data[neuron]:
-                histo[int(t/float(bins/Global.config['dt']))] += 1
+                histo[int((t-t_start)/float(bins/Global.config['dt']))] += 1
     
         return np.array(histo)
 

@@ -20,16 +20,6 @@ except:
     print('Error : Python package "setuptools" is required.')
     print('You can install it from pip or: http://pypi.python.org/pypi/setuptools')
     exit(0)
-
-# distutils
-try:
-    from distutils.sysconfig import get_python_inc
-    print('Checking for distutils... OK')
-except:
-    print('Checking for distutils... NO')
-    print('Error : Python package "distutils" is required.')
-    print('You can install it from pip or: http://pypi.python.org/pypi/distutils')
-    exit(0)
     
 # numpy
 try:

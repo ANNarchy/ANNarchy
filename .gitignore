@@ -4,6 +4,7 @@
 *.data
 *.csv
 *.tar.gz
+*.ipynb_checkpoints/
 examples/*/annarchy
 benchmarks/*/annarchy
 benchmarks/*/COBA

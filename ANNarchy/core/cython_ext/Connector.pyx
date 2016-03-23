@@ -126,8 +126,7 @@ cdef class CSR:
             preranks = list(ranks)
             set_preranks = list(set(preranks))
             if len(preranks) != len(set_preranks):
-                ANNarchy.core.Global._error('The same synapse has been declared multiple times! Check your code.')
-                exit(0)
+                ANNarchy.core.Global._error('The same synapse has been declared multiple times! Check your code.', exit=True)
 
             # Add the new data
             self.post_rank.push_back(rk)
