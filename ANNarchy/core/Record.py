@@ -173,7 +173,12 @@ class Monitor(object):
             try:
                 setattr(self.cyInstance, 'record_'+var, True)
             except:
-                Global._warning('Monitor: ' + var + ' can not be recorded.')
+                obj_desc = ''
+                if isinstance(self.object, (Population, PopulationView)):
+                    obj_desc = 'population '+self.object.name
+                else:
+                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
 
     def resume(self):
         "Resumes the recordings."
@@ -182,7 +187,12 @@ class Monitor(object):
             try:
                 setattr(self.cyInstance, 'record_'+var, True)
             except:
-                Global._warning('Monitor:' + var + 'can not be recorded.')
+                obj_desc = ''
+                if isinstance(self.object, (Population, PopulationView)):
+                    obj_desc = 'population '+self.object.name
+                else:
+                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
             self._recorded_variables[var]['start'].append(Global.get_current_step())
 
     def pause(self):
@@ -192,7 +202,12 @@ class Monitor(object):
             try:
                 setattr(self.cyInstance, 'record_'+var, False)
             except:
-                Global._warning('Monitor:' + var + 'can not be recorded.')
+                obj_desc = ''
+                if isinstance(self.object, (Population, PopulationView)):
+                    obj_desc = 'population '+self.object.name
+                else:
+                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
             self._recorded_variables[var]['stop'].append(Global.get_current_step())
 
     def stop(self):
@@ -203,7 +218,12 @@ class Monitor(object):
                 setattr(self.cyInstance, 'record_'+var, False)
                 getattr(self.cyInstance, 'clear_'+var)()
             except:
-                Global._warning('Monitor:' + var + 'can not be recorded.')
+                obj_desc = ''
+                if isinstance(self.object, (Population, PopulationView)):
+                    obj_desc = 'population '+self.object.name
+                else:
+                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
         self.variables = []
         self._recorded_variables = {}
         Global._network[0]['instance'].remove_recorder(self.cyInstance)
