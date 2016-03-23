@@ -42,7 +42,7 @@ For CUDA:
 
     * the CUDA-SDK is available on the official website: https://developer.nvidia.com/cuda-downloads (we recommend to use at least a SDK version > 6.x)
     
-The version requirement on Sympy is rather newand may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
+The version requirement on Sympy is rather new and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
 
     sudo easy_install pip
     sudo pip install cython numpy sympy pyqtgraph matplotlib lxml scipy
@@ -105,6 +105,10 @@ Again, replace '2.7' with your Python version. If this directory does not exist,
         sudo env "PATH=$PATH" "LIBRARY_PATH=$LIBRARY_PATH" python setup.py ...
 
 
+If you have multiple Python installations on your system (e.g. through Anaconda), you should not forget to update your ``LD_LIBRARY_PATH`` environment variable in ``.bashrc`` or ``bash_profile`` to point at the location of ``libpython2.7.so``::
+
+    export LD_LIBRARY_PATH=$HOME/anaconda2/lib:$LD_LIBRARY_PATH
+
 Installation on MacOS X systems
 ================================
 
@@ -120,7 +124,7 @@ The only problem with Anaconda (and potentially other Python distributions, not 
     Fatal Python error: PyThreadState_Get: no current thread
     Abort trap: 6
 
-The solution is to set the environment variable ``DYLIB_FALLBACK_LIBRARY_PATH`` to point at the correct library ``libpythonx.y.dylib`` in your ``.bash_profile``. For a standard Anaconda installation, this should be::
+The solution is to set the environment variable ``DYLD_FALLBACK_LIBRARY_PATH`` to point at the correct library ``libpython2.7.dylib`` in your ``.bash_profile``. For a standard Anaconda installation, this should be::
 
     export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
 
