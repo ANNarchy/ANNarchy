@@ -7,6 +7,7 @@
 * Fixed code generation for MacOS X, especially when using a non-standard Python installation (e.g. anaconda).
 * ``compile()`` now accepts a different compiler (g++ or clang++) and custom flags.
 * Now works correctly in ipython notebooks.
+* Added iPython notebooks to the examples.
 
 **4.5.3:**
 

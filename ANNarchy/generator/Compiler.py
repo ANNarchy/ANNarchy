@@ -252,8 +252,8 @@ class Compiler(object):
             import filecmp
             for f in os.listdir(self.annarchy_dir+'/generate'):
                 if f == "Makefile": 
-                    if not filecmp.cmp( self.annarchy_dir+'/generate/'+ f, 
-                                    self.annarchy_dir+ '/' + f) :
+                    if  not f in os.listdir(self.annarchy_dir+'/') or not filecmp.cmp( self.annarchy_dir+'/generate/'+ f, 
+                                    self.annarchy_dir+ '/' + f):
                         shutil.copy(self.annarchy_dir+'/generate/'+f, # src
                                     self.annarchy_dir+ '/' +f # dest
                                     )

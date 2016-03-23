@@ -1,12 +1,12 @@
 import numpy as np
 cimport numpy as np
-from ANNarchy import simulate
     
 cdef class World:
     " Environment class allowing to clamp a rotating bubble into the baseline of a population."
     
     cdef pop # Input population
-    
+    cdef func # Function to call
+
     cdef float angle # Current angle
     cdef float radius # Radius of the circle 
     cdef float sigma # Width of the bubble
@@ -16,9 +16,10 @@ cdef class World:
     cdef float cx, cy, midw, midh
     cdef np.ndarray data 
     
-    def __cinit__(self, pop, radius, sigma, period):
+    def __cinit__(self, pop, radius, sigma, period, func):
         " Constructor"
         self.pop = pop
+        self.func=func
         self.angle = 0.0
         self.radius = radius
         self.sigma = sigma
@@ -42,5 +43,5 @@ cdef class World:
             self.data = (np.exp(-((self.xx-self.cx)**2 + (self.yy-self.cy)**2)/2.0/self.sigma**2))
             # Clamp the bubble into pop.baseline
             self.pop.baseline = self.data
-            # Simulate 1 ms
-            simulate(1)  
+            # Simulate for 1 step
+            self.func()  
