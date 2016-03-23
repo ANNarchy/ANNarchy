@@ -40,7 +40,7 @@ Additionally, the following packages are optional but strongly recommended:
     
 For CUDA:
 
-    * the CUDA-SDK is available on the official website: https://developer.nvidia.com/cuda-downloads (we recommend to use at least a SDK version > 6.x)
+    * the CUDA-SDK is available on the official `website <https://developer.nvidia.com/cuda-downloads>`_ (we recommend to use at least a SDK version > 6.x)
     
 The version requirement on Sympy is rather new and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
 
