@@ -16,9 +16,9 @@ cdef class World:
     cdef float cx, cy, midw, midh
     cdef np.ndarray data 
     
-    def __cinit__(self, pop, radius, sigma, period, func):
+    def __cinit__(self, population, radius, sigma, period, func):
         " Constructor"
-        self.pop = pop
+        self.pop = population
         self.func=func
         self.angle = 0.0
         self.radius = radius
