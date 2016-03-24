@@ -48,7 +48,8 @@ world = World(population=inp, radius=0.5, sigma=2.0, period=5000.0, func=step)
 
 # Launch the GUI and run the simulation
 from Viz import loop_bubbles
-loop_bubbles(populations = [inp, focus], func=world.rotate, update_rate=200)
+if __name__ == '__main__':
+    loop_bubbles(populations = [inp, focus], func=world.rotate, update_rate=200)
 
 
 
