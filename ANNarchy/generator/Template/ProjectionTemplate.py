@@ -65,13 +65,22 @@ struct ProjStruct%(id_proj)s{
         _plasticity = true;
         _update_period = 1;
         _update_offset = 0L;
+
 %(init_connectivity_matrix)s
-%(init_inverse_connectivity_matrix)s
+
+        // Inverse the connectivity matrix if spiking neurons
+        inverse_connectivity_matrix();
+
 %(init_event_driven)s
 %(init_parameters_variables)s
 %(init_rng)s
 %(init_additional)s
 %(init_profile)s
+    }
+
+    // Spiking networks: inverse the connectivity matrix
+    void inverse_connectivity_matrix() {
+%(init_inverse_connectivity_matrix)s
     }
 
     // Computes the weighted sum of inputs or updates the conductances
@@ -136,6 +145,7 @@ lil_connectivity_matrix_omp = {
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
+        void inverse_connectivity_matrix()
 """,
     'pyx_wrapper_args': "synapses",
     'pyx_wrapper_init': """
@@ -150,10 +160,16 @@ lil_connectivity_matrix_omp = {
     # Connectivity
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
+    def set_post_rank(self, val):
+        proj%(id_proj)s.set_post_rank(val)
+        proj%(id_proj)s.inverse_connectivity_matrix()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()[n]
     def pre_rank_all(self):
         return proj%(id_proj)s.get_pre_rank()
+    def set_pre_rank(self, val):
+        proj%(id_proj)s.set_pre_rank(val)
+        proj%(id_proj)s.inverse_connectivity_matrix()
 """
 }
 

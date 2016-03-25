@@ -301,12 +301,16 @@ def _load_proj_data(proj, desc):
     """
     Update a projection with the stored data set. 
     """       
-    if not desc['post_ranks'] == proj.post_ranks:
-        Global._error('The current projection has not the same number of postsynaptic neurons as in the saved file.')
-        return
     if not 'attributes' in desc.keys():
         Global._error('Saved with a too old version of ANNarchy (< 4.2).')
         return
+    # If the post ranks have changed, overwrite
+    if not desc['post_ranks'] == proj.post_ranks:
+        getattr(proj.cyInstance, 'set_post_rank')(desc['post_ranks'])
+    # If the pre ranks have changed, overwrite
+    if not desc['pre_ranks'] == proj.cyInstance.pre_rank_all():
+        getattr(proj.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
+    # Other variables
     if hasattr(desc, 'dendrites'): # Saved before 4.5.3
         for dendrite in desc['dendrites']:
             rk = dendrite['post_rank']

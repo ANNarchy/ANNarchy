@@ -8,6 +8,7 @@
 * ``compile()`` now accepts a different compiler (g++ or clang++) and custom flags.
 * Now works correctly in ipython notebooks.
 * Added iPython notebooks to the examples.
+* Fixed the ``load()`` method when using a single weight, or for very sparse random projections.
 
 **4.5.3:**
 

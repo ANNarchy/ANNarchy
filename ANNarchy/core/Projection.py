@@ -327,7 +327,7 @@ class Projection(object):
             * **post**: rank of the post-synaptic neuron.
         """
         if not isinstance(pre, int) or not isinstance(post, int):
-            Global._error('Projection.synapse() only accepts rnaks for the pre and post neurons.')
+            Global._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
         return self.dendrite(post).synapse(pre)
 
 
