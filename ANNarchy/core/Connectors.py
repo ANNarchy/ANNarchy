@@ -137,9 +137,9 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     
     *Parameters*:
     
-        * **amp_pos***: amplitude of the positive Gaussian function
+        * **amp_pos**: amplitude of the positive Gaussian function
         * **sigma_pos**: width of the positive Gaussian function
-        * **amp_neg***: amplitude of the negative Gaussian function
+        * **amp_neg**: amplitude of the negative Gaussian function
         * **sigma_neg**: width of the negative Gaussian function
         * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
         * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)

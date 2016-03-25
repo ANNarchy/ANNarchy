@@ -98,14 +98,17 @@ pygments_style = 'sphinx'
 # -- Options for HTML output ---------------------------------------------------
 
 # on_rtd is whether we are on readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+# on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
-if not on_rtd:  # only import and set the theme if we're building docs locally
+# if not on_rtd:  # only import and set the theme if we're building docs locally
     # The theme to use for HTML and HTML Help pages.  See the documentation for
     # a list of builtin themes.
-    html_theme_path = ["_themes", ]
-    html_theme = "sphinx_rtd_theme"
+    # html_theme_path = ["_themes", ]
+    # html_theme = "pyramid"
     #html_theme_options = {'sticky_navigation' : False}
+
+html_theme = "agogo"
+
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
