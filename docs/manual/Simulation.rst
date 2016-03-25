@@ -107,7 +107,7 @@ Except for the Matlab format, you can also load the state of variables stored in
 
 .. warning::
 
-    The structure of the network must of course be the same as when the file was saved: number of populations, neurons and projections. The neuron and synapse types must define the same variables. If a variable was saved but does not exist anymore, it will be skipped. If the variable did not exist, its actual value will be reinitialized!
+    The structure of the network must of course be the same as when the file was saved: number of populations, neurons and projections. The neuron and synapse types must define the same variables. If a variable was saved but does not exist anymore, it will be skipped. If the variable did not exist, its current value will be kept, what can lead to crashes.
 
 ``load()`` also accepts the ``populations`` and ``projections`` boolean flags (for example if you want to load only the synaptic weights but not restore the neural variables).
 
