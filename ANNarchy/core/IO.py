@@ -286,13 +286,14 @@ def _load_pop_data(pop, desc):
     Update a population with the stored data set. 
     """
     if not 'attributes' in desc.keys():
-        _error('Saved with a too old version of ANNarchy (< 4.2).')
-        return
+        _error('Saved with a too old version of ANNarchy (< 4.2).', exit=True)
+        
     for var in desc['attributes']:
         try:
             getattr(pop.cyInstance, 'set_'+var)(desc[var]) 
         except:
-            Global._error('Can not load the variable ' + var + ' in the population ' + pop.name)
+            Global._warning('Can not load the variable ' + var + ' in the population ' + pop.name)
+            Global._print('Skipping this variable.')
             return
 
     
@@ -323,4 +324,7 @@ def _load_proj_data(proj, desc):
                     return
     else: # Default since 4.5.3
         for var in desc['attributes']:
-            getattr(proj.cyInstance, 'set_' + var)(desc[var])
+            try:
+                getattr(proj.cyInstance, 'set_' + var)(desc[var])
+            except Exception as e:
+                Global._warning('load(): the variable', var, 'does not exist anymore in the projection, skipping it.')

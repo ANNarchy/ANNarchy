@@ -1026,6 +1026,20 @@ if(_transmission && pop%(id_post)s._active){
         if local_eq.strip() == '' and global_eq.strip() == '' :
             return "", ""
 
+
+        # Special case where w is a single value
+        if proj._has_single_weight():
+            local_eq = re.sub(
+                r'([^\w]+)w%\(local_index\)s',
+                r'\1w',
+                ' ' + local_eq
+            )
+            global_eq = re.sub(
+                r'([^\w]+)w%\(local_index\)s',
+                r'\1w',
+                ' ' + global_eq
+            )
+
         # OpenMP
         omp_code = ""
         if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
