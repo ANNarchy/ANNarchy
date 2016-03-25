@@ -797,6 +797,7 @@ class Projection(object):
     ################################
 
     def _data(self):
+        "Method gathering all info about the projection when calling save()"
 
         if not self.initialized:
             Global._error('save_connectivity(): the network has not been compiled yet.')

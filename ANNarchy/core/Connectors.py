@@ -432,7 +432,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
 
 def connect_from_file(self, filename):
     """
-    Builds a connection pattern using data saved using the Projection.save_connectivity() method.
+    Builds a connection pattern using data saved using the Projection.save_connectivity() method (not save()!).
 
     *Parameters*:
 
@@ -449,7 +449,8 @@ def connect_from_file(self, filename):
     from ANNarchy.core.IO import _load_data
     try:
         data = _load_data(filename)
-    except:
+    except Exception as e:
+        Global._print(e)
         Global._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')
         exit(0)
 
@@ -457,14 +458,19 @@ def connect_from_file(self, filename):
     try:
         csr.post_rank = data['post_ranks']
         csr.pre_rank = data['pre_ranks']
-        csr.w = data['w']
+        if isinstance(data['w'], (int, float)):
+            self._single_constant_weight = True
+            csr.w = [[data['w']]]
+        else:
+            csr.w = data['w']
         csr.size = data['size']
         csr.nb_synapses = data['nb_synapses']
         if data['delay']:
             csr.delay = data['delay']
         csr.max_delay = data['max_delay']
         csr.uniform_delay = data['uniform_delay']
-    except:
+    except Exception as e:
+        Global._print(e)
         Global._error('Unable to load the data', filename, 'into the projection.')
         exit(0)
 
