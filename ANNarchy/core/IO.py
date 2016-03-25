@@ -294,7 +294,7 @@ def _load_pop_data(pop, desc):
         except:
             Global._warning('Can not load the variable ' + var + ' in the population ' + pop.name)
             Global._print('Skipping this variable.')
-            return
+            continue
 
     
 def _load_proj_data(proj, desc):
@@ -328,3 +328,4 @@ def _load_proj_data(proj, desc):
                 getattr(proj.cyInstance, 'set_' + var)(desc[var])
             except Exception as e:
                 Global._warning('load(): the variable', var, 'does not exist anymore in the projection, skipping it.')
+                continue
