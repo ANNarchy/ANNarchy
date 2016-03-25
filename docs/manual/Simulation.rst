@@ -105,7 +105,12 @@ Except for the Matlab format, you can also load the state of variables stored in
 
     load('data.txt')
 
-The structure of the network must of course be exactly the same as when the file was saved (number of populations, neurons, synapses...), otherwise an error will be thrown. ``load()`` also accepts the ``populations`` and ``projections`` boolean flags (for example if you want to load only the synaptic weights but not restore the neural variables).
+.. warning::
+
+    The structure of the network must of course be exactly the same as when the file was saved: number of populations, neurons, but also the identity of neurons receiving synapses in each projection. This means that very sparse random connections (e.g. ``connect_fixed_probability`` with a very low probability for a post-synaptic neuron to receive synapses) may lead to an error. 
+
+
+``load()`` also accepts the ``populations`` and ``projections`` boolean flags (for example if you want to load only the synaptic weights but not restore the neural variables).
 
 Populations and projections individually
 ----------------------------------------
