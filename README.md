@@ -27,7 +27,13 @@ Vitay J, Dinkelbach HÜ and Hamker FH (2015). ANNarchy: a code generation approa
 
 **Installation**:
 
-ANNarchy can be installed using one of the following commands:
+Using pip, you can install the latest stable release:
+
+~~~
+pip install ANNarchy
+~~~
+
+Using the source code, ANNarchy can be installed using one of the following commands:
 
 * With administrator permissions:
 

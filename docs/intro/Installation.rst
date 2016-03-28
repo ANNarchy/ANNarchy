@@ -67,13 +67,29 @@ The version requirement on Sympy is rather new and may not be available on all d
 Installation
 ---------------
 
+Using pip
+_________
+
+Stable releases of ANNarchy are available on PyPi::
+
+    pip install ANNarchy
+
+or::
+
+    pip install ANNarchy --user
+
+if you do not have administrator permissions.
+
+Using the source code
+______________________
+
 Installation of ANNarchy is possible through one of the three following methods: 
 
 **Local installation in home directory** 
 
 If you want to install ANNarchy in your home directory, type::
 
-    user@Machine:~/annarchy-4.0$ python setup.py install --user
+    python setup.py install --user
     
 The ANNarchy egg will be installed in ``$HOME/.local/lib/python2.7/site-packages/`` (at least on Debian systems) and automatically added to your ``PYTHONPATH``.
 
@@ -82,7 +98,7 @@ The ANNarchy egg will be installed in ``$HOME/.local/lib/python2.7/site-packages
 
 If you have superuser permissions, you can install ANNarchy in ``/usr/local`` by typing in the top-level directory::
 
-    user@Machine:~/annarchy-4.0$ sudo python setup.py install
+    sudo python setup.py install
     
 This simply installs a Python egg in ``/usr/local/lib/python2.7/dist-packages/`` (replace '2.7' with your Python version). 
 
@@ -91,11 +107,11 @@ This simply installs a Python egg in ``/usr/local/lib/python2.7/dist-packages/``
 
 If you want to install ANNarchy in another directory (let's say in ``/path/to/repertory``), you should first set your Python path to this directory::
 
-    user@Machine:~/annarchy-4.0$ export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python2.7/site-packages
+    export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python2.7/site-packages
     
 Again, replace '2.7' with your Python version. If this directory does not exist, you should create it now. Don't forget to set this value in your ``~/.profile`` or ``~/.bashrc`` to avoid typing this command before every session. You can then install ANNarchy by typing::
 
-    user@Machine:~/annarchy-4.0$ python setup.py install --prefix=/path/to/repertory
+    python setup.py install --prefix=/path/to/repertory
     
 
 .. note::
@@ -114,7 +130,7 @@ Installation on MacOS X systems
 
 Installation on MacOS X is in principle similar to GNU/Linux::
 
-    user@Machine:~/annarchy-4.0$ python setup.py install (--user or --prefix)
+    python setup.py install (--user or --prefix)
 
 
 We advise using a full Python distribution such as `Anaconda <https://www.continuum.io/why-anaconda>`_, which installs automatically all dependencies of ANNarchy, rather than using the old python provided by Apple.
