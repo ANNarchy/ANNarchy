@@ -33,6 +33,6 @@ from .generator import compile
 
 # Version
 __version__ = '4.5'
-__release__ = '4.5.4'
+__release__ = '4.5.5beta'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                    ') on ' + sys.platform + ' (' + os.name + ').' )
