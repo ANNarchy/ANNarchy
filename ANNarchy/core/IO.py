@@ -305,27 +305,27 @@ def _load_proj_data(proj, desc):
         Global._error('Saved with a too old version of ANNarchy (< 4.2).')
         return
     # If the post ranks have changed, overwrite
-    if not desc['post_ranks'] == proj.post_ranks:
+    if desc.has_key('post_ranks') and not desc['post_ranks'] == proj.post_ranks:
         getattr(proj.cyInstance, 'set_post_rank')(desc['post_ranks'])
     # If the pre ranks have changed, overwrite
-    if not desc['pre_ranks'] == proj.cyInstance.pre_rank_all():
+    if desc.has_key('pre_ranks') and not desc['pre_ranks'] == proj.cyInstance.pre_rank_all():
         getattr(proj.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
     # Other variables
-    if hasattr(desc, 'dendrites'): # Saved before 4.5.3
+    if desc.has_key('dendrites'): # Saved before 4.5.3
         for dendrite in desc['dendrites']:
             rk = dendrite['post_rank']
             for var in desc['attributes']:
                 if var in ['rank', 'delay']:
                     continue
                 try:
-                    if isinstance(dendrite[var], (int, float)): # uniform weights
+                    if var == 'w' and isinstance(dendrite[var], (int, float)): # uniform weights
                         getattr(proj.cyInstance, 'set_' + var)(dendrite[var])
                     else:
                         getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
                 except Exception as e:
                     Global._print(e)
-                    Global._warning('Can not set attribute ' + var + ' in the projection.')
-                    continue
+                    Global._warning('load(): cannot set attribute ' + var + ' in the projection.')
+                    exit()
     else: # Default since 4.5.3
         for var in desc['attributes']:
             try:
