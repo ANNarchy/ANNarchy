@@ -324,8 +324,8 @@ def _load_proj_data(proj, desc):
                         getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
                 except Exception as e:
                     Global._print(e)
-                    Global._error('Can not set attribute ' + var + ' in the projection.')
-                    return
+                    Global._warning('Can not set attribute ' + var + ' in the projection.')
+                    continue
     else: # Default since 4.5.3
         for var in desc['attributes']:
             try:
