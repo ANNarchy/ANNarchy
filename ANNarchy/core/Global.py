@@ -566,3 +566,32 @@ def _error(*var_text, **args):
     if 'exit' in args.keys():
         if args['exit']:
             exit(0)
+
+################################
+## Decorators
+################################
+
+_callbacks = []
+
+class every(object):
+
+    def __init__(self, period, offset=0.):
+        """
+        If there are decorator arguments, the function
+        to be decorated is not passed to the constructor!
+        """
+        self.period = period
+        self.offset = offset
+        _callbacks.append(self)
+
+    def __call__(self, f):
+        """
+        If there are decorator arguments, __call__() is only called
+        once, as part of the decoration process! You can only give
+        it a single argument, which is the function object.
+        """
+        self.func = f
+        return f
+
+def list_callbacks():
+    return _callbacks
