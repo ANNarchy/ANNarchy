@@ -579,19 +579,17 @@ def _error(*var_text, **args):
 ################################
 ## Decorators
 ################################
-_callbacks = []
-_callbacks_enabled = True
+_callbacks = [[]]
+_callbacks_enabled = [True]
 
-def callbacks_enabled():
-    return _callbacks_enabled
+def callbacks_enabled(net_id=0):
+    return _callbacks_enabled[net_id]
 
-def disable_callbacks():
-    global _callbacks_enabled
-    _callbacks_enabled = False
+def disable_callbacks(net_id=0):
+    _callbacks_enabled[net_id] = False
 
-def enable_callbacks():
-    global _callbacks_enabled
-    _callbacks_enabled = True
+def enable_callbacks(net_id=0):
+    _callbacks_enabled[net_id] = True
 
 class every(object):
     """
@@ -615,7 +613,7 @@ class every(object):
 
     """
 
-    def __init__(self, period, offset=0., wait=0.0):
+    def __init__(self, period, offset=0., wait=0.0, net_id=0):
         """
         *Parameters:*
 
@@ -629,7 +627,7 @@ class every(object):
         self.period = float(period)
         self.offset = float(offset)
         self.wait = float(wait)
-        _callbacks.append(self)
+        _callbacks[net_id].append(self)
 
     def __call__(self, f):
         """
@@ -649,15 +647,15 @@ def simulate_with_callbacks(duration, net_id=0):
         _error('simulate(): the network is not compiled yet.')
         exit(0)
 
-    if not callbacks_enabled():
+    if not callbacks_enabled(net_id):
         return simulate(duration)
         
-    t_start = get_current_step()
+    t_start = get_current_step(net_id)
     length = int(duration*dt())
 
     # Compute the times
     times = []
-    for c in _callbacks:
+    for c in _callbacks[net_id]:
         period = int(c.period*dt())
         offset = int(c.offset*dt()) % period
         wait = int(c.wait*dt())
@@ -673,13 +671,13 @@ def simulate_with_callbacks(duration, net_id=0):
     times = sorted(times)
 
     for time, callback, n in times:
-        print time, 
+        #print time, 
         # Advance the simulation to the desired time
-        if time != get_current_step():
-            _network[net_id]['instance'].pyx_run(time-get_current_step())
+        if time != get_current_step(net_id):
+            _network[net_id]['instance'].pyx_run(time-get_current_step(net_id))
         # Call the callback
         callback.func(n)
 
     # Go to the end of the duration
-    if get_current_step() < t_start + length:
-        _network[net_id]['instance'].pyx_run(t_start + length - get_current_step())
+    if get_current_step(net_id) < t_start + length:
+        _network[net_id]['instance'].pyx_run(t_start + length - get_current_step(net_id))
