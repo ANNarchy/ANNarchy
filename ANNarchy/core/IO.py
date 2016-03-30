@@ -325,7 +325,7 @@ def _load_proj_data(proj, desc):
                 except Exception as e:
                     Global._print(e)
                     Global._warning('load(): cannot set attribute ' + var + ' in the projection.')
-                    exit()
+                    continue
     else: # Default since 4.5.3
         for var in desc['attributes']:
             try:
