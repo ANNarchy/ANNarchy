@@ -88,7 +88,7 @@ class VideoPopulation(ImagePopulation):
     """ 
     Specific rate-coded Population allowing to feed a webcam input into the firing rate of a population (each neuron represents one pixel).
     
-    This extension requires the C++ library OpenCV >= 2.0 (apt-get/yum install opencv).
+    This extension requires the C++ library OpenCV >= 2.0 (apt-get/yum install opencv). ``pkg-config opencv --cflags --libs`` should not return an error.
     
     Usage :
     
@@ -127,11 +127,7 @@ class VideoPopulation(ImagePopulation):
     def _generate(self):
         "Code generation"      
         # Add corresponding libs to the Makefile
-        extra_libs.append('-lopencv_core')
-        extra_libs.append('-lopencv_imgproc')
-        extra_libs.append('-lopencv_highgui')
-        extra_libs.append('-lopencv_objdetect')
-        extra_libs.append('-lopencv_video')
+        extra_libs.append('`pkg-config opencv --cflags --libs`')
 
         # Include opencv
         self._specific_template['include_additional'] = """#include <opencv2/opencv.hpp>
