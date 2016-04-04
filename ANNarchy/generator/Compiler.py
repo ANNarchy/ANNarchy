@@ -377,24 +377,27 @@ class Compiler(object):
         # non-standard python installs need to tell the location of libpythonx.y.so/dylib
         # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
         # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
-        try:
-            if py_major == "2":
-                python_include = subprocess.Popen(["python2-config", "--includes"], stdout=subprocess.PIPE).communicate()[0].strip()
-                python_lib = subprocess.Popen(["python2-config", "--libs"], stdout=subprocess.PIPE).communicate()[0].strip()
+        # try:
+        #     if py_major == "2":
+        #         python_include = subprocess.Popen(["python2-config", "--includes"], stdout=subprocess.PIPE).communicate()[0].strip()
+        #         python_lib = subprocess.Popen(["python2-config", "--libs"], stdout=subprocess.PIPE).communicate()[0].strip()
             
-                python_path = subprocess.Popen(["which", "python2"], stdout=subprocess.PIPE).communicate()[0].strip()
-                python_lib += " -L" + python_path.replace('/bin/python2', '/lib') + ' '
-            else: # in python 3, Popen return bytes, not strings....
-                python_include = subprocess.Popen(["python3-config", "--includes"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
-                python_lib = subprocess.Popen(["python3-config", "--libs"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
+        #         python_path = subprocess.Popen(["which", "python2"], stdout=subprocess.PIPE).communicate()[0].strip()
+        #         python_lib += " -L" + python_path.replace('/bin/python2', '/lib') + ' '
+        #     else: # in python 3, Popen return bytes, not strings....
+        #         python_include = subprocess.Popen(["python3-config", "--includes"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
+        #         python_lib = subprocess.Popen(["python3-config", "--libs"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
             
-                python_path = subprocess.Popen(["which", "python3"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
-                python_lib += " -L" + python_path.replace('/bin/python3', '/lib') + " "
-        except Exception as e:
-            Global._print(e)
-            Global._error('the development files of Python (Python.h) do not seem to be installed.')
-            Global._print('Check that python'+py_major+'-config is in your $PATH')
-            exit(0)
+        #         python_path = subprocess.Popen(["which", "python3"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
+        #         python_lib += " -L" + python_path.replace('/bin/python3', '/lib') + " "
+        # except Exception as e:
+        #     Global._print(e)
+        #     Global._error('the development files of Python (Python.h) do not seem to be installed.')
+        #     Global._print('Check that python'+py_major+'-config is in your $PATH')
+        #     exit(0)
+
+        python_include = "`python%(major)s-config --includes`" % {'major': py_major}
+        python_lib = "`python%(major)s-config --ldflags --libs`" % {'major': py_major}
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
