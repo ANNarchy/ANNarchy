@@ -64,7 +64,7 @@ def run_network(idx, net):
     Inh.b = 0.25 - 0.05 * ri
     Inh.u = Inh.v * Inh.b
     # Simulate
-    net.simulate(5000.)
+    net.simulate(1000.)
     # Recordings
     t, n = net.get(M).raster_plot()
     return t, n
