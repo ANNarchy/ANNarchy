@@ -332,7 +332,8 @@ class ProjectionGenerator(object):
         # Local functions
         if len(proj.synapse_type.description['functions'])>0:
             declare_parameters_variables += """
-    // Local functions"""
+    // Local functions
+"""
             for func in proj.synapse_type.description['functions']:
                 declare_parameters_variables += ' '*4 + func['cpp'] + '\n'
 
