@@ -106,8 +106,21 @@ pygments_style = 'sphinx'
     # html_theme_path = ["_themes", ]
     # html_theme = "pyramid"
     #html_theme_options = {'sticky_navigation' : False}
+import alabaster
 
-html_theme = "agogo"
+html_theme_path = [alabaster.get_path()]
+extensions.append('alabaster')
+html_theme = 'alabaster'
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+        'donate.html',
+    ]
+}
+#html_theme = "agogo"
 
 
 # The name for this set of Sphinx documents.  If None, it defaults to

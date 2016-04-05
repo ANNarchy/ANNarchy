@@ -3,6 +3,7 @@ from .PopulationView import PopulationView
 from .Projection import Projection
 from .Record import Monitor
 import ANNarchy.core.Global as Global
+import ANNarchy.core.Simulate as Simulate
 import ANNarchy.generator.Compiler as Compiler
 
 import os, shutil, sys
@@ -58,6 +59,8 @@ class Network(object):
             'compiled': False
             }
         )
+        Simulate._callbacks.append([])
+        Simulate._callbacks_enabled.append(True)
         self.populations = []
         self.projections = []
         self.monitors = []
@@ -176,7 +179,8 @@ class Network(object):
         Compiler.compile(directory=directory, silent=silent, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
-        """   Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
+        """   
+        Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
 
             simulate(1000.0)
 
@@ -184,9 +188,9 @@ class Network(object):
 
         * **duration**: the duration in milliseconds.
         * **measure_time**: defines whether the simulation time should be printed (default=False).
-            Global.simulate(duration, net_id=self.id)
+
         """
-        Global.simulate(duration, measure_time, self.id)
+        Simulate.simulate(duration, measure_time, net_id=self.id)
 
     def simulate_until(self, max_duration, population, operator='and', measure_time = False):
         """
@@ -211,13 +215,13 @@ class Network(object):
 
         * the actual duration of the simulation in milliseconds.
         """
-        return Global.simulate_until(max_duration, population, operator, measure_time, self.id)
+        return Simulate.simulate_until(max_duration, population, operator, measure_time, net_id=self.id)
 
     def step(self):
         """
         Performs a single simulation step (duration = ``dt``).
         """
-        Global.step(self.id)
+        Simulate.step(self.id)
 
 
     def reset(self, populations = True, projections = False, synapses = False):
@@ -316,20 +320,17 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
     """
     # Check inputs
     if not networks and number < 1:
-        Global._error('parallel_run(): the networks or number arguments must be set.')
-        return []
+        Global._error('parallel_run(): the networks or number arguments must be set.', exit=True)
 
     import types
     if not isinstance(method, types.FunctionType):
-        Global._error('parallel_run(): the method argument must be a method.')
-        return []
+        Global._error('parallel_run(): the method argument must be a method.', exit=True)
 
     if not networks: # The magic network will run N times
         return _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed)
 
     if not isinstance(networks, list):
-        Global._error('parallel_run(): the networks argument must be a list.')
-        return []
+        Global._error('parallel_run(): the networks argument must be a list.', exit=True)
 
     # Simulate the different networks
     return _parallel_networks(method, networks, max_processes, measure_time, sequential, same_seed)
@@ -355,8 +356,7 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
             results = pool.map(_only_run_method, [(idx, method, net) for idx, net in enumerate(networks)])
         except Exception as e:
             Global._print(e)
-            Global._error('parallel_run(): running multiple networks failed.')
-            return []
+            Global._error('parallel_run(): running multiple networks failed.', exit=True)
         pool.close()
         pool.join()
     else:
@@ -366,8 +366,7 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
                 results.append(method(idx, net))
             except Exception as e:
                 Global._print(e)
-                Global._error('parallel_run(): running network ' + str(net.id) + ' failed.')
-                return []
+                Global._error('parallel_run(): running network ' + str(net.id) + ' failed.', exit=True)
 
     # Time measurement
     if measure_time:
@@ -413,8 +412,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             pool.join()
         except Exception as e:
             Global._print(e)
-            Global._error('parallel_run(): running ' + str(number) + ' networks failed.')
-            return []
+            Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
     else:
         results = []
         try:
@@ -422,8 +420,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
                 results.append(_create_and_run_method((n, method, seed)))
         except Exception as e:
             Global._print(e)
-            Global._error('parallel_run(): running ' + str(number) + ' networks failed.')
-            return []
+            Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
 
     # Time measurement
     if measure_time:

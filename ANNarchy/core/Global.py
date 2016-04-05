@@ -23,7 +23,6 @@
 """
 import sys, os
 import time
-from math import ceil
 import numpy as np
 
 # High-level structures
@@ -220,76 +219,6 @@ def add_function(function):
     """
     _objects['functions'].append(function)
 
-def simulate(duration, measure_time = False, net_id=0):
-    """
-    Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
-
-        simulate(1000.0)
-
-    *Parameters*:
-
-    * **duration**: the duration in milliseconds.
-    * **measure_time**: defines whether the simulation time should be printed (default=False).
-    """
-    nb_steps = ceil(float(duration) / config['dt'])
-
-    if _network[net_id]['instance']:
-        if measure_time:
-            tstart = time.time()
-        _network[net_id]['instance'].pyx_run(nb_steps)
-        if measure_time:
-            _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
-    else:
-        _error('simulate(): the network is not compiled yet.')
-        return
-
-def simulate_until(max_duration, population, operator='and', measure_time = False, net_id=0):
-    """
-    Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
-
-    One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
-
-    Example::
-
-        pop1 = Population( ..., stop_condition = "r > 1.0 : any")
-        compile()
-        simulate_until(max_duration=1000.0. population=pop1)
-
-    *Parameters*:
-
-    * **duration**: the maximum duration of the simulation in milliseconds.
-    * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
-    * **operator**: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
-    * **measure_time**: defines whether the simulation time should be printed (default=False).
-
-    *Returns*:
-
-    * the actual duration of the simulation in milliseconds.
-    """
-    nb_steps = ceil(float(max_duration) / config['dt'])
-    if not isinstance(population, list):
-        population = [population]
-    if _network[net_id]['instance']:
-        if measure_time:
-            tstart = time.time()
-        nb = _network[net_id]['instance'].pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
-        sim_time = float(nb) / config['dt']
-        if measure_time:
-            _print('Simulating', nb/config['dt']/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
-        return sim_time
-    else:
-        _error('simulate(): the network is not compiled yet.')
-        return 0.0
-
-def step(net_id=0):
-    """
-    Performs a single simulation step (duration = ``dt``).
-    """
-    if _network[net_id]['instance']:
-        _network[net_id]['instance'].pyx_step()
-    else:
-        _error('simulate(): the network is not compiled yet.')
-        return 0.0
 
 ################################
 ## Learning flags
@@ -566,3 +495,5 @@ def _error(*var_text, **args):
     if 'exit' in args.keys():
         if args['exit']:
             exit(0)
+
+

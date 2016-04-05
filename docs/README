@@ -4,7 +4,7 @@ The documentation can be generated using the `Sphinx <http://sphinx-doc.org/>`_ 
 
 It can be simply installed through pip::
 
-	pip install sphinx
+	pip install sphinx alabaster
 
 Once Sphinx is installed, you only need to use the provided Makefile in the current directory.
 

@@ -19,6 +19,7 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/Simulation.rst
     manual/NumericalMethods.rst
     manual/Recording.rst
+    manual/Saving.rst
     manual/Network.rst
     manual/Hybrid.rst
     manual/StructuralPlasticity.rst
