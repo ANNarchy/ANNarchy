@@ -23,24 +23,24 @@ Dependencies
 
 ANNarchy depends on a number of packages which should be easily accessible on recent GNU/Linux distributions. The classical way to install these dependencies is through your favourite package manager. Older versions of these packages may work but have not been tested.
 
-    * g++ >= 4.6 (4.7 or above is recommended) 
-    * make >= 3.0
-    * python == 2.7 or >= 3.3 (with the development files)
-    * cython >= 0.19
-    * setuptools >= 0.6
-    * numpy >= 1.8
-    * sympy >= 0.7.4
+* g++ >= 4.6 (4.7 or above is recommended) 
+* make >= 3.0
+* python == 2.7 or >= 3.3 (with the development files)
+* cython >= 0.19
+* setuptools >= 0.6
+* numpy >= 1.8
+* sympy >= 0.7.4
     
 Additionally, the following packages are optional but strongly recommended:
 
-    * pyqtgraph >= 0.9.8 (to visualize the provided examples)
-    * matplotlib >= 1.3.0 (for your own visualizations)
-    * lxml >= 3.0 (to save the networks in .xml format)
-    * scipy >= 0.12 (to save the networks in Matlab format)
+* pyqtgraph >= 0.9.8 (to visualize the provided examples)
+* matplotlib >= 1.3.0 (for your own visualizations)
+* lxml >= 3.0 (to save the networks in .xml format)
+* scipy >= 0.12 (to save the networks in Matlab format)
     
 For CUDA:
 
-    * the CUDA-SDK is available on the official `website <https://developer.nvidia.com/cuda-downloads>`_ (we recommend to use at least a SDK version > 6.x)
+* the CUDA-SDK is available on the official `website <https://developer.nvidia.com/cuda-downloads>`_ (we recommend to use at least a SDK version > 6.x)
     
 The version requirement on Sympy is rather new and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
 

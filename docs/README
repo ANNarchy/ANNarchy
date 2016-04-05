@@ -2,9 +2,9 @@ This is the documentation for the current version of ANNarchy.
 
 The documentation can be generated using the `Sphinx <http://sphinx-doc.org/>`_ documentation tool (version 1.1 or above).
 
-It can be simply installed through pip::
+It can be simply installed through pip, with the relevant theme::
 
-	pip install sphinx alabaster
+	pip install sphinx sphinx_bootstrap_theme
 
 Once Sphinx is installed, you only need to use the provided Makefile in the current directory.
 
