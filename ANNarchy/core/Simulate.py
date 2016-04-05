@@ -19,7 +19,7 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
 
     * **duration**: the duration in milliseconds.
     * **measure_time**: defines whether the simulation time should be printed. Default: False.
-    * **callbacks**: defines if the callback method (decorator ``every``should be called). Default: True.
+    * **callbacks**: defines if the callback method (decorator ``every`` should be called). Default: True.
     """
     if not _network[net_id]['instance']:
         _error('simulate(): the network is not compiled yet.')
