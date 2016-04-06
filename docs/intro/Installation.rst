@@ -21,11 +21,11 @@ Installation on GNU/Linux systems
 Dependencies
 --------------------
 
-ANNarchy depends on a number of packages which should be easily accessible on recent GNU/Linux distributions. The classical way to install these dependencies is through your favourite package manager. Older versions of these packages may work but have not been tested.
+ANNarchy depends on a number of packages which should be easily accessible on recent GNU/Linux distributions. The classical way to install these dependencies is through your package manager, or using full Python distributions such as Anaconda. Older versions of these packages may work but have not been tested.
 
 * g++ >= 4.6 (4.7 or above is recommended) 
 * make >= 3.0
-* python == 2.7 or >= 3.3 (with the development files)
+* python == 2.7 or >= 3.3 (with the development files, e.g. ``python-dev`` or ``python-devel``)
 * cython >= 0.19
 * setuptools >= 0.6
 * numpy >= 1.8
@@ -33,12 +33,12 @@ ANNarchy depends on a number of packages which should be easily accessible on re
     
 Additionally, the following packages are optional but strongly recommended:
 
-* pyqtgraph >= 0.9.8 (to visualize the provided examples)
-* matplotlib >= 1.3.0 (for your own visualizations)
+* pyqtgraph >= 0.9.8 (to visualize some of the provided examples)
+* matplotlib >= 1.3.0 (for the rest of the visualizations)
 * lxml >= 3.0 (to save the networks in .xml format)
 * scipy >= 0.12 (to save the networks in Matlab format)
     
-For CUDA:
+To use the CUDA backend:
 
 * the CUDA-SDK is available on the official `website <https://developer.nvidia.com/cuda-downloads>`_ (we recommend to use at least a SDK version > 6.x)
     
@@ -55,13 +55,7 @@ The version requirement on Sympy is rather new and may not be available on all d
             python-numpy python-scipy python-matplotlib cython python-opengl \
             python-qt4-gl python-lxml python-pip python-tk
 
-        sudo pip install sympy
-        
-        wget http://www.pyqtgraph.org/downloads/python-pyqtgraph_0.9.8-1_all.deb
-        
-        sudo dpkg -i python-pyqtgraph_0.9.8-1_all.deb
-        
-    You should replace the PyQtGraph version with the latest one on `pyqtgraph.org <www.pyqtgraph.org>`_.
+        sudo pip install sympy pyqtgraph
 
 
 Installation
@@ -109,7 +103,7 @@ If you want to install ANNarchy in another directory (let's say in ``/path/to/re
 
     export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python2.7/site-packages
     
-Again, replace '2.7' with your Python version. If this directory does not exist, you should create it now. Don't forget to set this value in your ``~/.profile`` or ``~/.bashrc`` to avoid typing this command before every session. You can then install ANNarchy by typing::
+Again, replace '2.7' with your Python version. If this directory does not exist, you should create it now. Don't forget to set this value in your ``~/.bash_profile`` or ``~/.bashrc`` to avoid typing this command before every session. You can then install ANNarchy by typing::
 
     python setup.py install --prefix=/path/to/repertory
     

@@ -13,6 +13,13 @@ Once all the relevant information has been defined, one needs to actually compil
     
 The optimized C++ code will be generated in the ``annarchy/`` subfolder relative to your script, compiled, the underlying objects created and made available to the Python interface.
 
+You can specify the following arguments to ``compile()``:
+
+* ``directory``: relative path to the directory where files will be generated and compiled (default: ``annarchy/``)
+* ``populations`` and ``projections``: to compile only a subpart of the network, see :doc:`Network`.
+* ``compiler``: to select which C++ compiler will be used. By default ``g++`` on Linux and ``clang++`` on OS X are used, you can change it here. Note that only these two compilers are supported for now, and that they must be in your ``$PATH``.
+* ``compiler_flags``: to select which flags are passed to the compiler. By default it is ``-march=native -O2``, but you can fine-tune it here. Beware that ``-O3`` is most often a bad idea!
+
 Simulating the network
 ======================
 
@@ -30,8 +37,8 @@ In some cases, you may want to perform only one step of the simulation, instead 
 
     step() # Simulate for 1 step
 
-Early-stopping of a simulation
--------------------------------
+Early-stopping
+==============
 
 In some cases, it is desired to stop the simulation whenever a criterion is fulfilled (for example, a neural integrator exceeds a certain threshold), not after a fixed amount of time.
 
@@ -75,79 +82,119 @@ The default value of ``operator`` is a ``'and'`` function between the population
             max_r = max(r)
         """
 
-Configuring the simulation
-===================================
+Setting inputs periodically
+===========================
 
-The resulting script can be directly executed in the console::
-
-    $ python MyNetwork.py
-
-or in the interactive mode::
-
-    $ python
-    Python 2.7.5 (default, Feb 19 2014, 13:47:28) 
-    [GCC 4.8.2 20131212 (Red Hat 4.8.2-7)] on linux2
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>> from MyNetwork import *
-    ANNarchy 4.1 (4.1.3) on linux2 (posix). 
-    >>>
-
-
-Cleaning the compilation directory
------------------------------------
-
-When calling ``compile()`` for the first time, a subfolder ``annarchy/`` will be created in the current directory, where the generated code will be compiled. The first compilation may last a couple of seconds, but further modifications to the script are much faster. If no modification to the network has been made, it will not be recompiled, saving this overhead.
-
-ANNarchy tracks the changes in the script and re-generates the corresponding code. In some cases (a new version of ANNarchy has been installed, bugs), it may be necessary to perform a fresh compilation of the network (for example you get a segmentation fault). You can either delete the ``annarchy/`` subfolder and restart the script::
-
-    $ rm -rf annarchy/
-    $ python MyNetwork.py
-
-or pass the ``--clean`` flag to Python::
-
-    $ python MyNetwork.py --clean 
-
-
-Parallel computing with OpenMP
--------------------------------
-
-The default paradigm for an ANNarchy simulation is through openMP, which distributes automatically the computations over the available CPU cores.
-
-By default, OpenMP would use all the available cores for your simulation, even if it is not optimal: small networks in particular tend to run faster with a small amount of cores (for the provided example with Neural Fields, it is for example 2). 
-For this reason, the ``OMP_NUM_THREADS`` environment variable has no effect in ANNarchy. You can control the number of cores by passing  the ``-j`` flag to the Python command::
-
-    user@machine:~$ python NeuralField.py -j2
-    
-It is the responsability of the user to find out which number of cores is optimal for his network, by comparing simulation times. When this optimal number is found, it can be hard-coded in the script by setting the ``num_threads`` argument to ``ANNarchy.setup()``:
+In most cases, your simulation will be decomposed into a series of fixed-duration trials, where you basically set inputs at the beginning of the trial, run the simulation for a fixed duration, and possibly read out results at the end:
 
 .. code-block:: python
 
-    from ANNarchy import *
-    setup(num_threads=2)
+    # Iterate over 100 trials
+    result = []
+    for trial in range(100):
+        # Set inputs to the network
+        pop.I = Uniform(0.0, 1.0)
+        # Simulate for 1 second
+        simulate(1000.)
+        # Save the output
+        result.append(pop.r)
 
-
-Parallel computing with CUDA
--------------------------------
-
-First of all, please note, that the CUDA paradigm is implemented for simulation of *rate-coded* neural networks. To run your network on GPUs you need to state to ANNarchy that you want to use CUDA as paradigm:
+For convenience, we provide the decorator ``every``, which allows to register a python method and call it automatically during the simulation with a fixed period:
 
 .. code-block:: python
 
-    from ANNarchy import *
-    setup(paradigm="cuda")
+    result = []
 
-Currently two versions of the CUDA paradigm are provided:
-    
-    * 2.0 and later ( Fermi cards )
-    * 3.5 and later ( Keplar cards )
+    @every(period=1000.)
+    def set inputs(n):
+        # Set inputs to the network
+        pop.I = Uniform(0.0, 1.0)
+        # Save the output of the previous step
+        if n > 0:
+            result.append(pop.r)
 
-You can check the version of your card on the official website: https://developer.nvidia.com/cuda-gpus
+    simulate(100 * 1000.)
 
-.. hint::
+In this example, ``set_inputs()`` will be executed just before the steps corresponding to times t = 0., 1000., 2000., and so on until t = 100000. 
 
-    As the current implementation is a development version, some of the features provided by ANNarchy are not supported yet:
-    
-        * spiking networks
-        * weight sharing
-        * non-uniform synaptic delays
-        * structural plasticity
+The method can have any name, but must accept only one argument, the integer ``n`` which will be incremented at each call of the method (i.e. it will take the values 0, 1, 2 until 99). This can for example be used to access data in a numpy array:
+
+.. code-block:: python
+
+    images = np.random.random((100, 640, 480))
+
+    @every(period=1000.)
+    def set inputs(n):
+        # Set inputs to the network
+        pop.I = images[n, :, :]
+
+    simulate(100 * 1000.)
+
+One can define several methods that will be called in the order of their definition:
+
+.. code-block:: python
+
+    @every(period=1000.)
+    def set inputs(n):
+        pop.I = 1.0
+
+    @every(period=1000.)
+    def reset inputs(n):
+        pop.I = 0.0
+
+In this example, ``set_inputs()`` will be called first, followed by ``reset_inputs``, so ``pop.I`` will finally be 0.0. The decorator ``every`` accepts an argument ``offset`` defining a delay within the period to call the method:
+
+.. code-block:: python
+
+    @every(period=1000.)
+    def set inputs(n):
+        pop.I = 1.0
+
+    @every(period=1000., offset=500.)
+    def reset inputs(n):
+        pop.I = 0.0
+
+In this case, ``set_inputs()`` will be called at times 0, 1000, 2000... while ``reset_inputs()`` will be called at times 500, 1500, 2500..., allowing to structure a trial more effectively. The ``offset`` can be set negative, in which case it will be relative to the end of the trial: 
+
+.. code-block:: python
+
+    @every(period=1000., offset=-100.)
+    def reset inputs(n):
+        pop.I = 0.0
+
+In this example, the method will be called at times 900, 1900, 2900 and so on. The ``offset`` value can not be longer than the ``period``, by definition. If you try to do so, a modulo operation will anyway be applied (i.e. an offset of 1500 with a period of 1000 becomes 500).
+
+Finally, the ``wait`` argument allows to delay the first call to the method from a fixed interval:
+
+.. code-block:: python
+
+    @every(period=1000., wait=5000.)
+    def reset inputs(n):
+        pop.I = 0.0
+
+In this case, the method will be called at times 5000, 6000 and so on.
+
+Between two calls to ``simulate()``, the callbacks can be disabled or re-enabled using the following methods:
+
+.. code-block:: python
+
+    @every(period=1000.)
+    def reset inputs(n):
+        pop.I = 0.0
+
+    # Simulate with callbacks
+    simulate(10000.)
+
+    # Disable callbacks
+    disable_callbacks()
+
+    # Simulate without callbacks
+    simulate(10000.)
+
+    # Re-enable callbacks
+    enable_callbacks()
+
+    # Simulate with callbacks
+    simulate(10000.)
+
+Note that the period is always relative to the time when ``simulate()`` is called, so if no offset is defined, the callbacks will be called before the first step of a simulation, no matter how long the previous simulation lasted. In the current state, it is not possible yet to enable/disable callbacks selectively, it is all or none.

@@ -37,6 +37,16 @@ Different methods are available to run the simulation:
 
 .. autofunction:: ANNarchy.step
 
+.. autoclass:: ANNarchy.every
+
+.. autofunction:: ANNarchy.enable_callbacks
+
+.. autofunction:: ANNarchy.disable_callbacks
+
+
+Reset the network
+=====================
+
 If you want to run multiple experiments with the same network, or if your experiment setup requires a pre learning phase, you can reset selectively neural or synaptic variables to their initial values. 
 
 .. autofunction:: ANNarchy.reset
