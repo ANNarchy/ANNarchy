@@ -1,7 +1,5 @@
 from ANNarchy import *
-
-dt = 0.1
-setup(dt=dt)
+setup(dt=0.1)
 
 # ###########################################
 # Neuron model
@@ -38,10 +36,10 @@ P.v = Uniform(-60.0, -50.0)
 # ###########################################
 # Connect the network
 # ###########################################
-we = 0.27 *60.0 / 10.0 # 0.7 * (Vmean - E_rev_exc) / gL (mV)
+we = 0.27 * 60.0 / 10.0 # 0.7 * (Vmean - E_rev_exc) / gL (mV)
 wi = - 4.5 * 20.0 / 10.0 # 4.5 * (Vmean - E_rev_inh) / gL (mV)
 Ce = Projection(pre=Pe, post=P, target='exc')
-Ce.connect_fixed_probability(weights=we, probability=0.02, delays=10.)
+Ce.connect_fixed_probability(weights=we, probability=0.02)
 Ci = Projection(pre=Pi, post=P, target='inh')
 Ci.connect_fixed_probability(weights=wi, probability=0.02)
 
@@ -52,12 +50,12 @@ compile()
 # ###########################################
 m = Monitor(P, ['spike'])
 simulate(1000.0, measure_time=True)
-data = m.get()
+data = m.get('spike')
 
 ###########################################
 # Make plots
 ###########################################
-t, n = m.raster_plot(data['spike'])
+t, n = m.raster_plot(data)
 print('Mean firing rate in the population: ' + str(len(t) / 4000.) + 'Hz')
 
 from pylab import *

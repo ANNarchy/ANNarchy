@@ -1,7 +1,5 @@
 from ANNarchy import *
-
-dt = 0.1
-setup(dt=dt)
+setup(dt=0.1)
 
 # ###########################################
 # Neuron model
@@ -54,12 +52,12 @@ compile()
 # ###########################################
 m = Monitor(P, ['spike'])
 simulate(1000.0, measure_time=True)
-data = m.get()
+data = m.get('spike')
 
 # ###########################################
 # Make plots
 # ###########################################
-t, n = m.raster_plot(data['spike'])
+t, n = m.raster_plot(data)
 print('Mean firing rate in the population: ' + str(len(t) / 4000.) + 'Hz')
 
 from pylab import *
