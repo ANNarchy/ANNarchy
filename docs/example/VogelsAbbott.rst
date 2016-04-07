@@ -110,7 +110,7 @@ It would have been equivalent to declare two separate populations as:
 
 .. code:: python
 
-    Pe = Population(geometry=3200, neuron=COBA)}
+    Pe = Population(geometry=3200, neuron=COBA)
     Pi = Population(geometry= 800, neuron=COBA)
 
 but splitting a global population allows to apply methods to all
@@ -190,9 +190,7 @@ Finally, we can show the raster plot with pylab:
 
 .. code:: python
 
-    %pylab inline  --no-import-all
     from pylab import *
-    pylab.rcParams['figure.figsize'] = (12, 8)
     plot(t, n, '.', markersize=0.5)
     xlabel('Time (ms)')
     ylabel('# neuron')
