@@ -396,19 +396,20 @@ class Compiler(object):
         #     Global._print('Check that python'+py_major+'-config is in your $PATH')
         #     exit(0)
 
+        py_prefix = sys.prefix
         if py_major=='2':
             major='2'
-            test = subprocess.Popen("python2-config --includes > /dev/null 2> /dev/null", shell=True)
+            test = subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True)
             if test.wait()!=0:
                 major=""
         else:
             major='3'
-            test = subprocess.Popen("python3-config --includes > /dev/null 2> /dev/null", shell=True)
+            test = subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True)
             if test.wait()!=0:
                 major=""
 
-        python_include = "`python%(major)s-config --includes`" % {'major': major}
-        python_lib = "`python%(major)s-config --ldflags --libs`" % {'major': major}
+        python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
+        python_lib = "`%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
