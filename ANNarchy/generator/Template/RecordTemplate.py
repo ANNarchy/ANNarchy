@@ -128,7 +128,7 @@ public:
         this->record_%(name)s = false; """,
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(pop%(id)s.gpu_%(name)s); 
+            this->%(name)s.push_back(pop%(id)s.%(name)s); 
         } """    
     }
 }

@@ -367,7 +367,7 @@ class PopulationGenerator(object):
             if Global.config['paradigm']=="openmp":
                 declaration += PopTemplate.cpp_11_rng[rd['locality']]['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
             else:
-                declaration += PopTemplate.cuda_rng['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+                declaration += PopTemplate.cuda_rng[rd['locality']]['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
 
         # Local functions
@@ -407,7 +407,7 @@ class PopulationGenerator(object):
                 if Global.config['paradigm'] == "openmp":
                     code += PopTemplate.cpp_11_rng[rd['locality']]['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
                 else:
-                    code += PopTemplate.cuda_rng['init'] % {'id': pop.id, 'rd_name': rd['name'] }
+                    code += PopTemplate.cuda_rng[rd['locality']]['init'] % {'id': pop.id, 'rd_name': rd['name'] }
 
         # Global operations
         code += self.init_globalops(pop)
@@ -681,14 +681,20 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in pop.neuron_type.description['random_distributions']:
             if rd['dist'] == "Uniform":
-                term = """curand_uniform_double( &%(rd)s[i]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "Normal":
-                term = """curand_normal_double( &%(rd)s[i])""" % { 'rd': rd['name'] };
+                term = """curand_normal_double( &%(rd)s[i] )""" % { 'rd': rd['name'] };
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """curand_normal_double( &%(rd)s[0] )""" % { 'rd': rd['name'] };
+                glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "LogNormal":
                 term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                glob_eqs = glob_eqs.replace(rd['name'], term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
@@ -996,8 +1002,11 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
                     local_code += PopTemplate.cpp_11_rng[rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
                 else:
                     global_code += PopTemplate.cpp_11_rng[rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
-            else: # CUDA. TODO: locality
-                local_code += PopTemplate.cuda_rng['update']
+            else:
+                # HD (27.04.2016):
+                # we dont need an update code here, as the drawing of random numbers is done in the Population::step()
+                local_code += ""
+                global_code += ""
 
         return res %{'update_rng_local': local_code, 'update_rng_global': global_code}
 

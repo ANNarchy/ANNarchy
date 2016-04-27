@@ -422,10 +422,11 @@ cpp_11_rng = {
 #    rd_name:
 #    rd_update:
 cuda_rng = {
-    'decl': """
+    'local': {
+        'decl': """
     curandState* gpu_%(rd_name)s;
 """,
-    'init': """
+        'init': """
         cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
         init_curand_states( size, gpu_%(rd_name)s, seed );
 #ifdef _DEBUG
@@ -433,9 +434,22 @@ cuda_rng = {
         if ( err != cudaSuccess )
             std::cout << "pop%(id)s - init_population: " << cudaGetErrorString(err) << std::endl;
 #endif
-""",
-    'update': """
 """
+    },
+    'global': {
+        'decl': """
+    curandState* gpu_%(rd_name)s;
+""",
+        'init': """
+        cudaMalloc((void**)&gpu_%(rd_name)s, sizeof(curandState));
+        init_curand_states( 1, gpu_%(rd_name)s, seed );
+#ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "pop%(id)s - init_population: " << cudaGetErrorString(err) << std::endl;
+#endif
+"""
+    }
 }
 
 cuda_pop_kernel=\
