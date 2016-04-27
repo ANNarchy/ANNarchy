@@ -365,7 +365,7 @@ class PopulationGenerator(object):
 """
         for rd in pop.neuron_type.description['random_distributions']:
             if Global.config['paradigm']=="openmp":
-                declaration += PopTemplate.cpp_11_rng['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+                declaration += PopTemplate.cpp_11_rng[rd['locality']]['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
             else:
                 declaration += PopTemplate.cuda_rng['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
@@ -405,7 +405,7 @@ class PopulationGenerator(object):
         // Random numbers"""
             for rd in pop.neuron_type.description['random_distributions']:
                 if Global.config['paradigm'] == "openmp":
-                    code += PopTemplate.cpp_11_rng['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+                    code += PopTemplate.cpp_11_rng[rd['locality']]['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
                 else:
                     code += PopTemplate.cuda_rng['init'] % {'id': pop.id, 'rd_name': rd['name'] }
 
@@ -981,20 +981,25 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
     def update_random_distributions(self, pop):
         if len(pop.neuron_type.description['random_distributions']) == 0:
             return ""
+
         res = """        if (_active){
+%(update_rng_global)s
             for(int i = 0; i < size; i++) {
-%(update_rng)s
+%(update_rng_local)s
             }
         }
         """
-        code = ""
+        local_code = ""; global_code = ""
         for rd in pop.neuron_type.description['random_distributions']:
             if Global.config['paradigm']=="openmp":
-                code += PopTemplate.cpp_11_rng['update'] % {'id': pop.id, 'rd_name': rd['name']}
-            else:
-                code += PopTemplate.cuda_rng['update']
+                if rd['locality'] == 'local':
+                    local_code += PopTemplate.cpp_11_rng[rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
+                else:
+                    global_code += PopTemplate.cpp_11_rng[rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
+            else: # CUDA. TODO: locality
+                local_code += PopTemplate.cuda_rng['update']
 
-        return res %{'update_rng': code}
+        return res %{'update_rng_local': local_code, 'update_rng_global': global_code}
 
     ################################
     ### CUDA

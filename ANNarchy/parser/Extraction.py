@@ -75,7 +75,8 @@ def extract_randomdist(description):
                         'dist': dist,
                         'definition': definition,
                         'args' : processed_arguments,
-                        'template': distributions_equivalents[dist]}
+                        'template': distributions_equivalents[dist],
+                        'locality': variable['locality']}
                 rk_rand += 1
                 random_objects.append(desc)
                 # Replace its definition by its temporary name

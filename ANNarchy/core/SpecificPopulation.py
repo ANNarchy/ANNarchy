@@ -24,7 +24,10 @@
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
+
 import numpy as np
+from scipy.special import erf
+from scipy.optimize import newton
 
 class PoissonPopulation(Population):
     """ 
@@ -314,3 +317,74 @@ class SpikeSourceArray(Population):
         else:
             return Population.__getattribute__(self, name)
             
+
+class HomogeneousCorrelatedSpikeTrains(Population):
+    """ 
+    Population of spiking neurons following a homogeneous Poisson distribution with correlated spike trains.
+
+    TODO: cite paper and copyright
+
+    """
+
+    def __init__(self, geometry, rates, corr, tau, name=None, refractory=None):
+        """        
+        *Parameters*:
+        
+            * *geometry*: population geometry as tuple. 
+
+            * *name*: unique name of the population (optional).
+
+            * TODO
+        """  
+        # Correction of mu and sigma
+        sigmar = (corr * rates / (2. * tau/1000.)) ** .5
+        mu, sigma = self._inv_rectified_gaussian(rates, sigmar)
+
+        # Create the neuron
+        corr_neuron = Neuron(
+            parameters = """
+            tau = %(tau)s : population
+            mu = %(mu)s : population
+            sigma = %(sigma)s : population
+            """ % {'tau': tau, 'mu': mu, 'sigma': sigma},
+            equations = """
+            x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.) : population, init=%(mu)s
+            p = Uniform(0.0, 1.0) * 1000.0 / dt
+            """ % {'mu': mu},
+            spike = """
+                p < x
+            """,
+            refractory=refractory,
+            name="HomogeneousCorrelated",
+            description="Homogeneous correlated spike trains."
+        )
+
+        Population.__init__(self, geometry=geometry, neuron=corr_neuron, name=name)
+
+
+    def _rectified_gaussian(self, mu, sigma):
+        '''
+        Calculates the mean and standard deviation for a rectified Gaussian distribution.
+        mu, sigma: parameters of the original distribution
+        Returns mur,sigmar: parameters of the rectified distribution
+        '''
+        a = 1. + erf(mu / (sigma * (2 ** .5)))
+        mur = (sigma / (2. * np.pi) ** .5) * np.exp(-0.5 * (mu / sigma) ** 2) + .5 * mu * a
+        sigmar = ((mu - mur) * mur + .5 * sigma ** 2 * a) ** .5
+
+        return (mur, sigmar)
+
+    def _inv_rectified_gaussian(self, mur, sigmar):
+        '''
+        Inverse of the function rectified_gaussian
+        '''
+        if sigmar == 0 * sigmar: # for unit consistency
+            return (mur, sigmar)
+        x0 = mur / sigmar
+        ratio = lambda u, v:u / v
+        f = lambda x:ratio(*self._rectified_gaussian(x, 1.)) - x0
+        y = newton(f, x0 * 1.1) # Secant method
+        sigma = mur / (np.exp(-0.5 * y ** 2) / ((2. * np.pi) ** .5) + .5 * y * (1. + erf(y * (2 ** (-.5)))))
+        mu = y * sigma
+
+        return (mu, sigma)
