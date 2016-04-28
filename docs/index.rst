@@ -11,7 +11,7 @@ The source code of ANNarchy can be downloaded at:
 
 The documentation can be found online at:
 
-`http://annarchy.readthedocs.org <http://annarchy.readthedocs.org>`_
+`http://annarchy.readthedocs.io <http://annarchy.readthedocs.io>`_
 
 A forum for discussion is set at:
 

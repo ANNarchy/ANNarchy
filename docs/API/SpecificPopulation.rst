@@ -12,6 +12,21 @@ Class PoissonPopulation
    :members:
 
 
+Class SpikeSourceArray
+=======================
+
+.. autoclass:: ANNarchy.SpikeSourceArray
+   :members:
+
+
+
+Class HomogeneousCorrelatedSpikeTrains
+========================================
+
+.. autoclass:: ANNarchy.HomogeneousCorrelatedSpikeTrains
+   :members:
+
+
 Class ImagePopulation
 =======================
 

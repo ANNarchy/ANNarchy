@@ -6,7 +6,7 @@ The latest source code is available at:
 
 The documentation is available online at:
 
-[http://annarchy.readthedocs.org](http://annarchy.readthedocs.org)
+[http://annarchy.readthedocs.io](http://annarchy.readthedocs.io)
 
 A forum for discussion is set at:
 

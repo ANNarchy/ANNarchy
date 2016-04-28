@@ -14,7 +14,7 @@ The efficiency of the connections received by a neuron is stored in different ar
     :align: center
     :alt: Structure of a neural network
 
-    
+
 To define a neural network and simulate its behaviour, you need to define the following information:
 
 * The number of populations, their geometry (number of neurons, optionally the spatial structure - 1D/2D/3D).

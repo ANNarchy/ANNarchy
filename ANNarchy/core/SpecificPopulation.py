@@ -348,7 +348,7 @@ class HomogeneousCorrelatedSpikeTrains(Population):
 
     Example:
 
-    ..code-block:: python
+    .. code-block:: python
 
         from ANNarchy import *
         setup(dt=0.1)
