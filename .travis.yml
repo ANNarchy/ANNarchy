@@ -10,11 +10,11 @@ addons:
     packages:
     - python-numpy 
     - python-scipy 
+    - python-sympy 
     - python-matplotlib 
     - cython
 # command to install dependencies
 install:
-  - pip install -r requirements.txt
   - python setup.py install
 # command to run tests
 script: nosetests
