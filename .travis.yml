@@ -10,8 +10,10 @@ before_install:
   - export PATH=$HOME/miniconda2/bin:$HOME/miniconda3/bin:$PATH
 # command to install dependencies
 install:
-  - pip install -r requirements.txt
-  - pip install .
+  - pip2 install -r requirements.txt
+  - pip2 install .
+  - pip3 install -r requirements.txt
+  - pip3 install .
 # command to run tests
 script: nosetests
 # Branches to build
