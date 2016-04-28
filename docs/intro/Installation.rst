@@ -30,13 +30,13 @@ ANNarchy depends on a number of packages which should be easily accessible on re
 * setuptools >= 0.6
 * numpy >= 1.8
 * sympy >= 0.7.4
+* scipy >= 0.12
     
 Additionally, the following packages are optional but strongly recommended:
 
 * pyqtgraph >= 0.9.8 (to visualize some of the provided examples)
 * matplotlib >= 1.3.0 (for the rest of the visualizations)
 * lxml >= 3.0 (to save the networks in .xml format)
-* scipy >= 0.12 (to save the networks in Matlab format)
     
 To use the CUDA backend:
 

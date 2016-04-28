@@ -1,16 +1,15 @@
 language: python
+sudo: required
 python:
   - "2.7"
   - "3.5"
+virtualenv:
+  system_site_packages: true
 before_install:
-  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-  - bash Miniconda2-latest-Linux-x86_64.sh -b
-  - bash Miniconda3-latest-Linux-x86_64.sh -b
-  - export PATH=$HOME/miniconda2/bin:$HOME/miniconda3/bin:$PATH
+ - sudo apt-get install -qq python-numpy python-scipy python-matplotlib g++ cython
 # command to install dependencies
 install:
-  - pip install .
+  - python setup.py install
 # command to run tests
 script: nosetests
 # Branches to build
