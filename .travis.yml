@@ -16,6 +16,7 @@ addons:
 install:
   - pip install mpmath --no-deps
   - pip install sympy --no-deps
+  - pip install cython
   - python setup.py install
 # command to run tests
 script: nosetests
