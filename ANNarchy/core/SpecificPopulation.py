@@ -86,7 +86,9 @@ class PoissonPopulation(Population):
 
     If the ``rates`` argument is not set, the population can be used as an interface from a rate-coded population. 
 
-    The ``target`` argument 
+    The ``target`` argument specifies which incoming projections will be summed to determine the instantaneous firing rate of each neuron.
+
+    See the example in ``examples/hybrid/Hybrid.py`` for a usage.
 
     """
 
@@ -94,15 +96,17 @@ class PoissonPopulation(Population):
         """        
         *Parameters*:
         
-            * *geometry*: population geometry as tuple. 
+        * **geometry**: population geometry as tuple. 
 
-            * *name*: unique name of the population (optional).
+        * **name**: unique name of the population (optional).
 
-            * *rates*: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
+        * **rates**: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
 
-            * *parameters*: additional parameters which can be used in the *rates* equation.
+        * **target**: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
 
-            * *refractory*: refractory period in ms.
+        * **parameters**: additional parameters which can be used in the *rates* equation.
+
+        * **refractory**: refractory period in ms.
         """  
         if rates == None and target==None:
             Global._error('A PoissonPopulation must define either rates or target.')
@@ -320,9 +324,46 @@ class SpikeSourceArray(Population):
 
 class HomogeneousCorrelatedSpikeTrains(Population):
     """ 
-    Population of spiking neurons following a homogeneous Poisson distribution with correlated spike trains.
+    Population of spiking neurons following a homogeneous distribution with correlated spike trains.
 
-    TODO: cite paper and copyright
+    The method describing the generation of homogeneous correlated spike trains is described in:
+
+    Brette, R. (2009). Generation of correlated spike trains. <http://audition.ens.fr/brette/papers/Brette2008NC.html>
+
+    The implementation is based on the one provided by `Brian <http://briansimulator.org>`_.
+
+    To generate correlated spike trains, the population rate of the group of Poisson-like spiking neurons varies following a stochastic differential equation:
+
+    .. math::
+
+        dx/dt = (mu - x)/tau + sigma * Xi / sqrt(tau)
+
+    where Xi is a random variable. Basically, x will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau. 
+
+    This doubly stochastic process is called a Cox process or Ornstein-Uhlenbeck process. 
+
+    To avoid that x becomes negative, the values of mu and sigma are computed from a rectified Gaussian distribution, parameterized by the desired population rate **rates**, the desired correlation strength **corr** and the time constant **tau**. See Brette's paper for details.
+
+    In short, you should only define the parameters ``rates``, ``corr` and ``tau``, and let the class compute mu and sigma for you. Changing ``rates``, ``corr` or ``tau`` after initialization automatically recomputes mu and sigma.
+
+    Example:
+
+    ..code-block:: python
+
+        from ANNarchy import *
+        setup(dt=0.1)
+
+        pop_poisson = PoissonPopulation(200, rates=10.)
+        pop_corr    = HomogeneousCorrelatedSpikeTrains(200, rates=10., corr=0.3, tau=10.)
+
+        compile()
+
+        simulate(1000.)
+
+        pop_poisson.rates=30.
+        pop_corr.rates=30.
+
+        simulate(1000.)
 
     """
 
@@ -330,61 +371,81 @@ class HomogeneousCorrelatedSpikeTrains(Population):
         """        
         *Parameters*:
         
-            * *geometry*: population geometry as tuple. 
+        * **geometry**: population geometry as tuple. 
 
-            * *name*: unique name of the population (optional).
+        * **rates**: rate in Hz of the population (must be a positive float)
 
-            * TODO
+        * **corr**: total correlation strength (float in [0, 1])
+
+        * **tau**: correlation time constant in ms. 
+
+        * **name**: unique name of the population (optional).
+
+        * **refractory**: refractory period in ms (careful: may break the correlation)
         """  
+        # Store parameters
+        self.rates = float(rates)
+        self.corr = corr
+
         # Correction of mu and sigma
-        sigmar = (corr * rates / (2. * tau/1000.)) ** .5
-        mu, sigma = self._inv_rectified_gaussian(rates, sigmar)
+        mu, sigma = self._rectify(self.rates, self.corr, tau)
 
         # Create the neuron
         corr_neuron = Neuron(
             parameters = """
-            tau = %(tau)s : population
-            mu = %(mu)s : population
-            sigma = %(sigma)s : population
+                tau = %(tau)s : population
+                mu = %(mu)s : population
+                sigma = %(sigma)s : population
             """ % {'tau': tau, 'mu': mu, 'sigma': sigma},
             equations = """
-            x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.) : population, init=%(mu)s
-            p = Uniform(0.0, 1.0) * 1000.0 / dt
+                x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.) : population, init=%(mu)s
+                p = Uniform(0.0, 1.0) * 1000.0 / dt
             """ % {'mu': mu},
-            spike = """
-                p < x
-            """,
+            spike = "p < x",
             refractory=refractory,
             name="HomogeneousCorrelated",
             description="Homogeneous correlated spike trains."
         )
 
         Population.__init__(self, geometry=geometry, neuron=corr_neuron, name=name)
+    
+    def __setattr__(self, name, value):
+        " Method called when setting an attribute."
+        Population.__setattr__(self, name, value) 
+        if name in ['rates', 'corr', 'tau'] and hasattr(self, 'initialized'):
+            # Correction of mu and sigma everytime r, c or tau is changed
+            self.mu, self.sigma = self._rectify(self.rates, self.corr, self.tau)
 
 
-    def _rectified_gaussian(self, mu, sigma):
-        '''
-        Calculates the mean and standard deviation for a rectified Gaussian distribution.
-        mu, sigma: parameters of the original distribution
-        Returns mur,sigmar: parameters of the rectified distribution
-        '''
-        a = 1. + erf(mu / (sigma * (2 ** .5)))
-        mur = (sigma / (2. * np.pi) ** .5) * np.exp(-0.5 * (mu / sigma) ** 2) + .5 * mu * a
-        sigmar = ((mu - mur) * mur + .5 * sigma ** 2 * a) ** .5
+    def _rectify(self, mu, corr, tau):
+        """
+        Rectifies mu and sigma to ensure the rates are positive.
 
-        return (mur, sigmar)
+        This part of the code is adapted from Brian's source code:
 
-    def _inv_rectified_gaussian(self, mur, sigmar):
-        '''
-        Inverse of the function rectified_gaussian
-        '''
+        Copyright ENS, INRIA, CNRS
+        Authors: Romain Brette (brette@di.ens.fr) and Dan Goodman (goodman@di.ens.fr)
+        Licence: CeCILL
+        """
+        def _rectified_gaussian(mu, sigma):
+            """
+            Calculates the mean and standard deviation for a rectified Gaussian distribution.
+            mu, sigma: parameters of the original distribution
+            Returns mur,sigmar: parameters of the rectified distribution
+            """
+            a = 1. + erf(mu / (sigma * (2 ** .5)))
+            mur = (sigma / (2. * np.pi) ** .5) * np.exp(-0.5 * (mu / sigma) ** 2) + .5 * mu * a
+            sigmar = ((mu - mur) * mur + .5 * sigma ** 2 * a) ** .5
+            return (mur, sigmar)
+
+        mur = mu
+        sigmar = (corr * mu / (2. * tau/1000.)) ** .5
         if sigmar == 0 * sigmar: # for unit consistency
             return (mur, sigmar)
         x0 = mur / sigmar
         ratio = lambda u, v:u / v
-        f = lambda x:ratio(*self._rectified_gaussian(x, 1.)) - x0
+        f = lambda x:ratio(*_rectified_gaussian(x, 1.)) - x0
         y = newton(f, x0 * 1.1) # Secant method
-        sigma = mur / (np.exp(-0.5 * y ** 2) / ((2. * np.pi) ** .5) + .5 * y * (1. + erf(y * (2 ** (-.5)))))
-        mu = y * sigma
-
-        return (mu, sigma)
+        new_sigma = mur / (np.exp(-0.5 * y ** 2) / ((2. * np.pi) ** .5) + .5 * y * (1. + erf(y * (2 ** (-.5)))))
+        new_mu = y * new_sigma
+        return (new_mu, new_sigma)
