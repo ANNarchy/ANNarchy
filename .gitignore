@@ -1,14 +1,14 @@
 *.pyc
-*.py~
+*.~
 *.mat
 *.data
 *.csv
 *.tar.gz
 *.ipynb_checkpoints/
 examples/*/annarchy
+tests/*/annarchy
 benchmarks/*/annarchy
 benchmarks/*/COBA
-tests/
 build/
 dist/
 internal/
