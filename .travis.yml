@@ -1,14 +1,13 @@
 language: python
 python:
   - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
   - "3.5"
 before_install:
+  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  - bash Miniconda2-latest-Linux-x86_64.sh -b
   - bash Miniconda3-latest-Linux-x86_64.sh -b
-  - export PATH=$HOME/miniconda3/bin:$PATH
+  - export PATH=$HOME/miniconda2/bin:$HOME/miniconda3/bin:$PATH
 # command to install dependencies
 install:
   - pip install -r requirements.txt
