@@ -14,6 +14,7 @@ addons:
     - cython
 # command to install dependencies
 install:
+  - pip install mpmath --no-deps
   - pip install sympy --no-deps
   - python setup.py install
 # command to run tests
