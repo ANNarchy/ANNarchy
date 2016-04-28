@@ -62,7 +62,14 @@ else:
 ################################################
 import ANNarchy
 
-package_data = ['core/cython_ext/*.pxd','generator/CudaCheck/cuda_check.so']
+package_data = [
+                'core/cython_ext/*.pxd',
+                'generator/CudaCheck/cuda_check.so',
+                'generator/CudaCheck/cuda_check.h',
+                'generator/CudaCheck/cuda_check.cu',
+                'generator/CudaCheck/cuda_check.pyx',
+                'generator/CudaCheck/Makefile'
+                ]
 
 extensions = [
     Extension("ANNarchy.core.cython_ext.Connector", ["ANNarchy/core/cython_ext/Connector.pyx"], include_dirs=[np.get_include()]),
