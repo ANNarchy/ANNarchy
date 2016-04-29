@@ -81,29 +81,29 @@ class test_RateTransmission(unittest.TestCase):
         tests functionality of the one_to_one connectivity pattern
         """
         # sum up r = 1
-	simulate(2)
+        simulate(2)
         self.assertTrue(numpy.allclose(pop2.sum1, 1.0))
 
     def test_all_to_all(self):
         """
         tests functionality of the all_to_all connectivity pattern
         """
-	# sum up r = 1, 9 neurons
-	simulate(2)
+        # sum up r = 1, 9 neurons
+        simulate(2)
         self.assertTrue(numpy.allclose(pop2.sum2, 9.0))
 
     def test_delay(self):
         """
         tests the delay functionality. 
         """
-	# The first ten steps, we have 
+        # The first ten steps, we have 
         # initialization value
         simulate(10)
         self.assertTrue(numpy.allclose(pop2.sum3, -1.0))
 
         # at 11th step we have the first queue 
         # value in our case t = 0
-	simulate(1)
+        simulate(1)
         self.assertTrue(numpy.allclose(pop2.sum3, 1.0))
 
         # at 20th -> t = 9

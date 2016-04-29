@@ -110,7 +110,7 @@ class test_Projection(unittest.TestCase):
         """
         Tests the *post_ranks* method, which returns the ranks of post-synaptic neurons recieving synapses.
         """
-        self.assertEqual(proj.post_ranks, range(64))
+        self.assertEqual(proj.post_ranks, list(range(64)))
 
 if __name__ == '__main__':
     unittest.main()
