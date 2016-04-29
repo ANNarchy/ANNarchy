@@ -6,7 +6,7 @@
 from pkg_resources import parse_version
 
 # check python version
-import sys
+import sys, os
 if not sys.version_info[:2] >= (2, 7):
     print('Error : ANNarchy requires at least Python 2.7.')
     exit(0) 
@@ -44,8 +44,7 @@ except:
     exit(0)
 
 # check for cuda
-import os
-if os.system("nvcc --version")==0:
+if os.system("nvcc --version 2> /dev/null") == 0:
     # if nvcc available build the CudaCheck library
     cwd = os.getcwd()
     print('Checking for CUDA... OK')
@@ -60,8 +59,6 @@ else:
 ################################################
 # Perform the installation
 ################################################
-import ANNarchy
-
 package_data = [
                 'core/cython_ext/*.pxd',
                 'generator/CudaCheck/cuda_check.so',
@@ -85,10 +82,11 @@ dependencies = [
     'sympy'
 ]
 
+release = '4.5.5'
 
 setup(  name='ANNarchy',
-        version=ANNarchy.__release__,
-        download_url = 'https://bitbucket.org/annarchy/annarchy/get/'+ANNarchy.__release__+'.zip',
+        version=release,
+        download_url = 'https://bitbucket.org/annarchy/annarchy',
         license='GPLv2+',
         platforms='GNU/Linux; MacOSX',
         description='Artificial Neural Networks architect',
