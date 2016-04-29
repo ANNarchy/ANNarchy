@@ -27,7 +27,7 @@ try:
     from .core.cython_ext.Connector import CSR
 except Exception as e:
     core.Global._print(e)
-    core.Global._error('Could not import Cython modules. Try reinstalling ANNarchy.')
+    core.Global._print('Error: Could not import Cython modules. Try reinstalling ANNarchy.')
 
 # ANNarchy compilation
 from .generator import compile
