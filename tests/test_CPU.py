@@ -22,7 +22,7 @@
 
 """
 from __future__ import print_function
-import os
+import os, sys
 from subprocess import call
 
 nb_errors = 0
@@ -40,3 +40,5 @@ if nb_errors != 0:
     print('Some tests failed:', nb_errors, '/', nb_tests)
 else:
     print('Everything is fine.')
+
+sys.exit(nb_errors)
