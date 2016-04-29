@@ -1,6 +1,6 @@
 """
 
-    RUN_ALL_CPU.py
+    test_CPU.py
 
     This file is part of ANNarchy.
 
@@ -25,14 +25,18 @@ from __future__ import print_function
 import os
 from subprocess import call
 
-#
-# This file simply runs all OMP-tests through a single command from command line.
-#
-# prompt> python RUN_ALL_CPU.py
-#
-for f in os.listdir('CPU'):
-    if f.startswith('test_') and f.endswith('.py'):
-        print('\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>'+f+'<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
-        call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'CPU')
+nb_errors = 0
+nb_tests = 0
 
-print('\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nFINISHED TESTING! HAVE SOME CAKE!\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
+for f in os.listdir('tests/CPU'):
+    if f.startswith('test_') and f.endswith('.py'):
+        print('Testing', f, '...')
+        ret = call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'tests/CPU')
+        if ret != 0: # Test failed
+            nb_errors += 1
+        nb_tests += 1
+
+if nb_errors != 0:
+    print('Some tests failed:', nb_errors, '/', nb_tests)
+else:
+    print('Everything is fine.')

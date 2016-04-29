@@ -72,7 +72,7 @@ proj = Projection(
 
 proj.connect_all_to_all(weights = 1.0)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 m = Monitor(pop1, 'r')
 n = Monitor(pop1[:1], 'r')
@@ -224,3 +224,5 @@ class test_Record(unittest.TestCase):
         datat = t.get('spike')
         self.assertEqual(datat[1], [2, 7]) 
 
+if __name__ == '__main__':
+    unittest.main()

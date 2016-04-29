@@ -65,7 +65,7 @@ proj.connect_one_to_one(weights = 1.0)
 proj2.connect_all_to_all(weights = 1.0)
 proj3.connect_one_to_one(weights = 1.0, delays = 10.0)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 
 class test_RateTransmission(unittest.TestCase):
@@ -110,3 +110,5 @@ class test_RateTransmission(unittest.TestCase):
         simulate(9)
         self.assertTrue(numpy.allclose(pop2.sum3, 10.0))
 
+if __name__ == '__main__':
+    unittest.main()

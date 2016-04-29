@@ -33,7 +33,7 @@ neuron = Neuron(
 
 pop1 = Population((8, 8), neuron)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 
 class test_PopulationView(unittest.TestCase):
@@ -62,3 +62,6 @@ class test_PopulationView(unittest.TestCase):
         self.assertTrue(numpy.allclose((pop1[2, 2] + pop1[3,3] + pop1[4,4]).r, [1.0, 1.0, 1.0]))
 
 
+if __name__ == '__main__':
+    unittest.main()
+    

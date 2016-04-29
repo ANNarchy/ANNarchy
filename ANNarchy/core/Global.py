@@ -494,6 +494,6 @@ def _error(*var_text, **args):
     print(text)
     if 'exit' in args.keys():
         if args['exit']:
-            exit(0)
+            sys.exit(1)
 
 

@@ -48,7 +48,7 @@ pop1 = Population(3, neuron1)
 pop2 = Population(3, neuron2)
 
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 m = Monitor(pop1, 'v')
 n = Monitor(pop2, 'v')
@@ -104,3 +104,6 @@ class test_SpikingNeuron(unittest.TestCase):
 		simulate(1)
 		self.assertTrue(numpy.allclose(pop2.neuron(0).v, 2.0))
 
+if __name__ == '__main__':
+    unittest.main()
+    

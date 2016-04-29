@@ -18,7 +18,7 @@ install:
   - pip install cython --upgrade
   - python setup.py install
 # command to run tests
-script: nosetests
+script: python tests/test_CPU.py
 # Branches to build
 branches:
   only:

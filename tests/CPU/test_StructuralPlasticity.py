@@ -70,7 +70,7 @@ proj2 = Projection(
 proj.connect_all_to_all(weights = 1.0)
 proj2.connect_one_to_one(weights = 1.0)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 
 class test_StructuralPlasticity(unittest.TestCase):
@@ -119,3 +119,6 @@ class test_StructuralPlasticity(unittest.TestCase):
 
         self.assertEqual(proj2.dendrite(3).rank, [2, 3, 4, 6])
         self.assertTrue(numpy.allclose(proj2.dendrite(3).w, [2.0, 1.0, 2.0, 2.0]))
+
+if __name__ == '__main__':
+    unittest.main()

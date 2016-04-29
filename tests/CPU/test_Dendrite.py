@@ -59,7 +59,7 @@ proj = Projection(
 )
 
 proj.connect_all_to_all(weights = 1.0)
-compile(clean=True)
+compile(clean=True, silent=True)
 
 class test_Dendrite(unittest.TestCase):
     """
@@ -78,15 +78,12 @@ class test_Dendrite(unittest.TestCase):
 
     def test_none(self):
         """
-        If a non-existent *Dendrite* is accessed, a *None* object
-        should be displayed. This is tested here.
-
-        .. note:
-
-            ANNarchy throws an error message at this point, which
-            is visible in test output.
+        If a non-existent *Dendrite* is accessed, an error should be thrown. 
+        This is tested here.
         """
-        self.assertEqual(proj.dendrite(14), None)
+        with self.assertRaises(SystemExit) as cm:
+            d = proj.dendrite(14)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_rank(self):
         """
@@ -170,3 +167,6 @@ class test_Dendrite(unittest.TestCase):
     #    """
     #    proj.tau = [5000.0, 6000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0]
     #    self.assertTrue(numpy.allclose(proj.dendrite(1).tau, 6000.0))
+
+if __name__ == '__main__':
+    unittest.main()

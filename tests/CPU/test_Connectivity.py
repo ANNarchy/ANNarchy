@@ -52,7 +52,7 @@ proj2 = Projection(
 proj1.connect_one_to_one(weights = 0.1)
 proj2.connect_all_to_all(weights = 0.1)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 #TODO: one2one, all2all for PopulationViews
 
@@ -85,3 +85,6 @@ class test_Connectivity(unittest.TestCase):
         """
         self.assertEqual(proj2.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
         self.assertTrue(numpy.allclose(proj2.dendrite(3).w, np.ones((8,1)) * 0.1))
+
+if __name__ == '__main__':
+    unittest.main()

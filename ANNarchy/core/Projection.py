@@ -314,8 +314,8 @@ class Projection(object):
         if rank in self.post_ranks:
             return Dendrite(self, rank, self.post_ranks.index(rank))
         else:
-            Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.")
-            return None
+            Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.", exit=True)
+            
 
     def synapse(self, pre, post):
         """

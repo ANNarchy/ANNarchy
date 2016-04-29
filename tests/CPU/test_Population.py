@@ -54,7 +54,7 @@ tc3_pop2 = Population((3,3,3), neuron2)
 tc4_pop1 = Population((3, 2), neuron)
 tc4_pop2 = Population((3, 2), neuron2)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 
 class test_Population1D(unittest.TestCase):
@@ -945,3 +945,6 @@ class test_Population2x3D(unittest.TestCase):
                                                       [ 10., 10.],
                                                       [ 10., 10.]]))
 
+
+if __name__ == '__main__':
+    unittest.main()

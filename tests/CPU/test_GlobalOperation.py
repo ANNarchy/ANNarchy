@@ -43,7 +43,7 @@ neuron = Neuron(
 pop1 = Population (6, neuron)
 pop2 = Population ((2, 3), neuron)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 class test_GlobalOps_1D(unittest.TestCase):
     """
@@ -179,3 +179,6 @@ class test_GlobalOps_2D(unittest.TestCase):
         Tests the result of *norm1(r)* for *pop2*.
         """
         self.assertTrue(numpy.allclose(pop2.l1, 12.0))
+
+if __name__ == '__main__':
+    unittest.main()

@@ -60,7 +60,7 @@ proj = Projection(
 
 proj.connect_all_to_all(weights = 1.0)
 
-compile(clean=True)
+compile(clean=True, silent=True)
 
 class test_Projection(unittest.TestCase):
     """
@@ -111,3 +111,6 @@ class test_Projection(unittest.TestCase):
         Tests the *post_ranks* method, which returns the ranks of post-synaptic neurons recieving synapses.
         """
         self.assertEqual(proj.post_ranks, range(64))
+
+if __name__ == '__main__':
+    unittest.main()
