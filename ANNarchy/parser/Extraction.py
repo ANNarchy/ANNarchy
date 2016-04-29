@@ -46,10 +46,10 @@ def extract_randomdist(description):
                 arguments = v.split(',')
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
-                    _error(eq)
+                    _print(eq)
                     _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
                 elif len(arguments) > distributions_arguments[dist]:
-                    _error(eq)
+                    _print(eq)
                     _error('Too many parameters provided to the distribution ' + dist)
                 # Process the arguments
                 processed_arguments = ""
@@ -64,7 +64,6 @@ def extract_randomdist(description):
                                 arg = arguments[idx].strip() 
                         else:
                             _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
-                            exit(0)
 
                     processed_arguments += str(arg)
                     if idx != len(arguments)-1: # not the last one
@@ -110,8 +109,9 @@ def extract_globalops_neuron(name, eq, description):
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = '_' + op + '_' + var.strip()
             else:
-                _error(eq+'\nThere is no local attribute '+var+'.')
-                exit(0)
+                _print(eq)
+                _error('There is no local attribute '+var+'.')
+                
     return eq, untouched, globs
     
 def extract_globalops_synapse(name, eq, desc):
@@ -159,7 +159,7 @@ def extract_prepost(name, eq, description):
                 if target == '':
                     _print(eq)
                     _error('pre.sum() requires one argument.')
-                    exit(0)
+                    
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
                 untouched[rep] = '_sum_' +target+ '%(pre_index)s'
@@ -180,7 +180,7 @@ def extract_prepost(name, eq, description):
                 if target == '':
                     _print(eq)
                     _error('post.sum() requires one argument.')
-                    exit(0)
+                    
                 dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target.strip()
                 untouched[rep] = '%(post_prefix)s_sum_' + target + '%(post_index)s'
@@ -209,7 +209,7 @@ def extract_parameters(description, extra_values={}):
         name = extract_name(equation)
         if name in ['_undefined', ""]:
             _error("Definition can not be analysed: " + equation)
-            exit(0)
+            
             
         # Process constraint
         bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
@@ -246,7 +246,7 @@ def extract_variables(description):
         constraint = definition['constraint']
         name = definition['name']
         if name == '_undefined':
-            exit(0)
+            Global._error('The variable', name, 'can not be analysed.')           
 
         # Process constraint
         bounds, flags, ctype, init = extract_boundsflags(constraint)
@@ -349,7 +349,7 @@ def extract_functions(description, local_global=False):
             arg_types = [arg.strip() for arg in types[1:]]
         if not len(arg_types) == len(arguments):
             _error('You must specify exactly the types of return value and arguments in ' + eq)
-            exit(0)
+            
         arg_line = ""
         for i in range(len(arguments)):
             arg_line += arg_types[i] + " " + arguments[i]
@@ -396,7 +396,7 @@ def extract_targets(variables):
             if t.strip() == '':
                 _print(var['eq'])
                 _error('sum() must have one argument.')
-                exit(0)
+                
             targets.append(t.strip())
         # Spiking neurons
         code = re.findall('([^\w.])g_([\w]+)', var['eq'])
@@ -409,9 +409,8 @@ def extract_spike_variable(description):
 
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
-        _error('The spike condition must be a single expression')
         _print(description['raw_spike'])
-        exit(0)
+        _error('The spike condition must be a single expression')
         
     translator = Equation('raw_spike_cond', 
                             cond[0].strip(), 
@@ -512,10 +511,10 @@ def extract_structural_plasticity(statement, description):
             arguments = v.split(',')
             # Check the number of provided arguments
             if len(arguments) < distributions_arguments[dist]:
-                _error(eq)
+                _print(eq)
                 _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
             elif len(arguments) > distributions_arguments[dist]:
-                _error(eq)
+                _print(eq)
                 _error('Too many parameters provided to the distribution ' + dist)
             # Process the arguments
             processed_arguments = ""
@@ -523,9 +522,9 @@ def extract_structural_plasticity(statement, description):
                 try:
                     arg = float(arguments[idx])
                 except: # A global parameter
-                    _error(eq)
+                    _print(eq)
                     _error('Random distributions for creating/pruning synapses must use foxed values.')
-                    exit(0)
+                    
                 processed_arguments += str(arg)
                 if idx != len(arguments)-1: # not the last one
                     processed_arguments += ', '
@@ -533,9 +532,9 @@ def extract_structural_plasticity(statement, description):
             
             # Store its definition
             if rd:
-                _error(eq)
+                _print(eq)
                 _error('Only one random distribution per equation is allowed.')
-                exit(0)
+                
 
             rd = {'name': 'rand_' + str(0) ,
                     'origin': dist+'('+v+')',

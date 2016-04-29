@@ -56,19 +56,19 @@ class SharedProjection(Projection):
 
         self._omp_config['psp_schedule'] = 'schedule(dynamic)'
         if not Global.config["paradigm"] == "openmp":
-            Global._error('Weight sharing is only implemented for the OpenMP paradigm.')
-            exit(0)
+            Global._error('SharedProjection: Weight sharing is only implemented for the OpenMP paradigm.')
 
         if not pre.neuron_type.type == 'rate':
-            Global._error('Weight sharing is only implemented for rate-coded populations.')
-            exit(0)
+            Global._error('SharedProjection: Weight sharing is only implemented for rate-coded populations.')
 
     def _create(self):
         # create fake CSR object, just for compilation.
         try:
             from ANNarchy.core.cython_ext.Connector import CSR
-        except:
+        except Exception as e:
+            Global._print(e)
             Global._error('ANNarchy was not successfully installed.')
+
         csr = CSR()
         csr.max_delay = self.delays
         csr.uniform_delay = self.delays
@@ -82,8 +82,8 @@ class SharedProjection(Projection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
-            exit(0)
+            Global._error('SharedProjection: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+            
 
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
@@ -178,52 +178,45 @@ class SharedProjection(Projection):
         if not isinstance(delays, (int, float)):
             Global._error('Shared projections can only have uniform delays.')
 
-
         # Check dimensions of populations and weight matrix
         self.dim_kernel = self.weights.ndim
         self.dim_pre = self.pre.dimension
         self.dim_post = self.post.dimension
 
         if self.dim_post > 4:
-            Global._error('Too many dimensions for the post-synaptic population (maximum 4).')
-            exit(0)
+            Global._error('SharedProjection: Too many dimensions for the post-synaptic population (maximum 4).')
+            
         if self.dim_pre > 4:
-            Global._error('Too many dimensions for the pre-synaptic population (maximum 4).')
-            exit(0)
+            Global._error('SharedProjection: Too many dimensions for the pre-synaptic population (maximum 4).')
+            
         if self.dim_kernel > 5  or (not self.multiple and self.dim_kernel > 4):
-            Global._error('Too many dimensions for the kernel (maximum 4).')
-            exit(0)
-
+            Global._error('SharedProjection: Too many dimensions for the kernel (maximum 4).')   
 
         # Check if the last axes match for parallel convolution (e.g. 3-2-3)
         if self.dim_kernel < self.dim_pre:
             if not self.keep_last_dimension:
-                Global._error('If the kernel has less dimensions than the pre-synaptic population, you need to set the flag keep_last_dimension to True.')
-                exit(0)
-
+                Global._error('SharedProjection: If the kernel has less dimensions than the pre-synaptic population, you need to set the flag keep_last_dimension to True.')
+                
             if self.pre.geometry[-1] != self.post.geometry[-1]:
-                Global._error('If the kernel has fewer dimensions than the two populations (keep_last_dimension=True), these must have the same number of neurons in the last dimension.')
-                exit(0)
-
+                Global._error('SharedProjection: If the kernel has fewer dimensions than the two populations (keep_last_dimension=True), these must have the same number of neurons in the last dimension.')
+                
         # If the last dim of the kernel matches the last dim of the pre-pop, the last pop can have one dimension less.
         if self.dim_post < self.dim_pre: # OK, but check the last dimension of the kernel has the same size as the post-population
             if self.weights.shape[-1] != self.pre.geometry[-1]:
-                Global._error('If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
-                exit(0)
-
-
+                Global._error('SharedProjection: If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
+                
         # Check if it is a bank of filters
         if self.dim_kernel > self.dim_pre:
             if not self.multiple:
-                Global._error('If the kernel has more dimensions than the pre-synaptic population, you need to set the flag multiple to True.')
-                exit(0)
+                Global._error('SharedProjection: If the kernel has more dimensions than the pre-synaptic population, you need to set the flag multiple to True.')
+                
             # if self.dim_kernel > self.dim_post:
             #     if not self.keep_last_dimension:
             #         Global._error('If the kernel has more dimensions than the post-synaptic population, you need to set the flag keep_last_dimension to True.')
-            #         exit(0)
+            #         
             if self.weights.shape[0] != self.post.geometry[-1]:
-                Global._error('For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
-                exit(0)
+                Global._error('SharedProjection: For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
+                
 
         # Generate the pre-synaptic coordinates
         if not self.multiple:
@@ -254,24 +247,24 @@ class SharedProjection(Projection):
         """
         self._operation_type = 'pooling'
         self.weights = []
-        if extent == None: # compute the extent automatically
+        if extent is None: # compute the extent automatically
             if self.pre.dimension != self.post.dimension:
-                Global._error('If you do not provide the extent parameter, the two populations must have the same dimensions.')
-                exit(0)
+                Global._error('SharedProjection: If you do not provide the extent parameter, the two populations must have the same dimensions.')
+                
             extent = list(self.pre.geometry)
             for dim in range(self.pre.dimension):
                 extent[dim] /= self.post.geometry[dim]
                 if self.pre.geometry[dim] != extent[dim] * self.post.geometry[dim] :
-                    Global._error('Unable to compute the extent of the pooling area: the number of neurons do not match.')
-                    exit(0)
+                    Global._error('SharedProjection: Unable to compute the extent of the pooling area: the number of neurons do not match.')
+                    
         elif not isinstance(extent, tuple):
-            Global._error('You must provide a tuple for the extent of the pooling operation.')
-            exit(0)
+            Global._error('SharedProjection: You must provide a tuple for the extent of the pooling operation.')
+            
 
         self.extent = list(extent)
         if len(self.extent) < self.pre.dimension:
-            Global._error('You must provide a tuple for the extent of the pooling operation.')
-            exit(0)
+            Global._error('SharedProjection: You must provide a tuple for the extent of the pooling operation.')
+            
 
         # Process the delays
         self.delays = delays
@@ -285,11 +278,11 @@ class SharedProjection(Projection):
         self.dim_post = self.post.dimension
 
         if self.dim_post > 4:
-            Global._error('Too many dimensions for the post-synaptic population (maximum 4).')
-            exit(0)
+            Global._error('SharedProjection: Too many dimensions for the post-synaptic population (maximum 4).')
+            
         if self.dim_pre > 4:
-            Global._error('Too many dimensions for the pre-synaptic population (maximum 4).')
-            exit(0)
+            Global._error('SharedProjection: Too many dimensions for the pre-synaptic population (maximum 4).')
+            
 
         # Generate the pre-synaptic coordinates
         self._generate_extent_coordinates()
@@ -314,16 +307,16 @@ class SharedProjection(Projection):
         self.projection = projection
 
         if not isinstance(self.projection, Projection):
-            Global._error('You must provide an existing projection to copy().')
-            exit(0)
+            Global._error('SharedProjection: You must provide an existing projection to copy().')
+            
 
         if isinstance(self.projection, SharedProjection):
-            Global._error('You can only copy regular projections, not shared projections.')
-            exit(0)
+            Global._error('SharedProjection: You can only copy regular projections, not shared projections.')
+            
 
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:
-            Global._error('When copying a projection, the geometries must be the same.')
-            exit(0)
+            Global._error('SharedProjection: When copying a projection, the geometries must be the same.')
+            
 
         # Dummy weights
         self.weights = None
@@ -389,10 +382,10 @@ class SharedProjection(Projection):
             try:
                 shape = np.array(self.subsampling).shape
             except:
-                Global._error('The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
+                Global._error('SharedProjection: The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
             if shape != (self.post.size, self.pre.dimension):
-                Global._error('The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
+                Global._error('SharedProjection: The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = self.subsampling
             return
@@ -408,8 +401,8 @@ class SharedProjection(Projection):
                 post_size = int(self.post.geometry[dim])
                 sample = int(pre_size/post_size)
                 if post_size * sample != pre_size:
-                    Global._error('The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
-                    exit(0)
+                    Global._error('SharedProjection: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
+                    
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
                 if self.keep_last_dimension:
@@ -460,10 +453,10 @@ class SharedProjection(Projection):
             try:
                 shape = np.array(self.subsampling).shape
             except:
-                Global._error('The sub-sampling list must have', self.post.size / self.post.geometry[-1], 'elements of size', self.pre.dimension)
+                Global._error('SharedProjection: The sub-sampling list must have', self.post.size / self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
             if shape != (self.post.size/ self.post.geometry[-1], self.pre.dimension):
-                Global._error('The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
+                Global._error('SharedProjection: The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = [c + [d] for c in self.subsampling  for d  in range(self.nb_filters)]
             return
@@ -479,8 +472,8 @@ class SharedProjection(Projection):
                 post_size = self.post.geometry[dim]
                 sample = int(pre_size/post_size)
                 if post_size * sample != pre_size:
-                    Global._error('The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
-                    exit(0)
+                    Global._error('SharedProjection: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
+                    
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
                 if self.keep_last_dimension:
@@ -651,7 +644,7 @@ class SharedProjection(Projection):
             code += tabify("""
                 sum += %(increment)s""" % {'increment': increment}, dim)
         else:
-            Global._error('Operation', operation, 'is not implemented yet for shared projections.')
+            Global._error('SharedProjection: Operation', operation, 'is not implemented yet for shared projections.')
 
         # Close for loops
         for dim in range(self.dim_kernel):
@@ -761,7 +754,7 @@ class SharedProjection(Projection):
             code += tabify("""
             sum += %(increment)s""" % {'increment': increment}, 1+dim)
         else:
-            Global._error('Operation', operation, 'is not implemented yet for shared projections.')
+            Global._error('SharedProjection: Operation', operation, 'is not implemented yet for shared projections.')
 
         # Close for loops
         for dim in range(self.dim_kernel-1):
@@ -854,7 +847,7 @@ class SharedProjection(Projection):
             code += """
                 sum += %(psp)s;"""
         else:
-            Global._error('Operation', operation, 'is not implemented yet for shared projections with pooling.')
+            Global._error('SharedProjection: Operation', operation, 'is not implemented yet for shared projections with pooling.')
 
         # Close for loops
         for dim in range(self.dim_pre):

@@ -127,8 +127,7 @@ class PopulationGenerator(object):
                 body, header, update_call = self.update_rate_neuron_cuda(pop)
                 update_variables = ""
             else:
-                Global._error("Spiking neurons on GPUs are currently not supported")
-                exit(0)
+                Global._error("Spiking neurons on GPUs are currently not supported")      
 
         # Stop condition
         stop_condition = self.stop_condition(pop)
@@ -275,7 +274,7 @@ class PopulationGenerator(object):
             body, header, update_call = self.update_rate_neuron_cuda(pop)
         else:
             Global._error("Spiking neurons on GPUs are currently not supported")
-            exit(0)
+            
 
         code = base_template % { 'id': pop.id,
                                  'name': pop.name,
@@ -487,8 +486,8 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                         #TODO:
                         continue
             else:
-                Global._error("synaptic delays for spiking neurons are not implemented yet ...")
-                exit(0)
+                Global._error("Synaptic delays for spiking neurons are not implemented yet with CUDA...")
+                
 
         # Initialization
         init_code = """
@@ -557,8 +556,8 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                 reset_code += """
         _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'delay': pop.max_delay}
             else:
-                Global._error("no synaptic delays for spiking synapses on CUDA implemented ...")
-                exit(0)
+                Global._error("No synaptic delays for spiking synapses on CUDA implemented ...")
+                
 
         update_code = """
         if ( _active ) {

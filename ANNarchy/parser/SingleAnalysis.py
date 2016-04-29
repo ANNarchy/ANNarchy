@@ -56,12 +56,12 @@ def analyse_neuron(neuron):
                 break
         else:
             _error('Rate-coded neurons must define the variable "r".')
-            exit(0)
+            
     else: # spiking neurons define r by default, it contains the average FR if enabled
         for var in description['parameters'] + description['variables']:
             if var['name'] == 'r':
                 _error('Spiking neurons use the variable "r" for the average FR, use another name.')
-                exit(0)
+                
         description['variables'].append(
                 {'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 
                  'flags': [], 'eq': '', 'cpp': ""})
@@ -76,7 +76,7 @@ def analyse_neuron(neuron):
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
         _error('Attributes must be declared only once.', attributes)
-        exit(0)
+        
     description['attributes'] = attributes
     description['local'] = local_var
     description['global'] = global_var
@@ -278,7 +278,7 @@ def analyse_synapse(synapse):
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
         _error('Attributes must be declared only once.', attributes)
-        exit(0)
+        
 
     # Add this info to the description
     description['parameters'] = parameters

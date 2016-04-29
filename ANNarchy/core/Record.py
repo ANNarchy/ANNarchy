@@ -356,8 +356,7 @@ class Monitor(object):
         times = []; ranks=[]
         if not 'spike' in self.variables:
             Global._error('Monitor: spike was not recorded')
-            exit(0)
-
+            
         # Get data
         if not spikes:
             data = self.get('spike')
@@ -402,8 +401,7 @@ class Monitor(object):
         """
         if not 'spike' in self.variables:
             Global._error('Monitor: spike was not recorded')
-            exit(0)
-
+            
         # Get data
         if not spikes:
             data = self.get('spike')
@@ -459,7 +457,6 @@ class Monitor(object):
         """
         if not 'spike' in self.variables:
             Global._error('Monitor: spike was not recorded')
-            exit(0)
 
         # Get data
         if not spikes:
@@ -503,7 +500,6 @@ class Monitor(object):
         """
         if not 'spike' in self.variables:
             Global._error('Monitor: spike was not recorded')
-            exit(0)
 
         # Get data
         if not spikes:
@@ -542,7 +538,6 @@ class Monitor(object):
         """
         if not 'spike' in self.variables:
             Global._error('Monitor: spike was not recorded')
-            exit(0)
 
         # Get data
         if not spikes:

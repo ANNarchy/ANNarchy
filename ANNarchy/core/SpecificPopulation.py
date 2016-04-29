@@ -108,9 +108,9 @@ class PoissonPopulation(Population):
 
         * **refractory**: refractory period in ms.
         """  
-        if rates == None and target==None:
+        if rates is None and target is None:
             Global._error('A PoissonPopulation must define either rates or target.')
-            exit(0)
+            
 
         if target is not None: # hybrid population
             # Create the neuron
@@ -200,8 +200,8 @@ class SpikeSourceArray(Population):
     def __init__(self, spike_times, name=None):
 
         if not isinstance(spike_times, list):
-            Global._error('in SpikeSourceArray, spike_times must be a Python list.')
-            exit(0)
+            Global._error('In a SpikeSourceArray, spike_times must be a Python list.')
+            
 
         if isinstance(spike_times[0], list): # several neurons
             nb_neurons = len(spike_times)

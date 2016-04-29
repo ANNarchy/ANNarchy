@@ -6,9 +6,8 @@ from ANNarchy.generator.Compiler import extra_libs
 try:
     from PIL import Image
 except:
-    Global._error('The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations.')
-    exit(0)
-            
+    Global._warning('The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations.')
+    
 import numpy as np
 
 class ImagePopulation(Population):
@@ -47,10 +46,10 @@ class ImagePopulation(Population):
         # Check geometry
         if isinstance(geometry, int) or len(geometry)==1:
             Global._error('The geometry of an ImagePopulation should be 2D (grayscale) or 3D (color).')
-            exit(0)
+            
         if len(geometry)==3 and (geometry[2]!=3 and geometry[2]!=1):
             Global._error('The third dimension of an ImagePopulation should be either 1 (grayscale) or 3 (color).') 
-            exit(0)            
+                        
         if len(geometry)==3 and geometry[2]==1:
             geometry = (geometry[0], geometry[1])
             
@@ -68,7 +67,7 @@ class ImagePopulation(Population):
             im = Image.open(image_name)
         except : # image does not exist
             Global._error('The image ' + image_name + ' does not exist.')
-            exit(0)
+            
         # Resize the image if needed
         (width, height) = (self.geometry[1], self.geometry[0])
         if im.size != (width, height):

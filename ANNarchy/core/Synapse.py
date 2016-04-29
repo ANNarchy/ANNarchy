@@ -66,10 +66,10 @@ class Synapse(object):
         # Check the operation
         if self.type == 'spike' and self.operation != 'sum':
             _error('Spiking synapses can only perform a sum of presynaptic potentials.')
-            exit(0)
+            
         if not self.operation in ['sum', 'min', 'max', 'mean']:
             _error('The only operations permitted are: sum (default), min, max, mean.')
-            exit(0)
+            
 
         # Description
         self.description = None
@@ -100,7 +100,7 @@ class Synapse(object):
 
     def __add__(self, synapse):  
         _error('adding synapse models is not implemented yet.')
-        exit(0)      
+              
         #self._variables.update(synapse.variables) 
 
     def __str__(self):

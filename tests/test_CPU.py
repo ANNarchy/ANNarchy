@@ -5,7 +5,8 @@
     This file is part of ANNarchy.
 
     Copyright (C) 2013-2016 Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+    Julien Vitay <julien.vitay@informatik.tu-chemnitz.de>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

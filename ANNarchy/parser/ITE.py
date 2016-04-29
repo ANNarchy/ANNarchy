@@ -139,11 +139,11 @@ def extract_ite(name, eq, description, split=True):
         # A if must be right after the equal sign
         if not right.strip().startswith('if'):
             _error(eq, '\nThe right term must directly start with a if statement.')
-            exit(0)
+            
         # It must have the same number of : and of else
         if not nb_then == 2*nb_else:
             _error(eq, '\nConditional statements must use both : and else.')
-            exit(0)
+            
         multilined = transform(right)
         condition = parse(multilined)
         right = ' __conditional__ '

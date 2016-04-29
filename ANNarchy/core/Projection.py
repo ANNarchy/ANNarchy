@@ -203,7 +203,6 @@ class Projection(object):
         """
         if not self._connection_method:
             Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
-            exit(0)
 
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
@@ -224,19 +223,19 @@ class Projection(object):
         elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
             # Ensure no negative delays are generated
-            if delay.min == None:
+            if delay.min is None:
                 delay.min = Global.config['dt']
             # The user needs to provide a max in order to compute max_delay
-            if delay.max == None:
+            if delay.max is None:
                 Global._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
-                exit(0)
+                
             self.max_delay = int(delay.max/Global.config['dt'])
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             self.uniform_delay = -1
             self.max_delay = int(max([max(l) for l in delay])/Global.config['dt'])
         else:
             Global._error('Projection.connect_xxx(): delays are not valid!')
-            exit(0)
+            
 
         # Transmit the max delay to the pre pop
         if isinstance(self.pre, PopulationView):
@@ -305,7 +304,7 @@ class Projection(object):
         """
         if not self.initialized:
             Global._error('dendrites can only be accessed after compilation.')
-            exit(0)
+            
         if isinstance(post, int):
             rank = post
         else:
@@ -328,6 +327,7 @@ class Projection(object):
         """
         if not isinstance(pre, int) or not isinstance(post, int):
             Global._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
+
         return self.dendrite(post).synapse(pre)
 
 
@@ -467,7 +467,6 @@ class Projection(object):
                 for idx, n in enumerate(self.post_ranks):
                     if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
                         Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
-                        exit(0)
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value[idx])
             else:
                 Global._error('The projection has ' + self.size + ' post-synaptic neurons.')
@@ -532,7 +531,7 @@ class Projection(object):
                     self.synapse_type.description['variables'][rk_var]['flags'].index(key)
                 except: # the flag does not exist yet, we can add it
                     self.synapse_type.description['variables'][rk_var]['flags'].append(key)
-            elif val == None: # delete the flag
+            elif val is None: # delete the flag
                 try:
                     self.synapse_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
@@ -574,6 +573,7 @@ class Projection(object):
         if rk_var == -1:
             Global._error('The projection '+self.name+' has no variable called ' + name)
             return
+
         self.synapse_type.description['variables'][rk_var]['eq'] = equation
 
 
@@ -605,13 +605,13 @@ class Projection(object):
         The default behaviour is that the synaptic variables are updated at each time step. The parameters must be multiple of ``dt``
         """
         # Check arguments
-        if period != None and offset!=None:
+        if not period is None and not offset is None:
             if offset >= period:
                 Global._error('enable_learning(): the offset must be smaller than the period.')
-                exit(0)
-        if period == None and offset!=None:
+                
+        if period is None and not offset is None:
             Global._error('enable_learning(): if you define an offset, you have to define a period.')
-            exit(0)
+            
         try:
             self.cyInstance._set_update(True)
             self.cyInstance._set_plasticity(True)
@@ -801,7 +801,6 @@ class Projection(object):
 
         if not self.initialized:
             Global._error('save_connectivity(): the network has not been compiled yet.')
-            return {}
 
         desc = {}
         desc['name'] = self.name
@@ -821,7 +820,7 @@ class Projection(object):
             try:
                 desc[var] = getattr(self.cyInstance, 'get_'+var)()
             except Exception as e:
-                Global._error('Can not save the attribute ' + var + ' in the projection.')
+                Global._warning('Can not save the attribute ' + var + ' in the projection.')
 
         return desc
 
@@ -922,16 +921,16 @@ class Projection(object):
             period = Global.config['dt']
         if not self.cyInstance:
             Global._error('Can not start pruning if the network is not compiled.')
-            exit(0)
+            
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.start_pruning(int(period/Global.config['dt']), Global.get_current_step())
             except :
                 Global._error("The synapse does not define a 'pruning' argument.")
-                exit(0)
+                
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
-            exit(0)
+            
 
     def stop_pruning(self):
         """
@@ -941,16 +940,16 @@ class Projection(object):
         """
         if not self.cyInstance:
             Global._error('Can not stop pruning if the network is not compiled.')
-            exit(0)
+            
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.stop_pruning()
             except:
                 Global._error("The synapse does not define a 'pruning' argument.")
-                exit(0)
+                
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
-            exit(0)
+            
 
     def start_creating(self, period=None):
         """
@@ -966,16 +965,16 @@ class Projection(object):
             period = Global.config['dt']
         if not self.cyInstance:
             Global._error('Can not start creating if the network is not compiled.')
-            exit(0)
+            
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.start_creating(int(period/Global.config['dt']), Global.get_current_step())
             except:
                 Global._error("The synapse does not define a 'creating' argument.")
-                exit(0)
+                
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
-            exit(0)
+            
 
     def stop_creating(self):
         """
@@ -985,13 +984,13 @@ class Projection(object):
         """
         if not self.cyInstance:
             Global._error('Can not stop creating if the network is not compiled.')
-            exit(0)
+            
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.stop_creating()
             except:
                 Global._error("The synapse does not define a 'creating' argument.")
-                exit(0)
+                
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
-            exit(0)
+            

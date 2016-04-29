@@ -186,7 +186,7 @@ class Population(object):
                 except Exception as e:
                     Global._print(e, self.neuron_type.description['refractory'])
                     Global._error('The initialization for the refractory period is not valid.')
-                    exit(0)
+                    
             else: # a value
                 self.refractory = self.neuron_type.description['refractory']
 
@@ -342,7 +342,7 @@ class Population(object):
             else :
                 return self.neuron_type.description['refractory']
         else:
-            Global._error('rate-coded neurons do not have refractory periods...')
+            Global._warning('rate-coded neurons do not have refractory periods...')
             return None
 
     @refractory.setter
@@ -360,7 +360,7 @@ class Population(object):
             else: # not initialized yet, saving for later
                 self.neuron_type.description['refractory'] = value
         else:
-            Global._error('rate-coded neurons do not have refractory periods...')
+            Global._warning('rate-coded neurons do not have refractory periods...')
 
     ################################
     ## Spiking neurons can compute a mean FR
@@ -397,15 +397,15 @@ class Population(object):
                 rank = coord[0]
                 if not rank < self.size:
                     Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
-                    return None
             else:
                 rank = self.rank_from_coordinates( coord[0] )
-                if rank == None:
+                if rank is None:
                     return None
         else: # a tuple
             rank = self.rank_from_coordinates( coord )
-            if rank == None:
+            if rank is None:
                 return None
+
         # Return corresponding neuron
         return IndividualNeuron(self, rank)
 
@@ -446,7 +446,6 @@ class Population(object):
             if isinstance(indices, (np.ndarray)):
                 if indices.ndim != 1:
                     Global._error('only one-dimensional lists/arrays are allowed to address a population.')
-                    return None
                 indices = list(indices.astype(int))
             return PopulationView(self, list(indices))
         elif isinstance(indices, slice): # a slice of ranks
@@ -492,12 +491,11 @@ class Population(object):
                     ranks = [self.rank_from_coordinates((x, y, z, k)) for x in coords[0] for y in coords[1] for z in coords[2] for k in coords[3]]
                 else:
                     Global._error("Slicing is implemented only for population with 4 dimensions at maximum", self.geometry)
-                    return None
                 if not max(ranks) < self.size:
                     Global._error("Indices do not match the geometry of the population", self.geometry)
-                    return None
                 return PopulationView(self, ranks)
-        Global._warning('can not address the population with', indices)
+
+        Global._warning('Population' + self.name + ': can not address the population with', indices)
         return None
 
     def __iter__(self):
@@ -519,12 +517,10 @@ class Population(object):
         try:
             rank = self._rank_from_coord( coord, self.geometry )
         except:
-            Global._error('There is no neuron of coordinates', coord, 'in the population', self.name, self.geometry)
-            exit(0)
+            Global._error('rank_from_coordinates(): There is no neuron of coordinates', coord, 'in the population', self.name, self.geometry)
 
         if rank > self.size:
-            Global._warning('Error when accessing neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
-            exit(0)
+            Global._error('rank_from_coordinates(), neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
         else:
             return rank
 
@@ -539,13 +535,11 @@ class Population(object):
         # Check the rank
         if not rank < self.size:
             Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
-            exit(0)
-
+            
         try:
             coord = self._coord_from_rank( rank, self.geometry )
         except:
             Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
-            exit(0)
         else:
             return coord
 
@@ -682,7 +676,7 @@ class Population(object):
         Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if not self._monitor:
             Global._error('get_record(): there is currently no recording.')
-            exit(0)
+            
         if variable:
             if not isinstance(variable, list):
                 variables = [variable]
@@ -720,7 +714,6 @@ class Population(object):
                         }
                 else:
                     Global._error("reshape=true is invalid for get_record('spike')")
-                    exit(0)
 
         return data
 
@@ -752,7 +745,6 @@ class Population(object):
         rk_var = self._find_variable_index(name)
         if rk_var == -1:
             Global._error('The population '+self.name+' has no variable called ' + name)
-            return
 
         for key, val in value.items():
             if val == '': # a flag
@@ -760,7 +752,7 @@ class Population(object):
                     self.neuron_type.description['variables'][rk_var]['flags'].index(key)
                 except: # the flag does not exist yet, we can add it
                     self.neuron_type.description['variables'][rk_var]['flags'].append(key)
-            elif val == None: # delete the flag
+            elif val is None: # delete the flag
                 try:
                     self.neuron_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
@@ -796,7 +788,7 @@ class Population(object):
         rk_var = self._find_variable_index(name)
         if rk_var == -1:
             Global._error('The population '+self.name+' has no variable called ' + name)
-            return
+
         self.neuron_type.description['variables'][rk_var]['eq'] = equation
 
 
@@ -825,7 +817,8 @@ class Population(object):
             try:
                 desc[var] = getattr(self.cyInstance, 'get_'+var)()
             except:
-                Global._error('Can not save the attribute ' + var + 'in the population ' + self.name + '.')
+                Global._warning('Can not save the attribute ' + var + 'in the population ' + self.name + '.')
+
         return desc
 
     def save(self, filename):

@@ -79,7 +79,7 @@ class DiagonalProjection(Projection):
             self._generate_omp_2d_gaussian()
         else:
             Global._error('The diagonal projection only works when both populations have 2 or 4 dimensions.')
-            exit(0)
+            
 
     def connect_gaussian(self, amp, sigma, min_val, max_distance=0.0):
         """
@@ -101,7 +101,7 @@ class DiagonalProjection(Projection):
 
         if not(self.pre.dimension == 4 and self.post.dimension == 4):
             Global._error('The diagonal projection only works when both populations have 4 dimensions.')
-            exit(0)
+            
 
         self.offset_w = (self.pre.geometry[0]-(self.pre.geometry[0]%2))/2.0
         self.offset_h = (self.pre.geometry[1]-(self.pre.geometry[1]%2))/2.0
@@ -150,8 +150,7 @@ class DiagonalProjection(Projection):
         """        
         if not self._connection_method:
             Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
-            exit(0)
-
+            
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self.weights)

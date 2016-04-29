@@ -183,7 +183,6 @@ def get_population(name, net_id=0):
             return pop
 
     _error("get_population(): the population", name, "does not exist.")
-    return None
 
 def populations(net_id=0):
     """
@@ -484,16 +483,20 @@ def _warning(*var_text):
 
 def _error(*var_text, **args):
     """
-    Prints an error message to standard out.
+    Prints an error message to standard out and exits.
 
-    When passing exit=True, the program will cleanly exit (needed for ipython notebooks)
+    When passing exit=False, the program will not exit.
     """
     text = 'ERROR: '
     for var in var_text:
         text += str(var) + ' '
+    
     print(text)
+
     if 'exit' in args.keys():
         if args['exit']:
             sys.exit(1)
+    else:
+        sys.exit(1)
 
 

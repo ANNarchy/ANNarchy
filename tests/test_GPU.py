@@ -1,11 +1,12 @@
 """
 
-    RUN_ALL_GPU.py
+    test_GPU.py
 
     This file is part of ANNarchy.
 
     Copyright (C) 2013-2016 Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+    Julien Vitay <julien.vitay@informatik.tu-chemnitz.de>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,18 +23,23 @@
 
 """
 from __future__ import print_function
-import os
+import os, sys
 from subprocess import call
 
-#
-# This file simply runs all CUDA-tests through a single command from command line.
-#
-# prompt> python RUN_ALL_GPU.py
-#
-for f in os.listdir('GPU'):
+nb_errors = 0
+nb_tests = 0
+
+for f in os.listdir('tests/GPU'):
     if f.startswith('test_') and f.endswith('.py'):
-        print('\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nRUNNING TEST >>'+f+'<<\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
-        call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'GPU')
+        print('Testing', f, '...')
+        ret = call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'tests/GPU')
+        if ret != 0: # Test failed
+            nb_errors += 1
+        nb_tests += 1
 
-print('\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\nFINISHED TESTING! HAVE SOME CAKE!\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
+if nb_errors != 0:
+    print('Some tests failed:', nb_errors, '/', nb_tests)
+else:
+    print('Everything is fine.')
 
+sys.exit(nb_errors)

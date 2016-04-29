@@ -58,10 +58,10 @@ class DecodingProjection(Projection):
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
             Global._error('The pre-synaptic population of a DecodingProjection must be spiking.')
-            exit(0)
+            
         if not self.post.neuron_type.type == 'rate':
             Global._error('The post-synaptic population of a DecodingProjection must be rate-coded.')
-            exit(0)
+            
 
         # Process window argument
         if window == 0.0:

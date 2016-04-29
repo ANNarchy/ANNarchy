@@ -62,8 +62,9 @@ class CoupledEquations(object):
         for var in self.variables:
             methods.append(var['method'])
         if len(list(set(methods))) > 1: # mixture of methods
+            _print(methods)
             _error('Can not mix different numerical methods when solving a coupled system of equations.')
-            exit(0)
+            
         else:
             method = methods[0]
 
@@ -112,8 +113,9 @@ class CoupledEquations(object):
         try:
             solution = solve(equations.values(), new_vars.keys())
         except:
+            _print(expression_list)
             _error('The multiple ODEs can not be solved together using the implicit Euler method.')
-            exit(0)
+            
 
         for var, sol in solution.items():
             # simplify the solution

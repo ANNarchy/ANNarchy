@@ -153,7 +153,7 @@ class Equation(object):
         except Exception as e:
             _print(e)
             _error('Can not analyse the expression :' +  str(expression))
-            exit(0)
+            
         else:
             return res
     
@@ -262,7 +262,7 @@ class Equation(object):
         if len(solved) > 1:
             _print(self.expression)
             _error('the ODE is not linear, can not use the implicit method.')
-            exit(0)
+            
         else:
             solved = solved[0]
 
@@ -284,7 +284,7 @@ class Equation(object):
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
 
-        if real_tau == None: # the equation can not be standardized
+        if real_tau is None: # the equation can not be standardized
             return self.explicit(expression)
 
         instepsize = together( stepsize / (stepsize + S(1.0)) )
@@ -304,7 +304,7 @@ class Equation(object):
     def exponential(self, expression):
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
-        if real_tau == None: # the equation can not be standardized
+        if real_tau is None: # the equation can not be standardized
             return self.explicit(expression)
     
         # Obtain C code
@@ -322,17 +322,17 @@ class Equation(object):
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
 
-        if real_tau == None: # the equation can not be standardized
+        if real_tau is None: # the equation can not be standardized
             _print(self.expression)
             _error('The equation is not a linear ODE and can not be evaluated exactly.')
-            exit(0)
+            
 
         # Check the steady state is not dependent on other variables
         for var in self.variables:
             if self.local_dict[var] in steadystate.atoms():
                 _print(self.expression)
                 _error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
-                exit(0)
+                
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
@@ -381,7 +381,7 @@ class Equation(object):
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
                 _print(self.expression)
                 _error('The exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
-                exit(0)           
+                           
     
         factor_var = collected_var[self.local_dict[self.name]]
         

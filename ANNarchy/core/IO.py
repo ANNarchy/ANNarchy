@@ -76,7 +76,7 @@ def load_parameter(in_file):
                 elif child.tag == 'value':
                     value = child.text
                     
-                    if value == None:
+                    if value is None:
                         print('Error: no value defined for',name)
                         damaged_pars.append(name)
                         value = 0
@@ -92,9 +92,9 @@ def load_parameter(in_file):
                 else:
                     print('Error: unexpected xml-tag', child.tag)
             
-            if name == None:
+            if name is None:
                 Global._print('Error: no name in parameter set.')
-            elif value == None:
+            elif value is None:
                 Global._print('Error: no value in parameter set.')
                 damaged_pars.append(name)
             elif name in par.keys():
@@ -245,7 +245,7 @@ def load(filename, populations=True, projections=True, net_id=0):
     """   
 
     desc = _load_data(filename)
-    if desc == None:
+    if desc is None:
         return
     if populations:
         # Over all populations

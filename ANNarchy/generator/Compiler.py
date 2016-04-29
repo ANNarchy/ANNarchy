@@ -149,10 +149,10 @@ def compile(    directory='annarchy',
     debug_build = options.debug # debug build
     clean = options.clean # enforce rebuild
 
-    if populations == None: # Default network
+    if populations is None: # Default network
         populations = Global._network[net_id]['populations']
 
-    if projections == None: # Default network
+    if projections is None: # Default network
         projections = Global._network[net_id]['projections']
 
     # Compiling directory
@@ -307,12 +307,11 @@ class Compiler(object):
             with open('compile_stderr.log', 'r') as rfile:
                 msg = rfile.read()
             Global._print(msg)
-            Global._error('Compilation failed.')
             try:
                 os.remove('ANNarchyCore'+str(self.net_id)+'.so')
             except:
                 pass
-            exit(0)
+            Global._error('Compilation failed.')
 
         # Return to the current directory
         os.chdir('..')
@@ -377,25 +376,6 @@ class Compiler(object):
         # non-standard python installs need to tell the location of libpythonx.y.so/dylib
         # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
         # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
-        # try:
-        #     if py_major == "2":
-        #         python_include = subprocess.Popen(["python2-config", "--includes"], stdout=subprocess.PIPE).communicate()[0].strip()
-        #         python_lib = subprocess.Popen(["python2-config", "--libs"], stdout=subprocess.PIPE).communicate()[0].strip()
-            
-        #         python_path = subprocess.Popen(["which", "python2"], stdout=subprocess.PIPE).communicate()[0].strip()
-        #         python_lib += " -L" + python_path.replace('/bin/python2', '/lib') + ' '
-        #     else: # in python 3, Popen return bytes, not strings....
-        #         python_include = subprocess.Popen(["python3-config", "--includes"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
-        #         python_lib = subprocess.Popen(["python3-config", "--libs"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
-            
-        #         python_path = subprocess.Popen(["which", "python3"], stdout=subprocess.PIPE).communicate()[0].decode().strip()
-        #         python_lib += " -L" + python_path.replace('/bin/python3', '/lib') + " "
-        # except Exception as e:
-        #     Global._print(e)
-        #     Global._error('the development files of Python (Python.h) do not seem to be installed.')
-        #     Global._print('Check that python'+py_major+'-config is in your $PATH')
-        #     exit(0)
-
         py_prefix = sys.prefix
         if py_major=='2':
             major='2'
@@ -442,7 +422,7 @@ class Compiler(object):
 
         else: # Windows: to test....
             Global._warning("Compilation on windows is not supported yet.")
-            exit(0)
+            
 
         # Write the Makefile to the disk
         with open(self.annarchy_dir + '/generate/Makefile', 'w') as wfile:
@@ -467,7 +447,7 @@ class Compiler(object):
                     Global._print(pop.neuron_type.parameters)
                     Global._print(pop.neuron_type.equations)
                     Global._error(term + ' is a reserved variable name')
-                    exit(0)
+                    
 
         # Check projections
         for proj in self.projections:
@@ -477,11 +457,11 @@ class Compiler(object):
                     Global._print(proj.synapse_type.parameters)
                     Global._print(proj.synapse_type.equations)
                     Global._error(term + ' is a reserved variable name')
-                    exit(0)
+                    
             # Check the connector method has been called
             if not proj._connection_method:
                 Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected. Call a connector method before compiling the network.')
-                exit(0)
+                
 
             # Check existing pre variables
             for dep in  proj.synapse_type.description['dependencies']['pre']:
@@ -489,21 +469,20 @@ class Compiler(object):
                     target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.pre.targets:
                         Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
-                        exit(0)
                     continue 
+
                 if not dep in proj.pre.attributes:
                     Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
-                    exit(0)
+                    
             for dep in  proj.synapse_type.description['dependencies']['post']:
                 if dep.startswith('sum('):
                     target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.post.targets:
                         Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
-                        exit(0)
                     continue 
+
                 if not dep in proj.post.attributes:
                     Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
-                    exit(0)
 
 
 def _instantiate(net_id, import_id=-1):
@@ -522,7 +501,7 @@ def _instantiate(net_id, import_id=-1):
     except Exception as e:
         Global._print(e)
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
-        exit(0)
+        
     Global._network[net_id]['instance'] = cython_module
 
     # Bind the py extensions to the corresponding python objects

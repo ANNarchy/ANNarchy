@@ -23,7 +23,7 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
     """
     if not _network[net_id]['instance']:
         _error('simulate(): the network is not compiled yet.')
-        exit(0)
+        
 
     # Compute the number of steps
     nb_steps = ceil(float(duration) / dt())
@@ -65,7 +65,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     """
     if not _network[net_id]['instance']:
         _error('simulate_until(): the network is not compiled yet.')
-        exit(0)
+        
 
     nb_steps = ceil(float(max_duration) / dt())
     if not isinstance(population, list):
@@ -89,7 +89,7 @@ def step(net_id=0):
     """
     if not _network[net_id]['instance']:
         _error('simulate_until(): the network is not compiled yet.')
-        exit(0)
+        
 
     _network[net_id]['instance'].pyx_step()
 

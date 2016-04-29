@@ -113,7 +113,7 @@ class Network(object):
                     post = post_pop
             except:
                 Global._error('Network.add(): The pre- or post-synaptic population of this projection are not in the network.')
-                exit(0)
+                
             target = obj.target
             synapse = obj.synapse_type
             # Create the projection
@@ -165,8 +165,7 @@ class Network(object):
             for m in self.monitors:
                 if m.id == obj.id:
                     return m
-        Global._error('The network has no such object.')
-        return None
+        Global._error('The network has no such object:', obj)
 
     def compile(self, directory='annarchy', silent=False):
         """ Compiles the network.

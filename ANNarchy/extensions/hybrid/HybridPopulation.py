@@ -53,8 +53,7 @@ class Spike2RatePopulation(Population):
 
         if not self.population.neuron_type.description['type'] == 'spike':
             Global._error('the population ' + self.population.name + ' must contain spiking neurons.')
-            exit(0)
-
+            
         if self.mode == 'window':
             self._code = self._create_window()
         elif self.mode == 'adaptive':
@@ -63,7 +62,7 @@ class Spike2RatePopulation(Population):
             self._code = self._create_isi()
         else:
             Global._error('Spike2RatePopulation: Unknown method ' + self.mode)
-            exit(0)
+            
 
         self._specific = True
 
@@ -445,7 +444,7 @@ class Rate2SpikePopulation(Population):
 
         if not self.population.neuron_type.description['type'] == 'rate':
             Global._error('the population ' + self.population.name + ' must contain rate-coded neurons.')
-            exit(0)
+            
 
         # Create the description, but it will not be used for generation
         Population.__init__(

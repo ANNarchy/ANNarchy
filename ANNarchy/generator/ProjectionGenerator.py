@@ -94,7 +94,7 @@ class ProjectionGenerator(object):
                 psp_prefix, psp_code = self.computesum_spiking(proj)
             else:
                 Global._error("Spiking networks are not supported on CUDA yet ...")
-                exit(0)
+                
 
         # Detect event-driven variables
         has_event_driven = False
@@ -499,9 +499,9 @@ class ProjectionGenerator(object):
                             '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
                         )
                     else:
-                        Global._error('The psp accesses a global variable with a non-uniform delay!')
                         Global._print(proj.synapse_type.description['psp']['eq'])
-                        exit(0)
+                        Global._error('The psp accesses a global variable with a non-uniform delay!')
+                        
 
             else: # Uniform delays
                 for var in delayed_variables:
@@ -672,8 +672,8 @@ class ProjectionGenerator(object):
         # Take delays into account if any
         if proj.max_delay > 1:
             if proj.uniform_delay == -1:
-                Global._error("only uniform delays are supported on GPUs.")
-                exit(0)
+                Global._error("Only uniform delays are supported on GPUs.")
+                
             else:
                 call_code = call_code.replace("gpu_r", "gpu_delayed_r["+str(proj.max_delay-1)+"]")
 
@@ -831,7 +831,7 @@ if(%(condition)s){
         if proj.max_delay > 1:
             if proj.uniform_delay == -1 : # Non-uniform delays
                 Global._error('Non-uniform delays are not yet possible for spiking networks.')
-                exit(0)
+                
             else: # Uniform delays
                 pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
         else:
@@ -1391,14 +1391,11 @@ if(_transmission && pop%(id_post)s._active){
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
                     Global._error('creating: you can not add a delay higher than the maximum of existing delays')
-                    exit(0)
+                    
                 delay = ", " + str(d)
             else:
                 if d != proj.uniform_delay:
                     Global._error('creating: you can not add a delay different from the others if they were constant.')
-                    exit(0)
-
-
 
         # OMP
         if Global.config['num_threads']>1:
