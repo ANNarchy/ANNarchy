@@ -46,10 +46,8 @@ Oja = Synapse(
     """
 )
 
-
 pop1 = Population((8, 8), neuron)
 pop2 = Population((8, 8), neuron2)
-
 
 proj = Projection(
      pre = pop1,
@@ -60,57 +58,63 @@ proj = Projection(
 
 proj.connect_all_to_all(weights = 1.0)
 
-compile(clean=True, silent=True)
-
 class test_Projection(unittest.TestCase):
     """
     Tests the functionality of the *Projection* object. We test:
-        
+
         *access to parameters
         *method to get the ranks of post-synaptic neurons recieving synapses
         *method to get the number of post-synaptic neurons recieving synapses
     """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1, pop2, proj])
+        self.test_net.compile(silent=True)
+
+        self.net_proj = self.test_net.get(proj)
+
     def setUp(self):
         """
         In our *setUp()* function we reset the network before every test.
         """
-        reset()
+        self.test_net.reset()
 
     def test_get_tau(self):
         """
         Tests the direct access to the parameter *tau* of our *Projection*.
         """
-        self.assertTrue(numpy.allclose(proj.tau, 5000.0))
+        self.assertTrue(numpy.allclose(self.net_proj.tau, 5000.0))
 
     def test_get_tau_2(self):
         """
         Tests the access to the parameter *tau* of our *Projection* with the *get()* method.
         """
-        self.assertTrue(numpy.allclose(proj.get('tau'), 5000.0))
+        self.assertTrue(numpy.allclose(self.net_proj.get('tau'), 5000.0))
 
     def test_get_alpha(self):
         """
         Tests the direct access to the parameter *alpha* of our *Projection*.
         """
-        self.assertTrue(numpy.allclose(proj.alpha, 8.0))
+        self.assertTrue(numpy.allclose(self.net_proj.alpha, 8.0))
 
     def test_get_alpha_2(self):
         """
         Tests the access to the parameter *alpha* of our *Projection* with the *get()* method.
         """
-        self.assertTrue(numpy.allclose(proj.get('alpha'), 8.0))
+        self.assertTrue(numpy.allclose(self.net_proj.get('alpha'), 8.0))
 
     def test_get_size(self):
         """
         Tests the *size* method, which returns the number of post-synaptic neurons recieving synapses.
         """
-        self.assertEqual(proj.size, 64)
+        self.assertEqual(self.net_proj.size, 64)
 
     def test_get_post_ranks(self):
         """
         Tests the *post_ranks* method, which returns the ranks of post-synaptic neurons recieving synapses.
         """
-        self.assertEqual(proj.post_ranks, list(range(64)))
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(self.net_proj.post_ranks, list(range(64)))

@@ -52,19 +52,26 @@ proj2 = Projection(
 proj1.connect_one_to_one(weights = 0.1)
 proj2.connect_all_to_all(weights = 0.1)
 
-compile(clean=True, silent=True)
-
-#TODO: one2one, all2all for PopulationViews
+# TODO: PopulationViews
 
 class test_Connectivity(unittest.TestCase):
     """
     This class tests the functionality of the connectivity patterns within *Projections*.
     """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1, pop2, proj1, proj2])
+        self.test_net.compile(silent=True)
+
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network before every test.
         """
-        reset()
+        self.test_net.reset()
 
     def test_one_to_one(self):
         """
@@ -73,8 +80,10 @@ class test_Connectivity(unittest.TestCase):
 
         We test correctness of ranks and weight values.
         """
-        self.assertEqual(proj1.dendrite(3).rank, [3])
-        self.assertTrue(numpy.allclose(proj1.dendrite(3).w, [0.1]))
+        tmp = self.test_net.get(proj1)
+
+        self.assertEqual(tmp.dendrite(3).rank, [3])
+        self.assertTrue(numpy.allclose(tmp.dendrite(3).w, [0.1]))
 
     def test_all_to_all(self):
         """
@@ -83,8 +92,7 @@ class test_Connectivity(unittest.TestCase):
 
         We test correctness of ranks and weight values.
         """
-        self.assertEqual(proj2.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertTrue(numpy.allclose(proj2.dendrite(3).w, np.ones((8,1)) * 0.1))
+        tmp = self.test_net.get(proj2)
 
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(tmp.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertTrue(numpy.allclose(tmp.dendrite(3).w, np.ones((8, 1)) * 0.1))

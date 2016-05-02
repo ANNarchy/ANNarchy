@@ -23,23 +23,12 @@
 
 """
 from __future__ import print_function
+from ANNarchy import *
 import os, sys
 from subprocess import call
 
-nb_errors = 0
-nb_tests = 0
+from CPU import *
+import unittest
 
-for f in os.listdir('tests/CPU'):
-    if f.startswith('test_') and f.endswith('.py'):
-        print('Testing', f, '...')
-        ret = call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'tests/CPU')
-        if ret != 0: # Test failed
-            nb_errors += 1
-        nb_tests += 1
-
-if nb_errors != 0:
-    print('Some tests failed:', nb_errors, '/', nb_tests)
-else:
-    print('Everything is fine.')
-
-sys.exit(nb_errors)
+if __name__ == '__main__':
+    unittest.main()

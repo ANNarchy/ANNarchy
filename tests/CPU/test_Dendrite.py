@@ -46,10 +46,8 @@ Oja = Synapse(
     """
 )
 
-
 pop1 = Population(5, neuron)
 pop2 = Population(8, neuron2)
-
 
 proj = Projection(
      pre = pop1,
@@ -59,7 +57,6 @@ proj = Projection(
 )
 
 proj.connect_all_to_all(weights = 1.0)
-compile(clean=True, silent=True)
 
 class test_Dendrite(unittest.TestCase):
     """
@@ -70,19 +67,30 @@ class test_Dendrite(unittest.TestCase):
         * the *rank* method
         * the *size* method
     """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1, pop2, proj])
+        self.test_net.compile(silent=True)
+
+        self.net_proj = self.test_net.get(proj)
+
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network.
         """
-        reset()
+        self.test_net.reset()
 
     def test_none(self):
         """
-        If a non-existent *Dendrite* is accessed, an error should be thrown. 
+        If a non-existent *Dendrite* is accessed, an error should be thrown.
         This is tested here.
         """
         with self.assertRaises(SystemExit) as cm:
-            d = proj.dendrite(14)
+            d = self.net_proj.dendrite(14)
         self.assertEqual(cm.exception.code, 1)
 
     def test_rank(self):
@@ -90,83 +98,64 @@ class test_Dendrite(unittest.TestCase):
         Tests the *rank* method, which returns the ranks of the
         pre-synaptic neurons belonging to the accessed *Dendrite*.
         """
-        self.assertEqual(proj.dendrite(5).rank, [0, 1, 2, 3, 4])
+        self.assertEqual(self.net_proj.dendrite(5).rank, [0, 1, 2, 3, 4])
 
     def test_dendrite_size(self):
         """
         Tests the *size* method, which returns the number of pre-synaptic
         neurons belonging to the accessed *Dendrite*.
         """
-        self.assertEqual(proj.dendrite(3).size, 5)
+        self.assertEqual(self.net_proj.dendrite(3).size, 5)
 
     def test_get_dendrite_tau(self):
         """
         Tests the direct access of the parameter *tau* of a *Dendrite*.
         """
-        self.assertTrue(numpy.allclose(proj.dendrite(1).tau, 5000.0))
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(1).tau, 5000.0))
 
     def test_get_dendrite_alpha(self):
         """
         Tests the direct access of the variable *alpha* of a *Dendrite*.
         """
-        self.assertTrue(numpy.allclose(proj.dendrite(0).alpha, [8.0, 8.0, 8.0, 8.0, 8.0]))
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(0).alpha, [8.0, 8.0, 8.0, 8.0, 8.0]))
 
     def test_get_dendrite_weights(self):
         """
         Tests the direct access of the parameter *w* (weights) of a *Dendrite*.
         """
-        self.assertTrue(numpy.allclose(proj.dendrite(7).w, [1.0, 1.0, 1.0, 1.0, 1.0]))
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(7).w, [1.0, 1.0, 1.0, 1.0, 1.0]))
 
     def test_set_tau(self):
         """
         Tests the setting of the parameter *tau* for the whole *Projection* through a single value.
         """
-        proj.tau=6000.0
-        self.assertTrue(numpy.allclose(proj.dendrite(0).tau, 6000.0))
+        self.net_proj.tau = 6000.0
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(0).tau, 6000.0))
 
     def test_set_alpha(self):
         """
         Tests the setting of the parameter *alpha* of a *Dendrite*.
         """
-        proj.dendrite(4).alpha=9.0
-        self.assertTrue(numpy.allclose(proj.dendrite(4).alpha, [9.0, 9.0, 9.0, 9.0, 9.0]))
+        self.net_proj.dendrite(4).alpha = 9.0
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(4).alpha, [9.0, 9.0, 9.0, 9.0, 9.0]))
 
     def test_set_alpha_2(self):
         """
         Tests the setting of the parameter *alpha* of a specific synapse in a *Dendrite*.
         """
-        proj.dendrite(4)[1].alpha=10.0
-        self.assertTrue(numpy.allclose(proj.dendrite(4).alpha, [9.0, 10.0, 9.0, 9.0, 9.0]))
+        self.net_proj.dendrite(4)[1].alpha = 10.0
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(4).alpha, [9.0, 10.0, 9.0, 9.0, 9.0]))
 
     def test_set_weights(self):
         """
         Tests the setting of the parameter *w* (weights) of a *Dendrite*.
         """
-        proj.dendrite(6).w=2.0
-        self.assertTrue(numpy.allclose(proj.dendrite(6).w, [2.0, 2.0, 2.0, 2.0, 2.0]))
+        self.net_proj.dendrite(6).w = 2.0
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(6).w, [2.0, 2.0, 2.0, 2.0, 2.0]))
 
     def test_set_weights_2(self):
         """
         Tests the setting of the parameter *w* (weights) of a specific synapse in a *Dendrite*.
         """
-        proj.dendrite(6)[2].w=3.0
-        self.assertTrue(numpy.allclose(proj.dendrite(6).w, [2.0, 2.0, 3.0, 2.0, 2.0]))
-
-    #def test_get_dendrite_tau_2(self):
-    #    """
-    #    Tests the access of the parameter *tau* with the *get()* method.
-    #    """
-    #    self.assertTrue(numpy.allclose(proj.dendrite(1).get('tau'), 5000.0))
-
-    #def test_set_tau2(self):
-    #    """
-    #    Tests the setting of the parameter *tau* for the whole *Projection* through a list of values,
-    #    which is the same size as the number of post-synaptic neurons recieving synapses.
-
-    #    HD (22th Sep. 2015): this test currently fail, it is not yet clear if it is an error or not.
-    #    """
-    #    proj.tau = [5000.0, 6000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0, 5000.0]
-    #    self.assertTrue(numpy.allclose(proj.dendrite(1).tau, 6000.0))
-
-if __name__ == '__main__':
-    unittest.main()
+        self.net_proj.dendrite(6)[2].w = 3.0
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(6).w, [2.0, 2.0, 3.0, 2.0, 2.0]))

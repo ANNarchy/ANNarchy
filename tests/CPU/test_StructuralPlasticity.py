@@ -70,20 +70,26 @@ proj2 = Projection(
 proj.connect_all_to_all(weights = 1.0)
 proj2.connect_one_to_one(weights = 1.0)
 
-compile(clean=True, silent=True)
-
-
 class test_StructuralPlasticity(unittest.TestCase):
     """
     This class tests the *Structural Plasticity* feature, which can optinally be enabled.
     This feature allows the user to manually manipulate *Dentrite* objects by adding or removing synapses within them.
     Both functions *prune_synapse()* and *create_synapse()* are tested.
     """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1, pop2, proj, proj2])
+        self.test_net.compile(silent=True)
+
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network.
         """
-        reset()
+        self.test_net.reset()
 
     def test_prune(self):
         """
@@ -92,16 +98,15 @@ class test_StructuralPlasticity(unittest.TestCase):
         Then, we delete 3 synapses by calling *prune_synapse()* and call the *rank* method on the *Dendrite* to check, if corresponding synapses are really missing.
         Once again, we check the *weights* to see, if the size of the array fits.
         """
+        self.assertEqual(self.test_net.get(proj).dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7])
+        self.assertTrue(numpy.allclose(self.test_net.get(proj).dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
 
-        self.assertEqual(proj.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7])
-        self.assertTrue(numpy.allclose(proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
+        self.test_net.get(proj).dendrite(3).prune_synapse(2)
+        self.test_net.get(proj).dendrite(3).prune_synapse(4)
+        self.test_net.get(proj).dendrite(3).prune_synapse(6)
 
-        proj.dendrite(3).prune_synapse(2)
-        proj.dendrite(3).prune_synapse(4)
-        proj.dendrite(3).prune_synapse(6)
-
-        self.assertEqual(proj.dendrite(3).rank, [0, 1, 3, 5, 7])
-        self.assertTrue(numpy.allclose(proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0]))
+        self.assertEqual(self.test_net.get(proj).dendrite(3).rank, [0, 1, 3, 5, 7])
+        self.assertTrue(numpy.allclose(self.test_net.get(proj).dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0]))
 
     def test_create(self):
         """
@@ -110,15 +115,12 @@ class test_StructuralPlasticity(unittest.TestCase):
         Then, we create 3 additional synapses by calling *create_synapse()* call the *rank* method on the *Dendrite* to check, if corresponding synapses are listed.
         Once again, we check the *weights* to see, if the size of the returned array fits and the values match the second argument given to *create_synapse()*.
         """
-        self.assertEqual(proj2.dendrite(3).rank, [3])
-        self.assertTrue(numpy.allclose(proj2.dendrite(3).w, [1.0]))
+        self.assertEqual(self.test_net.get(proj2).dendrite(3).rank, [3])
+        self.assertTrue(numpy.allclose(self.test_net.get(proj2).dendrite(3).w, [1.0]))
 
-        proj2.dendrite(3).create_synapse(2, 2.0)
-        proj2.dendrite(3).create_synapse(4, 2.0)
-        proj2.dendrite(3).create_synapse(6, 2.0)
+        self.test_net.get(proj2).dendrite(3).create_synapse(2, 2.0)
+        self.test_net.get(proj2).dendrite(3).create_synapse(4, 2.0)
+        self.test_net.get(proj2).dendrite(3).create_synapse(6, 2.0)
 
-        self.assertEqual(proj2.dendrite(3).rank, [2, 3, 4, 6])
-        self.assertTrue(numpy.allclose(proj2.dendrite(3).w, [2.0, 1.0, 2.0, 2.0]))
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(self.test_net.get(proj2).dendrite(3).rank, [2, 3, 4, 6])
+        self.assertTrue(numpy.allclose(self.test_net.get(proj2).dendrite(3).w, [2.0, 1.0, 2.0, 2.0]))
