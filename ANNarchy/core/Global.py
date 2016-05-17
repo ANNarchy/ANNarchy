@@ -490,7 +490,7 @@ def _error(*var_text, **args):
     text = 'ERROR: '
     for var in var_text:
         text += str(var) + ' '
-    
+
     print(text)
 
     if 'exit' in args.keys():
@@ -498,5 +498,3 @@ def _error(*var_text, **args):
             sys.exit(1)
     else:
         sys.exit(1)
-
-

@@ -1,9 +1,9 @@
 """
 
     Random.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 """
 import numpy as np
 from ANNarchy.core import Global
@@ -46,7 +46,7 @@ distributions_equivalents = {
 available_distributions = distributions_arguments.keys()
 
 class RandomDistribution(object):
-    """ 
+    """
     BaseClass for random distributions.
     """
 
@@ -80,18 +80,18 @@ class Uniform(RandomDistribution):
     Random distribution object using the uniform distribution between ``min`` and ``max``.
 
     The returned values are floats in the range [min, max].
-    """   
+    """
     def __init__(self, min, max):
-        """        
+        """
         *Parameters*:
-        
+
         * **min**: minimum value.
-        
+
         * **max**: maximum value.
         """
         self.min = min
         self.max = max
-        
+
     def get_values(self, shape):
         """
         Returns a Numpy array with the given shape.
@@ -107,18 +107,18 @@ class DiscreteUniform(RandomDistribution):
     Random distribution object using the discrete uniform distribution between ``min`` and ``max``.
 
     The returned values are integers in the range [min, max].
-    """   
+    """
     def __init__(self, min, max):
-        """        
+        """
         *Parameters*:
-        
+
         * **min**: minimum value
-        
+
         * **max**: maximum value
         """
         self.min = min
         self.max = max
-        
+
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
@@ -127,31 +127,31 @@ class DiscreteUniform(RandomDistribution):
 
     def latex(self):
         return "$\\mathcal{U}$(" + str(self.min) + ', ' + str(self.max) + ')'
-    
-    
+
+
 class Normal(RandomDistribution):
     """
     Random distribution instance returning a random value based on a normal (Gaussian) distribution.
-    """   
+    """
     def __init__(self, mu, sigma, min=None, max=None):
-        """        
+        """
         *Parameters*:
-        
+
         * **mu**: mean of the distribution
-        
+
         * **sigma**: standard deviation of the distribution
-        
+
         * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
-        
+
         * **min**: minimum value returned (default: unlimited).
-        
+
         * **max**: maximum value returned (default: unlimited).
         """
         self.mu = mu
         self.sigma = sigma
         self.min = min
         self.max = max
-        
+
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
@@ -169,24 +169,24 @@ class Normal(RandomDistribution):
 class LogNormal(RandomDistribution):
     """
     Random distribution instance returning a random value based on lognormal distribution.
-    """   
+    """
     def __init__(self, mu, sigma, min=None, max=None):
-        """        
+        """
         *Parameters*:
-        
+
         * **mu**: mean of the distribution
-        
+
         * **sigma**: standard deviation of the distribution
-        
+
         * **min**: minimum value returned (default: unlimited).
-        
+
         * **max**: maximum value returned (default: unlimited).
         """
         self.mu = mu
         self.sigma = sigma
         self.min = min
         self.max = max
-        
+
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape
@@ -204,24 +204,24 @@ class LogNormal(RandomDistribution):
 class Exponential(RandomDistribution):
     """
     Random distribution instance returning a random value based on exponential distribution, according the density function:
-    
+
     .. math ::
-    
+
         P(x | \lambda) = \lambda e^{(-\lambda x )}
 
-    """   
+    """
     def __init__(self, Lambda, min=None, max=None):
-        """        
+        """
         *Parameters*:
-        
+
         * **Lambda**: rate parameter.
-        
+
         * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
-        
+
         * **min**: minimum value returned (default: unlimited).
-        
+
         * **max**: maximum value returned (default: unlimited).
-        
+
         .. note::
 
             ``Lambda`` is capitalized, otherwise it would be a reserved Python keyword.
@@ -230,7 +230,7 @@ class Exponential(RandomDistribution):
         self.Lambda = Lambda
         self.min = min
         self.max = max
-        
+
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape.
@@ -248,24 +248,24 @@ class Exponential(RandomDistribution):
 class Gamma(RandomDistribution):
     """
     Random distribution instance returning a random value based on gamma distribution.
-    """   
+    """
     def __init__(self, alpha, beta=1.0, seed=-1, min=None, max=None):
-        """        
+        """
         *Parameters*:
-        
+
         * **alpha**: shape of the gamma distribution
-        
+
         * **beta**: scale of the gamma distribution
-        
+
         * **min**: minimum value returned (default: unlimited).
-        
+
         * **max**: maximum value returned (default: unlimited).
         """
         self.alpha = alpha
         self.beta = beta
         self.min = min
         self.max = max
-        
+
     def get_values(self, shape):
         """
         Returns a np.ndarray with the given shape

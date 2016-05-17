@@ -1,9 +1,9 @@
 """
-    
+
     Neuron.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 """
 from ANNarchy.core.Global import _error, _warning, _network, _objects
 from ANNarchy.parser.SingleAnalysis import analyse_neuron
@@ -29,16 +29,16 @@ import numpy as np
 class Neuron(object):
     """
     Base class to define a neuron.
-    """    
+    """
     def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
-        """         
+        """
         *Parameters*:
-        
+
             * **parameters**: parameters of the neuron and their initial value.
             * **equations**: equations defining the temporal evolution of variables.
-            * **functions**: additional functions used in the variables' equations.                
+            * **functions**: additional functions used in the variables' equations.
             * **spike**: condition to emit a spike (only for spiking neurons).
-            * **reset**: changes to the variables after a spike (only for spiking neurons).                  
+            * **reset**: changes to the variables after a spike (only for spiking neurons).
             * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
             * **name**: name of the neuron type (used for reporting only).
             * **description**: short description of the neuron type (used for reporting).
@@ -89,7 +89,7 @@ Parameters:
 Equations of the variables:
 """ + str(self.equations) + """
 
-""" 
+"""
         else:
             text= """Spiking neuron.
 
@@ -101,7 +101,7 @@ Spiking condition:
 """ + str(self.spike) + """
 Reset after a spike:
 """ + str(self.reset)
-        
+
         return text
 
 
@@ -109,11 +109,11 @@ Reset after a spike:
 class RateNeuron(Neuron):
     """
     Base class to define a rate-coded neuron.
-    """    
+    """
     def __init__(self, parameters="", equations="", functions=None, name="", description="", extra_values={}):
-        """        
+        """
         *Parameters*:
-        
+
             * **parameters**: parameters of the neuron and their initial value.
             * **equations**: equations defining the temporal evolution of variables.
             * **functions**: additional functions used in the variables' equations.
@@ -121,20 +121,20 @@ class RateNeuron(Neuron):
         """
         _warning("The use of RateNeuron or SpikeNeuron is deprecated, use Neuron instead.")
         Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, name=name, description=description, extra_values=extra_values)
-        
+
 class SpikeNeuron(Neuron):
     """
     Base class to define a spiking neuron.
-    """    
+    """
     def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
-        """         
+        """
         *Parameters*:
-        
+
             * **parameters**: parameters of the neuron and their initial value.
             * **equations**: equations defining the temporal evolution of variables.
-            * **functions**: additional functions used in the variables' equations.                
+            * **functions**: additional functions used in the variables' equations.
             * **spike**: condition to emit a spike.
-            * **reset**: changes to the variables after a spike                    
+            * **reset**: changes to the variables after a spike
             * **refractory**: refractory period of a neuron after a spike.
 
         """
@@ -144,13 +144,13 @@ class SpikeNeuron(Neuron):
 class IndividualNeuron(object):
     """
     Neuron object returned by the Population.neuron(rank) method.
-    
+
     This only a wrapper around the Population data. It has the same attributes (parameter and variable) as the original population.
     """
     def __init__(self, population, rank):
         self.population  = population
         self.rank  = rank
-        
+
     def __getattr__(self, name):
         " Method called when accessing an attribute."
         if name == 'population':
@@ -172,7 +172,7 @@ class IndividualNeuron(object):
                 return object.__getattribute__(self, name)
         else:
             return object.__getattribute__(self, name)
-        
+
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
         if name == 'population':
@@ -186,15 +186,15 @@ class IndividualNeuron(object):
                         newval = self.population.get(name)
                         newval[self.population.coordinates_from_rank(self.rank)] = value
                         self.population.__setattr__(name, newval)
-                    else: # Access the C++ data 
+                    else: # Access the C++ data
                         getattr(self.population.cyInstance, 'set_single_'+name)(self.rank, value)
                 else:
                     self.population.__setattr__(name, value)
             else:
                 object.__setattr__(self, name, value)
         else:
-            object.__setattr__(self, name, value) 
-            
+            object.__setattr__(self, name, value)
+
     def __repr__(self):
         desc = 'Neuron of the population ' + self.population.name + ' with rank ' + str(self.rank) + ' (coordinates ' + str(self.population.coordinates_from_rank(self.rank)) + ').\n'
         desc += 'Parameters:\n'
@@ -204,7 +204,7 @@ class IndividualNeuron(object):
         for param in self.population.variables:
             desc += '  ' + param + ' = ' + str(self.__getattr__(param)) + '\n'
         return desc
-    
+
     def __add__(self, other):
         """Allows to join two neurons if they have the same population."""
         if other.population == self.population:

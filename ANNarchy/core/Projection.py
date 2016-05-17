@@ -228,14 +228,14 @@ class Projection(object):
             # The user needs to provide a max in order to compute max_delay
             if delay.max is None:
                 Global._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
-                
+
             self.max_delay = int(delay.max/Global.config['dt'])
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             self.uniform_delay = -1
             self.max_delay = int(max([max(l) for l in delay])/Global.config['dt'])
         else:
             Global._error('Projection.connect_xxx(): delays are not valid!')
-            
+
 
         # Transmit the max delay to the pre pop
         if isinstance(self.pre, PopulationView):
@@ -304,7 +304,7 @@ class Projection(object):
         """
         if not self.initialized:
             Global._error('dendrites can only be accessed after compilation.')
-            
+
         if isinstance(post, int):
             rank = post
         else:
@@ -314,7 +314,7 @@ class Projection(object):
             return Dendrite(self, rank, self.post_ranks.index(rank))
         else:
             Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.", exit=True)
-            
+
 
     def synapse(self, pre, post):
         """
@@ -608,10 +608,10 @@ class Projection(object):
         if not period is None and not offset is None:
             if offset >= period:
                 Global._error('enable_learning(): the offset must be smaller than the period.')
-                
+
         if period is None and not offset is None:
             Global._error('enable_learning(): if you define an offset, you have to define a period.')
-            
+
         try:
             self.cyInstance._set_update(True)
             self.cyInstance._set_plasticity(True)
@@ -670,7 +670,7 @@ class Projection(object):
         if not self.initialized:
             Global._error('save_connectivity(): the network has not been compiled yet.')
             return
-        
+
         data = {
                 'name': self.name,
                 'post_ranks': self.post_ranks,
@@ -921,16 +921,16 @@ class Projection(object):
             period = Global.config['dt']
         if not self.cyInstance:
             Global._error('Can not start pruning if the network is not compiled.')
-            
+
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.start_pruning(int(period/Global.config['dt']), Global.get_current_step())
             except :
                 Global._error("The synapse does not define a 'pruning' argument.")
-                
+
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
-            
+
 
     def stop_pruning(self):
         """
@@ -940,16 +940,16 @@ class Projection(object):
         """
         if not self.cyInstance:
             Global._error('Can not stop pruning if the network is not compiled.')
-            
+
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.stop_pruning()
             except:
                 Global._error("The synapse does not define a 'pruning' argument.")
-                
+
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
-            
+
 
     def start_creating(self, period=None):
         """
@@ -965,16 +965,16 @@ class Projection(object):
             period = Global.config['dt']
         if not self.cyInstance:
             Global._error('Can not start creating if the network is not compiled.')
-            
+
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.start_creating(int(period/Global.config['dt']), Global.get_current_step())
             except:
                 Global._error("The synapse does not define a 'creating' argument.")
-                
+
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
-            
+
 
     def stop_creating(self):
         """
@@ -984,13 +984,12 @@ class Projection(object):
         """
         if not self.cyInstance:
             Global._error('Can not stop creating if the network is not compiled.')
-            
+
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.stop_creating()
             except:
                 Global._error("The synapse does not define a 'creating' argument.")
-                
+
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
-            

@@ -7,18 +7,18 @@ from ANNarchy import *
 #setup(paradigm="cuda")
 
 # Input neuron just adds noise to the baseline
-InputNeuron = Neuron(   
+InputNeuron = Neuron(
     parameters="""
         baseline = 0.0
     """,
     equations="""
         r = pos(baseline + Uniform(-0.5, 0.5))
-    """ 
+    """
 )
 
 # Neural field neuron
 NeuralFieldNeuron = Neuron(
-    parameters=""" 
+    parameters="""
         tau = 10.0 : population
     """,
     equations="""
@@ -39,7 +39,7 @@ lat = Projection(pre=focus, post=focus, target='inh')
 lat.connect_dog(amp_pos=0.2, sigma_pos=0.1, amp_neg=0.1, sigma_neg=0.7)
 
 # Analyse and compile everything
-compile()   
+compile()
 
 # Import the environment for the simulation (Cython)
 import pyximport; pyximport.install()
@@ -50,6 +50,3 @@ world = World(population=inp, radius=0.5, sigma=2.0, period=5000.0, func=step)
 from Viz import loop_bubbles
 if __name__ == '__main__':
     loop_bubbles(populations = [inp, focus], func=world.rotate, update_rate=200)
-
-
-

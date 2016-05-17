@@ -186,7 +186,7 @@ class Population(object):
                 except Exception as e:
                     Global._print(e, self.neuron_type.description['refractory'])
                     Global._error('The initialization for the refractory period is not valid.')
-                    
+
             else: # a value
                 self.refractory = self.neuron_type.description['refractory']
 
@@ -535,7 +535,7 @@ class Population(object):
         # Check the rank
         if not rank < self.size:
             Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
-            
+
         try:
             coord = self._coord_from_rank( rank, self.geometry )
         except:
@@ -676,7 +676,7 @@ class Population(object):
         Global._warning("recording from a Population is deprecated, use a Monitor instead.")
         if not self._monitor:
             Global._error('get_record(): there is currently no recording.')
-            
+
         if variable:
             if not isinstance(variable, list):
                 variables = [variable]
