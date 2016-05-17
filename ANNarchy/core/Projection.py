@@ -231,8 +231,12 @@ class Projection(object):
 
             self.max_delay = int(delay.max/Global.config['dt'])
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
-            self.uniform_delay = -1
-            self.max_delay = int(max([max(l) for l in delay])/Global.config['dt'])
+            if len(delay) > 0:
+                self.uniform_delay = -1
+                self.max_delay = int(max([max(l) for l in delay])/Global.config['dt'])
+            else: # list is empty, no delay
+                self.max_delay = -1
+                self.uniform_delay = -1
         else:
             Global._error('Projection.connect_xxx(): delays are not valid!')
 
