@@ -257,12 +257,12 @@ def connect_with_func(self, method, **args):
     if synapses.uniform_delay != -1: # uniform delay
         d = synapses.max_delay * Global.config['dt']
     else:
-        d = Uniform(0., synapses.max_delay * Global.config['dt'])
+        d = Uniform(0., synapses.max_delay * Global.config['dt']) # Just to trick _store_connectivity(), the real delays are in the CSR
 
     self._store_connectivity(self._load_from_csr, (synapses, ), d)
 
     self.connector_name = "User-defined"
-    self.connector_description = "User-defined"
+    self.connector_description = "Created by the method " + method.__name__
 
     return self
 
