@@ -878,7 +878,7 @@ class Projection(object):
 
         Example::
 
-            proj.save('pop1.txt')
+            proj.save('proj1.txt')
 
         """
         from ANNarchy.core.IO import _save_data
@@ -897,7 +897,7 @@ class Projection(object):
 
         Example::
 
-            proj.load('pop1.txt')
+            proj.load('proj1.txt')
 
         """
         from ANNarchy.core.IO import _load_data, _load_proj_data

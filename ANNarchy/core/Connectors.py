@@ -1,9 +1,9 @@
 """
 
     Connectors.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 """
 import numpy as np
 import math
@@ -40,14 +40,14 @@ except Exception as e:
 
 ################################
 ## Connector methods
-################################   
+################################
 
 def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple_weights=False):
     """
     Builds a one-to-one connection pattern between the two populations.
-    
+
     *Parameters*:
-    
+
         * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
         * **shift**: specifies if the ranks of the presynaptic population should be shifted to match the start of the post-synaptic population ranks. Particularly useful for PopulationViews. Does not work yet for populations with geometry. Default: if the two populations have the same number of neurons, it is set to True. If not, it is set to False (only the ranks count).
@@ -73,9 +73,9 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
 def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
     """
     Builds an all-to-all connection pattern between the two populations.
-    
+
     *Parameters*:
-    
+
         * **weights**: synaptic values, either a single value or a random distribution object.
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
         * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
@@ -103,11 +103,11 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     """
     Builds a Gaussian connection pattern between the two populations.
 
-    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around
     the neuron with the same normalized coordinates using a Gaussian profile.
-    
+
     *Parameters*:
-    
+
         * **amp**: amplitude of the Gaussian function
         * **sigma**: width of the Gaussian function
         * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
@@ -130,11 +130,11 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     """
     Builds a Difference-Of-Gaussians connection pattern between the two populations.
 
-    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around 
+    Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around
     the neuron with the same normalized coordinates using a Difference-Of-Gaussians profile.
-    
+
     *Parameters*:
-    
+
         * **amp_pos**: amplitude of the positive Gaussian function
         * **sigma_pos**: width of the positive Gaussian function
         * **amp_neg**: amplitude of the negative Gaussian function
@@ -156,19 +156,19 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     return self
 
 def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
-    """ 
+    """
     Builds a probabilistic connection pattern between the two populations.
 
     Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with the given probability. Self-connections are avoided by default.
 
     *Parameters*:
-    
-        * **probability**: probability that a synapse is created.    
+
+        * **probability**: probability that a synapse is created.
         * **weights**: either a single value for all synapses or a RandomDistribution object.
         * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
         * **allow_self_connections** : defines if self-connections are allowed (default=False).
         * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-    """         
+    """
     if self.pre!=self.post:
         allow_self_connections = True
 
@@ -182,13 +182,13 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     return self
 
 def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
-    """ 
+    """
     Builds a connection pattern between the two populations with a fixed number of pre-synaptic neurons.
 
-    Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly. 
+    Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly.
 
     *Parameters*:
-    
+
         * **number**: number of synapses per postsynaptic neuron.
         * **weights**: either a single value for all synapses or a RandomDistribution object.
         * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
@@ -200,7 +200,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
 
     if number > self.pre.size:
         Global._error('connect_fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population.')
-    
+
     self.connector_name = "Random Convergent"
     self.connector_description = "Random Convergent %(number)s $\\rightarrow$ 1, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
 
@@ -210,7 +210,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections), delays)
 
     return self
-        
+
 def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
     """
     Builds a connection pattern between the two populations with a fixed number of post-synaptic neurons.
@@ -218,16 +218,16 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     Each neuron in the pre-synaptic population sends connections to a fixed number of neurons of the post-synaptic population chosen randomly.
 
     *Parameters*:
-    
-        * **number**: number of synapses per pre-synaptic neuron.        
-        * **weights**: either a single value for all synapses or a RandomDistribution object.        
-        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)        
+
+        * **number**: number of synapses per pre-synaptic neuron.
+        * **weights**: either a single value for all synapses or a RandomDistribution object.
+        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
         * **allow_self_connections** : defines if self-connections are allowed (default=False)
         * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
-    
+
     if number > self.pre.size:
         Global._error('connect_fixed_number_post: the number of post-synaptic neurons exceeds the size of the population.')
 
@@ -239,7 +239,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
 
     self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections), delays)
     return self
-            
+
 def connect_with_func(self, method, **args):
     """
     Builds a connection pattern based on a user-defined method.
@@ -247,14 +247,14 @@ def connect_with_func(self, method, **args):
     *Parameters*:
 
     * **method**: method to call. The method **must** return a CSR object.
-    * **args**: list of arguments needed by the function 
-    """ 
+    * **args**: list of arguments needed by the function
+    """
     # Invoke the method directly, we need the delays already....
     synapses = method(self.pre, self.post, **args)
     synapses.validate()
 
     # Treat delays
-    if synapses.uniform_delay != -1: # uniform delay    
+    if synapses.uniform_delay != -1: # uniform delay
         d = synapses.max_delay * Global.config['dt']
     else:
         d = Uniform(0., synapses.max_delay * Global.config['dt'])
@@ -280,7 +280,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
     *Parameters*:
 
     * **weights**: a matrix or list of lists representing the weights. If a value is None, the synapse will not be created.
-    * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0. 
+    * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0.
     * **pre_post**: states which index is first. By default, the first dimension is related to the post-synaptic population. If ``pre_post`` is True, the first dimension is the pre-synaptic population.
     """
 
@@ -342,10 +342,10 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
                 else:
                     rk_pre = j
                 r.append(rk_pre)
-                w.append(val) 
+                w.append(val)
                 if not uniform_delay:
-                    d.append(delays[i,j])   
-        if uniform_delay:        
+                    d.append(delays[i,j])
+        if uniform_delay:
             d.append(delays)
         if len(r) > 0:
             csr.add(rk_post, r, w, d)
@@ -402,7 +402,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
         post_ranks = self.post.ranks
     else:
         post_ranks = [i for i in range(self.post.size)]
-    
+
     # Process the sparse matrix and fill the csr
     weights.sort_indices()
     (pre, post) = weights.shape
@@ -412,7 +412,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
         Global._print('Expected:', (len(pre_ranks), len(post_ranks)))
         Global._print('Received:', (pre, post))
         Global._error('Quitting...')
-        
+
 
     for idx_post in range(post):
         idx_pre = weights.getcol(idx_post).indices
@@ -420,7 +420,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
         pr = [pre_ranks[i] for i in idx_pre]
         csr.add(post_ranks[idx_post], pr, w, [float(delays)])
 
-    return csr        
+    return csr
 
 def connect_from_file(self, filename):
     """
@@ -437,7 +437,7 @@ def connect_from_file(self, filename):
     # Create an empty CSR object
     csr = Connector.CSR()
 
-    # Load the data        
+    # Load the data
     from ANNarchy.core.IO import _load_data
     try:
         data = _load_data(filename)
@@ -467,6 +467,5 @@ def connect_from_file(self, filename):
     # Store the synapses
     self.connector_name = "From File"
     self.connector_description = "From File"
-    self._store_connectivity(self._load_from_csr, (csr,), csr.max_delay if csr.uniform_delay > -1 else csr.delay)
+    self._store_connectivity(self._load_from_csr, (csr,), csr.max_delay if csr.uniform_delay > 0 else csr.delay)
     return self
-    
