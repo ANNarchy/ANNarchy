@@ -129,20 +129,24 @@ def setup(**keyValueArgs):
 
     .. note::
 
-        This function should be used before any other functions of ANNarchy, right after ``from ANNarchy import *``::
+        This function should be used before any other functions of ANNarchy (including importing a network definition), right after ``from ANNarchy import *``::
 
             from ANNarchy import *
             setup(dt=1.0, method='midpoint', num_threads=2)
             ...
-    """
-    for key in keyValueArgs:
 
+    """
+    if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
+        _warning('setup(): populations or projections have already been defined. Changing a setup parameter now might lead to strange behaviors...')
+        _print('In particular, changing dt after a projection has been created might create problems with the synaptic delays (internally generated in steps, not ms).')
+
+    for key in keyValueArgs:
         if key in config.keys():
             config[key] = keyValueArgs[key]
         else:
-            _print('Unknown key:', key)
+            _warning('setup(): unknown key:', key)
 
-        if key == 'seed':
+        if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
 
 
