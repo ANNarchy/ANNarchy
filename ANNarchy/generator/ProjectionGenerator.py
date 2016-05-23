@@ -94,7 +94,7 @@ class ProjectionGenerator(object):
                 psp_prefix, psp_code = self.computesum_spiking(proj)
             else:
                 Global._error("Spiking networks are not supported on CUDA yet ...")
-                
+
 
         # Detect event-driven variables
         has_event_driven = False
@@ -433,7 +433,7 @@ class ProjectionGenerator(object):
             psp_code = proj._specific_template['psp_code']
             if self._prof_gen:
                 psp_code = self._prof_gen.annotate_computesum_rate_omp(proj, psp_code)
-           
+
             return psp_prefix, psp_code
 
         # Choose the relevant summation template
@@ -501,7 +501,7 @@ class ProjectionGenerator(object):
                     else:
                         Global._print(proj.synapse_type.description['psp']['eq'])
                         Global._error('The psp accesses a global variable with a non-uniform delay!')
-                        
+
 
             else: # Uniform delays
                 for var in delayed_variables:
@@ -673,7 +673,7 @@ class ProjectionGenerator(object):
         if proj.max_delay > 1:
             if proj.uniform_delay == -1:
                 Global._error("Only uniform delays are supported on GPUs.")
-                
+
             else:
                 call_code = call_code.replace("gpu_r", "gpu_delayed_r["+str(proj.max_delay-1)+"]")
 
@@ -728,7 +728,7 @@ class ProjectionGenerator(object):
                     g_target_code += """
             // Increase the post-synaptic conductance %(eq)s
             pop%(id_post)s.g_%(target)s[post_rank[i]] += %(g_target)s ;
-    """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': target, 'g_target': g_target, 'eq': eq['eq']}
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': target, 'g_target': g_target, 'eq': eq['eq']}
                     # Determine bounds
                     for key, val in eq['bounds'].items():
                         if not key in ['min', 'max']:
@@ -736,12 +736,12 @@ class ProjectionGenerator(object):
                         try:
                             value = str(float(val))
                         except: # TODO: more complex operations
-                            value = "%(name)s%(locality)s" % {'id_proj' : proj.id, 'name': val, 'locality': '[i]' if val in proj.synapse_type.description['global'] else '[i][j]'}
+                            value = val % {'id_proj' : proj.id, 'global_index' : '[i]', 'local_index' : '[i][j]'}
 
                         g_target_code += """
-    if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
-        pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
-    """ % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': target, 'op': "<" if key == 'min' else '>', 'val': value }
+            if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
+                pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
+""" % {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': target, 'op': "<" if key == 'min' else '>', 'val': value }
 
             else:
                 condition = ""
@@ -753,7 +753,7 @@ class ProjectionGenerator(object):
                     if condition == "":
                         condition = simultaneous
                     else:
-                        condition += "&&(" + simultaneous + ")" 
+                        condition += "&&(" + simultaneous + ")"
                 # Generate the code
                 if condition != "":
                     updated_variables_list += """
@@ -831,7 +831,7 @@ if(%(condition)s){
         if proj.max_delay > 1:
             if proj.uniform_delay == -1 : # Non-uniform delays
                 Global._error('Non-uniform delays are not yet possible for spiking networks.')
-                
+
             else: # Uniform delays
                 pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
         else:
@@ -1391,7 +1391,7 @@ if(_transmission && pop%(id_post)s._active){
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
                     Global._error('creating: you can not add a delay higher than the maximum of existing delays')
-                    
+
                 delay = ", " + str(d)
             else:
                 if d != proj.uniform_delay:
