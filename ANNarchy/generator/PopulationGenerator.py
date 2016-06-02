@@ -127,7 +127,7 @@ class PopulationGenerator(object):
                 body, header, update_call = self.update_rate_neuron_cuda(pop)
                 update_variables = ""
             else:
-                Global._error("Spiking neurons on GPUs are currently not supported")      
+                Global._error("Spiking neurons on GPUs are currently not supported")
 
         # Stop condition
         stop_condition = self.stop_condition(pop)
@@ -274,7 +274,7 @@ class PopulationGenerator(object):
             body, header, update_call = self.update_rate_neuron_cuda(pop)
         else:
             Global._error("Spiking neurons on GPUs are currently not supported")
-            
+
 
         code = base_template % { 'id': pop.id,
                                  'name': pop.name,
@@ -487,7 +487,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                         continue
             else:
                 Global._error("Synaptic delays for spiking neurons are not implemented yet with CUDA...")
-                
+
 
         # Initialization
         init_code = """
@@ -554,10 +554,11 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             _delayed_spike.pop_back();
 """
                 reset_code += """
+        _delayed_spike.clear();
         _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'delay': pop.max_delay}
             else:
                 Global._error("No synaptic delays for spiking synapses on CUDA implemented ...")
-                
+
 
         update_code = """
         if ( _active ) {
@@ -814,7 +815,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
         # Gather code
         spike_gather = """
             if(%(condition)s){ // Emit a spike
-%(reset)s        
+%(reset)s
                 %(omp_critical_code)s
                 {
                     spiked.push_back(i);
@@ -824,12 +825,12 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
                 %(mean_FR_push)s
             }
             %(mean_FR_update)s
-"""% {  'id': pop.id, 'name': pop.name, 'size': pop.size, 
-        'condition' : cond, 'reset': reset, 
+"""% {  'id': pop.id, 'name': pop.name, 'size': pop.size,
+        'condition' : cond, 'reset': reset,
         'refrac_inc': refrac_inc,
         'mean_FR_push': mean_FR_push,
         'mean_FR_update': mean_FR_update,
-        'omp_critical_code': omp_critical_code} 
+        'omp_critical_code': omp_critical_code}
 
         code += spike_gather
 
@@ -945,8 +946,8 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         # Retrieve the code
         condition = pop.neuron_type.description['stop_condition']['cpp']% {
-            'id': pop.id, 
-            'local_index': "[i]", 
+            'id': pop.id,
+            'local_index': "[i]",
             'global_index': ''}
 
         # Generate the function

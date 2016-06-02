@@ -192,9 +192,19 @@ class Population(object):
 
     def reset(self):
         """
-        Resets all parameters and variables to the value they had before the call to compile.
+        Resets all parameters and variables to the value they had before the call to compile().
         """
         self._init_attributes()
+
+    def clear(self):
+        """
+        Clears all spiking events previously emitted.
+
+        Can be useful if you do not want to totally reset a population (i.e. all variables), only to clear the spiking history between two trials.
+
+        Note: does nothing for rate-coded networks.
+        """
+        self.cyInstance.reset()
 
     def enable(self):
         """
