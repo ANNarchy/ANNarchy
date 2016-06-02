@@ -59,9 +59,9 @@ def extract_randomdist(description):
                     except: # A global parameter
                         if arguments[idx].strip() in description['global']:
                             if description['object'] == 'neuron':
-                                arg = arguments[idx].strip() 
+                                arg = arguments[idx].strip()
                             else:
-                                arg = arguments[idx].strip() 
+                                arg = arguments[idx].strip()
                         else:
                             _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
 
@@ -88,15 +88,15 @@ def extract_randomdist(description):
                 else: # Why not on a population-wide variable?
                     description['global'].append(desc['name'])
         variable['transformed_eq'] = eq
-        
+
     return random_objects
-    
+
 def extract_globalops_neuron(name, eq, description):
-    """ Replaces global operations (mean(r), etc)  with arbitrary names and 
+    """ Replaces global operations (mean(r), etc)  with arbitrary names and
     returns a dictionary of changes.
     """
-    untouched = {}    
-    globs = []  
+    untouched = {}
+    globs = []
     # Global ops
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     for op in glop_names:
@@ -105,25 +105,25 @@ def extract_globalops_neuron(name, eq, description):
             if var.strip() in description['local']:
                 globs.append({'function': op, 'variable': var.strip()})
                 oldname = op + '(' + var + ')'
-                newname = '_' + op + '_' + var.strip() 
+                newname = '_' + op + '_' + var.strip()
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = '_' + op + '_' + var.strip()
             else:
                 _print(eq)
                 _error('There is no local attribute '+var+'.')
-                
+
     return eq, untouched, globs
-    
+
 def extract_globalops_synapse(name, eq, desc):
-    """ 
-    Replaces global operations (mean(pre.r), etc)  with arbitrary names and 
+    """
+    Replaces global operations (mean(pre.r), etc)  with arbitrary names and
     returns a dictionary of changes.
     """
-    untouched = {}    
+    untouched = {}
     globs = {'pre' : [],
-             'post' : [] }   
+             'post' : [] }
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
-    
+
     for op in glop_names:
         pre_matches = re.findall('([^\w.])'+op+'\(\s*pre\.([\w]+)\s*\)', eq)
         post_matches = re.findall('([^\w.])'+op+'\(\s*post\.([\w]+)\s*\)', eq)
@@ -138,12 +138,12 @@ def extract_globalops_synapse(name, eq, desc):
             globs['post'].append({'function': op, 'variable': var.strip()})
             newname = '__post_' + op + '_' + var.strip()
             eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
-            untouched[newname] = '%(post_prefix)s_' + op + '_' + var 
+            untouched[newname] = '%(post_prefix)s_' + op + '_' + var
 
     return eq, untouched, globs
-    
+
 def extract_prepost(name, eq, description):
-    " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."  
+    " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."
 
     dependencies = {'pre': [], 'post': []}
 
@@ -159,7 +159,7 @@ def extract_prepost(name, eq, description):
                 if target == '':
                     _print(eq)
                     _error('pre.sum() requires one argument.')
-                    
+
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
                 untouched[rep] = '_sum_' +target+ '%(pre_index)s'
@@ -180,7 +180,7 @@ def extract_prepost(name, eq, description):
                 if target == '':
                     _print(eq)
                     _error('post.sum() requires one argument.')
-                    
+
                 dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target.strip()
                 untouched[rep] = '%(post_prefix)s_sum_' + target + '%(post_index)s'
@@ -193,14 +193,14 @@ def extract_prepost(name, eq, description):
             untouched['_post_'+var] = '%(post_prefix)s' + var +'%(post_index)s'
 
     return eq, untouched, dependencies
-                   
+
 
 def extract_parameters(description, extra_values={}):
     """ Extracts all variable information from a multiline description."""
     parameters = []
     # Split the multilines into individual lines
     parameter_list = prepare_string(description)
-    
+
     # Analyse all variables
     for definition in parameter_list:
         # Check if there are flags after the : symbol
@@ -209,8 +209,8 @@ def extract_parameters(description, extra_values={}):
         name = extract_name(equation)
         if name in ['_undefined', ""]:
             _error("Definition can not be analysed: " + equation)
-            
-            
+
+
         # Process constraint
         bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
 
@@ -220,8 +220,8 @@ def extract_parameters(description, extra_values={}):
                 locality = 'global'
                 break
         else:
-            locality = 'local' 
-            
+            locality = 'local'
+
         # Store the result
         desc = {'name': name,
                 'locality': locality,
@@ -231,9 +231,9 @@ def extract_parameters(description, extra_values={}):
                 'ctype' : ctype,
                 'init' : init,
                 }
-        parameters.append(desc)              
+        parameters.append(desc)
     return parameters
-    
+
 def extract_variables(description):
     """ Extracts all variable information from a multiline description."""
     variables = []
@@ -246,7 +246,10 @@ def extract_variables(description):
         constraint = definition['constraint']
         name = definition['name']
         if name == '_undefined':
-            Global._error('The variable', name, 'can not be analysed.')           
+            Global._error('The variable', name, 'can not be analysed.')
+
+        # Check the validity of the equation
+        check_equation(equation)
 
         # Process constraint
         bounds, flags, ctype, init = extract_boundsflags(constraint)
@@ -257,7 +260,7 @@ def extract_variables(description):
                 locality = 'global'
                 break
         else:
-            locality = 'local' 
+            locality = 'local'
 
         # Store the result
         desc = {'name': name,
@@ -267,8 +270,8 @@ def extract_variables(description):
                 'flags' : flags,
                 'ctype' : ctype,
                 'init' : init }
-        variables.append(desc)              
-    return variables        
+        variables.append(desc)
+    return variables
 
 def extract_boundsflags(constraint, equation ="", extra_values={}):
         # Process the flags if any
@@ -296,7 +299,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                 init = float(init)
         elif '=' in equation: # the value is in the equation
             init = equation.split('=')[1].strip()
-            
+
             if init in ['false', 'False']:
                 init = False
                 ctype = 'bool'
@@ -321,11 +324,11 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
             elif ctype == 'double':
                 init = 0.0
         return bounds, flags, ctype, init
-    
+
 def extract_functions(description, local_global=False):
     """ Extracts all functions from a multiline description."""
     if not description:
-        return [] 
+        return []
     # Split the multilines into individual lines
     function_list = process_equations(description)
     # Process each function
@@ -349,20 +352,22 @@ def extract_functions(description, local_global=False):
             arg_types = [arg.strip() for arg in types[1:]]
         if not len(arg_types) == len(arguments):
             _error('You must specify exactly the types of return value and arguments in ' + eq)
-            
+
         arg_line = ""
         for i in range(len(arguments)):
             arg_line += arg_types[i] + " " + arguments[i]
             if not i == len(arguments) -1:
                 arg_line += ', '
+
         # Process the content
-        eq2, condition = extract_ite('', content, None, split=False)
+        eq2, condition = extract_ite('', content, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, split=False)
         if condition == []:
             parser = FunctionParser(content, arguments)
             parsed_content = parser.parse()
         else:
             parser = FunctionParser(content, arguments)
-            parsed_content = parser.process_ITE(condition)
+            parsed_content = translate_ITE("", eq2, condition, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, {}, split=False)
+
         # Create the one-liner
         fdict = {'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}
         if not local_global: # local to a class
@@ -374,8 +379,8 @@ def extract_functions(description, local_global=False):
         fdict['cpp'] = oneliner
         functions.append(fdict)
     return functions
-    
-    
+
+
 def get_attributes(parameters, variables):
     """ Returns a list of all attributes names, plus the lists of local/global variables."""
     attributes = []; local_var = []; global_var = []
@@ -396,7 +401,7 @@ def extract_targets(variables):
             if t.strip() == '':
                 _print(var['eq'])
                 _error('sum() must have one argument.')
-                
+
             targets.append(t.strip())
         # Spiking neurons
         code = re.findall('([^\w.])g_([\w]+)', var['eq'])
@@ -411,20 +416,20 @@ def extract_spike_variable(description):
     if len(cond) > 1:
         _print(description['raw_spike'])
         _error('The spike condition must be a single expression')
-        
-    translator = Equation('raw_spike_cond', 
-                            cond[0].strip(), 
+
+    translator = Equation('raw_spike_cond',
+                            cond[0].strip(),
                             description)
     raw_spike_code = translator.parse()
-    
+
     reset_desc = []
     if 'raw_reset' in description.keys() and description['raw_reset']:
         reset_desc = process_equations(description['raw_reset'])
         for var in reset_desc:
-            translator = Equation(var['name'], var['eq'], 
+            translator = Equation(var['name'], var['eq'],
                                   description)
-            var['cpp'] = translator.parse() 
-    
+            var['cpp'] = translator.parse()
+
     return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
 
 def extract_pre_spike_variable(description):
@@ -445,17 +450,17 @@ def extract_pre_spike_variable(description):
         # Append the result of analysis
         pre_spike_var.append( { 'name': name, 'eq': eq ,
                                 'locality': 'local',
-                                'bounds': bounds, 
-                                'flags':flags, 'ctype' : ctype, 
+                                'bounds': bounds,
+                                'flags':flags, 'ctype' : ctype,
                                 'init' : init} )
 
-    return pre_spike_var 
+    return pre_spike_var
 
 def extract_post_spike_variable(description):
     post_spike_var = []
     if not description['raw_post_spike']:
         return post_spike_var
-    
+
     for var in process_equations(description['raw_post_spike']):
         # Get its name
         name = var['name']
@@ -471,7 +476,7 @@ def extract_post_spike_variable(description):
                                 'locality': 'local',
                                 'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
-    return post_spike_var  
+    return post_spike_var
 
 def extract_stop_condition(pop):
     eq = pop['stop_condition']['eq']
@@ -486,8 +491,8 @@ def extract_stop_condition(pop):
             if el.strip() == 'all':
                 pop['stop_condition']['type'] = 'all'
     # Convert the expression
-    translator = Equation('stop_cond', eq, 
-                          pop, 
+    translator = Equation('stop_cond', eq,
+                          pop,
                           type = 'cond')
     code = translator.parse()
     pop['stop_condition']['cpp'] = '(' + code + ')'
@@ -524,17 +529,17 @@ def extract_structural_plasticity(statement, description):
                 except: # A global parameter
                     _print(eq)
                     _error('Random distributions for creating/pruning synapses must use foxed values.')
-                    
+
                 processed_arguments += str(arg)
                 if idx != len(arguments)-1: # not the last one
                     processed_arguments += ', '
             definition = distributions_equivalents[dist] + '(' + processed_arguments + ')'
-            
+
             # Store its definition
             if rd:
                 _print(eq)
                 _error('Only one random distribution per equation is allowed.')
-                
+
 
             rd = {'name': 'rand_' + str(0) ,
                     'origin': dist+'('+v+')',
@@ -550,16 +555,16 @@ def extract_structural_plasticity(statement, description):
     eq, untouched, dependencies = extract_prepost('test', eq, description)
 
     # Parse code
-    translator = Equation('test', eq, 
-                          description, 
-                          method = 'cond', 
+    translator = Equation('test', eq,
+                          description,
+                          method = 'cond',
                           untouched = {})
 
     code = translator.parse()
 
     # Replace untouched variables with their original name
     for prev, new in untouched.items():
-        code = code.replace(prev, new) 
+        code = code.replace(prev, new)
 
     # Add new dependencies
     for dep in dependencies['pre']:
@@ -568,7 +573,7 @@ def extract_structural_plasticity(statement, description):
         description['dependencies']['post'].append(dep)
 
     return {'eq': eq, 'cpp': code, 'bounds': bounds, 'flags': flags, 'rd': rd}
-    
+
 
 def find_method(variable):
 
@@ -591,3 +596,10 @@ def find_method(variable):
         method= config['method']
 
     return method
+
+def check_equation(equation):
+    "Makes a formal check on the equation (matching parentheses, etc)"
+    # Matching parentheses
+    if equation.count('(') != equation.count(')'):
+        _print(equation)
+        _error('The number of parentheses does not match.')

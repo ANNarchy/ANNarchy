@@ -27,10 +27,6 @@ from ANNarchy.parser.Equation import transform_condition
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 
-
-# Predefined symbols which must not be declared by the user, but used in the equations
-_predefined = ['weight', 'w']
-
 class FunctionParser(object):
     '''
     Class to analyse one equation.
@@ -40,16 +36,16 @@ class FunctionParser(object):
         self.eq = eq
         self.local_dict = {
             'pos': Function('positive'),
-            'positive': Function('positive'), 
-            'neg': Function('negative'), 
-            'negative': Function('negative'), 
-            'clip': Function('clip'), 
-            'True': Symbol('true'), 
-            'False': Symbol('false'), 
+            'positive': Function('positive'),
+            'neg': Function('negative'),
+            'negative': Function('negative'),
+            'clip': Function('clip'),
+            'True': Symbol('true'),
+            'False': Symbol('false'),
         }
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)
-        
+
     def parse(self, part=None):
         if not part:
             part = self.eq
@@ -79,20 +75,3 @@ class FunctionParser(object):
             transformations = (standard_transformations + (convert_xor,))
         )
         return ccode(eq, precision=8)
-        
-    def process_ITE(self, condition):
-        if_statement = condition[0]
-        then_statement = condition[1]
-        else_statement = condition[2]
-        if_code = self.parse(if_statement)
-        if isinstance(then_statement, list): # nested conditional
-            then_code =  self.process_ITE(then_statement)
-        else:
-            then_code = self.parse(then_statement)
-        if isinstance(else_statement, list): # nested conditional
-            else_code =  self.process_ITE(else_statement)
-        else:
-            else_code = self.parse(else_statement)
-                          
-        code = '( ' + if_code + ' ? ' + then_code + ' : ' + else_code + ' )'
-        return code
