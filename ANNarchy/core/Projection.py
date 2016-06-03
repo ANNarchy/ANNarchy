@@ -253,21 +253,39 @@ class Projection(object):
         return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse_type.description['plasticity'] and Global.config['paradigm']=="openmp"
 
 
-    def reset(self, synapses=False):
+    def reset(self, attributes=-1, synapses=False):
         """
-        Resets all parameters and variables to the value they had before the call to compile.
+        Resets all parameters and variables of the projection to the value they had before the call to compile.
 
-        *Parameters*:
+        *Parameters:*
 
-        * **synapses**: if True, the connections will also be erased (default: False).
+        * **attributes**: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
 
         .. note::
 
-            Not implemented yet...
+            Only parameters and variables are reinitialized, not the connectivity structure (including the weights and delays).
+
+            The parameter ``synapses`` will be used in a future release to also reinitialize the connectivity structure.
+
         """
-        self._init_attributes()
-        if synapses:
-            Global._warning('Resetting synapses is not implemented yet...')
+        if attributes == -1:
+            attributes = self.attributes
+
+        for var in attributes:
+            # Skip w
+            if var=='w':
+                continue
+            # check it exists
+            if not var in self.attributes:
+                _warning("Projection.reset():", var, "is not an attribute of the population, won't reset.")
+                continue
+            # Set the value
+            try:
+                self.__setattr__(var, self.init[var])
+            except Exception as e:
+                _print(e)
+                _warning("Projection.reset(): something went wrong while resetting", var)
+        #Global._warning('Projection.reset(): only parameters and variables are reinitialized, not the connectivity structure (including the weights)...')
 
     ################################
     ## Dendrite access

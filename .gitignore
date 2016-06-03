@@ -7,6 +7,7 @@
 *.ipynb_checkpoints/
 examples/*/annarchy
 tests/*/annarchy
+tests/annarchy
 benchmarks/*/annarchy
 benchmarks/*/COBA
 build/
@@ -17,4 +18,3 @@ docs/_build
 ANNarchy/core/cython_ext/*.cpp
 ANNarchy/core/cython_ext/*.so
 publish
-.travis.yml

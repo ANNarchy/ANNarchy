@@ -17,15 +17,20 @@
     simulate(100 * 1000.)
 
 * Fixed installation with non-standard Python distribution (e.g. Anaconda).
-* Added a ``HomogeneousCorrelatedSpikeTrains`` class allowing to generate homegeneous correlated spike trains::
+* Added a ``HomogeneousCorrelatedSpikeTrains`` class allowing to generate homogeneous correlated spike trains::
 
     pop = HomogeneousCorrelatedSpikeTrains(geometry=200, rates=10., corr=0.3, tau=10.)
 
 * Installing through pip does not forget CUDA files anymore.
+* Added ``Population.clear()`` to clear all spiking events (also delayed) without resetting the network.
+* ``Population.reset()`` and ``Projection.reset()`` now accept a list of attributes to be reset, instead of resetting all of them.
+* Unit tests are now performed on Travis CI to get a badge.
+* Bug fixed: min/max bounds on g_target was wrongly analyzed when depending on a parameter.
+
 
 **4.5.4:**
 
-* Spiking neurons now define the variable ``t_last`` storing the time (in ms) of the last emitted spike. 
+* Spiking neurons now define the variable ``t_last`` storing the time (in ms) of the last emitted spike.
 * Added a method ``compute_firing_rate()`` that allows spiking neurons to compute their mean firing rate over a prefined window and store the result (in Hz) into the reserved variable ``r``.
 * Fixed bug when using "if a == b".
 * Pre- and post-synaptic occuring at the same time are now both evaluated. The flag ``unless_post`` can be set in ``pre_spike`` to disable the evaluation of the pre-spike in that case (default behavior for simple_stdp example).
@@ -44,9 +49,9 @@
     subpop = pop[neurons]
 
 * Synapses can be accessed directly at the Projection level with::
-    
+
     proj.synapse(pre, post) # equivalent to proj[post][pre]
-    
+
 * Bugfix: pop[0] now returns a PopulationView containing the neuron 0, not an IndividualNeuron (accessible through pop.neuron(0))
 * Various bugfixes in CUDA.
 * Bugfix: connect_from_sparse now works with popviews whose ranks are not linearly increasing (e.g. columns)

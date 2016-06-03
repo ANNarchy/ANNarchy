@@ -190,15 +190,34 @@ class Population(object):
             else: # a value
                 self.refractory = self.neuron_type.description['refractory']
 
-    def reset(self):
+    def reset(self, attributes=-1):
         """
-        Resets all parameters and variables to the value they had before the call to compile().
+        Resets all parameters and variables of the population to the value they had before the call to compile().
+
+        *Parameters:*
+
+        * **attributes**: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
         """
-        self._init_attributes()
+        if attributes == -1:
+            self.set(self.init)
+        else: # only some of them
+            for var in attributes:
+                # check it exists
+                if not var in self.attributes:
+                    _warning("Population.reset():", var, "is not an attribute of the population, won't reset.")
+                    continue
+                try:
+                    self.__setattr__(var, self.init[var])
+                except Exception as e:
+                    _print(e)
+                    _warning("Population.reset(): something went wrong while resetting", var)
+
+        self.cyInstance.activate(self._activated)
+        self.cyInstance.reset()
 
     def clear(self):
         """
-        Clears all spiking events previously emitted.
+        Clears all spiking events previously emitted (history of spikes, delayed spikes).
 
         Can be useful if you do not want to totally reset a population (i.e. all variables), only to clear the spiking history between two trials.
 
