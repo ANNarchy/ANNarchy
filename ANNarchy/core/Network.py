@@ -113,7 +113,7 @@ class Network(object):
                     post = post_pop
             except:
                 Global._error('Network.add(): The pre- or post-synaptic population of this projection are not in the network.')
-                
+
             target = obj.target
             synapse = obj.synapse_type
             # Create the projection
@@ -178,7 +178,7 @@ class Network(object):
         Compiler.compile(directory=directory, silent=silent, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
-        """   
+        """
         Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
 
             simulate(1000.0)
@@ -293,6 +293,22 @@ class Network(object):
         for proj in projections:
             proj.disable_learning()
 
+    def get_population(self, name):
+        """
+        Returns the population with the given *name*.
+
+        *Parameter*:
+
+        * **name**: name of the population
+
+        Returns:
+
+        * The requested ``Population`` object if existing, ``None`` otherwise.
+        """
+        for pop in self.populations:
+            if pop.name == name:
+                return pop
+        return None
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False):
     """

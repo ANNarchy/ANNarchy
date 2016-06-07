@@ -32,7 +32,7 @@ One can create three ``Network`` objects to implement the three conditions::
     net1.add([pop2, m])
     net1.compile()
 
-The network is created empty, and the population ``pop2`` as well as the attached monitor are added to it through the ``add()`` method. This method takes a list of objects (populations, projections and monitors). 
+The network is created empty, and the population ``pop2`` as well as the attached monitor are added to it through the ``add()`` method. This method takes a list of objects (populations, projections and monitors).
 
 The network has then to be compiled by calling the ``compile()`` method specifically on the network. The network can be simulated independently by calling ``simulate()`` or ``simulate_until()`` on the network.
 
@@ -66,7 +66,7 @@ One can then plot them separately and be not surprised by the fact that the firi
 
 .. note::
 
-    Networks only work on copies of the corresponding objects at the tme they are added to the network. It is no use to modify the ``rates`` parameter of ``pop1`` after the network are created.
+    Networks only work on copies of the corresponding objects at the time they are added to the network. It is no use to modify the ``rates`` parameter of ``pop1`` after the network are created.
 
     Similarly, it is useless to read variables from the original objects if only the networks are simulated: they would still have their original values.
 
@@ -84,6 +84,23 @@ One can then plot them separately and be not surprised by the fact that the firi
 
     On the contrary, connection methods having a random components (e.g. ``connect_fixed_probability()`` or using ``weights=Uniform(0.0, 1.0)``) will be redrawn for each network.
 
+.. warning::
+
+    Global simulation methods (:doc:`../API/ANNarchy`) should not be called directly, even with the ``net_id`` parameter. The ``Network`` class overrides them::
+
+        net.step()
+        net.simulate()
+        net.simulate_until()
+        net.reset()
+        net.get_time()
+        net.set_time(t)
+        net.get_current_step()
+        net.set_current_step(t)
+        net.set_seed(seed)
+        net.enable_learning()
+        net.disable_learning()
+        net.get_population(name)
+
 Parallel simulations
 =====================
 
@@ -97,7 +114,7 @@ One has to define a method for the simulation::
     def simulation(idx, net):
         net.simulate(1000.)
 
-The first argument to this method MUST be an integer corresponding to the index of a network, the second MUST be a network object. 
+The first argument to this method MUST be an integer corresponding to the index of a network, the second MUST be a network object.
 
 One can then call the ``parallel_run()`` method and pass it the method, as well as a list of networks to apply this network::
 
@@ -147,7 +164,7 @@ A more common use case manipulates a single network and iterates over the values
 The ``simulation()`` is called over three internally-created networks (with ``everything=True``). As ``idx = [0, 1, 2]``, the input rates of each network is ``[0, 10., 20.]``, so this method is functionally equivalent to the previous script, with the assumption that an input rate of 0.0 is the same as having no input at all.
 
 As before, the content of the ``simulation()`` method should only manipulate the network object, not the original objects (``pop1.rate = 10. * idx`` won't have any effect).
- 
+
 .. note::
 
-    You do not have access on the internally-created networks after the simulation (they are in a separate memory space). Return the data you want to analyse or write them to disk.
+    You do not have access on the internally-created networks after the simulation (they are in a separate memory space). Return the data you want to analyze or write them to disk.
