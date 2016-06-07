@@ -1,9 +1,9 @@
 """
 
     Record.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -32,14 +32,14 @@ class Monitor(object):
     """
     Monitoring class allowing to record easily variables from Population, PopulationView and Dendrite objects.
     """
-    
+
     def __init__(self, obj, variables=[], period=None, start=True, net_id=0):
-        """        
+        """
         *Parameters*:
-        
+
         * **obj**: object to monitor. Must be a Population, PopulationView or Dendrite object.
-        
-        * **variables**: single variable name or list of variable names to record (default: []).  
+
+        * **variables**: single variable name or list of variable names to record (default: []).
 
         * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
 
@@ -78,7 +78,7 @@ class Monitor(object):
             self._init_monitoring()
 
     # Extend the period attribute
-    @property 
+    @property
     def period(self):
         "Period of recording in ms"
         if not self.cyInstance:
@@ -95,7 +95,7 @@ class Monitor(object):
     def _add_variable(self, var):
         if not var in self.variables:
             self.variables.append(var)
-        self._recorded_variables[var] = {'start': [Global.get_current_step()], 'stop': [Global.get_current_step()]}
+        self._recorded_variables[var] = {'start': [Global.get_current_step(self.net_id)], 'stop': [Global.get_current_step(self.net_id)]}
 
     def _init_monitoring(self):
         "To be called after compile() as it accesses cython objects"
@@ -115,7 +115,7 @@ class Monitor(object):
 
         # Create the wrapper
         period = int(self._period/Global.config['dt'])
-        offset = Global.get_current_step() % period
+        offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, offset)
         Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
@@ -134,7 +134,7 @@ class Monitor(object):
 
         # Create the wrapper
         period = int(self._period/Global.config['dt'])
-        offset = Global.get_current_step() % period
+        offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], period, offset)
         Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
@@ -149,8 +149,8 @@ class Monitor(object):
         """Starts recording the variables. It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
 
         *Parameters*:
-        
-        * **variables**: single variable name or list of variable names to start recording (default: the ``variables`` argument passed to the constructor).  
+
+        * **variables**: single variable name or list of variable names to start recording (default: the ``variables`` argument passed to the constructor).
 
         * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
         """
@@ -167,7 +167,7 @@ class Monitor(object):
         if period:
             self._period = period
             self.cyInstance.period = int(self._period/Global.config['dt'])
-            self.cyInstance.offset = Global.get_current_step()
+            self.cyInstance.offset = Global.get_current_step(self.net_id)
 
         for var in variables:
             try:
@@ -193,7 +193,7 @@ class Monitor(object):
                 else:
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
-            self._recorded_variables[var]['start'].append(Global.get_current_step())
+            self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
 
     def pause(self):
         "Resumes the recordings."
@@ -208,7 +208,7 @@ class Monitor(object):
                 else:
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
-            self._recorded_variables[var]['stop'].append(Global.get_current_step())
+            self._recorded_variables[var]['stop'].append(Global.get_current_step(self.net_id))
 
     def stop(self):
         "Stops the recordings."
@@ -234,13 +234,13 @@ class Monitor(object):
         """
         Returns the recorded variables as a Numpy array (first dimension is time, second is neuron index).
 
-        If a single variable name is provided, the recorded values for this variable are directly returned. 
-        If a list is provided or the argument left empty, a dictionary with all recorded variables is returned. 
+        If a single variable name is provided, the recorded values for this variable are directly returned.
+        If a list is provided or the argument left empty, a dictionary with all recorded variables is returned.
 
         The ``spike`` variable of a population will be returned as a dictionary of lists, where the spike times (in steps) for each recorded neurons are returned.
 
         *Parameters*:
-        
+
         * **variables**: (list of) variables. By default, a dictionary with all variables is returned.
 
         * **keep**: defines if the content in memory for each variable should be kept (default: False).
@@ -272,12 +272,12 @@ class Monitor(object):
         for var in variables:
             data[var] = return_variable(self, var, keep)
             if not keep:
-                if self._recorded_variables[var]['stop'][-1] != Global.get_current_step():
+                if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
                     self._recorded_variables[var]['start'][-1] = self._recorded_variables[var]['stop'][-1]
-                    self._recorded_variables[var]['stop'][-1] = Global.get_current_step()
+                    self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
             else:
-                if self._recorded_variables[var]['stop'][-1] != Global.get_current_step():
-                    self._recorded_variables[var]['stop'][-1] = Global.get_current_step()
+                if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
+                    self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
 
         if not force_dict and len(variables)==1:
             return data[variables[0]]
@@ -285,8 +285,8 @@ class Monitor(object):
             return data
 
 
-    def _get_population(self, pop, name, keep):   
-        try: 
+    def _get_population(self, pop, name, keep):
+        try:
             data = getattr(self.cyInstance, name)
             if not keep:
                 getattr(self.cyInstance, 'clear_' + name)()
@@ -297,8 +297,8 @@ class Monitor(object):
         else:
             return data
 
-    def _get_dendrite(self, proj, name, keep):   
-        try: 
+    def _get_dendrite(self, proj, name, keep):
+        try:
             data = getattr(self.cyInstance, name)
             if not keep:
                 getattr(self.cyInstance, 'clear_' + name)()
@@ -310,7 +310,7 @@ class Monitor(object):
         """ Returns the start and stop times of the recorded variables.
 
         *Parameters*:
-        
+
         * **variables**: (list of) variables. By default, the times for all variables is returned.
         """
         import copy
@@ -319,7 +319,7 @@ class Monitor(object):
             if not isinstance(variables, list):
                 variables = [variables]
         else:
-            variables = self.variables       
+            variables = self.variables
         for var in variables:
             if not var in self.variables:
                 continue
@@ -332,9 +332,9 @@ class Monitor(object):
 
     def raster_plot(self, spikes=None):
         """ Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
-        
+
         *Parameters*:
-        
+
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
@@ -356,7 +356,7 @@ class Monitor(object):
         times = []; ranks=[]
         if not 'spike' in self.variables:
             Global._error('Monitor: spike was not recorded')
-            
+
         # Get data
         if not spikes:
             data = self.get('spike')
@@ -376,9 +376,9 @@ class Monitor(object):
 
     def histogram(self, spikes=None, bins=None):
         """ Returns a histogram for the recorded spikes in the population.
-        
+
         *Parameters*:
-        
+
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         * **bins**: the bin size in ms (default: dt).
@@ -401,7 +401,7 @@ class Monitor(object):
         """
         if not 'spike' in self.variables:
             Global._error('Monitor: spike was not recorded')
-            
+
         # Get data
         if not spikes:
             data = self.get('spike')
@@ -417,13 +417,13 @@ class Monitor(object):
         # Compute the duration of the recordings
         t_start = self._recorded_variables['spike']['start'][-1]
         duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
-        
+
         # Number of neurons
         nb_neurons = self.object.size
 
         # Number of bins
         nb_bins = int(duration*Global.config['dt']/bins)
-        
+
         # Initialize histogram
         histo = [0 for t in range(nb_bins)]
 
@@ -431,14 +431,14 @@ class Monitor(object):
         for neuron in range(nb_neurons):
             for t in data[neuron]:
                 histo[int((t-t_start)/float(bins/Global.config['dt']))] += 1
-    
+
         return np.array(histo)
 
-    def mean_fr(self, spikes=None, bins=None):
+    def mean_fr(self, spikes=None):
         """ Computes the mean firing rate in the population during the recordings.
-        
+
         *Parameters*:
-        
+
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
@@ -467,9 +467,10 @@ class Monitor(object):
             else:
                 data = spikes
 
+
         # Compute the duration of the recordings
         duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
-        
+
         # Number of neurons
         nb_neurons = self.object.size
 
@@ -477,7 +478,7 @@ class Monitor(object):
         fr = 0
         for neuron in range(nb_neurons):
             fr += len(data[neuron])
-    
+
         return fr/float(nb_neurons)/duration/Global.dt()*1000.0
 
 
@@ -486,9 +487,9 @@ class Monitor(object):
         """ Computes the smoothed firing rate of the recorded spiking neurons.
 
         The first axis is the neuron index, the second is time.
-        
+
         *Parameters*:
-        
+
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
@@ -513,20 +514,20 @@ class Monitor(object):
         import ANNarchy.core.cython_ext.Transformations as Transformations
         return Transformations.smoothed_rate(
             {
-                'data': data, 
-                'start': self._recorded_variables['spike']['start'][-1], 
+                'data': data,
+                'start': self._recorded_variables['spike']['start'][-1],
                 'stop': self._recorded_variables['spike']['stop'][-1]
-            }, 
+            },
             smooth
         )
 
     def population_rate(self, spikes=None, smooth=0.):
         """ Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
-        
+
         This method is faster than calling ``smoothed_rate`` and averaging.
 
         *Parameters*:
-        
+
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
@@ -551,9 +552,9 @@ class Monitor(object):
         import ANNarchy.core.cython_ext.Transformations as Transformations
         return Transformations.population_rate(
             {
-                'data': data, 
-                'start': self._recorded_variables['spike']['start'][-1], 
+                'data': data,
+                'start': self._recorded_variables['spike']['start'][-1],
                 'stop': self._recorded_variables['spike']['stop'][-1]
-            }, 
+            },
             smooth
         )
