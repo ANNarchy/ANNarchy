@@ -1,9 +1,9 @@
 """
 
     Compiler.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
 """
 import os, sys, imp
 import subprocess
@@ -41,18 +41,18 @@ from distutils.sysconfig import get_python_inc, get_python_lib
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
 extra_libs = []
- 
+
 def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
     """
     ANNarchy is provided as a python package. For compilation a local folder
     'annarchy' is created in the current working directory.
-    
+
     *Parameter*:
-    
+
     * annarchy_dir : subdirectory
     * *profile_enabled*: copy needed data for profile extension
     """
-        
+
     # Verbose
     if Global.config['verbose']:
         Global._print("Create subdirectory.")
@@ -61,14 +61,14 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
         shutil.rmtree(annarchy_dir, True)
 
     # Create the subdirectory
-    if not os.path.exists(annarchy_dir):    
+    if not os.path.exists(annarchy_dir):
         os.mkdir(annarchy_dir)
         os.mkdir(annarchy_dir+'/build')
 
-    # Subdirectory for building networks    
-    if not os.path.exists(annarchy_dir+'/build/net'+str(net_id)):  
+    # Subdirectory for building networks
+    if not os.path.exists(annarchy_dir+'/build/net'+str(net_id)):
         os.mkdir(annarchy_dir+'/build/net'+str(net_id))
-        
+
     # Create the generate subfolder
     shutil.rmtree(annarchy_dir+'/generate', True)
     os.mkdir(annarchy_dir+'/generate')
@@ -85,7 +85,7 @@ def setup_parser():
     class MyOptionParser(OptionParser):
         def error(self, msg):
             pass
-    
+
     parser = MyOptionParser ("usage: python %prog [options]")
 
     group = OptionGroup(parser, "general")
@@ -104,20 +104,20 @@ def setup_parser():
 
     return parser
 
-def compile(    directory='annarchy', 
-                clean=False, 
-                populations=None, 
+def compile(    directory='annarchy',
+                clean=False,
+                populations=None,
                 projections=None,
-                compiler="default", 
+                compiler="default",
                 compiler_flags="-march=native -O2",
-                cuda_config={'device': 0}, 
-                silent=False, 
-                debug_build=False, 
-                profile_enabled = False, 
+                cuda_config={'device': 0},
+                silent=False,
+                debug_build=False,
+                profile_enabled = False,
                 net_id=0 ):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
-    
+
     *Parameters*:
 
     * **directory**: name of the subdirectory where the code will be generated and compiled. Must be a relative path.
@@ -176,27 +176,27 @@ def compile(    directory='annarchy',
 
     # Manage the compilation subfolder
     _folder_management(annarchy_dir, profile_enabled, clean, net_id)
-    
+
     # Create a Compiler object
-    compiler = Compiler(    annarchy_dir=annarchy_dir, 
-                            clean=clean, 
-                            compiler=compiler, 
+    compiler = Compiler(    annarchy_dir=annarchy_dir,
+                            clean=clean,
+                            compiler=compiler,
                             compiler_flags=compiler_flags,
-                            silent=silent, 
-                            cuda_config=cuda_config,  
-                            debug_build=debug_build, 
-                            profile_enabled=profile_enabled, 
-                            populations=populations, 
-                            projections=projections, 
+                            silent=silent,
+                            cuda_config=cuda_config,
+                            debug_build=debug_build,
+                            profile_enabled=profile_enabled,
+                            populations=populations,
+                            projections=projections,
                             net_id=net_id  )
     compiler.generate()
-    
+
 class Compiler(object):
     " Main class to generate C++ code efficiently"
-      
-    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, silent, cuda_config, debug_build, profile_enabled, 
-                 populations, projections, net_id): 
-        
+
+    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, silent, cuda_config, debug_build, profile_enabled,
+                 populations, projections, net_id):
+
         # Store arguments
         self.annarchy_dir = annarchy_dir
         self.clean = clean
@@ -209,7 +209,7 @@ class Compiler(object):
         self.populations = populations
         self.projections = projections
         self.net_id = net_id
-        
+
     def generate(self):
         " Method to generate the C++ code."
 
@@ -224,22 +224,22 @@ class Compiler(object):
 
         # Copy the files if needed
         changed = self.copy_files()
-        
+
         # Perform compilation if something has changed
         if changed or not os.path.isfile(self.annarchy_dir+'/ANNarchyCore'+str(self.net_id)+'.so'):
             self.compilation()
-                
+
         Global._network[self.net_id]['compiled'] = True
-        
-        # Create the Python objects                
-        _instantiate(self.net_id)    
+
+        # Create the Python objects
+        _instantiate(self.net_id)
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
         changed = False
         if self.clean:
             for f in os.listdir(self.annarchy_dir+'/generate'):
-                if f == "Makefile": 
+                if f == "Makefile":
                     shutil.copy(self.annarchy_dir+'/generate/'+f, # src
                                 self.annarchy_dir+ '/' + f # dest
                     )
@@ -251,8 +251,8 @@ class Compiler(object):
         else: # only the ones which have changed
             import filecmp
             for f in os.listdir(self.annarchy_dir+'/generate'):
-                if f == "Makefile": 
-                    if  not f in os.listdir(self.annarchy_dir+'/') or not filecmp.cmp( self.annarchy_dir+'/generate/'+ f, 
+                if f == "Makefile":
+                    if  not f in os.listdir(self.annarchy_dir+'/') or not filecmp.cmp( self.annarchy_dir+'/generate/'+ f,
                                     self.annarchy_dir+ '/' + f):
                         shutil.copy(self.annarchy_dir+'/generate/'+f, # src
                                     self.annarchy_dir+ '/' +f # dest
@@ -261,7 +261,7 @@ class Compiler(object):
                     continue
 
                 if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
-                    not filecmp.cmp( self.annarchy_dir+'/generate/'+ f, 
+                    not filecmp.cmp( self.annarchy_dir+'/generate/'+ f,
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) :
                     shutil.copy(self.annarchy_dir+'/generate/'+f, # src
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +f # dest
@@ -366,7 +366,7 @@ class Compiler(object):
         libs = ""
         for l in extra_libs:
             libs += str(l) + ' '
-        
+
         # Python version
         py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
                                                'minor': sys.version_info[1] }
@@ -388,25 +388,32 @@ class Compiler(object):
             if test.wait()!=0:
                 major=""
 
-        python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-        python_lib = "`%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
+        # Test that it exists (virtualenv)
+        test = subprocess.Popen("%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null" % {'major': major, 'py_prefix': py_prefix}, shell=True)
+        if test.wait()!=0:
+            Global._warning("can not find python-config in the same directory as python, trying with the default path...")
+            python_include = "`python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
+            python_lib = "`python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
+        else:
+            python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
+            python_lib = "`%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
 
         # Gather all Makefile flags
-        makefile_flags = { 
+        makefile_flags = {
             'compiler': self.compiler,
-            'cpu_flags': cpu_flags, 
+            'cpu_flags': cpu_flags,
             'cuda_gen': cuda_gen,
-            'gpu_flags': gpu_flags, 
+            'gpu_flags': gpu_flags,
             'openmp': omp_flag,
-            'libs': libs, 
-            'py_version': py_version, 
-            'py_major': py_major, 
-            'python_include': python_include, 
+            'libs': libs,
+            'py_version': py_version,
+            'py_major': py_major,
+            'python_include': python_include,
             'python_lib': python_lib,
-            'numpy_include': numpy_include, 
+            'numpy_include': numpy_include,
             'net_id': self.net_id
         }
 
@@ -422,7 +429,7 @@ class Compiler(object):
 
         else: # Windows: to test....
             Global._warning("Compilation on windows is not supported yet.")
-            
+
 
         # Write the Makefile to the disk
         with open(self.annarchy_dir + '/generate/Makefile', 'w') as wfile:
@@ -447,7 +454,7 @@ class Compiler(object):
                     Global._print(pop.neuron_type.parameters)
                     Global._print(pop.neuron_type.equations)
                     Global._error(term + ' is a reserved variable name')
-                    
+
 
         # Check projections
         for proj in self.projections:
@@ -457,11 +464,11 @@ class Compiler(object):
                     Global._print(proj.synapse_type.parameters)
                     Global._print(proj.synapse_type.equations)
                     Global._error(term + ' is a reserved variable name')
-                    
+
             # Check the connector method has been called
             if not proj._connection_method:
                 Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected. Call a connector method before compiling the network.')
-                
+
 
             # Check existing pre variables
             for dep in  proj.synapse_type.description['dependencies']['pre']:
@@ -469,24 +476,24 @@ class Compiler(object):
                     target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.pre.targets:
                         Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
-                    continue 
+                    continue
 
                 if not dep in proj.pre.attributes:
                     Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
-                    
+
             for dep in  proj.synapse_type.description['dependencies']['post']:
                 if dep.startswith('sum('):
                     target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                     if not target in proj.post.targets:
                         Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
-                    continue 
+                    continue
 
                 if not dep in proj.post.attributes:
                     Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
 
 
 def _instantiate(net_id, import_id=-1):
-    """ After every is compiled, actually create the Cython objects and 
+    """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
 
     if import_id < 0:
@@ -501,7 +508,7 @@ def _instantiate(net_id, import_id=-1):
     except Exception as e:
         Global._print(e)
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
-        
+
     Global._network[net_id]['instance'] = cython_module
 
     # Bind the py extensions to the corresponding python objects
@@ -510,23 +517,23 @@ def _instantiate(net_id, import_id=-1):
             Global._print('Creating population', pop.name)
         if Global.config['show_time']:
             t0 = time.time()
-        
+
         # Instantiate the population
         pop._instantiate(cython_module)
 
         if Global.config['show_time']:
-            Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds') 
-                        
+            Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
+
     # Instantiate projections
     for proj in Global._network[net_id]['projections']:
         if Global.config['verbose']:
-            Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')        
+            Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
         if Global.config['show_time']:
             t0 = time.time()
-        
+
         # Create the projection
         proj._instantiate(cython_module)
-        
+
         if Global.config['show_time']:
             Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
@@ -541,7 +548,7 @@ def _instantiate(net_id, import_id=-1):
         pop._init_attributes()
     for proj in Global._network[net_id]['projections']:
         if Global.config['verbose']:
-            Global._print('Initializing projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')  
+            Global._print('Initializing projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
         proj._init_attributes()
 
     # Sets the desired number of threads

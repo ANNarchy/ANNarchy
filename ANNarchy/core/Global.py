@@ -485,6 +485,7 @@ def _warning(*var_text):
     if not config['suppress_warnings']:
         print(text)
 
+import traceback, sys
 def _error(*var_text, **args):
     """
     Prints an error message to standard out and exits.
@@ -496,6 +497,7 @@ def _error(*var_text, **args):
         text += str(var) + ' '
 
     print(text)
+    traceback.print_stack(file=sys.stdout)
 
     if 'exit' in args.keys():
         if args['exit']:
