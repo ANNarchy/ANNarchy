@@ -29,8 +29,9 @@ import re
 
 class ProjectionGenerator(object):
 
-    def __init__(self, profile_generator):
+    def __init__(self, profile_generator, net_id):
         self._prof_gen = profile_generator
+        self._net_id = net_id
 
 #######################################################################
 ############## HEADER #################################################
@@ -168,7 +169,7 @@ class ProjectionGenerator(object):
         }
 
         # Store file
-        with open(annarchy_dir+'/generate/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+        with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/proj'+str(proj.id)+'.hpp', 'w') as ofile:
             ofile.write(final_code)
 
         #

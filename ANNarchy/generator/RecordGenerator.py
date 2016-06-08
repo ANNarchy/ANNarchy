@@ -1,9 +1,9 @@
 """
 
     RecordGenerator.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -48,7 +48,7 @@ class RecordGenerator:
         self._populations = populations
         self._projections = projections
         self._net_id = net_id
-        
+
     def generate(self):
         """
         Generate one file "Recorder.h" comprising of Monitor base class and inherited
@@ -64,11 +64,11 @@ class RecordGenerator:
 
         for proj in self._projections:
             record_class += self._proj_recorder_class(proj)
-        
+
         code = RecTemplate.record_base_class % {'record_classes': record_class}
-        
+
         # Generate header code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/Recorder.h', 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/Recorder.h', 'w') as ofile:
             ofile.write(code)
 
     def _pop_recorder_class(self, pop):

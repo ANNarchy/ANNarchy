@@ -26,6 +26,7 @@
 * ``Population.reset()`` and ``Projection.reset()`` now accept a list of attributes to be reset, instead of resetting all of them.
 * Unit tests are now performed on Travis CI to get a badge.
 * Bug fixed: min/max bounds on g_target was wrongly analyzed when depending on a parameter.
+* ``parallel_run()`` now accepts additional arbitrary arguments that can be passed to the simulation callback. 
 
 
 **4.5.4:**

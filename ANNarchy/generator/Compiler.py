@@ -64,14 +64,15 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
     if not os.path.exists(annarchy_dir):
         os.mkdir(annarchy_dir)
         os.mkdir(annarchy_dir+'/build')
+        os.mkdir(annarchy_dir+'/generate')
 
     # Subdirectory for building networks
     if not os.path.exists(annarchy_dir+'/build/net'+str(net_id)):
         os.mkdir(annarchy_dir+'/build/net'+str(net_id))
 
     # Create the generate subfolder
-    shutil.rmtree(annarchy_dir+'/generate', True)
-    os.mkdir(annarchy_dir+'/generate')
+    if not os.path.exists(annarchy_dir+'/generate/net'+str(net_id)):
+        os.mkdir(annarchy_dir+'/generate/net'+str(net_id))
 
     # Save current ANNarchy version
     with open(annarchy_dir+'/release', 'w') as f:
@@ -238,48 +239,50 @@ class Compiler(object):
         " Copy the generated files in the build/ folder if needed."
         changed = False
         if self.clean:
-            for f in os.listdir(self.annarchy_dir+'/generate'):
-                if f == "Makefile":
-                    shutil.copy(self.annarchy_dir+'/generate/'+f, # src
-                                self.annarchy_dir+ '/' + f # dest
-                    )
-                else:
-                    shutil.copy(self.annarchy_dir+'/generate/'+f, # src
+            for f in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+                # if f == "Makefile":
+                #     shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, # src
+                #                 self.annarchy_dir+ '/' + f # dest
+                #     )
+                # else:
+                shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, # src
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f # dest
                     )
             changed = True
         else: # only the ones which have changed
             import filecmp
-            for f in os.listdir(self.annarchy_dir+'/generate'):
-                if f == "Makefile":
-                    if  not f in os.listdir(self.annarchy_dir+'/') or not filecmp.cmp( self.annarchy_dir+'/generate/'+ f,
-                                    self.annarchy_dir+ '/' + f):
-                        shutil.copy(self.annarchy_dir+'/generate/'+f, # src
-                                    self.annarchy_dir+ '/' +f # dest
-                                    )
-                        changed = True
-                    continue
+            for f in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+                # if f == "Makefile":
+                #     if not f in os.listdir(self.annarchy_dir+'/') or not filecmp.cmp( self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + f,
+                #                     self.annarchy_dir+ '/' + f):
+                #         shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, # src
+                #                     self.annarchy_dir+ '/' + f # dest
+                #                     )
+                #         changed = True
+                #     continue
 
                 if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
-                    not filecmp.cmp( self.annarchy_dir+'/generate/'+ f,
+                    not filecmp.cmp( self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + f,
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) :
-                    shutil.copy(self.annarchy_dir+'/generate/'+f, # src
+                    shutil.copy(self.annarchy_dir+'/generate//net'+ str(self.net_id) + '/' + f, # src
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +f # dest
                     )
                     changed = True
+
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for f in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
+                if f == 'Makefile':
+                    continue
                 basename, extension = f.split('.')
                 if not extension in ['h', 'hpp', 'cpp', 'cu']: # ex: .o
                     continue
-                if not os.path.isfile(self.annarchy_dir+'/generate/' + f):
+                if not os.path.isfile(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f):
                     if f.startswith('ANNarchyCore'):
                         continue
                     os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f)
                     if os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o'):
                         os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o')
                     changed = True
-
         return changed
 
     def compilation(self):
@@ -295,7 +298,7 @@ class Compiler(object):
                 t0 = time.time()
 
         # Switch to the build directory
-        os.chdir(self.annarchy_dir)
+        os.chdir(self.annarchy_dir + '/build/net'+ str(self.net_id))
 
         # Start the compilation
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not Global.config["verbose"] else ""
@@ -303,6 +306,7 @@ class Compiler(object):
         # Start the compilation process
         make_process = subprocess.Popen("make all -j4" + verbose, shell=True)
 
+        # Check for errors
         if make_process.wait() != 0:
             with open('compile_stderr.log', 'r') as rfile:
                 msg = rfile.read()
@@ -314,7 +318,7 @@ class Compiler(object):
             Global._error('Compilation failed.')
 
         # Return to the current directory
-        os.chdir('..')
+        os.chdir('../../..')
 
         if not self.silent:
             Global._print('OK')
@@ -432,7 +436,7 @@ class Compiler(object):
 
 
         # Write the Makefile to the disk
-        with open(self.annarchy_dir + '/generate/Makefile', 'w') as wfile:
+        with open(self.annarchy_dir + '/generate/net'+ str(self.net_id) + '/Makefile', 'w') as wfile:
             wfile.write(makefile_template % makefile_flags)
 
 

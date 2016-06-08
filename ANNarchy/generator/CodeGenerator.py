@@ -1,8 +1,8 @@
 """
     CodeGenerator.py
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -59,13 +59,13 @@ class CodeGenerator(object):
 
         if Global.config['profiling']:
             from .ProfileGenerator import ProfileGenerator
-            self._profgen = ProfileGenerator(self._annarchy_dir)
+            self._profgen = ProfileGenerator(self._annarchy_dir, net_id)
             self._profgen.generate()
         else:
             self._profgen = None
 
-        self._popgen = PopulationGenerator(self._profgen)
-        self._projgen = ProjectionGenerator(self._profgen)
+        self._popgen = PopulationGenerator(self._profgen, net_id)
+        self._projgen = ProjectionGenerator(self._profgen, net_id)
 
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
         self._recordgen = RecordGenerator(annarchy_dir, populations, projections, net_id)
@@ -109,7 +109,7 @@ class CodeGenerator(object):
             self._proj_desc.append(self._projgen.header_struct(proj, self._annarchy_dir))
 
         # Generate header code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/ANNarchy.h', 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
         # Generate monitor code for the analysed pops and projs
@@ -117,16 +117,16 @@ class CodeGenerator(object):
 
         # Generate cpp code for the analysed pops and projs
         postfix = ".cpp" if Global.config['paradigm']=="openmp" else ".cu"
-        with open(self._annarchy_dir+'/generate/ANNarchy'+postfix, 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy'+postfix, 'w') as ofile:
             ofile.write(self.generate_body())
 
         # Generate cython code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
             ofile.write(self._pyxgen.generate())
 
     def _propagate_global_ops(self):
         """
-        
+
         """
         # Analyse the populations
         for pop in self._populations:
@@ -210,7 +210,7 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr
             }
-            
+
     def header_custom_functions(self):
 
         if len(Global._objects['functions']) == 0:
@@ -294,7 +294,7 @@ class CodeGenerator(object):
             prof_dict = self._profgen.generate_body_dict()
         else:
             from .ProfileGenerator import ProfileGenerator
-            prof_dict = ProfileGenerator(self._annarchy_dir).generate_body_dict(True)
+            prof_dict = ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict(True)
 
         #
         # Generate the ANNarchy.cpp code, the corrsponding template differs greatly
@@ -338,7 +338,7 @@ class CodeGenerator(object):
             # between the structures of objects, I implemented the following workaround:
             #
             # We create the c-structs holding data fields and accessors as in OpenMP. We also
-            # create the kernels, call entity in the corresponding generator objects, and 
+            # create the kernels, call entity in the corresponding generator objects, and
             # return the codes via the descriptor dictionary.
             #
             # This ensures a consistent interface in the generators and also in the generated
@@ -401,22 +401,22 @@ class CodeGenerator(object):
                 'initialize' : self._body_initialize(),
                 'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
-                
+
                 # cuda host specific
                 'stream_setup': stream_setup,
                 'host_device_transfer': host_device_transfer,
                 'device_host_transfer': device_host_transfer,
                 'kernel_def': kernel_def,
-                
+
                 #device stuff
                 'kernel_config': threads_per_kernel,
                 'pop_kernel': pop_kernel, #update_neuron_body,
                 'psp_kernel': psp_kernel,
                 'syn_kernel': syn_kernel, #update_synapse_body,
                 'glob_ops_kernel': glob_ops_body,
-                'custom_func': "", #custom_func            
+                'custom_func': "", #custom_func
             }
-        
+
 
     def _body_initialize(self):
         """
@@ -550,9 +550,9 @@ class CodeGenerator(object):
         execution. Please note, that these parameter must be modified
         through Global.cuda_config dictionary, otherwise default values (no
         stream, 192 threads for psp, 32 threads for neurons) are used.
-        
+
         Notice:
-        
+
             Only related to the CUDA implementation
         """
         cu_config = Global.cuda_config

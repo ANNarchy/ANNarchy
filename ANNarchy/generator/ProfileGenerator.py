@@ -28,18 +28,19 @@ class ProfileGenerator(object):
     """
     Extent the generated code by profiling annotations.
     """
-    def __init__(self, annarchy_dir):
+    def __init__(self, annarchy_dir, net_id):
         """
         Initialize ProfileGenerator.
         """
         self.annarchy_dir = annarchy_dir
+        self._net_id = net_id
 
     def generate(self):
         """
         Generate Profiling class code, called from Generator instance.
         """
         # Generate header for profiling
-        with open(self.annarchy_dir+'/generate/Profiling.h', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/net'+str(self._net_id)+'/Profiling.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
     def generate_body_dict(self, empty=False):

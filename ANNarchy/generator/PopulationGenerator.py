@@ -28,11 +28,12 @@ from .Template.GlobalOperationTemplate import global_operation_templates_extern 
 
 class PopulationGenerator(object):
 
-    def __init__(self, profile_generator):
+    def __init__(self, profile_generator, net_id):
         """
         Initialize PopulationGenerator.
         """
         self._prof_gen = profile_generator
+        self._net_id = net_id
 
 #######################################################################
 ############## HEADER #################################################
@@ -217,7 +218,7 @@ class PopulationGenerator(object):
                                 }
 
         # Store the complete header definition in a single file
-        with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
+        with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/pop'+str(pop.id)+'.hpp', 'w') as ofile:
             ofile.write(code)
 
         # Generate the calls to be made in the main ANNarchy.cpp
@@ -302,7 +303,7 @@ class PopulationGenerator(object):
                                 }
 
         # Store the complete header definition in a single file
-        with open(annarchy_dir+'/generate/pop'+str(pop.id)+'.hpp', 'w') as ofile:
+        with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/pop'+str(pop.id)+'.hpp', 'w') as ofile:
             ofile.write(code)
 
         pop_desc['update'] = update_call
