@@ -1,5 +1,5 @@
 ***********************************
-Networks
+Networks (in parallel)
 ***********************************
 
 A typical ANNarchy script represents a single network of populations and projections. Most of the work in computational neuroscience consists in running the same network again and again, varying some free parameters each time, until the fit to the data is publishable.  The ``reset()`` allows to return the network to its state before compilation, but this is particularly tedious to implement.
@@ -114,7 +114,7 @@ One has to define a method for the simulation::
     def simulation(idx, net):
         net.simulate(1000.)
 
-The first argument to this method MUST be an integer corresponding to the index of a network, the second MUST be a network object.
+The first argument to this method MUST be an integer corresponding to the index of a network, the second MUST be a network object. Other arguments are allowed (see below)
 
 One can then call the ``parallel_run()`` method and pass it the method, as well as a list of networks to apply this network::
 
@@ -168,3 +168,34 @@ As before, the content of the ``simulation()`` method should only manipulate the
 .. note::
 
     You do not have access on the internally-created networks after the simulation (they are in a separate memory space). Return the data you want to analyze or write them to disk.
+
+Passing additional arguments
+-----------------------------
+
+The two first obligatory arguments of the simulation callback are ``idx``, the index of the network in the simulation, and ``net``, the network object. You can of course use other names, but these two arguments will be passed.
+
+``idx`` can be used for example to access arrays of parameter values::
+
+    rates = [0.0, 0.1, 0.2, 0.3, 0.4]
+    def simulation(idx, net):
+        net.get(pop1).rates = rates[idx]
+        ...
+
+    results = parallel_run(method=simulation, number=len(rates))
+
+Another option is to provide additional arguments to the ``simulation`` callback during the ``parallel_run()`` call::
+
+    def simulation(idx, net, rates):
+        net.get(pop1).rates = rates
+        ...
+
+    rates = [0.0, 0.1, 0.2, 0.3, 0.4]
+    results = parallel_run(method=simulation, number=len(rates), rates=rates)
+
+These additional arguments must be lists of the same size as the number of networks (``number`` or ``len(networks)``). You can use as many additional arguments as you want::
+
+    def simulation(idx, net, a, b, c, d):
+        ...
+    results = parallel_run(method=simulation, number=10, a=..., b=..., c=..., d=...)
+
+In ``parallel_run()``, the arguments can be passed in any order, but they must be named (e.g. ``, a=list(range(0)),``, not ``, list(range(10)),``).
