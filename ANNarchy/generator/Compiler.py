@@ -240,30 +240,20 @@ class Compiler(object):
         changed = False
         if self.clean:
             for f in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
-                # if f == "Makefile":
-                #     shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, # src
-                #                 self.annarchy_dir+ '/' + f # dest
-                #     )
-                # else:
+
                 shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, # src
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f # dest
                     )
             changed = True
+
         else: # only the ones which have changed
             import filecmp
             for f in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
-                # if f == "Makefile":
-                #     if not f in os.listdir(self.annarchy_dir+'/') or not filecmp.cmp( self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + f,
-                #                     self.annarchy_dir+ '/' + f):
-                #         shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, # src
-                #                     self.annarchy_dir+ '/' + f # dest
-                #                     )
-                #         changed = True
-                #     continue
 
                 if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
                     not filecmp.cmp( self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + f,
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) :
+
                     shutil.copy(self.annarchy_dir+'/generate//net'+ str(self.net_id) + '/' + f, # src
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +f # dest
                     )
@@ -283,6 +273,7 @@ class Compiler(object):
                     if os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o'):
                         os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o')
                     changed = True
+
         return changed
 
     def compilation(self):
