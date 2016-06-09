@@ -826,6 +826,9 @@ class Projection(object):
 
         desc = {}
         desc['name'] = self.name
+        desc['pre'] = self.pre.name
+        desc['post'] = self.post.name
+        desc['target'] = self.target
         desc['post_ranks'] = self.post_ranks
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
