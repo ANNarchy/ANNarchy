@@ -23,6 +23,7 @@
 """
 import sys, os
 import time
+import traceback
 import numpy as np
 
 # High-level structures
@@ -485,7 +486,6 @@ def _warning(*var_text):
     if not config['suppress_warnings']:
         print(text)
 
-import traceback, sys
 def _error(*var_text, **args):
     """
     Prints an error message to standard out and exits.
@@ -497,7 +497,11 @@ def _error(*var_text, **args):
         text += str(var) + ' '
 
     print(text)
-    traceback.print_stack(file=sys.stdout)
+
+    tb = traceback.format_stack()
+    for line in tb:
+        if not '/ANNarchy/core/' in line:
+            print(line)
 
     if 'exit' in args.keys():
         if args['exit']:

@@ -3,10 +3,10 @@ Parser
 **************************
 
 A Neuron or Synapse type is primarily defined by two sets of values which must be specified in its constructor:
-    
+
 * **Parameters** are values such as time constants which are constant during the simulation. They can be the same throughout the population/projection, or take different values.
 
-* **Variables** are neuronal variables (for example the membrane potential or firing rate) or synaptic variables (the synaptic efficiency) whose value evolve with time during the simulation. The equation (whether it is an ordinary differential equation or not) ruling their evolution can be described using a specific meta-language.  
+* **Variables** are neuronal variables (for example the membrane potential or firing rate) or synaptic variables (the synaptic efficiency) whose value evolve with time during the simulation. The equation (whether it is an ordinary differential equation or not) ruling their evolution can be described using a specific meta-language.
 
 
 Parameters
@@ -23,7 +23,7 @@ Parameters are defined by a multi-string consisting of one or more parameter def
 
 Each parameter should be defined on a single line, with its name on the left side of the equal sign, and its value on the right side. The given value corresponds to the  initial value of the parameter (but it can be changed at any further point of the simulation).
 
-As a neuron/synapse type is likely to be reused in different populations/projections, it is good practice to set reasonable initial values in the neuron/synapse type, and eventually adapt them to the corresponding populations/projections later on. 
+As a neuron/synapse type is likely to be reused in different populations/projections, it is good practice to set reasonable initial values in the neuron/synapse type, and eventually adapt them to the corresponding populations/projections later on.
 
 
 Constraints
@@ -39,11 +39,11 @@ By default, a neural parameter will be unique to each neuron (i.e. each neuron i
         tau = 10.0
         eta = 0.5 : population
     """
-    
+
 In this case, there will be only only one instance of the ``eta`` parameter for the whole population. ``eta`` is called a **global** parameter, in opposition to **local** parameters which are the default.
 
-The same is true for synapses, whose parameters are unique to each synapse in a given projection. If the ``post-synaptic`` flag is passed, the parameter will be common to all synapses of a post-synaptic neuron. 
-    
+The same is true for synapses, whose parameters are unique to each synapse in a given projection. If the ``post-synaptic`` flag is passed, the parameter will be common to all synapses of a post-synaptic neuron.
+
 **Type of the variable**
 
 Parameters have floating-point precision by default. If you want to force the parameter to be an integer or boolean, you can also pass the ``int`` and ``bool`` flags, separated by commas:
@@ -54,7 +54,7 @@ Parameters have floating-point precision by default. If you want to force the pa
         tau = 10.0
         eta = 1 : population, int
     """
-    
+
 Variables
 --------------------
 
@@ -78,7 +78,7 @@ The declaration of a single variable can extend on multiple lines:
 
     equations = """
         noise = Uniform(0.0, 0.2)
-        tau * dmp/dt  = baseline - mp 
+        tau * dmp/dt  = baseline - mp
                         + sum(exc) + noise : max = 1.0
         rate = pos(mp)
     """
@@ -94,7 +94,7 @@ As it is only a parser and not a solver, some limitations exist:
 
     tau * dmp/dt  = baseline - mp
 
-    tau * dmp/dt  + mp = baseline 
+    tau * dmp/dt  + mp = baseline
 
     tau * dmp/dt  + mp -  baseline = 0
 
@@ -108,7 +108,7 @@ ____________
 
 **Locality and type**
 
-Like the parameters, variables also accept the ``population`` and ``post-synaptic`` to define the local/global character of the variable, as well as the ``int`` or ``bool`` flags for their type. 
+Like the parameters, variables also accept the ``population`` and ``post-synaptic`` to define the local/global character of the variable, as well as the ``int`` or ``bool`` flags for their type.
 
 **Initial value**
 
@@ -117,7 +117,7 @@ The initial value of the variable (before the first simulation starts) can also 
 
 .. code-block:: python
 
-    equations = """    
+    equations = """
         tau * dmp/dt + mp = baseline : init = 0.2
     """
 
@@ -129,7 +129,7 @@ Upper- and lower-bounds can be set using the ``min`` and ``max`` keywords:
 
 .. code-block:: python
 
-    equations = """    
+    equations = """
         tau * dmp/dt  + mp = baseline : min = -0.2, max = 1.0
     """
 
@@ -144,7 +144,7 @@ At each step of the simulation, after the update rule is calculated for ``mp``, 
         min_mp = -1.0 : population
         max_mp = 1.0
     """,
-    equations = """    
+    equations = """
         variance = Uniform(0.0, 1.0)
         tau * dmp/dt  + mp = sum(exc) : min = min_mp, max = max_mp + variance
         r = mp : min = 0.0 # Equivalent to r = pos(mp)
@@ -152,7 +152,7 @@ At each step of the simulation, after the update rule is calculated for ``mp``, 
 
 
 **Numerical method**
-        
+
 The numerization method for a single ODEs can be explicitely set by specifying a flag::
 
     tau * dmp/dt  + mp = sum(exc) : exponential
@@ -168,24 +168,26 @@ The available numerical methods are described in :doc:`NumericalMethods`.
 * *max*: maximum allowed value (unset by default)
 * *population*: the attribute is equal for all neurons in a population.
 * *post-synaptic*: the attribute is equal for all synapses of a post-synaptic neuron.
-* *explicit*, *implicit*, *exponential*, *midpoint*, *event-driven*: the numerical method to be used. 
+* *explicit*, *implicit*, *exponential*, *midpoint*, *event-driven*: the numerical method to be used.
 
 Allowed vocabulary
-___________________
+-------------------
 
-The mathematical parser relies heavily on the one provided by `SymPy <http://sympy.org/>`_. 
+The mathematical parser relies heavily on the one provided by `SymPy <http://sympy.org/>`_.
 
-**Constants**
+Constants
+_________
 
 All parameters and variables use implicitely the floating-point double precision, except when stated otherwise with the ``int`` or ``bool`` keywords. You can use numerical constants within the equation, noting that they will be automatically converted to this precision:
 
 .. code-block:: python
 
-    tau * dmp / dt  = 1 / pos(mp) + 1 
-    
+    tau * dmp / dt  = 1 / pos(mp) + 1
+
 The constant :math:`\pi` is available under the literal form ``pi``.
-    
-**Operators**
+
+Operators
+__________
 
 * Additions (+), substractions (-), multiplications (*), divisions (/) and power functions (^) are of course allowed.
 
@@ -194,18 +196,19 @@ The constant :math:`\pi` is available under the literal form ``pi``.
 .. code-block:: python
 
     dmp / dt  = A
-    
+
 with a ``d`` preceding the variable's name and terminated by ``/dt`` (with or without spaces). Gradients must be on the left side of the equation.
 
 * To update the value of a variable at each time step, the operators ``=``, ``+=``, ``-=``, ``*=``, and ``/=`` are allowed.
-  
 
-**Parameters and Variables**
+
+Parameters and Variables
+_________________________
 
 Any parameter or variable defined in the same Neuron/Synapse can be used inside another equation. Additionally, the following variables are pre-defined:
 
 * ``dt`` : the discretization time step for the simulation. Using this variable, you can define the numerical method by yourself. For example:
-  
+
 .. code-block:: python
 
     tau * dmp / dt  + mp = baseline
@@ -226,7 +229,8 @@ with backward Euler would be equivalent to:
     r = 10.0 * (sin(2*pi*f*ts + phi) + 1.0)
 
 
-**Random number generators**
+Random number generators
+_________________________
 
 Several random generators are available and can be used within an equation. In the current version are for example available:
 
@@ -240,7 +244,7 @@ See :doc:`../API/RandomDistribution` for more distributions. For example:
 
     noise = Uniform(-0.5, 0.5)
 
-The arguments to the random distributions can be either fixed values or (functions of) global parameters. 
+The arguments to the random distributions can be either fixed values or (functions of) global parameters.
 
 .. code-block:: python
 
@@ -260,97 +264,113 @@ It is therefore better practice to use normalized random generators and scale th
     noise = min_val + (max_val - min_val) * Uniform(0.0, 1.0)
 
 
-**Mathematical functions**
+Mathematical functions
+_______________________
 
-Most mathematical functions of the ``cmath`` library are understood by the parser, for example:
+* Most mathematical functions of the ``cmath`` library are understood by the parser, for example:
 
 .. code-block:: python
 
     cos, sin, tan, acos, asin, atan, exp, abs, fabs, sqrt, log, ln
-    
-The positive and negative parts of a term are also defined:
+
+* The positive and negative parts of a term are also defined, with short and long versions:
 
 .. code-block:: python
-    
-    pos, positive, neg,  negative
 
-A piecewise linear function is also provided (linear when x is between a and b, saturated otherwise):
+    r = pos(mp)
+    r = positive(mp)
+    r = neg(mp)
+    r = negative(mp)
+
+* A piecewise linear function is also provided (linear when x is between a and b, saturated at a or b otherwise):
 
 .. code-block:: python
-    
-    clip(x, a, b)
 
-    
+    r = clip(x, a, b)
+
+* For integer variables, the modulo operator is defined:
+
+.. code-block::python
+
+    x += 1 : int
+    y = modulo(x, 10)
+
 These functions must be followed by a set of matching brackets:
 
 .. code-block:: python
 
     tau * dmp / dt + mp = exp( - cos(2*pi*f*t + pi/4 ) + 1)
-    
-**Conditional statements**
 
-It is possible to use conditional statements inside an equation or ODE. They follow the form:
+Conditional statements
+____________________________
+
+**Python-style**
+
+It is possible to use Python-style conditional statements as the right term of an equation or ODE. They follow the form:
 
 .. code-block:: python
 
     if condition : statement1 else : statement2
-    
-For example, to define a piecewise linear function, you can write: 
+
+For example, to define a piecewise linear function, you can nest different conditionals:
 
 .. code-block:: python
 
-    r = if mp < 1 : pos(mp) else: 1
+    r = if mp < 1. :
+            if mp > 0.:
+                mp
+            else:
+                0.
+        else:
+            1.
 
-which is equivalent to: 
+which is equivalent to:
 
 .. code-block:: python
 
     r = clip(mp, 0.0, 1.0)
- 
-The condition can use the following vocabulary: 
+
+The condition can use the following vocabulary:
 
 .. code-block:: python
-    
+
     True, False, and, or, not, is, is not, ==, !=, >, <, >=, <=
-    
+
 .. note::
 
     The ``and``, ``or`` and ``not`` logical operators must be used with parentheses around their terms. Example:
-    
+
     .. code-block:: python
-    
-        weird = if (mp > 0) and ( (noise < 0.1) or (not(condition)) ): 
-                    1.0 
-                else: 
-                    0.0   
+
+        var = if (mp > 0) and ( (noise < 0.1) or (not(condition)) ):
+                    1.0
+                else:
+                    0.0
 
 
-    ``is`` is equivalent to ``==``, ``is not`` is equivalent to ``!=``.  
-    
+    ``is`` is equivalent to ``==``, ``is not`` is equivalent to ``!=``.
 
-Conditional statements can also be nested: 
 
-.. code-block:: python
-
-    rate = if mp < 1.0 : 
-              if mp < 0.0 :
-                  0.0 
-              else: 
-                  mp
-           else:
-              1.0
-
-When a conditional statement is split over multiple lines, the flags must be set after the last line: 
+When a conditional statement is split over multiple lines, the flags must be set after the last line:
 
 .. code-block:: python
 
-    rate = if mp < 1.0 : 
+    rate = if mp < 1.0 :
               if mp < 0.0 :
-                  0.0 
-              else: 
+                  0.0
+              else:
                   mp
            else:
               1.0 : init = 0.6
+
+An ``if a: b else:c`` statement must be exactly the right term of an equation. It is for example NOT possible to write::
+
+    r = 1.0 + (if mp> 0.0: mp else: 0.0) + b
+
+**Ternary operator**
+
+The ternary operator ``ite(cond, then, else)`` (ite stands for if-then-else) is available to ease the combination of conditionals with .
+
 
 Custom functions
 -------------------
@@ -362,14 +382,14 @@ Global functions can be defined using the ``add_function()`` method:
 .. code-block:: python
 
     add_function('sigmoid(x) = 1.0 / (1.0 + exp(-x))')
-    
+
 With this declaration, ``sigmoid()`` can be used in the declaration of any variable, for example:
 
 
 .. code-block:: python
 
     rate = sigmoid(mp)
-    
+
 Functions must be one-liners, i.e. they should have only one return value. They can use as many arguments as needed, but are totally unaware of the context: all the needed information should be passed as an argument.
 
 The types of the arguments (including the return value) are by default floating-point. If other types should be used, they should be specified at the end of the definition, after the ``:`` sign, with the type of the return value first, followed by the type of all arguments separated by commas:
@@ -387,5 +407,3 @@ Local functions are specific to a Neuron or Synapse class and can only be used w
         sigmoid(x) = 1.0 / (1.0 + exp(-x))
         conditional_increment(c, v, t) = if v > t : c + 1 else: c : int, int, float, float
     """
-
-
