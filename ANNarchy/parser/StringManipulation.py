@@ -26,7 +26,7 @@
 ####################################
 import re
 from ANNarchy.core.Global import _error, _warning, _print, authorized_keywords
-        
+
 def split_equation(definition):
     " Splits a description into equation and flags."
     try:
@@ -44,10 +44,10 @@ def split_equation(definition):
             constraint = constraint.strip()
         else:
             equation = definition.strip() # there are no constraints
-            constraint = None            
+            constraint = None
     finally:
         return equation, constraint
-    
+
 def prepare_string(stream):
     """ Splits up a multiline equation, remove comments and unneeded spaces or tabs."""
     expr_set = []
@@ -57,9 +57,9 @@ def prepare_string(stream):
         expr = re.sub('\#[\s\S]+', ' ', expr)   # remove comments
         expr = re.sub('\s+', ' ', expr)     # remove additional tabs etc.
         if expr.strip() == '' or len(expr)==0: # through beginning line breaks or something similar empty strings are contained in the set
-            continue           
-        expr_set.append(''.join(expr))        
-    return expr_set 
+            continue
+        expr_set.append(''.join(expr))
+    return expr_set
 
 def extract_name(equation, left=False):
     " Extracts the name of a parameter/variable by looking the left term of an equation."
@@ -69,28 +69,28 @@ def extract_name(equation, left=False):
             name = equation.split('=')[0]
         except: # No equal sign. Eg: baseline : init=0.0
             return equation.strip()
-        
+
         # Search for increments
         operators = ['+=', '-=', '*=', '/=', '>=', '<=']
         for op in operators:
-            if op in equation: 
-                return equation.split(op)[0]  
+            if op in equation:
+                return equation.split(op)[0]
     else:
-        name = equation.strip()          
+        name = equation.strip()
         # Search for increments
         operators = ['+', '-', '*', '/']
         for op in operators:
-            if equation.endswith(op): 
-                return equation.split(op)[0]   
+            if equation.endswith(op):
+                return equation.split(op)[0]
     # Check for error
     if name.strip() == "":
         _error('the variable name can not be extracted from ' + equation)
-           
+
     # Search for any operation in the left side
     operators = ['+', '-', '*', '/']
     ode = False
     for op in operators:
-        if not name.find(op) == -1: 
+        if not name.find(op) == -1:
             ode = True
     if not ode: # variable name is alone on the left side
         return name
@@ -99,11 +99,11 @@ def extract_name(equation, left=False):
     if len(name) == 1:
         return name[0].strip()
     else:
-        return '_undefined' 
-    
-                
+        return '_undefined'
+
+
 def extract_flags(constraint):
-    """ Extracts from all attributes given after : which are bounds (eg min=0.0 or init=0.1) 
+    """ Extracts from all attributes given after : which are bounds (eg min=0.0 or init=0.1)
         and which are flags (eg postsynaptic, implicit...).
     """
     bounds = {}
@@ -118,23 +118,23 @@ def extract_flags(constraint):
             bounds[key.strip()] = value.strip()
         except ValueError: # No equal sign = flag
             flags.append(con.strip())
-    return bounds, flags     
-        
+    return bounds, flags
+
 def process_equations(equations):
     """ Takes a multi-string describing equations and returns a list of dictionaries, where:
-    
+
     * 'name' is the name of the variable
-    
+
     * 'eq' is the equation
-    
+
     * 'constraints' is all the constraints given after the last :. _extract_flags() should be called on it.
-    
+
     Warning: one equation can now be on multiple lines, without needing the ... newline symbol.
-    
+
     TODO: should this be used for other arguments as equations? pre_event and so on
     """
     def is_constraint(eq):
-        " Internal method to determine if a string contains reserved keywords." 
+        " Internal method to determine if a string contains reserved keywords."
         eq = ',' +  eq.replace(' ', '') + ','
         for key in authorized_keywords:
             pattern = '([,]+)' + key + '([=,]+)'
@@ -146,26 +146,29 @@ def process_equations(equations):
     variables = []
     try:
         equations = equations.replace(';', '\n').split('\n')
-    except: # euqations is empty
+    except: # equations is empty
         return variables
-        
+
+
     # Iterate over all lines
     for line in equations:
         # Skip empty lines
         definition = line.strip()
         if definition == '':
             continue
+
         # Remove comments
         com = definition.split('#')
         if len(com) > 1:
             definition = com[0]
             if definition.strip() == '':
                 continue
+
         # Process the line
         try:
             equation, constraint = definition.rsplit(':', 1)
-        except ValueError: # There is no :, only equation is concerned 
-            equation = line
+        except ValueError: # There is no :, only equation is concerned
+            equation = definition
             constraint = ''
         else:   # there is a :
             # Check if the constraint contains the reserved keywords
@@ -177,7 +180,8 @@ def process_equations(equations):
                 constraint = constraint.strip()
             else:
                 equation = definition.strip() # there are no constraints
-                constraint = '' 
+                constraint = ''
+
         # Split the equation around operators = += -= *= /=, but not ==
         split_operators = re.findall('([\s\w\+\-\*\/\)]+)=([^=])', equation)
         if len(split_operators) == 1: # definition of a new variable
@@ -186,18 +190,18 @@ def process_equations(equations):
             if eq.strip() == "":
                 _print(equation)
                 _error('The equation can not be analysed, check the syntax.')
-                
+
             name = extract_name(eq, left=True)
             if name in ['_undefined', '']:
                 _error('No variable name can be found in ' + equation)
-                
+
             # Append the result
             variables.append({'name': name, 'eq': equation.strip(), 'constraint': constraint.strip()})
-        elif len(split_operators) == 0: 
+        elif len(split_operators) == 0:
             # Continuation of the equation on a new line: append the equation to the previous variable
             variables[-1]['eq'] += ' ' + equation.strip()
             variables[-1]['constraint'] += constraint
         else:
             _error('Only one assignement operator is allowed per equation.')
-            
-    return variables 
+
+    return variables

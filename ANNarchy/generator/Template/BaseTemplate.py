@@ -25,6 +25,9 @@ omp_header_template = """#ifndef __ANNARCHY_H__
 #define clip(x, a, b) (x<a? a : (x>b? b :x))
 #define modulo(a, b) long(a) %% long(b)
 #define Eq(a, b) a == b
+#define And(a, b) a && b
+#define Or(a, b) a || b
+#define Not(a) !a
 #define ite(a, b, c) (a?b:c)
 
 /*

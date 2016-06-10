@@ -26,9 +26,6 @@ Each parameter should be defined on a single line, with its name on the left sid
 As a neuron/synapse type is likely to be reused in different populations/projections, it is good practice to set reasonable initial values in the neuron/synapse type, and eventually adapt them to the corresponding populations/projections later on.
 
 
-Constraints
-____________
-
 **Local vs. global parameters**
 
 By default, a neural parameter will be unique to each neuron (i.e. each neuron instance will hold a copy of the parameter) or synapse. In order to save memory space, one can force ANNarchy to store only one parameter value for a whole population by specifying the ``population`` flag after a ``:`` symbol following the parameter definition:
@@ -178,7 +175,7 @@ The mathematical parser relies heavily on the one provided by `SymPy <http://sym
 Constants
 _________
 
-All parameters and variables use implicitely the floating-point double precision, except when stated otherwise with the ``int`` or ``bool`` keywords. You can use numerical constants within the equation, noting that they will be automatically converted to this precision:
+All parameters and variables use implicitly the floating-point double precision, except when stated otherwise with the ``int`` or ``bool`` keywords. You can use numerical constants within the equation, noting that they will be automatically converted to this precision:
 
 .. code-block:: python
 
@@ -369,7 +366,15 @@ An ``if a: b else:c`` statement must be exactly the right term of an equation. I
 
 **Ternary operator**
 
-The ternary operator ``ite(cond, then, else)`` (ite stands for if-then-else) is available to ease the combination of conditionals with .
+The ternary operator ``ite(cond, then, else)`` (ite stands for if-then-else) is available to ease the combination of conditionals with other terms::
+
+    r = ite(mp>0.0, mp, 0.0)
+    # is exactly the same as:
+    r = if mp > 0.0: mp else: 0.0
+
+The advantage is that the conditional term is not restricted to the right term of the equation, and can be used multiple times::
+
+    r = ite(mp > 0.0, ite(mp < 1.0, mp, 1.0), 0.0) + ite(stimulated, 1.0, 0.0)
 
 
 Custom functions

@@ -1,9 +1,7 @@
 **4.5.5**
 
 * Fixed bug when loading a network saved before 4.5.3.
-* Added the ``every`` decorator allowing functions to be called periodically during a simulation:
-
-.. code-block:: python
+* Added the ``every`` decorator allowing functions to be called periodically during a simulation::
 
     result = []
 
@@ -26,7 +24,10 @@
 * ``Population.reset()`` and ``Projection.reset()`` now accept a list of attributes to be reset, instead of resetting all of them.
 * Unit tests are now performed on Travis CI to get a badge.
 * Bug fixed: min/max bounds on g_target was wrongly analyzed when depending on a parameter.
-* ``parallel_run()`` now accepts additional arbitrary arguments that can be passed to the simulation callback. 
+* ``parallel_run()`` now accepts additional arbitrary arguments that can be passed to the simulation callback.
+* Added an ``ite(cond, statement1, statement2)`` conditional function replicating ``if cond: statement1 else: statement2``, but which can be combined::
+
+    r = 1.0 + ite(sum(exc) > 1.0, sum(exc), 0.0) + ite(sum(inh) > 1.0, -sum(inh), 0.0)
 
 
 **4.5.4:**

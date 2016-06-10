@@ -122,9 +122,9 @@ def extract_ite(name, eq, description, split=True):
                 break
         return result[0]
 
-    # If no if, maybe it is a ternary operator
+    # If no if, not a conditional
     if not 'if ' in eq:
-        return extract_ternary(name, eq, description, split)
+        return eq, []
 
     # Process the equation
     condition = []
@@ -159,57 +159,3 @@ def extract_ite(name, eq, description, split=True):
         _error('Conditional statements must define "then" and "else" values.\n var = if condition: a else: b')
 
     return eq, [condition]
-
-def extract_ternary(name, eq, description, split=True):
-
-    # Process the equation
-    condition = []
-    # Eventually split around =
-    if split:
-        left, right =  eq.split('=', 1)
-    else:
-        left = ''
-        right = eq
-
-    # Search for the ternary operator in right
-    ternary_pattern = r'([^()]*)\(([^()]+)\?([^()]+):([^()]+)\)'
-    matches = re.findall(ternary_pattern, right)
-
-    # if no ternary operator is detected: just leave
-    if len(matches) == 0:
-        return eq, condition
-
-    conditions = []
-
-    while len(re.findall(ternary_pattern, right))>0:
-        matches = re.findall(ternary_pattern, right)
-        for cond in matches:
-            if_statement = cond[1]
-            then_statement = cond[2]
-            else_statement = cond[3]
-
-            if '__conditional__' in then_statement:
-                idx = then_statement.split('__conditional__')[1][0]
-                then_condition = conditions[int(idx)]
-            else:
-                then_condition = then_statement
-
-            if '__conditional__' in else_statement:
-                idx = else_statement.split('__conditional__')[1][0]
-                else_condition = conditions[int(idx)]
-            else:
-                else_condition = else_statement
-
-            conditions.append([if_statement, then_condition, else_condition])
-
-            right = right.replace('('+if_statement+'?'+then_statement+':'+else_statement+')',
-                                  ' __conditional__'+str(len(conditions)-1)+' '
-                                 )
-
-    # Recompose the equation
-    if split:
-        eq = left + '=' + right
-    else:
-        eq = right
-
-    return eq, conditions
