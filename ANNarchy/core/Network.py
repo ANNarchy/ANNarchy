@@ -446,6 +446,11 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     if measure_time:
         ts = time()
 
+    # Make sure the magic network is compiled
+    if not Global._network[0]['compiled']:
+        Global._warning('parallel_run(): the magic network is not compiled yet, doing it...')
+        Compiler.compile()
+
     # Number of processes to create
     if max_processes < 0:
         max_processes = min(number, multiprocessing.cpu_count())
