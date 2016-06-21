@@ -132,7 +132,7 @@ class Population(object):
         # Finalize initialization
         self.initialized = False
         self.cyInstance = None
-        self._activated = True
+        self.enabled = True
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions.
@@ -175,7 +175,7 @@ class Population(object):
         """ Method used after compilation to initialize the attributes."""
         self.initialized = True
         self.set(self.init)
-        self.cyInstance.activate(self._activated)
+        self.cyInstance.activate(self.enabled)
         self.cyInstance.reset()
 
         # If the spike population has a refractory period:
@@ -212,7 +212,7 @@ class Population(object):
                     _print(e)
                     _warning("Population.reset(): something went wrong while resetting", var)
 
-        self.cyInstance.activate(self._activated)
+        self.cyInstance.activate(self.enabled)
         self.cyInstance.reset()
 
     def clear(self):
@@ -227,21 +227,25 @@ class Population(object):
 
     def enable(self):
         """
-        Enables computations in this population (including the projections leading to it).
+        (Re)-enables computations in this population, after they were disabled by the ``disable()`` method.
+
+        The status of the population is accessible through the ``enabled`` flag.
         """
         if self.initialized:
             self.cyInstance.activate(True)
         else:
-            self._activated = True
+            self.enabled = True
 
     def disable(self):
         """
-        Enables computations in this population (including the projections leading to it).
+        Temporarily disables computations in this population (including the projections leading to it).
+
+        You can re-enable it with the ``enable()`` method.
         """
         if self.initialized:
             self.cyInstance.activate(False)
         else:
-            self._activated = False
+            self.enabled = False
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
