@@ -94,6 +94,8 @@ class Network(object):
             pop.name = obj.name
             pop.class_name = obj.class_name
             pop.init = obj.init
+            if not obj.enabled: # Also copy the enabled state:
+                pop.disable()
             # Add the copy to the local network
             Global._network[self.id]['populations'].append(pop)
             self.populations.append(pop)
