@@ -233,8 +233,7 @@ class Population(object):
         """
         if self.initialized:
             self.cyInstance.activate(True)
-        else:
-            self.enabled = True
+        self.enabled = True
 
     def disable(self):
         """
@@ -244,8 +243,7 @@ class Population(object):
         """
         if self.initialized:
             self.cyInstance.activate(False)
-        else:
-            self.enabled = False
+        self.enabled = False
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."

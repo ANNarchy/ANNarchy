@@ -13,34 +13,61 @@ class Network(object):
     """
     A network gathers already defined populations, projections and monitors in order to run them independently.
 
-    This is particularly useful when varying single parameters of a network and comparing the results.
+    This is particularly useful when varying single parameters of a network and comparing the results (see the ``parallel_run()`` method).
 
-    Only objects declared before the creation of the network can be used. Global methods such as ``simulate()`` must be used on the network object. The objects must be accessed through the ``get()`` method, as the original ones will not be simulated.
+    Only objects declared before the creation of the network can be used. Global methods such as ``simulate()`` must be used on the network object.
+    The objects must be accessed through the ``get()`` method, as the original ones will not be part of the network (a copy is made).
 
-    Each network must be individually compiled, but it does not matter if the original objects are also compiled.
+    Each network must be individually compiled, but it does not matter if the original objects were already compiled.
 
-    Example::
+    When passing ``everything=True`` to the constructor, all populations/projections/monitors already defined at the global level will be added to the network.
 
-        pop1 = Population(100, Izhikevich)
-        pop2 = Population(100, Izhikevich)
-        proj = Projection(pop1, pop2, 'exc')
+    If not, you can select which object will be added to network with the ``add()`` method.
+
+    Example with ``everything=True``::
+
+        pop = Population(100, Izhikevich)
+        proj = Projection(pop, pop, 'exc')
         proj.connect_all_to_all(1.0)
-        m = Monitor(pop2, 'spike')
+        m = Monitor(pop, 'spike')
 
-        compile()
+        compile() # Optional
 
-        net = Network(True)
-        net.get(pop1).a = 0.02
+        net = Network(everything=True)
+        net.get(pop).a = 0.02
         net.compile()
         net.simulate(1000.)
 
-        net2 = Network(True)
-        net2.get(pop1).a = 0.05
+        net2 = Network(everything=True)
+        net2.get(pop).a = 0.05
         net2.compile()
         net2.simulate(1000.)
 
-        t, n = net.get(M).raster_plot()
-        t2, n2 = net2.get(M).raster_plot()
+        t, n = net.get(m).raster_plot()
+        t2, n2 = net2.get(m).raster_plot()
+
+    Example with ``everything=False`` (the default)::
+
+        pop = Population(100, Izhikevich)
+        proj1 = Projection(pop, pop, 'exc')
+        proj1.connect_all_to_all(1.0)
+        proj2 = Projection(pop, pop, 'exc')
+        proj2.connect_all_to_all(2.0)
+        m = Monitor(pop, 'spike')
+
+        net = Network()
+        net.add([pop, proj1, m])
+        net.compile()
+        net.simulate(1000.)
+
+        net2 = Network()
+        net2.add([pop, proj2, m])
+        net2.compile()
+        net2.simulate(1000.)
+
+        t, n = net.get(m).raster_plot()
+        t2, n2 = net2.get(m).raster_plot()
+
     """
     def __init__(self, everything=False):
         """
@@ -94,6 +121,7 @@ class Network(object):
             pop.name = obj.name
             pop.class_name = obj.class_name
             pop.init = obj.init
+            pop.enabled = obj.enabled
             if not obj.enabled: # Also copy the enabled state:
                 pop.disable()
             # Add the copy to the local network
