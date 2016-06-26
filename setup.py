@@ -9,7 +9,7 @@ from pkg_resources import parse_version
 import sys, os
 if not sys.version_info[:2] >= (2, 7):
     print('Error : ANNarchy requires at least Python 2.7.')
-    exit(0) 
+    exit(0)
 
 # setuptools
 try:
@@ -20,7 +20,7 @@ except:
     print('Error : Python package "setuptools" is required.')
     print('You can install it from pip or: http://pypi.python.org/pypi/setuptools')
     exit(0)
-    
+
 # numpy
 try:
     import numpy as np
