@@ -499,12 +499,12 @@ def _error(*var_text, **args):
     print(text)
 
     # tb = traceback.print_stack()
-    # tb = traceback.format_stack()
-    # for line in tb:
-    #     if not '/ANNarchy/core/' in line and \
-    #        not '/ANNarchy/parser/' in line and \
-    #        not '/ANNarchy/generator/' in line :
-    #         print(line)
+    tb = traceback.format_stack()
+    for line in tb:
+        if not '/ANNarchy/core/' in line and \
+           not '/ANNarchy/parser/' in line and \
+           not '/ANNarchy/generator/' in line :
+            print(line)
 
     if 'exit' in args.keys():
         if args['exit']:

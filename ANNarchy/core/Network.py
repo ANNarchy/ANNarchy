@@ -172,7 +172,11 @@ class Network(object):
 
         *Parameters:*
 
-        * **obj**: A single object.
+        * **obj**: A single object or a list of objects.
+
+        *Returns:*
+
+        * The corresponding object or list of objects.
 
         **Example**::
 
@@ -183,6 +187,13 @@ class Network(object):
             net.simulate(100.)
             print net.get(pop).v
         """
+        if isinstance(obj, list):
+            return [self._get_object(o) for o in obj]
+        else:
+            return self._get_object(obj)
+
+    def _get_object(self, obj):
+        "Retrieves the corresponding object."
         if isinstance(obj, (Population, PopulationView)):
             for pop in self.populations:
                 if pop.id == obj.id:
@@ -195,7 +206,7 @@ class Network(object):
             for m in self.monitors:
                 if m.id == obj.id:
                     return m
-        Global._error('The network has no such object:', obj)
+        Global._error('The network has no such object:', obj.name, obj)
 
     def compile(self, directory='annarchy', silent=False):
         """ Compiles the network.

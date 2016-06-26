@@ -29,6 +29,9 @@
 
     r = 1.0 + ite(sum(exc) > 1.0, sum(exc), 0.0) + ite(sum(inh) > 1.0, -sum(inh), 0.0)
 
+* The ``Network`` class has several bugs fixed (e.g. disabled populations stay disabled when put in a network).
+* Populations have now an "enabled" attribute to read their status.
+
 
 **4.5.4:**
 
