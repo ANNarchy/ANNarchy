@@ -408,7 +408,7 @@ csr_weight_matrix_cuda = {
 
 
 ######################################
-### Summation OMP
+### Rate-coded summation OMP
 ######################################
 # Default LiL
 lil_summation_operation = {
@@ -521,6 +521,51 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 }
 """
 }
+
+######################################
+### Spiking summation
+######################################
+spiking_summation_fixed_delay = """
+// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+    std::vector< std::pair<int, int> > inv_post;
+    // Iterate over all incoming spikes
+    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
+        rk_j = %(pre_array)s[_idx_j];
+        inv_post = inv_pre_rank[rk_j];
+        nb_post = inv_post.size();
+        // Iterate over connected post neurons
+        %(omp_code)s
+        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+            // Retrieve the correct indices
+            i = inv_post[_idx_i].first;
+            j = inv_post[_idx_i].second;
+            %(event_driven)s
+            %(g_target)s
+            %(pre_event)s
+        }
+    }
+} // active
+"""
+spiking_summation_variable_delay = """
+// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+    // Iterate over all post neurons
+    %(omp_code)s
+    for (i=0; i<post_rank.size(); i++){
+        for (j=0; j<pre_rank[i].size(); j++){
+            for(int _idx_j = 0; _idx_j < pop%(id_pre)s._delayed_spike[delay[i][j]-1].size(); _idx_j++){
+                if(pop0._delayed_spike[delay[i][j]-1][_idx_j] == pre_rank[i][j]){
+                    %(event_driven)s
+                    %(g_target)s
+                    %(pre_event)s
+                    break;
+                }
+            }
+        }
+    }
+} // active
+"""
 
 ######################################
 ### Update synaptic variables

@@ -828,11 +828,15 @@ if(%(condition)s){
                     pre_code
                 )
 
+        # Default template is without variable delays
+        template = ProjTemplate.spiking_summation_fixed_delay
+
         # Take delays into account if any
+        pre_array = ""
         if proj.max_delay > 1:
             if proj.uniform_delay == -1 : # Non-uniform delays
-                Global._error('Non-uniform delays are not yet possible for spiking networks.')
-
+                Global._warning('Variable delays for spiking networks is experimental and slow...')
+                template = ProjTemplate.spiking_summation_variable_delay
             else: # Uniform delays
                 pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_proj' : proj.id, 'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
         else:
@@ -847,35 +851,15 @@ if(%(condition)s){
         # Generate the whole code block
         code = ""
         if g_target_code != "" or pre_code != "":
-            code = """
-// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-    std::vector< std::pair<int, int> > inv_post;
-    // Iterate over all incoming spikes
-    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
-        rk_j = %(pre_array)s[_idx_j];
-        inv_post = inv_pre_rank[rk_j];
-        nb_post = inv_post.size();
-        // Iterate over connected post neurons
-        %(omp_code)s
-        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
-            // Retrieve the correct indices
-            i = inv_post[_idx_i].first;
-            j = inv_post[_idx_i].second;
-%(event_driven)s
-%(g_target)s
-%(pre_event)s
-        }
-    }
-} // active
-"""%{   'id_pre': proj.pre.id,
-        'id_post': proj.post.id,
-        'pre_array': pre_array,
-        'pre_event': pre_code,
-        'g_target': g_target_code,
-        'omp_code': omp_code,
-        'event_driven': event_driven_code
-    }
+            code = template % {
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'pre_array': pre_array,
+                'pre_event': pre_code,
+                'g_target': g_target_code,
+                'omp_code': omp_code,
+                'event_driven': event_driven_code
+            }
 
         # Add tabs
         code = tabify(code, 2)

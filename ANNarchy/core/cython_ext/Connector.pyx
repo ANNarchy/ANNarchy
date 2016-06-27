@@ -93,7 +93,7 @@ cdef class CSR:
         if len(postranks) != len(set_postranks):
             ANNarchy.core.Global._warning('You have added several times the same post-synaptic neuron to the CSR data in your connector method.')
             ANNarchy.core.Global._print('ANNarchy will try to sort the entries if possible, it may take some time...')
-        else: 
+        else:
             return
 
         # Find out which post neurons are doubled.
@@ -150,7 +150,7 @@ cdef _get_weights_delays(int size, weights, delays):
     if isinstance(delays, (float, int)):
         d = vector[double](1, delays)
     elif isinstance(delays, RandomDistribution):
-        d = delays.get_list_values(size) 
+        d = delays.get_list_values(size)
 
     return w, d
 
@@ -170,14 +170,8 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     cdef vector[double] w, d
 
     # Retríeve ranks
-    if hasattr(post, 'ranks'): # PopulationView
-        post_ranks = post.ranks
-    else: # Plain population
-        post_ranks = list(range(post.size))
-    if hasattr(pre, 'ranks'): # PopulationView
-        pre_ranks = pre.ranks
-    else:
-        pre_ranks = list(range(pre.size))
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
 
     # Create the projection data as CSR
     projection = CSR()
@@ -220,18 +214,12 @@ def one_to_one(pre, post, weights, delays, shift):
 
     # Create the projection data as CSR
     projection = CSR()
-        
+
     # Retríeve ranks
-    if hasattr(post, 'ranks'): # PopulationView
-        post_ranks = post.ranks
-    else: # Plain population
-        post_ranks = list(range(post.size))
+    post_ranks = post.ranks
 
     if shift:
-        if hasattr(pre, 'ranks'): # PopulationView
-            pre_ranks = pre.ranks
-        else:
-            pre_ranks = list(range(pre.size))
+        pre_ranks = pre.ranks
         offset = min(post_ranks) - min(pre_ranks)
     else:
         offset = 0
@@ -259,7 +247,7 @@ def one_to_one(pre, post, weights, delays, shift):
             # Create the dendrite
             projection.push_back(r_post, r, w, d)
 
-            
+
 
     return projection
 
@@ -277,17 +265,10 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     cdef np.ndarray random_values, tmp, pre_ranks
 
     # Retríeve ranks
-    if hasattr(post, 'ranks'): # PopulationView
-        post_ranks = post.ranks
-    else: # Plain population
-        post_ranks = list(range(post.size))
+    post_ranks = post.ranks
 
-    if hasattr(pre, 'ranks'): # PopulationView
-        pre_ranks = np.array(pre.ranks)
-        max_size_pre = len(pre.ranks)
-    else:
-        pre_ranks = np.arange(pre.size)
-        max_size_pre = pre.size
+    pre_ranks = np.array(pre.ranks)
+    max_size_pre = len(pre.ranks)
 
     # Create the projection data as CSR
     projection = CSR()
@@ -327,16 +308,10 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     cdef list pre_ranks, post_ranks
     cdef vector[int] r
     cdef vector[double] w, d
-    
+
     # Retríeve ranks
-    if hasattr(post, 'ranks'): # PopulationView
-        post_ranks = post.ranks
-    else: # Plain population
-        post_ranks = list(range(post.size))
-    if hasattr(pre, 'ranks'): # PopulationView
-        pre_ranks = pre.ranks
-    else:
-        pre_ranks = list(range(pre.size))
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
 
     # Create the projection data as CSR
     projection = CSR()
@@ -376,20 +351,14 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     cdef dict rk_mat
     cdef vector[int] r
     cdef vector[double] w, d
-    
+
     # Retríeve ranks
-    if hasattr(post, 'ranks'): # PopulationView
-        post_ranks = post.ranks
-    else: # Plain population
-        post_ranks = list(range(post.size))
-    if hasattr(pre, 'ranks'): # PopulationView
-        pre_ranks = pre.ranks
-    else:
-        pre_ranks = list(range(pre.size))
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
 
     # Create the projection data as CSR
     projection = CSR()
-    
+
 
     # Build the backward matrix
     rk_mat = {i: [] for i in post_ranks}
@@ -463,7 +432,7 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
         post_size = 1
         for c in post_geometry:
             post_size  = post_size * c
-    
+
     # Create the projection data as CSR
     projection = CSR()
     for post in list(range(post_size)):
@@ -540,7 +509,7 @@ def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float 
         post_size = 1
         for c in post_geometry:
             post_size  = post_size * c
-    
+
     # Create the projection data as CSR
     projection = CSR()
     for post in list(range(post_size)):
