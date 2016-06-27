@@ -76,7 +76,6 @@ class Population(object):
         size = int(1)
         for i in range(len(self.geometry)):
             size *= int(self.geometry[i])
-
         self.size = int(size)
         self.ranks = list(range(self.size))
 
