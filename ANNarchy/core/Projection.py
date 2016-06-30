@@ -482,20 +482,30 @@ class Projection(object):
         * *attribute*: should be a string representing the variables's name.
 
         """
+        # Convert np.arrays into lists for better iteration
         if isinstance(value, np.ndarray):
             value = list(value)
+        # A list is given
         if isinstance(value, list):
             if len(value) == len(self.post_ranks):
-                for idx, n in enumerate(self.post_ranks):
-                    if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
-                        Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
-                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value[idx])
+                if attribute in self.synapse_type.description['local']:
+                    for idx, n in enumerate(self.post_ranks):
+                        if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
+                            Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
+                        getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value[idx])
+                else:
+                    getattr(self.cyInstance, 'set_'+attribute)(value)
             else:
                 Global._error('The projection has ' + self.size + ' post-synaptic neurons.')
+        # A Random Distribution is given
         elif isinstance(value, RandomDistribution):
-            for idx, n in enumerate(self.post_ranks):
-                getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value.get_values(self.cyInstance.nb_synapses(idx)))
-        else: # a single value
+            if attribute in self.synapse_type.description['local']:
+                for idx, n in enumerate(self.post_ranks):
+                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value.get_values(self.cyInstance.nb_synapses(idx)))
+            else:
+                getattr(self.cyInstance, 'set_'+attribute)(value.get_values(len(self.post_ranks)))
+        # A single value is given
+        else:
             if attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
