@@ -168,9 +168,9 @@ def extract_prepost(name, eq, description):
             eq = re.sub(r'pre\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['pre'].append(var)
-            target = 'pre.' + var
-            eq = eq.replace(target, ' _pre_'+var)
-            untouched['_pre_'+var] = '%(pre_prefix)s' + var + '%(pre_index)s'
+            eq = re.sub("pre."+var+"([^_\w]+)", "_pre_"+var+"__\g<1>", eq+" ")
+            # eq = eq.replace(target, ' _pre_'+var)
+            untouched['_pre_'+var+'__'] = '%(pre_prefix)s' + var + '%(pre_index)s'
 
     # Replace all post.* occurences with a temporary variable
     for var in list(set(post_matches)):
@@ -188,9 +188,9 @@ def extract_prepost(name, eq, description):
             eq = re.sub(r'post\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
-            target = 'post.' + var
-            eq = eq.replace(target, ' _post_'+var)
-            untouched['_post_'+var] = '%(post_prefix)s' + var +'%(post_index)s'
+            eq = re.sub("post."+var+"([^_\w]+)", "_post_"+var+"__\g<1>", eq+" ")
+            # eq = eq.replace(target, ' _post_'+var+'__')
+            untouched['_post_'+var+'__'] = '%(post_prefix)s' + var +'%(post_index)s'
 
     return eq, untouched, dependencies
 

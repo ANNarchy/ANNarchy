@@ -56,14 +56,14 @@ def analyse_neuron(neuron):
                 break
         else:
             _error('Rate-coded neurons must define the variable "r".')
-            
+
     else: # spiking neurons define r by default, it contains the average FR if enabled
         for var in description['parameters'] + description['variables']:
             if var['name'] == 'r':
                 _error('Spiking neurons use the variable "r" for the average FR, use another name.')
-                
+
         description['variables'].append(
-                {'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 
+                {'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': 'double', 'init': 0.0,
                  'flags': [], 'eq': '', 'cpp': ""})
 
     # Extract functions
@@ -76,7 +76,7 @@ def analyse_neuron(neuron):
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
         _error('Attributes must be declared only once.', attributes)
-        
+
     description['attributes'] = attributes
     description['local'] = local_var
     description['global'] = global_var
@@ -278,7 +278,7 @@ def analyse_synapse(synapse):
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
         _error('Attributes must be declared only once.', attributes)
-        
+
 
     # Add this info to the description
     description['parameters'] = parameters
@@ -412,8 +412,10 @@ def analyse_synapse(synapse):
             switch = code[1]
 
         # Replace untouched variables with their original name
+        # print cpp_eq
         for prev, new in untouched.items():
             cpp_eq = cpp_eq.replace(prev, new)
+        # print cpp_eq
 
         # Replace local functions
         for f in description['functions']:

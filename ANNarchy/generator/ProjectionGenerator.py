@@ -1406,7 +1406,7 @@ if(_transmission && pop%(id_post)s._active){
                         }
                     }
                     if((!_exists)%(proba)s){
-                        std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
+                        //std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
                         proj%(id_proj)s.addSynapse(i, rk_pre, %(weights)s%(delay)s);
 
                     }
