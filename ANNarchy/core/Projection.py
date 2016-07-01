@@ -223,7 +223,7 @@ class Projection(object):
         elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
             # Ensure no negative delays are generated
-            if delay.min is None:
+            if delay.min is None or delay.min < Global.config['dt']:
                 delay.min = Global.config['dt']
             # The user needs to provide a max in order to compute max_delay
             if delay.max is None:
