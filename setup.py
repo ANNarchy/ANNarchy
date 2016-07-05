@@ -82,7 +82,7 @@ dependencies = [
     'sympy'
 ]
 
-release = '4.5.6'
+release = '4.5.7'
 
 setup(  name='ANNarchy',
         version=release,
@@ -104,6 +104,7 @@ setup(  name='ANNarchy',
             'Programming Language :: Python :: 2.7',
             'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',
+            'Programming Language :: Python :: 3.5',
             'Topic :: Scientific/Engineering :: Bio-Informatics',
             'Topic :: Scientific/Engineering :: Artificial Intelligence'
         ],
