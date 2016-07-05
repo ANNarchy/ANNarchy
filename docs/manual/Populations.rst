@@ -144,7 +144,7 @@ Setting their value is also simple:
 
 
             
-For population-wise attributes, you can only specify a single value (float, int or bool depending on the type of the parameter/variable). For neuron-specific attributes, you can provide either:
+For population-wide attributes, you can only specify a single value (float, int or bool depending on the type of the parameter/variable). For neuron-specific attributes, you can provide either:
 
     * a single value which will be applied to all neurons of the population.
     

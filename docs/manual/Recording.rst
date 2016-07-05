@@ -31,6 +31,11 @@ Some examples::
     m = Monitor(pop[:100], 'r', period=10.0) # record r in the first 100 neurons of pop, every 10 ms
     m = Monitor(pop, 'r', start=False) # record r in all neurons, but do not start recording
 
+Spiking networks additionally allow to record the `spike` events in a population (see later). You also can record conductances (e.g. ``g_exc``) and weighted sums of inputs in rate-coded networks (``sum(exc)``) the same way::
+
+    m = Monitor(pop, ['spike', 'g_exc', 'g_inh'])
+    m = Monitor(pop, ['r', 'sum(exc)', 'sum(inh)'])
+
 Starting the recordings
 ------------------------
 

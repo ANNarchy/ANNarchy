@@ -1,3 +1,17 @@
+**4.5.6**
+
+* Spiking networks can now use variable delays, at the cost of extra computations.
+* Fixed bug in parser when a synapse uses pre/post variables with one name containing the other (e.g. r and r_mean).
+* Fixed bug when assigning postsynptic variable a random distribution.
+* Added the ability to access the weighted sums of a rate-coded population with::
+
+    pop.sum('exc')
+
+* Added the ability to record these weighted sums::
+
+    m = monitor(pop, ['r', 'sum(exc'])
+
+
 **4.5.5**
 
 * Fixed bug when loading a network saved before 4.5.3.
