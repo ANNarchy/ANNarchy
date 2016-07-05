@@ -94,7 +94,13 @@ class RecordGenerator:
         recording_code = ""
         struct_code = ""
 
-        for var in pop.neuron_type.description['variables']:
+        # Rate-coded networks also can record the weighted sums
+        wsums_list = []
+        if pop.neuron_type.type == 'rate':
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                wsums_list.append({'ctype': 'double', 'name': '_sum_'+target, 'locality': 'local'})
+
+        for var in pop.neuron_type.description['variables'] + wsums_list:
             struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
             init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
             recording_code += template[var['locality']]['recording'] % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}

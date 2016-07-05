@@ -27,6 +27,7 @@ from .PopulationView import PopulationView
 from .Dendrite import Dendrite
 
 import numpy as np
+import re
 
 class Monitor(object):
     """
@@ -47,7 +48,11 @@ class Monitor(object):
 
         Example::
 
-            m = Monitor(pop1, ['v', 'spike'], period=10.0, ranks=range(:100))
+            m = Monitor(pop, ['g_exc', 'v', 'spike'], period=10.0, ranks=range(:100))
+
+        It is also possible to record the sum of inputs to each neuron in a rate-coded population::
+
+            m = Monitor(pop, ['sum(exc)', 'r'])
 
         """
         # Object to record (Population, PopulationView, Dendrite)
@@ -60,9 +65,6 @@ class Monitor(object):
             self.variables = [variables]
         else:
             self.variables = variables
-
-        # Populations can record sum(exc)
-        print self.variables
 
         # Period
         if not period:
@@ -173,12 +175,17 @@ class Monitor(object):
             self.cyInstance.offset = Global.get_current_step(self.net_id)
 
         for var in variables:
+            name = var
+            # Sums of inputs for rate-coded populations
+            if var.startswith('sum('):
+                target = re.findall(r"\(([\w]+)\)", var)[0]
+                name = '_sum_' + target
             try:
-                setattr(self.cyInstance, 'record_'+var, True)
+                setattr(self.cyInstance, 'record_'+name, True)
             except:
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
-                    obj_desc = 'population '+self.object.name
+                    obj_desc = 'population ' + self.object.name
                 else:
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
@@ -187,8 +194,13 @@ class Monitor(object):
         "Resumes the recordings."
         # Start recording the variables
         for var in self.variables:
+            name = var
+            # Sums of inputs for rate-coded populations
+            if var.startswith('sum('):
+                target = re.findall(r"\(([\w]+)\)", var)[0]
+                name = '_sum_' + target
             try:
-                setattr(self.cyInstance, 'record_'+var, True)
+                setattr(self.cyInstance, 'record_'+name, True)
             except:
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
@@ -202,8 +214,13 @@ class Monitor(object):
         "Resumes the recordings."
         # Start recording the variables
         for var in self.variables:
+            name = var
+            # Sums of inputs for rate-coded populations
+            if var.startswith('sum('):
+                target = re.findall(r"\(([\w]+)\)", var)[0]
+                name = '_sum_' + target
             try:
-                setattr(self.cyInstance, 'record_'+var, False)
+                setattr(self.cyInstance, 'record_'+name, False)
             except:
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
@@ -217,9 +234,14 @@ class Monitor(object):
         "Stops the recordings."
         # Stop and clear the variables
         for var in self.variables:
+            name = var
+            # Sums of inputs for rate-coded populations
+            if var.startswith('sum('):
+                target = re.findall(r"\(([\w]+)\)", var)[0]
+                name = '_sum_' + target
             try:
-                setattr(self.cyInstance, 'record_'+var, False)
-                getattr(self.cyInstance, 'clear_'+var)()
+                setattr(self.cyInstance, 'record_'+name, False)
+                getattr(self.cyInstance, 'clear_'+name)()
             except:
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
@@ -227,6 +249,7 @@ class Monitor(object):
                 else:
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+
         self.variables = []
         self._recorded_variables = {}
         Global._network[0]['instance'].remove_recorder(self.cyInstance)
@@ -273,14 +296,24 @@ class Monitor(object):
 
         data = {}
         for var in variables:
-            data[var] = return_variable(self, var, keep)
-            if not keep:
-                if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
-                    self._recorded_variables[var]['start'][-1] = self._recorded_variables[var]['stop'][-1]
-                    self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
-            else:
-                if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
-                    self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
+            name = var
+            # Sums of inputs for rate-coded populations
+            if var.startswith('sum('):
+                target = re.findall(r"\(([\w]+)\)", var)[0]
+                name = '_sum_' + target
+            # Retrieve the data
+            data[var] = return_variable(self, name, keep)
+            # Eventually reshape the array
+            try:
+                if not keep:
+                    if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
+                        self._recorded_variables[var]['start'][-1] = self._recorded_variables[var]['stop'][-1]
+                        self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
+                else:
+                    if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
+                        self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
+            except:
+                Global._warning('Monitor.get(): you try to get recordings which do not exist:', var)
 
         if not force_dict and len(variables)==1:
             return data[variables[0]]
@@ -295,6 +328,7 @@ class Monitor(object):
                 getattr(self.cyInstance, 'clear_' + name)()
         except:
             data = []
+
         if name is not 'spike':
             return np.array(data)
         else:

@@ -495,16 +495,29 @@ class PyxGenerator(object):
             if var['name'] in pop.neuron_type.description['local']:
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
-        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+        bool record_%(name)s
+""" % {'name': var['name'], 'type': var['ctype']}
             elif var['name'] in pop.neuron_type.description['global']:
                 tpl_code += """
         vector[%(type)s] %(name)s
-        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+        bool record_%(name)s
+""" % {'name': var['name'], 'type': var['ctype']}
 
         if pop.neuron_type.type == 'spike':
             tpl_code += """
         map[int, vector[long]] spike
-        bool record_spike"""
+        bool record_spike
+"""
+
+        # Arrays for the presynaptic sums
+        if pop.neuron_type.type == 'rate':
+            tpl_code += """
+        # Targets"""
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                tpl_code += """
+        vector[vector[double]] _sum_%(target)s
+        bool record__sum_%(target)s
+""" % {'target': target}
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
 
@@ -529,7 +542,8 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_%(name)s
         def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_%(name)s = val
     def clear_%(name)s(self):
-        (<PopRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : pop.id, 'name': var['name']}
+        (<PopRecorder%(id)s *>self.thisptr).%(name)s.clear()
+""" % {'id' : pop.id, 'name': var['name']}
 
         if pop.neuron_type.type == 'spike':
             tpl_code += """
@@ -541,8 +555,24 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val
     def clear_spike(self):
         for idx in range((<PopRecorder%(id)s *>self.thisptr).spike.size()):
-            (<PopRecorder%(id)s *>self.thisptr).spike[idx].clear()""" % {'id' : pop.id}
+            (<PopRecorder%(id)s *>self.thisptr).spike[idx].clear()
+""" % {'id' : pop.id}
 
+        # Arrays for the presynaptic sums
+        if pop.neuron_type.type == 'rate':
+            tpl_code += """
+    # Targets"""
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                tpl_code += """
+    property %(name)s:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).%(name)s = val
+    property record_%(name)s:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_%(name)s
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_%(name)s = val
+    def clear_%(name)s(self):
+        (<PopRecorder%(id)s *>self.thisptr).%(name)s.clear()
+""" % {'id' : pop.id, 'name': '_sum_'+target}
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
 
@@ -564,7 +594,8 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
             elif var['name'] in proj.synapse_type.description['global']:
                 tpl_code += """
         vector[%(type)s] %(name)s
-        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+        bool record_%(name)s
+""" % {'name': var['name'], 'type': var['ctype']}
 
 
         return tpl_code % {'id' : proj.id}
@@ -590,6 +621,7 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s
         def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s = val
     def clear_%(name)s(self):
-        (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : proj.id, 'name': var['name']}
+        (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()
+""" % {'id' : proj.id, 'name': var['name']}
 
         return tpl_code % {'id' : proj.id}
