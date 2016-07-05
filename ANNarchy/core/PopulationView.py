@@ -1,9 +1,9 @@
 """
 
     PopulationView
-    
+
     This file is part of ANNarchy.
-    
+
     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
@@ -20,19 +20,19 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""    
+"""
 from ANNarchy.core import Global as Global
 import numpy as np
 
 class PopulationView(object):
     """ Container representing a subset of neurons of a Population."""
-    
+
     def __init__(self, population, ranks):
         """
         Create a view of a subset of neurons within the same population.
-        
+
         Parameter:
-        
+
             * *population*: population object
             * *ranks: list or numpy array containing the ranks of the selected neurons.
         """
@@ -72,7 +72,7 @@ class PopulationView(object):
                 return object.__getattribute__(self, name)
         else:
             return object.__getattribute__(self, name)
-        
+
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
         if name == 'population':
@@ -83,36 +83,36 @@ class PopulationView(object):
             else:
                 object.__setattr__(self, name, value)
         else:
-            object.__setattr__(self, name, value)    
-        
+            object.__setattr__(self, name, value)
+
     def get(self, name):
         """
         Returns current variable/parameter value.
-        
+
         Parameter:
-        
+
             * *name*: name of the parameter/variable.
         """
         if name in self.population.attributes:
             all_val = getattr(self.population, name).reshape(self.population.size)
-            return all_val[self.ranks] 
+            return all_val[self.ranks]
         else:
             Global._error("Population does not have a parameter/variable called " + name + ".")
-        
+
     def set(self, value):
         """ Updates neuron variable/parameter definition.
-        
+
         Parameters:
-        
+
             * *value*: dictionary of parameters/variables to be updated for the corresponding subset of neurons. It can be a single value or a list/1D array of the same size as the PopulationView.
-            
+
                 .. code-block:: python
-                
+
                     >>> subpop = pop[0:5]
                     >>> subpop.set( {'tau' : 20, 'r'= np.random.rand(subpop.size) } )
-                    
+
         .. warning::
-        
+
             If you modify the value of a parameter, this will be the case for ALL neurons of the population, not only the subset.
         """
         def _set_single(name, rank, value):
@@ -150,10 +150,10 @@ class PopulationView(object):
                         return None
                     if val_key in self.population.neuron_type.description['global']:
                         Global._error("Global attributes can only have one value in a population.")
-                        return None                    
+                        return None
                     # Assign the value
                     for idx, rk in enumerate(self.ranks):
-                        _set_single(val_key, rk, value[val_key][idx]) 
+                        _set_single(val_key, rk, value[val_key][idx])
 
                 else: # single value
                     for rk in self.ranks:
@@ -161,7 +161,30 @@ class PopulationView(object):
             else:
                 Global._error("the population has no attribute called ", val_key)
                 return None
-                
+
+    ################################
+    ## Access to weighted sums
+    ################################
+    def sum(self, target):
+        """
+        Returns the array of weighted sums corresponding to the target::
+
+            excitatory = pop.sum('exc')
+
+        For spiking networks, this is equivalent to accessing the conductances directly::
+
+            excitatory = pop.g_exc
+
+        If no incoming projection has the given target, the method returns zeros.
+
+        *Parameter:*
+
+        * **target**: the desired projection target.
+
+        **Note:** it is not possible to distinguish the original population when the same target is used.
+        """
+        return self.population.sum(target)[self.ranks]
+
     def __add__(self, other):
         """Allows to join two PopulationViews if they have the same population."""
         from ANNarchy.core.Neuron import IndividualNeuron
@@ -173,7 +196,11 @@ class PopulationView(object):
         else:
             Global._error("can only add two PopulationViews of the same population.")
             return None
-                
+
+    ################################
+    ## Composition
+    ################################
+
     def __repr__(self):
         """Defines the printing behaviour."""
         string ="PopulationView of " + str(self.population.name) + '\n'
