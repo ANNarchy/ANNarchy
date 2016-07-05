@@ -363,6 +363,41 @@ class Population(object):
 
 
     ################################
+    ## Access to weighted sums
+    ################################
+    def sum(self, target):
+        """
+        Returns the array of weighted sums corresponding to the target::
+
+            excitatory = pop.sum('exc')
+
+        For spiking networks, this is equivalent to accessing the conductances directly::
+
+            excitatory = pop.g_exc
+
+        If no incoming projection has the given target, the method returns zeros.
+
+        *Parameter:*
+
+        * **target**: the desired projection target.
+
+        **Note:** it is not possible to distinguish the original population when the same target is used.
+        """
+        # Check if the network is initialized
+        if not self.initialized:
+            Global._warning('sum(): the population', self.name, 'is not initialized yet.')
+            return np.zeros(self.geometry)
+        # Check if a projection has this type
+        if not target in self.targets:
+            Global._warning('sum(): the population', self.name, 'receives no projection with the target', target)
+            return np.zeros(self.geometry)
+        # Spiking neurons already have conductances available
+        if self.neuron_type.type == 'spike':
+            return getattr(self, 'g_'+target)
+        # Otherwise, call the Cython method
+        return getattr(self.cyInstance, 'get_sum_'+target)()
+
+    ################################
     ## Refractory period
     ################################
     @property

@@ -156,8 +156,8 @@ class PyxGenerator(object):
             export_targets += """
         # Targets"""
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                export_targets += """        vector[double] _sum_%(target)s
-""" % {'target' : target}
+                export_targets += """
+        vector[double] _sum_%(target)s""" % {'target' : target}
         if 'export_targets' in pop._specific_template.keys():
             export_targets = pop._specific_template['export_targets']
 
@@ -185,6 +185,7 @@ class PyxGenerator(object):
         wrapper_init = """
         pop%(id)s = size""" % {'id': pop.id}
         wrapper_access_parameters_variables = ""
+        wrapper_access_targets = ""
         wrapper_access_refractory = ""
         wrapper_access_additional = ""
 
@@ -206,11 +207,23 @@ class PyxGenerator(object):
         for var in pop.neuron_type.description['variables']:
             wrapper_access_parameters_variables += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
+        # Arrays for the presynaptic sums of rate-coded neurons
+        if pop.neuron_type.type == 'rate':
+            wrapper_access_targets += """
+    # Targets"""
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                wrapper_access_targets += """
+    cpdef np.ndarray get_sum_%(target)s(self):
+        return np.array(pop%(id)s._sum_%(target)s)""" % {'id': pop.id, 'target' : target}
+
+
         # Specific populations can overwrite
         if 'wrapper_args' in pop._specific_template.keys():
             wrapper_args = pop._specific_template['wrapper_args']
         if 'wrapper_init' in pop._specific_template.keys():
             wrapper_init = pop._specific_template['wrapper_init']
+        if 'wrapper_access_targets' in pop._specific_template.keys():
+            wrapper_access_targets = pop._specific_template['wrapper_access_targets']
         if 'wrapper_access_refractory' in pop._specific_template.keys():
             wrapper_access_refractory = pop._specific_template['wrapper_access_refractory']
         if 'wrapper_access_parameters_variables' in pop._specific_template.keys():
@@ -224,6 +237,7 @@ class PyxGenerator(object):
             'wrapper_args' : wrapper_args,
             'wrapper_init' : wrapper_init,
             'wrapper_access_parameters_variables' : wrapper_access_parameters_variables,
+            'wrapper_access_targets' : wrapper_access_targets,
             'wrapper_access_refractory' : wrapper_access_refractory,
             'wrapper_access_additional' : wrapper_access_additional,
         }
@@ -264,16 +278,16 @@ class PyxGenerator(object):
 
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.single_weight_matrix_omp  
+            weight_tpl = ProjTemplate.single_weight_matrix_omp
 
         # Export connectivity matrix
         export_connectivity_matrix = connectivity_tpl['pyx_struct']
         export_connectivity_matrix += weight_tpl['pyx_struct']
 
-        # Delay 
+        # Delay
         export_delay=""
         if has_delay:
-            export_delay = ProjTemplate.delay['pyx_struct'] % {'id': proj.id} 
+            export_delay = ProjTemplate.delay['pyx_struct'] % {'id': proj.id}
 
         # Event-driven
         export_event_driven = ""
@@ -319,7 +333,7 @@ class PyxGenerator(object):
             export_event_driven = proj._specific_template['export_event_driven']
         if 'export_parameters_variables' in proj._specific_template.keys():
             export_parameters_variables = proj._specific_template['export_parameters_variables']
-                
+
 
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
@@ -365,10 +379,10 @@ class PyxGenerator(object):
 
         # Import weight array template
         weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
-        
+
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.single_weight_matrix_omp            
+            weight_tpl = ProjTemplate.single_weight_matrix_omp
 
         sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
 
@@ -380,7 +394,7 @@ class PyxGenerator(object):
         wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
         wrapper_init += weight_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
 
-        # Wrapper sccess to connectivity matrix 
+        # Wrapper sccess to connectivity matrix
         wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
         wrapper_access_connectivity += weight_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
 
@@ -441,7 +455,7 @@ class PyxGenerator(object):
         if 'wrapper_access_connectivity' in proj._specific_template.keys():
             wrapper_access_connectivity = proj._specific_template['wrapper_access_connectivity']
         if 'wrapper_init_delay' in proj._specific_template.keys() and has_delay:
-            wrapper_init_delay = proj._specific_template['wrapper_init_delay']          
+            wrapper_init_delay = proj._specific_template['wrapper_init_delay']
         if 'wrapper_access_delay' in proj._specific_template.keys() and has_delay:
             wrapper_access_delay = proj._specific_template['wrapper_access_delay']
         if 'wrapper_init_event_driven' in proj._specific_template.keys() and has_event_driven:
@@ -453,7 +467,7 @@ class PyxGenerator(object):
 
         return PyxTemplate.proj_pyx_wrapper % {
             'id_proj': proj.id,
-            'wrapper_args': wrapper_args, 
+            'wrapper_args': wrapper_args,
             'wrapper_init_connectivity': wrapper_init,
             'wrapper_init_delay': wrapper_init_delay,
             'wrapper_init_event_driven': wrapper_init_event_driven,
@@ -475,7 +489,7 @@ class PyxGenerator(object):
         tpl_code = """
     # Population %(id)s (%(name)s) : Monitor
     cdef cppclass PopRecorder%(id)s (Monitor):
-        PopRecorder%(id)s(vector[int], int, long) except +    
+        PopRecorder%(id)s(vector[int], int, long) except +
 """
         for var in pop.neuron_type.description['variables']:
             if var['name'] in pop.neuron_type.description['local']:
@@ -510,10 +524,10 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
             tpl_code += """
     property %(name)s:
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).%(name)s = val 
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).%(name)s = val
     property record_%(name)s:
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_%(name)s
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_%(name)s = val 
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_%(name)s = val
     def clear_%(name)s(self):
         (<PopRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : pop.id, 'name': var['name']}
 
@@ -521,10 +535,10 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
             tpl_code += """
     property spike:
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).spike
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).spike = val 
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).spike = val
     property record_spike:
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_spike
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val 
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val
     def clear_spike(self):
         for idx in range((<PopRecorder%(id)s *>self.thisptr).spike.size()):
             (<PopRecorder%(id)s *>self.thisptr).spike[idx].clear()""" % {'id' : pop.id}
@@ -540,7 +554,7 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         tpl_code = """
     # Projection %(id)s : Monitor
     cdef cppclass ProjRecorder%(id)s (Monitor):
-        ProjRecorder%(id)s(vector[int], int, long) except +    
+        ProjRecorder%(id)s(vector[int], int, long) except +
 """
         for var in proj.synapse_type.description['variables']:
             if var['name'] in proj.synapse_type.description['local']:
@@ -571,10 +585,10 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
             tpl_code += """
     property %(name)s:
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s
-        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val 
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val
     property record_%(name)s:
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s
-        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s = val 
+        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s = val
     def clear_%(name)s(self):
         (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()""" % {'id' : proj.id, 'name': var['name']}
 

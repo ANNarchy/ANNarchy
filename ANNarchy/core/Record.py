@@ -61,6 +61,9 @@ class Monitor(object):
         else:
             self.variables = variables
 
+        # Populations can record sum(exc)
+        print self.variables
+
         # Period
         if not period:
             self._period = Global.config['dt']

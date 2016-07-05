@@ -23,7 +23,7 @@
 """
 # Definition of a population as a c-like struct, divided
 # into two groups: rate or spike
-# 
+#
 # Parameters:
 #
 #    id: id of the population
@@ -41,7 +41,7 @@ extern std::mt19937 rng;
 ///////////////////////////////////////////////////////////////
 // Main Structure for the population of id %(id)s (%(name)s)
 ///////////////////////////////////////////////////////////////
-struct PopStruct%(id)s{  
+struct PopStruct%(id)s{
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population
     // Access functions used by cython wrapper
@@ -171,7 +171,7 @@ struct PopStruct%(id)s{
 
 # c like definition of neuron attributes, whereas 'local' is used if values can vary across
 # neurons, consequently 'global' is used if values are common to all neurons.Currently two
-# types of sets are defined: openmp and cuda. In cuda case additional 'dirty' flags are 
+# types of sets are defined: openmp and cuda. In cuda case additional 'dirty' flags are
 # created.
 #
 # Parameters:
@@ -501,7 +501,7 @@ cuda_pop_kernel_call =\
 #     id: id of the population
 #     target: target name (e. g. FF, LAT ...)
 spike_specific = {
-    'declare_spike': """    
+    'declare_spike': """
     // Structures for managing spikes
     std::vector<long int> last_spike;
     std::vector<int> spiked;
@@ -511,7 +511,7 @@ spike_specific = {
         spiked = std::vector<int>(0, 0);
         last_spike = std::vector<long int>(size, -10000L);
 """,
-    'declare_refractory': """    
+    'declare_refractory': """
     // Refractory period
     std::vector<int> refractory;
     std::vector<int> refractory_remaining;""",
@@ -537,7 +537,8 @@ spike_specific = {
 rate_psp = {
     'openmp':
     {
-        'decl': """    std::vector<double> _sum_%(target)s;""",
+        'decl': """
+    std::vector<double> _sum_%(target)s;""",
         'init': """
         // Post-synaptic potential
         _sum_%(target)s = std::vector<double>(size, 0.0);""",
