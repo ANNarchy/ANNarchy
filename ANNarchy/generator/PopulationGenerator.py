@@ -747,7 +747,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         # targets
         for target in sorted(pop.neuron_type.description['targets']):
-            tar += """, pop%(id)s.gpu_sum_%(target)s""" % { 'id': pop.id, 'target' : target}
+            tar += """, pop%(id)s.gpu__sum_%(target)s""" % { 'id': pop.id, 'target' : target}
 
         # global operations
         for op in pop.global_operations:
