@@ -1198,7 +1198,7 @@ cuda_psp_kernel_call =\
                        /* computation data */
                        pop%(pre)s.gpu_r, proj%(id)s.gpu_w,
                        /* result */
-                       pop%(post)s.gpu_sum_%(target)s );
+                       pop%(post)s.gpu__sum_%(target)s );
     }
 """
 
