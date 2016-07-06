@@ -8,13 +8,16 @@ def raster_plot(spikes):
     """
     Transforms recorded spikes to display easily a raster plot for a spiking population.
 
-    It returns a (N, 2) Numpy array where each spike (first index) is represented by the corresponding time (first column) and the neuron index (second column).  It can be very easily plotted, for example with matplotlib::
+    It returns a (N, 2) Numpy array where each spike (first index) is represented by the 
+    corresponding time (first column) and the neuron index (second column).  
+    It can be very easily plotted, for example with matplotlib::
 
-        >>> monitor = Monitor(Pop, 'spike')
-        >>> times, ranks = raster_plot( monitor.get('spike')
-        >>> from pylab import *
-        >>> plot(times, ranks, 'o')
-        >>> show()
+        monitor = Monitor(pop, 'spike')
+        simulate(1000.0)
+        times, ranks = raster_plot(monitor.get('spike'))
+        from matplotlib.pyplot import *
+        plot(times, ranks, '.')
+        show()
 
     *Parameters*:
 
