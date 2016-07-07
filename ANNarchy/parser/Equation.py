@@ -170,7 +170,7 @@ class Equation(object):
             res =  parse_expr(transform_condition(expression),
                 local_dict = local_dict,
                 transformations = (standard_transformations + (convert_xor,)),
-                # evaluate=False
+                #evaluate=False
             )
         except Exception as e:
             _print(e)
@@ -450,16 +450,16 @@ class Equation(object):
             else:
                 terms = expression.split('!=')
                 expression = 'Not(Equality(' + terms[0] + ', ' + terms[1] + '))'
-
+        
         # Parse the string
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
-
+        
         # Obtain C code
         code = self.c_code(analysed)
-
+        
         # Return result
         return code
 
