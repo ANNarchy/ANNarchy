@@ -94,8 +94,7 @@ class ProjectionGenerator(object):
             if Global.config['paradigm'] == "openmp":
                 psp_prefix, psp_code = self.computesum_spiking(proj)
             else:
-                Global._error("Spiking networks are not supported on CUDA yet ...")
-
+                psp_header, psp_body, psp_call = self.computesum_spiking_cuda(proj)
 
         # Detect event-driven variables
         has_event_driven = False
@@ -246,7 +245,7 @@ class ProjectionGenerator(object):
 
         # Spiking model require inverted ranks
         if proj.synapse_type.type == "spike":
-            inv_connectivity_matrix_tpl = ProjTemplate.inverse_connectivity_matrix if Global.config['paradigm']=="openmp" else {}
+            inv_connectivity_matrix_tpl = ProjTemplate.inverse_connectivity_matrix if Global.config['paradigm']=="openmp" else ProjTemplate.inverse_connectivity_matrix_cuda
             declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare']
             init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
 
@@ -889,6 +888,10 @@ if(%(condition)s){
             code = self._prof_gen.annotate_computesum_spiking_omp(proj, code)
 
         return psp_prefix, code
+
+    def computesum_spiking_cuda(self, proj):
+        
+        return "", "", ""
 
 #######################################################################
 ############## Post-synaptic event spiking OMP ########################

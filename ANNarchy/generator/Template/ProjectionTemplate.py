@@ -405,7 +405,14 @@ csr_weight_matrix_cuda = {
 """
 }
 
-
+inverse_connectivity_matrix_cuda = {
+    'declare': """
+    // TODO:
+""",
+    'init': """
+        // TODO:
+"""
+}
 
 ######################################
 ### Rate-coded summation OMP

@@ -122,13 +122,14 @@ class PopulationGenerator(object):
             if pop.neuron_type.type == 'rate':
                 update_variables = self.update_rate_neuron_openmp(pop)
             else:
-                update_variables = self.update_spike_neuron(pop)
+                update_variables = self.update_spike_neuron_openmp(pop)
         else:
             if pop.neuron_type.type == 'rate':
                 body, header, update_call = self.update_rate_neuron_cuda(pop)
                 update_variables = ""
             else:
-                Global._error("Spiking neurons on GPUs are currently not supported")
+                body, header, update_call = self.update_spike_neuron_cuda(pop)
+                update_variables = ""
 
         # Stop condition
         stop_condition = self.stop_condition(pop)
@@ -251,76 +252,6 @@ class PopulationGenerator(object):
 
         return pop_desc
 
-    def _generate_cuda(self, pop, pop_desc, annarchy_dir):
-        "Generate complete code corresponding to CUDA"
-        glops_extern = ""
-        ## We first make a normal generation
-        # Retrieve the correct template
-        base_template = PopTemplate.header_struct_cuda
-
-        # Generate declaration and accessors of all parameters and variables
-        declaration_parameters_variables, access_parameters_variables = self.generate_decl_and_acc(pop)
-
-        init = self.init_population(pop)
-        reset = ""
-        if pop.max_delay > 1:
-            delay_init, delay_update, delay_reset = self._delay_code(pop)
-            #delay_update = delay_update.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
-            init += delay_init
-            reset += delay_reset
-
-        update_rng = self.update_random_distributions(pop)#.replace("pop"+str(pop.id)+".", "") #TODO: adjust prefixes in parser
-
-        if pop.neuron_type.type == 'rate':
-            body, header, update_call = self.update_rate_neuron_cuda(pop)
-        else:
-            Global._error("Spiking neurons on GPUs are currently not supported")
-
-
-        code = base_template % { 'id': pop.id,
-                                 'name': pop.name,
-                                 'size': pop.size,
-                                 'include_additional': include_additional,
-                                 'struct_additional': struct_additional,
-                                 'extern_global_operations': extern_global_operations,
-                                 'declare_spike_arrays': declare_spike,
-                                 'declare_parameters_variables': declaration_parameters_variables,
-                                 'declare_additional': declare_additional,
-                                 'declare_delay': declare_delay,
-                                 'access_parameters_variables': access_parameters_variables,
-                                 'init_parameters_variables': init_parameters_variables,
-                                 'init_spike': init_spike,
-                                 'init_delay': init_delay,
-                                 'init_additional': init_additional,
-                                 'reset_spike': reset_spike,
-                                 'reset_delay': reset_delay,
-                                 'reset_additional': reset_additional,
-                                 'update_variables': update_variables,
-                                 'update_rng': update_rng,
-                                 'update_delay': update_delay,
-                                 'update_global_ops': update_global_ops,
-                                 'stop_condition': stop_condition
-                                }
-
-        # Store the complete header definition in a single file
-        with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/pop'+str(pop.id)+'.hpp', 'w') as ofile:
-            ofile.write(code)
-
-        pop_desc['update'] = update_call
-        pop_desc['update_body'] =  body
-        pop_desc['update_header'] =  header
-        pop_desc['update_delay'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
-
-        if len(pop.global_operations) > 0:
-            update_global_ops = self.update_globalops(pop)
-            pop_desc['gops_update'] = update_global_ops % { 'id': pop.id }
-
-        host_to_device, device_to_host = self._cuda_memory_transfers(pop)
-        pop_desc['host_to_device'] = host_to_device
-        pop_desc['device_to_host'] = device_to_host
-
-        return pop_desc
-
     def generate_decl_and_acc(self, pop):
         # Pick basic template based on neuron type
         attr_template = PopTemplate.attribute_decl[Global.config['paradigm']]
@@ -339,7 +270,8 @@ class PopulationGenerator(object):
             declaration += attr_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
             accessors += acc_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
-        # Arrays for the presynaptic sums
+        # Arrays for the presynaptic sums for rate-coded neurons.
+        # The conductance/current variables for spiking neurons are stored in variables. 
         declaration += """
     // Targets
 """
@@ -766,7 +698,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
     ### Spiking neurons
     ################################
 
-    def update_spike_neuron(self, pop):
+    def update_spike_neuron_openmp(self, pop):
         # Neural update
         from .Utils import generate_equation_code
 
@@ -853,6 +785,244 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         return final_code
 
+    def update_spike_neuron_cuda(self, pop):
+        """
+        Generate the neural update code for GPU devices.
+        """
+        # Is there any variable?
+        if len(pop.neuron_type.description['variables']) == 0:
+            return "", "", ""
+
+        # Neural update
+        from .Utils import generate_equation_code
+
+        header = ""
+        body = ""
+        call = ""
+
+        # determine variables and attributes
+        var = ""
+        par = ""
+        tar = ""
+        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+            else:
+                par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+
+        # random variables
+        for rd in pop.neuron_type.description['random_distributions']:
+            var += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
+
+        # global operations
+        for op in pop.global_operations:
+            par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
+
+        # targets
+        for target in sorted(pop.neuron_type.description['targets']):
+            tar += """, double* _g_%(target)s""" % {'target' : target}
+
+        #Global variables
+        glob_eqs = ""
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        glob_eqs = """
+    __shared__ volatile unsigned int num_events;
+    if ( threadIdx.x == 0)
+    {
+%(eqs)s
+        num_events = 0;
+    }
+""" % {'id': pop.id, 'eqs': eqs }
+            #glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
+
+        # Local variables
+        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+
+        # we replace the rand_%(id)s by the corresponding curand... term
+        for rd in pop.neuron_type.description['random_distributions']:
+            if rd['dist'] == "Uniform":
+                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            elif rd['dist'] == "Normal":
+                term = """curand_normal_double( &%(rd)s[i] )""" % { 'rd': rd['name'] };
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """curand_normal_double( &%(rd)s[0] )""" % { 'rd': rd['name'] };
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            elif rd['dist'] == "LogNormal":
+                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            else:
+                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        # remove all types
+        repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
+        tar_wo_types = tar
+        var_wo_types = var
+        par_wo_types = par
+        for type in repl_types:
+            tar_wo_types = tar_wo_types.replace(type, "")
+            var_wo_types = var_wo_types.replace(type, "")
+            par_wo_types = par_wo_types.replace(type, "")
+
+        # Process the condition
+        cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        reset = ""
+        for eq in pop.neuron_type.description['spike']['spike_reset']:
+            reset += """
+                %(reset)s
+""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
+
+        spike_gather = """
+        if ( %(cond)s ) {
+            %(reset)s
+
+            // store spike event
+            int pos = atomicAdd( (unsigned int*) &num_events, 1);
+            printf("%%i ", pos );
+        }
+""" % { 'cond': cond, 'reset': reset }
+
+        loc_eqs += spike_gather
+
+        #
+        # create kernel prototypes
+        body += PopTemplate.cuda_pop_kernel % {
+                                'id': pop.id,
+                                'local_eqs': loc_eqs,
+                                'global_eqs': glob_eqs,
+                                'pop_size': str(pop.size),
+                                'tar': tar,
+                                'tar2': tar_wo_types,
+                                'var': var,
+                                'var2': var_wo_types,
+                                'par': par,
+                                'par2': par_wo_types
+                             }
+
+        #
+        # create kernel prototypes
+        header += """
+__global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
+""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
+
+        #
+        #    for calling entites we need to determine again all members
+        var = ""
+        par = ""
+        tar = ""
+        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+            else:
+                par += """, pop%(id)s.%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+
+        # random variables
+        for rd in pop.neuron_type.description['random_distributions']:
+            var += """, pop%(id)s.gpu_%(rd_name)s""" % { 'id': pop.id, 'rd_name' : rd['name'] }
+
+        # targets
+        for target in sorted(pop.neuron_type.description['targets']):
+            tar += """, pop%(id)s.gpu_g_%(target)s""" % { 'id': pop.id, 'target' : target}
+
+        # global operations
+        for op in pop.global_operations:
+            par += """, pop%(id)s._%(op)s_%(var)s""" % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
+
+        call += PopTemplate.cuda_pop_kernel_call % {
+            'id': pop.id,
+            'tar': tar.replace("double*","").replace("int*",""),
+            'var': var.replace("double*","").replace("int*",""),
+            'par': par.replace("double","").replace("int","")
+        }        
+#===============================================================================
+#         # Is there a refractory period?
+#         if pop.neuron_type.refractory or pop.refractory:
+#             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+#             code = """
+#             if( refractory_remaining[i] > 0){ // Refractory period
+# %(eqs)s
+#                 // Decrement the refractory period
+#                 refractory_remaining[i]--;
+#                 continue;
+#             }
+#         """ %  {'id': pop.id, 'eqs': eqs}
+#             refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
+#         else:
+#             code = ""
+#             refrac_inc = ""
+# 
+#         # Global variables
+#         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+#         if eqs.strip() != "":
+#             global_code = eqs
+#         else:
+#             global_code = ""
+# 
+#         # OMP code
+#         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+#         omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+# 
+#         # Local variables, evaluated in parallel
+#         code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+# 
+#         # Process the condition
+#         cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+# 
+#         # reset equations
+#         reset = ""
+#         for eq in pop.neuron_type.description['spike']['spike_reset']:
+#             reset += """
+#                 %(reset)s
+# """ % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
+# 
+#         # Mean Firing rate
+#         mean_FR_push, mean_FR_update = self.update_fr(pop)
+# 
+#         # Gather code
+#         spike_gather = """
+#             if(%(condition)s){ // Emit a spike
+# %(reset)s
+#                 %(omp_critical_code)s
+#                 {
+#                     spiked.push_back(i);
+#                 }
+#                 last_spike[i] = t;
+#                 %(refrac_inc)s
+#                 %(mean_FR_push)s
+#             }
+#             %(mean_FR_update)s
+# """% {  'id': pop.id, 'name': pop.name, 'size': pop.size,
+#         'condition' : cond, 'reset': reset,
+#         'refrac_inc': refrac_inc,
+#         'mean_FR_push': mean_FR_push,
+#         'mean_FR_update': mean_FR_update,
+#         'omp_critical_code': omp_critical_code}
+# 
+#         code += spike_gather
+# 
+#         # finish code
+#         final_code = """
+#     if( _active ) {
+#         spiked.clear();
+# %(global_code)s
+#         %(omp_code)s
+#         for(int i = 0; i < %(size)s; i++){
+# %(code)s
+#         }
+#     } // active
+# """ % {'id': pop.id, 'size': pop.size, 'name': pop.name, 'code': code, 'global_code': global_code, 'omp_code': omp_code }
+# 
+#         # if profiling enabled, annotate with profiling code
+#         if self._prof_gen:
+#             final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+#===============================================================================
+
+        return body, header, call
+    
     ################################
     ### Reset
     ################################
