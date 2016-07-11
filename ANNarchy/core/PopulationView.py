@@ -113,7 +113,7 @@ class PopulationView(object):
 
         .. warning::
 
-            If you modify the value of a parameter, this will be the case for ALL neurons of the population, not only the subset.
+            If you modify the value of a global parameter, this will be the case for ALL neurons of the population, not only the subset.
         """
         def _set_single(name, rank, value):
             if not self.population.initialized:
@@ -121,7 +121,11 @@ class PopulationView(object):
                     Global._error('can not set the value of a global attribute from a PopulationView.')
                     return
                 if isinstance(self.population.init[name], np.ndarray):
-                    self.population.init[name][rank] = value
+                    if len(self.population.geometry) == 1:
+                        self.population.init[name][rank] = value
+                    else: # Need to access the coordinates
+                        coords = self.population.coordinates_from_rank(rank)
+                        self.population.init[name][coords] = value
                 else:
                     val = self.population.init[name]
                     data = val * np.ones(self.population.size)
