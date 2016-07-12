@@ -421,6 +421,8 @@ def extract_spike_variable(description):
                             cond[0].strip(),
                             description)
     raw_spike_code = translator.parse()
+    # Also store the variables used in the condition, as it may be needed for CUDA generation
+    spike_code_dependencies = translator.dependencies()
 
     reset_desc = []
     if 'raw_reset' in description.keys() and description['raw_reset']:
@@ -429,8 +431,11 @@ def extract_spike_variable(description):
             translator = Equation(var['name'], var['eq'],
                                   description)
             var['cpp'] = translator.parse()
+            var['dependencies'] = translator.dependencies()
 
-    return { 'spike_cond': raw_spike_code, 'spike_reset': reset_desc}
+    return { 'spike_cond': raw_spike_code,
+             'spike_cond_dependencies': spike_code_dependencies, 
+             'spike_reset': reset_desc}
 
 def extract_pre_spike_variable(description):
     pre_spike_var = []
