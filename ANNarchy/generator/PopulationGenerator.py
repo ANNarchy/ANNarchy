@@ -834,25 +834,8 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
     }
 """ % {'id': pop.id, 'eqs': eqs }
 
-        # Is there a refractory period?
-        if pop.neuron_type.refractory or pop.refractory:
-            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-            code = """
-        if( refractory_remaining[i] > 0){ // Refractory period
-%(eqs)s
-            // Decrement the refractory period
-            refractory_remaining[i]--;
-            continue;
-        }
-        """ %  {'id': pop.id, 'eqs': eqs}
-            refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
-        else:
-            code = ""
-            refrac_inc = ""
- 
         # Local variables
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-        code += loc_eqs
 
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in pop.neuron_type.description['random_distributions']:
@@ -899,10 +882,41 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             // store spike event
             int pos = atomicAdd( num_events, 1);
             spiked[pos] = i;
-        }
-""" % { 'id': pop.id, 'cond': cond, 'reset': reset }
 
-        code += spike_gather
+            // refractory
+            %(refrac_inc)s
+        }
+""" % { 'id': pop.id, 'cond': cond, 'reset': reset, 'refrac_inc': "%(refrac_inc)s" }
+
+        # Is there a refractory period?
+        if pop.neuron_type.refractory or pop.refractory:
+            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+            refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
+
+            code = """
+        if( refractory_remaining[i] > 0){ // Refractory period
+%(eqs)s
+            // Decrement the refractory period
+            refractory_remaining[i]--;
+            if(threadIdx.x== 0)
+                printf("%%i ", refractory_remaining[0]);
+        } else{
+        %(code)s
+
+        %(spike_gather)s
+        }
+        """ %  { 'id': pop.id,
+                 'eqs': eqs,
+                 'code': loc_eqs,
+                 'spike_gather': spike_gather % { 'refrac_inc': refrac_inc}
+            }
+
+            refrac_header = ", int *refractory, int* refractory_remaining"
+            refrac_body = """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
+        else:
+            refrac_header = ""
+            refrac_body = ""
+            code = loc_eqs + spike_gather % { 'refrac_inc': ""}
 
         #
         # create kernel prototypes
@@ -911,7 +925,8 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
                                 'local_eqs': code,
                                 'global_eqs': glob_eqs,
                                 'pop_size': str(pop.size),
-                                'default': "double dt, int* spiked, unsigned int* num_events, int* refractory_remaining",
+                                'default': "double dt, int* spiked, unsigned int* num_events",
+                                'refrac': refrac_header,
                                 'tar': tar,
                                 'tar2': tar_wo_types,
                                 'var': var,
@@ -923,8 +938,12 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         #
         # create kernel prototypes
         header += """
-__global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
-""" % { 'id': pop.id, 'default': "double dt, int *spiked, unsigned int* num_events, int* refractory_remaining", 'tar': tar, 'var': var, 'par': par }
+__global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
+""" % { 'id': pop.id,
+        'default': "double dt, int *spiked, unsigned int* num_events",
+        'refrac': ", int *refractory, int* refractory_remaining",
+        'tar': tar, 'var': var, 'par': par
+    }
 
         #
         #    for calling entites we need to determine again all members
@@ -951,51 +970,13 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         call += PopTemplate.cuda_pop_kernel_call % {
             'id': pop.id,
-            'default': """dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_num_events, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id},
+            'default': """dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_num_events""" %{'id':pop.id},
+            'refrac': refrac_body,
             'tar': tar.replace("double*","").replace("int*",""),
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
         }        
-#===============================================================================
-#         # Is there a refractory period?
-#         if pop.neuron_type.refractory or pop.refractory:
-#             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-#             code = """
-#             if( refractory_remaining[i] > 0){ // Refractory period
-# %(eqs)s
-#                 // Decrement the refractory period
-#                 refractory_remaining[i]--;
-#                 continue;
-#             }
-#         """ %  {'id': pop.id, 'eqs': eqs}
-#             refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
-#         else:
-#             code = ""
-#             refrac_inc = ""
-# 
-#         # Global variables
-#         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-#         if eqs.strip() != "":
-#             global_code = eqs
-#         else:
-#             global_code = ""
-# 
-#         # OMP code
-#         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
-#         omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
-# 
-#         # Local variables, evaluated in parallel
-#         code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-# 
-#         # Process the condition
-#         cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-# 
-#         # reset equations
-#         reset = ""
-#         for eq in pop.neuron_type.description['spike']['spike_reset']:
-#             reset += """
-#                 %(reset)s
-# """ % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
+
 # 
 #         # Mean Firing rate
 #         mean_FR_push, mean_FR_update = self.update_fr(pop)
@@ -1234,6 +1215,16 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             //std::cout << "Transfer pop%(id)s.%(attr_name)s" << std::endl;
             cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
             pop%(id)s.%(attr_name)s_dirty = false;
+        }
+""" % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
+
+        if pop.neuron_type.refractory or pop.refractory:
+            host_device_transfer += """
+        // refractory
+        if( pop%(id)s.refractory_dirty )
+        {
+            cudaMemcpy(pop%(id)s.gpu_refractory, pop%(id)s.refractory.data(), pop%(id)s.size * sizeof(int), cudaMemcpyHostToDevice);
+            pop%(id)s.refractory_dirty = false;
         }
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 

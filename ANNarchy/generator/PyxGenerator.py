@@ -138,9 +138,16 @@ class PyxGenerator(object):
         export_refractory = ""
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
-                export_refractory = """
+                if Global.config['paradigm'] == "openmp":
+                    export_refractory = """
         vector[int] refractory
 """
+                else:
+                    export_refractory = """
+        vector[int] refractory
+        bool refractory_dirty
+"""
+
         # Parameters and variables
         export_parameters_variables = ""
         for var in pop.neuron_type.description['parameters']:
@@ -193,13 +200,7 @@ class PyxGenerator(object):
         # Spiking neurons have aditional data
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
-                wrapper_access_refractory += """
-    # Refractory period
-    cpdef np.ndarray get_refractory(self):
-        return pop%(id)s.refractory
-    cpdef set_refractory(self, np.ndarray value):
-        pop%(id)s.refractory = value
-""" % {'id': pop.id}
+                wrapper_access_refractory += PopTemplate.spike_specific[Global.config['paradigm']]['pyx_wrapper'] % {'id': pop.id}
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
