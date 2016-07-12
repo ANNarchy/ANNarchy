@@ -554,7 +554,8 @@ spike_specific = {
     'declare_refractory': """
     // Refractory period
     std::vector<int> refractory;
-    std::vector<int> refractory_remaining;""",
+    std::vector<int> refractory_remaining;
+    int *gpu_refractory_remaining;""",
     'init_refractory': """
         // Refractory period
         refractory = std::vector<int>(size, 0);

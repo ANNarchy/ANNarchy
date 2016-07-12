@@ -834,8 +834,25 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
     }
 """ % {'id': pop.id, 'eqs': eqs }
 
+        # Is there a refractory period?
+        if pop.neuron_type.refractory or pop.refractory:
+            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+            code = """
+        if( refractory_remaining[i] > 0){ // Refractory period
+%(eqs)s
+            // Decrement the refractory period
+            refractory_remaining[i]--;
+            continue;
+        }
+        """ %  {'id': pop.id, 'eqs': eqs}
+            refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
+        else:
+            code = ""
+            refrac_inc = ""
+ 
         # Local variables
-        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        code += loc_eqs
 
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in pop.neuron_type.description['random_distributions']:
@@ -872,7 +889,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
-                %(reset)s
+            %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
 
         spike_gather = """
@@ -885,16 +902,16 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         }
 """ % { 'id': pop.id, 'cond': cond, 'reset': reset }
 
-        loc_eqs += spike_gather
+        code += spike_gather
 
         #
         # create kernel prototypes
         body += PopTemplate.cuda_pop_kernel % {
                                 'id': pop.id,
-                                'local_eqs': loc_eqs,
+                                'local_eqs': code,
                                 'global_eqs': glob_eqs,
                                 'pop_size': str(pop.size),
-                                'default': "double dt, int* spiked, unsigned int* num_events",
+                                'default': "double dt, int* spiked, unsigned int* num_events, int* refractory_remaining",
                                 'tar': tar,
                                 'tar2': tar_wo_types,
                                 'var': var,
@@ -907,7 +924,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # create kernel prototypes
         header += """
 __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
-""" % { 'id': pop.id, 'default': "double dt, int *spiked, unsigned int* num_events", 'tar': tar, 'var': var, 'par': par }
+""" % { 'id': pop.id, 'default': "double dt, int *spiked, unsigned int* num_events, int* refractory_remaining", 'tar': tar, 'var': var, 'par': par }
 
         #
         #    for calling entites we need to determine again all members
@@ -934,7 +951,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         call += PopTemplate.cuda_pop_kernel_call % {
             'id': pop.id,
-            'default': """dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_num_events""" %{'id':pop.id},
+            'default': """dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_num_events, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id},
             'tar': tar.replace("double*","").replace("int*",""),
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
