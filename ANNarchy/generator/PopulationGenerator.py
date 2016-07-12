@@ -648,6 +648,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                                 'local_eqs': loc_eqs,
                                 'global_eqs': glob_eqs,
                                 'pop_size': str(pop.size),
+                                'default': 'double dt',
                                 'tar': tar,
                                 'tar2': tar_wo_types,
                                 'var': var,
@@ -659,8 +660,8 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         #
         # create kernel prototypes
         header += """
-__global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
-""" % { 'id': pop.id, 'tar': tar, 'var': var, 'par': par }
+__global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
+""" % { 'id': pop.id, 'default': 'double dt', 'tar': tar, 'var': var, 'par': par }
 
         #
         #    for calling entites we need to determine again all members
@@ -687,6 +688,7 @@ __global__ void cuPop%(id)s_step( double dt%(tar)s%(var)s%(par)s );
 
         call += PopTemplate.cuda_pop_kernel_call % {
             'id': pop.id,
+            'default': 'dt',
             'tar': tar.replace("double*","").replace("int*",""),
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
@@ -1056,15 +1058,18 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
                 code += """
             _%(op)s_%(var)s = %(op)s_value(%(var)s.data(), size);
 """ % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+
+            return """
+    if ( _active ){
+%(code)s
+    }""" % {'code': code}
+
         else:
             from Template.GlobalOperationTemplate import global_operation_templates_cuda as template
             for op in pop.global_operations:
                 code += template[op['function']]['call'] % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
 
-        return """
-    if (_active){
-%(code)s
-}""" % {'code':code}
+            return code
 
     ################################
     ### Mean firing rate (spiking)
