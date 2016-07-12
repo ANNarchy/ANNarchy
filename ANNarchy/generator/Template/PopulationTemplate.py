@@ -455,7 +455,7 @@ cuda_rng = {
 cuda_pop_kernel=\
 """
 // gpu device kernel for population %(id)s
-__global__ void cuPop%(id)s_step(double dt%(tar)s%(var)s%(par)s)
+__global__ void cuPop%(id)s_step(%(default)s%(tar)s%(var)s%(par)s)
 {
     int i = threadIdx.x + blockIdx.x*blockDim.x;
 
@@ -477,8 +477,9 @@ cuda_pop_kernel_call =\
     if ( pop%(id)s._active ) {
         int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
 
-        cuPop%(id)s_step<<<nb, __pop%(id)s__>>>(/* default arguments */
-              dt
+        cuPop%(id)s_step<<<nb, __pop%(id)s__>>>(
+              /* default arguments */
+              %(default)s
               /* population targets */
               %(tar)s
               /* kernel gpu arrays */
@@ -502,7 +503,8 @@ cuda_pop_kernel_call =\
 #     id: id of the population
 #     target: target name (e. g. FF, LAT ...)
 spike_specific = {
-    'declare_spike': """
+    'openmp': {
+        'declare_spike': """
     // Structures for managing spikes
     std::vector<long int> last_spike;
     std::vector<int> spiked;
@@ -533,6 +535,44 @@ spike_specific = {
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
 """
+    },
+    'cuda': {
+        'declare_spike': """
+    // Structures for managing spikes
+    std::vector<long int> last_spike;
+    std::vector<int> spiked;
+    int* gpu_spiked;
+    unsigned int* gpu_num_events;
+""",
+    'init_spike': """
+        // Spiking variables
+        spiked = std::vector<int>(0, 0);
+        cudaMalloc((void**)&gpu_num_events, sizeof(unsigned int));
+        cudaMalloc((void**)&gpu_spiked, size * sizeof(int)); // we can't reallocate dynamically on the device, therefore we allocate max. possible request
+        last_spike = std::vector<long int>(size, -10000L);
+""",
+    'declare_refractory': """
+    // Refractory period
+    std::vector<int> refractory;
+    std::vector<int> refractory_remaining;""",
+    'init_refractory': """
+        // Refractory period
+        refractory = std::vector<int>(size, 0);
+        refractory_remaining = std::vector<int>(size, 0);
+""",
+    'init_event-driven': """
+        last_spike = std::vector<long int>(size, -10000L);
+""",
+    'reset_spike': """
+        spiked.clear();
+        last_spike.clear();
+        last_spike = std::vector<long int>(size, -10000L);
+""",
+    'reset_refractory': """
+        refractory_remaining.clear();
+        refractory_remaining = std::vector<int>(size, 0);
+"""
+    }
 }
 
 rate_psp = {

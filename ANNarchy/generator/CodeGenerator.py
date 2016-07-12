@@ -319,7 +319,7 @@ class CodeGenerator(object):
                 'delay_code' : delay_code,
                 'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
-                'set_number_threads' : number_threads,
+                'set_number_threads' : number_threads
             }
 
             base_dict.update( prof_dict )

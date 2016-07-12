@@ -132,3 +132,37 @@ public:
         } """    
     }
 }
+
+recording_tpl= {
+    'openmp' : """
+        if(this->record_spike){
+            for(int i=0; i<pop%(id)s.spiked.size(); i++){
+                if(!this->partial){
+                    this->spike[pop%(id)s.spiked[i]].push_back(t);
+                }
+                else{
+                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
+                        this->spike[pop%(id)s.spiked[i]].push_back(t);
+                    }
+                }
+            }
+        } """,
+    'cuda' : """
+        if(this->record_spike){
+            unsigned int num_events = 0;
+            cudaMemcpy(&num_events, pop%(id)s.gpu_num_events, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+            pop%(id)s.spiked = std::vector<int>(num_events, 0);
+            cudaMemcpy(pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, num_events*sizeof(int), cudaMemcpyDeviceToHost);
+
+            for(int i=0; i<pop%(id)s.spiked.size(); i++){
+                if(!this->partial){
+                    this->spike[pop%(id)s.spiked[i]].push_back(t);
+                }
+                else{
+                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
+                        this->spike[pop%(id)s.spiked[i]].push_back(t);
+                    }
+                }
+            }
+        } """
+}

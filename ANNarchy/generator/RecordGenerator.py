@@ -123,19 +123,7 @@ class RecordGenerator:
             }
         }
         this->record_spike = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
-            recording_code += """
-        if(this->record_spike){
-            for(int i=0; i<pop%(id)s.spiked.size(); i++){
-                if(!this->partial){
-                    this->spike[pop%(id)s.spiked[i]].push_back(t);
-                }
-                else{
-                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                        this->spike[pop%(id)s.spiked[i]].push_back(t);
-                    }
-                }
-            }
-        }""" % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
+            recording_code += RecTemplate.recording_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
 
         return tpl_code % {'id': pop.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 
