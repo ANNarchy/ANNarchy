@@ -898,8 +898,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 %(eqs)s
             // Decrement the refractory period
             refractory_remaining[i]--;
-            if(threadIdx.x== 0)
-                printf("%%i ", refractory_remaining[0]);
         } else{
         %(code)s
 

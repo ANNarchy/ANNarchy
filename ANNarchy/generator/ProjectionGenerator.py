@@ -897,7 +897,9 @@ if(%(condition)s){
         for eq in proj.synapse_type.description['pre_spike']:
 
             if eq['name'] == "g_target":   # synaptic transmission
-                eq_code += "atomicAdd(&g_target[post_ranks[offsets[pre_idx]+syn_idx]], w[offsets[pre_idx]+syn_idx]);"
+                eq_code += """
+        int j = offsets[pre_idx]+syn_idx;
+        atomicAdd(&g_target[post_ranks[j]], w[indices[j]]);"""
                 kernel_args_call += "pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
 
             if kernel_args != "":
