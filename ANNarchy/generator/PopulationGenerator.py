@@ -820,10 +820,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         for op in pop.global_operations:
             par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
 
-        # targets
-        for target in sorted(pop.neuron_type.description['targets']):
-            tar += """, double* _g_%(target)s""" % {'target' : target}
-
         # Global variables
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
         glob_eqs = """
@@ -957,10 +953,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
         # random variables
         for rd in pop.neuron_type.description['random_distributions']:
             var += """, pop%(id)s.gpu_%(rd_name)s""" % { 'id': pop.id, 'rd_name' : rd['name'] }
-
-        # targets
-        for target in sorted(pop.neuron_type.description['targets']):
-            tar += """, pop%(id)s.gpu_g_%(target)s""" % { 'id': pop.id, 'target' : target}
 
         # global operations
         for op in pop.global_operations:
