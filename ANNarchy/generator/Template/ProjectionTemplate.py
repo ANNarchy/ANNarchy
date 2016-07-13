@@ -407,10 +407,57 @@ csr_weight_matrix_cuda = {
 
 inverse_connectivity_matrix_cuda = {
     'declare': """
-    // TODO:
+    // Inverse connectivity
+    std::vector< std::vector< int > > pre_to_post_rank;
+    std::vector< std::vector< int > > pre_to_post_idx;
+    std::vector< int > pre_to_post_flat_idx;
+    int *gpu_pre_to_post_flat_idx;
+    std::vector< int > pre_to_post_flat_off;
+    int *gpu_pre_to_post_flat_off;
+    std::vector< int > pre_to_post_rank_flat;
+    int *gpu_pre_to_post_rank_flat;
+    std::vector< int > pre_to_post_idx_flat;
+    int *gpu_pre_to_post_idx_flat;
 """,
     'init': """
-        // TODO:
+        // result container
+        pre_to_post_rank = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
+        pre_to_post_idx = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
+
+        // some iterator definitions we need
+        typename std::vector<std::vector<int> >::iterator pre_rank_out_it = pre_rank.begin();  // 1st level iterator for pre_rank
+        typename std::vector<int>::iterator pre_rank_in_it;                                    // 2nd level iterator for pre_rank
+        typename std::vector< int >::iterator post_rank_it = post_rank.begin();
+
+        // iterate over post neurons, post_rank_it encodes the current rank
+        for( ; pre_rank_out_it != pre_rank.end(); pre_rank_out_it++, post_rank_it++ ) {
+
+            int syn_idx = flat_off[*post_rank_it]; // start point of the flattened array, post-side
+            // iterate over synapses, update both result containers
+            for( pre_rank_in_it = pre_rank_out_it->begin(); pre_rank_in_it != pre_rank_out_it->end(); pre_rank_in_it++ ) {
+                //std::cout << *pre_rank_in_it << "->" << *post_rank_it << ": " << syn_idx << std::endl;
+                pre_to_post_rank[*pre_rank_in_it].push_back(*post_rank_it);
+                pre_to_post_idx[*pre_rank_in_it].push_back(syn_idx);
+                syn_idx++;
+            }
+        }
+
+        // flattening and transfer to GPU
+        pre_to_post_flat_idx = flattenIdx<int>(pre_to_post_rank);
+        cudaMalloc((void**)&gpu_pre_to_post_flat_idx, pre_to_post_flat_idx.size()*sizeof(int));
+        cudaMemcpy(gpu_pre_to_post_flat_idx, pre_to_post_flat_idx.data(), pre_to_post_flat_idx.size()*sizeof(int), cudaMemcpyHostToDevice);
+
+        pre_to_post_flat_off = flattenOff<int>(pre_to_post_rank);
+        cudaMalloc((void**)&gpu_pre_to_post_flat_off, pre_to_post_flat_off.size()*sizeof(int));
+        cudaMemcpy(gpu_pre_to_post_flat_off, pre_to_post_flat_off.data(), pre_to_post_flat_off.size()*sizeof(int), cudaMemcpyHostToDevice);
+
+        pre_to_post_rank_flat = flattenArray<int>(pre_to_post_rank);
+        cudaMalloc((void**)&gpu_pre_to_post_rank_flat, pre_to_post_rank_flat.size()*sizeof(int));
+        cudaMemcpy(gpu_pre_to_post_rank_flat, pre_to_post_rank_flat.data(), pre_to_post_rank_flat.size()*sizeof(int), cudaMemcpyHostToDevice);
+
+        pre_to_post_idx_flat = flattenArray<int>(pre_to_post_idx);
+        cudaMalloc((void**)&gpu_pre_to_post_idx_flat, pre_to_post_idx_flat.size()*sizeof(int));
+        cudaMemcpy(gpu_pre_to_post_idx_flat, pre_to_post_idx_flat.data(), pre_to_post_idx_flat.size()*sizeof(int), cudaMemcpyHostToDevice);        
 """
 }
 
