@@ -891,7 +891,34 @@ if(%(condition)s){
 
     def computesum_spiking_cuda(self, proj):
         
-        return "", "", ""
+        kernel_args = ""
+        kernel_args_call = ""
+        eq_code = ""
+        for eq in proj.synapse_type.description['pre_spike']:
+
+            if eq['name'] == "g_target":   # synaptic transmission
+                eq_code += "atomicAdd(&g_target[post_ranks[offsets[pre_idx]+syn_idx]], w[offsets[pre_idx]+syn_idx]);"
+                kernel_args_call += "pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
+
+            if kernel_args != "":
+                kernel_args += ", "
+            kernel_args += eq['ctype'] + "* " + eq['name']
+
+        conn_call = "proj%(id_proj)s.gpu_pre_to_post_flat_idx, proj%(id_proj)s.gpu_pre_to_post_flat_off, proj%(id_proj)s.gpu_pre_to_post_rank_flat, proj%(id_proj)s.gpu_pre_to_post_idx_flat, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
+        call = """
+    if ( pop%(id_pre)s._active) {
+        int num_events = 0;
+        cudaMemcpy(&num_events, pop%(id_pre)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
+
+        cu_proj%(id_proj)s_psp<<<num_events, 32>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s, %(kernel_args)s );
+    }""" % { 'id_proj': proj.id, 'id_pre': proj.pre.id, 'kernel_args': kernel_args_call, 'conn_args': conn_call }
+
+        body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'kernel_args': kernel_args, 'eq':  eq_code }
+
+        conn_header = "int* nb_synapses, int* offsets, int* post_ranks, int* indices, double *w"
+        header = """__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_header)s, %(kernel_args)s );\n""" % { 'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args }
+
+        return header, body, call
 
 #######################################################################
 ############## Post-synaptic event spiking OMP ########################

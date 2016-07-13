@@ -1256,6 +1256,20 @@ cuda_psp_kernel_call =\
     }
 """
 
+cuda_spike_psp_kernel=\
+"""// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( int *spiked, int* nb_synapses, int* offsets, int* post_ranks, int* indices, double* w, %(kernel_args)s ) {
+    int pre_idx = spiked[blockIdx.x];
+    int syn_idx = threadIdx.x;
+
+    //printf("%%li - %%i: %%i, %%i\\n", t, pre_idx, offsets[pre_idx], nb_synapses[pre_idx]);
+    while( syn_idx < nb_synapses[pre_idx]) {
+        %(eq)s
+        syn_idx += blockDim.x;
+    }
+}
+"""
+
 ######################################
 ### Update synaptic variables CUDA
 ######################################
