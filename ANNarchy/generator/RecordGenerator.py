@@ -123,7 +123,7 @@ class RecordGenerator:
             }
         }
         this->record_spike = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
-            recording_code += RecTemplate.recording_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
+            recording_code += RecTemplate.recording_spike_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
 
         return tpl_code % {'id': pop.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
 

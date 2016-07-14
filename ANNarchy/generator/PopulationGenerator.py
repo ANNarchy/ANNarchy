@@ -878,6 +878,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             // store spike event
             int pos = atomicAdd( num_events, 1);
             spiked[pos] = i;
+            last_spike[i] = t;
 
             // refractory
             %(refrac_inc)s
@@ -919,7 +920,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
                                 'local_eqs': code,
                                 'global_eqs': glob_eqs,
                                 'pop_size': str(pop.size),
-                                'default': "double dt, int* spiked, unsigned int* num_events",
+                                'default': "double dt, int* spiked, unsigned int* num_events, long int* last_spike",
                                 'refrac': refrac_header,
                                 'tar': tar,
                                 'tar2': tar_wo_types,
@@ -934,7 +935,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         header += """
 __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
 """ % { 'id': pop.id,
-        'default': "double dt, int *spiked, unsigned int* num_events",
+        'default': "double dt, int *spiked, unsigned int* num_events, long int* last_spike",
         'refrac': ", int *refractory, int* refractory_remaining",
         'tar': tar, 'var': var, 'par': par
     }
@@ -960,55 +961,12 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
 
         call += PopTemplate.cuda_pop_kernel_call % {
             'id': pop.id,
-            'default': """dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_num_events""" %{'id':pop.id},
+            'default': """dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_num_events, pop%(id)s.gpu_last_spike""" %{'id':pop.id},
             'refrac': refrac_body,
             'tar': tar.replace("double*","").replace("int*",""),
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
         }        
-
-# 
-#         # Mean Firing rate
-#         mean_FR_push, mean_FR_update = self.update_fr(pop)
-# 
-#         # Gather code
-#         spike_gather = """
-#             if(%(condition)s){ // Emit a spike
-# %(reset)s
-#                 %(omp_critical_code)s
-#                 {
-#                     spiked.push_back(i);
-#                 }
-#                 last_spike[i] = t;
-#                 %(refrac_inc)s
-#                 %(mean_FR_push)s
-#             }
-#             %(mean_FR_update)s
-# """% {  'id': pop.id, 'name': pop.name, 'size': pop.size,
-#         'condition' : cond, 'reset': reset,
-#         'refrac_inc': refrac_inc,
-#         'mean_FR_push': mean_FR_push,
-#         'mean_FR_update': mean_FR_update,
-#         'omp_critical_code': omp_critical_code}
-# 
-#         code += spike_gather
-# 
-#         # finish code
-#         final_code = """
-#     if( _active ) {
-#         spiked.clear();
-# %(global_code)s
-#         %(omp_code)s
-#         for(int i = 0; i < %(size)s; i++){
-# %(code)s
-#         }
-#     } // active
-# """ % {'id': pop.id, 'size': pop.size, 'name': pop.name, 'code': code, 'global_code': global_code, 'omp_code': omp_code }
-# 
-#         # if profiling enabled, annotate with profiling code
-#         if self._prof_gen:
-#             final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
-#===============================================================================
 
         return body, header, call
     
@@ -1215,6 +1173,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
         // refractory
         if( pop%(id)s.refractory_dirty )
         {
+        #ifdef _DEBUG
+            std::cout << "Transfer pop%(id)s.refractory" << std::endl;
+        #endif
             cudaMemcpy(pop%(id)s.gpu_refractory, pop%(id)s.refractory.data(), pop%(id)s.size * sizeof(int), cudaMemcpyHostToDevice);
             pop%(id)s.refractory_dirty = false;
         }

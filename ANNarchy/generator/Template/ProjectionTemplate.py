@@ -1296,13 +1296,13 @@ cuda_spike_psp_kernel_call=\
         int tpb = 32;
         cudaMemcpy(&num_events, pop%(id_pre)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
 
-        if (num_events > 0) {
+        if ( num_events > 0 ) {
             cu_proj%(id_proj)s_psp<<<num_events, tpb>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s, %(kernel_args)s );
 
         #ifdef _DEBUG
             cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
             if( err_psp_proj%(id_proj)s != cudaSuccess) {
-                std::cout << "proj0_psp: " << std::endl;
+                std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
                 std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
                 std::cout << "   kernel_config: " << num_events << ", " << tpb << std::endl;
             }

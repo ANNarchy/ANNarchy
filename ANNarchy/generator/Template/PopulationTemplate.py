@@ -549,16 +549,23 @@ spike_specific = {
         'declare_spike': """
     // Structures for managing spikes
     std::vector<long int> last_spike;
+    long int* gpu_last_spike;
     std::vector<int> spiked;
     int* gpu_spiked;
     unsigned int* gpu_num_events;
 """,
     'init_spike': """
         // Spiking variables
-        spiked = std::vector<int>(0, 0);
-        cudaMalloc((void**)&gpu_num_events, sizeof(unsigned int));
+        spiked = std::vector<int>();
         cudaMalloc((void**)&gpu_spiked, size * sizeof(int)); // we can't reallocate dynamically on the device, therefore we allocate max. possible request
+
         last_spike = std::vector<long int>(size, -10000L);
+        cudaMalloc((void**)&gpu_last_spike, size * sizeof(long int));
+        cudaMemcpy(gpu_last_spike, last_spike.data(), size * sizeof(long int), cudaMemcpyHostToDevice);
+
+        cudaMalloc((void**)&gpu_num_events, sizeof(unsigned int));
+        int null = 0;
+        cudaMemcpy(gpu_num_events, &null, sizeof(unsigned int), cudaMemcpyHostToDevice);
 """,
     'declare_refractory': """
     // Refractory period

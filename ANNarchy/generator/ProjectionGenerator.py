@@ -1508,8 +1508,12 @@ if(_transmission && pop%(id_post)s._active){
         // %(name)s: local
         if ( proj%(id)s.%(name)s_dirty )
         {
+        #ifdef _DEBUG
+            std::cout << "Transfer proj%(id)s.%(name)s " << std::endl;
+        #endif
             std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
             cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            proj%(id)s.%(name)s_dirty = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
