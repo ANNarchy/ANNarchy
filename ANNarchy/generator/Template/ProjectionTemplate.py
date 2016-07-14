@@ -628,7 +628,7 @@ if (_transmission && pop%(id_post)s._active){
     for (i=0; i<post_rank.size(); i++){
         for (j=0; j<pre_rank[i].size(); j++){
             for(int _idx_j = 0; _idx_j < pop%(id_pre)s._delayed_spike[delay[i][j]-1].size(); _idx_j++){
-                if(pop0._delayed_spike[delay[i][j]-1][_idx_j] == pre_rank[i][j]){
+                if(pop%(id_pre)s._delayed_spike[delay[i][j]-1][_idx_j] == pre_rank[i][j]){
                     %(event_driven)s
                     %(g_target)s
                     %(pre_event)s
