@@ -190,12 +190,17 @@ class SpikeSourceArray(Population):
     """
     Spike source generating spikes at the times given in the spike_times array.
 
-    Depending on the initial array provided, the population will have one or several neurons, but the geoemtry can only be one-dimensional.
+    Depending on the initial array provided, the population will have one or several neurons, but the geometry can only be one-dimensional.
 
     *Parameters*:
 
-    * **spike_times** : a list of times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+    * **spike_times** : a list of absolute times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise. 
+    Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
     * **name**: optional name for the population.
+
+    You can later modify the spike_times attribute of the population, but it must have the same size as the initial one::
+
+
     """
     def __init__(self, spike_times, name=None):
 
@@ -237,28 +242,41 @@ class SpikeSourceArray(Population):
     // Custom local parameter spike_times
     std::vector< double > r ;
     std::vector< std::vector< double > > spike_times ;
-    std::vector< double >  next_spike ;
+    std::vector< long int >  next_spike ;
     std::vector< int > idx_next_spike;
+"""
+        self._specific_template['declare_additional'] = """
+    // Recompute the spike times
+    void recompute_spike_times(){
+        std::fill(next_spike.begin(), next_spike.end(), -10000);
+        std::fill(idx_next_spike.begin(), idx_next_spike.end(), 0);
+        for(int i=0; i< size; i++){
+            if(!spike_times[i].empty()){
+                int idx = 0;
+                // Find the first spike time which is not in the past
+                while((long int)(spike_times[i][idx]/dt) < t){
+                    idx++;
+                }
+                // Set the next spike
+                if(idx < spike_times[i].size())
+                    next_spike[i] = (long int)(spike_times[i][idx]/dt);
+                else
+                    next_spike[i] = -10000;
+            }
+        }
+    }
 """
         self._specific_template['access_parameters_variables'] = ""
 
         self._specific_template['init_parameters_variables'] ="""
         r = std::vector<double>(size, 0.0);
-        next_spike = std::vector<double>(size, -10000.0);
-        for(int i=0; i< size; i++){
-            if(!spike_times[i].empty())
-                next_spike[i] = spike_times[i][0];
-        }
+        next_spike = std::vector<long int>(size, -10000);
         idx_next_spike = std::vector<int>(size, 0);
+        this->recompute_spike_times();
 """
 
         self._specific_template['reset_additional'] ="""
-        next_spike = std::vector<double>(size, -10000.0);
-        for(int i=0; i< size; i++){
-            if(!spike_times[i].empty())
-                next_spike[i] = spike_times[i][0];
-        }
-        idx_next_spike = std::vector<int>(size, 0);
+        this->recompute_spike_times();
 """
 
         self._specific_template['update_variables'] ="""
@@ -266,11 +284,11 @@ class SpikeSourceArray(Population):
             spiked.clear();
             for(int i = 0; i < %(size)s; i++){
                 // Emit spike
-                if( t == (long int)(next_spike[i]/dt) ){
+                if( t == next_spike[i] ){
                     last_spike[i] = t;
                     idx_next_spike[i]++ ;
                     if(idx_next_spike[i] < spike_times[i].size())
-                        next_spike[i] = spike_times[i][idx_next_spike[i]];
+                        next_spike[i] = (long int)(spike_times[i][idx_next_spike[i]]/dt);
                     spiked.push_back(i);
                 }
             }
@@ -280,6 +298,7 @@ class SpikeSourceArray(Population):
         self._specific_template['export_parameters_variables'] ="""
         vector[vector[double]] spike_times
         vector[double] r
+        void recompute_spike_times()
 """
 
         self._specific_template['wrapper_args'] = "size, times"
@@ -291,6 +310,7 @@ class SpikeSourceArray(Population):
         return pop%(id)s.spike_times
     cpdef set_spike_times(self, value):
         pop%(id)s.spike_times = value
+        pop%(id)s.recompute_spike_times()
     # Mean firing rate
     cpdef get_r(self):
         return pop%(id)s.r
@@ -305,10 +325,18 @@ class SpikeSourceArray(Population):
 
     def __setattr__(self, name, value):
         if name == 'spike_times':
+            if not isinstance(value[0], list): # several neurons
+                value = [ value ]
+            if not len(value) == self.size:
+                Global._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population.')
+            times = []
+            for neur_times in value:
+                times.append(sorted(list(set(neur_times)))) # suppress doublons and sort
+
             if self.initialized:
-                self.cyInstance.set_spike_times(value)
+                self.cyInstance.set_spike_times(times)
             else:
-                object.__setattr__(self, name, value)
+                self.init['spike_times'] = times
         else:
             Population.__setattr__(self, name, value)
 
@@ -317,7 +345,7 @@ class SpikeSourceArray(Population):
             if self.initialized:
                 return self.cyInstance.get_spike_times()
             else:
-                return object.__getattribute__(self, name)
+                return self.init['spike_times']
         else:
             return Population.__getattribute__(self, name)
             
