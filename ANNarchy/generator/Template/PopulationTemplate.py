@@ -493,7 +493,7 @@ cuda_pop_kernel_call =\
 #ifdef _DEBUG
     cudaError_t err_pop_step_%(id)s = cudaGetLastError();
     if(err_pop_step_%(id)s != cudaSuccess)
-        std::cout << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
+        std::cout << "pop0_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
 #endif
 """
 

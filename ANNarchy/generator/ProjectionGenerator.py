@@ -148,7 +148,7 @@ class ProjectionGenerator(object):
             'declare_additional': decl['additional'],
             'declare_profile': declare_profile,
             'init_connectivity_matrix': connectivity_matrix['init'],
-            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_pre': proj.pre.id, 'id_post': proj.post.id},
+            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_proj': proj.id, 'id_pre': proj.pre.id, 'id_post': proj.post.id},
             'init_event_driven': "",
             'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
@@ -907,13 +907,7 @@ if(%(condition)s){
             kernel_args += eq['ctype'] + "* " + eq['name']
 
         conn_call = "proj%(id_proj)s.gpu_pre_to_post_flat_idx, proj%(id_proj)s.gpu_pre_to_post_flat_off, proj%(id_proj)s.gpu_pre_to_post_rank_flat, proj%(id_proj)s.gpu_pre_to_post_idx_flat, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
-        call = """
-    if ( pop%(id_pre)s._active) {
-        int num_events = 0;
-        cudaMemcpy(&num_events, pop%(id_pre)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
-
-        cu_proj%(id_proj)s_psp<<<num_events, 32>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s, %(kernel_args)s );
-    }""" % { 'id_proj': proj.id, 'id_pre': proj.pre.id, 'kernel_args': kernel_args_call, 'conn_args': conn_call }
+        call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id, 'id_pre': proj.pre.id, 'kernel_args': kernel_args_call, 'conn_args': conn_call }
 
         body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'kernel_args': kernel_args, 'eq':  eq_code }
 

@@ -457,7 +457,26 @@ inverse_connectivity_matrix_cuda = {
 
         pre_to_post_idx_flat = flattenArray<int>(pre_to_post_idx);
         cudaMalloc((void**)&gpu_pre_to_post_idx_flat, pre_to_post_idx_flat.size()*sizeof(int));
-        cudaMemcpy(gpu_pre_to_post_idx_flat, pre_to_post_idx_flat.data(), pre_to_post_idx_flat.size()*sizeof(int), cudaMemcpyHostToDevice);        
+        cudaMemcpy(gpu_pre_to_post_idx_flat, pre_to_post_idx_flat.data(), pre_to_post_idx_flat.size()*sizeof(int), cudaMemcpyHostToDevice);
+
+    #ifdef _DEBUG
+        std::ofstream file;
+        file.open("proj%(id_proj)s_post_pre.txt", std::ios::trunc);
+        pre_rank_out_it = pre_rank.begin();
+        post_rank_it = post_rank.begin();
+        for( ; pre_rank_out_it != pre_rank.end(); pre_rank_out_it++, post_rank_it++ ) {
+            for( pre_rank_in_it = pre_rank_out_it->begin(); pre_rank_in_it != pre_rank_out_it->end(); pre_rank_in_it++ ) {
+                file << *post_rank_it << ", " << *pre_rank_in_it << std::endl;
+            }
+        }
+        file.close();
+
+        file.open("proj%(id_proj)s_pre_post.txt", std::ios::trunc);
+        for( int pre = 0; pre < pop%(id_pre)s.size; pre++ )
+            for( int syn = 0; syn < pre_to_post_flat_idx[pre]; syn++ )
+                file << pre << ", " << pre_to_post_rank_flat[pre_to_post_flat_off[pre]+syn] << std::endl;
+        file.close();
+    #endif
 """
 }
 
@@ -1268,6 +1287,28 @@ __global__ void cu_proj%(id)s_psp( int *spiked, int* nb_synapses, int* offsets, 
         syn_idx += blockDim.x;
     }
 }
+"""
+
+cuda_spike_psp_kernel_call=\
+"""
+    if ( pop%(id_pre)s._active) {
+        int num_events = 0;
+        int tpb = 32;
+        cudaMemcpy(&num_events, pop%(id_pre)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
+
+        if (num_events > 0) {
+            cu_proj%(id_proj)s_psp<<<num_events, tpb>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s, %(kernel_args)s );
+
+        #ifdef _DEBUG
+            cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+            if( err_psp_proj%(id_proj)s != cudaSuccess) {
+                std::cout << "proj0_psp: " << std::endl;
+                std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
+                std::cout << "   kernel_config: " << num_events << ", " << tpb << std::endl;
+            }
+        #endif
+        }
+    }
 """
 
 ######################################

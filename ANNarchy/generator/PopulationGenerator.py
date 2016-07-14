@@ -1202,7 +1202,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
         // %(attr_name)s: local
         if( pop%(id)s.%(attr_name)s_dirty )
         {
-            //std::cout << "Transfer pop%(id)s.%(attr_name)s" << std::endl;
+        #ifdef _DEBUG
+            std::cout << "Transfer pop%(id)s.%(attr_name)s" << std::endl;
+        #endif
             cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
             pop%(id)s.%(attr_name)s_dirty = false;
         }
