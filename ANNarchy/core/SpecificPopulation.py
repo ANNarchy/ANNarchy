@@ -228,12 +228,18 @@ class SpikeSourceArray(Population):
 
         Population.__init__(self, geometry=nb_neurons, neuron=neuron, name=name)
 
+        times = self._sort_spikes(spike_times)
+
+        self.init['spike_times'] = times
+
+
+    def _sort_spikes(self, spike_times):
         # Do some sorting to save C++ complexity
         times = []
         for neur_times in spike_times:
-            times.append(sorted(list(set(neur_times)))) # suppress doublons and sort
+            times.append(sorted(list(set([int(t/Global.config['dt']) for t in neur_times])))) # suppress doublons and sort
+        return [ [Global.config['dt']*t for t in neur] for neur in times]
 
-        self.init['spike_times'] = times
 
     def _generate(self):
         "Code generation"
@@ -286,9 +292,14 @@ class SpikeSourceArray(Population):
                 // Emit spike
                 if( t == next_spike[i] ){
                     last_spike[i] = t;
-                    idx_next_spike[i]++ ;
-                    if(idx_next_spike[i] < spike_times[i].size())
+                    while(++idx_next_spike[i]< spike_times[i].size()){
+                        if((long int)(spike_times[i][idx_next_spike[i]]/dt) > t)
+                            break;
+                    }
+                    //idx_next_spike[i]++ ;
+                    if(idx_next_spike[i] < spike_times[i].size()){
                         next_spike[i] = (long int)(spike_times[i][idx_next_spike[i]]/dt);
+                    }
                     spiked.push_back(i);
                 }
             }
@@ -329,9 +340,7 @@ class SpikeSourceArray(Population):
                 value = [ value ]
             if not len(value) == self.size:
                 Global._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population.')
-            times = []
-            for neur_times in value:
-                times.append(sorted(list(set(neur_times)))) # suppress doublons and sort
+            times = self._sort_spikes(value)
 
             if self.initialized:
                 self.cyInstance.set_spike_times(times)
