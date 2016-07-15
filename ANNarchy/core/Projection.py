@@ -218,8 +218,8 @@ class Projection(object):
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
-            self.max_delay = int(delay/Global.config['dt'])
-            self.uniform_delay = int(delay/Global.config['dt'])
+            self.max_delay = round(delay/Global.config['dt'])
+            self.uniform_delay = round(delay/Global.config['dt'])
         elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
             # Ensure no negative delays are generated
@@ -233,7 +233,7 @@ class Projection(object):
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             if len(delay) > 0:
                 self.uniform_delay = -1
-                self.max_delay = int(max([max(l) for l in delay])/Global.config['dt'])
+                self.max_delay = round(max([max(l) for l in delay])/Global.config['dt'])
             else: # list is empty, no delay
                 self.max_delay = -1
                 self.uniform_delay = -1
