@@ -29,10 +29,10 @@ from subprocess import call
 nb_errors = 0
 nb_tests = 0
 
-for f in os.listdir('tests/GPU'):
+for f in os.listdir('GPU'):
     if f.startswith('test_') and f.endswith('.py'):
         print('Testing', f, '...')
-        ret = call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'tests/GPU')
+        ret = call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'GPU')
         if ret != 0: # Test failed
             nb_errors += 1
         nb_tests += 1

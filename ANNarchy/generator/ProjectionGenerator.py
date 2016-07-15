@@ -164,7 +164,7 @@ class ProjectionGenerator(object):
             'access_connectivity_matrix': connectivity_matrix['accessor'],
             'access_parameters_variables': accessor,
             'access_additional': access_additional,
-            'cuda_flattening': ProjTemplate.cuda_flattening if Global.config['paradigm'] == "cuda" else ""
+            'cuda_flattening': ProjTemplate.cuda_flattening % {'id_post':proj.post.id} if Global.config['paradigm'] == "cuda" else ""
         }
 
         # Store file
@@ -657,10 +657,7 @@ class ProjectionGenerator(object):
                                    'psp': psp
                                   }
 
-        header_code = """__global__ void cu_proj%(id)s_psp( int* pre_rank, int* nb_synapses, int *offsets, double *pre_r, double* w, double *sum_%(target)s );
-""" % { 'id': proj.id,
-        'target': proj.target
-      }
+        header_code = ProjTemplate.cuda_psp_kernel_header % { 'id': proj.id, 'target': proj.target }
 
         call_code = ProjTemplate.cuda_psp_kernel_call % {
                                         'id': proj.id,
@@ -675,7 +672,8 @@ class ProjectionGenerator(object):
                 Global._error("Only uniform delays are supported on GPUs.")
 
             else:
-                call_code = call_code.replace("gpu_r", "gpu_delayed_r["+str(proj.max_delay-1)+"]")
+                # TODO: replace by regex
+                call_code = call_code.replace("gpu_r,", "gpu_delayed_r["+str(proj.max_delay-1)+"],")
 
         return header_code, body_code, call_code
 
@@ -898,21 +896,21 @@ if(%(condition)s){
 
             if eq['name'] == "g_target":   # synaptic transmission
                 eq_code += """
-        int j = offsets[pre_idx]+syn_idx;
-        atomicAdd(&g_target[post_ranks[j]], w[indices[j]]);"""
+        atomicAdd(&g_target[post_ranks[syn_idx]], w[indices[syn_idx]]);"""
                 kernel_args_call += "pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
 
             if kernel_args != "":
                 kernel_args += ", "
             kernel_args += eq['ctype'] + "* " + eq['name']
 
-        conn_call = "proj%(id_proj)s.gpu_pre_to_post_flat_idx, proj%(id_proj)s.gpu_pre_to_post_flat_off, proj%(id_proj)s.gpu_pre_to_post_rank_flat, proj%(id_proj)s.gpu_pre_to_post_idx_flat, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
+        conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w," % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
         call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id, 'id_pre': proj.pre.id, 'kernel_args': kernel_args_call, 'conn_args': conn_call }
 
-        body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'kernel_args': kernel_args, 'eq':  eq_code }
+        conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w,"
+        body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'conn_arg': conn_body, 'kernel_args': kernel_args, 'eq':  eq_code }
 
-        conn_header = "int* nb_synapses, int* offsets, int* post_ranks, int* indices, double *w"
-        header = """__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_header)s, %(kernel_args)s );\n""" % { 'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args }
+        conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w,"
+        header = """__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_header)s %(kernel_args)s );\n""" % { 'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args }
 
         return header, body, call
 
@@ -1203,7 +1201,7 @@ if(_transmission && pop%(id_post)s._active){
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'local_index': '[j]',
-                'global_index': '[i]',
+                'global_index': '[rk_post]',
                 'pre_index': '[rk_pre]',
                 'post_index': '[rk_post]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '_',
@@ -1225,11 +1223,7 @@ if(_transmission && pop%(id_post)s._active){
             'post': proj.post.id,
          }
 
-        header = """__global__ void cuProj%(id)s_step( int* post_rank, int *pre_rank, int *nb_synapses, int *offsets, double dt%(var)s%(par)s, bool plasticity);
-""" % { 'id': proj.id,
-        'var': var,
-        'par': par
-}
+        header = ProjTemplate.cuda_synapse_kernel_header % { 'id': proj.id, 'var': var, 'par': par }
 
         #
         # calling entity
@@ -1509,7 +1503,7 @@ if(_transmission && pop%(id_post)s._active){
         if ( proj%(id)s.%(name)s_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "Transfer proj%(id)s.%(name)s " << std::endl;
+            std::cout << "HtoD: %(name)s " << std::endl;
         #endif
             std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
             cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
@@ -1517,7 +1511,7 @@ if(_transmission && pop%(id_post)s._active){
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
-                std::cout << "Transfer of proj%(id)s.gpu_%(name)s: " << cudaGetErrorString(err) << std::endl;
+                std::cout << "  occured error: " << cudaGetErrorString(err) << std::endl;
         #endif
             flat_proj%(id)s_%(name)s.clear();
         }
@@ -1541,9 +1535,12 @@ if(_transmission && pop%(id_post)s._active){
             if attr['name'] in proj.synapse_type.description['local']:
                 device_host_transfer += """
             // %(name)s: local
+        #ifdef _DEBUG
+            std::cout << "DtoH: %(name)s " << std::endl;
+        #endif
             std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
             cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-            proj%(id)s.%(name)s = deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s, proj%(id)s.flat_idx);
+            proj%(id)s.%(name)s = proj%(id)s.deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s);
             flat_proj%(id)s_%(name)s.clear();
 """ % { 'id': proj.id, 'name': attr['name'], 'type': attr['ctype'] }
             else:

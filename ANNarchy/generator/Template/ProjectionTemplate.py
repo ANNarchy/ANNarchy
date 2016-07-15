@@ -278,18 +278,15 @@ inverse_connectivity_matrix = {
 ######################################
 csr_connectivity_matrix_cuda = {
     'declare': """
-    // Connectivity
+    // Connectivity (LIL)
     std::vector<int> post_rank ;
-    int* gpu_post_rank;
     std::vector< std::vector< int > > pre_rank ;
-    int* gpu_pre_rank;
-    int* gpu_nb_synapses;
-    int* gpu_off_synapses;
 
-    // flat connectivity parameters
+    // CSR
     int overallSynapses;
-    std::vector<int> flat_idx;
-    std::vector<int> flat_off;
+    std::vector<int> row_ptr;
+    int *gpu_row_ptr;
+    int* gpu_pre_rank;
 """,
    'accessor': """
     // Accessor to connectivity data
@@ -300,29 +297,21 @@ csr_connectivity_matrix_cuda = {
     int nb_synapses(int n) { return pre_rank[n].size(); }
 """,
    'init': """
-        // post_rank
-        cudaMalloc((void**)&gpu_post_rank, post_rank.size() * sizeof(int));
-        cudaMemcpy(gpu_post_rank, post_rank.data(), post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+        // row_ptr and overallSynapses
+        genRowPtr();
+    #ifdef _DEBUG_CONN
+        std::cout << "Post to Pre:" << std::endl;
+        for(int i = 0; i < pop%(id_post)s.size; i++) {
+            std::cout << i << ": " << row_ptr[i] << " -> "<< row_ptr[i+1] << std::endl;
+        }
+    #endif
+        cudaMalloc((void**)&gpu_row_ptr, row_ptr.size()*sizeof(int));
+        cudaMemcpy(gpu_row_ptr, row_ptr.data(), row_ptr.size()*sizeof(int), cudaMemcpyHostToDevice);
 
-        // nb_synapses
-        flat_idx = flattenIdx<int>(pre_rank);
-        cudaMalloc((void**)&gpu_nb_synapses, flat_idx.size() * sizeof(int));
-        cudaMemcpy(gpu_nb_synapses, flat_idx.data(), flat_idx.size() * sizeof(int), cudaMemcpyHostToDevice);
-        overallSynapses = 0;
-        std::vector<int>::iterator it;
-        for ( it = flat_idx.begin(); it != flat_idx.end(); it++)
-            overallSynapses += *it;
-
-        // off_synapses
-        flat_off = flattenOff<int>(pre_rank);
-        cudaMalloc((void**)&gpu_off_synapses, flat_off.size() * sizeof(int));
-        cudaMemcpy(gpu_off_synapses, flat_off.data(), flat_off.size() * sizeof(int), cudaMemcpyHostToDevice);
-
-        // pre_rank
+        // pre ranks
         std::vector<int> flat_pre_rank = flattenArray<int>(pre_rank);
-        cudaMalloc((void**)&gpu_pre_rank, flat_pre_rank.size() * sizeof(int));
-        cudaMemcpy(gpu_pre_rank, flat_pre_rank.data(), flat_pre_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
-        flat_pre_rank.clear();
+        cudaMalloc((void**)&gpu_pre_rank, flat_pre_rank.size()*sizeof(int));
+        cudaMemcpy(gpu_pre_rank, flat_pre_rank.data(), flat_pre_rank.size()*sizeof(int), cudaMemcpyHostToDevice);
 """,
     'pyx_struct': """
         vector[int] get_post_rank()
@@ -407,34 +396,29 @@ csr_weight_matrix_cuda = {
 
 inverse_connectivity_matrix_cuda = {
     'declare': """
-    // Inverse connectivity
-    std::vector< std::vector< int > > pre_to_post_rank;
-    std::vector< std::vector< int > > pre_to_post_idx;
-    std::vector< int > pre_to_post_flat_idx;
-    int *gpu_pre_to_post_flat_idx;
-    std::vector< int > pre_to_post_flat_off;
-    int *gpu_pre_to_post_flat_off;
-    std::vector< int > pre_to_post_rank_flat;
-    int *gpu_pre_to_post_rank_flat;
-    std::vector< int > pre_to_post_idx_flat;
-    int *gpu_pre_to_post_idx_flat;
+    // Inverse connectivity, only on gpu
+    int* gpu_col_ptr;
+    int* gpu_row_idx;
+    int* gpu_inv_idx;
 """,
     'init': """
-        // result container
-        pre_to_post_rank = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
-        pre_to_post_idx = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
+        //
+        // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
+        //
+        std::vector< std::vector< int > > pre_to_post_rank = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
+        std::vector< std::vector< int > > pre_to_post_idx = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
 
         // some iterator definitions we need
-        typename std::vector<std::vector<int> >::iterator pre_rank_out_it = pre_rank.begin();  // 1st level iterator for pre_rank
-        typename std::vector<int>::iterator pre_rank_in_it;                                    // 2nd level iterator for pre_rank
+        typename std::vector<std::vector<int> >::iterator pre_rank_out_it = pre_rank.begin();  // 1st level iterator
+        typename std::vector<int>::iterator pre_rank_in_it;                                    // 2nd level iterator
         typename std::vector< int >::iterator post_rank_it = post_rank.begin();
 
         // iterate over post neurons, post_rank_it encodes the current rank
         for( ; pre_rank_out_it != pre_rank.end(); pre_rank_out_it++, post_rank_it++ ) {
 
-            int syn_idx = flat_off[*post_rank_it]; // start point of the flattened array, post-side
+            int syn_idx = row_ptr[*post_rank_it]; // start point of the flattened array, post-side
             // iterate over synapses, update both result containers
-            for( pre_rank_in_it = pre_rank_out_it->begin(); pre_rank_in_it != pre_rank_out_it->end(); pre_rank_in_it++ ) {
+            for( pre_rank_in_it = pre_rank_out_it->begin(); pre_rank_in_it != pre_rank_out_it->end(); pre_rank_in_it++) {
                 //std::cout << *pre_rank_in_it << "->" << *post_rank_it << ": " << syn_idx << std::endl;
                 pre_to_post_rank[*pre_rank_in_it].push_back(*post_rank_it);
                 pre_to_post_idx[*pre_rank_in_it].push_back(syn_idx);
@@ -442,41 +426,31 @@ inverse_connectivity_matrix_cuda = {
             }
         }
 
-        // flattening and transfer to GPU
-        pre_to_post_flat_idx = flattenIdx<int>(pre_to_post_rank);
-        cudaMalloc((void**)&gpu_pre_to_post_flat_idx, pre_to_post_flat_idx.size()*sizeof(int));
-        cudaMemcpy(gpu_pre_to_post_flat_idx, pre_to_post_flat_idx.data(), pre_to_post_flat_idx.size()*sizeof(int), cudaMemcpyHostToDevice);
-
-        pre_to_post_flat_off = flattenOff<int>(pre_to_post_rank);
-        cudaMalloc((void**)&gpu_pre_to_post_flat_off, pre_to_post_flat_off.size()*sizeof(int));
-        cudaMemcpy(gpu_pre_to_post_flat_off, pre_to_post_flat_off.data(), pre_to_post_flat_off.size()*sizeof(int), cudaMemcpyHostToDevice);
-
-        pre_to_post_rank_flat = flattenArray<int>(pre_to_post_rank);
-        cudaMalloc((void**)&gpu_pre_to_post_rank_flat, pre_to_post_rank_flat.size()*sizeof(int));
-        cudaMemcpy(gpu_pre_to_post_rank_flat, pre_to_post_rank_flat.data(), pre_to_post_rank_flat.size()*sizeof(int), cudaMemcpyHostToDevice);
-
-        pre_to_post_idx_flat = flattenArray<int>(pre_to_post_idx);
-        cudaMalloc((void**)&gpu_pre_to_post_idx_flat, pre_to_post_idx_flat.size()*sizeof(int));
-        cudaMemcpy(gpu_pre_to_post_idx_flat, pre_to_post_idx_flat.data(), pre_to_post_idx_flat.size()*sizeof(int), cudaMemcpyHostToDevice);
-
-    #ifdef _DEBUG
-        std::ofstream file;
-        file.open("proj%(id_proj)s_post_pre.txt", std::ios::trunc);
-        pre_rank_out_it = pre_rank.begin();
-        post_rank_it = post_rank.begin();
-        for( ; pre_rank_out_it != pre_rank.end(); pre_rank_out_it++, post_rank_it++ ) {
-            for( pre_rank_in_it = pre_rank_out_it->begin(); pre_rank_in_it != pre_rank_out_it->end(); pre_rank_in_it++ ) {
-                file << *post_rank_it << ", " << *pre_rank_in_it << std::endl;
-            }
+        std::vector<int> col_ptr = std::vector<int>( pop%(id_pre)s.size, 0 );
+        int curr_off = 0;
+        for ( int i = 0; i < pop%(id_pre)s.size; i++) {
+            col_ptr[i] = curr_off;
+            curr_off += pre_to_post_rank[i].size();
         }
-        file.close();
+        col_ptr.push_back(curr_off);
 
-        file.open("proj%(id_proj)s_pre_post.txt", std::ios::trunc);
-        for( int pre = 0; pre < pop%(id_pre)s.size; pre++ )
-            for( int syn = 0; syn < pre_to_post_flat_idx[pre]; syn++ )
-                file << pre << ", " << pre_to_post_rank_flat[pre_to_post_flat_off[pre]+syn] << std::endl;
-        file.close();
+    #ifdef _DEBUG_CONN
+        std::cout << "Pre to Post:" << std::endl;
+        for ( int i = 0; i < pop%(id_pre)s.size; i++ ) {
+            std::cout << i << ": " << col_ptr[i] << " -> " << col_ptr[i+1] << std::endl;
+        }
     #endif
+
+        cudaMalloc((void**)&gpu_col_ptr, col_ptr.size()*sizeof(int));
+        cudaMemcpy(gpu_col_ptr, col_ptr.data(), col_ptr.size()*sizeof(int), cudaMemcpyHostToDevice);
+
+        std::vector<int> row_idx = flattenArray(pre_to_post_rank);
+        cudaMalloc((void**)&gpu_row_idx, row_idx.size()*sizeof(int));
+        cudaMemcpy(gpu_row_idx, row_idx.data(), row_idx.size()*sizeof(int), cudaMemcpyHostToDevice);
+
+        std::vector<int> inv_idx = flattenArray(pre_to_post_idx);
+        cudaMalloc((void**)&gpu_inv_idx, inv_idx.size()*sizeof(int));
+        cudaMemcpy(gpu_inv_idx, inv_idx.data(), inv_idx.size()*sizeof(int), cudaMemcpyHostToDevice);
 """
 }
 
@@ -1140,34 +1114,23 @@ cuda_flattening = """
     /*
      * (De-)Flattening of LIL structures
      */
-    template<typename T>
-    std::vector<int> flattenIdx(std::vector<std::vector<T> > in)
-    {
-        std::vector<T> flatIdx = std::vector<T>();
-        typename std::vector<std::vector<T> >::iterator it;
+    void genRowPtr( ) {
+        std::vector<std::vector<int> >::iterator pre_it = pre_rank.begin();
+        std::vector<int>::iterator post_it = post_rank.begin();
 
-        for ( it = in.begin(); it != in.end(); it++)
-        {
-            flatIdx.push_back(it->size());
+        row_ptr = std::vector<int>(pop%(id_post)s.size, 0);
+
+        int curr_off = 0;
+        for(int i = 0; i < pop%(id_post)s.size; i++) {
+            row_ptr[i] = curr_off;
+            if ( i == *post_it ) {
+                curr_off += pre_it->size();
+                pre_it++;
+                post_it++;
+            }
         }
-
-        return flatIdx;
-    }
-
-    template<typename T>
-    std::vector<int> flattenOff(std::vector<std::vector<T> > in)
-    {
-        std::vector<T> flatOff = std::vector<T>();
-        typename std::vector<std::vector<T> >::iterator it;
-
-        int currOffset = 0;
-        for ( it = in.begin(); it != in.end(); it++)
-        {
-            flatOff.push_back(currOffset);
-            currOffset += it->size();
-        }
-
-        return flatOff;
+        row_ptr.push_back(curr_off);
+        overallSynapses = curr_off;
     }
 
     template<typename T>
@@ -1185,18 +1148,21 @@ cuda_flattening = """
     }
 
     template<typename T>
-    std::vector<std::vector<T> > deFlattenArray(std::vector<T> in, std::vector<int> idx)
+    std::vector<std::vector<T> > deFlattenArray( std::vector<T> in )
     {
         std::vector<std::vector<T> > deFlatVec = std::vector<std::vector<T> >();
         std::vector<int>::iterator it;
 
         int t=0;
-        for ( it = idx.begin(); it != idx.end(); it++)
+        for ( int i = 0; i < pop%(id_post)s.size; i++)
         {
-            std::vector<T> tmp = std::vector<T>(in.begin()+t, in.begin()+t+*it);
-            t += *it;
+            if ( row_ptr[i] != row_ptr[i+1] ) {
+                int num_syn = row_ptr[i+1]-row_ptr[i];
+                std::vector<T> tmp = std::vector<T>(in.begin()+t, in.begin()+t+num_syn);
+                t += num_syn;
 
-            deFlatVec.push_back(tmp);
+                deFlatVec.push_back(tmp);
+            }
         }
 
         return deFlatVec;
@@ -1215,14 +1181,14 @@ cuda_flattening = """
 # doesn't reorder stores to it and induce incorrect behavior.
 cuda_psp_kernel=\
 """
-__global__ void cu_proj%(id)s_psp( int* rank_pre, int *nb_synapses, int* offsets, double *pre_r, double* w, double *sum_%(target)s ) {
+__global__ void cu_proj%(id)s_psp( int* rank_pre, int *row_ptr, double *pre_r, double* w, double *sum_%(target)s ) {
     unsigned int tid = threadIdx.x;
-    unsigned int j = tid+offsets[blockIdx.x];
+    unsigned int j = tid+row_ptr[blockIdx.x];
 
     extern double __shared__ sdata[];
     double localSum = 0.0;
 
-    while(j < nb_synapses[blockIdx.x]+offsets[blockIdx.x])
+    while(j < row_ptr[blockIdx.x+1])
     {
         localSum += %(psp)s
 
@@ -1258,6 +1224,9 @@ __global__ void cu_proj%(id)s_psp( int* rank_pre, int *nb_synapses, int* offsets
 
 }
 """
+cuda_psp_kernel_header=\
+"""__global__ void cu_proj%(id)s_psp( int* pre_rank, int* row_ptr, double *pre_r, double* w, double *sum_%(target)s );
+"""
 
 cuda_psp_kernel_call =\
 """
@@ -1267,7 +1236,7 @@ cuda_psp_kernel_call =\
 
         cu_proj%(id)s_psp<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, sharedMemSize>>>(
                        /* ranks and offsets */
-                       proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_nb_synapses, proj%(id)s.gpu_off_synapses,
+                       proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_row_ptr,
                        /* computation data */
                        pop%(pre)s.gpu_r, proj%(id)s.gpu_w,
                        /* result */
@@ -1277,12 +1246,13 @@ cuda_psp_kernel_call =\
 
 cuda_spike_psp_kernel=\
 """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( int *spiked, int* nb_synapses, int* offsets, int* post_ranks, int* indices, double* w, %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_arg)s %(kernel_args)s ) {
+
     int pre_idx = spiked[blockIdx.x];
-    int syn_idx = threadIdx.x;
+    int syn_idx = col_ptr[pre_idx]+threadIdx.x;
 
     //printf("%%li - %%i: %%i, %%i\\n", t, pre_idx, offsets[pre_idx], nb_synapses[pre_idx]);
-    while( syn_idx < nb_synapses[pre_idx]) {
+    while( syn_idx < col_ptr[pre_idx+1]) {
         %(eq)s
         syn_idx += blockDim.x;
     }
@@ -1297,7 +1267,7 @@ cuda_spike_psp_kernel_call=\
         cudaMemcpy(&num_events, pop%(id_pre)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
 
         if ( num_events > 0 ) {
-            cu_proj%(id_proj)s_psp<<<num_events, tpb>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s, %(kernel_args)s );
+            cu_proj%(id_proj)s_psp<<<num_events, tpb>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
         #ifdef _DEBUG
             cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
@@ -1318,16 +1288,15 @@ cuda_synapse_kernel=\
 """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_step( /* default params */
-                              int *post_rank, int *pre_rank, int* nb_synapses, int* offsets, double dt
+                              int *pre_rank, int* row_ptr, double dt
                               /* additional params */
                               %(var)s%(par)s,
                               /* plasticity enabled */
                               bool plasticity )
 {
-    int i = blockIdx.x;
-    int j = offsets[i] + threadIdx.x;
-    int C = offsets[i]+ nb_synapses[i];
-    int rk_post = post_rank[i];
+    int rk_post = blockIdx.x;
+    int j = row_ptr[rk_post] + threadIdx.x;
+    int C = row_ptr[rk_post+1];
 
     // Updating global variables of projection %(id)s
     if ( threadIdx.x == 0)
@@ -1347,15 +1316,17 @@ __global__ void cuProj%(id)s_step( /* default params */
 }
 """
 
+cuda_synapse_kernel_header=\
+"""__global__ void cuProj%(id)s_step( int *pre_rank, int *row_ptr, double dt%(var)s%(par)s, bool plasticity);
+"""
+
 cuda_synapse_kernel_call =\
 """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity ) {
         cuProj%(id_proj)s_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
-            proj%(id_proj)s.gpu_post_rank,
             proj%(id_proj)s.gpu_pre_rank,
-            proj%(id_proj)s.gpu_nb_synapses,
-            proj%(id_proj)s.gpu_off_synapses,
+            proj%(id_proj)s.gpu_row_ptr,
             dt
             %(local)s
             %(global)s

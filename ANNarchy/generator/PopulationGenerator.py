@@ -649,6 +649,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                                 'global_eqs': glob_eqs,
                                 'pop_size': str(pop.size),
                                 'default': 'double dt',
+                                'refrac': "",
                                 'tar': tar,
                                 'tar2': tar_wo_types,
                                 'var': var,
@@ -689,6 +690,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         call += PopTemplate.cuda_pop_kernel_call % {
             'id': pop.id,
             'default': 'dt',
+            'refrac': "",
             'tar': tar.replace("double*","").replace("int*",""),
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
@@ -1168,8 +1170,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
         }
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
-        if pop.neuron_type.refractory or pop.refractory:
-            host_device_transfer += """
+        if pop.neuron_type.type == "spike":
+            if pop.neuron_type.refractory or pop.refractory:
+                host_device_transfer += """
         // refractory
         if( pop%(id)s.refractory_dirty )
         {
