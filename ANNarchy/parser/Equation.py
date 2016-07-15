@@ -324,10 +324,20 @@ class Equation(object):
 
 
     def exponential(self, expression):
+        "Exponential Euler method."
+
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
         if real_tau is None: # the equation can not be standardized
             return self.explicit(expression)
+
+        # Check if the step size is local or not
+        global_stepsize = True
+        for var in self.attributes: # Add each variable of the neuron
+            if var in self.local_attributes and self.local_dict[var] in stepsize.atoms():
+                global_stepsize = False
+
+        # TODO: if the stepsize is global, take it out of the for loop to save some operations
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
@@ -335,6 +345,7 @@ class Equation(object):
         explicit_code = 'double _' + self.name + ' =  (1.0 - exp('\
                         + self.c_code(-stepsize) + '))*(' \
                         + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
+
         switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
