@@ -1151,14 +1151,14 @@ if(_transmission && pop%(id_post)s._active){
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in proj.synapse_type.description['random_distributions']:
             if rd['dist'] == "Uniform":
-                term = """curand_uniform_double( &%(rd)s[i]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
-                local_eq = local_eq.replace(rd['name']+"[j]", term)
+                term = """curand_uniform_double( &%(rd)s[j]) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                local_eq = local_eq.replace(rd['name']+"%(local_index)s", term)
             elif rd['dist'] == "Normal":
-                term = """curand_normal_double( &%(rd)s[i])""" % { 'rd': rd['name'] };
-                local_eq = local_eq.replace(rd['name']+"[j]", term)
+                term = """curand_normal_double( &%(rd)s[j] ) * %(sigma)s + %(mean)s""" % { 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1] };
+                local_eq = local_eq.replace(rd['name']+"%(local_index)s", term)
             elif rd['dist'] == "LogNormal":
-                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
-                local_eq = local_eq.replace(rd['name']+"[j]", term)
+                term = """curand_log_normal_double( &%(rd)s[j], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                local_eq = local_eq.replace(rd['name']+"%(local_index)s", term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
