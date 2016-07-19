@@ -843,9 +843,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
                 term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "Normal":
-                term = """curand_normal_double( &%(rd)s[i] )""" % { 'rd': rd['name'] };
+                term = """curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s""" % { 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1] };
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_normal_double( &%(rd)s[0] )""" % { 'rd': rd['name'] };
+                term = """curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s""" % { 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1] };
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "LogNormal":
                 term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
