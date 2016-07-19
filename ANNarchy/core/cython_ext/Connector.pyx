@@ -54,9 +54,9 @@ cdef class CSR:
 
         # Store delays and update the max
         for i in range(d.size()):
-            int_delays.push_back(int(d[i]/self.dt))
+            int_delays.push_back(round(d[i]/self.dt))
         self.delay.push_back(int_delays)
-        max_d = int(np.max(d)/self.dt)
+        max_d = round(np.max(d)/self.dt)
         if max_d > self.max_delay:
             self.max_delay = max_d
 
@@ -64,7 +64,7 @@ cdef class CSR:
         if d.size() > 1 :
             self.uniform_delay = -1
         else:
-            unif_d = int(d[0]/self.dt)
+            unif_d = round(d[0]/self.dt)
             if self.uniform_delay != unif_d and self.size > 0:
                 self.uniform_delay = -1
             else:

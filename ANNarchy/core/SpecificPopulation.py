@@ -217,7 +217,7 @@ class SpikeSourceArray(Population):
         # Create a fake neuron just to be sure the description has the correct parameters
         neuron = Neuron(
             parameters="""
-                spike_times = 0.0
+                spike_times = 0.0 : int
             """,
             equations="",
             spike=" t == spike_times",
@@ -228,17 +228,12 @@ class SpikeSourceArray(Population):
 
         Population.__init__(self, geometry=nb_neurons, neuron=neuron, name=name)
 
-        times = self._sort_spikes(spike_times)
-
-        self.init['spike_times'] = times
+        self.init['spike_times'] = spike_times
 
 
     def _sort_spikes(self, spike_times):
-        # Do some sorting to save C++ complexity
-        times = []
-        for neur_times in spike_times:
-            times.append(sorted(list(set([int(t/Global.config['dt']) for t in neur_times])))) # suppress doublons and sort
-        return [ [Global.config['dt']*t for t in neur] for neur in times]
+        "Sort, unify the spikes and transform them intosteps."
+        return [sorted(list(set([round(t/Global.config['dt']) for t in neur_times]))) for neur_times in spike_times]
 
 
     def _generate(self):
@@ -247,7 +242,7 @@ class SpikeSourceArray(Population):
         self._specific_template['declare_parameters_variables'] = """
     // Custom local parameter spike_times
     std::vector< double > r ;
-    std::vector< std::vector< double > > spike_times ;
+    std::vector< std::vector< long int > > spike_times ;
     std::vector< long int >  next_spike ;
     std::vector< int > idx_next_spike;
 """
@@ -260,12 +255,12 @@ class SpikeSourceArray(Population):
             if(!spike_times[i].empty()){
                 int idx = 0;
                 // Find the first spike time which is not in the past
-                while((long int)(spike_times[i][idx]/dt) < t){
+                while(spike_times[i][idx] < t){
                     idx++;
                 }
                 // Set the next spike
                 if(idx < spike_times[i].size())
-                    next_spike[i] = (long int)(spike_times[i][idx]/dt);
+                    next_spike[i] = spike_times[i][idx];
                 else
                     next_spike[i] = -10000;
             }
@@ -292,13 +287,15 @@ class SpikeSourceArray(Population):
                 // Emit spike
                 if( t == next_spike[i] ){
                     last_spike[i] = t;
+                    /* 
                     while(++idx_next_spike[i]< spike_times[i].size()){
-                        if((long int)(spike_times[i][idx_next_spike[i]]/dt) > t)
+                        if(spike_times[i][idx_next_spike[i]] > t)
                             break;
                     }
-                    //idx_next_spike[i]++ ;
+                    */
+                    idx_next_spike[i]++ ;
                     if(idx_next_spike[i] < spike_times[i].size()){
-                        next_spike[i] = (long int)(spike_times[i][idx_next_spike[i]]/dt);
+                        next_spike[i] = spike_times[i][idx_next_spike[i]];
                     }
                     spiked.push_back(i);
                 }
@@ -307,7 +304,7 @@ class SpikeSourceArray(Population):
 """ % {'size': self.size}
 
         self._specific_template['export_parameters_variables'] ="""
-        vector[vector[double]] spike_times
+        vector[vector[long]] spike_times
         vector[double] r
         void recompute_spike_times()
 """
@@ -340,10 +337,9 @@ class SpikeSourceArray(Population):
                 value = [ value ]
             if not len(value) == self.size:
                 Global._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population.')
-            times = self._sort_spikes(value)
 
             if self.initialized:
-                self.cyInstance.set_spike_times(times)
+                self.cyInstance.set_spike_times(self._sort_spikes(value))
             else:
                 self.init['spike_times'] = times
         else:
@@ -352,7 +348,7 @@ class SpikeSourceArray(Population):
     def __getattr__(self, name):
         if name == 'spike_times':
             if self.initialized:
-                return self.cyInstance.get_spike_times()
+                return [ [Global.config['dt']*time for time in neur] for neur in self.cyInstance.get_spike_times()]
             else:
                 return self.init['spike_times']
         else:
