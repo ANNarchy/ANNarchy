@@ -18,7 +18,7 @@ parameters = """
     target = 1.1 : population
 """,
 equations = """
-    noise =  sqrt( 2.0 * tau ) * Normal(0.0, sigma) 
+    noise =  sigma * sqrt( 2.0 * tau ) * Normal(0.0, 1.0) 
     tau * dx/dt + x = target + noise
 """,
 spike = """
