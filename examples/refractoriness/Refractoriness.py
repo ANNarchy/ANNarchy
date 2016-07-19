@@ -1,11 +1,13 @@
 #
-#   ANNarchy - SimpleSTDP
+#   ANNarchy - Refractoriness
 #
 #   A simple model showing the usage of refractoriness in ANNarchy
 # 
 #   See e.g. Mainen & Sejnowski (1995) for experimental results in vitro.
 #
 #   Code adapted from the Brian example: https://brian2.readthedocs.org/en/latest/examples/non_reliability.html
+#
+#   Note that the Brian example uses constant refractory periods of 5 ms, while they are uniformaly distributed between 1 and 5 ms here.
 #
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
