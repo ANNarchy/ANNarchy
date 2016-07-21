@@ -107,6 +107,10 @@ public:
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
             cudaMemcpy(pop%(id)s.%(name)s.data(), pop%(id)s.gpu_%(name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+        #ifdef _DEBUG
+            std::cout << "record %(name)s."<< std::endl;
+            std::cout << "  [min, max]: " << *std::min_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << ", " << *std::max_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << std::endl;
+        #endif
             if(!this->partial)
                 this->%(name)s.push_back(pop%(id)s.%(name)s); 
             else{

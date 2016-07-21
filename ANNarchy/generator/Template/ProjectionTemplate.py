@@ -1251,7 +1251,8 @@ __global__ void cu_proj%(id)s_psp( int *spiked, %(conn_arg)s %(kernel_args)s ) {
     int pre_idx = spiked[blockIdx.x];
     int syn_idx = col_ptr[pre_idx]+threadIdx.x;
 
-    //printf("%%li - %%i: %%i, %%i\\n", t, pre_idx, offsets[pre_idx], nb_synapses[pre_idx]);
+    //if (threadIdx.x == 0)
+    //    printf("%%li - %%i: %%i, %%i\\n", t, pre_idx, col_ptr[pre_idx], col_ptr[pre_idx+1]);
     while( syn_idx < col_ptr[pre_idx+1]) {
         %(eq)s
         syn_idx += blockDim.x;
@@ -1266,6 +1267,9 @@ cuda_spike_psp_kernel_call=\
         int tpb = 32;
         cudaMemcpy(&num_events, pop%(id_pre)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
 
+    #ifdef _DEBUG
+        std::cout << t << ": " << num_events << " event(s)." << std::endl;
+    #endif
         if ( num_events > 0 ) {
             cu_proj%(id_proj)s_psp<<<num_events, tpb>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 

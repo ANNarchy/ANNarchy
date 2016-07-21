@@ -878,7 +878,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             %(reset)s
 
             // store spike event
-            int pos = atomicAdd( num_events, 1);
+            int pos = atomicAdd( &num_events[0], 1);
             spiked[pos] = i;
             last_spike[i] = t;
 

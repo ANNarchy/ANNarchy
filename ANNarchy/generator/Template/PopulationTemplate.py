@@ -457,16 +457,18 @@ cuda_pop_kernel=\
 // gpu device kernel for population %(id)s
 __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 {
-    int i = threadIdx.x + blockIdx.x*blockDim.x;
+    int i = threadIdx.x;
 
     // Updating global variables of population %(id)s
 %(global_eqs)s
     __syncthreads();
 
     // Updating local variables of population %(id)s
-    if ( i < %(pop_size)s )
+    while ( i < %(pop_size)s )
     {
 %(local_eqs)s
+
+        i += blockDim.x;
     }
 }
 """
@@ -477,7 +479,7 @@ cuda_pop_kernel_call =\
     if ( pop%(id)s._active ) {
         int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
 
-        cuPop%(id)s_step<<<nb, __pop%(id)s__>>>(
+        cuPop%(id)s_step<<< 1, __pop%(id)s__ >>>(
               /* default arguments */
               %(default)s
               /* refractoriness */
