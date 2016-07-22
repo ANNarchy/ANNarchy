@@ -791,7 +791,11 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
     def update_spike_neuron_cuda(self, pop):
         """
-        Generate the neural update code for GPU devices.
+        Generate the neural update code for GPU devices. We split up the
+        calculation into two parts:
+
+            * local evolvement of differential equations
+            * spike gathering
         """
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
@@ -824,12 +828,15 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         # Global variables
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-        glob_eqs = """
+        if eqs.strip() == "":
+            glob_eqs = ""
+        else:
+            glob_eqs = """
     if ( threadIdx.x == 0)
     {
 %(eqs)s
-        *num_events = 0;
     }
+    __syncthreads();
 """ % {'id': pop.id, 'eqs': eqs }
 
         # Local variables
@@ -865,28 +872,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             var_wo_types = var_wo_types.replace(type, "")
             par_wo_types = par_wo_types.replace(type, "")
 
-        # Process the condition
-        cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-        reset = ""
-        for eq in pop.neuron_type.description['spike']['spike_reset']:
-            reset += """
-            %(reset)s
-""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
-
-        spike_gather = """
-        if ( %(cond)s ) {
-            %(reset)s
-
-            // store spike event
-            int pos = atomicAdd( &num_events[0], 1);
-            spiked[pos] = i;
-            last_spike[i] = t;
-
-            // refractory
-            %(refrac_inc)s
-        }
-""" % { 'id': pop.id, 'cond': cond, 'reset': reset, 'refrac_inc': "%(refrac_inc)s" }
-
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
@@ -898,14 +883,11 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             // Decrement the refractory period
             refractory_remaining[i]--;
         } else{
-        %(code)s
-
-        %(spike_gather)s
+            %(loc_eqs)s
         }
         """ %  { 'id': pop.id,
                  'eqs': eqs,
-                 'code': loc_eqs,
-                 'spike_gather': spike_gather % { 'refrac_inc': refrac_inc}
+                 'loc_eqs': loc_eqs
             }
 
             refrac_header = ", int *refractory, int* refractory_remaining"
@@ -913,7 +895,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         else:
             refrac_header = ""
             refrac_body = ""
-            code = loc_eqs + spike_gather % { 'refrac_inc': ""}
 
         #
         # create kernel prototypes
@@ -922,7 +903,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
                                 'local_eqs': code,
                                 'global_eqs': glob_eqs,
                                 'pop_size': str(pop.size),
-                                'default': "double dt, int* spiked, unsigned int* num_events, long int* last_spike",
+                                'default': "double dt",
                                 'refrac': refrac_header,
                                 'tar': tar,
                                 'tar2': tar_wo_types,
@@ -937,7 +918,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         header += """
 __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
 """ % { 'id': pop.id,
-        'default': "double dt, int *spiked, unsigned int* num_events, long int* last_spike",
+        'default': "double dt",
         'refrac': ", int *refractory, int* refractory_remaining",
         'tar': tar, 'var': var, 'par': par
     }
@@ -963,12 +944,88 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
 
         call += PopTemplate.cuda_pop_kernel_call % {
             'id': pop.id,
-            'default': """dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_num_events, pop%(id)s.gpu_last_spike""" %{'id':pop.id},
+            'default': """dt""",
             'refrac': refrac_body,
             'tar': tar.replace("double*","").replace("int*",""),
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
-        }        
+        }
+
+        #
+        # Process the spike condition and generate 2nd set of kernels
+        #
+        cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        reset = ""
+        for eq in pop.neuron_type.description['spike']['spike_reset']:
+            reset += """
+            %(reset)s
+""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
+
+        # arguments
+        body_args = ""
+        header_args = ""
+        call_args = ""
+
+        # gather all attributes required by this kernel
+        kernel_deps = []
+        for var in pop.neuron_type.description['spike']['spike_cond_dependencies']:
+            kernel_deps.append(var)
+        for reset_eq in pop.neuron_type.description['spike']['spike_reset']:
+            kernel_deps.append(reset_eq['name'])
+            for var in reset_eq['dependencies']:
+                kernel_deps.append(var)
+        kernel_deps = list(set(kernel_deps)) # remove doubled entries
+
+        # generate header, call and body args
+        for var in kernel_deps:
+            attr = self._get_attr(pop, var)
+
+            if attr['locality'] == 'local':
+                body_args += ", "+attr['ctype']+"* " + var
+                header_args += ", "+attr['ctype']+"* " + var
+                call_args += ", pop"+str(pop.id)+".gpu_"+var
+            else:
+                body_args += ", "+attr['ctype']+" " + var
+                header_args += ", "+attr['ctype']+" " + var
+                call_args += ", pop"+str(pop.id)+"."+var
+
+        spike_gather = """
+        if ( %(cond)s ) {
+            %(reset)s
+
+            // store spike event
+            int pos = atomicAdd( &num_events[0], 1);
+            spiked[pos] = i;
+            last_spike[i] = t;
+
+            // refractory
+            %(refrac_inc)s
+        }
+""" % { 'id': pop.id, 'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc }
+
+        body += PopTemplate.cuda_spike_gather_kernel % {
+                                'id': pop.id,
+                                'pop_size': str(pop.size),
+                                'default': 'unsigned int* num_events, int* spiked, long int* last_spike',
+                                'refrac': refrac_header,
+                                'args': body_args,
+                                'spike_gather': spike_gather
+                             }
+
+        header += """
+__global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
+""" % { 'id': pop.id,
+        'default': "unsigned int * num_events, int* spiked, long int* last_spike",
+        'refrac': ", int *refractory, int* refractory_remaining",
+        'args': header_args
+    }
+
+        call += PopTemplate.cuda_spike_gather_kernel_call % {
+            'id': pop.id,
+            'default': 'pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id},
+            'refrac': refrac_body,
+            'args': call_args % {'id': pop.id}
+        }
 
         return body, header, call
     
@@ -1192,3 +1249,11 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
 """ % { 'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype'] }
 
         return host_device_transfer, device_host_transfer
+
+    def _get_attr(self, pop, name):
+        """
+        Small helper function, used in self.update_spike_neuron_cuda
+        """
+        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+            if attr['name'] == name:
+                return attr

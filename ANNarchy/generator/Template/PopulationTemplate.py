@@ -457,18 +457,17 @@ cuda_pop_kernel=\
 // gpu device kernel for population %(id)s
 __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 {
-    int i = threadIdx.x;
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
 
     // Updating global variables of population %(id)s
 %(global_eqs)s
-    __syncthreads();
 
     // Updating local variables of population %(id)s
     while ( i < %(pop_size)s )
     {
 %(local_eqs)s
 
-        i += blockDim.x;
+        i += blockDim.x * gridDim.x;
     }
 }
 """
@@ -479,7 +478,7 @@ cuda_pop_kernel_call =\
     if ( pop%(id)s._active ) {
         int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
 
-        cuPop%(id)s_step<<< 1, __pop%(id)s__ >>>(
+        cuPop%(id)s_step<<< nb, __pop%(id)s__ >>>(
               /* default arguments */
               %(default)s
               /* refractoriness */
@@ -496,6 +495,45 @@ cuda_pop_kernel_call =\
     cudaError_t err_pop_step_%(id)s = cudaGetLastError();
     if(err_pop_step_%(id)s != cudaSuccess)
         std::cout << "pop0_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
+#endif
+"""
+
+cuda_spike_gather_kernel=\
+"""
+// gpu device kernel for population %(id)s
+__global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s )
+{
+    int i = threadIdx.x;
+    *num_events = 0;
+    __syncthreads();
+
+    // Updating local variables of population %(id)s
+    while ( i < %(pop_size)s )
+    {
+%(spike_gather)s
+
+        i += blockDim.x;
+    }
+}
+"""
+
+cuda_spike_gather_kernel_call =\
+"""
+    // Check if neurons emit a spike in population %(id)s
+    if ( pop%(id)s._active ) {
+        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s__ >>>(
+              /* default arguments */
+              %(default)s
+              /* refractoriness */
+              %(refrac)s
+              /* other variables */
+              %(args)s );
+    }
+
+#ifdef _DEBUG
+    cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
+    if(err_pop_spike_gather_%(id)s != cudaSuccess)
+        std::cout << "pop0_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
 #endif
 """
 
