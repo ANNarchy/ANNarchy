@@ -904,7 +904,13 @@ if(%(condition)s){
             kernel_args += eq['ctype'] + "* " + eq['name']
 
         conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w," % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
-        call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id, 'id_pre': proj.pre.id, 'kernel_args': kernel_args_call, 'conn_args': conn_call }
+        call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id,
+                                                           'id_pre': proj.pre.id,
+                                                           'id_post': proj.post.id,
+                                                           'target': proj.target,
+                                                           'kernel_args': kernel_args_call,
+                                                           'conn_args': conn_call
+                                                         }
 
         conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w,"
         body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'conn_arg': conn_body, 'kernel_args': kernel_args, 'eq':  eq_code }

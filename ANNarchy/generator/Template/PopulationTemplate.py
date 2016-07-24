@@ -530,6 +530,9 @@ cuda_spike_gather_kernel_call =\
               %(args)s );
     }
 
+    // update event counter
+    cudaMemcpy(&pop%(id)s.num_events, pop%(id)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
+
 #ifdef _DEBUG
     cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
     if(err_pop_spike_gather_%(id)s != cudaSuccess)
@@ -592,6 +595,7 @@ spike_specific = {
     long int* gpu_last_spike;
     std::vector<int> spiked;
     int* gpu_spiked;
+    unsigned int num_events;
     unsigned int* gpu_num_events;
 """,
     'init_spike': """
@@ -604,8 +608,8 @@ spike_specific = {
         cudaMemcpy(gpu_last_spike, last_spike.data(), size * sizeof(long int), cudaMemcpyHostToDevice);
 
         cudaMalloc((void**)&gpu_num_events, sizeof(unsigned int));
-        int null = 0;
-        cudaMemcpy(gpu_num_events, &null, sizeof(unsigned int), cudaMemcpyHostToDevice);
+        num_events = 0;
+        cudaMemcpy(gpu_num_events, &num_events, sizeof(unsigned int), cudaMemcpyHostToDevice);
 """,
     'declare_refractory': """
     // Refractory period

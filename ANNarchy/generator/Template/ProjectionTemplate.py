@@ -1263,15 +1263,14 @@ __global__ void cu_proj%(id)s_psp( int *spiked, %(conn_arg)s %(kernel_args)s ) {
 cuda_spike_psp_kernel_call=\
 """
     if ( pop%(id_pre)s._active) {
-        int num_events = 0;
-        int tpb = 32;
-        cudaMemcpy(&num_events, pop%(id_pre)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
+        int num_events = pop%(id_pre)s.num_events;
+        int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s__;
 
     #ifdef _DEBUG
         std::cout << t << ": " << num_events << " event(s)." << std::endl;
     #endif
         if ( num_events > 0 ) {
-            cu_proj%(id_proj)s_psp<<<num_events, tpb>>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+            cu_proj%(id_proj)s_psp<<< num_events, tpb >>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
         #ifdef _DEBUG
             cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();

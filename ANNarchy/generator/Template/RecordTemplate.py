@@ -153,12 +153,9 @@ recording_spike_tpl= {
         } """,
     'cuda' : """
         if(this->record_spike){
-            unsigned int num_events = 0;
-            cudaMemcpy(&num_events, pop%(id)s.gpu_num_events, sizeof(unsigned int), cudaMemcpyDeviceToHost);
-
-            if (num_events > 0) {
-                pop%(id)s.spiked = std::vector<int>(num_events, 0);
-                cudaMemcpy(pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, num_events*sizeof(int), cudaMemcpyDeviceToHost);
+            if (pop%(id)s.num_events > 0) {
+                pop%(id)s.spiked = std::vector<int>(pop%(id)s.num_events, 0);
+                cudaMemcpy(pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.num_events*sizeof(int), cudaMemcpyDeviceToHost);
 
                 for(int i=0; i<pop%(id)s.spiked.size(); i++){
                     if(!this->partial){
