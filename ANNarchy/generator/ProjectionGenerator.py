@@ -897,13 +897,10 @@ if(%(condition)s){
             if eq['name'] == "g_target":   # synaptic transmission
                 eq_code += """
         atomicAdd(&g_target[post_ranks[syn_idx]], w[indices[syn_idx]]);"""
-                kernel_args_call += "pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
+                kernel_args_call += ", pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
+                kernel_args += ", " + eq['ctype'] + "* " + eq['name']
 
-            if kernel_args != "":
-                kernel_args += ", "
-            kernel_args += eq['ctype'] + "* " + eq['name']
-
-        conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w," % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
+        conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
         call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id,
                                                            'id_pre': proj.pre.id,
                                                            'id_post': proj.post.id,
@@ -912,10 +909,10 @@ if(%(condition)s){
                                                            'conn_args': conn_call
                                                          }
 
-        conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w,"
+        conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
         body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'conn_arg': conn_body, 'kernel_args': kernel_args, 'eq':  eq_code }
 
-        conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w,"
+        conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
         header = """__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_header)s %(kernel_args)s );\n""" % { 'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args }
 
         return header, body, call

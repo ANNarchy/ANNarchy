@@ -811,7 +811,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # determine variables and attributes
         var = ""
         par = ""
-        tar = ""
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
                 var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
@@ -864,11 +863,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         # remove all types
         repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
-        tar_wo_types = tar
         var_wo_types = var
         par_wo_types = par
         for type in repl_types:
-            tar_wo_types = tar_wo_types.replace(type, "")
             var_wo_types = var_wo_types.replace(type, "")
             par_wo_types = par_wo_types.replace(type, "")
 
@@ -877,7 +874,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
             refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
 
-            code = """
+            loc_eqs = """
         if( refractory_remaining[i] > 0){ // Refractory period
 %(eqs)s
             // Decrement the refractory period
@@ -893,6 +890,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             refrac_header = ", int *refractory, int* refractory_remaining"
             refrac_body = """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
         else:
+            refrac_inc = ""
             refrac_header = ""
             refrac_body = ""
 
@@ -900,13 +898,11 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # create kernel prototypes
         body += PopTemplate.cuda_pop_kernel % {
                                 'id': pop.id,
-                                'local_eqs': code,
+                                'local_eqs': loc_eqs,
                                 'global_eqs': glob_eqs,
                                 'pop_size': str(pop.size),
                                 'default': "double dt",
                                 'refrac': refrac_header,
-                                'tar': tar,
-                                'tar2': tar_wo_types,
                                 'var': var,
                                 'var2': var_wo_types,
                                 'par': par,
@@ -916,18 +912,17 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         #
         # create kernel prototypes
         header += """
-__global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
+__global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
 """ % { 'id': pop.id,
         'default': "double dt",
-        'refrac': ", int *refractory, int* refractory_remaining",
-        'tar': tar, 'var': var, 'par': par
+        'refrac': refrac_header,
+        'var': var, 'par': par
     }
 
         #
         #    for calling entites we need to determine again all members
         var = ""
         par = ""
-        tar = ""
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
                 var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
@@ -946,7 +941,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
             'id': pop.id,
             'default': """dt""",
             'refrac': refrac_body,
-            'tar': tar.replace("double*","").replace("int*",""),
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
         }
@@ -1016,7 +1010,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
 __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
 """ % { 'id': pop.id,
         'default': "unsigned int * num_events, int* spiked, long int* last_spike",
-        'refrac': ", int *refractory, int* refractory_remaining",
+        'refrac': refrac_header,
         'args': header_args
     }
 
