@@ -82,7 +82,14 @@ class ProjectionGenerator(object):
         update_rng = self.update_random_distributions(proj)
 
         # Spiking networks may have a post_spike arguement
-        post_event_prefix, post_event = self.postevent(proj)
+        if Global.config['paradigm'] == "openmp":
+            post_event_prefix, post_event = self.postevent_openmp(proj)
+        elif Global.config['paradigm'] == "cuda":
+            post_event_body, post_event_header, post_event_call = self.postevent_cuda(proj)
+            post_event_prefix = ""
+            post_event = ""
+        else:
+            Global._error("Intern: code generation for postevent is not implemented for "+Global.config['paradigm'])
 
         # Compute sum is the trickiest part
         if proj.synapse_type.type == 'rate':
@@ -914,7 +921,7 @@ if(%(condition)s){
                 if eq['name'] == "g_target":   # synaptic transmission
                     eq_code += """
             atomicAdd(&g_target[post_ranks[syn_idx]], w[indices[syn_idx]]);"""
-                    kernel_args_call += ", pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
+                    kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s" % { 'id_post': proj.post.id, 'target': proj.target }
                     kernel_args += ", " + eq['ctype'] + "* " + eq['name']
 
             conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
@@ -995,7 +1002,7 @@ if(%(condition)s){
 #######################################################################
 ############## Post-synaptic event spiking OMP ########################
 #######################################################################
-    def postevent(self, proj):
+    def postevent_openmp(self, proj):
         if proj.synapse_type.type == "rate":
             return "",""
 
@@ -1080,6 +1087,8 @@ if(_transmission && pop%(id_post)s._active){
 
         return post_event_prefix, tabify(code, 2)
 
+    def postevent_cuda(self, proj):
+        return "", "", ""
 
 #######################################################################
 ############## Synaptic variables OMP #################################
@@ -1573,8 +1582,12 @@ if(_transmission && pop%(id_post)s._active){
         device_host_transfer = ""
 
         # transfer of variables
+        proc_attr = []
         host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % { 'id': proj.id }
         for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+            if attr['name'] in proc_attr:
+                continue
+
             if attr['name'] in proj.synapse_type.description['local']:
                 host_device_transfer += """
         // %(name)s: local
@@ -1607,9 +1620,15 @@ if(_transmission && pop%(id_post)s._active){
         }
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
 
+            proc_attr.append(attr['name'])
+
+        proc_attr = []
         device_host_transfer += """
     // device to host transfers for proj%(id)s\n""" % { 'id': proj.id }
         for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+            if attr['name'] in proc_attr:
+                continue
+
             if attr['name'] in proj.synapse_type.description['local']:
                 device_host_transfer += """
             // %(name)s: local
@@ -1626,6 +1645,7 @@ if(_transmission && pop%(id_post)s._active){
             // %(name)s: global
             cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 """ % { 'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype'] }
+            proc_attr.append(attr['name'])
 
         return host_device_transfer, device_host_transfer
 

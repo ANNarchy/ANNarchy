@@ -320,7 +320,12 @@ csr_connectivity_matrix_cuda = {
         void set_pre_rank(vector[vector[int]])
         # void inverse_connectivity_matrix()
 """,
+    'pyx_wrapper_args': " synapses",
     'pyx_wrapper_init': """
+        cdef CSR syn = synapses
+        cdef int size = syn.size
+        cdef int nb_post = syn.post_rank.size()
+        proj%(id_proj)s.set_size( size )
         proj%(id_proj)s.set_post_rank( syn.post_rank )
         proj%(id_proj)s.set_pre_rank( syn.pre_rank )
 """,
@@ -338,7 +343,6 @@ csr_connectivity_matrix_cuda = {
         proj%(id_proj)s.set_pre_rank(val)
         # proj%(id_proj)s.inverse_connectivity_matrix() ' TODO: spike only'
 """,
-    'pyx_wrapper_args': " syn",
 }
 
 csr_weight_matrix_cuda = {
