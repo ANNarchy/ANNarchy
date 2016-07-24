@@ -702,6 +702,7 @@ delay = {
 ### Event-driven
 ######################################
 event_driven = {
+    'openmp': {
     'header_struct': """
     std::vector<std::vector<long> > _last_event;
 """,
@@ -716,6 +717,32 @@ event_driven = {
         for n in range(nb_post):
             proj%(id_proj)s._last_event[n] = vector[long](proj%(id_proj)s.nb_synapses(n), -10000)
 """
+    },
+    'cuda': {
+    'header_struct': """
+    std::vector<std::vector<long> > _last_event;
+    long* gpu_last_event;
+    void update_gpu_last_event() {
+        std::vector<long> tmp =flattenArray<long>(_last_event);
+        cudaMalloc((void**)&gpu_last_event, sizeof(long)*tmp.size());
+        cudaMemcpy(gpu_last_event, tmp.data(), sizeof(long)*tmp.size(), cudaMemcpyHostToDevice);
+        tmp.clear();
+    }
+""",
+    'cpp_init': """
+""",
+    'pyx_struct': """
+        vector[vector[long]] _last_event
+        void update_gpu_last_event()
+""",
+    'pyx_wrapper_init':
+"""
+        proj%(id_proj)s._last_event = vector[vector[long]](nb_post, vector[long]())
+        for n in range(nb_post):
+            proj%(id_proj)s._last_event[n] = vector[long](proj%(id_proj)s.nb_synapses(n), -10000)
+        proj%(id_proj)s.update_gpu_last_event()
+"""
+    }
 }
 
 
@@ -838,12 +865,14 @@ attribute_cpp_init = {
     'local':
 """
         // Local %(attr_type)s %(name)s
+        %(name)s = std::vector< std::vector<%(type)s> >(post_rank.size(), std::vector<%(type)s>());
         cudaMalloc((void**)&gpu_%(name)s, overallSynapses * sizeof(%(type)s));
         %(name)s_dirty = true;
 """,
     'global':
 """
         // Global %(attr_type)s %(name)s
+        %(name)s = std::vector<%(type)s>(post_rank.size(), %(init)s);
         cudaMalloc((void**)&gpu_%(name)s, post_rank.size() * sizeof(%(type)s));
         %(name)s_dirty = true;
 """
@@ -1249,7 +1278,7 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 
 cuda_spike_psp_kernel=\
 """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( double dt, int *spiked, %(conn_arg)s %(kernel_args)s ) {
 
     int pre_idx = spiked[blockIdx.x];
     int syn_idx = col_ptr[pre_idx]+threadIdx.x;
@@ -1257,7 +1286,10 @@ __global__ void cu_proj%(id)s_psp( int *spiked, %(conn_arg)s %(kernel_args)s ) {
     //if (threadIdx.x == 0)
     //    printf("%%li - %%i: %%i, %%i\\n", t, pre_idx, col_ptr[pre_idx], col_ptr[pre_idx+1]);
     while( syn_idx < col_ptr[pre_idx+1]) {
-        %(eq)s
+%(event_driven)s
+%(psp)s
+%(pre_event)s
+
         syn_idx += blockDim.x;
     }
 }
@@ -1273,9 +1305,10 @@ cuda_spike_psp_kernel_call=\
         std::cout << t << ": " << num_events << " event(s)." << std::endl;
     #endif
         if ( num_events > 0 ) {
-            cu_proj%(id_proj)s_psp<<< num_events, tpb >>>( pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+            cu_proj%(id_proj)s_psp<<< num_events, tpb >>>( dt, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
         #ifdef _DEBUG
+            cudaDeviceSynchronize();
             cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
             if( err_psp_proj%(id_proj)s != cudaSuccess) {
                 std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
@@ -1340,6 +1373,7 @@ cuda_synapse_kernel_call =\
         );
 
     #ifdef _DEBUG
+        cudaDeviceSynchronize();
         cudaError_t proj%(id_proj)s_step = cudaGetLastError();
         if (proj%(id_proj)s_step != cudaSuccess) {
             std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString(proj%(id_proj)s_step) << std::endl;
@@ -1347,3 +1381,46 @@ cuda_synapse_kernel_call =\
     #endif
     }
 """
+
+######################################
+### post-event update CUDA
+######################################
+cuda_spike_postevent = {
+    'body': """// Projection %(id_proj)s: post-synaptic events
+__global__ void cuProj%(id_proj)s_postevent( double dt, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s ) {
+    int i = spiked[blockIdx.x];                // post-synaptic
+    int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
+
+    while ( j < row_ptr[i+1] ) {
+%(event_driven)s
+%(post_code)s
+
+        j+= blockDim.x;
+    }
+}
+""",
+    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s );
+""",
+    'call': """
+    if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
+        if (pop%(id_post)s.num_events > 0 ) {
+            cuProj%(id_proj)s_postevent<<< pop%(id_post)s.num_events, __pop%(id_pre)s_pop%(id_post)s_%(target)s__ >>>(
+                dt, pop%(id_post)s.gpu_spiked
+                /* connectivity */
+                , proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_row_ptr
+                /* weights */
+                , proj%(id_proj)s.gpu_w
+                /* other variables */
+                %(add_args)s
+            );
+        #ifdef _DEBUG
+            cudaDeviceSynchronize();
+            cudaError_t proj%(id_proj)s_postevent = cudaGetLastError();
+            if (proj%(id_proj)s_postevent != cudaSuccess) {
+                std::cout << "proj%(id_proj)s_postevent: " << cudaGetErrorString(proj%(id_proj)s_postevent) << std::endl;
+            }
+        #endif
+        }
+    }
+"""
+}

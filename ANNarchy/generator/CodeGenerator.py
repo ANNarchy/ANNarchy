@@ -359,9 +359,11 @@ class CodeGenerator(object):
             kernel_def = ""
             for pop in self._pop_desc:
                 kernel_def += pop['update_header']
+
             for proj in self._proj_desc:
                 kernel_def += proj['psp_header']
                 kernel_def += proj['update_synapse_header']
+                kernel_def += proj['postevent_header']
 
             delay_code = ""
             for pop in self._pop_desc:
@@ -375,6 +377,14 @@ class CodeGenerator(object):
             syn_call = ""
             for proj in self._proj_desc:
                 syn_call += proj['update_synapse_call']
+
+            postevent_kernel = ""
+            for proj in self._proj_desc:
+                postevent_kernel += proj['postevent_body']
+
+            postevent_call = ""
+            for proj in self._proj_desc:
+                postevent_call += proj['postevent_call']
 
             # global operations
             glob_ops_header, glob_ops_body = self.body_def_glops()
@@ -397,9 +407,9 @@ class CodeGenerator(object):
                 'update_neuron' : update_neuron,
                 'update_globalops' : update_globalops,
                 'update_synapse' : syn_call,
+                'post_event': postevent_call,
                 'delay_code': delay_code,
                 'initialize' : self._body_initialize(),
-                'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
 
                 # cuda host specific
@@ -414,6 +424,7 @@ class CodeGenerator(object):
                 'psp_kernel': psp_kernel,
                 'syn_kernel': syn_kernel, #update_synapse_body,
                 'glob_ops_kernel': glob_ops_body,
+                'postevent_kernel': postevent_kernel,
                 'custom_func': "", #custom_func
             }
 

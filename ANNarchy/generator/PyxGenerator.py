@@ -293,7 +293,7 @@ class PyxGenerator(object):
         # Event-driven
         export_event_driven = ""
         if has_event_driven:
-            export_event_driven = ProjTemplate.event_driven['pyx_struct']
+            export_event_driven = ProjTemplate.event_driven[Global.config['paradigm']]['pyx_struct']
 
         # Determine all export methods
         export_parameters_variables = ""
@@ -410,7 +410,7 @@ class PyxGenerator(object):
         # Event-driven
         wrapper_init_event_driven = ""
         if has_event_driven:
-            wrapper_init_event_driven = ProjTemplate.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id}
+            wrapper_init_event_driven = ProjTemplate.event_driven[Global.config['paradigm']]['pyx_wrapper_init'] % {'id_proj': proj.id}
 
         # Determine all accessor methods
         wrapper_access_parameters_variables = ""

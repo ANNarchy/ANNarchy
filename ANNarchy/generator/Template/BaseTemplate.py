@@ -568,6 +568,11 @@ __device__ __forceinline__ long modulo(long a, long b) { return a %% b; }
  ****************************************/
 %(glob_ops_kernel)s
 
+/****************************************
+ * postevent kernel                     *
+ ****************************************/
+%(postevent_kernel)s
+
 #else
 #include "ANNarchy.h"
 #include <math.h>
@@ -721,6 +726,7 @@ void single_step()
     ////////////////////////////////
     // Postsynaptic events
     ////////////////////////////////
+%(post_event)s
 
     ////////////////////////////////
     // Recording
