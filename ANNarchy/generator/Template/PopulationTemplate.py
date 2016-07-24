@@ -455,7 +455,7 @@ cuda_rng = {
 cuda_pop_kernel=\
 """
 // gpu device kernel for population %(id)s
-__global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(var)s%(par)s)
+__global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
 
@@ -481,8 +481,10 @@ cuda_pop_kernel_call =\
         cuPop%(id)s_step<<< nb, __pop%(id)s__ >>>(
               /* default arguments */
               %(default)s
-              /* refractoriness */
+              /* refractoriness (only spike) */
               %(refrac)s
+              /* targets (only rate) */
+              %(tar)s
               /* kernel gpu arrays */
               %(var)s
               /* kernel constants */

@@ -903,6 +903,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
                                 'pop_size': str(pop.size),
                                 'default': "double dt",
                                 'refrac': refrac_header,
+                                'tar': "",
                                 'var': var,
                                 'var2': var_wo_types,
                                 'par': par,
@@ -941,6 +942,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
             'id': pop.id,
             'default': """dt""",
             'refrac': refrac_body,
+            'tar': "",
             'var': var.replace("double*","").replace("int*",""),
             'par': par.replace("double","").replace("int","")
         }

@@ -1179,9 +1179,9 @@ cuda_flattening = """
 # now that we are using warp-synchronous programming (below)
 # we need to declare our shared memory volatile so that the compiler
 # doesn't reorder stores to it and induce incorrect behavior.
-cuda_psp_kernel=\
-"""
-__global__ void cu_proj%(id)s_psp( int* rank_pre, int *row_ptr, double *pre_r, double* w, double *sum_%(target)s ) {
+cuda_psp_kernel = {
+    'body': """
+__global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int j = tid+row_ptr[blockIdx.x];
 
@@ -1219,30 +1219,29 @@ __global__ void cu_proj%(id)s_psp( int* rank_pre, int *row_ptr, double *pre_r, d
     // write result for this block to global mem
     if (tid == 0)
     {
-        sum_%(target)s[blockIdx.x] = sdata[0];
+        %(target_arg)s[blockIdx.x] = sdata[0];
     }
 
 }
-"""
-cuda_psp_kernel_header=\
-"""__global__ void cu_proj%(id)s_psp( int* pre_rank, int* row_ptr, double *pre_r, double* w, double *sum_%(target)s );
-"""
+""",
+    'header': """__global__ void cu_proj%(id)s_psp( %(conn_args)s%(add_args)s, double* %(target_arg)s );
+""",
+    'call': """
+    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
+    if ( pop%(id_post)s._active ) {
+        int sharedMemSize = __pop%(id_pre)s_pop%(id_post)s_%(target)s__ * 64;
 
-cuda_psp_kernel_call =\
-"""
-    // proj%(id)s: pop%(pre)s -> pop%(post)s
-    if ( pop%(post)s._active ) {
-        int sharedMemSize = __pop%(pre)s_pop%(post)s_%(target)s__ * 64;
-
-        cu_proj%(id)s_psp<<<pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, sharedMemSize>>>(
+        cu_proj%(id_proj)s_psp<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s__, sharedMemSize>>>(
                        /* ranks and offsets */
-                       proj%(id)s.gpu_pre_rank, proj%(id)s.gpu_row_ptr,
+                       %(conn_args)s
                        /* computation data */
-                       pop%(pre)s.gpu_r, proj%(id)s.gpu_w,
+                       %(add_args)s
                        /* result */
-                       pop%(post)s.gpu__sum_%(target)s );
+                       %(target_arg)s );
     }
 """
+
+}
 
 cuda_spike_psp_kernel=\
 """// gpu device kernel for projection %(id)s

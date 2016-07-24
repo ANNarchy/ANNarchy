@@ -92,7 +92,7 @@ class ProjectionGenerator(object):
                 psp_header, psp_body, psp_call = self.computesum_rate_cuda(proj)
         else:
             if Global.config['paradigm'] == "openmp":
-                psp_prefix, psp_code = self.computesum_spiking(proj)
+                psp_prefix, psp_code = self.computesum_spiking_openmp(proj)
             else:
                 psp_header, psp_body, psp_call = self.computesum_spiking_cuda(proj)
 
@@ -605,13 +605,6 @@ class ProjectionGenerator(object):
         if 'psp_code' in proj._specific_template.keys():
             return psp_prefix, proj._specific_template['psp_code']
 
-        # Choose the relevant summation template
-        # TODO:
-        #if proj._dense_matrix: # Dense connectivity
-        #    template =  ProjTemplate.dense_summation_operation
-        #else: # Default LiL
-        #    template =  ProjTemplate.lil_summation_operation
-
         # Dictionary of keywords to transform the parsed equations
         ids = {
                 'id_proj' : proj.id,
@@ -628,16 +621,21 @@ class ProjectionGenerator(object):
                 'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
-        # Special keywords based on the data structure
-        #if proj._dense_matrix: # Dense connectivity
-        #    ids['pre_index'] = "[j]"
-        #    ids['post_index'] = "[i]"
-
+        #
         # Retrieve the PSP
+        add_args_header = ""
+        add_args_call = ""
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
         else: # custom psp
             psp = (proj.synapse_type.description['psp']['cpp'])
+
+            # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #
+            # Some of the features currently not work
+            # psp = w*pre.r + X
+            #
+            # ATTENTION: an idea is implemented in computesum_spiking_cuda
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -647,24 +645,38 @@ class ProjectionGenerator(object):
                 ' ' + psp
             )
 
+        # connectivity, yet only CSR
+        conn_header = "int* rank_pre, int *row_ptr, double *pre_r, double* w"
+        conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id }
+
+        #
+        # finish the kernel etc.
         psp = proj.synapse_type.description['psp']['cpp'] % ids
 
-        body_code = ProjTemplate.cuda_psp_kernel % {
-                                   'id': proj.id,
-                                   'pre': proj.pre.id,
-                                   'post': proj.post.id,
-                                   'target': proj.target,
+        body_code = ProjTemplate.cuda_psp_kernel['body'] % {
+                                   'id_proj': proj.id,
+                                   'conn_args': conn_header,
+                                   'target_arg': "sum_"+proj.target,
+                                   'add_args': add_args_header,
                                    'psp': psp
                                   }
 
-        header_code = ProjTemplate.cuda_psp_kernel_header % { 'id': proj.id, 'target': proj.target }
+        header_code = ProjTemplate.cuda_psp_kernel['header'] % {
+                                    'id': proj.id,
+                                    'conn_args': conn_header,
+                                    'target_arg': "sum_"+proj.target,
+                                    'add_args': add_args_header
+                                   }
 
-        call_code = ProjTemplate.cuda_psp_kernel_call % {
-                                        'id': proj.id,
-                                        'pre': proj.pre.id,
-                                        'post': proj.post.id,
-                                        'target': proj.target,
-                                      }
+        call_code = ProjTemplate.cuda_psp_kernel['call'] % {
+                                    'id_proj': proj.id,
+                                    'id_pre': proj.pre.id,
+                                    'id_post': proj.post.id,
+                                    'conn_args': conn_call,
+                                    'target': proj.target,
+                                    'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
+                                    'add_args': add_args_call
+                                  }
 
         # Take delays into account if any
         if proj.max_delay > 1:
@@ -681,7 +693,7 @@ class ProjectionGenerator(object):
 #######################################################################
 ############## Compute sum spiking OMP ################################
 #######################################################################
-    def computesum_spiking(self, proj):
+    def computesum_spiking_openmp(self, proj):
         # Needed variables
         psp_prefix = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
@@ -888,32 +900,95 @@ if(%(condition)s){
         return psp_prefix, code
 
     def computesum_spiking_cuda(self, proj):
-        
-        kernel_args = ""
-        kernel_args_call = ""
-        eq_code = ""
-        for eq in proj.synapse_type.description['pre_spike']:
+        header = ""
+        body = ""
+        call = ""
 
-            if eq['name'] == "g_target":   # synaptic transmission
-                eq_code += """
-        atomicAdd(&g_target[post_ranks[syn_idx]], w[indices[syn_idx]]);"""
-                kernel_args_call += ", pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
-                kernel_args += ", " + eq['ctype'] + "* " + eq['name']
+        if proj.synapse_type.description['pre_spike'] != []:
+            kernel_args = ""
+            kernel_args_call = ""
+            eq_code = ""
 
-        conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
-        call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id,
-                                                           'id_pre': proj.pre.id,
-                                                           'id_post': proj.post.id,
-                                                           'target': proj.target,
-                                                           'kernel_args': kernel_args_call,
-                                                           'conn_args': conn_call
-                                                         }
+            for eq in proj.synapse_type.description['pre_spike']:
 
-        conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
-        body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'conn_arg': conn_body, 'kernel_args': kernel_args, 'eq':  eq_code }
+                if eq['name'] == "g_target":   # synaptic transmission
+                    eq_code += """
+            atomicAdd(&g_target[post_ranks[syn_idx]], w[indices[syn_idx]]);"""
+                    kernel_args_call += ", pop%(id_pre)s.gpu_g_%(target)s" % { 'id_pre': proj.pre.id, 'target': proj.target }
+                    kernel_args += ", " + eq['ctype'] + "* " + eq['name']
 
-        conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
-        header = """__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_header)s %(kernel_args)s );\n""" % { 'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args }
+            conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
+            call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id,
+                                                               'id_pre': proj.pre.id,
+                                                               'id_post': proj.post.id,
+                                                               'target': proj.target,
+                                                               'kernel_args': kernel_args_call,
+                                                               'conn_args': conn_call
+                                                             }
+
+            conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
+            body = ProjTemplate.cuda_spike_psp_kernel % { 'id': proj.id, 'conn_arg': conn_body, 'kernel_args': kernel_args, 'eq':  eq_code }
+
+            conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
+            header = """__global__ void cu_proj%(id)s_psp( int *spiked, %(conn_header)s %(kernel_args)s );\n""" % { 'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args }
+
+        ####################################################
+        # Not even-driven summation of psp: like rate-coded
+        ####################################################
+        if 'psp' in  proj.synapse_type.description.keys(): # not event-based
+            # transfrom psp equation
+            psp = proj.synapse_type.description['psp']['cpp']
+
+            add_args_header = ""
+            add_args_call = ""
+            #
+            # on which other variables the psp rely?
+            tmp_deps = re.findall(r"post_prefix\)s[A-Za-z]*\%\(", psp)
+            for post_dep in tmp_deps:
+                var = post_dep.split(")s")[1].split("%(")[0]
+
+                add_args_header += ", double* post_%(var)s" % { 'var': var }
+                add_args_call += ", pop%(id)s.gpu_%(var)s" % { 'id': proj.post.id, 'var': var }
+
+            tmp_deps = re.findall(r"pre_prefix\)s[A-Za-z]*\%\(", psp)
+            for pre_dep in tmp_deps:
+                var = pre_dep.split(")s")[1].split("%(")[0]
+
+                add_args_header += ", double* pre_%(var)s" % { 'var': var }
+                add_args_call += ", pop%(id)s.gpu_%(var)s" % { 'id': proj.post.id, 'var': var }
+
+            psp =  proj.synapse_type.description['psp']['cpp'] % {'local_index': '[rank_pre[j]]',
+                                                                 'pre_prefix': 'pre_',
+                                                                 'pre_index': '[rank_pre[j]]',
+                                                                 'post_prefix': 'post_',
+                                                                 'post_index': '[blockIdx.x]'
+                                                                 }
+
+            # connectivity
+            conn_body = "int *rank_pre, int* row_ptr, double* w"
+            conn_header = "int *rank_pre, int* row_ptr, double *w"
+            conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
+
+            # build up kernel
+            body = ProjTemplate.cuda_psp_kernel['body'] % { 'id_proj': proj.id,
+                                                            'conn_args': conn_body,
+                                                            'target_arg': 'g_'+proj.target,
+                                                            'add_args':  add_args_header,
+                                                            'psp': psp,
+                                                          }
+            header = ProjTemplate.cuda_psp_kernel['header'] % { 'id': proj.id,
+                                                                'conn_args': conn_header,
+                                                                'add_args': add_args_header,
+                                                                'target_arg': 'g_'+proj.target,
+                                                               }
+            call = ProjTemplate.cuda_psp_kernel['call'] % { 'id_proj': proj.id,
+                                                            'id_pre': proj.pre.id,
+                                                            'id_post': proj.post.id,
+                                                            'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                                                            'target': proj.target,
+                                                            'conn_args': conn_call,
+                                                            'add_args': add_args_call
+                                                           }
 
         return header, body, call
 
