@@ -434,7 +434,7 @@ class Compiler(object):
     def code_generation(self):
         """ Code generation dependent on paradigm """
         from .CodeGenerator import CodeGenerator
-        generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id)
+        generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
         generator.generate()
 
     def check_structure(self):

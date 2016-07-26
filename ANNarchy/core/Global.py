@@ -60,13 +60,6 @@ config = dict(
    }
 )
 
-# Configuration for CUDA
-cuda_config = dict(
-    {
-     'device': 0
-    }
-)
-
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
 

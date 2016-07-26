@@ -34,7 +34,7 @@ class CodeGenerator(object):
     Implements the code generator class for OpenMP (and sequential) code.
     OpenMP support is only enabled if the number of threads is higher then one.
     """
-    def __init__(self, annarchy_dir, populations, projections, net_id):
+    def __init__(self, annarchy_dir, populations, projections, net_id, cuda_config):
         """
         Constructor initializes PopulationGenerator and ProjectionGenerator
         class and stores the provided information for later use.
@@ -46,11 +46,13 @@ class CodeGenerator(object):
               files; they are stored in 'generate' sub-folder
             * *populations*: list of populations
             * *populations*: list of projections
+            * *cuda_config*: configuration dict for cuda. check _cuda_kernel_config for more details.
         """
         self._net_id = net_id
         self._annarchy_dir = annarchy_dir
         self._populations = populations
         self._projections = projections
+        self._cuda_config = cuda_config
 
         for pop in self._populations:
             pop._generate()
@@ -566,29 +568,27 @@ class CodeGenerator(object):
 
             Only related to the CUDA implementation
         """
-        cu_config = Global.cuda_config
-
         code = "// Population config\n"
         for pop in self._populations:
             num_threads = 32
-            if pop in cu_config.keys():
-                num_threads = cu_config[pop]['num_threads']
+            if pop in self._cuda_config.keys():
+                num_threads = self._cuda_config[pop]['num_threads']
 
             code+= """#define __pop%(id)s__ %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
 
         code += "\n// Population config\n"
         for proj in self._projections:
             num_threads = 192
-            if proj in cu_config.keys():
-                num_threads = cu_config[proj]['num_threads']
+            if proj in self._cuda_config.keys():
+                num_threads = self._cuda_config[proj]['num_threads']
 
             code+= """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
 
         pop_assign = "    // populations\n"
         for pop in self._populations:
-            if pop in Global.cuda_config.keys():
+            if pop in self._cuda_config.keys():
                 pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
-""" % {'pid': pop.id, 'sid': Global.cuda_config[pop]['stream'] }
+""" % {'pid': pop.id, 'sid': self._cuda_config[pop]['stream'] }
             else:
                 # default stream
                 pop_assign += """    pop%(pid)s.stream = 0;
@@ -596,9 +596,9 @@ class CodeGenerator(object):
 
         proj_assign = "    // populations\n"
         for proj in self._projections:
-            if proj in Global.cuda_config.keys():
+            if proj in self._cuda_config.keys():
                 proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
-""" % {'pid': proj.id, 'sid': Global.cuda_config[proj]['stream'] }
+""" % {'pid': proj.id, 'sid': self._cuda_config[proj]['stream'] }
             else:
                 # default stream
                 proj_assign += """    proj%(pid)s.stream = 0;

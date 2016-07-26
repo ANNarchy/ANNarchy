@@ -397,7 +397,8 @@ class PopulationGenerator(object):
                     else:
                         declare_code += """
     std::deque< double > _delayed_%(var)s; """ % {'var': var}
-            else: # Spiking networks should only exchange spikes
+            else:
+                # Spiking networks should only exchange spikes
                 declare_code += """
     // Delays for spike population
     std::deque< std::vector<int> > _delayed_spike;
@@ -409,18 +410,30 @@ class PopulationGenerator(object):
                     else:
                         declare_code += """
     std::deque< double > _delayed_%(var)s; """ % {'var': var}
-        else: #CUDA
+
+        elif Global.config['paradigm'] == "cuda":
             if pop.neuron_type.type == "rate":
                 for var in pop.delayed_variables:
                     if var in pop.neuron_type.description['local']:
                         declare_code += """
 std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': var}
                     else:
-                        #TODO:
+                        # TODO:
+                        Global._warning('Delay is not implemented for post-synaptic variables ...')
                         continue
             else:
-                Global._error("Synaptic delays for spiking neurons are not implemented yet with CUDA...")
+                # Spiking networks should only exchange spikes
+                declare_code += """
+    // Delays for spike population
+    std::deque< int* > gpu_delayed_spike; // contains a set of device pointers
+"""
 
+                # TODO:
+                if pop.delayed_variables != []:
+                    Global._error("only spike transmission can be delayed on CUDA yet.")
+
+        else:
+            Global._error("delayed synaptic variables are not implemented for:" + Global.config['paradigm'])
 
         # Initialization
         init_code = """
@@ -489,14 +502,21 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                 reset_code += """
         _delayed_spike.clear();
         _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'delay': pop.max_delay}
+            elif Global.config['paradigm']=="cuda":
+                init_code += ""
+                update_code += ""
+                reset_code += ""
             else:
-                Global._error("No synaptic delays for spiking synapses on CUDA implemented ...")
+                Global._error("No synaptic delays for spiking synapses on "+ Global.config['paradigm'] + " implemented ...")
 
 
-        update_code = """
+        if Global.config['paradigm']=="openmp" or Global.config['paradigm']=="cuda":
+            update_code = """
         if ( _active ) {
 %(code)s
         }""" % {'code': update_code }
+        else:
+            Global._error("No synaptic delays for spiking synapses on "+ Global.config['paradigm'] + " implemented ...")
 
         return declare_code, init_code, update_code, reset_code
 
