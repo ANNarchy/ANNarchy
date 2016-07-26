@@ -366,7 +366,7 @@ def extract_functions(description, local_global=False):
             parsed_content = parser.parse()
         else:
             parser = FunctionParser(content, arguments)
-            parsed_content = translate_ITE("", eq2, condition, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, {})
+            parsed_content, deps = translate_ITE("", eq2, condition, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, {})
 
         # Create the one-liner
         fdict = {'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}

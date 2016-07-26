@@ -10,7 +10,6 @@
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
-setup(paradigm="cuda")
 
 # Parameters
 F = 15.0 # Poisson distribution at 15 Hz
