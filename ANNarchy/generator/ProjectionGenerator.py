@@ -966,6 +966,7 @@ if(%(condition)s){
         has_exact = False
         event_driven_code = ''
         for var in proj.synapse_type.description['variables']:
+
             if var['method'] == 'event-driven':
                 has_exact = True
                 event_driven_code += """
@@ -984,6 +985,9 @@ if(%(condition)s){
             kernel_args += ", long* _last_event"
             kernel_args_call += ", proj%(id_proj)s.gpu_last_event"  % { 'id_proj': proj.id }
 
+        import pprint
+        pprint.pprint(proj.synapse_type.description['pre_spike'])
+            
         # Generate code for pre-spike variables
         pre_code = ""
         if len(updated_variables_list) > 0:

@@ -466,8 +466,7 @@ def analyse_synapse(synapse):
                                   type='return')
             code = translator.parse()
         else:
-            code = translate_ITE('psp', eq, condition, description, untouched,
-                                  split=False)
+            code = translate_ITE('psp', eq, condition, description, untouched)
 
         # Replace untouched variables with their original name
         for prev, new in untouched.items():
@@ -495,10 +494,10 @@ def analyse_synapse(synapse):
                                       untouched = {})
                 code = translator.parse()
             else:
-                code = translate_ITE(variable['name'], eq, condition, description, {}, split=True)
+                code = translate_ITE(variable['name'], eq, condition, description, {})
             # Store the result
             variable['cpp'] = code # the C++ equation
-
+            variable['dependencies'] = translator.dependencies()
             # Process the bounds
             if 'min' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['min'], str):

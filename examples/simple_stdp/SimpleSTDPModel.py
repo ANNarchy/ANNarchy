@@ -10,12 +10,13 @@
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
+setup(paradigm="cuda")
 
 # Parameters
 F = 15.0 # Poisson distribution at 15 Hz
 N = 1000 # 1000 Poisson inputs
 gmax = 0.01 # Maximum weight
-duration = 100000.0 # Simulation for 100 seconds
+duration = 100#000.0 # Simulation for 100 seconds
 
 # Definition of the neuron
 IF = Neuron(
