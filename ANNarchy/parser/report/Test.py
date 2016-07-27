@@ -37,5 +37,4 @@ proj = Projection(
 ).connect_all_to_all(weights= Uniform (-0.5, 0.5 ) ) 
 
 # Call only the analyser
-from ANNarchy.parser.Report import report
 report()
