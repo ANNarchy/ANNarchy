@@ -964,6 +964,7 @@ if(%(condition)s){
         # Event-driven integration of synaptic variables
         #######################################################
         has_exact = False
+        deps = []
         event_driven_code = ''
         for var in proj.synapse_type.description['variables']:
 
@@ -974,20 +975,20 @@ if(%(condition)s){
         %(exact)s
 """ % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id, 'local_index': "[indices[syn_idx]]", 'global_index': '[post_ranks[syn_idx]]'}}
 
+                # add to kernel dependencies
+                for dep in var['dependencies']:
+                    deps.append(dep)
+
         if has_exact:
             event_driven_code += """
         // Update the last event for the synapse
-        _last_event[i][j] = t;
+        _last_event[indices[syn_idx]] = t;
 """ % {'id_proj' : proj.id, 'exact': var['cpp']}
-            event_driven_code = event_driven_code.replace("_last_event[i][j]", "_last_event[indices[syn_idx]]")
 
             # event-driven requires last event
             kernel_args += ", long* _last_event"
             kernel_args_call += ", proj%(id_proj)s.gpu_last_event"  % { 'id_proj': proj.id }
 
-        import pprint
-        pprint.pprint(proj.synapse_type.description['pre_spike'])
-            
         # Generate code for pre-spike variables
         pre_code = ""
         if len(updated_variables_list) > 0:
@@ -995,10 +996,17 @@ if(%(condition)s){
                 pre_code += var
             pre_code = tabify(pre_code, 3)
 
-        # hand-crafted (TODO)
-        if has_exact:
-            kernel_args += ", double* x, double* y, double *tau_plus, double *tau_minus, double *A_plus, double* w_max, double* w_min"
-            kernel_args_call += ", proj%(id_proj)s.gpu_x, proj%(id_proj)s.gpu_y, proj%(id_proj)s.gpu_tau_plus, proj%(id_proj)s.gpu_tau_minus, proj%(id_proj)s.gpu_A_plus, proj%(id_proj)s.gpu_w_max, proj%(id_proj)s.gpu_w_min"  % { 'id_proj': proj.id }
+        for pre_deps in proj.synapse_type.description['pre_spike']+proj.synapse_type.description['post_spike']:
+            for var in pre_deps['dependencies']:
+                deps.append(var)
+        deps = list(set(deps))
+
+        for var in deps:
+            attr = self._get_attr(proj, var)
+            if attr['name'] == "w":
+                continue
+            kernel_args += ", "+ attr['ctype']+ "* " + attr['name']
+            kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % { 'id_proj': proj.id, 'name': attr['name'] }
 
         conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % { 'id_proj': proj.id, 'id_pre': proj.pre.id }
         call = ProjTemplate.cuda_spike_psp_kernel_call % { 'id_proj': proj.id,
@@ -1821,6 +1829,14 @@ _last_event[i][j] = t;
             proc_attr.append(attr['name'])
 
         return host_device_transfer, device_host_transfer
+
+    def _get_attr(self, proj, name):
+        """
+        Small helper function, used in self.update_spike_neuron_cuda
+        """
+        for attr in proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters']:
+            if attr['name'] == name:
+                return attr
 
 ######################################
 ### Code generation

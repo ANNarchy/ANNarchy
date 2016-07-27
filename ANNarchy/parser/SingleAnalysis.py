@@ -171,14 +171,12 @@ def analyse_neuron(neuron):
             code = translator.parse()
             dependencies = translator.dependencies()
         else: # An if-then-else statement
-            code = translate_ITE(
+            code, dependencies = translate_ITE(
                         variable['name'],
                         eq,
                         condition,
                         description,
                         untouched )
-            dependencies = []
-
 
         if isinstance(code, str):
             cpp_eq = code
@@ -400,9 +398,8 @@ def analyse_synapse(synapse):
             dependencies = translator.dependencies()
 
         else: # An if-then-else statement
-            code = translate_ITE(variable['name'], eq, condition, description,
+            code, dependencies = translate_ITE(variable['name'], eq, condition, description,
                     untouched)
-            dependencies = []
 
         if isinstance(code, str):
             cpp_eq = code
@@ -466,7 +463,7 @@ def analyse_synapse(synapse):
                                   type='return')
             code = translator.parse()
         else:
-            code = translate_ITE('psp', eq, condition, description, untouched)
+            code, deps = translate_ITE('psp', eq, condition, description, untouched)
 
         # Replace untouched variables with their original name
         for prev, new in untouched.items():
@@ -493,11 +490,13 @@ def analyse_synapse(synapse):
                                       method = 'explicit',
                                       untouched = {})
                 code = translator.parse()
+                deps = translator.dependencies()
             else:
-                code = translate_ITE(variable['name'], eq, condition, description, {})
+                code, deps = translate_ITE(variable['name'], eq, condition, description, {})
+
             # Store the result
             variable['cpp'] = code # the C++ equation
-            variable['dependencies'] = translator.dependencies()
+            variable['dependencies'] = deps
             # Process the bounds
             if 'min' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['min'], str):

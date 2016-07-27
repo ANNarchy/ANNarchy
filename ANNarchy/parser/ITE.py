@@ -69,7 +69,7 @@ def translate_ITE(name, eq, condition, description, untouched):
         else:
             code[0] = code[0].replace('__conditional__'+str(i), itecode)
 
-    return code
+    return code, deps
 
 
 def extract_ite(name, eq, description, split=True):
