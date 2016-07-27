@@ -707,6 +707,7 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
         }
 
         return body, header, call
+
     def _memory_transfers(self, pop):
         """
         Before evaluation neuron/synaptic equations we need to update the data on
