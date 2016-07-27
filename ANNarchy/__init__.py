@@ -18,7 +18,7 @@ from .core.IO import save, load, load_parameter
 from .core.Utils import raster_plot, smoothed_rate, histogram, population_rate, sparse_random_matrix
 from .core.Record import Monitor
 from .core.Network import Network, parallel_run
-from .parser.Report import report
+from .parser.report.Report import report
 from .models import *
 from .extensions import *
 

@@ -30,7 +30,7 @@ from ANNarchy.core.Random import RandomDistribution, Uniform
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.parser.Report import _process_random
+from ANNarchy.parser.report.Report import _process_random
 
 try:
     import ANNarchy.core.cython_ext.Connector as Connector
