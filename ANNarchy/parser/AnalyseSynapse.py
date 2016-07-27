@@ -22,12 +22,71 @@
 
 """
 from ANNarchy.core.Global import _error, _warning, config
-from .Extraction import *
-from .CoupledEquations import CoupledEquations
+from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
+from ANNarchy.parser.Equation import Equation
+from ANNarchy.parser.StringManipulation import *
+from ANNarchy.parser.ITE import *
+from ANNarchy.parser.Extraction import *
+from ANNarchy.parser.CoupledEquations import CoupledEquations
 
 def analyse_synapse(synapse):
-    """ Performs the analysis for a single synapse."""
-    concurrent_odes = []
+    """ 
+    Parses the structure and generates code snippets for the synapse type.
+
+    It returns a ``description`` dictionary with the following fields:
+
+    * 'object': 'synapse' by default, to distinguish it from 'neuron'
+    * 'type': either 'rate' or 'spiking'
+    * 'raw_parameters': provided field
+    * 'raw_equations': provided field
+    * 'raw_functions': provided field
+    * 'raw_psp': provided field
+    * 'raw_pre_spike': provided field
+    * 'raw_post_spike': provided field
+    * 'parameters': list of parameters defined for the synapse type
+    * 'variables': list of variables defined for the synapse type
+    * 'functions': list of functions defined for the synapse type
+    * 'attributes': list of names of all parameters and variables
+    * 'local': list of names of parameters and variables which are local to each synapse
+    * 'global': list of names of parameters and variables which are global to the projection
+    * 'random_distributions': list of random number generators used in the neuron equations
+    * 'global_operations': list of global operations (min/max/mean...) used in the equations
+    * 'pre_global_operations': list of global operations (min/max/mean...) on the pre-synaptic population
+    * 'post_global_operations': list of global operations (min/max/mean...) on the post-synaptic population
+    * 'pre_spike': list of variables updated after a pre-spike event
+    * 'post_spike': list of variables updated after a post-spike event
+    * 'dependencies': dictionary ('pre', 'post') of lists of pre (resp. post) variables accessed by the synapse (used for delaying variables)
+    * 'psp': dictionary ('eq' and 'psp') for the psp code to be summed
+    * 'pruning' and 'creating': statements for structural plasticity
+
+
+    Each parameter is a dictionary with the following elements:
+
+    * 'bounds': unused
+    * 'ctype': 'type of the parameter: 'double', 'int' or 'bool'
+    * 'eq': original equation in text format
+    * 'flags': list of flags provided after the :
+    * 'init': initial value
+    * 'locality': 'local' or 'global'
+    * 'name': name of the parameter
+
+    Each variable is a dictionary with the following elements:
+    
+    * 'bounds': dictionary of bounds ('init', 'min', 'max') provided after the :
+    * 'cpp': C++ code snippet updating the variable
+    * 'ctype': type of the variable: 'double', 'int' or 'bool'
+    * 'dependencies': list of variable and parameter names on which the equation depends
+    * 'eq': original equation in text format
+    * 'flags': list of flags provided after the :
+    * 'init': initial value
+    * 'locality': 'local' or 'global'
+    * 'method': numericalmethod for ODEs
+    * 'name': name of the variable
+    * 'switch': ODEs have a switch term
+    * 'transformed_eq': same as eq, except special terms (sums, rds) are replaced with a temporary name
+    * 'untouched': dictionary of special terms, with their new name as keys and replacement values as values.
+    
+    """
 
     # Store basic information
     description = {
@@ -38,12 +97,14 @@ def analyse_synapse(synapse):
         'raw_functions': synapse.functions
     }
 
+    # Psps is what is actually summed over the incoming weights
     if synapse.psp:
         description['raw_psp'] = synapse.psp
     elif synapse.type == 'rate':
         description['raw_psp'] = "w*pre.r"
 
-    if synapse.type == 'spike': # Additionally store pre_spike and post_spike
+    # Spiking synapses additionally store pre_spike and post_spike
+    if synapse.type == 'spike': 
         description['raw_pre_spike'] = synapse.pre_spike
         description['raw_post_spike'] = synapse.post_spike
 
@@ -61,8 +122,8 @@ def analyse_synapse(synapse):
             break
     else:
         parameters.append(
-            #TODO: is this exception really needed? Maybe we could find
-            #      a better solution instead of the hard-coded 'w' ... [hdin: 26.05.2015]
+            # TODO: is this exception really needed? Maybe we could find
+            #       a better solution instead of the hard-coded 'w' ... [hdin: 26.05.2015]
             {'name': 'w', 'bounds': {}, 'ctype': 'double', 'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'}
         )
 
@@ -89,6 +150,7 @@ def analyse_synapse(synapse):
     description['global'] = global_var
     description['global_operations'] = []
 
+    # Lists of global operations needed at the pre and post populations
     description['pre_global_operations'] = []
     description['post_global_operations'] = []
 
@@ -136,6 +198,9 @@ def analyse_synapse(synapse):
     # Variables names for the parser which should be left untouched
     untouched = {}
     description['dependencies'] = {'pre': [], 'post': []}
+
+    # The ODEs may be interdependent (implicit, midpoint), so they need to be passed explicitely to CoupledEquations
+    concurrent_odes = []
 
     # Iterate over all variables
     for variable in description['variables']:
@@ -211,10 +276,8 @@ def analyse_synapse(synapse):
             switch = code[1]
 
         # Replace untouched variables with their original name
-        # print cpp_eq
         for prev, new in untouched.items():
             cpp_eq = cpp_eq.replace(prev, new)
-        # print cpp_eq
 
         # Replace local functions
         for f in description['functions']:
@@ -299,6 +362,7 @@ def analyse_synapse(synapse):
             # Store the result
             variable['cpp'] = code # the C++ equation
             variable['dependencies'] = deps
+
             # Process the bounds
             if 'min' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['min'], str):
@@ -326,4 +390,6 @@ def analyse_synapse(synapse):
     if synapse.creating:
         description['creating'] = extract_structural_plasticity(synapse.creating, description)
 
+    import pprint
+    pprint.pprint(description.keys())
     return description
