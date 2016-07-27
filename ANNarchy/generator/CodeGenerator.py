@@ -27,7 +27,8 @@ from .ProjectionGenerator import ProjectionGenerator
 from .PyxGenerator import PyxGenerator
 from .RecordGenerator import RecordGenerator
 
-import numpy as np
+from .Population import OpenMPGenerator, CUDAGenerator
+
 
 class CodeGenerator(object):
     """
@@ -66,7 +67,13 @@ class CodeGenerator(object):
         else:
             self._profgen = None
 
-        self._popgen = PopulationGenerator(self._profgen, net_id)
+        if Global.config['paradigm'] == "openmp":
+            self._popgen = OpenMPGenerator(self._profgen, net_id)
+        elif Global.config['paradigm'] == "cuda":
+            self._popgen = CUDAGenerator(self._profgen, net_id)
+        else:
+            Global._error("No PopulationGenerator for " + Global.config['paradigm'])
+
         self._projgen = ProjectionGenerator(self._profgen, net_id)
 
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
