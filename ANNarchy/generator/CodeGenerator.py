@@ -22,7 +22,6 @@
 """
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
-from .PopulationGenerator import PopulationGenerator
 from .ProjectionGenerator import ProjectionGenerator
 from .PyxGenerator import PyxGenerator
 from .RecordGenerator import RecordGenerator

@@ -23,9 +23,11 @@
 """
 from ANNarchy.core import Global
 
-import ANNarchy.generator.Template.PopulationTemplate as PopTemplate
 import ANNarchy.generator.Template.ProjectionTemplate as ProjTemplate
 import ANNarchy.generator.Template.PyxTemplate as PyxTemplate
+
+import ANNarchy.generator.Population.OpenMPTemplates as omp_templates
+import ANNarchy.generator.Population.CUDATemplates as cuda_templates
 
 class PyxGenerator(object):
     """
@@ -151,9 +153,9 @@ class PyxGenerator(object):
         # Parameters and variables
         export_parameters_variables = ""
         for var in pop.neuron_type.description['parameters']:
-            export_parameters_variables += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            export_parameters_variables += PyxTemplate.pop_attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         for var in pop.neuron_type.description['variables']:
-            export_parameters_variables += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            export_parameters_variables += PyxTemplate.pop_attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
         if 'export_parameters_variables' in pop._specific_template.keys():
             export_parameters_variables = pop._specific_template['export_parameters_variables']
 
@@ -200,13 +202,19 @@ class PyxGenerator(object):
         # Spiking neurons have aditional data
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
-                wrapper_access_refractory += PopTemplate.spike_specific[Global.config['paradigm']]['pyx_wrapper'] % {'id': pop.id}
+                if Global.config['paradigm'] == "openmp":
+                    wrapper_access_refractory += omp_templates.spike_specific['pyx_wrapper'] % {'id': pop.id}
+                elif Global.config['paradigm'] == "cuda":
+                    wrapper_access_refractory += cuda_templates.spike_specific['pyx_wrapper'] % {'id': pop.id}
+                else:
+                    raise NotImplementedError
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            wrapper_access_parameters_variables += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
+            wrapper_access_parameters_variables += PyxTemplate.pop_attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
+
         for var in pop.neuron_type.description['variables']:
-            wrapper_access_parameters_variables += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
+            wrapper_access_parameters_variables += PyxTemplate.pop_attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
         # Arrays for the presynaptic sums of rate-coded neurons
         if pop.neuron_type.type == 'rate':
