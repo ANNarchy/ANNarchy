@@ -128,6 +128,64 @@ def set_seed(long seed):
     setSeed(seed)
 '''
 
+# export of accessors for parameter members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
+#    attr_type: either 'variable' or 'parameter'
+pop_attribute_cpp_export = {
+    'local':
+"""
+        # Local %(attr_type)s %(name)s
+        vector[%(type)s] get_%(name)s()
+        %(type)s get_single_%(name)s(int rk)
+        void set_%(name)s(vector[%(type)s])
+        void set_single_%(name)s(int, %(type)s)
+""",
+    'global':
+"""
+        # Global %(attr_type)s %(name)s
+        %(type)s  get_%(name)s()
+        void set_%(name)s(%(type)s)
+"""
+}
+# export of accessors for parameter members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons. Functions marked as cpdef
+# can be accessed from python as well as cython. Local parameters allows access to single as well as all values.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
+#    attr_type: either 'variable' or 'parameter'
+pop_attribute_pyx_wrapper = {
+    'local':
+"""
+    # Local %(attr_type)s %(name)s
+    cpdef np.ndarray get_%(name)s(self):
+        return np.array(pop%(id)s.get_%(name)s())
+    cpdef set_%(name)s(self, np.ndarray value):
+        pop%(id)s.set_%(name)s( value )
+    cpdef %(type)s get_single_%(name)s(self, int rank):
+        return pop%(id)s.get_single_%(name)s(rank)
+    cpdef set_single_%(name)s(self, int rank, value):
+        pop%(id)s.set_single_%(name)s(rank, value)
+""",
+    'global':
+"""
+    # Global %(attr_type)s %(name)s
+    cpdef %(type)s get_%(name)s(self):
+        return pop%(id)s.get_%(name)s()
+    cpdef set_%(name)s(self, %(type)s value):
+        pop%(id)s.set_%(name)s(value)
+"""
+}
+
 # Export for populations
 pop_pyx_struct = """
     # Export Population %(id)s (%(name)s)
