@@ -390,6 +390,4 @@ def analyse_synapse(synapse):
     if synapse.creating:
         description['creating'] = extract_structural_plasticity(synapse.creating, description)
 
-    import pprint
-    pprint.pprint(description.keys())
     return description
