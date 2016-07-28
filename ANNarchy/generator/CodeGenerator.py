@@ -22,12 +22,11 @@
 """
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
-from .ProjectionGenerator import ProjectionGenerator
 from .PyxGenerator import PyxGenerator
 from .RecordGenerator import RecordGenerator
 
 from .Population import OpenMPGenerator, CUDAGenerator
-
+from .Projection import OpenMPProjectionGenerator, CUDAProjectionGenerator
 
 class CodeGenerator(object):
     """
@@ -68,12 +67,12 @@ class CodeGenerator(object):
 
         if Global.config['paradigm'] == "openmp":
             self._popgen = OpenMPGenerator(self._profgen, net_id)
+            self._projgen = OpenMPProjectionGenerator(self._profgen, net_id)
         elif Global.config['paradigm'] == "cuda":
             self._popgen = CUDAGenerator(self._profgen, net_id)
+            self._projgen = CUDAProjectionGenerator(self._profgen, net_id)
         else:
             Global._error("No PopulationGenerator for " + Global.config['paradigm'])
-
-        self._projgen = ProjectionGenerator(self._profgen, net_id)
 
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
         self._recordgen = RecordGenerator(annarchy_dir, populations, projections, net_id)

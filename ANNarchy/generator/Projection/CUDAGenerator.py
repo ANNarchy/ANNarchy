@@ -1,0 +1,842 @@
+"""
+
+    CUDAGenerator.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+from .ProjectionGenerator import ProjectionGenerator, get_bounds
+import CUDATemplates
+
+from ANNarchy.core import Global
+from ANNarchy.generator.Utils import generate_equation_code, tabify
+
+import re
+
+class CUDAGenerator(ProjectionGenerator):
+    """
+    Generate the header for a Population object to run either on a Nvidia
+    GPU using Nvidia SDK > 5.0 and CC > 2.0
+    """
+    _templates = CUDATemplates.cuda_templates
+
+    def __init__(self, profile_generator, net_id):
+        super(CUDAGenerator, self).__init__(profile_generator, net_id)
+
+    def header_struct(self, proj, annarchy_dir):
+        """
+        """
+        # Generate declarations and accessors for the variables
+        decl, accessor = self._declaration_accessors(proj)
+
+        # Initiliaze the projection
+        init_parameters_variables = self._init_parameters_variables(proj)
+
+        update_variables_body, update_variables_header, update_variables_call = self._update_synapse(proj)
+
+        # Update the random distributions
+        init_rng = self._init_random_distributions(proj)
+        update_rng = self._update_random_distributions(proj)
+
+        post_event_body, post_event_header, post_event_call = self._post_event(proj)
+
+        # Compute sum is the trickiest part
+        psp_header, psp_body, psp_call = self._computesum_rate(proj) if proj.synapse_type.type == 'rate' else self._computesum_spiking(proj)
+
+        # Detect event-driven variables
+        has_event_driven = False
+        for var in proj.synapse_type.description['variables']:
+            if var['method'] == 'event-driven':
+                has_event_driven = True
+
+        # Detect non.uniform delays to eventually generate the code
+        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
+
+        # Connectivity matrix
+        connectivity_matrix = self._connectivity(proj)
+
+        # Profiling
+        if self._prof_gen:
+            include_profile = """#include "Profiling.h"\n"""
+            declare_profile, init_profile = self._prof_gen.generate_init_projection(proj)
+        else:
+            include_profile = ""
+            init_profile = ""
+            declare_profile = ""
+
+        # Additional info (overwritten)
+        include_additional = ""
+        struct_additional = ""
+        init_additional = ""
+        access_additional = ""
+        if 'include_additional' in proj._specific_template.keys():
+            include_additional = proj._specific_template['include_additional']
+        if 'struct_additional' in proj._specific_template.keys():
+            struct_additional = proj._specific_template['struct_additional']
+        if 'init_additional' in proj._specific_template.keys():
+            init_additional = proj._specific_template['init_additional']
+        if 'access_additional' in proj._specific_template.keys():
+            access_additional = proj._specific_template['access_additional']
+
+        final_code = self._templates['projection_header'] % {
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'id_proj': proj.id,
+            'name_pre': proj.pre.name,
+            'name_post': proj.post.name,
+            'target': proj.target,
+            'include_additional': include_additional,
+            'include_profile': include_profile,
+            'struct_additional': struct_additional,
+            'declare_connectivity_matrix': connectivity_matrix['declare'],
+            'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
+            'declare_delay': decl['delay'] if has_delay else "",
+            'declare_event_driven': decl['event_driven'] if has_event_driven else "",
+            'declare_rng': decl['rng'],
+            'declare_parameters_variables': decl['parameters_variables'],
+            'declare_cuda_stream': decl['cuda_stream'],
+            'declare_additional': decl['additional'],
+            'declare_profile': declare_profile,
+            'init_connectivity_matrix': connectivity_matrix['init'],
+            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_proj': proj.id, 'id_pre': proj.pre.id, 'id_post': proj.post.id},
+            'init_event_driven': "",
+            'init_rng': init_rng,
+            'init_parameters_variables': init_parameters_variables,
+            'init_additional': init_additional,
+            'init_profile': init_profile,
+            'access_connectivity_matrix': connectivity_matrix['accessor'],
+            'access_parameters_variables': accessor,
+            'access_additional': access_additional,
+            'cuda_flattening': CUDATemplates.cuda_flattening % {'id_post':proj.post.id}
+        }
+
+        # Store file
+        with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+            ofile.write(final_code)
+
+        # Dictionary for inclusions in ANNarchy.cpp
+        proj_desc = {
+            'include': """#include "proj%(id)s.hpp"\n""" % {'id': proj.id},
+            'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% {'id': proj.id},
+            'instance': """ProjStruct%(id)s proj%(id)s;\n"""% {'id': proj.id},
+            'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
+        }
+
+        proj_desc['psp_header'] = psp_header
+        proj_desc['psp_body'] = psp_body
+        proj_desc['psp_call'] = psp_call
+
+        proj_desc['update_synapse_header'] = update_variables_header
+        proj_desc['update_synapse_body'] = update_variables_body
+        proj_desc['update_synapse_call'] = update_variables_call
+
+        proj_desc['postevent_header'] = post_event_header
+        proj_desc['postevent_body'] = post_event_body
+        proj_desc['postevent_call'] = post_event_call
+
+        host_device_transfer, device_host_transfer = self._memory_transfers(proj)
+
+        proj_desc['host_to_device'] = host_device_transfer
+        proj_desc['device_to_host'] = device_host_transfer
+
+        return proj_desc
+
+    def _declaration_accessors(self, proj):
+        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
+
+        declaration['cuda_stream'] = CUDATemplates.cuda_templates['cuda_stream']
+        return declaration, accessor
+
+    def _connectivity(self, proj):
+        """
+        Create codes for connectivity, comprising usually of post_rank and pre_rank.
+        In case of spiking models they are extended by an inv_rank data field. The
+        extension SharedProjection as well as SpecificProjection members overwrite
+        the _specific_template member variable of the Projection object, to
+        replace directly the default codes.
+
+        Returns:
+
+            a dictionary containing the following fields: *declare*, *init*,
+            *accessor*, *declare_inverse*, *init_inverse*
+
+        TODO:
+
+            maybe we should make a forced linkage between the declare, accessor and init fields.
+            Currently it could be, that one overwrite only the declare field and leave the others
+            untouched which causes errors.
+        """
+        declare_inverse_connectivity_matrix = ""
+        init_inverse_connectivity_matrix = ""
+
+        # Retrieve the templates
+        connectivity_matrix_tpl = CUDATemplates.csr_connectivity_matrix
+
+        # Default weight matrix as LIL
+        weight_matrix_tpl = CUDATemplates.csr_weight_matrix
+
+        # Special case when the weight have a single value
+        if proj._has_single_weight():
+            raise NotImplementedError
+
+        # Connectivity
+        declare_connectivity_matrix = connectivity_matrix_tpl['declare']
+        access_connectivity_matrix = connectivity_matrix_tpl['accessor']
+        init_connectivity_matrix = connectivity_matrix_tpl['init']
+
+        # Weight array
+        declare_connectivity_matrix += weight_matrix_tpl['declare']
+        access_connectivity_matrix += weight_matrix_tpl['accessor']
+        init_connectivity_matrix += weight_matrix_tpl['init']
+
+        # Spiking model require inverted ranks
+        if proj.synapse_type.type == "spike":
+            inv_connectivity_matrix_tpl = CUDATemplates.inverse_connectivity_matrix
+            declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare']
+            init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
+
+        # Specific projections can overwrite
+        if 'declare_connectivity_matrix' in proj._specific_template.keys():
+            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
+        if 'access_connectivity_matrix' in proj._specific_template.keys():
+            access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
+        if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
+            declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix']
+        if 'init_connectivity_matrix' in proj._specific_template.keys():
+            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix']
+        if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
+            init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix']
+
+
+        return {
+            'declare' : declare_connectivity_matrix,
+            'init' : init_connectivity_matrix,
+            'accessor' : access_connectivity_matrix,
+            'declare_inverse': declare_inverse_connectivity_matrix,
+            'init_inverse': init_inverse_connectivity_matrix
+        }
+
+    def _computesum_rate(self, proj):
+        """
+        returns all data needed for compute postsynaptic sum kernels:
+
+        header:  kernel prototypes
+        body:    kernel implementation
+        call:    kernel call
+        """
+        # Default variables needed in psp_code
+        psp_prefix = """
+        int nb_post; double sum;"""
+        if 'psp_prefix' in proj._specific_template.keys():
+            psp_prefix = proj._specific_template['psp_prefix']
+
+        # Specific projection
+        if 'psp_code' in proj._specific_template.keys():
+            return psp_prefix, proj._specific_template['psp_code']
+
+        # Dictionary of keywords to transform the parsed equations
+        ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': "[j]",
+                'global_index': '[i]',
+                'pre_index': '[rank_pre[j]]',
+                'post_index': '[post_rank[i]]',
+                'pre_prefix': 'pre_',
+                'post_prefix': 'post_',
+                'delay_nu' : '[delay[j]-1]', # non-uniform delay
+                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+        }
+
+        #
+        # Retrieve the PSP
+        add_args_header = ""
+        add_args_call = ""
+        if not 'psp' in  proj.synapse_type.description.keys(): # default
+            psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
+        else: # custom psp
+            psp = (proj.synapse_type.description['psp']['cpp'])
+
+            # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            #
+            # Some of the features currently not work
+            # psp = w*pre.r + X
+            #
+            # ATTENTION: an idea is implemented in computesum_spiking_cuda
+
+        # Special case where w is a single value
+        if proj._has_single_weight():
+            psp = re.sub(
+                r'([^\w]+)w%\(local_index\)s',
+                r'\1w',
+                ' ' + psp
+            )
+
+        # connectivity, yet only CSR
+        conn_header = "int* rank_pre, int *row_ptr, double *pre_r, double* w"
+        conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
+
+        #
+        # finish the kernel etc.
+        psp = proj.synapse_type.description['psp']['cpp'] % ids
+
+        body_code = CUDATemplates.cuda_psp_kernel['body'] % {
+            'id_proj': proj.id,
+            'conn_args': conn_header,
+            'target_arg': "sum_"+proj.target,
+            'add_args': add_args_header,
+            'psp': psp
+        }
+
+        header_code = CUDATemplates.cuda_psp_kernel['header'] % {
+            'id': proj.id,
+            'conn_args': conn_header,
+            'target_arg': "sum_"+proj.target,
+            'add_args': add_args_header
+        }
+
+        call_code = CUDATemplates.cuda_psp_kernel['call'] % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'conn_args': conn_call,
+            'target': proj.target,
+            'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
+            'add_args': add_args_call
+        }
+
+        # Take delays into account if any
+        if proj.max_delay > 1:
+            if proj.uniform_delay == -1:
+                Global._error("Only uniform delays are supported on GPUs.")
+
+            else:
+                # TODO: replace by regex
+                call_code = call_code.replace("gpu_r,", "gpu_delayed_r["+str(proj.max_delay-1)+"],")
+
+        return header_code, body_code, call_code
+
+    def _computesum_spiking(self, proj):
+        updated_variables_list = []
+
+        kernel_args = ""
+        kernel_args_call = ""
+        eq_code = ""
+
+        # Basic tags
+        ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'local_index': "[indices[syn_idx]]", 'global_index': '[post_ranks[syn_idx]]'}
+
+        for eq in proj.synapse_type.description['pre_spike']:
+
+            if eq['name'] == "g_target":   # synaptic transmission
+                eq_code += """atomicAdd(&g_target[post_ranks[syn_idx]], w[indices[syn_idx]]);"""
+                kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s" % {'id_post': proj.post.id, 'target': proj.target}
+                kernel_args += ", " + eq['ctype'] + "* " + eq['name']
+
+                eq_code = tabify(eq_code, 1)
+            else:
+                condition = ""
+                # Check conditions to update the variable
+                #if eq['name'] == 'w': # Surround it by the learning flag
+                #    condition = "_plasticity" # Plasticity can be disabled (TODO)
+                if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
+                    simultaneous = "pop%(id_pre)s.last_spike[pre_rank[i][j]] != pop%(id_post)s.last_spike[post_rank[i]]" % {'id_post': proj.post.id, 'id_pre': proj.pre.id}
+                    if condition == "":
+                        condition = simultaneous
+                    else:
+                        condition += "&&(" + simultaneous + ")"
+                # Generate the code
+                if condition != "":
+                    updated_variables_list += """
+// unless_post can prevent evaluation of presynaptic variables
+if(%(condition)s){
+    // %(eq)s
+    %(cpp)s
+    %(bounds)s
+}
+""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids, 'condition': condition}
+
+                else: # Normal synaptic variable
+                    updated_variables_list += """
+// %(eq)s
+%(cpp)s
+%(bounds)s""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
+
+        #######################################################
+        # Event-driven integration of synaptic variables
+        #######################################################
+        has_exact = False
+        deps = []
+        event_driven_code = ''
+        for var in proj.synapse_type.description['variables']:
+
+            if var['method'] == 'event-driven':
+                has_exact = True
+                event_driven_code += """
+        // %(eq)s
+        %(exact)s
+""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id, 'local_index': "[indices[syn_idx]]", 'global_index': '[post_ranks[syn_idx]]'}}
+
+                # add to kernel dependencies
+                for dep in var['dependencies']:
+                    deps.append(dep)
+
+        if has_exact:
+            event_driven_code += """
+        // Update the last event for the synapse
+        _last_event%(local_idx)s = t;
+""" % {'local_idx': '[indices[syn_idx]]'}
+
+            # event-driven requires last event
+            kernel_args += ", long* _last_event"
+            kernel_args_call += ", proj%(id_proj)s.gpu_last_event"  % {'id_proj': proj.id}
+
+        # Generate code for pre-spike variables
+        pre_code = ""
+        if len(updated_variables_list) > 0:
+            for var in updated_variables_list:
+                pre_code += var
+            pre_code = tabify(pre_code, 3)
+
+        for pre_deps in proj.synapse_type.description['pre_spike']+proj.synapse_type.description['post_spike']:
+            for var in pre_deps['dependencies']:
+                deps.append(var)
+        deps = list(set(deps))
+
+        for var in deps:
+            attr = self._get_attr(proj, var)
+            if attr['name'] == "w":
+                continue
+            kernel_args += ", "+ attr['ctype']+ "* " + attr['name']
+            kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'name': attr['name']}
+
+        conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+        call = CUDATemplates.cuda_spike_psp_kernel_call % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'target': proj.target,
+            'kernel_args': kernel_args_call,
+            'conn_args': conn_call
+        }
+
+        conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
+        body = CUDATemplates.cuda_spike_psp_kernel % {
+            'id': proj.id,
+            'conn_arg': conn_body,
+            'kernel_args': kernel_args,
+            'event_driven': event_driven_code,
+            'psp':  eq_code,
+            'pre_event': pre_code
+        }
+
+        conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
+        header = """__global__ void cu_proj%(id)s_psp( double dt, int *spiked, %(conn_header)s %(kernel_args)s );\n""" % {'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args}
+
+        ####################################################
+        # Not even-driven summation of psp: like rate-coded
+        ####################################################
+        if 'psp' in  proj.synapse_type.description.keys(): # not event-based
+            # transfrom psp equation
+            psp = proj.synapse_type.description['psp']['cpp']
+
+            add_args_header = ""
+            add_args_call = ""
+            #
+            # on which other variables the psp rely?
+            tmp_deps = re.findall(r"post_prefix\)s[A-Za-z]*\%\(", psp)
+            for post_dep in tmp_deps:
+                var = post_dep.split(")s")[1].split("%(")[0]
+
+                add_args_header += ", double* post_%(var)s" % {'var': var}
+                add_args_call += ", pop%(id)s.gpu_%(var)s" % {'id': proj.post.id, 'var': var}
+
+            tmp_deps = re.findall(r"pre_prefix\)s[A-Za-z]*\%\(", psp)
+            for pre_dep in tmp_deps:
+                var = pre_dep.split(")s")[1].split("%(")[0]
+
+                add_args_header += ", double* pre_%(var)s" % {'var': var}
+                add_args_call += ", pop%(id)s.gpu_%(var)s" % {'id': proj.post.id, 'var': var}
+
+            psp = proj.synapse_type.description['psp']['cpp'] % {
+                'local_index': '[rank_pre[j]]',
+                'pre_prefix': 'pre_',
+                'pre_index': '[rank_pre[j]]',
+                'post_prefix': 'post_',
+                'post_index': '[blockIdx.x]'
+            }
+
+            # connectivity
+            conn_body = "int *rank_pre, int* row_ptr, double* w"
+            conn_header = "int *rank_pre, int* row_ptr, double *w"
+            conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+
+            # build up kernel
+            body = CUDATemplates.cuda_psp_kernel['body'] % {
+                'id_proj': proj.id,
+                'conn_args': conn_body,
+                'target_arg': 'g_'+proj.target,
+                'add_args':  add_args_header,
+                'psp': psp,
+            }
+
+            header = CUDATemplates.cuda_psp_kernel['header'] % {
+                'id': proj.id,
+                'conn_args': conn_header,
+                'add_args': add_args_header,
+                'target_arg': 'g_'+proj.target,
+            }
+
+            call = CUDATemplates.cuda_psp_kernel['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                'target': proj.target,
+                'conn_args': conn_call,
+                'add_args': add_args_call
+            }
+
+        return header, body, call
+
+    def _post_event(self, proj):
+        """
+        Post-synaptic event kernel for CUDA devices
+        """
+        if proj.synapse_type.type == "rate":
+            return "", "", ""
+
+        if proj.synapse_type.description['post_spike'] == []:
+            return "", "", ""
+
+        ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': "[j]",
+                'global_index': '[i]',
+                'pre_index': '[pre_rank[j]]',
+                'post_index': '[post_rank[i]]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+        }
+
+        add_args_header = ""
+        add_args_call = ""
+
+        # Event-driven integration
+        has_event_driven = False
+        for var in proj.synapse_type.description['variables']:
+            if var['method'] == 'event-driven':
+                has_event_driven = True
+
+        # Generate event-driven code
+        event_driven_code = ""
+        if has_event_driven:
+            # event-driven rely on last pre-synaptic event
+            add_args_header += ", long* _last_event"
+            add_args_call += ", proj%(id_proj)s.gpu_last_event" % {'id_proj': proj.id}
+
+            for var in proj.synapse_type.description['variables']:
+                if var['method'] == 'event-driven':
+                    event_driven_code += '// ' + var['eq'] + '\n'
+                    event_driven_code += var['cpp'] % ids + '\n'
+            event_driven_code += """
+        // Update the last event for the synapse
+        _last_event%(local_index)s = t;
+""" % {'local_index' : '[j]'}
+
+        # Gather the equations
+        post_code = ""
+        for eq in proj.synapse_type.description['post_spike']:
+            post_code += '// ' + eq['eq'] + '\n'
+            #TODO:            
+            #if eq['name'] == 'w':
+            #    post_code += "if(_plasticity)\n"
+            post_code += eq['cpp'] % ids + '\n'
+            post_code += get_bounds(eq) % ids + '\n'
+        post_code = tabify(post_code, 2)
+
+        # hand-crafted (TODO)
+        if has_event_driven:
+            # hand-crafted event-driven
+            add_args_header += ", double * x, double *y, double* tau_plus, double* tau_minus"
+            add_args_call += ", proj%(id_proj)s.gpu_x, proj%(id_proj)s.gpu_y, proj%(id_proj)s.gpu_tau_plus, proj%(id_proj)s.gpu_tau_minus" % {'id_proj': proj.id}
+
+            # hand-crafted post-event
+            add_args_header += ", double* A_minus, double *w_max, double *w_min"
+            add_args_call += ", proj%(id_proj)s.gpu_A_minus, proj%(id_proj)s.gpu_w_max, proj%(id_proj)s.gpu_w_min" % {'id_proj': proj.id}
+
+        postevent_header = CUDATemplates.cuda_spike_postevent['header'] % {'id_proj': proj.id,
+                                                                           'add_args': add_args_header
+                                                                         }
+
+        postevent_body = CUDATemplates.cuda_spike_postevent['body'] % {'id_proj': proj.id,
+                                                                       'add_args': add_args_header,
+                                                                       'event_driven': event_driven_code,
+                                                                       'post_code': post_code
+                                                                     }
+
+        postevent_call = CUDATemplates.cuda_spike_postevent['call'] % {'id_proj': proj.id,
+                                                                       'id_pre': proj.pre.id,
+                                                                       'id_post': proj.post.id,
+                                                                       'target': proj.target,
+                                                                       'add_args': add_args_call
+                                                                     }
+
+        return postevent_body, postevent_header, postevent_call
+
+    def _init_random_distributions(self, proj):
+        if proj.synapse_type.description['random_distributions'] != []:
+            raise NotImplementedError
+
+        return ""
+
+    def _memory_transfers(self, proj):
+        host_device_transfer = ""
+        device_host_transfer = ""
+
+        # transfer of variables
+        proc_attr = []
+        host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % {'id': proj.id}
+        for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+            if attr['name'] in proc_attr:
+                continue
+
+            if attr['name'] in proj.synapse_type.description['local']:
+                host_device_transfer += """
+        // %(name)s: local
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+        #ifdef _DEBUG
+            std::cout << "HtoD: %(name)s " << std::endl;
+        #endif
+            std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            proj%(id)s.%(name)s_dirty = false;
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  occured error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+            flat_proj%(id)s_%(name)s.clear();
+        }
+""" % {'id': proj.id, 'name': attr['name'], 'type': attr['ctype']}
+            else:
+                host_device_transfer += """
+        // %(name)s: global
+        if ( proj%(id)s.%(name)s_dirty )
+        {
+        #ifdef _DEBUG
+            std::cout << "HtoD: %(name)s " << std::endl;
+        #endif
+            cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            proj%(id)s.%(name)s_dirty = false;
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "Transfer of proj%(id)s.gpu_%(name)s: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
+""" % {'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype']}
+
+            proc_attr.append(attr['name'])
+
+        proc_attr = []
+        device_host_transfer += """
+    // device to host transfers for proj%(id)s\n""" % {'id': proj.id}
+        for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+            if attr['name'] in proc_attr:
+                continue
+
+            if attr['name'] in proj.synapse_type.description['local']:
+                device_host_transfer += """
+            // %(name)s: local
+        #ifdef _DEBUG
+            std::cout << "DtoH: %(name)s " << std::endl;
+        #endif
+            std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
+            cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            proj%(id)s.%(name)s = proj%(id)s.deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s);
+            flat_proj%(id)s_%(name)s.clear();
+""" % {'id': proj.id, 'name': attr['name'], 'type': attr['ctype']}
+            else:
+                device_host_transfer += """
+            // %(name)s: global
+            cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % {'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype']}
+            proc_attr.append(attr['name'])
+
+        return host_device_transfer, device_host_transfer
+
+    def _update_random_distributions(self, proj):
+        if proj.synapse_type.description['random_distributions'] != []:
+            raise NotImplementedError
+
+        return ""
+
+    def _update_synapse(self, proj):
+        # Global variables
+        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
+
+        # Local variables
+        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="plasticity")
+
+        if global_eq.strip() == '' and local_eq.strip() == '':
+            return "", "", ""
+
+        # pre- and postsynaptic global operations
+        pre_global_ops = []
+        for pre_glob in proj.synapse_type.description['pre_global_operations']:
+            pre_global_ops.append("""_%(func)s_%(name)s""" % {'func': pre_glob['function'], 'name': pre_glob['variable']})
+
+        post_global_ops = []
+        for post_glob in proj.synapse_type.description['post_global_operations']:
+            post_global_ops.append("""_%(func)s_%(name)s""" % {'func': post_glob['function'], 'name': post_glob['variable']})
+
+        # remove doubled entries
+        pre_dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
+        pre_global_ops = list(set(pre_global_ops))
+        post_dependencies = list(set(proj.synapse_type.description['dependencies']['post']))
+        post_global_ops = list(set(post_global_ops))
+
+        var = ""
+        par = ""
+
+        # synaptic variables / parameters
+        for attr in proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters']:
+            var += """, %(type)s* %(name)s """ % {'type': attr['ctype'], 'name': attr['name']}
+
+        # replace pre- and postsynaptic global operations / variable accesses
+        if proj.pre.id != proj.post.id:
+            for pre_var in pre_dependencies:
+                var += """, double* pop%(id)s_%(name)s""" % {'id': proj.pre.id, 'name': pre_var}
+            for g_op in pre_global_ops:
+                par += """, double pop%(id)s_%(name)s""" % {'id': proj.pre.id, 'name': g_op}
+            for post_var in post_dependencies:
+                var += """, double* pop%(id)s_%(name)s""" % {'id': proj.post.id, 'name': post_var}
+            for g_op in post_global_ops:
+                #TODO:
+                #old = """, double pop%(id)s.%(name)s""" % { 'id': proj.post.id, 'name': g_op}
+                raise NotImplementedError
+        else:
+            for pre_var in list(set(pre_dependencies + post_dependencies)):
+                var += """, double* pop%(id)s_%(name)s""" % {'id': proj.pre.id, 'name': pre_var}
+            for g_op in list(set(pre_global_ops+post_global_ops)):
+                par += """, double pop%(id)s_%(name)s""" % {'id': proj.pre.id, 'name': g_op}
+
+        # random variables
+        for rd in proj.synapse_type.description['random_distributions']:
+            par += """, curandState* %(rd_name)s""" % {'rd_name' : rd['name']}
+
+        # we replace the rand_%(id)s by the corresponding curand... term
+        for rd in proj.synapse_type.description['random_distributions']:
+            if rd['dist'] == "Uniform":
+                term = """curand_uniform_double( &%(rd)s[j]) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                local_eq = local_eq.replace(rd['name']+"%(local_index)s", term)
+            elif rd['dist'] == "Normal":
+                term = """curand_normal_double( &%(rd)s[j] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                local_eq = local_eq.replace(rd['name']+"%(local_index)s", term)
+            elif rd['dist'] == "LogNormal":
+                term = """curand_log_normal_double( &%(rd)s[j], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                local_eq = local_eq.replace(rd['name']+"%(local_index)s", term)
+            else:
+                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        # remove all types
+        repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
+        var_wo_types = var
+        par_wo_types = par
+        for var_type in repl_types:
+            var_wo_types = var_wo_types.replace(var_type, "")
+            par_wo_types = par_wo_types.replace(var_type, "")
+
+        # Dictionary of pre/suffixes
+        ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': '[j]',
+                'global_index': '[rk_post]',
+                'pre_index': '[rk_pre]',
+                'post_index': '[rk_post]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '_',
+                'post_prefix': 'pop'+ str(proj.post.id) + '_',
+                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+        }
+
+        body = CUDATemplates.cuda_synapse_kernel % {
+            'id': proj.id,
+            'par': par,
+            'par2': par_wo_types,
+            'var': var,
+            'var2': var_wo_types,
+            'global_eqs': global_eq % ids,
+            'local_eqs': local_eq % ids,
+            'target': proj.target,
+            'pre': proj.pre.id,
+            'post': proj.post.id,
+         }
+
+        header = CUDATemplates.cuda_synapse_kernel_header % {'id': proj.id, 'var': var, 'par': par}
+
+        #
+        # calling entity
+        local = ""
+        for attr in proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters']:
+            local += """, proj%(id)s.gpu_%(name)s """ % {'id': proj.id, 'name': attr['name']}
+
+        if proj.pre.id == proj.post.id:
+            for var in list(set(pre_dependencies + post_dependencies)):
+                if var in pre_dependencies:
+                    local += """, pop%(id)s.gpu_%(name)s """ % {'id': proj.pre.id, 'name': var}
+                else:
+                    local += """, pop%(id)s.gpu_%(name)s """ % {'id': proj.post.id, 'name': var}
+        else:
+            for pre_var in pre_dependencies:
+                local += """, pop%(id)s.gpu_%(name)s """ % {'id': proj.pre.id, 'name': pre_var}
+            for post_var in post_dependencies:
+                local += """, pop%(id)s.gpu_%(name)s """ % {'id': proj.post.id, 'name': post_var}
+
+        glob = ""
+        for g_op in pre_global_ops:
+            glob += """, pop%(id)s.%(name)s """ % {'id': proj.pre.id, 'name': g_op}
+        for g_op in post_global_ops:
+            glob += """, pop%(id)s.%(name)s """ % {'id': proj.post.id, 'name': g_op}
+
+        # random variables
+        for rd in proj.synapse_type.description['random_distributions']:
+            glob += """, proj%(id)s.gpu_%(rd_name)s""" % {'id': proj.id, 'rd_name' : rd['name']}
+
+        # generate code
+        call = CUDATemplates.cuda_synapse_kernel_call % {
+            'id_proj': proj.id,
+            'post': proj.post.id,
+            'pre': proj.pre.id,
+            'target': proj.target,
+            'local': local,
+            'global': glob
+        }
+
+        return body, header, call

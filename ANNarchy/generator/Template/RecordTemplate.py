@@ -137,6 +137,56 @@ public:
     }
 }
 
+omp_projection = {
+    'struct': """
+class ProjRecorder%(id)s : public Monitor
+{
+public:
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
+        : Monitor(ranks, period, offset)
+    {
+%(init_code)s
+    };
+    virtual void record() {
+%(recording_code)s
+    };
+%(struct_code)s
+};
+""",
+    'local': {
+        'struct': """
+    // Local variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+        }
+"""
+    },
+    'global': {
+        'struct': """
+    // Global variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< %(type)s >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+        }
+"""
+    }
+}
+
 recording_spike_tpl= {
     'openmp' : """
         if(this->record_spike){

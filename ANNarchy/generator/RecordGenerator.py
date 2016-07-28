@@ -22,10 +22,9 @@
 
 """
 from ANNarchy.core import Global
-import ANNarchy.generator.Template.ProjectionTemplate as ProjTemplate
 import ANNarchy.generator.Template.RecordTemplate as RecTemplate
 
-class RecordGenerator:
+class RecordGenerator(object):
     """
     Creates the required codes for recording population
     and projection data
@@ -83,10 +82,12 @@ class RecordGenerator:
 
             omp_population, cuda_population
         """
-        if Global.config['paradigm']=="openmp":
+        if Global.config['paradigm'] == "openmp":
             template = RecTemplate.omp_population
-        else:
+        elif Global.config['paradigm'] == "cuda":
             template = RecTemplate.cuda_population
+        else:
+            raise NotImplementedError
 
         tpl_code = template['template']
 
@@ -108,21 +109,21 @@ class RecordGenerator:
         if pop.neuron_type.type == 'spike':
             struct_code += """
     // Local variable %(name)s
-    std::map<int, std::vector< long int > > %(name)s ;
+    std::map<int, std::vector< %(type)s > > %(name)s ;
     bool record_%(name)s ; """ % {'type' : 'long int', 'name': 'spike'}
             init_code += """
-        this->spike = std::map<int,  std::vector< long int > >();
+        this->%(name)s = std::map<int,  std::vector< %(type)s > >();
         if(!this->partial){
             for(int i=0; i<pop%(id)s.size; i++) {
-                this->spike[i]=std::vector<long int>();
+                this->%(name)s[i]=std::vector<%(type)s>();
             }
         }
         else{
             for(int i=0; i<this->ranks.size(); i++) {
-                this->spike[this->ranks[i]]=std::vector<long int>();
+                this->%(name)s[this->ranks[i]]=std::vector<%(type)s>();
             }
         }
-        this->record_spike = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
+        this->record_%(name)s = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
             recording_code += RecTemplate.recording_spike_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
 
         return tpl_code % {'id': pop.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
@@ -139,7 +140,7 @@ class RecordGenerator:
 
             record
         """
-        tpl_code = ProjTemplate.record
+        tpl_code = RecTemplate.omp_projection
         init_code = ""
         recording_code = ""
         struct_code = ""

@@ -23,11 +23,13 @@
 """
 from ANNarchy.core import Global
 
-import ANNarchy.generator.Template.ProjectionTemplate as ProjTemplate
 import ANNarchy.generator.Template.PyxTemplate as PyxTemplate
 
 import ANNarchy.generator.Population.OpenMPTemplates as omp_templates
 import ANNarchy.generator.Population.CUDATemplates as cuda_templates
+
+import ANNarchy.generator.Projection.OpenMPTemplates as proj_omp_templates
+import ANNarchy.generator.Projection.CUDATemplates as proj_cuda_templates
 
 class PyxGenerator(object):
     """
@@ -279,29 +281,45 @@ class PyxGenerator(object):
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Import templates
-        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_connectivity_matrix_cuda
+        connectivity_tpl = proj_omp_templates.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_connectivity_matrix
 
-        weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
+        weight_tpl = proj_omp_templates.lil_weight_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_weight_matrix
 
-        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
+        if Global.config['paradigm'] == "openmp":
+            sp_tpl = proj_omp_templates.structural_plasticity['pyx_struct']
+        else:
+            sp_tpl = {}
 
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.single_weight_matrix_omp
+            if Global.config['paradigm'] == "openmp":
+                weight_tpl = proj_omp_templates.single_weight_matrix
+            else:
+                raise NotImplementedError
 
         # Export connectivity matrix
         export_connectivity_matrix = connectivity_tpl['pyx_struct']
         export_connectivity_matrix += weight_tpl['pyx_struct']
 
         # Delay
-        export_delay=""
+        export_delay = ""
         if has_delay:
-            export_delay = ProjTemplate.delay['pyx_struct'] % {'id': proj.id}
+            if Global.config['paradigm'] == "openmp":
+                export_delay = proj_omp_templates.delay['pyx_struct'] % {'id': proj.id}
+            elif Global.config['paradigm'] == "cuda":
+                export_delay = proj_cuda_templates.delay['pyx_struct'] % {'id': proj.id}
+            else:
+                raise NotImplementedError
 
         # Event-driven
         export_event_driven = ""
         if has_event_driven:
-            export_event_driven = ProjTemplate.event_driven[Global.config['paradigm']]['pyx_struct']
+            if Global.config['paradigm'] == "openmp":
+                export_event_driven = proj_omp_templates.event_driven['pyx_struct']
+            elif Global.config['paradigm'] == "cuda":
+                export_event_driven = proj_cuda_templates.event_driven['pyx_struct']
+            else:
+                raise NotImplementedError
 
         # Determine all export methods
         export_parameters_variables = ""
@@ -309,12 +327,12 @@ class PyxGenerator(object):
         for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
-            export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            export_parameters_variables += PyxTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         # Variables
         for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
-            export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            export_parameters_variables += PyxTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Structural plasticity
         structural_plasticity = ""
@@ -381,19 +399,22 @@ class PyxGenerator(object):
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Import attributes templates
-        pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
+        pyx_acc_tpl = PyxTemplate.attribute_pyx_wrapper
 
         # Import connectivity matrix template
-        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_connectivity_matrix_cuda
+        connectivity_tpl = proj_omp_templates.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_connectivity_matrix
 
         # Import weight array template
-        weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
+        weight_tpl = proj_omp_templates.lil_weight_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_weight_matrix
 
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.single_weight_matrix_omp
+            if Global.config['paradigm'] == "openmp":
+                weight_tpl = proj_omp_templates.single_weight_matrix
+            else:
+                raise NotImplementedError
 
-        sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
+        sp_tpl = proj_omp_templates.structural_plasticity['pyx_wrapper']
 
         # Arguments to the wrapper (default: synapses)
         wrapper_args = connectivity_tpl['pyx_wrapper_args']
@@ -408,17 +429,31 @@ class PyxGenerator(object):
         wrapper_access_connectivity += weight_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
 
         # Delays
-        wrapper_init_delay = ""; wrapper_access_delay=""
+        wrapper_init_delay = ""
+        wrapper_access_delay = ""
         if has_delay:
-            # Initialize the wrapper
-            wrapper_init_delay = ProjTemplate.delay['pyx_wrapper_init'] % {'id_proj': proj.id}
-            # Access in wrapper
-            wrapper_access_delay = ProjTemplate.delay['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+            if Global.config['paradigm'] == "openmp":
+                # Initialize the wrapper
+                wrapper_init_delay = proj_omp_templates.delay['pyx_wrapper_init'] % {'id_proj': proj.id}
+                # Access in wrapper
+                wrapper_access_delay = proj_omp_templates.delay['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+            elif Global.config['paradigm'] == "cuda":
+                # Initialize the wrapper
+                wrapper_init_delay = proj_cuda_templates.delay['pyx_wrapper_init'] % {'id_proj': proj.id}
+                # Access in wrapper
+                wrapper_access_delay = proj_cuda_templates.delay['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+            else:
+                raise NotImplementedError
 
         # Event-driven
         wrapper_init_event_driven = ""
         if has_event_driven:
-            wrapper_init_event_driven = ProjTemplate.event_driven[Global.config['paradigm']]['pyx_wrapper_init'] % {'id_proj': proj.id}
+            if Global.config['paradigm'] == "openmp":
+                wrapper_init_event_driven = proj_omp_templates.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id}
+            elif Global.config['paradigm'] == "cuda":
+                wrapper_init_event_driven = proj_cuda_templates.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id}
+            else:
+                raise NotImplementedError
 
         # Determine all accessor methods
         wrapper_access_parameters_variables = ""

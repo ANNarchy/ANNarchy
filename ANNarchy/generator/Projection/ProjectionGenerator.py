@@ -1,0 +1,274 @@
+"""
+
+    ProjectionGenerator.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+from ANNarchy.core import Global
+
+class ProjectionGenerator(object):
+    """
+    Abstract definition of a ProjectionGenerator.
+    """
+    _templates = {}
+
+    def __init__(self, profile_generator, net_id):
+        self._prof_gen = profile_generator
+        self._net_id = net_id
+
+    def header_struct(self, proj, annarchy_dir):
+        """
+        Generate and store the projection code in a single header file. The
+        name is defined as
+        proj%(id)s.hpp.
+
+        Parameters:
+
+            proj: Projection object
+            annarchy_dir: working directory
+
+        Returns:
+
+            (str, str): include directive, pointer definition
+
+        Templates:
+
+            header_struct: basic template
+
+        """
+        raise NotImplementedError
+
+    def creating(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def pruning(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _connectivity(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _computesum_rate(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _computesum_spiking(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _declaration_accessors(self, proj):
+        """
+        Generate declaration and accessor code for variables/parameters of the projection.
+
+        Returns:
+            (dict, str): first return value contain declaration code and last one the accessor code.
+
+            The declaration dictionary has the following fields:
+                delay, event_driven, rng, parameters_variables, additional, cuda_stream
+        """
+        # create the code for non-specific projections
+        declare_event_driven = ""
+        declare_rng = ""
+        declare_parameters_variables = ""
+        declare_additional = ""
+
+        # choose templates dependend on the paradigm
+        decl_template = self._templates['attribute_decl']
+        acc_template = self._templates['attribute_acc']
+
+        # Delays
+        declare_delay = self._templates['delay']['declare']
+
+        # Code for declarations and accessors
+        accessor = ""
+        # Parameters
+        for var in proj.synapse_type.description['parameters']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+
+            ids = {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            declare_parameters_variables += decl_template[var['locality']] % ids
+            accessor += acc_template[var['locality']] % ids
+
+        # Variables
+        for var in proj.synapse_type.description['variables']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+
+            ids = {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            declare_parameters_variables += decl_template[var['locality']] % ids
+            accessor += acc_template[var['locality']] % ids
+
+        # If no psp is defined, it's event-driven
+        has_event_driven = False
+        for var in proj.synapse_type.description['variables']:
+            if var['method'] == 'event-driven':
+                has_event_driven = True
+                break
+        if has_event_driven:
+            declare_event_driven = self._templates['event_driven']['declare']
+
+        # Arrays for the random numbers
+        if len(proj.synapse_type.description['random_distributions']) > 0:
+            declare_rng += """
+    // Random numbers
+"""
+            for rd in proj.synapse_type.description['random_distributions']:
+                declare_rng += """    std::vector< std::vector<double> > %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+""" % {'rd_name' : rd['name'], 'template': rd['template']}
+
+        # Local functions
+        if len(proj.synapse_type.description['functions']) > 0:
+            declare_parameters_variables += """
+    // Local functions
+"""
+            for func in proj.synapse_type.description['functions']:
+                declare_parameters_variables += ' '*4 + func['cpp'] + '\n'
+
+        # Structural plasticity
+        if Global.config['structural_plasticity']:
+            declare_parameters_variables += self._header_structural_plasticity(proj)
+
+        # Specific projections can overwrite
+        if 'declare_parameters_variables' in proj._specific_template.keys():
+            declare_parameters_variables = proj._specific_template['declare_parameters_variables']
+        if 'declare_rng' in proj._specific_template.keys():
+            declare_rng = proj._specific_template['declare_rng']
+        if 'declare_event_driven' in proj._specific_template.keys():
+            declare_event_driven = proj._specific_template['declare_event_driven']
+        if 'declare_delay' in proj._specific_template.keys():
+            declare_delay = proj._specific_template['declare_delay']
+        if 'declare_additional' in proj._specific_template.keys():
+            declare_additional = proj._specific_template['declare_additional']
+        if 'access_parameters_variables' in proj._specific_template.keys():
+            accessor = proj._specific_template['access_parameters_variables']
+
+        # Finalize the declarations
+        declaration = {
+            'delay': declare_delay,
+            'event_driven': declare_event_driven,
+            'rng': declare_rng,
+            'parameters_variables': declare_parameters_variables,
+            'additional': declare_additional
+        }
+
+        return declaration, accessor
+
+    def _get_attr(self, proj, name):
+        """
+        Small helper function, used for instance in self.update_spike_neuron_cuda
+        """
+        for attr in proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters']:
+            if attr['name'] == name:
+                return attr
+
+    def _header_structural_plasticity(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _init_parameters_variables(self, proj):
+        """
+        Generate initialization code for variables/parameters of the projection.
+
+        Returns:
+
+            str: the string contains initialization code.
+        """
+        # Is it a specific projection?
+        if 'init_parameters_variables' in proj._specific_template.keys():
+            return proj._specific_template['init_parameters_variables']
+
+        # Learning by default
+        code = ""
+
+        # choose initialization templates based on chosen paradigm
+        attr_init_tpl = self._templates['attribute_cpp_init']
+
+        # Initialize parameters
+        for var in proj.synapse_type.description['parameters']:
+            if var['name'] == 'w':
+                continue
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_init_tpl[var['locality']] % {'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
+
+        # Initialize variables
+        for var in proj.synapse_type.description['variables']:
+            if var['name'] == 'w':
+                continue
+            init = 0.0 if var['ctype'] == 'double' else 0
+            code += attr_init_tpl[var['locality']] % {'id': proj.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
+
+        # Pruning
+        if Global.config['structural_plasticity']:
+            if 'pruning' in proj.synapse_type.description.keys():
+                code += """
+    // Pruning
+    proj%(id_proj)s._pruning = false;
+    proj%(id_proj)s._pruning_period = 1;
+    proj%(id_proj)s._pruning_offset = 0;
+"""% {'id_proj': proj.id}
+            if 'creating' in proj.synapse_type.description.keys():
+                code += """
+    // Creating
+    proj%(id_proj)s._creating = false;
+    proj%(id_proj)s._creating_period = 1;
+    proj%(id_proj)s._creating_offset = 0;
+"""% {'id_proj': proj.id}
+
+        return code
+
+    def _init_random_distributions(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _post_event(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _update_random_distributions(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _update_synapse(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+######################################
+### Code generation
+######################################
+def get_bounds(param):
+    "Analyses the bounds of a variable and returns the corresponding code."
+    code = ""
+    # Min-Max bounds
+    for bound, val in param['bounds'].items():
+        if bound == "init":
+            continue
+
+        code += """if(%(var)s%(index)s %(operator)s %(val)s)
+    %(var)s%(index)s = %(val)s;
+""" % {'index': "[i][j]",
+       'var' : param['name'],
+       'val' : val,
+       'operator': '<' if bound == 'min' else '>'
+       }
+    return code

@@ -1,0 +1,2 @@
+from .OpenMPGenerator import OpenMPGenerator as OpenMPProjectionGenerator
+from .CUDAGenerator import CUDAGenerator as CUDAProjectionGenerator

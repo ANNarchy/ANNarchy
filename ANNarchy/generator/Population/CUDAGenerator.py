@@ -93,6 +93,7 @@ class CUDAGenerator(PopulationGenerator):
             body, header, update_call = self._update_rate_neuron(pop)
         else:
             body, header, update_call = self._update_spiking_neuron(pop)
+        update_variables = ""
 
         # Stop condition
         stop_condition = self._stop_condition(pop)
@@ -175,7 +176,7 @@ class CUDAGenerator(PopulationGenerator):
             'reset_spike': reset_spike,
             'reset_delay': reset_delay,
             'reset_additional': reset_additional,
-            'update_variables': "",
+            'update_variables': update_variables,
             'update_rng': update_rng,
             'update_delay': update_delay,
             'update_global_ops': update_global_ops,
@@ -293,7 +294,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         return declare_code, init_code, update_code, reset_code
 
     def _init_fr(self, pop):
-        # TODO:        
+        # TODO:
         return "", ""
 
     def _update_fr(self, pop):
@@ -333,9 +334,9 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                 * body:    kernel implementation
                 * header:  kernel prototypes
                 * call:    kernel call
-        
+
         TODO:
-            * refactoring: get rid of this tar, par, var stuff as done in spiking related codes ... 
+            * refactoring: get rid of this tar, par, var stuff as done in spiking related codes ...
         """
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
@@ -354,13 +355,13 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         tar = ""
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
-                var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
             else:
-                par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+                par += """, %(type)s %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
 
         # random variables
         for rd in pop.neuron_type.description['random_distributions']:
-            var += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
+            var += """, curandState* %(rd_name)s""" % {'rd_name' : rd['name']}
 
         # global operations
         for op in pop.global_operations:
@@ -379,7 +380,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
     {
 %(eqs)s
     }
-""" % {'id': pop.id, 'eqs': eqs }
+""" % {'eqs': eqs}
             #glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
 
         # Local variables
@@ -388,19 +389,19 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in pop.neuron_type.description['random_distributions']:
             if rd['dist'] == "Uniform":
-                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "Normal":
-                term = """curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s""" % { 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1] };
+                term = """curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s""" % { 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1] };
+                term = """curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "LogNormal":
-                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
@@ -436,7 +437,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         # create kernel prototypes
         header += """
 __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
-""" % { 'id': pop.id, 'default': 'double dt', 'tar': tar, 'var': var, 'par': par }
+""" % {'id': pop.id, 'default': 'double dt', 'tar': tar, 'var': var, 'par': par}
 
         #
         #    for calling entites we need to determine again all members
@@ -445,29 +446,29 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         tar = ""
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
-                var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+                var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
             else:
-                par += """, pop%(id)s.%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+                par += """, pop%(id)s.%(name)s""" % {'id': pop.id, 'name': attr['name']}
 
         # random variables
         for rd in pop.neuron_type.description['random_distributions']:
-            var += """, pop%(id)s.gpu_%(rd_name)s""" % { 'id': pop.id, 'rd_name' : rd['name'] }
+            var += """, pop%(id)s.gpu_%(rd_name)s""" % {'id': pop.id, 'rd_name' : rd['name']}
 
         # targets
         for target in sorted(pop.neuron_type.description['targets']):
-            tar += """, pop%(id)s.gpu__sum_%(target)s""" % { 'id': pop.id, 'target' : target}
+            tar += """, pop%(id)s.gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
 
         # global operations
         for op in pop.global_operations:
-            par += """, pop%(id)s._%(op)s_%(var)s""" % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
+            par += """, pop%(id)s._%(op)s_%(var)s""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
 
         call += CUDATemplates.population_update_call % {
             'id': pop.id,
             'default': 'dt',
             'refrac': "",
-            'tar': tar.replace("double*","").replace("int*",""),
-            'var': var.replace("double*","").replace("int*",""),
-            'par': par.replace("double","").replace("int","")
+            'tar': tar.replace("double*", "").replace("int*", ""),
+            'var': var.replace("double*", "").replace("int*", ""),
+            'par': par.replace("double", "").replace("int", "")
         }
 
         return body, header, call
@@ -496,13 +497,13 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         par = ""
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
-                var += """, %(type)s* %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
             else:
-                par += """, %(type)s %(name)s""" % { 'type': attr['ctype'], 'name': attr['name'] }
+                par += """, %(type)s %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
 
         # random variables
         for rd in pop.neuron_type.description['random_distributions']:
-            var += """, curandState* %(rd_name)s""" % { 'rd_name' : rd['name'] }
+            var += """, curandState* %(rd_name)s""" % {'rd_name' : rd['name']}
 
         # global operations
         for op in pop.global_operations:
@@ -519,7 +520,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 %(eqs)s
     }
     __syncthreads();
-""" % {'id': pop.id, 'eqs': eqs }
+""" % {'eqs': eqs}
 
         # Local variables
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
@@ -527,19 +528,19 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # we replace the rand_%(id)s by the corresponding curand... term
         for rd in pop.neuron_type.description['random_distributions']:
             if rd['dist'] == "Uniform":
-                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % { 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1] };
+                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "Normal":
-                term = """curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s""" % { 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1] };
+                term = """curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s""" % { 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1] };
+                term = """curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "LogNormal":
-                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % { 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1] };
+                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
@@ -555,7 +556,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-            refrac_inc = "refractory_remaining[i] = refractory[i];" %  {'id': pop.id}
+            refrac_inc = "refractory_remaining[i] = refractory[i];"
 
             loc_eqs = """
         if( refractory_remaining[i] > 0){ // Refractory period
@@ -565,10 +566,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         } else{
             %(loc_eqs)s
         }
-        """ %  { 'id': pop.id,
-                 'eqs': eqs,
-                 'loc_eqs': loc_eqs
-            }
+        """ %  {'eqs': eqs, 'loc_eqs': loc_eqs}
 
             refrac_header = ", int *refractory, int* refractory_remaining"
             refrac_body = """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
@@ -597,11 +595,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # create kernel prototypes
         header += """
 __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
-""" % { 'id': pop.id,
-        'default': "double dt",
-        'refrac': refrac_header,
-        'var': var, 'par': par
-    }
+""" % {'id': pop.id, 'default': "double dt", 'refrac': refrac_header, 'var': var, 'par': par}
 
         #
         #    for calling entites we need to determine again all members
@@ -609,31 +603,31 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
         par = ""
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
-                var += """, pop%(id)s.gpu_%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+                var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
             else:
-                par += """, pop%(id)s.%(name)s""" % { 'id': pop.id, 'name': attr['name'] }
+                par += """, pop%(id)s.%(name)s""" % {'id': pop.id, 'name': attr['name']}
 
         # random variables
         for rd in pop.neuron_type.description['random_distributions']:
-            var += """, pop%(id)s.gpu_%(rd_name)s""" % { 'id': pop.id, 'rd_name' : rd['name'] }
+            var += """, pop%(id)s.gpu_%(rd_name)s""" % {'id': pop.id, 'rd_name' : rd['name']}
 
         # global operations
         for op in pop.global_operations:
-            par += """, pop%(id)s._%(op)s_%(var)s""" % { 'id': pop.id, 'op': op['function'], 'var': op['variable'] }
+            par += """, pop%(id)s._%(op)s_%(var)s""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
 
         call += CUDATemplates.population_update_call % {
             'id': pop.id,
             'default': """dt""",
             'refrac': refrac_body,
             'tar': "",
-            'var': var.replace("double*","").replace("int*",""),
-            'par': par.replace("double","").replace("int","")
+            'var': var.replace("double*", "").replace("int*", ""),
+            'par': par.replace("double", "").replace("int", "")
         }
 
         #
         # Process the spike condition and generate 2nd set of kernels
         #
-        cond =  pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        cond = pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
@@ -680,7 +674,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
             // refractory
             %(refrac_inc)s
         }
-""" % {'id': pop.id, 'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
+""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
 
         body += CUDATemplates.spike_gather_kernel % {
             'id': pop.id,
@@ -693,11 +687,11 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
 
         header += """
 __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
-""" % { 'id': pop.id,
-        'default': "unsigned int * num_events, int* spiked, long int* last_spike",
-        'refrac': refrac_header,
-        'args': header_args
-    }
+""" % {'id': pop.id,
+       'default': "unsigned int * num_events, int* spiked, long int* last_spike",
+       'refrac': refrac_header,
+       'args': header_args
+        }
 
         call += CUDATemplates.spike_gather_call % {
             'id': pop.id,
@@ -753,7 +747,7 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
             cudaMemcpy(pop%(id)s.gpu_refractory, pop%(id)s.refractory.data(), pop%(id)s.size * sizeof(int), cudaMemcpyHostToDevice);
             pop%(id)s.refractory_dirty = false;
         }
-""" % {'id': pop.id, 'attr_name': attr['name']}
+""" % {'id': pop.id}
 
         device_host_transfer += """
     // device to host transfers for %(name)s\n""" % {'name': pop.name}
