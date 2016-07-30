@@ -587,7 +587,7 @@ class CodeGenerator(object):
         """
         code = "// Population config\n"
         for pop in self._populations:
-            num_threads = 32
+            num_threads = self._guess_pop_kernel_config(pop)
             if pop in self._cuda_config.keys():
                 num_threads = self._cuda_config[pop]['num_threads']
 
@@ -629,3 +629,36 @@ class CodeGenerator(object):
         }
 
         return code, stream_config
+
+    def _guess_pop_kernel_config(self, pop):
+        """
+        Instead of a fixed amount of threads for each kernel, we try
+        to guess a good configuration based on the population size.
+        """
+        from CudaCheck import CudaCheck
+        from math import log
+
+        max_tpb = CudaCheck().max_threads_per_block()
+        warp_size = CudaCheck().warp_size()
+
+        num_neur = pop.size / 2 # at least 2 iterations per thread
+        guess = warp_size       # smallest block is 1 warp
+
+        # Simplest case: we have more neurons than
+        # available threads per block
+        if num_neur > max_tpb:
+            guess = max_tpb
+
+        # check which is the closest possible thread amount
+        pow_of_2 = [ 2**x for x in range(int(log(warp_size,2)), int(log(max_tpb,2))+1)]
+        for i in range(len(pow_of_2)):
+            if pow_of_2[i] < num_neur:
+                continue
+            else:
+                guess = pow_of_2[i]
+                break
+
+        if Global.config['verbose']:
+            print 'population', pop.id, ' - kernel size:', guess
+
+        return guess

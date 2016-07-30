@@ -21,3 +21,11 @@ class CudaCheck(object):
     def runtime_version(self):
         import cuda_check
         return cuda_check.runtime_version()
+
+    def max_threads_per_block(self, device=0):
+        import cuda_check
+        return cuda_check.max_threads_per_block(device)
+
+    def warp_size(self, device=0):
+        import cuda_check
+        return cuda_check.warp_size(device)
