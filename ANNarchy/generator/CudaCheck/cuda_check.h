@@ -5,4 +5,6 @@ extern int get_major_version(int);
 
 extern int get_minor_version(int);
 
+extern int get_runtime_version();
+
 #endif

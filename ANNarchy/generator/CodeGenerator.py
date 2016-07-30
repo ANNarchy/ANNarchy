@@ -59,9 +59,16 @@ class CodeGenerator(object):
             proj._generate()
 
         if Global.config['profiling']:
-            from .ProfileGenerator import ProfileGenerator
-            self._profgen = ProfileGenerator(self._annarchy_dir, net_id)
-            self._profgen.generate()
+            if Global.config['paradigm']=="openmp":
+                from .Profile import PAPIProfile
+                self._profgen = PAPIProfile(self._annarchy_dir, net_id)
+                self._profgen.generate()
+            elif Global.config['paradigm']=="cuda":
+                from .Profile import CUDAProfile
+                self._profgen = CUDAProfile(self._annarchy_dir, net_id)
+                self._profgen.generate()
+            else:
+                Global._error('No ProfileGenerator available for ' + Global.config['paradigm'])
         else:
             self._profgen = None
 
@@ -98,10 +105,15 @@ class CodeGenerator(object):
               proj<id>)
         """
         if Global.config['verbose']:
-            if Global.config['num_threads'] > 1:
-                print('\nGenerate code for OpenMP ...')
+            if Global.config['paradigm'] == "openmp":
+                if Global.config['num_threads'] > 1:
+                    print('\nGenerate code for OpenMP ...')
+                else:
+                    print('\nGenerate sequential code ...')
+            elif Global.config['paradigm'] == "cuda":
+                print('\nGenerate CUDA code ...')
             else:
-                print('\nGenerate sequential code ...')
+                raise NotImplementedError
 
         # Propagte the global operations needed by the projections to the
         # corresponding populations.
@@ -300,8 +312,8 @@ class CodeGenerator(object):
         if self._profgen:
             prof_dict = self._profgen.generate_body_dict()
         else:
-            from .ProfileGenerator import ProfileGenerator
-            prof_dict = ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict(True)
+            from .Profile import ProfileGenerator
+            prof_dict = ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
 
         #
         # Generate the ANNarchy.cpp code, the corrsponding template differs greatly
@@ -441,7 +453,7 @@ class CodeGenerator(object):
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        from .Template.ProfileTemplate import profile_template
+        from .Profile.ProfileTemplate import profile_template
         profiling_init = "" if not Global.config["profiling"] else profile_template['init']
 
         # Initialize populations

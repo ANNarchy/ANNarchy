@@ -424,7 +424,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # if profiling enabled, annotate with profiling code
         if self._prof_gen:
-            final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+            final_code = self._prof_gen.annotate_update_neuron(pop, final_code)
 
         return final_code
 
@@ -514,6 +514,6 @@ class OpenMPGenerator(PopulationGenerator):
 
         # if profiling enabled, annotate with profiling code
         if self._prof_gen:
-            final_code = self._prof_gen.annotate_update_neuron_omp(pop, final_code)
+            final_code = self._prof_gen.annotate_update_neuron(pop, final_code)
 
         return final_code

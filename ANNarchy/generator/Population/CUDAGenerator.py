@@ -29,6 +29,8 @@ from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 
+import re
+
 class CUDAGenerator(PopulationGenerator):
     """
     Generate the header for a Population object to use on CUDA devices.
@@ -416,6 +418,9 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             var_wo_types = var_wo_types.replace(type, "")
             par_wo_types = par_wo_types.replace(type, "")
 
+        loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
+        glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
+
         #
         # create kernel prototypes
         body += CUDATemplates.population_update_kernel % {
@@ -574,6 +579,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             refrac_inc = ""
             refrac_header = ""
             refrac_body = ""
+
+        loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
+        glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
 
         #
         # create kernel prototypes
@@ -757,3 +765,31 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
 """ % {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
 
         return host_device_transfer, device_host_transfer
+
+    def _check_and_apply_pow_fix(self, eqs):
+        """
+        CUDA SDKs before 7.5 had an error if std=c++11 is enabled related
+        to pow(double, int). Only pow(double, double) was detected as
+        device function, the pow(double, int) will be detected as host
+        function. (This was fixed within SDK 7.5)
+
+        To support also earlier versions, we simply add a double type cast.
+        """
+        from ANNarchy.generator.CudaCheck import CudaCheck
+        if eqs.strip() == "":
+            # nothing to do
+            return eqs
+
+        if CudaCheck().runtime_version() > 7000:
+            # nothing to do, is working in higher SDKs
+            return eqs
+
+        if Global.config['verbose']:
+            print 'occurance of pow() and SDK below 7.5 detected, apply fix.'
+
+        # detect all pow statements
+        pow_occur = re.findall("pow\([^\(]*\)", eqs)
+        for term in pow_occur:
+            eqs = eqs.replace( term, term.replace(',',',(double)') )
+
+        return eqs

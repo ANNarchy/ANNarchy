@@ -504,7 +504,7 @@ class OpenMPGenerator(ProjectionGenerator):
                }
 
         if self._prof_gen:
-            final_code = self._prof_gen.annotate_computesum_rate_omp(proj, final_code)
+            final_code = self._prof_gen.annotate_computesum_rate(proj, final_code)
 
         return psp_prefix, final_code
 
@@ -709,7 +709,7 @@ if(%(condition)s){
 
         # Annotate code
         if self._prof_gen:
-            code = self._prof_gen.annotate_computesum_spiking_omp(proj, code)
+            code = self._prof_gen.annotate_computesum_spiking(proj, code)
 
         return psp_prefix, code
 
@@ -1000,7 +1000,7 @@ if(_transmission && pop%(id_post)s._active){
             }
 
         if self._prof_gen:
-            code = self._prof_gen.annotate_update_synapse_omp(proj, code)
+            code = self._prof_gen.annotate_update_synapse(proj, code)
 
         # Return the code block
         return prefix, tabify(code, 2)

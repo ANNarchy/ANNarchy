@@ -44,3 +44,9 @@ int get_minor_version(int device) {
 
     return -1;
 }
+
+int get_runtime_version() {
+	int version = 0;
+	cudaRuntimeGetVersion(&version);
+	return version;
+}

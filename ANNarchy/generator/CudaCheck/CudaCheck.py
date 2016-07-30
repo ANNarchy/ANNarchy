@@ -17,3 +17,7 @@ class CudaCheck(object):
         """
         import cuda_check
         return cuda_check.get_cuda_version()
+
+    def runtime_version(self):
+        import cuda_check
+        return cuda_check.runtime_version()
