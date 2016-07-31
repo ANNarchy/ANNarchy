@@ -29,6 +29,8 @@ from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 
+from ANNarchy.generator.Utils import generate_equation_code, tabify
+
 import re
 
 class CUDAGenerator(PopulationGenerator):
@@ -66,15 +68,18 @@ class CUDAGenerator(PopulationGenerator):
         # Spike-specific stuff
         reset_spike = ""; declare_spike = ""; init_spike = ""
         if pop.neuron_type.description['type'] == 'spike':
+            spike_tpl = self._templates['spike_specific']
+
             # Main data for spiking pops
-            declare_spike += self._templates['spike_specific']['declare_spike'] % {'id': pop.id}
-            init_spike += self._templates['spike_specific']['init_spike'] % {'id': pop.id}
-            reset_spike += self._templates['spike_specific']['reset_spike'] % {'id': pop.id}
+            declare_spike += spike_tpl['declare_spike'] % {'id': pop.id}
+            init_spike += spike_tpl['init_spike'] % {'id': pop.id}
+            reset_spike += spike_tpl['reset_spike'] % {'id': pop.id}
+
             # If there is a refractory period
             if pop.neuron_type.refractory or pop.refractory:
-                declare_spike += self._templates['spike_specific']['declare_refractory'] % {'id': pop.id}
-                init_spike += self._templates['spike_specific']['init_refractory'] % {'id': pop.id}
-                reset_spike += self._templates['spike_specific']['reset_refractory'] % {'id': pop.id}
+                declare_spike += spike_tpl['declare_refractory'] % {'id': pop.id}
+                init_spike += spike_tpl['init_refractory'] % {'id': pop.id}
+                reset_spike += spike_tpl['reset_refractory'] % {'id': pop.id}
 
         # Process eventual delay
         declare_delay = ""; init_delay = ""; update_delay = ""; reset_delay = ""
@@ -96,6 +101,9 @@ class CUDAGenerator(PopulationGenerator):
         else:
             body, header, update_call = self._update_spiking_neuron(pop)
         update_variables = ""
+
+        # Memory transfers
+        host_to_device, device_to_host = self._memory_transfers(pop)
 
         # Stop condition
         stop_condition = self._stop_condition(pop)
@@ -182,7 +190,9 @@ class CUDAGenerator(PopulationGenerator):
             'update_rng': update_rng,
             'update_delay': update_delay,
             'update_global_ops': update_global_ops,
-            'stop_condition': stop_condition
+            'stop_condition': stop_condition,
+            'host_to_device': host_to_device,
+            'device_to_host': device_to_host
         }
 
         # Store the complete header definition in a single file
@@ -205,9 +215,8 @@ class CUDAGenerator(PopulationGenerator):
         if len(pop.global_operations) > 0:
             pop_desc['gops_update'] = self._update_globalops(pop) % {'id': pop.id}
 
-        host_to_device, device_to_host = self._memory_transfers(pop)
-        pop_desc['host_to_device'] = host_to_device
-        pop_desc['device_to_host'] = device_to_host
+        pop_desc['host_to_device'] = tabify("pop%(id)s.host_to_device();" % {'id':pop.id}, 1)+"\n"
+        pop_desc['device_to_host'] = tabify("pop%(id)s.device_to_host();" % {'id':pop.id}, 1)+"\n"
 
         return pop_desc
 
@@ -345,8 +354,6 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             return "", "", ""
 
         # Neural update
-        from ANNarchy.generator.Utils import generate_equation_code
-
         header = ""
         body = ""
         call = ""
@@ -413,10 +420,10 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         tar_wo_types = tar
         var_wo_types = var
         par_wo_types = par
-        for type in repl_types:
-            tar_wo_types = tar_wo_types.replace(type, "")
-            var_wo_types = var_wo_types.replace(type, "")
-            par_wo_types = par_wo_types.replace(type, "")
+        for attr_type in repl_types:
+            tar_wo_types = tar_wo_types.replace(attr_type, "")
+            var_wo_types = var_wo_types.replace(attr_type, "")
+            par_wo_types = par_wo_types.replace(attr_type, "")
 
         loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
         glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
@@ -491,8 +498,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             return "", "", ""
 
         # Neural update
-        from ANNarchy.generator.Utils import generate_equation_code
-
         header = ""
         body = ""
         call = ""
@@ -554,9 +559,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
         var_wo_types = var
         par_wo_types = par
-        for type in repl_types:
-            var_wo_types = var_wo_types.replace(type, "")
-            par_wo_types = par_wo_types.replace(type, "")
+        for attr_type in repl_types:
+            var_wo_types = var_wo_types.replace(attr_type, "")
+            par_wo_types = par_wo_types.replace(attr_type, "")
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
@@ -712,9 +717,9 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
 
     def _memory_transfers(self, pop):
         """
-        Before evaluation neuron/synaptic equations we need to update the data on
-        the GPU. To synchronize the states of variables after simulate several steps,
-        we need to transfer variables back to the host.
+        Before evaluation neuron/synaptic equations we need to update the data
+        on the GPU. To synchronize the states of variables after simulation of 
+        several steps, we need to transfer variables back to the host.
 
         Return:
 
@@ -733,13 +738,19 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
             if attr['name'] in pop.neuron_type.description['local']:
                 host_device_transfer += """
         // %(attr_name)s: local
-        if( pop%(id)s.%(attr_name)s_dirty )
+        if( %(attr_name)s_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "Transfer pop%(id)s.%(attr_name)s" << std::endl;
+            std::cout << "Transfer %(attr_name)s ( pop%(id)s )" << std::endl;
         #endif
-            cudaMemcpy(pop%(id)s.gpu_%(attr_name)s, pop%(id)s.%(attr_name)s.data(), pop%(id)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            pop%(id)s.%(attr_name)s_dirty = false;
+            cudaMemcpy( gpu_%(attr_name)s,  %(attr_name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            %(attr_name)s_dirty = false;
+
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
         }
 """ % {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
 
@@ -747,13 +758,19 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
             if pop.neuron_type.refractory or pop.refractory:
                 host_device_transfer += """
         // refractory
-        if( pop%(id)s.refractory_dirty )
+        if( refractory_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "Transfer pop%(id)s.refractory" << std::endl;
+            std::cout << "Transfer refractory ( pop%(id)s )" << std::endl;
         #endif
-            cudaMemcpy(pop%(id)s.gpu_refractory, pop%(id)s.refractory.data(), pop%(id)s.size * sizeof(int), cudaMemcpyHostToDevice);
-            pop%(id)s.refractory_dirty = false;
+            cudaMemcpy( gpu_refractory, refractory.data(), size * sizeof(int), cudaMemcpyHostToDevice);
+            refractory_dirty = false;
+
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error " << cudaGetErrorString(err) << std::endl;
+        #endif
         }
 """ % {'id': pop.id}
 
@@ -761,8 +778,9 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
     // device to host transfers for %(name)s\n""" % {'name': pop.name}
         for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
             if attr['name'] in pop.neuron_type.description['local']:
-                device_host_transfer += """\tcudaMemcpy(pop%(id)s.%(attr_name)s.data(), pop%(id)s.gpu_%(attr_name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
+                device_host_transfer += """
+    cudaMemcpy( %(attr_name)s.data(),  gpu_%(attr_name)s, size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % {'attr_name': attr['name'], 'type': attr['ctype']}
 
         return host_device_transfer, device_host_transfer
 
@@ -788,8 +806,8 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
             print 'occurance of pow() and SDK below 7.5 detected, apply fix.'
 
         # detect all pow statements
-        pow_occur = re.findall("pow\([^\(]*\)", eqs)
+        pow_occur = re.findall(r"pow\([^\(]*\)", eqs)
         for term in pow_occur:
-            eqs = eqs.replace( term, term.replace(',',',(double)') )
+            eqs = eqs.replace(term, term.replace(',', ',(double)'))
 
         return eqs

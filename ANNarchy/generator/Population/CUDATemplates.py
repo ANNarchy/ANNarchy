@@ -21,74 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-library_header = """#pragma once
-extern double dt;
-extern long int t;
-
-// RNG - defined in ANNarchy.cu
-extern long seed;
-extern void init_curand_states( int N, curandState* states, unsigned long seed );
-
-%(include_additional)s
-%(extern_global_operations)s
-%(struct_additional)s
-
-///////////////////////////////////////////////////////////////
-// Main Structure for the population of id %(id)s (%(name)s)
-///////////////////////////////////////////////////////////////
-struct PopStruct%(id)s{
-    int size; // Number of neurons
-    bool _active; // Allows to shut down the whole population
-    cudaStream_t stream; // assigned stream for concurrent kernel execution ( CC > 2.x )
-
-    // Access functions used by cython wrapper
-    int get_size() { return size; }
-    bool is_active() { return _active; }
-    void set_active(bool val) { _active = val; }
-%(declare_spike_arrays)s
-    // Neuron specific parameters and variables
-%(declare_parameters_variables)s
-%(declare_delay)s
-%(declare_additional)s
-    // Access methods to the parameters and variables
-%(access_parameters_variables)s
-
-    // Method called to initialize the data structures
-    void init_population() {
-        size = %(size)s;
-        _active = true;
-%(init_parameters_variables)s
-%(init_spike)s
-%(init_delay)s
-%(init_additional)s
-    }
-
-    // Method called to reset the population
-    void reset() {
-%(reset_spike)s
-%(reset_delay)s
-%(reset_additional)s
-    }
-
-    // Method to draw new random numbers
-    void update_rng() {
-%(update_rng)s
-    }
-
-    // Method to enqueue output variables in case outgoing projections have non-zero delay
-    void update_delay() {
-%(update_delay)s
-    }
-
-    // Main method to update neural variables
-    void update() {
-%(update_variables)s
-    }
-
-    %(stop_condition)s
-};
-"""
-
 population_header = """#pragma once
 extern double dt;
 extern long int t;
@@ -153,7 +85,17 @@ struct PopStruct%(id)s{
 %(update_variables)s
     }
 
+    // Stop condition
     %(stop_condition)s
+
+    // Memory transfers
+    void host_to_device() {
+%(host_to_device)s
+    }
+
+    void device_to_host() {
+%(device_to_host)s
+    }
 };
 """
 
@@ -358,7 +300,7 @@ spike_specific = {
 """
 }
 
-population_update_kernel=\
+population_update_kernel = \
 """
 // gpu device kernel for population %(id)s
 __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
@@ -378,7 +320,7 @@ __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 }
 """
 
-population_update_call=\
+population_update_call = \
 """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
@@ -404,7 +346,7 @@ population_update_call=\
 #endif
 """
 
-spike_gather_kernel=\
+spike_gather_kernel = \
 """
 // gpu device kernel for population %(id)s
 __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s )
@@ -423,7 +365,7 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s )
 }
 """
 
-spike_gather_call =\
+spike_gather_call = \
 """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
@@ -449,7 +391,6 @@ spike_gather_call =\
 #
 # Final dictionary
 cuda_templates = {
-    'header': library_header,
     'population_header': population_header,
     'attr_decl': attribute_decl,
     'attr_acc': attribute_acc,

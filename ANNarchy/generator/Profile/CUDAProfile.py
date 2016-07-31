@@ -27,7 +27,7 @@ from ProfileGenerator import ProfileGenerator
 from ProfileTemplate import profile_template
 
 class CUDAProfile(ProfileGenerator):
-    
+
     def __init__(self, annarchy_dir, net_id):
         ProfileGenerator.__init__(self, annarchy_dir, net_id)
 
@@ -56,6 +56,6 @@ class CUDAProfile(ProfileGenerator):
         _out_file << "    <paradigm>%(paradigm)s</paradigm>" << std::endl;
         _out_file << "  </config>" << std::endl;
         """ % {'paradigm': Global.config["paradigm"]}
-        
+
         config = Global.config["paradigm"]
-        return profile_header % { 'config': config, 'config_xml': config_xml }
+        return profile_header % {'config': config, 'config_xml': config_xml}

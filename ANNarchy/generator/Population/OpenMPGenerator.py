@@ -376,7 +376,8 @@ class OpenMPGenerator(PopulationGenerator):
             }
         }
         """
-        local_code = ""; global_code = ""
+        local_code = ""
+        global_code = ""
         for rd in pop.neuron_type.description['random_distributions']:
             if rd['locality'] == 'local':
                 local_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}

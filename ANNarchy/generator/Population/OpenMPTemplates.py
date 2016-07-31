@@ -396,7 +396,7 @@ openmp_templates = {
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_delayed': attribute_delayed,
     'rng': cpp_11_rng,
-    
+
     'rate_psp': rate_psp,
     'spike_specific': spike_specific
 }

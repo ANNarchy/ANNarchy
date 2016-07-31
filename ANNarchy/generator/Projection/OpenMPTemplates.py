@@ -701,7 +701,7 @@ openmp_templates = {
     'attribute_decl': attribute_decl,
     'attribute_acc': attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
-    
+
     'delay': delay,
     'event_driven': event_driven
 }

@@ -67,7 +67,7 @@ class PAPIProfile(ProfileGenerator):
 """
         init = """        // Profiling
         measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", "step");
-""" % { 'name': pop.name }
+""" % {'name': pop.name}
 
         return declare, init
 
@@ -82,7 +82,7 @@ class PAPIProfile(ProfileGenerator):
         init = """        // Profiling
         measure_psp = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "psp");
         measure_step = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "step");
-""" % { 'id_proj': proj.id }
+""" % {'id_proj': proj.id}
 
         return declare, init
 
@@ -98,18 +98,20 @@ class PAPIProfile(ProfileGenerator):
         %(prof_begin)s
 %(code)s
         %(prof_end)s
-""" % {'code': code,
-       'prof_begin': prof_begin,
-       'prof_end': prof_end
-       }
+""" % {
+        'code': code,
+        'prof_begin': prof_begin,
+        'prof_end': prof_end
+        }
+
         return prof_code
 
     def annotate_computesum_spiking(self, proj, code):
         """
         annotate the computesum compuation code
         """
-        prof_begin = profile_template['compute_psp']['before'] % { 'name': 'proj'+str(proj.id) }
-        prof_end = profile_template['compute_psp']['after'] % { 'name': 'proj'+str(proj.id) }
+        prof_begin = profile_template['compute_psp']['before'] % {'name': 'proj'+str(proj.id)}
+        prof_end = profile_template['compute_psp']['after'] % {'name': 'proj'+str(proj.id)}
 
         prof_code = """
         // first run, measuring average time
@@ -145,8 +147,8 @@ class PAPIProfile(ProfileGenerator):
         """
         annotate the update neuron code
         """
-        prof_begin = profile_template['update_neuron']['before'] % { 'name': pop.name }
-        prof_end = profile_template['update_neuron']['after'] % { 'name': pop.name }
+        prof_begin = profile_template['update_neuron']['before'] % {'name': pop.name}
+        prof_end = profile_template['update_neuron']['after'] % {'name': pop.name}
 
         prof_code = """
         // first run, measuring average time
@@ -165,14 +167,14 @@ class PAPIProfile(ProfileGenerator):
         """
         from .ProfileTemplate import profile_header
 
-        if Global.config["paradigm"] == "openmp":
-            config_xml = """
+        config_xml = """
         _out_file << "  <config>" << std::endl;
         _out_file << "    <paradigm>%(paradigm)s</paradigm>" << std::endl;
         _out_file << "    <num_threads>%(num_threads)s</num_threads>" << std::endl;
         _out_file << "  </config>" << std::endl;
-        """ % { 'paradigm': Global.config["paradigm"], 'num_threads': Global.config["num_threads"]}
-            config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
-            return profile_header % { 'config': config, 'config_xml': config_xml }
-        else:
-            return ""
+        """ % {
+            'paradigm': Global.config["paradigm"],
+            'num_threads': Global.config["num_threads"]
+        }
+        config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
+        return profile_header % {'config': config, 'config_xml': config_xml}

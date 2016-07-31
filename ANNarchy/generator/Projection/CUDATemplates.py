@@ -1,3 +1,26 @@
+"""
+
+    CUDATemplates.py
+
+    This file is part of ANNarchy.
+
+    Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ANNarchy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
 projection_header = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -64,6 +87,15 @@ struct ProjStruct%(id_proj)s{
 %(access_connectivity_matrix)s
 %(access_parameters_variables)s
 %(access_additional)s
+
+    // Memory transfers
+    void host_to_device() {
+%(host_to_device)s
+    }
+    
+    void device_to_host() {
+%(device_to_host)s
+    }
 
 %(cuda_flattening)s
 };
@@ -496,7 +528,7 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 
 }
 
-cuda_spike_psp_kernel=\
+cuda_spike_psp_kernel = \
 """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( double dt, int *spiked, %(conn_arg)s %(kernel_args)s ) {
 
@@ -515,7 +547,7 @@ __global__ void cu_proj%(id)s_psp( double dt, int *spiked, %(conn_arg)s %(kernel
 }
 """
 
-cuda_spike_psp_kernel_call=\
+cuda_spike_psp_kernel_call = \
 """
     if ( pop%(id_pre)s._active) {
         int num_events = pop%(id_pre)s.num_events;
@@ -543,7 +575,7 @@ cuda_spike_psp_kernel_call=\
 ######################################
 ### Update synaptic variables CUDA
 ######################################
-cuda_synapse_kernel=\
+cuda_synapse_kernel = \
 """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_step( /* default params */
@@ -575,7 +607,7 @@ __global__ void cuProj%(id)s_step( /* default params */
 }
 """
 
-cuda_synapse_kernel_header=\
+cuda_synapse_kernel_header = \
 """__global__ void cuProj%(id)s_step( int *pre_rank, int *row_ptr, double dt%(var)s%(par)s, bool plasticity);
 """
 

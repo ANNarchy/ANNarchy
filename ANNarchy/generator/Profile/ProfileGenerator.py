@@ -35,6 +35,10 @@ class ProfileGenerator(object):
         self._net_id = net_id
 
     def generate(self):
+        """
+        Called from Codegenerator, this method is responsible for
+        creation of header file for the Profiling class.
+        """
         raise NotImplementedError
 
     def generate_body_dict(self):
@@ -55,21 +59,27 @@ class ProfileGenerator(object):
         return body_dict
 
     def generate_init_population(self, pop):
+        "Implemented by child class"
         raise NotImplementedError
 
     def generate_init_projection(self, proj):
+        "Implemented by child class"
         raise NotImplementedError
 
     def annotate_computesum_rate(self, proj, code):
+        "Implemented by child class"
         raise NotImplementedError
 
     def annotate_computesum_spiking(self, proj, code):
+        "Implemented by child class"
         raise NotImplementedError
 
     def annotate_update_synapse(self, proj, code):
+        "Implemented by child class"
         raise NotImplementedError
 
     def annotate_update_neuron(self, pop, code):
+        "Implemented by child class"
         raise NotImplementedError
 
     def _generate_header(self):
@@ -83,6 +93,9 @@ class ProfileGenerator(object):
         _out_file << "    <paradigm>%(paradigm)s</paradigm>" << std::endl;
         _out_file << "    <num_threads>%(num_threads)s</num_threads>" << std::endl;
         _out_file << "  </config>" << std::endl;
-        """ % { 'paradigm': Global.config["paradigm"], 'num_threads': Global.config["num_threads"]}
+        """ % {
+            'paradigm': Global.config["paradigm"],
+            'num_threads': Global.config["num_threads"]
+        }
         config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
-        return profile_header % { 'config': config, 'config_xml': config_xml }
+        return profile_header % {'config': config, 'config_xml': config_xml}

@@ -71,6 +71,9 @@ class CUDAGenerator(ProjectionGenerator):
         # Connectivity matrix
         connectivity_matrix = self._connectivity(proj)
 
+        # Memory transfers
+        host_device_transfer, device_host_transfer = self._memory_transfers(proj)
+
         # Profiling
         if self._prof_gen:
             include_profile = """#include "Profiling.h"\n"""
@@ -123,6 +126,8 @@ class CUDAGenerator(ProjectionGenerator):
             'access_connectivity_matrix': connectivity_matrix['accessor'],
             'access_parameters_variables': accessor,
             'access_additional': access_additional,
+            'host_to_device': host_device_transfer,
+            'device_to_host': device_host_transfer,
             'cuda_flattening': CUDATemplates.cuda_flattening % {'id_post':proj.post.id}
         }
 
@@ -150,10 +155,8 @@ class CUDAGenerator(ProjectionGenerator):
         proj_desc['postevent_body'] = post_event_body
         proj_desc['postevent_call'] = post_event_call
 
-        host_device_transfer, device_host_transfer = self._memory_transfers(proj)
-
-        proj_desc['host_to_device'] = host_device_transfer
-        proj_desc['device_to_host'] = device_host_transfer
+        proj_desc['host_to_device'] = tabify("proj%(id)s.host_to_device();" % {'id':proj.id}, 1)+"\n"
+        proj_desc['device_to_host'] = tabify("proj%(id)s.device_to_host();" % {'id':proj.id}, 1)+"\n"
 
         return proj_desc
 
@@ -615,9 +618,10 @@ if(%(condition)s){
         host_device_transfer = ""
         device_host_transfer = ""
 
-        # transfer of variables
+        #
+        # Host -> Device
+        #
         proc_attr = []
-        host_device_transfer += """\n    // host to device transfers for proj%(id)s\n""" % {'id': proj.id}
         for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
             if attr['name'] in proc_attr:
                 continue
@@ -625,45 +629,45 @@ if(%(condition)s){
             if attr['name'] in proj.synapse_type.description['local']:
                 host_device_transfer += """
         // %(name)s: local
-        if ( proj%(id)s.%(name)s_dirty )
+        if ( %(name)s_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "HtoD: %(name)s " << std::endl;
+            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            std::vector<double> flat_proj%(id)s_%(name)s = flattenArray<double>(proj%(id)s.%(name)s);
-            cudaMemcpy(proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.data(), flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            proj%(id)s.%(name)s_dirty = false;
+            std::vector<double> flat_%(name)s = flattenArray<double>( %(name)s );
+            cudaMemcpy( gpu_%(name)s, flat_%(name)s.data(), flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            %(name)s_dirty = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
-                std::cout << "  occured error: " << cudaGetErrorString(err) << std::endl;
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
         #endif
-            flat_proj%(id)s_%(name)s.clear();
         }
 """ % {'id': proj.id, 'name': attr['name'], 'type': attr['ctype']}
             else:
                 host_device_transfer += """
         // %(name)s: global
-        if ( proj%(id)s.%(name)s_dirty )
+        if ( %(name)s_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "HtoD: %(name)s " << std::endl;
+            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy(proj%(id)s.gpu_%(name)s, proj%(id)s.%(name)s.data(), pop%(post)s.size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            proj%(id)s.%(name)s_dirty = false;
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), pop%(post)s.size * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            %(name)s_dirty = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
-                std::cout << "Transfer of proj%(id)s.gpu_%(name)s: " << cudaGetErrorString(err) << std::endl;
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
         #endif
         }
 """ % {'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype']}
 
             proc_attr.append(attr['name'])
 
+        #
+        # Device -> Host
+        #
         proc_attr = []
-        device_host_transfer += """
-    // device to host transfers for proj%(id)s\n""" % {'id': proj.id}
         for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
             if attr['name'] in proc_attr:
                 continue
@@ -672,18 +676,17 @@ if(%(condition)s){
                 device_host_transfer += """
             // %(name)s: local
         #ifdef _DEBUG
-            std::cout << "DtoH: %(name)s " << std::endl;
+            std::cout << "DtoH: %(name)s ( porj%(id)s )" << std::endl;
         #endif
-            std::vector<%(type)s> flat_proj%(id)s_%(name)s = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0);
-            cudaMemcpy(flat_proj%(id)s_%(name)s.data(), proj%(id)s.gpu_%(name)s, flat_proj%(id)s_%(name)s.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-            proj%(id)s.%(name)s = proj%(id)s.deFlattenArray<%(type)s>(flat_proj%(id)s_%(name)s);
-            flat_proj%(id)s_%(name)s.clear();
+            std::vector<%(type)s> flat_%(name)s = std::vector<%(type)s>( overallSynapses, 0);
+            cudaMemcpy(flat_%(name)s.data(), gpu_%(name)s, flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
+            %(name)s = deFlattenArray< %(type)s >( flat_%(name)s );
 """ % {'id': proj.id, 'name': attr['name'], 'type': attr['ctype']}
             else:
                 device_host_transfer += """
             // %(name)s: global
-            cudaMemcpy( proj%(id)s.%(name)s.data(), proj%(id)s.gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % {'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype']}
+            cudaMemcpy( %(name)s.data(), gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+""" % {'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype']}
             proc_attr.append(attr['name'])
 
         return host_device_transfer, device_host_transfer

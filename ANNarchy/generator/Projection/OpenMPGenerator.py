@@ -158,7 +158,8 @@ class OpenMPGenerator(ProjectionGenerator):
         creating_structure = proj.synapse_type.description['creating']
 
         # Random stuff
-        proba = ""; proba_init = ""
+        proba = ""
+        proba_init = ""
         if 'proba' in creating_structure['bounds'].keys():
             val = creating_structure['bounds']['proba']
             proba += '&&(unif(rng)<' + val + ')'
@@ -227,8 +228,8 @@ class OpenMPGenerator(ProjectionGenerator):
     def pruning(self, proj):
         pruning_structure = proj.synapse_type.description['pruning']
 
-
-        proba = ""; proba_init = ""
+        proba = ""
+        proba_init = ""
         if 'proba' in pruning_structure['bounds'].keys():
             val = pruning_structure['bounds']['proba']
             proba = '&&(unif(rng)<' + val + ')'
@@ -468,7 +469,8 @@ class OpenMPGenerator(ProjectionGenerator):
                     omp_code += "nb_post) %(schedule)s" % {'schedule': omp_schedule}
 
             else: # No delay
-                pre_copy = ""; omp_code = "#pragma omp parallel for private(sum) firstprivate("
+                pre_copy = ""
+                omp_code = "#pragma omp parallel for private(sum) firstprivate("
                 for var in dependencies:
                     if var in proj.pre.neuron_type.description['local']:
                         pre_copy += "std::vector<double> _pre_" + var + " = %(pre_prefix)s" + var + ";"
@@ -758,7 +760,8 @@ if(%(condition)s){
         spiking_removecode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_removecode']
 
         # Randomdistributions
-        rd_addcode = ""; rd_removecode = ""
+        rd_addcode = ""
+        rd_removecode = ""
         for rd in proj.synapse_type.description['random_distributions']:
             rd_addcode += """
         %(name)s[post].insert(%(name)s[post].begin() + idx, 0.0);
