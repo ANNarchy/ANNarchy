@@ -24,7 +24,7 @@
 from ANNarchy.core import Global
 
 from ProfileGenerator import ProfileGenerator
-from ProfileTemplate import profile_template
+from ProfileTemplate import cuda_profile_template, cuda_profile_header
 
 class CUDAProfile(ProfileGenerator):
 
@@ -39,18 +39,108 @@ class CUDAProfile(ProfileGenerator):
         with open(self.annarchy_dir+'/generate/net'+str(self._net_id)+'/Profiling.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
+    def generate_body_dict(self):
+        """
+        Creates a dictionary, contain profile code snippets.
+        """
+        body_dict = {
+            'prof_include': cuda_profile_template['include'],
+            'prof_step_pre': cuda_profile_template['step_pre'],
+            'prof_step_post': cuda_profile_template['step_post'],
+            'prof_run_pre': cuda_profile_template['run_pre'],
+            'prof_run_post': cuda_profile_template['run_post'],
+            'prof_proj_psp_pre': cuda_profile_template['proj_psp_pre'],
+            'prof_proj_psp_post': cuda_profile_template['proj_psp_post'],
+            'prof_neur_step_pre': cuda_profile_template['neur_step_pre'],
+            'prof_neur_step_post': cuda_profile_template['neur_step_post']
+        }
+        return body_dict
+
     def generate_init_population(self, pop):
-        return "", ""
+        declare = """
+    Measurement* measure_step;
+    Measurement* measure_gather;
+"""
+        init = """        // Profiling
+        measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", "step");
+        measure_gather = Profiling::get_instance()->register_function("pop", "%(name)s", "gather");
+""" % {'name': pop.name}
+
+        return declare, init
 
     def generate_init_projection(self, proj):
-        return "", ""
+        """
+        Generate initialization code for projection
+        """
+        declare = """
+    Measurement* measure_psp;
+    Measurement* measure_step;
+"""
+        init = """        // Profiling
+        measure_psp = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "psp");
+        measure_step = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "step");
+""" % {'id_proj': proj.id}
+
+        return declare, init
+
+    def annotate_computesum_spiking(self, proj, code):
+        """
+        annotate the computesum compuation code
+        """
+        prof_begin = cuda_profile_template['compute_psp']['before'] % {'id':proj.id, 'name': 'proj'+str(proj.id)}
+        prof_end = cuda_profile_template['compute_psp']['after'] % {'id':proj.id, 'name': 'proj'+str(proj.id)}
+
+        prof_code = """
+        // first run, measuring average time
+        %(prof_begin)s
+%(code)s
+        %(prof_end)s
+""" % {'code': code,
+       'prof_begin': prof_begin,
+       'prof_end': prof_end
+       }
+        return prof_code
+
+    def annotate_update_neuron(self, pop, code):
+        """
+        annotate the update neuron code
+        """
+        prof_begin = cuda_profile_template['update_neuron']['before'] % {'id': pop.id, 'name': pop.name}
+        prof_end = cuda_profile_template['update_neuron']['after'] % {'id': pop.id, 'name': pop.name}
+
+        prof_code = """
+        // first run, measuring average time
+    %(prof_begin)s
+%(code)s
+    %(prof_end)s
+""" % {'code': code,
+       'prof_begin': prof_begin,
+       'prof_end': prof_end
+       }
+        return prof_code
+
+    def annotate_spike_gather(self, pop, code):
+        """
+        annotate the update neuron code
+        """
+        prof_begin = cuda_profile_template['spike_gather']['before'] % {'id': pop.id, 'name': pop.name}
+        prof_end = cuda_profile_template['spike_gather']['after'] % {'id': pop.id, 'name': pop.name}
+
+        prof_code = """
+        // first run, measuring average time
+    %(prof_begin)s
+%(code)s
+    %(prof_end)s
+""" % {'code': code,
+       'prof_begin': prof_begin,
+       'prof_end': prof_end
+       }
+        return prof_code
 
     def _generate_header(self):
         """
         generate Profiling.h
         """
-        from .ProfileTemplate import profile_header
-
         config_xml = """
         _out_file << "  <config>" << std::endl;
         _out_file << "    <paradigm>%(paradigm)s</paradigm>" << std::endl;
@@ -58,4 +148,7 @@ class CUDAProfile(ProfileGenerator):
         """ % {'paradigm': Global.config["paradigm"]}
 
         config = Global.config["paradigm"]
-        return profile_header % {'config': config, 'config_xml': config_xml}
+        return cuda_profile_header % {
+            'config': config,
+            'config_xml': config_xml
+        }

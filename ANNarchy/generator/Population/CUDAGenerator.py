@@ -500,7 +500,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # Neural update
         header = ""
         body = ""
-        call = ""
 
         # determine variables and attributes
         var = ""
@@ -628,7 +627,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
         for op in pop.global_operations:
             par += """, pop%(id)s._%(op)s_%(var)s""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
 
-        call += CUDATemplates.population_update_call % {
+        call = CUDATemplates.population_update_call % {
             'id': pop.id,
             'default': """dt""",
             'refrac': refrac_body,
@@ -636,6 +635,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
             'var': var.replace("double*", "").replace("int*", ""),
             'par': par.replace("double", "").replace("int", "")
         }
+
+        if self._prof_gen:
+            call = self._prof_gen.annotate_update_neuron(pop, call)
 
         #
         # Process the spike condition and generate 2nd set of kernels
@@ -706,12 +708,16 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
        'args': header_args
         }
 
-        call += CUDATemplates.spike_gather_call % {
+        spike_gather = CUDATemplates.spike_gather_call % {
             'id': pop.id,
             'default': 'pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id},
             'refrac': refrac_body,
             'args': call_args % {'id': pop.id}
         }
+
+        if self._prof_gen:
+            spike_gather = self._prof_gen.annotate_spike_gather(pop, spike_gather)
+        call += spike_gather
 
         return body, header, call
 

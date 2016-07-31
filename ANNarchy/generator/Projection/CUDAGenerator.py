@@ -518,6 +518,10 @@ if(%(condition)s){
                 'add_args': add_args_call
             }
 
+        # Profiling
+        if self._prof_gen:
+            call = self._prof_gen.annotate_computesum_spiking(proj, call)
+
         return header, body, call
 
     def _post_event(self, proj):

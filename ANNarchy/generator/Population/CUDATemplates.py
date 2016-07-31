@@ -30,6 +30,8 @@ extern long seed;
 extern void init_curand_states( int N, curandState* states, unsigned long seed );
 
 %(include_additional)s
+%(include_profile)s
+
 %(extern_global_operations)s
 %(struct_additional)s
 
@@ -50,6 +52,10 @@ struct PopStruct%(id)s{
 %(declare_parameters_variables)s
 %(declare_delay)s
 %(declare_additional)s
+
+    // Profiling
+%(declare_profile)s
+
     // Access methods to the parameters and variables
 %(access_parameters_variables)s
 
@@ -61,6 +67,7 @@ struct PopStruct%(id)s{
 %(init_spike)s
 %(init_delay)s
 %(init_additional)s
+%(init_profile)s
     }
 
     // Method called to reset the population

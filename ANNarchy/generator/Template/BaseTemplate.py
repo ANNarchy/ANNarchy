@@ -599,6 +599,7 @@ __global__ void update_t(int t_host) {
 /*                                                                                 */
 /***********************************************************************************/
 #include "ANNarchy.h"
+%(prof_include)s
 #include <math.h>
 
 // cuda specific header
@@ -685,11 +686,13 @@ void run(int nbSteps) {
 
     stream_assign();
 
+%(prof_run_pre)s
     // simulation loop
     for(int i=0; i<nbSteps; i++) {
         single_step();
         //progress(i, nbSteps);
     }
+%(prof_run_post)s
 
     //std::cout << std::endl;
 %(device_host_transfer)s
@@ -697,7 +700,9 @@ void run(int nbSteps) {
 
 void step() {
 %(host_device_transfer)s
+%(prof_run_pre)s
     single_step();
+%(prof_run_post)s
 %(device_host_transfer)s
 }
 

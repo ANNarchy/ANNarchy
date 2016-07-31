@@ -424,6 +424,13 @@ class CodeGenerator(object):
                 host_device_transfer += pop['host_to_device']
                 device_host_transfer += pop['device_to_host']
 
+            #Profiling
+            if self._profgen:
+                prof_dict = self._profgen.generate_body_dict()
+            else:
+                from .Profile import ProfileGenerator
+                prof_dict = ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
+
             #
             # HD ( 31.07.2016 ):
             #
@@ -445,7 +452,7 @@ class CodeGenerator(object):
                 'custom_func': "", #custom_func
             }
 
-            host_code = cuda_host_body_template % {
+            base_dict = {
                 # network definitions
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
@@ -466,7 +473,8 @@ class CodeGenerator(object):
                 'kernel_def': kernel_def,
                 'kernel_config': threads_per_kernel,
             }
-            
+            base_dict.update( prof_dict )
+            host_code = cuda_host_body_template % base_dict
             return device_code, host_code
 
     def _body_initialize(self):
@@ -474,8 +482,14 @@ class CodeGenerator(object):
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        from .Profile.ProfileTemplate import profile_template
-        profiling_init = "" if not Global.config["profiling"] else profile_template['init']
+        if Global.config['paradigm'] == "openmp":
+            from .Profile.ProfileTemplate import papi_profile_template
+            profiling_init = "" if not Global.config["profiling"] else papi_profile_template['init']
+        elif Global.config['paradigm'] == "cuda":
+            from .Profile.ProfileTemplate import cuda_profile_template
+            profiling_init = "" if not Global.config["profiling"] else cuda_profile_template['init']
+        else:
+            raise NotImplementedError
 
         # Initialize populations
         population_init = "    // Initialize populations\n"
