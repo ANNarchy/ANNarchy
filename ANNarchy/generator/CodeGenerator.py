@@ -135,9 +135,17 @@ class CodeGenerator(object):
         self._recordgen.generate()
 
         # Generate cpp code for the analysed pops and projs
-        postfix = ".cpp" if Global.config['paradigm']=="openmp" else ".cu"
-        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy'+postfix, 'w') as ofile:
-            ofile.write(self.generate_body())
+        if Global.config['paradigm']=="openmp":
+            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy.cpp', 'w') as ofile:
+                ofile.write(self.generate_body())
+        elif Global.config['paradigm']=="cuda":
+            device_code, host_code = self.generate_body()
+            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyHost.cu', 'w') as ofile:
+                ofile.write(host_code)
+            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyDevice.cu', 'w') as ofile:
+                ofile.write(device_code)
+        else:
+            raise NotImplementedError
 
         # Generate cython code for the analysed pops and projs
         with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
@@ -416,8 +424,18 @@ class CodeGenerator(object):
                 host_device_transfer += pop['host_to_device']
                 device_host_transfer += pop['device_to_host']
 
-            from Template.BaseTemplate import cuda_body_template
-            return cuda_body_template % {
+            from Template.BaseTemplate import cuda_device_body_template, cuda_host_body_template
+            device_code = cuda_device_body_template % {
+                #device stuff
+                'pop_kernel': pop_kernel,
+                'psp_kernel': psp_kernel,
+                'syn_kernel': syn_kernel,
+                'glob_ops_kernel': glob_ops_body,
+                'postevent_kernel': postevent_kernel,
+                'custom_func': "", #custom_func
+            }
+
+            host_code = cuda_host_body_template % {
                 # network definitions
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
@@ -436,17 +454,10 @@ class CodeGenerator(object):
                 'host_device_transfer': host_device_transfer,
                 'device_host_transfer': device_host_transfer,
                 'kernel_def': kernel_def,
-
-                #device stuff
                 'kernel_config': threads_per_kernel,
-                'pop_kernel': pop_kernel, #update_neuron_body,
-                'psp_kernel': psp_kernel,
-                'syn_kernel': syn_kernel, #update_synapse_body,
-                'glob_ops_kernel': glob_ops_body,
-                'postevent_kernel': postevent_kernel,
-                'custom_func': "", #custom_func
             }
-
+            
+            return device_code, host_code
 
     def _body_initialize(self):
         """
