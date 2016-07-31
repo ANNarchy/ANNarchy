@@ -424,8 +424,18 @@ class CodeGenerator(object):
                 host_device_transfer += pop['host_to_device']
                 device_host_transfer += pop['device_to_host']
 
-            from Template.BaseTemplate import cuda_device_body_template, cuda_host_body_template
-            device_code = cuda_device_body_template % {
+            #
+            # HD ( 31.07.2016 ):
+            #
+            # I'm not really sure, what exactly causes the problem with this atomicAdd function. If
+            # we move it into ANNarchyDevice.cu, the macro seems to be evaluated wrongly and the
+            # atomicAdd() function appears doubled or appears not.
+            #
+            # So as "solution", the atomicAdd definition block resides in ANNarchyHost and only the
+            # computation kernels are placed in ANNarchyDevice. If we decide to use SDK8 as lowest
+            # requirement, one can move this kernel too.
+            from Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template
+            device_code = cuda_device_kernel_template % {
                 #device stuff
                 'pop_kernel': pop_kernel,
                 'psp_kernel': psp_kernel,

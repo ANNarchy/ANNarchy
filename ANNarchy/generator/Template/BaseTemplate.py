@@ -491,38 +491,13 @@ inline void setSeed(long int seed){ printf("Setting seed not implemented on CUDA
 #endif
 """
 
-cuda_device_body_template = """
-/***********************************************************************************/
-/*                                                                                 */
-/*                                                                                 */
-/*          DEVICE - code                                                          */
-/*                                                                                 */
-/*                                                                                 */
-/***********************************************************************************/
+cuda_device_kernel_template = """
+/****************************************
+ * Global Symbols (ANNarchyHost.cu)     *
+ ****************************************/
 #include <curand_kernel.h>
-#include <float.h>
-
-#if __CUDA_ARCH__ > 600
-#else
-    __device__ double atomicAdd(double* address, double val)
-    {
-        unsigned long long int* address_as_ull = (unsigned long long int*)address;
-        unsigned long long int old = *address_as_ull, assumed;
-        do {
-            assumed = old;
-            old = atomicCAS(address_as_ull, assumed,
-                            __double_as_longlong(val +
-                            __longlong_as_double(assumed)));
-        } while (assumed != old);
-        return __longlong_as_double(old);
-    }
-#endif
-
-// global time step
-__device__ long int t;
-__global__ void update_t(int t_host) {
-    t = t_host;
-}
+extern __device__ long int t;
+extern __device__ double atomicAdd(double* address, double val);
 
 /****************************************
  * init random states                   *
@@ -578,6 +553,44 @@ __device__ __forceinline__ long modulo(long a, long b) { return a %% b; }
 
 cuda_host_body_template =\
 """
+#ifdef __CUDA_ARCH__
+/***********************************************************************************/
+/*                                                                                 */
+/*                                                                                 */
+/*          DEVICE - code                                                          */
+/*                                                                                 */
+/*                                                                                 */
+/***********************************************************************************/
+#include <cuda_runtime_api.h>
+#include <curand_kernel.h>
+#include <float.h>
+
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+    __device__ double atomicAdd(double* address, double val)
+    {
+        unsigned long long int* address_as_ull = (unsigned long long int*)address;
+        unsigned long long int old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            old = atomicCAS(address_as_ull, assumed,
+                            __double_as_longlong(val +
+                            __longlong_as_double(assumed)));
+        } while (assumed != old);
+        return __longlong_as_double(old);
+    }
+#endif
+
+// global time step
+__device__ long int t;
+__global__ void update_t(int t_host) {
+    t = t_host;
+}
+
+// Computation Kernel
+#include "ANNarchyDevice.cu"
+
+#else
 /***********************************************************************************/
 /*                                                                                 */
 /*                                                                                 */
@@ -747,8 +760,8 @@ void single_step()
     t++;    // host side
     // note: the first parameter is the name of the device variable
     //       for earlier releases before CUDA4.1 this was a const char*
-    //cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
-    update_t<<<1,1>>>(t);
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
+    //update_t<<<1,1>>>(t);
 }
 
 
@@ -760,6 +773,7 @@ long int getTime() {return t;}
 void setTime(long int t_) { t=t_;}
 double getDt() { return dt;}
 void setDt(double dt_) { dt=dt_;}
+#endif
 """
 
 cuda_stream_setup=\
@@ -797,8 +811,8 @@ void stream_destroy()
 cuda_initialize_template = """
     dt = _dt;
     t = (long int)(0);
-    //cudaMemcpyToSymbol(t, &t, sizeof(long int));
-    update_t<<<1,1>>>(t);
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
+    //update_t<<<1,1>>>(t);
 
     // seed
     seed = _seed;
