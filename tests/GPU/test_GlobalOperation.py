@@ -43,14 +43,12 @@ neuron = Neuron(
 pop1 = Population (6, neuron)
 pop2 = Population ((2, 3), neuron)
 
-compile(clean=True)
-
 class test_GlobalOps_1D(unittest.TestCase):
     """
     ANNarchy support several global operations, there are always applied on
     variables of *Population* objects. Currently the following methods
     are supported:
-        
+
         * mean()
         * max()
         * min()
@@ -60,69 +58,78 @@ class test_GlobalOps_1D(unittest.TestCase):
     They are used in the equations of our neuron definition.
     This particular test focuses on a one-dimensional *Population*.
     """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1])
+        self.test_net.compile(silent=True)
+
+        self.net_pop = self.test_net.get(pop1)
 
     def setUp(self):
         """
         In our *setUp()* function we set the variable *r*.
         We also call *simulate()* to calculate mean/max/min.
         """
-        # reset() set all variables to init value (default 0), which is 
+        # reset() set all variables to init value (default 0), which is
         # unfortunatly meaningless for mean/max/min. So we set here some
         # better values
-        pop1.r = [2.0, 1.0, 0.0, -5.0, -3.0, -1.0]
+        self.net_pop.r = [2.0, 1.0, 0.0, -5.0, -3.0, -1.0]
 
         # 1st step: calculate mean/max/min and store in intermediate
         #           variables
         # 2nd step: write intermediate variables to accessible variables.
-        simulate(2)
+        self.test_net.simulate(2)
 
     def tearDown(self):
         """
         After each test we call *reset()* to reset the network.
         """
-        reset()
+        self.test_net.reset()
 
     def test_get_mean_r(self):
         """
         Tests the result of *mean(r)* for *pop1*.
         """
-        self.assertTrue( numpy.allclose( pop1.mean_r, -1.0 ) )
+        self.assertTrue( numpy.allclose( self.net_pop.mean_r, -1.0 ) )
 
     def test_get_max_r(self):
         """
         Tests the result of *max(r)* for *pop1*.
         """
-        self.assertTrue( numpy.allclose(pop1.max_r, 2.0) )
+        self.assertTrue( numpy.allclose( self.net_pop.max_r, 2.0) )
 
     def test_get_min_r(self):
         """
         Tests the result of *min(r)* for *pop1*.
         """
-        self.assertTrue( numpy.allclose(pop1.min_r, -5.0) )
+        self.assertTrue( numpy.allclose( self.net_pop.min_r, -5.0) )
 
     def test_get_l1_norm(self):
         """
         Tests the result of *norm1(r)* (L1 norm) for *pop1*.
         """
-        self.assertTrue(numpy.allclose(pop1.l1, 12.0))
+        self.assertTrue(numpy.allclose( self.net_pop.l1, 12.0))
 
     def test_get_l2_norm(self):
         """
         Tests the result of *norm2(r)* (L2 norm) for *pop1*.
         """
         # compute control value
-        l2norm = np.linalg.norm(pop1.r, ord=2)
+        l2norm = np.linalg.norm( self.net_pop.r, ord=2)
 
         # test
-        self.assertTrue(numpy.allclose(pop1.l2, l2norm))
-
+        self.assertTrue(numpy.allclose( self.net_pop.l2, l2norm))
 
 class test_GlobalOps_2D(unittest.TestCase):
     """
     ANNarchy support several global operations, there are always applied on
     variables of *Population* objects. Currently the following methods
     are supported:
-        
+
         * mean()
         * max()
         * min()
@@ -132,60 +139,60 @@ class test_GlobalOps_2D(unittest.TestCase):
     They are used in the equations of our neuron definition.
     This particular test focuses on a two-dimensional *Population*.
     """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop2])
+        self.test_net.compile(silent=True)
+
+        self.net_pop = self.test_net.get(pop2)
 
     def setUp(self):
         """
         In our *setUp()* function we set the variable *r*.
         We also call *simulate()* to calculate mean/max/min.
-        
         """
-        # reset() set all variables to init value (default 0), which is 
+        # reset() set all variables to init value (default 0), which is
         # unfortunatly meaningless for mean/max/min. So we set here some
         # better values
-        pop2.r = [[2.0, 1.0, 0.0],
+        self.net_pop.r = [[2.0, 1.0, 0.0],
                   [-5.0, -3.0, -1.0]]
 
         # 1st step: calculate mean/max/min and store in intermediate
         #           variables
         # 2nd step: write intermediate variables to accessible variables.
-        simulate(2)
+        self.test_net.simulate(2)
 
     def tearDown(self):
         """
         After each test we call *reset()* to reset the network.
         """
-        reset()
+        self.test_net.reset()
 
     def test_get_mean_r(self):
         """
         Tests the result of *mean(r)* for *pop2*.
-        """       
-        self.assertTrue( numpy.allclose( pop2.mean_r, -1.0 ) )
+        """
+        self.assertTrue( numpy.allclose( self.net_pop.mean_r, -1.0 ) )
 
     def test_get_max_r(self):
         """
         Tests the result of *max(r)* for *pop2*.
         """
-        self.assertTrue( numpy.allclose(pop2.max_r, 2.0) )
+        self.assertTrue( numpy.allclose( self.net_pop.max_r, 2.0) )
 
     def test_get_min_r(self):
         """
         Tests the result of *min(r)* for *pop2*.
         """
-        self.assertTrue( numpy.allclose(pop2.min_r, -5.0) )
-        
+        self.assertTrue( numpy.allclose( self.net_pop.min_r, -5.0) )
+
     def test_get_l1_norm(self):
         """
         Tests the result of *norm1(r)* for *pop2*.
         """
-        self.assertTrue(numpy.allclose(pop2.l1, 12.0))
+        self.assertTrue(numpy.allclose( self.net_pop.l1, 12.0))
 
-    def test_get_l2_norm(self):
-        """
-        Tests the result of *norm2(r)* for *pop2*.
-        """
-        # compute control value
-        l2norm = np.linalg.norm(pop2.r, ord=2)
-        
-        # test
-        self.assertTrue(numpy.allclose(pop2.l2, l2norm))

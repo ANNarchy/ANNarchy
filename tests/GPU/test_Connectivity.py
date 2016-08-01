@@ -50,30 +50,50 @@ proj2 = Projection(
      target = "exc",
 )
 
-proj1.connect_one_to_one(weights = 1.0)
-proj2.connect_all_to_all(weights = 1.0)
+proj1.connect_one_to_one(weights = 0.1)
+proj2.connect_all_to_all(weights = 0.1)
 
-compile(clean=True)
-
+# TODO: PopulationViews
 
 class test_Connectivity(unittest.TestCase):
+    """
+    This class tests the functionality of the connectivity patterns within *Projections*.
+    """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1, pop2, proj1, proj2])
+        self.test_net.compile(silent=True)
 
     def setUp(self):
         """
-        basic setUp() method to reset the network after every test
+        In our *setUp()* function we call *reset()* to reset the network before every test.
         """
-        reset()
+        self.test_net.reset()
 
     def test_one_to_one(self):
         """
-        tests functionality of the one_to_one connectivity pattern
+        Tests the *one_to_one* connectivity pattern, in which every pre-synaptic neuron
+        is connected to its ranked equivalent post-synaptic neuron.
+
+        We test correctness of ranks and weight values.
         """
-        self.assertEqual(proj1.dendrite(3).rank, [3])
-        self.assertTrue(numpy.allclose(proj1.dendrite(3).w, [1.0]))
+        tmp = self.test_net.get(proj1)
+
+        self.assertEqual(tmp.dendrite(3).rank, [3])
+        self.assertTrue(numpy.allclose(tmp.dendrite(3).w, [0.1]))
 
     def test_all_to_all(self):
         """
-        tests functionality of the all_to_all connectivity pattern
+        Tests the *all_to_all* connectivity pattern, in which every pre-synaptic neuron
+        is connected to every post-synaptic neuron.
+
+        We test correctness of ranks and weight values.
         """
-        self.assertEqual(proj2.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertTrue(numpy.allclose(proj2.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
+        tmp = self.test_net.get(proj2)
+
+        self.assertEqual(tmp.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertTrue(numpy.allclose(tmp.dendrite(3).w, np.ones((8, 1)) * 0.1))

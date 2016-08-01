@@ -208,15 +208,19 @@ class Network(object):
                     return m
         Global._error('The network has no such object:', obj.name, obj)
 
-    def compile(self, directory='annarchy', silent=False):
+    def compile(self, directory='annarchy', silent=False, debug_build=False):
         """ Compiles the network.
 
         *Parameters*:
 
         * **directory**: name of the subdirectory where the code will be generated and compiled.
         * **silent**: defines if the "Compiling... OK" should be printed.
+
+        The following arguments are for internal development use only:
+
+        * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
         """
-        Compiler.compile(directory=directory, silent=silent, net_id=self.id)
+        Compiler.compile(directory=directory, silent=silent, debug_build=debug_build, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
         """

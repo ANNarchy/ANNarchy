@@ -147,7 +147,9 @@ def compile(    directory='annarchy',
         profile_enabled = options.profile
         Global.config['profiling']= options.profile
 
-    debug_build = options.debug # debug build
+    if not debug_build:
+        debug_build = options.debug # debug build
+
     clean = options.clean # enforce rebuild
 
     if populations is None: # Default network

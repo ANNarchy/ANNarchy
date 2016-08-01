@@ -105,4 +105,4 @@ class test_SpikingNeuron(unittest.TestCase):
         self.assertTrue(numpy.allclose(self.test_net.get(pop2).neuron(0).v, 1.0))
         self.test_net.simulate(1)
         self.assertTrue(numpy.allclose(self.test_net.get(pop2).neuron(0).v, 2.0))
-    
+

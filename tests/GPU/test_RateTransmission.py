@@ -66,48 +66,63 @@ proj.connect_one_to_one(weights = 1.0)
 proj2.connect_all_to_all(weights = 1.0)
 proj3.connect_one_to_one(weights = 1.0, delays = 10.0)
 
-compile(clean=True)
-
-
 class test_RateTransmission(unittest.TestCase):
+    """
+    One major function for rate-coded neurons is the computation of the
+    continous transmission between neurons. In this class the continous
+    transmission is computed and testd for the following patterns:
+
+        * one2one
+        * all2all
+        * delayed connections
+    """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1, pop2, proj, proj2, proj3])
+        self.test_net.compile(silent=True)
+
+        self.net_pop2 = self.test_net.get(pop2)
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        reset()
+        self.test_net.reset()
 
     def test_one_to_one(self):
         """
         tests functionality of the one_to_one connectivity pattern
         """
         # sum up r = 1
-	simulate(2)
-        self.assertTrue(numpy.allclose(pop2.sum1, 1.0))
+        self.test_net.simulate(2)
+        self.assertTrue(numpy.allclose(self.net_pop2.sum1, 1.0))
 
     def test_all_to_all(self):
         """
         tests functionality of the all_to_all connectivity pattern
         """
-	# sum up r = 1, 9 neurons
-	simulate(2)
-        self.assertTrue(numpy.allclose(pop2.sum2, 9.0))
+        # sum up r = 1, 9 neurons
+        self.test_net.simulate(2)
+        self.assertTrue(numpy.allclose(self.net_pop2.sum2, 9.0))
 
     def test_delay(self):
         """
-        tests the delay functionality. 
+        tests the delay functionality.
         """
-	# The first ten steps, we have 
+        # The first ten steps, we have
         # initialization value
-        simulate(10)
-        self.assertTrue(numpy.allclose(pop2.sum3, -1.0))
+        self.test_net.simulate(10)
+        self.assertTrue(numpy.allclose(self.net_pop2.sum3, -1.0))
 
-        # at 11th step we have the first queue 
+        # at 11th step we have the first queue
         # value in our case t = 0
-	simulate(1)
-        self.assertTrue(numpy.allclose(pop2.sum3, 1.0))
+        self.test_net.simulate(1)
+        self.assertTrue(numpy.allclose(self.net_pop2.sum3, 1.0))
 
         # at 20th -> t = 9
-        simulate(9)
-        self.assertTrue(numpy.allclose(pop2.sum3, 10.0))
-
+        self.test_net.simulate(9)
+        self.assertTrue(numpy.allclose(self.net_pop2.sum3, 10.0))

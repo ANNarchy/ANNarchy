@@ -747,9 +747,9 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
         if( %(attr_name)s_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "Transfer %(attr_name)s ( pop%(id)s )" << std::endl;
+            std::cout << "HtoD %(attr_name)s ( pop%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(attr_name)s,  %(attr_name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(attr_name)s, %(attr_name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
             %(attr_name)s_dirty = false;
 
         #ifdef _DEBUG
@@ -767,7 +767,7 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
         if( refractory_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "Transfer refractory ( pop%(id)s )" << std::endl;
+            std::cout << "HtoD refractory ( pop%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_refractory, refractory.data(), size * sizeof(int), cudaMemcpyHostToDevice);
             refractory_dirty = false;

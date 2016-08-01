@@ -719,6 +719,7 @@ void single_step()
     // Presynaptic events
     ////////////////////////////////
 %(compute_sums)s
+
     cudaDeviceSynchronize();
 
     ////////////////////////////////
@@ -729,6 +730,8 @@ void single_step()
     // Update neural variables
     ////////////////////////////////
 %(update_neuron)s
+
+    cudaDeviceSynchronize();
 
     ////////////////////////////////
     // Delay outputs
@@ -747,10 +750,14 @@ void single_step()
     ////////////////////////////////
 %(update_synapse)s
 
+    cudaDeviceSynchronize();
+
     ////////////////////////////////
     // Postsynaptic events
     ////////////////////////////////
 %(post_event)s
+
+    cudaDeviceSynchronize();
 
     ////////////////////////////////
     // Recording
@@ -775,7 +782,7 @@ void single_step()
  *
 */
 long int getTime() {return t;}
-void setTime(long int t_) { t=t_;}
+void setTime(long int t_) { t=t_; cudaMemcpyToSymbol(t, &t, sizeof(long int)); }
 double getDt() { return dt;}
 void setDt(double dt_) { dt=dt_;}
 #endif

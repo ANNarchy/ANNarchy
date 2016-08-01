@@ -204,13 +204,13 @@ class Population(object):
             for var in attributes:
                 # check it exists
                 if not var in self.attributes:
-                    _warning("Population.reset():", var, "is not an attribute of the population, won't reset.")
+                    Global._warning("Population.reset():", var, "is not an attribute of the population, won't reset.")
                     continue
                 try:
                     self.__setattr__(var, self.init[var])
                 except Exception as e:
-                    _print(e)
-                    _warning("Population.reset(): something went wrong while resetting", var)
+                    Global._print(e)
+                    Global._warning("Population.reset(): something went wrong while resetting", var)
 
         self.cyInstance.activate(self.enabled)
         self.cyInstance.reset()
