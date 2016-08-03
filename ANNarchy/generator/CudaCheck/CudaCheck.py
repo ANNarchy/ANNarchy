@@ -13,10 +13,18 @@ class CudaCheck(object):
 
     def version(self):
         """
-        
+        Returns cuda compatibility as tuple(major,minor)
         """
         import cuda_check
         return cuda_check.get_cuda_version()
+
+    def version_str(self):
+        """
+        Returns cuda compatibility as string, usable for -gencode as argument.
+        """
+        import cuda_check
+        cu_version = cuda_check.get_cuda_version()
+        return str(cu_version[0])+str(cu_version[1])
 
     def runtime_version(self):
         import cuda_check

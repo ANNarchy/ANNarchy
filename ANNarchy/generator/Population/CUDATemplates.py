@@ -208,11 +208,6 @@ curand = {
         'init': """
         cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
         init_curand_states( size, gpu_%(rd_name)s, seed );
-#ifdef _DEBUG
-        cudaError_t err = cudaGetLastError();
-        if ( err != cudaSuccess )
-            std::cout << "pop%(id)s - init_population: " << cudaGetErrorString(err) << std::endl;
-#endif
 """
     },
     'global': {

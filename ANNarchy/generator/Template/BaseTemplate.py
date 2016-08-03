@@ -500,19 +500,6 @@ extern __device__ long int t;
 extern __device__ double atomicAdd(double* address, double val);
 
 /****************************************
- * init random states                   *
- ****************************************/
-__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed )
-{
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if( tid < N )
-    {
-        curand_init( seed, tid, 0, &states[ tid ] );
-    }
-}
-
-/****************************************
  * inline functions                     *
  ****************************************/
 __device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
@@ -565,6 +552,9 @@ cuda_host_body_template =\
 #include <curand_kernel.h>
 #include <float.h>
 
+/****************************************
+ * atomicAdd for non-Pascal             *
+ ****************************************/
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
 #else
     __device__ double atomicAdd(double* address, double val)
@@ -580,6 +570,24 @@ cuda_host_body_template =\
         return __longlong_as_double(old);
     }
 #endif
+
+/****************************************
+ * init random states                   *
+ ****************************************/
+/*
+ *  Each thread gets an unique sequence number (i) and all use the same seed. As highlightet
+ *  in section 3.1.1. of the curand documentation this should be enough to get good random numbers
+ */
+__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed )
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    while( i < N )
+    {
+        curand_init( seed, i, 0, &states[ i ] );
+        i += blockDim.x * gridDim.x;
+    }
+}
 
 // global time step
 __device__ long int t;
@@ -622,6 +630,12 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
     int numBlocks = ceil (double(N) / double(numThreads));
 
     rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
+
+#ifdef _DEBUG
+    cudaError_t err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cout << "init_curand_state: " << cudaGetErrorString(err) << std::endl;
+#endif
 }
 
 /*
