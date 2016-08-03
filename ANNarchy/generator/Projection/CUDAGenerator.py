@@ -358,8 +358,8 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 condition = ""
                 # Check conditions to update the variable
-                #if eq['name'] == 'w': # Surround it by the learning flag
-                #    condition = "_plasticity" # Plasticity can be disabled (TODO)
+                if eq['name'] == 'w': # Surround it by the learning flag
+                    condition = "plasticity"
                 if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
                     simultaneous = "pop%(id_pre)s.last_spike[pre_rank[i][j]] != pop%(id_post)s.last_spike[post_rank[i]]" % {'id_post': proj.post.id, 'id_pre': proj.pre.id}
                     if condition == "":
@@ -452,7 +452,7 @@ if(%(condition)s){
         }
 
         conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
-        header = """__global__ void cu_proj%(id)s_psp( double dt, int *spiked, %(conn_header)s %(kernel_args)s );\n""" % {'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args}
+        header = """__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );\n""" % {'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args}
 
         ####################################################
         # Not even-driven summation of psp: like rate-coded
@@ -558,6 +558,7 @@ if(%(condition)s){
 
         # Generate event-driven code
         event_driven_code = ""
+        event_deps = []
         if has_event_driven:
             # event-driven rely on last pre-synaptic event
             add_args_header += ", long* _last_event"
@@ -567,6 +568,9 @@ if(%(condition)s){
                 if var['method'] == 'event-driven':
                     event_driven_code += '// ' + var['eq'] + '\n'
                     event_driven_code += var['cpp'] % ids + '\n'
+
+                    for deps in var['dependencies']:
+                        event_deps.append(deps)
             event_driven_code += """
         // Update the last event for the synapse
         _last_event%(local_index)s = t;
@@ -574,24 +578,30 @@ if(%(condition)s){
 
         # Gather the equations
         post_code = ""
+        post_deps = []
         for eq in proj.synapse_type.description['post_spike']:
             post_code += '// ' + eq['eq'] + '\n'
-            #TODO:            
-            #if eq['name'] == 'w':
-            #    post_code += "if(_plasticity)\n"
+            if eq['name'] == 'w':
+                post_code += "if(plasticity)\n"
             post_code += eq['cpp'] % ids + '\n'
             post_code += get_bounds(eq) % ids + '\n'
+
+            # add dependencies, only right side!
+            for deps in eq['dependencies']:
+                post_deps.append(deps)
+            # left side of equations is not part of dependencies
+            post_deps.append(eq['name'])
         post_code = tabify(post_code, 2)
 
-        # hand-crafted (TODO)
-        if has_event_driven:
-            # hand-crafted event-driven
-            add_args_header += ", double * x, double *y, double* tau_plus, double* tau_minus"
-            add_args_call += ", proj%(id_proj)s.gpu_x, proj%(id_proj)s.gpu_y, proj%(id_proj)s.gpu_tau_plus, proj%(id_proj)s.gpu_tau_minus" % {'id_proj': proj.id}
+        # Create add_args for event-driven eqs and post_event
+        kernel_deps = list(set(post_deps+event_deps)) # variables can occur in several eqs
+        for dep in kernel_deps:
+            if dep == "w":
+                continue
 
-            # hand-crafted post-event
-            add_args_header += ", double* A_minus, double *w_max, double *w_min"
-            add_args_call += ", proj%(id_proj)s.gpu_A_minus, proj%(id_proj)s.gpu_w_max, proj%(id_proj)s.gpu_w_min" % {'id_proj': proj.id}
+            attr = self._get_attr(proj, dep)
+            add_args_header += ', %(type)s* %(name)s' % {'type': attr['ctype'], 'name': attr['name']}
+            add_args_call +=  ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
 
         postevent_header = CUDATemplates.cuda_spike_postevent['header'] % {'id_proj': proj.id,
                                                                            'add_args': add_args_header

@@ -530,7 +530,7 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 
 cuda_spike_psp_kernel = \
 """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
 
     int pre_idx = spiked[blockIdx.x];
     int syn_idx = col_ptr[pre_idx]+threadIdx.x;
@@ -557,7 +557,7 @@ cuda_spike_psp_kernel_call = \
         std::cout << t << ": " << num_events << " event(s)." << std::endl;
     #endif
         if ( num_events > 0 ) {
-            cu_proj%(id_proj)s_psp<<< num_events, tpb >>>( dt, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+            cu_proj%(id_proj)s_psp<<< num_events, tpb >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
         #ifdef _DEBUG
             cudaDeviceSynchronize();
@@ -639,7 +639,7 @@ cuda_synapse_kernel_call =\
 ######################################
 cuda_spike_postevent = {
     'body': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( double dt, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s ) {
     int i = spiked[blockIdx.x];                // post-synaptic
     int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
 
@@ -651,13 +651,13 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, int* spiked, int* row_pt
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s );
+    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s );
 """,
     'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
         if (pop%(id_post)s.num_events > 0 ) {
             cuProj%(id_proj)s_postevent<<< pop%(id_post)s.num_events, __pop%(id_pre)s_pop%(id_post)s_%(target)s__ >>>(
-                dt, pop%(id_post)s.gpu_spiked
+                dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
                 /* connectivity */
                 , proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_row_ptr
                 /* weights */
