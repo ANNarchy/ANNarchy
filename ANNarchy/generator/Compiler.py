@@ -76,7 +76,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Save current ANNarchy version
     with open(annarchy_dir+'/release', 'w') as f:
-        f.write(ANNarchy.__release__)
+        f.write(Global.config['paradigm']+', '+ANNarchy.__release__)
 
     sys.path.append(annarchy_dir)
 
@@ -171,9 +171,25 @@ def compile(    directory='annarchy',
     if os.path.isfile(annarchy_dir+'/release'):
         with open(annarchy_dir+'/release', 'r') as f:
             prev_release = f.read().strip()
+            prev_paradigm = ''
+
+            # HD (03.08.2016):
+            # in ANNarchy 4.5.7b I added also the paradigm to the release tag.
+            # This if clause can be removed in later releases (TODO)
+            if prev_release.find(',') != -1:
+                prev_paradigm, prev_release = prev_release.split(', ')
+            else:
+                # old release tag
+                clean = True
+
             if parse_version(prev_release) < parse_version(ANNarchy.__release__):
                 Global._print('ANNarchy has been updated, recompiling...')
                 clean = True
+
+            if prev_paradigm != Global.config['paradigm']:
+                Global._print('Parallel framework has been changed, recompiling...')
+                clean = True
+
     else:
         clean = True
 

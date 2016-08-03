@@ -32,6 +32,7 @@ from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import generate_equation_code, tabify
 
 import re
+from math import ceil
 
 class CUDAGenerator(PopulationGenerator):
     """
@@ -47,6 +48,9 @@ class CUDAGenerator(PopulationGenerator):
         Specialized implementation of PopulationGenerator.header_struct() for
         generation of an openMP header.
         """
+        if pop.neuron_type.description['type'] == 'spike':
+            Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
+
         # Generate declaration and accessors of all parameters and variables
         declaration_parameters_variables, access_parameters_variables = self._generate_decl_and_acc(pop)
 
@@ -261,7 +265,8 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             # Spiking networks should only exchange spikes
             declare_code += """
     // Delays for spike population
-    std::deque< int* > gpu_delayed_spike; // contains a set of device pointers
+    std::deque< int* > gpu_delayed_spiked;        // contains a set of device pointers
+    std::deque< unsigned int* > gpu_delayed_num_events;    // how many events
 """
             # TODO:
             if pop.delayed_variables != []:
@@ -293,8 +298,35 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
-            init_code += ""
-            update_code += ""
+            init_code += """
+            gpu_delayed_spiked = std::deque<int*>();
+            gpu_delayed_num_events = std::deque<unsigned int*>();
+            int *dev_spiked;
+            unsigned int *dev_num_events;
+
+            for(int i = 0; i < %(max_delay)s; i++) {
+
+                // events
+                cudaMalloc((void**)&dev_spiked, size * sizeof(int));
+                gpu_delayed_spiked.push_front(dev_spiked);
+
+                // event counter
+                cudaMalloc((void**)&dev_num_events, sizeof(unsigned int));
+                gpu_delayed_num_events.push_front(dev_num_events);
+            }
+            """ % {'max_delay': int(ceil(pop.max_delay/Global.config['dt']))}
+            update_code += """
+            int* last_spiked = gpu_delayed_spiked.back();
+            gpu_delayed_spiked.pop_back();
+            gpu_delayed_spiked.push_front(last_spiked);
+
+            unsigned int* last_num_event = gpu_delayed_num_events.back();
+            gpu_delayed_num_events.pop_back();
+            gpu_delayed_num_events.push_front(last_num_event);
+
+            cudaMemcpy( &num_events, gpu_delayed_num_events.front(), sizeof(unsigned int), cudaMemcpyDeviceToHost);
+            gpu_spiked = gpu_delayed_spiked.front();
+            """ % {'id': pop.id}
             reset_code += ""
 
         update_code = """
@@ -708,9 +740,14 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
        'args': header_args
         }
 
+        if pop.max_delay > 1:
+            default_args = 'pop%(id)s.gpu_delayed_num_events.front(), pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
+        else: # no_delay
+            default_args = 'pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
+
         spike_gather = CUDATemplates.spike_gather_call % {
             'id': pop.id,
-            'default': 'pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id},
+            'default': default_args,
             'refrac': refrac_body,
             'args': call_args % {'id': pop.id}
         }
