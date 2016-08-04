@@ -338,6 +338,9 @@ class CUDAGenerator(ProjectionGenerator):
         return header_code, body_code, call_code
 
     def _computesum_spiking(self, proj):
+        """
+        Generate code for the spike propagation.
+        """
         updated_variables_list = []
 
         kernel_args = ""
@@ -345,16 +348,28 @@ class CUDAGenerator(ProjectionGenerator):
         eq_code = ""
 
         # Basic tags
-        ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'local_index': "[indices[syn_idx]]", 'global_index': '[post_ranks[syn_idx]]'}
+        ids = {
+            'id_proj' : proj.id,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+            'target': proj.target,
+            'local_index': "[indices[syn_idx]]",
+            'global_index': '[post_ranks[syn_idx]]'
+        }
 
         for eq in proj.synapse_type.description['pre_spike']:
 
             if eq['name'] == "g_target":   # synaptic transmission
-                eq_code += """atomicAdd(&g_target[post_ranks[syn_idx]], w[indices[syn_idx]]);"""
+                code = eq['cpp'].split('=')[1] % ids
+                # HD (04.08.2016):
+                # The temporary variable (_tmp_) is not absolutely essential,
+                # but it might be better, as the psp term can be complex.
+                eq_code += """
+        double _tmp_ = %(psp)s;
+        atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code }
+
                 kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s" % {'id_post': proj.post.id, 'target': proj.target}
                 kernel_args += ", " + eq['ctype'] + "* " + eq['name']
-
-                eq_code = tabify(eq_code, 1)
             else:
                 condition = ""
                 # Check conditions to update the variable
