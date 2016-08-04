@@ -11,6 +11,10 @@ class CudaCheck(object):
         """
         pass
 
+    def gpu_count(self):
+        import cuda_check
+        return cuda_check.gpu_count()
+
     def version(self):
         """
         Returns cuda compatibility as tuple(major,minor)

@@ -468,8 +468,13 @@ inline int run_until(int steps, std::vector<int> populations, bool or_and) {
 
 void step();
 
-inline void setNumberThreads(int) {
-    // Dummy function
+inline void setDevice(int device_id) {
+#ifdef _DEBUG
+    std::cout << "Setting device " << device_id << " as compute device ..." << std::endl;
+#endif
+    cudaError_t err = cudaSetDevice(device_id);
+    if ( err != cudaSuccess )
+        std::cerr << "Set device " << device_id << ": " << cudaGetErrorString(err) << std::endl;
 }
 
 /*

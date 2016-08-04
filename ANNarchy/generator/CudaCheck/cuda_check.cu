@@ -25,6 +25,11 @@ void get_properties() {
     }
 }
 
+int num_devices() {
+	get_properties();
+	return nb_devices;
+}
+
 int get_major_version(int device) {
     get_properties();
 

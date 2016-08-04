@@ -111,7 +111,7 @@ def compile(    directory='annarchy',
                 projections=None,
                 compiler="default",
                 compiler_flags="-march=native -O2",
-                cuda_config={'device': 0},
+                cuda_config=None,
                 silent=False,
                 debug_build=False,
                 profile_enabled = False,
@@ -251,7 +251,7 @@ class Compiler(object):
         Global._network[self.net_id]['compiled'] = True
 
         # Create the Python objects
-        _instantiate(self.net_id)
+        _instantiate(self.net_id, cuda_config=self.cuda_config)
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -502,7 +502,7 @@ class Compiler(object):
                     Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
 
 
-def _instantiate(net_id, import_id=-1):
+def _instantiate(net_id, import_id=-1, cuda_config=None):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
 
@@ -520,6 +520,10 @@ def _instantiate(net_id, import_id=-1):
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
 
     Global._network[net_id]['instance'] = cython_module
+
+    if cuda_config:
+        print 'setting device', cuda_config['device']
+        cython_module.set_device(cuda_config['device'])
 
     # Bind the py extensions to the corresponding python objects
     for pop in Global._network[net_id]['populations']:

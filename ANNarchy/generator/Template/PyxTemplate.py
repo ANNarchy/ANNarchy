@@ -44,9 +44,7 @@ cdef extern from "ANNarchy.h":
     double getDt()
     void setDt(double dt_)
 
-    # Number of threads
-    void setNumberThreads(int)
-
+%(device_specific_export)s
 
 # Population wrappers
 %(pop_class)s
@@ -119,15 +117,37 @@ def set_dt(double dt):
 def get_dt():
     return getDt()
 
-# Set number of threads
-def set_number_threads(int n):
-    setNumberThreads(n)
+%(device_specific_wrapper)s
 
 # Set seed
 def set_seed(long seed):
     setSeed(seed)
 '''
 
+pyx_device_specific={
+    'openmp': {
+        'wrapper': """
+# Set number of threads
+def set_number_threads(int n):
+    setNumberThreads(n)
+""",
+        'export': """
+    # Number of threads
+    void setNumberThreads(int)
+"""
+    },
+    'cuda': {
+        'wrapper': """
+# Set GPU device
+def set_device(int device_id):
+    setDevice(device_id)
+""",
+        'export': """
+    # GPU device
+    void setDevice(int)
+"""
+    }
+}
 # export of accessors for parameter members towards python, whereas 'local' is used if values can vary
 # across neurons, consequently 'global' is used if values are common to all neurons.
 #

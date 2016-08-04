@@ -429,9 +429,16 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
     if measure_time:
         ts = time()
 
-    # Number of processes to create
+    # Number of processes to create depends on number of
+    # available CPUs or GPUs
     if max_processes < 0:
-        max_processes = min(len(networks), multiprocessing.cpu_count())
+        if Global.config['paradigm'] == "openmp":
+            max_processes = min(len(networks), multiprocessing.cpu_count())
+        elif Global.config['paradigm'] == "cuda":
+            from ANNarchy.generator.CudaCheck import CudaCheck
+            max_processes = min(len(networks), CudaCheck().gpu_count())
+        else:
+            raise NotImplementedError
 
     # Number of networks
     number = len(networks)

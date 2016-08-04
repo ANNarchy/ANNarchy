@@ -126,7 +126,9 @@ class PyxGenerator(object):
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
             'pop_class' : pop_class, 'proj_class': proj_class,
-            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class
+            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class,
+            'device_specific_export': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['export'],
+            'device_specific_wrapper': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['wrapper'],
         }
 
 #######################################################################

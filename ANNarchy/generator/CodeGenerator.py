@@ -623,36 +623,45 @@ class CodeGenerator(object):
         code = "// Population config\n"
         for pop in self._populations:
             num_threads = self._guess_pop_kernel_config(pop)
-            if pop in self._cuda_config.keys():
-                num_threads = self._cuda_config[pop]['num_threads']
+            if self._cuda_config:
+                if pop in self._cuda_config.keys():
+                    num_threads = self._cuda_config[pop]['num_threads']
 
             code+= """#define __pop%(id)s__ %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
 
         code += "\n// Population config\n"
         for proj in self._projections:
             num_threads = 192
-            if proj in self._cuda_config.keys():
-                num_threads = self._cuda_config[proj]['num_threads']
+            if self._cuda_config:
+                if proj in self._cuda_config.keys():
+                    num_threads = self._cuda_config[proj]['num_threads']
 
             code+= """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
 
+        # HD:
+        # the try-except blocks here are a REALLY lazy method.
+        # TODO: it should be implemented more carefully in future
         pop_assign = "    // populations\n"
         for pop in self._populations:
-            if pop in self._cuda_config.keys():
+            try:
+                sid = self._cuda_config[pop]['stream']
                 pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
-""" % {'pid': pop.id, 'sid': self._cuda_config[pop]['stream'] }
-            else:
-                # default stream
+""" % {'pid': pop.id, 'sid': sid}
+            except:
+                # default stream, if either no cuda_config at all or
+                # the population is not configured by user
                 pop_assign += """    pop%(pid)s.stream = 0;
 """ % {'pid': pop.id }
 
         proj_assign = "    // populations\n"
         for proj in self._projections:
-            if proj in self._cuda_config.keys():
+            try:
+                sid = self._cuda_config[proj]['stream']
                 proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
-""" % {'pid': proj.id, 'sid': self._cuda_config[proj]['stream'] }
-            else:
-                # default stream
+""" % {'pid': proj.id, 'sid': sid }
+            except:
+                # default stream, if either no cuda_config at all or
+                # the projection is not configured by user
                 proj_assign += """    proj%(pid)s.stream = 0;
 """ % {'pid': proj.id }
 
