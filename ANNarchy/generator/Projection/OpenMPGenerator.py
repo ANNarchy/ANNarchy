@@ -23,6 +23,7 @@
 """
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
 from .OpenMPTemplates import openmp_templates
+from .Connectivity import OpenMPConnectivity
 
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
@@ -31,7 +32,7 @@ from ANNarchy.generator.Utils import generate_equation_code, tabify
 import re
 from ANNarchy.generator.Projection import OpenMPTemplates
 
-class OpenMPGenerator(ProjectionGenerator):
+class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
     """
     Generate the header for a Population object to run either on single core
     or multi-cores with OpenMP.
@@ -39,11 +40,16 @@ class OpenMPGenerator(ProjectionGenerator):
     _templates = openmp_templates
 
     def __init__(self, profile_generator, net_id):
+        # The super here calls all the base classes, so first
+        # ProjectionGenerator and afterwards OpenMPConnectivity
         super(OpenMPGenerator, self).__init__(profile_generator, net_id)
 
     def header_struct(self, proj, annarchy_dir):
         """
         """
+        # configure Connectivity base class
+        self.configure(proj)
+
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj)
 
@@ -275,75 +281,6 @@ class OpenMPGenerator(ProjectionGenerator):
         }
 
         return pruning
-
-    def _connectivity(self, proj):
-        """
-        Create codes for connectivity, comprising usually of post_rank and pre_rank.
-        In case of spiking models they are extended by an inv_rank data field. The
-        extension SharedProjection as well as SpecificProjection members overwrite
-        the _specific_template member variable of the Projection object, to
-        replace directly the default codes.
-
-        Returns:
-
-            a dictionary containing the following fields: *declare*, *init*,
-            *accessor*, *declare_inverse*, *init_inverse*
-
-        TODO:
-
-            maybe we should make a forced linkage between the declare, accessor and init fields.
-            Currently it could be, that one overwrite only the declare field and leave the others
-            untouched which causes errors.
-        """
-        declare_inverse_connectivity_matrix = ""
-        init_inverse_connectivity_matrix = ""
-
-        # Retrieve the templates
-        connectivity_matrix_tpl = OpenMPTemplates.lil_connectivity_matrix
-
-        # Default weight matrix as LIL
-        weight_matrix_tpl = OpenMPTemplates.lil_weight_matrix
-
-        # Special case when the weight have a single value
-        if proj._has_single_weight():
-            weight_matrix_tpl = OpenMPTemplates.single_weight_matrix
-
-        # Connectivity
-        declare_connectivity_matrix = connectivity_matrix_tpl['declare']
-        access_connectivity_matrix = connectivity_matrix_tpl['accessor']
-        init_connectivity_matrix = connectivity_matrix_tpl['init']
-
-        # Weight array
-        declare_connectivity_matrix += weight_matrix_tpl['declare']
-        access_connectivity_matrix += weight_matrix_tpl['accessor']
-        init_connectivity_matrix += weight_matrix_tpl['init']
-
-        # Spiking model require inverted ranks
-        if proj.synapse_type.type == "spike":
-            inv_connectivity_matrix_tpl = OpenMPTemplates.inverse_connectivity_matrix
-            declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare']
-            init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
-
-        # Specific projections can overwrite
-        if 'declare_connectivity_matrix' in proj._specific_template.keys():
-            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
-        if 'access_connectivity_matrix' in proj._specific_template.keys():
-            access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
-        if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
-            declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix']
-        if 'init_connectivity_matrix' in proj._specific_template.keys():
-            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix']
-        if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
-            init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix']
-
-
-        return {
-            'declare' : declare_connectivity_matrix,
-            'init' : init_connectivity_matrix,
-            'accessor' : access_connectivity_matrix,
-            'declare_inverse': declare_inverse_connectivity_matrix,
-            'init_inverse': init_inverse_connectivity_matrix
-        }
 
     def _computesum_rate(self, proj):
         """
@@ -654,8 +591,11 @@ if(%(condition)s){
                 )
 
         # Default template is without variable delays
+        
+        #TODO: choose correct template based on connectivity
         template = OpenMPTemplates.spiking_summation_fixed_delay
-
+        #template = OpenMPTemplates.spiking_summation_fixed_delay_dense_matrix
+        
         # Take delays into account if any
         pre_array = ""
         if proj.max_delay > 1:

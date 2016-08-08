@@ -1,0 +1,1 @@
+from Connectivity import OpenMPConnectivity, CUDAConnectivity

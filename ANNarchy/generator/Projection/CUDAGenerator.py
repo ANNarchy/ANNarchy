@@ -1,35 +1,36 @@
-"""
-
-    CUDAGenerator.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     CUDAGenerator.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
 import CUDATemplates
+from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
 from ANNarchy.generator.Utils import generate_equation_code, tabify
 
 import re
 
-class CUDAGenerator(ProjectionGenerator):
+class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
     """
     Generate the header for a Population object to run either on a Nvidia
     GPU using Nvidia SDK > 5.0 and CC > 2.0
@@ -37,13 +38,21 @@ class CUDAGenerator(ProjectionGenerator):
     _templates = CUDATemplates.cuda_templates
 
     def __init__(self, profile_generator, net_id):
+        # The super here calls all the base classes, so first ProjectionGenerator
+        # and afterwards CUDAConnectivity
         super(CUDAGenerator, self).__init__(profile_generator, net_id)
 
     def header_struct(self, proj, annarchy_dir):
         """
         """
+        # configure Connectivity base class
+        self.configure(proj)
+        
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj)
+
+        # concurrent streams
+        decl['cuda_stream'] = CUDATemplates.cuda_templates['cuda_stream']
 
         # Initiliaze the projection
         init_parameters_variables = self._init_parameters_variables(proj)
@@ -159,81 +168,6 @@ class CUDAGenerator(ProjectionGenerator):
         proj_desc['device_to_host'] = tabify("proj%(id)s.device_to_host();" % {'id':proj.id}, 1)+"\n"
 
         return proj_desc
-
-    def _declaration_accessors(self, proj):
-        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
-
-        declaration['cuda_stream'] = CUDATemplates.cuda_templates['cuda_stream']
-        return declaration, accessor
-
-    def _connectivity(self, proj):
-        """
-        Create codes for connectivity, comprising usually of post_rank and pre_rank.
-        In case of spiking models they are extended by an inv_rank data field. The
-        extension SharedProjection as well as SpecificProjection members overwrite
-        the _specific_template member variable of the Projection object, to
-        replace directly the default codes.
-
-        Returns:
-
-            a dictionary containing the following fields: *declare*, *init*,
-            *accessor*, *declare_inverse*, *init_inverse*
-
-        TODO:
-
-            maybe we should make a forced linkage between the declare, accessor and init fields.
-            Currently it could be, that one overwrite only the declare field and leave the others
-            untouched which causes errors.
-        """
-        declare_inverse_connectivity_matrix = ""
-        init_inverse_connectivity_matrix = ""
-
-        # Retrieve the templates
-        connectivity_matrix_tpl = CUDATemplates.csr_connectivity_matrix
-
-        # Default weight matrix as LIL
-        weight_matrix_tpl = CUDATemplates.csr_weight_matrix
-
-        # Special case when the weight have a single value
-        if proj._has_single_weight():
-            raise NotImplementedError
-
-        # Connectivity
-        declare_connectivity_matrix = connectivity_matrix_tpl['declare']
-        access_connectivity_matrix = connectivity_matrix_tpl['accessor']
-        init_connectivity_matrix = connectivity_matrix_tpl['init']
-
-        # Weight array
-        declare_connectivity_matrix += weight_matrix_tpl['declare']
-        access_connectivity_matrix += weight_matrix_tpl['accessor']
-        init_connectivity_matrix += weight_matrix_tpl['init']
-
-        # Spiking model require inverted ranks
-        if proj.synapse_type.type == "spike":
-            inv_connectivity_matrix_tpl = CUDATemplates.inverse_connectivity_matrix
-            declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare']
-            init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
-
-        # Specific projections can overwrite
-        if 'declare_connectivity_matrix' in proj._specific_template.keys():
-            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
-        if 'access_connectivity_matrix' in proj._specific_template.keys():
-            access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
-        if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
-            declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix']
-        if 'init_connectivity_matrix' in proj._specific_template.keys():
-            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix']
-        if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
-            init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix']
-
-
-        return {
-            'declare' : declare_connectivity_matrix,
-            'init' : init_connectivity_matrix,
-            'accessor' : access_connectivity_matrix,
-            'declare_inverse': declare_inverse_connectivity_matrix,
-            'init_inverse': init_inverse_connectivity_matrix
-        }
 
     def _computesum_rate(self, proj):
         """

@@ -282,10 +282,13 @@ class PyxGenerator(object):
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Import templates
-        connectivity_tpl = proj_omp_templates.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_connectivity_matrix
+        from ANNarchy.generator.Projection.Connectivity import CSR_CUDA
+        from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
 
-        weight_tpl = proj_omp_templates.lil_weight_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_weight_matrix
+        # Import templates
+        connectivity_tpl = LIL_OpenMP.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_connectivity_matrix
+
+        weight_tpl = LIL_OpenMP.lil_weight_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_weight_matrix
 
         if Global.config['paradigm'] == "openmp":
             sp_tpl = proj_omp_templates.structural_plasticity['pyx_struct']
@@ -403,16 +406,19 @@ class PyxGenerator(object):
         # Import attributes templates
         pyx_acc_tpl = PyxTemplate.attribute_pyx_wrapper
 
+        from ANNarchy.generator.Projection.Connectivity import CSR_CUDA
+        from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
+
         # Import connectivity matrix template
-        connectivity_tpl = proj_omp_templates.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_connectivity_matrix
+        connectivity_tpl = LIL_OpenMP.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_connectivity_matrix
 
         # Import weight array template
-        weight_tpl = proj_omp_templates.lil_weight_matrix if Global.config['paradigm'] == "openmp" else proj_cuda_templates.csr_weight_matrix
+        weight_tpl = LIL_OpenMP.lil_weight_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_weight_matrix
 
         # Special case for single weights
         if proj._has_single_weight():
             if Global.config['paradigm'] == "openmp":
-                weight_tpl = proj_omp_templates.single_weight_matrix
+                weight_tpl = LIL_OpenMP.single_weight_matrix
             else:
                 raise NotImplementedError
 

@@ -368,7 +368,7 @@ class Compiler(object):
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
             from .CudaCheck import CudaCheck
             cu_version = CudaCheck().version_str()
-            cuda_gen = "-gencode arch=compute_%(ver)s,code=compute_%(ver)s" % {'ver': cu_version}
+            cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
 
