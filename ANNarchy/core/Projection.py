@@ -178,7 +178,7 @@ class Projection(object):
     connect_from_sparse = ConnectorMethods.connect_from_sparse
     _load_from_sparse = ConnectorMethods._load_from_sparse
     connect_from_file = ConnectorMethods.connect_from_file
-    _load_from_csr = ConnectorMethods._load_from_csr
+    _load_from_csr = ConnectorMethods._load_from_lil
 
     def _generate(self):
         "Overriden by specific projections to generate the code"
@@ -210,11 +210,14 @@ class Projection(object):
         # Access the list of postsynaptic neurons
         self.post_ranks = self.cyInstance.post_rank()
 
-    def _store_connectivity(self, method, args, delay):
-
+    def _store_connectivity(self, method, args, delay, storage_format="lil"):
+        """
+        Store connectivity data. This function is called from cython_ext.Connectors module.
+        """
         self._connection_method = method
         self._connection_args = args
         self._connection_delay = delay
+        self._storage_format = storage_format
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
@@ -240,18 +243,15 @@ class Projection(object):
         else:
             Global._error('Projection.connect_xxx(): delays are not valid!')
 
-
         # Transmit the max delay to the pre pop
         if isinstance(self.pre, PopulationView):
             self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
-
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
         return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse_type.description['plasticity'] and Global.config['paradigm']=="openmp"
-
 
     def reset(self, attributes=-1, synapses=False):
         """
@@ -277,14 +277,14 @@ class Projection(object):
                 continue
             # check it exists
             if not var in self.attributes:
-                _warning("Projection.reset():", var, "is not an attribute of the population, won't reset.")
+                Global._warning("Projection.reset():", var, "is not an attribute of the population, won't reset.")
                 continue
             # Set the value
             try:
                 self.__setattr__(var, self.init[var])
             except Exception as e:
-                _print(e)
-                _warning("Projection.reset(): something went wrong while resetting", var)
+                Global._print(e)
+                Global._warning("Projection.reset(): something went wrong while resetting", var)
         #Global._warning('Projection.reset(): only parameters and variables are reinitialized, not the connectivity structure (including the weights)...')
 
     ################################

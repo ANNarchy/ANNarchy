@@ -70,7 +70,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
     self._store_connectivity(Connector.one_to_one, (weights, delays, shift), delays)
     return self
 
-def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
+def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
     """
     Builds an all-to-all connection pattern between the two populations.
 
@@ -80,6 +80,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
         * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
         * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row and column ("csrc"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -96,7 +97,12 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         self._dense_matrix = True
 
     # Store the connectivity
-    self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections), delays)
+    if ("lil"==storage_format):
+        self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections), delays, storage_format)
+    elif ("csrc"==storage_format):
+        self._store_connectivity(Connector.all_to_all_csrc, (weights, delays, allow_self_connections), delays, storage_format)
+    else:
+        Global._error("Invalid connectivity format " + storage_format + " provided to all_to_all connector")
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -266,7 +272,7 @@ def connect_with_func(self, method, **args):
 
     return self
 
-def _load_from_csr(self, pre, post, synapses):
+def _load_from_lil(self, pre, post, synapses):
     return synapses
 
 def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
@@ -299,7 +305,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
     return self
 
 def _load_from_matrix(self, pre, post, weights, delays, pre_post):
-    csr = Connector.CSR()
+    csr = Connector.LIL()
 
     uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
@@ -387,10 +393,8 @@ def connect_from_sparse(self, weights, delays=0.0):
     return self
 
 def _load_from_sparse(self, pre, post, weights, delays):
-    from scipy.sparse import csc_matrix
-
-    # Create an empty CSR object
-    csr = Connector.CSR()
+    # Create an empty LIL object
+    lil = Connector.LIL()
 
     # Find offsets
     if isinstance(self.pre, PopulationView):
@@ -403,7 +407,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
     else:
         post_ranks = [i for i in range(self.post.size)]
 
-    # Process the sparse matrix and fill the csr
+    # Process the sparse matrix and fill the lil
     weights.sort_indices()
     (pre, post) = weights.shape
 
@@ -418,9 +422,9 @@ def _load_from_sparse(self, pre, post, weights, delays):
         idx_pre = weights.getcol(idx_post).indices
         w = weights.getcol(idx_post).data
         pr = [pre_ranks[i] for i in idx_pre]
-        csr.add(post_ranks[idx_post], pr, w, [float(delays)])
+        lil.add(post_ranks[idx_post], pr, w, [float(delays)])
 
-    return csr
+    return lil
 
 def connect_from_file(self, filename):
     """
@@ -434,8 +438,8 @@ def connect_from_file(self, filename):
 
         Only the ranks, weights and delays are loaded, not the other variables.
     """
-    # Create an empty CSR object
-    csr = Connector.CSR()
+    # Create an empty LIL object
+    lil = Connector.LIL()
 
     # Load the data
     from ANNarchy.core.IO import _load_data
@@ -445,21 +449,21 @@ def connect_from_file(self, filename):
         Global._print(e)
         Global._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')
 
-    # Load the CSR object
+    # Load the LIL object
     try:
-        csr.post_rank = data['post_ranks']
-        csr.pre_rank = data['pre_ranks']
+        lil.post_rank = data['post_ranks']
+        lil.pre_rank = data['pre_ranks']
         if isinstance(data['w'], (int, float)):
             self._single_constant_weight = True
-            csr.w = [[data['w']]]
+            lil.w = [[data['w']]]
         else:
-            csr.w = data['w']
-        csr.size = data['size']
-        csr.nb_synapses = data['nb_synapses']
+            lil.w = data['w']
+        lil.size = data['size']
+        lil.nb_synapses = data['nb_synapses']
         if data['delay']:
-            csr.delay = data['delay']
-        csr.max_delay = data['max_delay']
-        csr.uniform_delay = data['uniform_delay']
+            lil.delay = data['delay']
+        lil.max_delay = data['max_delay']
+        lil.uniform_delay = data['uniform_delay']
     except Exception as e:
         Global._print(e)
         Global._error('Unable to load the data', filename, 'into the projection.')
@@ -467,5 +471,5 @@ def connect_from_file(self, filename):
     # Store the synapses
     self.connector_name = "From File"
     self.connector_description = "From File"
-    self._store_connectivity(self._load_from_csr, (csr,), csr.max_delay if csr.uniform_delay > 0 else csr.delay)
+    self._store_connectivity(self._load_from_lil, (lil,), lil.max_delay if lil.uniform_delay > 0 else lil.delay)
     return self

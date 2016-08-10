@@ -17,10 +17,10 @@ from ANNarchy.core.Random import RandomDistribution
 cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 
 ###################################################
-########## CSR object to hold synapses ############
+########## LIL object to hold synapses ############
 ###################################################
 
-cdef class CSR:
+cdef class LIL:
 
     def __cinit__(self):
 
@@ -91,7 +91,7 @@ cdef class CSR:
         cdef list preranks, set_preranks, indices
 
         if len(postranks) != len(set_postranks):
-            ANNarchy.core.Global._warning('You have added several times the same post-synaptic neuron to the CSR data in your connector method.')
+            ANNarchy.core.Global._warning('You have added several times the same post-synaptic neuron to the LIL data in your connector method.')
             ANNarchy.core.Global._print('ANNarchy will try to sort the entries if possible, it may take some time...')
         else:
             return
@@ -154,6 +154,54 @@ cdef _get_weights_delays(int size, weights, delays):
 
     return w, d
 
+###################################################
+########## CSRC object to hold synapses ###########
+###################################################
+cdef class CSRC:
+
+    def __cinit__(self, pre_size, post_size):
+        # pre -> post
+        self._row_ptr = vector[int](pre_size+1, 0)
+        self._col_idx = vector[int]()
+        self._w = vector[double]()
+        self._delay = vector[int]()
+
+        # post -> pre
+        self._col_ptr = vector[int](post_size+1, 0)
+        self._row_idx = vector[int]()
+        self._inv_idx = vector[int]()
+
+    cpdef add(self, int pre_rank, post_rank, w, d):
+        """
+        Add a single connection to the CSRC data structure.
+        """
+        # update vectors
+        self._col_idx.insert(self._col_idx.begin()+pre_rank+1, post_rank)
+        self._w.insert(self._w.begin()+pre_rank+1, w)
+        self._delay.insert(self._delay.begin()+pre_rank+1, d)
+
+        # update row borders
+        for i in range(pre_rank+1, self._row_ptr.size()):
+            self._row_ptr[i] += 1
+
+    cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d):
+        """
+        Add a set of connections to the CSRC data structure.
+        """
+        # update vectors
+        self._col_idx.insert(self._col_idx.begin()+pre_rank+1, post_ranks.begin(), post_ranks.end())
+        self._w.insert(self._w.begin()+pre_rank+1, w.begin(), w.end())
+        self._delay.insert(self._delay.begin()+pre_rank+1, d.begin(), d.end())
+
+        # update row borders
+        for i in range(pre_rank+1, self._row_ptr.size()):
+            self._row_ptr[i] += post_ranks.size()
+
+    cpdef inverse_connectivity(self):
+        """
+        Generate the backward view
+        """
+        pass
 
 #################################
 #### Connector methods ##########
@@ -162,7 +210,7 @@ cdef _get_weights_delays(int size, weights, delays):
 def all_to_all(pre, post, weights, delays, allow_self_connections):
     """ Cython implementation of the all-to-all pattern."""
 
-    cdef CSR projection
+    cdef LIL projection
     cdef double weight
     cdef int r_post, size_pre, i
     cdef list tmp, post_ranks, pre_ranks
@@ -173,8 +221,8 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
     post_ranks = post.ranks
     pre_ranks = pre.ranks
 
-    # Create the projection data as CSR
-    projection = CSR()
+    # Create the projection data as LIL
+    projection = LIL()
 
     for r_post in post_ranks:
         # List of pre ranks
@@ -202,18 +250,61 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
 
     return projection
 
+def all_to_all_csrc(pre, post, weights, delays, allow_self_connections):
+    """ Cython implementation of the all-to-all pattern, stored as CSRC and pre1st ordering. """
+
+    cdef CSRC projection
+    cdef double weight
+    cdef int r_post, size_pre, i
+    cdef list tmp, post_ranks, pre_ranks
+    cdef vector[int] r
+    cdef vector[double] w, d
+
+    # Retríeve ranks
+    post_ranks = post.ranks
+    pre_ranks = pre.ranks
+
+    # Create the projection data as CSRC
+    projection = CSRC(pre.size, post.size)
+
+    for r_pre in pre_ranks:
+        # List of post ranks
+        tmp = [i for i in post_ranks]
+        if not allow_self_connections:
+            try:
+                tmp.remove(r_pre)
+            except: # was not in the list
+                pass
+        r = tmp
+        size_post = len(tmp)
+        # Weights
+        if isinstance(weights, (int, float)):
+            weight = weights
+            w = vector[double](1, weight)
+        elif isinstance(weights, RandomDistribution):
+            w = weights.get_list_values(size_post)
+        # Delays
+        if isinstance(delays, (float, int)):
+            d = vector[double](1, delays)
+        elif isinstance(delays, RandomDistribution):
+            d = delays.get_list_values(size_post)
+        # Create the dendrite
+        projection.push_back(r_pre, r, w, d)
+
+    return projection
+
 def one_to_one(pre, post, weights, delays, shift):
     """ Cython implementation of the one-to-one pattern."""
 
-    cdef CSR projection
+    cdef LIL projection
     cdef double weight
     cdef int r_post, offset
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r
     cdef vector[double] w, d
 
-    # Create the projection data as CSR
-    projection = CSR()
+    # Create the projection data as LIL
+    projection = LIL()
 
     # Retríeve ranks
     post_ranks = post.ranks
@@ -256,7 +347,7 @@ def one_to_one(pre, post, weights, delays, shift):
 def fixed_probability(pre, post, probability, weights, delays, allow_self_connections):
     """ Cython implementation of the fixed_probability pattern."""
 
-    cdef CSR projection
+    cdef LIL projection
     cdef double weight
     cdef int r_post, r_pre, size_pre, max_size_pre
     cdef list post_ranks
@@ -270,8 +361,8 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     pre_ranks = np.array(pre.ranks)
     max_size_pre = len(pre.ranks)
 
-    # Create the projection data as CSR
-    projection = CSR()
+    # Create the projection data as LIL
+    projection = LIL()
 
     for r_post in post_ranks:
         # List of pre ranks
@@ -302,7 +393,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections):
     """ Cython implementation of the fixed_number_pre pattern."""
 
-    cdef CSR projection
+    cdef LIL projection
     cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef list pre_ranks, post_ranks
@@ -313,8 +404,8 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     post_ranks = post.ranks
     pre_ranks = pre.ranks
 
-    # Create the projection data as CSR
-    projection = CSR()
+    # Create the projection data as LIL
+    projection = LIL()
 
     for r_post in post_ranks:
         # List of pre ranks
@@ -343,7 +434,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
 def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections):
     """ Cython implementation of the fixed_number_post pattern."""
 
-    cdef CSR projection
+    cdef LIL projection
     cdef double weight
     cdef int r_post, r_pre, size_pre
     cdef list pre_ranks, post_ranks
@@ -356,8 +447,8 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     post_ranks = post.ranks
     pre_ranks = pre.ranks
 
-    # Create the projection data as CSR
-    projection = CSR()
+    # Create the projection data as LIL
+    projection = LIL()
 
 
     # Build the backward matrix
@@ -399,7 +490,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
 def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections):
     """ Cython implementation of the fixed_number_post pattern."""
 
-    cdef CSR projection
+    cdef LIL projection
     cdef float distance, value
     cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
     cdef tuple pre_coord, post_coord
@@ -433,8 +524,8 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
         for c in post_geometry:
             post_size  = post_size * c
 
-    # Create the projection data as CSR
-    projection = CSR()
+    # Create the projection data as LIL
+    projection = LIL()
     for post in list(range(post_size)):
         ranks = []
         values = []
@@ -480,7 +571,7 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
 def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections):
     """ Cython implementation of the fixed_number_post pattern."""
 
-    cdef CSR projection
+    cdef LIL projection
     cdef float distance, value
     cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
     cdef tuple pre_coord, post_coord
@@ -510,8 +601,8 @@ def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float 
         for c in post_geometry:
             post_size  = post_size * c
 
-    # Create the projection data as CSR
-    projection = CSR()
+    # Create the projection data as LIL
+    projection = LIL()
     for post in list(range(post_size)):
         ranks = []
         values = []

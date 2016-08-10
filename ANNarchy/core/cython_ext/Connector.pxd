@@ -2,7 +2,7 @@
 from libcpp.vector cimport vector
 from libcpp cimport bool
 
-cdef class CSR:
+cdef class LIL:
     """
     Container for the ranks, weights and delays of a projection.
     """
@@ -27,5 +27,23 @@ cdef class CSR:
     cpdef int get_max_delay(self)
     cpdef int get_uniform_delay(self)
 
-    # Method to clean a CSR object
+    # Method to clean a LIL object
     cpdef validate(self)
+
+cdef class CSRC:
+    """
+    Container for the ranks, weights and delays of a projection.
+    """
+    # Data
+    cdef public vector[int] _row_ptr
+    cdef public vector[int] _col_idx
+    cdef public vector[double] _w
+    cdef public vector[int] _delay
+    cdef public vector[int] _col_ptr
+
+    # Insert methods
+    cpdef add(self, int pre_rank, post_rank, w, d)
+    cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d)
+
+    # Backward view
+    cpdef inverse_connectivity(self)
