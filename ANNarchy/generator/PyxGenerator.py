@@ -408,12 +408,24 @@ class PyxGenerator(object):
 
         from ANNarchy.generator.Projection.Connectivity import CSR_CUDA
         from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
+        from ANNarchy.generator.Projection.Connectivity import CSRC_OpenMP
 
-        # Import connectivity matrix template
-        connectivity_tpl = LIL_OpenMP.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_connectivity_matrix
-
-        # Import weight array template
-        weight_tpl = LIL_OpenMP.lil_weight_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_weight_matrix
+        # Import connectivity matrix and weight array template
+        # dependent on storage format and target platform
+        if Global.config['paradigm'] == "openmp":
+            if proj._storage_format == "lil":
+                connectivity_tpl = LIL_OpenMP.lil_connectivity_matrix
+                weight_tpl = LIL_OpenMP.lil_weight_matrix
+            elif proj._storage_format == "csrc":
+                connectivity_tpl = CSRC_OpenMP.connectivity_matrix
+                weight_tpl = CSRC_OpenMP.weight_matrix
+            else:
+                raise NotImplementedError
+        elif Global.config['paradigm'] == "cuda":
+            connectivity_tpl = CSR_CUDA.csr_connectivity_matrix
+            weight_tpl = CSR_CUDA.csr_weight_matrix
+        else:
+            raise NotImplementedError
 
         # Special case for single weights
         if proj._has_single_weight():

@@ -1,6 +1,7 @@
 # distutils: language = c++
 from libcpp.vector cimport vector
 from libcpp cimport bool
+from sympy.mpmath.matrices.matrices import _matrix
 
 cdef class LIL:
     """
@@ -30,20 +31,21 @@ cdef class LIL:
     # Method to clean a LIL object
     cpdef validate(self)
 
+cdef extern from "CSRCMatrix.hpp":
+    cdef cppclass CSRCMatrix:
+        CSRCMatrix(const unsigned int, const unsigned int)
+
+        void push_back(int, vector[int], vector[double], vector[int])
+
 cdef class CSRC:
     """
     Container for the ranks, weights and delays of a projection.
     """
-    # Data
-    cdef public vector[int] _row_ptr
-    cdef public vector[int] _col_idx
-    cdef public vector[double] _w
-    cdef public vector[int] _delay
-    cdef public vector[int] _col_ptr
+    cdef CSRCMatrix* _matrix
 
     # Insert methods
     cpdef add(self, int pre_rank, post_rank, w, d)
     cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d)
 
-    # Backward view
-    cpdef inverse_connectivity(self)
+    # pre-defined pattern
+    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections)

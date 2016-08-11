@@ -410,6 +410,10 @@ class Compiler(object):
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
+        
+        # the connector module needs to reload some header files,
+        # ANNarchy.__path__ provides the installation directory
+        path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
 
         # Gather all Makefile flags
         makefile_flags = {
@@ -424,7 +428,8 @@ class Compiler(object):
             'python_include': python_include,
             'python_lib': python_lib,
             'numpy_include': numpy_include,
-            'net_id': self.net_id
+            'net_id': self.net_id,
+            'cython_ext': path_to_cython_ext
         }
 
         # Create Makefiles depending on the target platform and parallel framework

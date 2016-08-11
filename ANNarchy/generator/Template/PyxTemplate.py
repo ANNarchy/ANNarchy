@@ -8,6 +8,7 @@ cimport numpy as np
 
 import ANNarchy
 from ANNarchy.core.cython_ext.Connector cimport LIL as CSR
+from ANNarchy.core.cython_ext.Connector cimport CSRC
 
 cdef extern from "ANNarchy.h":
 
