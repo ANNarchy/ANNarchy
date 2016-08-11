@@ -24,6 +24,7 @@
 from . import Global
 from .Population import Population
 from .PopulationView import PopulationView
+from .Projection import Projection
 from .Dendrite import Dendrite
 
 import numpy as np
@@ -186,9 +187,11 @@ class Monitor(object):
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
                     obj_desc = 'population ' + self.object.name
-                else:
+                elif isinstance(self.object, Projection):
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
-                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+                else:
+                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
+                Global._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
 
     def resume(self):
         "Resumes the recordings."
@@ -205,8 +208,10 @@ class Monitor(object):
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
                     obj_desc = 'population '+self.object.name
-                else:
+                elif isinstance(self.object, Projection):
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                else:
+                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
             self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
 
@@ -225,8 +230,10 @@ class Monitor(object):
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
                     obj_desc = 'population '+self.object.name
-                else:
+                elif isinstance(self.object, Projection):
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                else:
+                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
             self._recorded_variables[var]['stop'].append(Global.get_current_step(self.net_id))
 
@@ -246,8 +253,10 @@ class Monitor(object):
                 obj_desc = ''
                 if isinstance(self.object, (Population, PopulationView)):
                     obj_desc = 'population '+self.object.name
-                else:
+                elif isinstance(self.object, Projection):
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                else:
+                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
 
         self.variables = []
