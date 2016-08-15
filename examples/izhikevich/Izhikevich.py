@@ -28,7 +28,7 @@ exc_proj = Projection(pre=Exc, post=pop, target='exc')
 exc_proj.connect_all_to_all(weights=Uniform(0.0, 0.5))
    
 inh_proj = Projection(pre=Inh, post=pop, target='inh')
-inh_proj.connect_all_to_all(weights=Uniform(0.0, 1.0), storage_format="csrc")
+inh_proj.connect_all_to_all(weights=Uniform(0.0, 1.0))
 
 # Compile
 compile()

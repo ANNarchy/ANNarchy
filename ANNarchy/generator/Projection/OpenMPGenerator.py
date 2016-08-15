@@ -449,18 +449,45 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 
     def _computesum_spiking(self, proj):
         # Needed variables
-        psp_prefix = """
+        if 'psp_prefix' in proj._specific_template.keys() and 'psp_code' in proj._specific_template.keys():
+            try:
+                psp_prefix = proj._specific_template['psp_prefix']
+                psp_code = proj._specific_template['psp_code']
+            except KeyError:
+                Global._error('psp_prefix as well as psp_code should be overwritten')
+            return psp_prefix, psp_code
+
+        # There was no
+        if proj._storage_format == "lil":
+            psp_prefix = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         double sum;"""
-        if 'psp_prefix' in proj._specific_template.keys():
-            psp_prefix = proj._specific_template['psp_prefix']
+        elif proj._storage_format == "csr":
+            psp_prefix = ""
+        else:
+            raise NotImplementedError
 
-        # Specific projection
-        if 'psp_code' in proj._specific_template.keys():
-            return psp_prefix, proj._specific_template['psp_code']
-
-        # Basic tags
-        ids = {'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id, 'target': proj.target, 'local_index': "[i][j]", 'global_index': '[i]'}
+        # Basic tags, dependent on storage format
+        if proj._storage_format == "lil":
+            ids = {
+                'id_proj' : proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'local_index': "[i][j]",
+                'global_index': '[i]'
+            }
+        elif proj._storage_format == "csr":
+            ids = {
+                'id_proj' : proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'local_index': "[syn]",
+                'global_index': '[i]'
+            }
+        else:
+            raise NotImplementedError
 
         # Determine the mode of synaptic transmission
         continous_transmission = False
@@ -489,10 +516,26 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     targets = proj.target
                 g_target_code = ""
                 for target in targets:
+                    if proj._storage_format == "lil":
+                        acc = "post_rank[i]"
+                    elif proj._storage_format == "csr":
+                        acc = "_post_ranks[syn]"
+                    else:
+                        raise NotImplementedError
+
+                    target_dict = {
+                        'id_post': proj.post.id,
+                        'target': target,
+                        'g_target': g_target,
+                        'eq': eq['eq'],
+                        'acc': acc,
+                    }
+
                     g_target_code += """
             // Increase the post-synaptic conductance %(eq)s
-            pop%(id_post)s.g_%(target)s[post_rank[i]] += %(g_target)s ;
-""" % {'id_post': proj.post.id, 'target': target, 'g_target': g_target, 'eq': eq['eq']}
+            pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
+""" % target_dict
+
                     # Determine bounds
                     for key, val in eq['bounds'].items():
                         if not key in ['min', 'max']:
@@ -593,7 +636,10 @@ if(%(condition)s){
         # Default template is without variable delays
         
         #TODO: choose correct template based on connectivity
-        template = OpenMPTemplates.spiking_summation_fixed_delay
+        if proj._storage_format == "lil":
+            template = OpenMPTemplates.spiking_summation_fixed_delay
+        elif proj._storage_format == "csr":
+            template = OpenMPTemplates.spiking_summation_fixed_delay_csr
         #template = OpenMPTemplates.spiking_summation_fixed_delay_dense_matrix
         
         # Take delays into account if any
@@ -610,8 +656,13 @@ if(%(condition)s){
         # No need for openmp if less than 100 post neurons
         omp_code = ""
         if Global.config['num_threads'] > 1:
-            if proj.post.size > Global.OMP_MIN_NB_NEURONS and len(updated_variables_list) > 0:
-                omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""
+            if proj._storage_format == "lil":
+                if proj.post.size > Global.OMP_MIN_NB_NEURONS and len(updated_variables_list) > 0:
+                    omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""
+            elif proj._storage_format == "csr":
+                omp_code = """#pragma omp parallel for"""
+            else:
+                omp_code = ""
 
         # Generate the whole code block
         code = ""

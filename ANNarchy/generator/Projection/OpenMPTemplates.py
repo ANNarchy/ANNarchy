@@ -388,6 +388,25 @@ if (_transmission && pop%(id_post)s._active){
 } // active
 """
 
+spiking_summation_fixed_delay_csr = """
+// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+
+    // Iterate over all spiking neurons
+    %(omp_code)s
+    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+        int _pre = %(pre_array)s[_idx];
+
+        // Iterate over connected post neurons
+        for(int syn = _row_ptr[_pre]; syn < _row_ptr[_pre + 1]; syn++) {
+            %(event_driven)s
+            %(g_target)s
+            %(pre_event)s
+        }
+    }
+} // active
+"""
+
 spiking_summation_fixed_delay_dense_matrix = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){

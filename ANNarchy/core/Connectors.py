@@ -80,7 +80,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
         * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
         * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row and column ("csrc"), by default lil is chosen.
+        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -97,12 +97,12 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         self._dense_matrix = True
 
     # Store the connectivity
-    if ("lil"==storage_format):
+    if ("lil" == storage_format):
         self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections), delays, storage_format)
-    elif ("csrc"==storage_format):
+    elif ("csr" == storage_format):
         self._store_connectivity(Connector.all_to_all_csrc, (weights, delays, allow_self_connections), delays, storage_format)
     else:
-        Global._error("Invalid connectivity format " + storage_format + " provided to all_to_all connector")
+        Global._error("Invalid connectivity format '" + storage_format + "' provided to all_to_all connector")
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -161,7 +161,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self._store_connectivity(Connector.dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections), delays)
     return self
 
-def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
+def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
     """
     Builds a probabilistic connection pattern between the two populations.
 
@@ -174,6 +174,7 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
         * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
         * **allow_self_connections** : defines if self-connections are allowed (default=False).
         * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -184,7 +185,13 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
+    if "lil" == storage_format:
+        self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
+    elif "csr" == storage_format:
+        self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
+    else:
+        Global._error("Invalid connectivity format '" + storage_format + "' provided to all_to_all connector")
+
     return self
 
 def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):

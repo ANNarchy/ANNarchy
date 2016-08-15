@@ -1,7 +1,7 @@
 from ANNarchy.core import Global
 import CSR_CUDA
 import LIL_OpenMP
-import Dense_OpenMP
+import CSR_OpenMP
 
 class Connectivity(object):
     """
@@ -196,7 +196,12 @@ class OpenMPConnectivity(Connectivity):
         super(OpenMPConnectivity, self).__init__()
 
     def configure(self, proj):
-        self._templates.update(LIL_OpenMP.conn_templates)
+        if proj._storage_format == "lil":
+            self._templates.update(LIL_OpenMP.conn_templates)
+        elif proj._storage_format == "csr":
+            self._templates.update(CSR_OpenMP.conn_templates)
+        else:
+            raise NotImplementedError
 
 class CUDAConnectivity(Connectivity):
     """
@@ -210,4 +215,7 @@ class CUDAConnectivity(Connectivity):
         super(CUDAConnectivity, self).__init__()
 
     def configure(self, proj):
-        self._templates.update(CSR_CUDA.conn_templates)
+        if proj._storage_format == "lil":
+            self._templates.update(CSR_CUDA.conn_templates)
+        else:
+            raise NotImplementedError

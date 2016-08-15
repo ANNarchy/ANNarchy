@@ -158,14 +158,14 @@ cdef _get_weights_delays(int size, weights, delays):
 ###################################################
 ########## CSRC object to hold synapses ###########
 ###################################################
-cdef class CSRC:
+cdef class CSR:
     """
-    Compressed sparse row and column (CSRC) data structure inspired by Brette et al.(2011)
+    Compressed sparse row (CSR) data structure inspired by Brette et al.(2011)
     
     This matrix uses pre-synaptic neurons as first order.
     """    
     def __cinit__(self, pre_size, post_size):
-        self._matrix = new CSRCMatrix(pre_size, post_size)
+        self._matrix = new CSRMatrix(pre_size, post_size)
 
     cpdef add(self, int pre_rank, post_rank, w, d):
         pass
@@ -258,13 +258,13 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
 
 def all_to_all_csrc(pre, post, weights, delays, allow_self_connections):
     """ Cython implementation of the all-to-all pattern, stored as CSRC and pre1st ordering. """
-    cdef CSRC projection
+    cdef CSR projection
 
     size_pre = pre.size if isinstance(pre, Population) else pre.population.size
     size_post = post.size if isinstance(post, Population) else post.population.size
     
     # Create the projection data as CSRC
-    projection = CSRC(size_pre, size_post)
+    projection = CSR(size_pre, size_post)
 
     # instantiate pattern
     projection.all_to_all(pre, post, weights, delays, allow_self_connections)

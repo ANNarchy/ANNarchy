@@ -284,11 +284,25 @@ class PyxGenerator(object):
 
         from ANNarchy.generator.Projection.Connectivity import CSR_CUDA
         from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
+        from ANNarchy.generator.Projection.Connectivity import CSR_OpenMP
 
-        # Import templates
-        connectivity_tpl = LIL_OpenMP.lil_connectivity_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_connectivity_matrix
+        # Import connectivity matrix and weight array template
+        # dependent on storage format and target platform
+        if Global.config['paradigm'] == "openmp":
+            if proj._storage_format == "lil":
+                connectivity_tpl = LIL_OpenMP.lil_connectivity_matrix
+                weight_tpl = LIL_OpenMP.lil_weight_matrix
+            elif proj._storage_format == "csr":
+                connectivity_tpl = CSR_OpenMP.connectivity_matrix
+                weight_tpl = CSR_OpenMP.weight_matrix
+            else:
+                raise NotImplementedError
+        elif Global.config['paradigm'] == "cuda":
+            connectivity_tpl = CSR_CUDA.csr_connectivity_matrix
+            weight_tpl = CSR_CUDA.csr_weight_matrix
+        else:
+            raise NotImplementedError
 
-        weight_tpl = LIL_OpenMP.lil_weight_matrix if Global.config['paradigm'] == "openmp" else CSR_CUDA.csr_weight_matrix
 
         if Global.config['paradigm'] == "openmp":
             sp_tpl = proj_omp_templates.structural_plasticity['pyx_struct']
@@ -408,7 +422,7 @@ class PyxGenerator(object):
 
         from ANNarchy.generator.Projection.Connectivity import CSR_CUDA
         from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
-        from ANNarchy.generator.Projection.Connectivity import CSRC_OpenMP
+        from ANNarchy.generator.Projection.Connectivity import CSR_OpenMP
 
         # Import connectivity matrix and weight array template
         # dependent on storage format and target platform
@@ -416,9 +430,9 @@ class PyxGenerator(object):
             if proj._storage_format == "lil":
                 connectivity_tpl = LIL_OpenMP.lil_connectivity_matrix
                 weight_tpl = LIL_OpenMP.lil_weight_matrix
-            elif proj._storage_format == "csrc":
-                connectivity_tpl = CSRC_OpenMP.connectivity_matrix
-                weight_tpl = CSRC_OpenMP.weight_matrix
+            elif proj._storage_format == "csr":
+                connectivity_tpl = CSR_OpenMP.connectivity_matrix
+                weight_tpl = CSR_OpenMP.weight_matrix
             else:
                 raise NotImplementedError
         elif Global.config['paradigm'] == "cuda":

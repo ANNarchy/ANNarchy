@@ -27,7 +27,7 @@ lil_connectivity_matrix = {
 """,
     'pyx_wrapper_args': "synapses",
     'pyx_wrapper_init': """
-        cdef CSR syn = synapses
+        cdef LIL syn = synapses
         cdef int size = syn.size
         cdef int nb_post = syn.post_rank.size()
         proj%(id_proj)s.set_size( size )
