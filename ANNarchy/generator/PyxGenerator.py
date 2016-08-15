@@ -553,6 +553,7 @@ class PyxGenerator(object):
             tpl_code += """
         map[int, vector[long]] spike
         bool record_spike
+        void clear_spike()
 """
 
         # Arrays for the presynaptic sums
@@ -600,8 +601,7 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_spike
         def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val
     def clear_spike(self):
-        for idx in range((<PopRecorder%(id)s *>self.thisptr).spike.size()):
-            (<PopRecorder%(id)s *>self.thisptr).spike[idx].clear()
+        (<PopRecorder%(id)s *>self.thisptr).clear_spike()
 """ % {'id' : pop.id}
 
         # Arrays for the presynaptic sums
