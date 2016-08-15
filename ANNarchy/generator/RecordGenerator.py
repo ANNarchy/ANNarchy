@@ -109,7 +109,13 @@ class RecordGenerator:
             struct_code += """
     // Local variable %(name)s
     std::map<int, std::vector< long int > > %(name)s ;
-    bool record_%(name)s ; """ % {'type' : 'long int', 'name': 'spike'}
+    bool record_%(name)s ;
+    void clear_spike() {
+        for ( auto it = spike.begin(); it != spike.end(); it++ ) {
+            it->second.clear();
+        }
+    }
+""" % {'type' : 'long int', 'name': 'spike'}
             init_code += """
         this->spike = std::map<int,  std::vector< long int > >();
         if(!this->partial){
