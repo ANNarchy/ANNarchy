@@ -579,9 +579,9 @@ cuda_synapse_kernel = \
 """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_step( /* default params */
-                              int *pre_rank, int* row_ptr, double dt
+                              %(default_args)s
                               /* additional params */
-                              %(var)s%(par)s,
+                              %(kernel_args)s,
                               /* plasticity enabled */
                               bool plasticity )
 {
@@ -608,7 +608,7 @@ __global__ void cuProj%(id)s_step( /* default params */
 """
 
 cuda_synapse_kernel_header = \
-"""__global__ void cuProj%(id)s_step( int *pre_rank, int *row_ptr, double dt%(var)s%(par)s, bool plasticity);
+"""__global__ void cuProj%(id)s_step( %(default_args)s%(kernel_args)s, bool plasticity);
 """
 
 cuda_synapse_kernel_call =\
@@ -616,11 +616,11 @@ cuda_synapse_kernel_call =\
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity ) {
         cuProj%(id_proj)s_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
-            proj%(id_proj)s.gpu_pre_rank,
-            proj%(id_proj)s.gpu_row_ptr,
-            dt
-            %(local)s
-            %(global)s
+            /* default args*/
+            %(default_args_call)s
+            /* kernel args */
+            %(kernel_args_call)s
+            /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
         );
 
