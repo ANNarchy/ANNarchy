@@ -8,7 +8,7 @@ list of list data structure.
 All templates are gathered in a dictionary called conn_templates,
 which should be used in CUDAGenerator or CUDAConnectivity.
 """
-csr_connectivity_matrix = {
+connectivity_matrix = {
     'declare': """
     // Connectivity (LIL)
     std::vector<int> post_rank ;
@@ -77,7 +77,7 @@ csr_connectivity_matrix = {
 """,
 }
 
-csr_weight_matrix = {
+weight_matrix = {
     'declare': """
     // Local variable w
     std::vector<std::vector<double> > w;
@@ -296,9 +296,9 @@ event_driven = {
 
 conn_templates = {
     # connectivity
-    'connectivity_matrix': csr_connectivity_matrix,
+    'connectivity_matrix': connectivity_matrix,
     'inverse_connectivity_matrix': inverse_connectivity_matrix,
-    'weight_matrix': csr_weight_matrix,
+    'weight_matrix': weight_matrix,
     'single_weight_matrix': None,
     
     # accessors

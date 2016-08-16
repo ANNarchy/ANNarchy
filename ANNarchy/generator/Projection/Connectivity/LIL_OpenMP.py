@@ -1,7 +1,7 @@
 ######################################
 ### LIL Connectivity matrix
 ######################################
-lil_connectivity_matrix = {
+connectivity_matrix = {
     'declare': """
     // Connectivity
     std::vector<int> post_rank;
@@ -51,7 +51,7 @@ lil_connectivity_matrix = {
 """
 }
 
-lil_weight_matrix = {
+weight_matrix = {
     'declare': """
     // LIL weights
     std::vector< std::vector< double > > w;
@@ -238,9 +238,9 @@ event_driven = {
 
 conn_templates = {
     # connectivity
-    'connectivity_matrix': lil_connectivity_matrix,
+    'connectivity_matrix': connectivity_matrix,
     'inverse_connectivity_matrix': inverse_connectivity_matrix,
-    'weight_matrix': lil_weight_matrix,
+    'weight_matrix': weight_matrix,
     'single_weight_matrix': single_weight_matrix,
     
     # accessors
