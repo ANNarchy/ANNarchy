@@ -28,7 +28,6 @@ from ANNarchy.core import Global
 from ANNarchy.generator.Utils import generate_equation_code, tabify
 
 import re
-from IPython.kernel.zmq.kernelapp import kernel_aliases
 
 class CUDAGenerator(ProjectionGenerator):
     """
