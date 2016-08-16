@@ -342,6 +342,7 @@ class CUDAGenerator(ProjectionGenerator):
         Generate code for the spike propagation.
         """
         updated_variables_list = []
+        deps = [] # list of dependencies for this kernel
 
         kernel_args = ""
         kernel_args_call = ""
@@ -367,6 +368,23 @@ class CUDAGenerator(ProjectionGenerator):
                 eq_code += """
         double _tmp_ = %(psp)s;
         atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code }
+
+                # Determine bounds
+                for key, val in eq['bounds'].items():
+                    if not key in ['min', 'max']:
+                        continue
+                    try:
+                        value = str(float(val))
+                    except: # TODO: more complex operations
+                        value = val % ids
+                        items = re.findall("[A-Za-z_]+\%\(", val)
+                        for item in items:
+                            deps.append(item.replace("%(",""))
+
+                    eq_code += """
+        if ( g_target[post_ranks[syn_idx]] %(op)s %(val)s )
+             g_target[post_ranks[syn_idx]] = %(val)s;
+""" % {'id_post': proj.post.id, 'op': "<" if key == 'min' else '>', 'val': value}
 
                 kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s" % {'id_post': proj.post.id, 'target': proj.target}
                 kernel_args += ", " + eq['ctype'] + "* " + eq['name']
@@ -402,7 +420,6 @@ if(%(condition)s){
         # Event-driven integration of synaptic variables
         #######################################################
         has_exact = False
-        deps = []
         event_driven_code = ''
         for var in proj.synapse_type.description['variables']:
 
