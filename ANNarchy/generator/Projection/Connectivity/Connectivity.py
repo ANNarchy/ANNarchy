@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-import CSR_CUDA
+from ANNarchy.generator.Projection.Connectivity import LIL_CUDA
 import LIL_OpenMP
 import CSR_OpenMP
 
@@ -144,6 +144,6 @@ class CUDAConnectivity(Connectivity):
 
     def configure(self, proj):
         if proj._storage_format == "lil":
-            self._templates.update(CSR_CUDA.conn_templates)
+            self._templates.update(LIL_CUDA.conn_templates)
         else:
             raise NotImplementedError
