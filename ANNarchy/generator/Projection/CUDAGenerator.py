@@ -229,7 +229,7 @@ class CUDAGenerator(ProjectionGenerator):
 
         return {
             'declare' : declare_connectivity_matrix,
-            'init' : init_connectivity_matrix,
+            'init' : init_connectivity_matrix % {'id_post': proj.post.id},
             'accessor' : access_connectivity_matrix,
             'declare_inverse': declare_inverse_connectivity_matrix,
             'init_inverse': init_inverse_connectivity_matrix

@@ -427,25 +427,8 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         # Local variables
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
-        # we replace the rand_%(id)s by the corresponding curand... term
-        for rd in pop.neuron_type.description['random_distributions']:
-            if rd['dist'] == "Uniform":
-                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            elif rd['dist'] == "Normal":
-                term = """curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            elif rd['dist'] == "LogNormal":
-                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            else:
-                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+        # we replace the random distributions
+        loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
 
         # remove all types
         repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
@@ -517,6 +500,31 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         return body, header, call
 
+    def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
+        """
+        we replace the rand_%(id)s by the corresponding curand... term
+        """
+        for rd in random_distributions:
+            if rd['dist'] == "Uniform":
+                term = """( curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """( curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            elif rd['dist'] == "Normal":
+                term = """( curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """( curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            elif rd['dist'] == "LogNormal":
+                term = """( curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """( curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            else:
+                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        return loc_eqs, glob_eqs
+
     def _update_spiking_neuron(self, pop):
         """
         Generate the neural update code for GPU devices. We split up the
@@ -567,24 +575,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
 
         # we replace the rand_%(id)s by the corresponding curand... term
-        for rd in pop.neuron_type.description['random_distributions']:
-            if rd['dist'] == "Uniform":
-                term = """curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            elif rd['dist'] == "Normal":
-                term = """curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            elif rd['dist'] == "LogNormal":
-                term = """curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s)""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            else:
-                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+        loc_eqs, glob_eqs = self._replace_random( loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'] )
 
         # remove all types
         repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]

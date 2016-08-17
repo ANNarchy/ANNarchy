@@ -528,6 +528,19 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 
 }
 
+cuda_spike_psp_kernel_one2one = \
+"""// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+    int syn_idx = spiked[blockIdx.x]; // one2one: syn_idx = n_idx
+
+    if(threadIdx.x == 0) {
+        g_target[syn_idx] += w[syn_idx];
+        if ( g_target[syn_idx] > max_trans[syn_idx] )
+            g_target[syn_idx] = max_trans[syn_idx];
+    }
+}
+"""
+
 cuda_spike_psp_kernel = \
 """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
