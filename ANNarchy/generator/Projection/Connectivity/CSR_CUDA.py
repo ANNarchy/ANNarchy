@@ -1,3 +1,26 @@
+#===============================================================================
+#
+#     CSR_CUDA.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 """
 This file contains all template codes to represent the connectivity as a
 compressed sparse row and column data structure.
@@ -54,7 +77,7 @@ connectivity_matrix = {
 """,
     'pyx_wrapper_args': " synapses",
     'pyx_wrapper_init': """
-        cdef CSR syn = synapses
+        cdef LIL syn = synapses
         cdef int size = syn.size
         cdef int nb_post = syn.post_rank.size()
         proj%(id_proj)s.set_size( size )

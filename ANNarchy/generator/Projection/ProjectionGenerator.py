@@ -77,6 +77,105 @@ class ProjectionGenerator(object):
         "Implemented by child class"
         raise NotImplementedError
 
+    def _declaration_accessors(self, proj):
+        """
+        Generate declaration and accessor code for variables/parameters of the projection.
+
+        Returns:
+            (dict, str): first return value contain declaration code and last one the accessor code.
+
+            The declaration dictionary has the following fields:
+                delay, event_driven, rng, parameters_variables, additional, cuda_stream
+        """
+        # create the code for non-specific projections
+        declare_event_driven = ""
+        declare_rng = ""
+        declare_parameters_variables = ""
+        declare_additional = ""
+
+        # choose templates dependend on the paradigm
+        decl_template = self._templates['attribute_decl']
+        acc_template = self._templates['attribute_acc']
+
+        # Delays
+        declare_delay = self._templates['delay']['declare']
+
+        # Code for declarations and accessors
+        accessor = ""
+        # Parameters
+        for var in proj.synapse_type.description['parameters']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+
+            ids = {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            declare_parameters_variables += decl_template[var['locality']] % ids
+            accessor += acc_template[var['locality']] % ids
+
+        # Variables
+        for var in proj.synapse_type.description['variables']:
+            if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+
+            ids = {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            declare_parameters_variables += decl_template[var['locality']] % ids
+            accessor += acc_template[var['locality']] % ids
+
+        # If no psp is defined, it's event-driven
+        has_event_driven = False
+        for var in proj.synapse_type.description['variables']:
+            if var['method'] == 'event-driven':
+                has_event_driven = True
+                break
+        if has_event_driven:
+            declare_event_driven = self._templates['event_driven']['declare']
+
+        # Arrays for the random numbers
+        if len(proj.synapse_type.description['random_distributions']) > 0:
+            declare_rng += """
+    // Random numbers
+"""
+            for rd in proj.synapse_type.description['random_distributions']:
+                declare_rng += """    std::vector< std::vector<double> > %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+""" % {'rd_name' : rd['name'], 'template': rd['template']}
+
+        # Local functions
+        if len(proj.synapse_type.description['functions']) > 0:
+            declare_parameters_variables += """
+    // Local functions
+"""
+            for func in proj.synapse_type.description['functions']:
+                declare_parameters_variables += ' '*4 + func['cpp'] + '\n'
+
+        # Structural plasticity
+        if Global.config['structural_plasticity']:
+            declare_parameters_variables += self._header_structural_plasticity(proj)
+
+        # Specific projections can overwrite
+        if 'declare_parameters_variables' in proj._specific_template.keys():
+            declare_parameters_variables = proj._specific_template['declare_parameters_variables']
+        if 'declare_rng' in proj._specific_template.keys():
+            declare_rng = proj._specific_template['declare_rng']
+        if 'declare_event_driven' in proj._specific_template.keys():
+            declare_event_driven = proj._specific_template['declare_event_driven']
+        if 'declare_delay' in proj._specific_template.keys():
+            declare_delay = proj._specific_template['declare_delay']
+        if 'declare_additional' in proj._specific_template.keys():
+            declare_additional = proj._specific_template['declare_additional']
+        if 'access_parameters_variables' in proj._specific_template.keys():
+            accessor = proj._specific_template['access_parameters_variables']
+
+        # Finalize the declarations
+        declaration = {
+            'delay': declare_delay,
+            'event_driven': declare_event_driven,
+            'rng': declare_rng,
+            'parameters_variables': declare_parameters_variables,
+            'additional': declare_additional
+        }
+
+        return declaration, accessor
+
     @staticmethod
     def _get_attr(proj, name):
         """

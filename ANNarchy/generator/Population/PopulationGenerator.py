@@ -203,55 +203,8 @@ class PopulationGenerator(object):
         return code
 
     def _stop_condition(self, pop):
-        """
-        Simulation can either end after a fixed point in time or
-        dependent on a population related condition. The code for
-        this is generated here and added to the ANNarchy.cpp/.cu
-        file.
-        """
-        if not pop.stop_condition: # no stop condition has been defined
-            return ""
-
-        # Process the stop condition
-        pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
-        from ANNarchy.parser.Extraction import extract_stop_condition
-        extract_stop_condition(pop.neuron_type.description)
-
-        # Retrieve the code
-        condition = pop.neuron_type.description['stop_condition']['cpp']% {
-            'id': pop.id,
-            'local_index': "[i]",
-            'global_index': ''}
-
-        # Generate the function
-        if pop.neuron_type.description['stop_condition']['type'] == 'any':
-            stop_code = """
-    // Stop condition (any)
-    bool stop_condition(){
-        for(int i=0; i<size; i++)
-        {
-            if(%(condition)s){
-                return true;
-            }
-        }
-        return false;
-    }
-    """ % {'condition': condition}
-        else:
-            stop_code = """
-    // Stop condition (all)
-    bool stop_condition(){
-        for(int i=0; i<size; i++)
-        {
-            if(!(%(condition)s)){
-                return false;
-            }
-        }
-        return true;
-    }
-    """ % {'condition': condition}
-
-        return stop_code
+        "Implemented by child class"
+        raise NotImplementedError
 
     def _update_fr(self, pop):
         "Implemented by child class"

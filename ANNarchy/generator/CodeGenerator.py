@@ -1,25 +1,26 @@
-"""
-    CodeGenerator.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#==============================================================================
+#
+#     CodeGenerator.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#==============================================================================
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from .PyxGenerator import PyxGenerator
@@ -30,8 +31,13 @@ from .Projection import OpenMPProjectionGenerator, CUDAProjectionGenerator
 
 class CodeGenerator(object):
     """
-    Implements the code generator class for OpenMP (and sequential) code.
-    OpenMP support is only enabled if the number of threads is higher then one.
+    The CodeGenerator class is responsible to control the code
+    generation process.
+
+    Unil now, it implements the code generation for OpenMP
+    (including sequential) and CUDA.The decision whether as
+    OpenMP or sequential code is dependent on the number of
+    threads.
     """
     def __init__(self, annarchy_dir, populations, projections, net_id, cuda_config):
         """
@@ -45,7 +51,8 @@ class CodeGenerator(object):
               files; they are stored in 'generate' sub-folder
             * *populations*: list of populations
             * *populations*: list of projections
-            * *cuda_config*: configuration dict for cuda. check _cuda_kernel_config for more details.
+            * *cuda_config*: configuration dict for cuda. check the method
+              _cuda_kernel_config for more details.
         """
         self._net_id = net_id
         self._annarchy_dir = annarchy_dir
@@ -59,16 +66,17 @@ class CodeGenerator(object):
             proj._generate()
 
         if Global.config['profiling']:
-            if Global.config['paradigm']=="openmp":
+            if Global.config['paradigm'] == "openmp":
                 from .Profile import PAPIProfile
                 self._profgen = PAPIProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
-            elif Global.config['paradigm']=="cuda":
+            elif Global.config['paradigm'] == "cuda":
                 from .Profile import CUDAProfile
                 self._profgen = CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
-                Global._error('No ProfileGenerator available for ' + Global.config['paradigm'])
+                Global._error('No ProfileGenerator available for '
+                              + Global.config['paradigm'])
         else:
             self._profgen = None
 
@@ -89,14 +97,15 @@ class CodeGenerator(object):
 
     def generate(self):
         """
-        Generate code files and store them in target directory (self._annarchy_dir/generate).
-        More detailed the following files are generated, by this class:
+        Generate code files and store them in target directory (located at
+        self._annarchy_dir/generate). More detailed the following files are
+        generated, by this class:
 
             * *ANNarchy.cpp*: main simulation loop, object instantiation
             * *ANNarchy.h*: collection of all objects, interface to Python
               extension
-            * *ANNarchyCore.pyx*: Python extension file, gathering all functions /
-              objects, which should be accessible from Python
+            * *ANNarchyCore.pyx*: Python extension file, gathering all
+               functions/ objects, which should be accessible from Python
             * for each population a seperate header file, contain semantic
               logic of a population respectively neuron object (filename:
               pop<id>).
@@ -135,15 +144,17 @@ class CodeGenerator(object):
         self._recordgen.generate()
 
         # Generate cpp code for the analysed pops and projs
-        if Global.config['paradigm']=="openmp":
+        if Global.config['paradigm'] == "openmp":
             with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy.cpp', 'w') as ofile:
-                ofile.write(self.generate_body())
-        elif Global.config['paradigm']=="cuda":
-            device_code, host_code = self.generate_body()
+                ofile.write(self._generate_body())
+
+        elif Global.config['paradigm'] == "cuda":
+            device_code, host_code = self._generate_body()
             with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyHost.cu', 'w') as ofile:
                 ofile.write(host_code)
             with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyDevice.cu', 'w') as ofile:
                 ofile.write(device_code)
+
         else:
             raise NotImplementedError
 
@@ -153,7 +164,11 @@ class CodeGenerator(object):
 
     def _propagate_global_ops(self):
         """
+        The parser analyses the synapse and neuron definitions and
+        store if global operations like min, max or mean are necessary.
 
+        Furthermore for synapses accesses to population variales (e. g. pre.r)
+        occure. In this case we need to generate special codes in the PopulationGenerator.
         """
         # Analyse the populations
         for pop in self._populations:
@@ -189,10 +204,6 @@ class CodeGenerator(object):
             pop.global_operations = [dict(y) for y in set(tuple(x.items()) for x in pop.global_operations)]
             pop.delayed_variables = list(set(pop.delayed_variables))
 
-
-#######################################################################
-############## HEADER #################################################
-#######################################################################
     def _generate_header(self):
         """
         Generate the ANNarchy.h code. This header represents the interface to
@@ -214,12 +225,12 @@ class CodeGenerator(object):
             proj_ptr += proj['extern']
 
         # Custom functions
-        custom_func = self.header_custom_functions()
+        custom_func = self._header_custom_functions()
 
         # Include OMP
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
-        if Global.config['paradigm']=="openmp":
+        if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_header_template
             return omp_header_template % {
                 'pop_struct': pop_struct,
@@ -229,7 +240,7 @@ class CodeGenerator(object):
                 'custom_func': custom_func,
                 'include_omp': include_omp
             }
-        else:
+        elif Global.config['paradigm'] == "cuda":
             from Template.BaseTemplate import cuda_header_template
             return cuda_header_template % {
                 'pop_struct': pop_struct,
@@ -237,9 +248,15 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr
             }
+        else:
+            raise NotImplementedError
 
-    def header_custom_functions(self):
-
+    def _header_custom_functions(self):
+        """
+        Generate code for custom functions attached to neuron or
+        synapse descriptions. These function can only rely on
+        provided arguments.
+        """
         if len(Global._objects['functions']) == 0:
             return ""
 
@@ -250,10 +267,15 @@ class CodeGenerator(object):
 
         return code
 
-#######################################################################
-############## BODY ###################################################
-#######################################################################
-    def generate_body(self):
+    def _generate_body(self):
+        """
+        Generate the codes 'main' library file. The generated code
+        will be used in different files, dependent on the chosen
+        target platform:
+
+        * openmp: ANNarchy.cpp
+        * cuda: ANNarchyHost.cu and ANNarchyDevice.cu
+        """
         # struct declaration for each population
         pop_ptr = ""
         for pop in self._pop_desc:
@@ -265,17 +287,17 @@ class CodeGenerator(object):
             proj_ptr += proj['instance']
 
         # Code for the global operations
-        glop_definition = self.body_def_glops()
+        glop_definition = self._body_def_glops()
         update_globalops = ""
         for pop in self._pop_desc:
             if 'gops_update' in pop.keys():
                 update_globalops += pop['gops_update']
 
         # Reset presynaptic sums
-        reset_sums = self.body_resetcomputesum_pop()
+        reset_sums = self._body_resetcomputesum_pop()
 
         # Compute presynaptic sums
-        compute_sums = self.body_computesum_proj()
+        compute_sums = self._body_computesum_proj()
 
         # Update random distributions
         rd_update_code = ""
@@ -308,7 +330,7 @@ class CodeGenerator(object):
                 post_event += proj['post_event']
 
         # Structural plasticity
-        structural_plasticity = self.body_structural_plasticity()
+        structural_plasticity = self._body_structural_plasticity()
 
         # Early stopping
         run_until = self.body_run_until()
@@ -324,12 +346,12 @@ class CodeGenerator(object):
             prof_dict = ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
 
         #
-        # Generate the ANNarchy.cpp code, the corrsponding template differs greatly
-        # for further information take a look into the corresponding branch
+        # Generate the ANNarchy.cpp code, the corrsponding template differs
+        # greatly. For further information take a look into the corresponding
+        # branches.
         #
 
-        # Generate cpp code for the analysed pops and projs
-        if Global.config['paradigm']=="openmp":
+        if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_body_template
             base_dict = {
                 'pop_ptr': pop_ptr,
@@ -349,9 +371,9 @@ class CodeGenerator(object):
                 'set_number_threads' : number_threads
             }
 
-            base_dict.update( prof_dict )
+            base_dict.update(prof_dict)
             return omp_body_template % base_dict
-        else:
+        elif Global.config['paradigm'] == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )
             #
             # The CUDA linking process is a big problem for object oriented approaches
@@ -414,7 +436,7 @@ class CodeGenerator(object):
                 postevent_call += proj['postevent_call']
 
             # global operations
-            glob_ops_header, glob_ops_body = self.body_def_glops()
+            glob_ops_header, glob_ops_body = self._body_def_glops()
             kernel_def += glob_ops_header
 
             # determine number of threads per kernel and concurrent kernel execution
@@ -434,13 +456,15 @@ class CodeGenerator(object):
             #
             # HD ( 31.07.2016 ):
             #
-            # I'm not really sure, what exactly causes the problem with this atomicAdd function. If
-            # we move it into ANNarchyDevice.cu, the macro seems to be evaluated wrongly and the
-            # atomicAdd() function appears doubled or appears not.
+            # I'm not really sure, what exactly causes the problem with this
+            # atomicAdd function. If we move it into ANNarchyDevice.cu, the
+            # macro seems to be evaluated wrongly and the atomicAdd() function
+            # appears doubled or appears not.
             #
-            # So as "solution", the atomicAdd definition block resides in ANNarchyHost and only the
-            # computation kernels are placed in ANNarchyDevice. If we decide to use SDK8 as lowest
-            # requirement, one can move this kernel too.
+            # So as "solution", the atomicAdd definition block resides in
+            # ANNarchyHost and only the computation kernels are placed in
+            # ANNarchyDevice. If we decide to use SDK8 as lowest requirement,
+            # one can move this kernel too.
             from Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template
             device_code = cuda_device_kernel_template % {
                 #device stuff
@@ -473,9 +497,11 @@ class CodeGenerator(object):
                 'kernel_def': kernel_def,
                 'kernel_config': threads_per_kernel,
             }
-            base_dict.update( prof_dict )
+            base_dict.update(prof_dict)
             host_code = cuda_host_body_template % base_dict
             return device_code, host_code
+        else:
+            raise NotImplementedError
 
     def _body_initialize(self):
         """
@@ -501,17 +527,24 @@ class CodeGenerator(object):
         for proj in self._proj_desc:
             projection_init += proj['init']
 
-        if Global.config['paradigm']=="openmp":
+        if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_initialize_template as init_tpl
-        else:
+        elif Global.config['paradigm'] == "cuda":
             from .Template.BaseTemplate import cuda_initialize_template as init_tpl
+        else:
+            raise NotImplementedError
 
-        return init_tpl % { 'prof_init': profiling_init,
-                            'pop_init': population_init,
-                            'proj_init': projection_init
-                          }
+        return init_tpl % {
+            'prof_init': profiling_init,
+            'pop_init': population_init,
+            'proj_init': projection_init
+        }
 
-    def body_computesum_proj(self):
+    def _body_computesum_proj(self):
+        """
+        Call the copmpute_psp() method of Projection structs, only in case of
+        openMP.
+        """
         code = ""
         # Sum over all synapses
         for proj in self._projections:
@@ -521,7 +554,11 @@ class CodeGenerator(object):
 
         return code
 
-    def body_resetcomputesum_pop(self):
+    def _body_resetcomputesum_pop(self):
+        """
+        Rate-coded neurons sum up the received inputs in temporary variables.
+        They need to be cleared in each time step.
+        """
         code = ""
         for pop in self._populations:
             if pop.neuron_type.type == 'rate':
@@ -529,7 +566,10 @@ class CodeGenerator(object):
 
         return code
 
-    def body_structural_plasticity(self):
+    def _body_structural_plasticity(self):
+        """
+        Call of pruning or creating methods if necessary.
+        """
         # Pruning if any
         pruning = ""
         creating = ""
@@ -542,7 +582,7 @@ class CodeGenerator(object):
 
         return creating + pruning
 
-    def body_def_glops(self):
+    def _body_def_glops(self):
         """
         Dependent on the used global operations we add pre-defined templates
         to the ANNarchy body file.
@@ -627,16 +667,22 @@ class CodeGenerator(object):
                 if pop in self._cuda_config.keys():
                     num_threads = self._cuda_config[pop]['num_threads']
 
-            code+= """#define __pop%(id)s__ %(nr)s\n""" % { 'id': pop.id, 'nr': num_threads }
+            code += """#define __pop%(id)s__ %(nr)s\n""" % {
+                'id': pop.id, 'nr': num_threads
+            }
 
-        code += "\n// Population config\n"
+        code += "\n// Projection config\n"
         for proj in self._projections:
             num_threads = 192
             if self._cuda_config:
                 if proj in self._cuda_config.keys():
                     num_threads = self._cuda_config[proj]['num_threads']
 
-            code+= """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n""" % { 'pre': proj.pre.id, 'post': proj.post.id, 'target': proj.target, 'nr': num_threads }
+            cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n"""
+            code += cfg % {
+                'pre': proj.pre.id, 'post': proj.post.id,
+                'target': proj.target, 'nr': num_threads
+            }
 
         # HD:
         # the try-except blocks here are a REALLY lazy method.
@@ -651,19 +697,19 @@ class CodeGenerator(object):
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
                 pop_assign += """    pop%(pid)s.stream = 0;
-""" % {'pid': pop.id }
+""" % {'pid': pop.id}
 
         proj_assign = "    // populations\n"
         for proj in self._projections:
             try:
                 sid = self._cuda_config[proj]['stream']
                 proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
-""" % {'pid': proj.id, 'sid': sid }
+""" % {'pid': proj.id, 'sid': sid}
             except:
                 # default stream, if either no cuda_config at all or
                 # the projection is not configured by user
                 proj_assign += """    proj%(pid)s.stream = 0;
-""" % {'pid': proj.id }
+""" % {'pid': proj.id}
 
         from Template.BaseTemplate import cuda_stream_setup
         stream_config = cuda_stream_setup % {
@@ -694,7 +740,7 @@ class CodeGenerator(object):
             guess = max_tpb
 
         # check which is the closest possible thread amount
-        pow_of_2 = [ 2**x for x in range(int(log(warp_size,2)), int(log(max_tpb,2))+1)]
+        pow_of_2 = [2**x for x in range(int(log(warp_size, 2)), int(log(max_tpb, 2))+1)]
         for i in range(len(pow_of_2)):
             if pow_of_2[i] < num_neur:
                 continue

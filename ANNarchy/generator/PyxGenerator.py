@@ -1,26 +1,26 @@
-"""
-
-    PyxGenerator.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     PyxGenerator.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 from ANNarchy.core import Global
 
 import ANNarchy.generator.Template.PyxTemplate as PyxTemplate
@@ -320,7 +320,7 @@ class PyxGenerator(object):
         # Special case for single weights
         if proj._has_single_weight():
             if Global.config['paradigm'] == "openmp":
-                weight_tpl = weight_tpl.single_weight_matrix
+                weight_tpl = template_dict['single_weight_matrix']
             else:
                 raise NotImplementedError
 
@@ -572,6 +572,7 @@ class PyxGenerator(object):
             tpl_code += """
         map[int, vector[long]] spike
         bool record_spike
+        void clear_spike()
 """
 
         # Arrays for the presynaptic sums
@@ -619,8 +620,7 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_spike
         def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val
     def clear_spike(self):
-        for idx in range((<PopRecorder%(id)s *>self.thisptr).spike.size()):
-            (<PopRecorder%(id)s *>self.thisptr).spike[idx].clear()
+        (<PopRecorder%(id)s *>self.thisptr).clear_spike()
 """ % {'id' : pop.id}
 
         # Arrays for the presynaptic sums

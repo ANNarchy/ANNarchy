@@ -500,7 +500,10 @@ def extract_stop_condition(pop):
                           pop,
                           type = 'cond')
     code = translator.parse()
+    deps = translator.dependencies()
+
     pop['stop_condition']['cpp'] = '(' + code + ')'
+    pop['stop_condition']['dependencies'] = deps
 
 def extract_structural_plasticity(statement, description):
     # Extract flags

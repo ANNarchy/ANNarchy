@@ -461,10 +461,7 @@ void initialize(double _dt, long seed) ;
 
 void run(int nbSteps);
 
-inline int run_until(int steps, std::vector<int> populations, bool or_and) {
-    printf("NOT IMPLEMENTED ...");
-    return 0;
-}
+int run_until(int steps, std::vector<int> populations, bool or_and);
 
 void step();
 
@@ -715,6 +712,10 @@ void run(int nbSteps) {
 
     //std::cout << std::endl;
 %(device_host_transfer)s
+}
+
+int run_until(int steps, std::vector<int> populations, bool or_and) {
+%(run_until)s
 }
 
 void step() {
