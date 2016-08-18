@@ -155,6 +155,9 @@ class RecordGenerator(object):
         for var in proj.synapse_type.description['variables']:
             struct_code += tpl_code[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
             init_code += tpl_code[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
-            recording_code += tpl_code[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+            if proj._storage_format == "lil":
+                recording_code += tpl_code[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+            else:
+                Global._print("variable "+ var['name'] + " is not recorded...")
 
         return tpl_code['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}

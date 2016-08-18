@@ -217,6 +217,7 @@ class ProjectionGenerator(object):
             init = 0.0 if var['ctype'] == 'double' else 0
             code += attr_init_tpl[var['locality']] % {
                 'id': proj.id,
+                'id_post': proj.post.id,
                 'name': var['name'],
                 'type': var['ctype'],
                 'init': init,

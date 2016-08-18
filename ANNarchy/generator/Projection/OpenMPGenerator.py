@@ -1,26 +1,26 @@
-"""
-
-    OpenMPGenerator.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     OpenMPGenerator.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
 from .OpenMPTemplates import openmp_templates
 from .Connectivity import OpenMPConnectivity
@@ -46,6 +46,16 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 
     def header_struct(self, proj, annarchy_dir):
         """
+        Generate the projection header for a given projection. The resulting
+        code will be stored in a file called proj<unique_id>.hpp in the
+        directory indicated by annarchy_dir.
+
+        This function will be called from CodeGenerator.
+
+        Returns:
+
+        * proj_desc: a dictionary with all call statements for the distinct
+        operations (like compute_psp, update_synapse, etc.)
         """
         # configure Connectivity base class
         self.configure(proj)
@@ -105,6 +115,13 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         if 'access_additional' in proj._specific_template.keys():
             access_additional = proj._specific_template['access_additional']
 
+        init_inverse = connectivity_matrix['init_inverse'] % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'post_size': proj.post.size # only needed if storage_format == "csr"
+        }
+
         final_code = self._templates['projection_header'] % {
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
@@ -124,7 +141,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'declare_additional': decl['additional'],
             'declare_profile': declare_profile,
             'init_connectivity_matrix': connectivity_matrix['init'],
-            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_proj': proj.id, 'id_pre': proj.pre.id, 'id_post': proj.post.id},
+            'init_inverse_connectivity_matrix': init_inverse,
             'init_event_driven': "",
             'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
@@ -448,7 +465,19 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         return psp_prefix, final_code
 
     def _computesum_spiking(self, proj):
-        # Needed variables
+        """
+        Generate codes for spike propagation and pre-spike part of event-driven equations.
+
+        Returns:
+
+            * psp_prefix: set of variables needed in the kernel, positioned at the begin of
+                          Projection::compute_psp() method.
+            * code: computation body
+
+        Specific templates:
+
+            * psp_prefix and psp_code
+        """
         if 'psp_prefix' in proj._specific_template.keys() and 'psp_code' in proj._specific_template.keys():
             try:
                 psp_prefix = proj._specific_template['psp_prefix']
@@ -484,7 +513,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'id_pre': proj.pre.id,
                 'target': proj.target,
                 'local_index': "[syn]",
-                'global_index': '[i]'
+                'global_index': '[_col_idx[syn]]'
             }
         else:
             raise NotImplementedError
@@ -519,7 +548,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     if proj._storage_format == "lil":
                         acc = "post_rank[i]"
                     elif proj._storage_format == "csr":
-                        acc = "_post_ranks[syn]"
+                        acc = "_col_idx[syn]"
                     else:
                         raise NotImplementedError
 
@@ -531,11 +560,19 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                         'acc': acc,
                     }
 
-                    g_target_code += """
+                    if Global.config['num_threads'] == 1:
+                        g_target_code += """
             // Increase the post-synaptic conductance %(eq)s
             pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
 """ % target_dict
-
+                    else:
+                        # access to post variable requires
+                        # an atomic operation
+                        g_target_code += """
+            // Increase the post-synaptic conductance %(eq)s
+            #pragma omp atomic
+            pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
+""" % target_dict
                     # Determine bounds
                     for key, val in eq['bounds'].items():
                         if not key in ['min', 'max']:
@@ -543,7 +580,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                         try:
                             value = str(float(val))
                         except: # TODO: more complex operations
-                            value = val % {'id_proj' : proj.id, 'global_index' : '[i]', 'local_index' : '[i][j]'}
+                            value = val % ids
 
                         g_target_code += """
             if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
@@ -551,32 +588,43 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 """ % {'id_post': proj.post.id, 'target': target, 'op': "<" if key == 'min' else '>', 'val': value}
 
             else:
+                # process equations in pre_spike which
+                # are not 'g_target'
+
                 condition = ""
                 # Check conditions to update the variable
                 if eq['name'] == 'w': # Surround it by the learning flag
                     condition = "_plasticity" # Plasticity can be disabled
+
                 if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
                     simultaneous = "pop%(id_pre)s.last_spike[pre_rank[i][j]] != pop%(id_post)s.last_spike[post_rank[i]]" % {'id_post': proj.post.id, 'id_pre': proj.pre.id}
                     if condition == "":
                         condition = simultaneous
                     else:
                         condition += "&&(" + simultaneous + ")"
-                # Generate the code
+
+                eq_dict = {
+                    'eq': eq['eq'],
+                    'cpp': eq['cpp'] % ids,
+                    'bounds': get_bounds(eq) % ids,
+                    'condition': condition
+                }
+
+                # Generate the code, either with or without coundition
                 if condition != "":
                     updated_variables_list += """
 // unless_post can prevent evaluation of presynaptic variables
-if(%(condition)s){
+if (%(condition)s) {
     // %(eq)s
     %(cpp)s
     %(bounds)s
 }
-""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids, 'condition': condition}
-
+""" % eq_dict
                 else: # Normal synaptic variable
                     updated_variables_list += """
 // %(eq)s
 %(cpp)s
-%(bounds)s""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
+%(bounds)s""" % eq_dict
 
 
         # Generate the default post-conductance increase
@@ -592,7 +640,7 @@ if(%(condition)s){
             for target in targets:
                 g_target_code += """
             // Increase the post-synaptic conductance g_target += w
-            pop%(id_post)s.g_%(target)s[post_rank[i]] += w[i][j];
+            pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_idx)s;
 """ % ids
 
         # Special case where w is a single value
@@ -612,12 +660,12 @@ if(%(condition)s){
                 event_driven_code += """
             // %(eq)s
             %(exact)s
-""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id, 'local_index': "[i][j]", 'global_index': '[i]'}}
+""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') % ids}
         if has_exact:
             event_driven_code += """
             // Update the last event for the synapse
             _last_event%(local_index)s = t;
-""" % {'local_index': "[i][j]"}
+""" % ids
 
         # Generate code for pre-spike variables
         pre_code = ""
@@ -794,21 +842,43 @@ if(%(condition)s){
         if proj.synapse_type.description['post_spike'] == []:
             return "", ""
 
-        ids = {
-            'id_proj' : proj.id,
-            'target': proj.target,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
-            'local_index': "[i][j]",
-            'global_index': '[i]',
-            'pre_index': '[pre_rank[i][j]]',
-            'post_index': '[post_rank[i]]',
-            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-            'post_prefix': 'pop'+ str(proj.post.id) + '.'
-        }
+        if proj._storage_format == "lil":
+            ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': "[i][j]",
+                'global_index': '[i]',
+                'pre_index': '[pre_rank[i][j]]',
+                'post_index': '[post_rank[i]]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+            }
 
-        post_event_prefix = """
+            post_event_prefix = """
         int i, j, rk_post, nb_pre;"""
+        elif proj._storage_format == "csr":
+            ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': "[_inv_idx[j]]",
+                'global_index': '[*it]',
+                'pre_index': '[]',
+                'post_index': '[]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+            }
+
+            post_event_prefix = """
+        int rk_post;
+        std::vector<int>::iterator it;
+        """
+
+        else:
+            raise NotImplementedError
 
         # Event-driven integration
         has_event_driven = False
@@ -825,8 +895,9 @@ if(%(condition)s){
                     event_driven_code += var['cpp'] % ids + '\n'
             event_driven_code += """
 // Update the last event for the synapse
-_last_event[i][j] = t;
-"""
+_last_event%(local_index)s = t;
+""" % ids
+
             event_driven_code = tabify(event_driven_code, 3)
 
         # Gather the equations
@@ -846,7 +917,8 @@ _last_event[i][j] = t;
             omp_code = ""
 
         # Generate the code block
-        code = """
+        if proj._storage_format == "lil":
+            code = """
 if(_transmission && pop%(id_post)s._active){
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
@@ -864,10 +936,39 @@ if(_transmission && pop%(id_post)s._active){
         }
     }
 }
-"""%{'id_post': proj.post.id,
-    'post_event': post_code,
-    'event_driven': event_driven_code,
-    'omp_code': omp_code}
+""" % {
+        'id_post': proj.post.id,
+        'post_event': post_code,
+        'event_driven': event_driven_code,
+        'omp_code': omp_code
+    }
+        elif proj._storage_format == "csr":
+            code = """
+if(_transmission && pop%(id_post)s._active){
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        rk_post = pop%(id_post)s.spiked[_idx_i];
+        // Find its index in the projection
+        it = std::find(post_ranks.begin(), post_ranks.end(), rk_post);
+        // Leave if the neuron is not part of the projection
+        if (it==post_ranks.end())
+            continue;
+        // Iterate over all synapse to this neuron
+        %(omp_code)s
+        for(int j = _col_ptr[*it]; j < _col_ptr[(*it)+1]; j++){
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+""" % {
+        'id_post': proj.post.id,
+        'post_event': post_code,
+        'event_driven': event_driven_code,
+        'omp_code': omp_code
+    }
+        else:
+            raise NotImplementedError
 
         return post_event_prefix, tabify(code, 2)
 

@@ -1,4 +1,5 @@
 from .test_Connectivity import test_Connectivity
+from .test_CSRConnectivity import test_CSRConnectivity
 from .test_Dendrite import test_Dendrite
 from .test_GlobalOperation import test_GlobalOps_1D, test_GlobalOps_2D
 from .test_Population import test_Population1D, test_Population2D, test_Population3D, test_Population2x3D

@@ -1,6 +1,6 @@
 """
 
-    test_Connectivity.py
+    test_CSRConnectivity.py
 
     This file is part of ANNarchy.
 
@@ -24,37 +24,22 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Projection, Network
+from ANNarchy import Izhikevich, Population, Projection, Network
 
-neuron = Neuron(
-    equations="r = 1"
+pop1 = Population((3, 3), Izhikevich)
+pop2 = Population((3, 3), Izhikevich)
+
+proj = Projection(
+    pre = pop1,
+    post = pop2,
+    target = "exc",
 )
 
-neuron2 = Neuron(
-    equations="r = sum(exc)"
-)
-
-pop1 = Population((3, 3), neuron)
-pop2 = Population((3, 3), neuron2)
-
-proj1 = Projection(
-     pre = pop1,
-     post = pop2,
-     target = "exc",
-)
-
-proj2 = Projection(
-     pre = pop1,
-     post = pop2,
-     target = "exc",
-)
-
-proj1.connect_one_to_one(weights = 0.1)
-proj2.connect_all_to_all(weights = 0.1)
+proj.connect_all_to_all(weights = 0.1, storage_format="csr")
 
 # TODO: PopulationViews
 
-class test_Connectivity(unittest.TestCase):
+class test_CSRConnectivity(unittest.TestCase):
     """
     This class tests the functionality of the connectivity patterns within *Projections*.
     """
@@ -64,26 +49,14 @@ class test_Connectivity(unittest.TestCase):
         Compile the network for this test
         """
         self.test_net = Network()
-        self.test_net.add([pop1, pop2, proj1, proj2])
-        self.test_net.compile(silent=True)
+        self.test_net.add([pop1, pop2, proj])
+        self.test_net.compile(silent=True, debug_build=True)
 
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network before every test.
         """
         self.test_net.reset()
-
-    def test_one_to_one(self):
-        """
-        Tests the *one_to_one* connectivity pattern, in which every pre-synaptic neuron
-        is connected to its ranked equivalent post-synaptic neuron.
-
-        We test correctness of ranks and weight values.
-        """
-        tmp = self.test_net.get(proj1)
-
-        self.assertEqual(tmp.dendrite(3).rank, [3])
-        self.assertTrue(numpy.allclose(tmp.dendrite(3).w, [0.1]))
 
     def test_all_to_all(self):
         """
@@ -92,7 +65,7 @@ class test_Connectivity(unittest.TestCase):
 
         We test correctness of ranks and weight values.
         """
-        tmp = self.test_net.get(proj2)
+        tmp = self.test_net.get(proj)
 
         self.assertEqual(tmp.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
         self.assertTrue(numpy.allclose(tmp.dendrite(3).w, numpy.ones((8, 1)) * 0.1))

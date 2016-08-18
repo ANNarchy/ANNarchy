@@ -72,6 +72,10 @@ public:
 		return values_;
 	}
 
+	inline int num_elements() {
+		return values_.size();
+	}
+
 	/**
 	 * 	\brief		add all connections of one dendrite
 	 * 	\details

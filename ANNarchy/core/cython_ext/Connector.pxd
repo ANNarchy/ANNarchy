@@ -40,6 +40,8 @@ cdef extern from "CSRMatrix.hpp":
         vector[int] column_indices()
         vector[double] values()
 
+        int num_elements()
+
 cdef class CSR:
     """
     Container for the ranks, weights and delays of a projection.
