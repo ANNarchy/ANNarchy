@@ -36,6 +36,9 @@ public:
 		fwd_row_ = std::vector<int>(num_rows_, 0);
 		fwd_col_idx_ = std::vector<int>();
 		values_ = std::vector<double>();
+	#ifdef _DEBUG
+		std::cout << "create CSR matrix: " << num_rows << ", " << num_columns << std::endl;
+	#endif
 	}
 
 	~CSRMatrix() {
@@ -84,11 +87,19 @@ public:
 	 * 	\param[in]	w			synaptic weights
 	 */
 	void push_back(int row, std::vector<int> columns, std::vector<double> w, std::vector<int> d) {
+	#ifdef _DEBUG
+		std::cout << "push_back: row = " << row << ", columns.size() = " << columns.size() << ", w.size() = " << w.size() << ", d.size() = " << d.size() << std::endl;
+	#endif
 		int old_idx = fwd_row_[row+1];
 
 		fwd_col_idx_.insert(fwd_col_idx_.begin()+old_idx, columns.begin(), columns.end());
-		values_.insert(values_.begin()+old_idx, w.begin(), w.end());
-
+		if (w.size() > 1 || columns.size() == 1) {
+			// either multiple weights, or a single connection
+			values_.insert(values_.begin()+old_idx, w.begin(), w.end());
+		} else {
+			auto tmp_w = std::vector<double>(columns.size(), w[0]);
+			values_.insert(values_.begin()+old_idx, tmp_w.begin(), tmp_w.end());
+		}
 		for( auto it = fwd_row_.begin()+row+1; it != fwd_row_.end(); it++ )
 			*it += columns.size();
 	}

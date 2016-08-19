@@ -54,3 +54,4 @@ cdef class CSR:
     
     # pre-defined pattern
     cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections)
+    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections)

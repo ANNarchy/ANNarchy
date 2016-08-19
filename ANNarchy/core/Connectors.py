@@ -186,9 +186,9 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
         self._single_constant_weight = True
 
     if "lil" == storage_format:
-        self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
+        self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays, storage_format)
     elif "csr" == storage_format:
-        self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays)
+        self._store_connectivity(Connector.fixed_probability_csr, (probability, weights, delays, allow_self_connections), delays, storage_format)
     else:
         Global._error("Invalid connectivity format '" + storage_format + "' provided to all_to_all connector")
 

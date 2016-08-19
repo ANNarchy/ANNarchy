@@ -192,24 +192,64 @@ cdef class CSR:
                     pass
             r = tmp
             size_post = len(tmp)
-            
+
             # Weights
             if isinstance(weights, (int, float)):
                 weight = weights
                 w = vector[double](1, weight)
             elif isinstance(weights, RandomDistribution):
                 w = weights.get_list_values(size_post)
-            
+
             # Delays
             if isinstance(delays, (float, int)):
                 d = vector[double](1, delays)
             elif isinstance(delays, RandomDistribution):
                 d = delays.get_list_values(size_post)
             d_int = np.array(d) / Global.config['dt']
-                    
+
             # Create the dendrite
             self._matrix.push_back(r_pre, r, w, d_int)
-        
+
+    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections):
+        cdef int max_size_post
+        cdef list pre_ranks
+        cdef vector[int] r, d_int
+        cdef vector[double] w, d
+        cdef np.ndarray random_values, tmp, post_ranks
+
+        # Retríeve ranks
+        pre_ranks = pre.ranks
+        post_ranks = np.array(post.ranks)
+        max_size_post = len(post.ranks)
+
+        for r_pre in pre_ranks:
+            # List of pre ranks
+            random_values = np.random.random(max_size_post)
+            tmp = post_ranks[random_values < probability]
+            if not allow_self_connections:
+                tmp = tmp[tmp != r_pre]
+            r = tmp
+            size_post = tmp.size
+            if size_post == 0:
+                continue
+
+            # Weights
+            if isinstance(weights, (int, float)):
+                weight = weights
+                w = vector[double](1, weight)
+            elif isinstance(weights, RandomDistribution):
+                w = weights.get_list_values(size_post)
+
+            # Delays
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(size_post)
+            d_int = np.array(d) / Global.config['dt']
+
+            # Create the dendrite
+            self._matrix.push_back(r_pre, r, w, d_int)
+
 #################################
 #### Connector methods ##########
 #################################
@@ -365,6 +405,21 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
             d = delays.get_list_values(size_pre)
         # Create the dendrite
         projection.push_back(r_post, r, w, d)
+
+    return projection
+
+def fixed_probability_csr(pre, post, probability, weights, delays, allow_self_connections):
+    """ Cython implementation of the fixed_probability pattern, stored as CSRC and pre1st ordering. """
+    cdef CSR projection
+
+    size_pre = pre.size if isinstance(pre, Population) else pre.population.size
+    size_post = post.size if isinstance(post, Population) else post.population.size
+
+    # Create the projection data as CSRC
+    projection = CSR(size_pre, size_post)
+
+    # instantiate pattern
+    projection.fixed_probability(pre, post, probability, weights, delays, allow_self_connections)
 
     return projection
 
