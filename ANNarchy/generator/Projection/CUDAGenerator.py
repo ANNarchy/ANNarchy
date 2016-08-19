@@ -106,6 +106,18 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         if 'access_additional' in proj._specific_template.keys():
             access_additional = proj._specific_template['access_additional']
 
+        inverse_connectivity_matrix = connectivity_matrix['init_inverse'] % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'post_size': proj.post.size # only needed by CSR
+        }
+
+        if proj._storage_format == "lil":
+            cuda_flattening = CUDATemplates.cuda_flattening % {'id_post':proj.post.id}
+        else:
+            cuda_flattening = ""
+
         final_code = self._templates['projection_header'] % {
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
@@ -126,7 +138,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'declare_additional': decl['additional'],
             'declare_profile': declare_profile,
             'init_connectivity_matrix': connectivity_matrix['init'],
-            'init_inverse_connectivity_matrix': connectivity_matrix['init_inverse'] % {'id_proj': proj.id, 'id_pre': proj.pre.id, 'id_post': proj.post.id},
+            'init_inverse_connectivity_matrix': inverse_connectivity_matrix,
             'init_event_driven': "",
             'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
@@ -137,7 +149,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'access_additional': access_additional,
             'host_to_device': host_device_transfer,
             'device_to_host': device_host_transfer,
-            'cuda_flattening': CUDATemplates.cuda_flattening % {'id_post':proj.post.id}
+            'cuda_flattening': cuda_flattening
         }
 
         # Store file
@@ -289,14 +301,26 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         eq_code = ""
 
         # Basic tags
-        ids = {
-            'id_proj' : proj.id,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
-            'target': proj.target,
-            'local_index': "[indices[syn_idx]]",
-            'global_index': '[post_ranks[syn_idx]]'
-        }
+        if proj._storage_format == "lil":
+            ids = {
+                'id_proj' : proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'local_index': "[indices[syn_idx]]",
+                'global_index': '[post_ranks[syn_idx]]'
+            }
+        elif proj._storage_format == "csr":
+            ids = {
+                'id_proj' : proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'local_index': "[syn_idx]",
+                'global_index': '[post_ranks[syn_idx]]'
+            }
+        else:
+            raise NotImplementedError
 
         for eq in proj.synapse_type.description['pre_spike']:
 
@@ -306,7 +330,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 # The temporary variable (_tmp_) is not absolutely essential,
                 # but it might be better, as the psp term can be complex.
                 eq_code += """
-        double _tmp_ = %(psp)s;
+        double _tmp_ = %(psp)s
         atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code }
 
                 # Determine bounds
@@ -409,7 +433,27 @@ if(%(condition)s){
             kernel_args += ", "+ attr['ctype']+ "* " + attr['name']
             kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'name': attr['name']}
 
-        conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+        if proj._storage_format == "lil":
+            conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
+            conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
+            prefix = """
+    int pre_idx = spiked[blockIdx.x];
+    int syn_idx = col_ptr[pre_idx]+threadIdx.x;
+"""
+            row_desc = "syn_idx < col_ptr[pre_idx+1]"
+        elif proj._storage_format == "csr":
+            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            conn_body = "int* row_ptr, int* post_ranks, double* w"
+            conn_header = "int* row_ptr, int* post_ranks, double *w"
+            prefix = """
+    int pre_idx = spiked[blockIdx.x];
+    int syn_idx = row_ptr[pre_idx]+threadIdx.x;
+"""
+            row_desc = "syn_idx < row_ptr[pre_idx+1]"
+        else:
+            raise NotImplementedError
+
         call = CUDATemplates.cuda_spike_psp_kernel_call % {
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
@@ -419,18 +463,22 @@ if(%(condition)s){
             'conn_args': conn_call
         }
 
-        conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
         body = CUDATemplates.cuda_spike_psp_kernel % {
             'id': proj.id,
             'conn_arg': conn_body,
+            'prefix': prefix,
+            'row_desc': row_desc,
             'kernel_args': kernel_args,
             'event_driven': event_driven_code,
             'psp':  eq_code,
             'pre_event': pre_code
         }
 
-        conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
-        header = """__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );\n""" % {'id': proj.id, 'conn_header': conn_header, 'kernel_args': kernel_args}
+        header = CUDATemplates.cuda_spike_psp_kernel_header % {
+            'id': proj.id,
+            'conn_header': conn_header,
+            'kernel_args': kernel_args
+        }
 
         ####################################################
         # Not even-driven summation of psp: like rate-coded
@@ -618,41 +666,11 @@ if(%(condition)s){
             if attr['name'] in proc_attr:
                 continue
 
-            if attr['name'] in proj.synapse_type.description['local']:
-                host_device_transfer += """
-        // %(name)s: local
-        if ( %(name)s_dirty )
-        {
-        #ifdef _DEBUG
-            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
-        #endif
-            std::vector<double> flat_%(name)s = flattenArray<double>( %(name)s );
-            cudaMemcpy( gpu_%(name)s, flat_%(name)s.data(), flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
-        #ifdef _DEBUG
-            cudaError_t err = cudaGetLastError();
-            if ( err!= cudaSuccess )
-                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
-        #endif
-        }
-""" % {'id': proj.id, 'name': attr['name'], 'type': attr['ctype']}
-            else:
-                host_device_transfer += """
-        // %(name)s: global
-        if ( %(name)s_dirty )
-        {
-        #ifdef _DEBUG
-            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
-        #endif
-            cudaMemcpy( gpu_%(name)s, %(name)s.data(), pop%(post)s.size * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
-        #ifdef _DEBUG
-            cudaError_t err = cudaGetLastError();
-            if ( err!= cudaSuccess )
-                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
-        #endif
-        }
-""" % {'id': proj.id, 'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype']}
+            host_device_transfer += self._templates['host_to_device'][attr['locality']] % {
+                'id': proj.id,
+                'name': attr['name'],
+                'type': attr['ctype']
+            }
 
             proc_attr.append(attr['name'])
 
@@ -664,21 +682,10 @@ if(%(condition)s){
             if attr['name'] in proc_attr:
                 continue
 
-            if attr['name'] in proj.synapse_type.description['local']:
-                device_host_transfer += """
-            // %(name)s: local
-        #ifdef _DEBUG
-            std::cout << "DtoH: %(name)s ( porj%(id)s )" << std::endl;
-        #endif
-            std::vector<%(type)s> flat_%(name)s = std::vector<%(type)s>( overallSynapses, 0);
-            cudaMemcpy(flat_%(name)s.data(), gpu_%(name)s, flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
-            %(name)s = deFlattenArray< %(type)s >( flat_%(name)s );
-""" % {'id': proj.id, 'name': attr['name'], 'type': attr['ctype']}
-            else:
-                device_host_transfer += """
-            // %(name)s: global
-            cudaMemcpy( %(name)s.data(), gpu_%(name)s, pop%(post)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % {'post': proj.post.id, 'name': attr['name'], 'type': attr['ctype']}
+            device_host_transfer += self._templates['device_to_host'][attr['locality']] % {
+                'id': proj.id, 'name': attr['name'], 'type': attr['ctype']
+            }
+
             proc_attr.append(attr['name'])
 
         return host_device_transfer, device_host_transfer

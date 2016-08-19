@@ -124,6 +124,10 @@ class CodeGenerator(object):
             else:
                 raise NotImplementedError
 
+        # check if the user access some new features, or old ones
+        # which changed.
+        self._check_experimental_features(self._populations, self._projections)
+
         # Propagte the global operations needed by the projections to the
         # corresponding populations.
         self._propagate_global_ops()
@@ -333,7 +337,7 @@ class CodeGenerator(object):
         structural_plasticity = self._body_structural_plasticity()
 
         # Early stopping
-        run_until = self.body_run_until()
+        run_until = self._body_run_until()
 
         # Number threads
         number_threads = "omp_set_num_threads(threads);" if Global.config['num_threads'] > 1 else ""
@@ -621,7 +625,7 @@ class CodeGenerator(object):
 
             return header, body
 
-    def body_run_until(self):
+    def _body_run_until(self):
         """
         Generate the code for conditioned stop of simulation
         """
@@ -653,8 +657,15 @@ class CodeGenerator(object):
         the device code, to have number of threads and blocks for calling
         device functions. Stream setup is for the concurrent kernel
         execution. Please note, that these parameter must be modified
-        through Global.cuda_config dictionary, otherwise default values (no
-        stream, 192 threads for psp, 32 threads for neurons) are used.
+        through Global.cuda_config dictionary, otherwise default values (see
+        below) are used.
+
+        The default configuration is:
+
+        * no stream
+        * 192 threads for psp and synapse update
+        * or guessed amount of threads for neurons, based on population size
+          (see _guess_pop_kernel_config)
 
         Notice:
 
@@ -752,3 +763,26 @@ class CodeGenerator(object):
             print 'population', pop.id, ' - kernel size:', guess
 
         return guess
+
+    def _check_experimental_features(self, populations, projections):
+        """
+        The idea behind this method, is to check if new experimental features are used. This
+        should help also the user to be aware of changes.
+        """
+        if Global.config['paradigm'] == "openmp":
+            for proj in projections:
+                if proj._storage_format == "csr":
+                    Global._warning("CSR representation is an experimental feature, we greatly appreciate bug reports.")
+                    break;
+
+        elif Global.config['paradigm'] == "cuda":
+            for pop in populations:
+                if pop.neuron_type.description['type'] == "spike":
+                    Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
+
+            for proj in projections:
+                if proj._storage_format == "csr":
+                    Global._warning("CSR representation is an experimental feature, we greatly appreciate bug reports.")
+                    break;
+        else:
+            pass

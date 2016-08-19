@@ -259,12 +259,10 @@ cuda_spike_psp_kernel = \
 """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
 
-    int pre_idx = spiked[blockIdx.x];
-    int syn_idx = col_ptr[pre_idx]+threadIdx.x;
+%(prefix)s
 
-    //if (threadIdx.x == 0)
-    //    printf("%%li - %%i: %%i, %%i\\n", t, pre_idx, col_ptr[pre_idx], col_ptr[pre_idx+1]);
-    while( syn_idx < col_ptr[pre_idx+1]) {
+    // over all afferent connections
+    while( %(row_desc)s ) {
 %(event_driven)s
 %(psp)s
 %(pre_event)s
@@ -273,6 +271,9 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
     }
 }
 """
+
+cuda_spike_psp_kernel_header = \
+"""__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );\n"""
 
 cuda_spike_psp_kernel_call = \
 """

@@ -48,9 +48,6 @@ class CUDAGenerator(PopulationGenerator):
         Specialized implementation of PopulationGenerator.header_struct() for
         generation of an openMP header.
         """
-        if pop.neuron_type.description['type'] == 'spike':
-            Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
-
         # Generate declaration and accessors of all parameters and variables
         declaration_parameters_variables, access_parameters_variables = self._generate_decl_and_acc(pop)
 

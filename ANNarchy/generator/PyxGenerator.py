@@ -31,7 +31,7 @@ import ANNarchy.generator.Population.CUDATemplates as cuda_templates
 import ANNarchy.generator.Projection.OpenMPTemplates as proj_omp_templates
 
 from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP, CSR_OpenMP
-from ANNarchy.generator.Projection.Connectivity import LIL_CUDA
+from ANNarchy.generator.Projection.Connectivity import LIL_CUDA, CSR_CUDA
 
 class PyxGenerator(object):
     """
@@ -149,6 +149,8 @@ class PyxGenerator(object):
             # LIL is internally transformed to CSR
             if proj._storage_format == "lil":
                 return LIL_CUDA.conn_templates
+            elif proj._storage_format == "csr":
+                return CSR_CUDA.conn_templates
             else:
                 raise NotImplementedError
 

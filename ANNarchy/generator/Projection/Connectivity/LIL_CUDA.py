@@ -153,6 +153,28 @@ weight_matrix = {
 """
 }
 
+single_weight_matrix = {
+    'declare': """
+    // Single weight in the projection
+    // TODO:
+""",
+    'accessor': "",
+    'init': "",
+    'pyx_struct': """
+        # Local variable w
+        # TODO:
+""",
+    'pyx_wrapper_args': "",
+    'pyx_wrapper_init': """
+        # Use only the first weight
+        # TODO:
+""",
+    'pyx_wrapper_accessor': """
+    # Local variable w
+    # TODO:
+"""
+}
+
 inverse_connectivity_matrix = {
     'declare': """
     // Inverse connectivity, only on gpu
@@ -268,6 +290,71 @@ attribute_cpp_init = {
 """
 }
 
+attribute_host_to_device = {
+    'local': """
+        // %(name)s: local
+        if ( %(name)s_dirty )
+        {
+        #ifdef _DEBUG
+            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
+        #endif
+            std::vector<double> flat_%(name)s = flattenArray<double>( %(name)s );
+            cudaMemcpy( gpu_%(name)s, flat_%(name)s.data(), flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            %(name)s_dirty = false;
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
+""",
+    'global': """
+        // %(name)s: global
+        if ( %(name)s_dirty )
+        {
+        #ifdef _DEBUG
+            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
+        #endif
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_rank.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            %(name)s_dirty = false;
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
+"""
+}
+
+attribute_device_to_host = {
+    'local': """
+            // %(name)s: local
+        #ifdef _DEBUG
+            std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
+        #endif
+            std::vector<%(type)s> flat_%(name)s = std::vector<%(type)s>( overallSynapses, 0);
+            cudaMemcpy(flat_%(name)s.data(), gpu_%(name)s, flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
+            %(name)s = deFlattenArray< %(type)s >( flat_%(name)s );
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+""",
+    'global': """
+            // %(name)s: global
+        #ifdef _DEBUG
+            std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
+        #endif
+            cudaMemcpy( %(name)s.data(), gpu_%(name)s,  post_rank.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+"""
+}
+
 delay = {
     'declare': """
     // Non-uniform delay
@@ -322,12 +409,14 @@ conn_templates = {
     'connectivity_matrix': connectivity_matrix,
     'inverse_connectivity_matrix': inverse_connectivity_matrix,
     'weight_matrix': weight_matrix,
-    'single_weight_matrix': None,
+    'single_weight_matrix': single_weight_matrix,
     
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_acc':attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
+    'host_to_device': attribute_host_to_device,
+    'device_to_host': attribute_device_to_host,
     'delay': delay,
     'event_driven': event_driven
 }
