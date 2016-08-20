@@ -22,33 +22,54 @@
 #include <iomanip>
 
 class CSRMatrix {
-	const int num_rows_;					///< number of rows
-	const int num_columns_;				///< number of columns
+	const int num_rows_;            ///< number of rows
+	const int num_columns_;         ///< number of columns
 
-	std::vector<int> fwd_row_;		        ///< i-th row in the matrix ranges from fwd_row_[i] to fwd_row_[i+1]
-	std::vector<int> fwd_col_idx_;         ///< accessing with fwd_col_idx_[fwd_row_[i]] to fwd_col_idx_[fwd_row_[i+1]] provides acces to all column indices
-	std::vector<double> values_;
+	std::vector<int> fwd_row_;      ///< i-th row in the matrix ranges from fwd_row_[i] to fwd_row_[i+1]
+	std::vector<int> fwd_col_idx_;  ///< accessing with fwd_col_idx_[fwd_row_[i]] to fwd_col_idx_[fwd_row_[i+1]] provides acces to all column indices
+	std::vector<double> values_;    ///< weight values
+	std::vector<int> delays_;       ///< delays in computation steps ( not time! )
 
 public:
+	/**
+	 * 	\brief 		constructor
+	 */
 	CSRMatrix(const int num_rows, const int num_columns) :
 		num_rows_(num_rows+1), num_columns_(num_columns+1) {
 
 		fwd_row_ = std::vector<int>(num_rows_, 0);
 		fwd_col_idx_ = std::vector<int>();
 		values_ = std::vector<double>();
+		delays_ = std::vector<int>();
 	#ifdef _DEBUG
 		std::cout << "create CSR matrix: " << num_rows << ", " << num_columns << std::endl;
 	#endif
 	}
 
+	/**
+	 * 	\brief 		destructor
+	 */
 	~CSRMatrix() {
-		// TODO:
+		fwd_row_.clear();
+		fwd_col_idx_.clear();
+		values_.clear();
+		delays_.clear();
+    #ifdef _DEBUG
+        std::cout << "destroyed CSR matrix: " << num_rows << ", " << num_columns << std::endl;
+    #endif
 	}
 
+	/**
+	 * 	\brief		get size in bytes allocated by the CSRMatrix
+	 */
 	inline size_t size_in_bytes() {
 		size_t size = 0;
 
-		// TODO:
+		size += fwd_row_.capacity() * sizeof(int);
+		size += fwd_col_idx_.capacity() * sizeof(int);
+		size += values_.capacity() * sizeof(double);
+		size += delays_.capacity() * sizeof(int);
+
 		return size;
 	}
 
@@ -60,9 +81,6 @@ public:
 		return num_columns_-1;
 	}
 
-	/**
-	 *	Forward View
-	 */
 	inline std::vector<int> row_begin() {
 		return fwd_row_;
 	}
@@ -75,8 +93,12 @@ public:
 		return values_;
 	}
 
+	inline std::vector<int> delays() {
+		return delays_;
+	}
+
 	inline int num_elements() {
-		return values_.size();
+		return fwd_col_idx_.size();
 	}
 
 	/**
@@ -92,7 +114,12 @@ public:
 	#endif
 		int old_idx = fwd_row_[row+1];
 
+		// column indices and update row_ptr
 		fwd_col_idx_.insert(fwd_col_idx_.begin()+old_idx, columns.begin(), columns.end());
+        for( auto it = fwd_row_.begin()+row+1; it != fwd_row_.end(); it++ )
+            *it += columns.size();
+
+		// synaptic weights
 		if (w.size() > 1 || columns.size() == 1) {
 			// either multiple weights, or a single connection
 			values_.insert(values_.begin()+old_idx, w.begin(), w.end());
@@ -100,8 +127,15 @@ public:
 			auto tmp_w = std::vector<double>(columns.size(), w[0]);
 			values_.insert(values_.begin()+old_idx, tmp_w.begin(), tmp_w.end());
 		}
-		for( auto it = fwd_row_.begin()+row+1; it != fwd_row_.end(); it++ )
-			*it += columns.size();
+
+		// synaptic delays
+        if (d.size() > 1 || columns.size() == 1) {
+            // either multiple weights, or a single connection
+            delays_.insert(delays_.begin()+old_idx, d.begin(), d.end());
+        } else {
+            auto tmp_d = std::vector<int>(columns.size(), d[0]);
+            delays_.insert(delays_.begin()+old_idx, tmp_d.begin(), tmp_d.end());
+        }
 	}
 
 	/**
@@ -131,6 +165,13 @@ public:
 		os << "[ ";
 		for(unsigned int idx = 0; idx < matrix.values_.size(); idx++) {
 			os << std::setprecision(2) << matrix.values_[idx] << " ";
+		}
+		os << "]" << std::endl;
+
+		os << "delays:" << std::endl;
+		os << "[ ";
+		for(unsigned int idx = 0; idx < matrix.delays_.size(); idx++) {
+			os << std::setprecision(2) << matrix.delays_[idx] << " ";
 		}
 		os << "]" << std::endl;
 
