@@ -55,7 +55,7 @@ public:
 		values_.clear();
 		delays_.clear();
     #ifdef _DEBUG
-        std::cout << "destroyed CSR matrix: " << num_rows << ", " << num_columns << std::endl;
+        std::cout << "destroyed CSR matrix: " << num_rows_-1 << ", " << num_columns_-1 << std::endl;
     #endif
 	}
 

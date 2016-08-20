@@ -137,6 +137,9 @@ class Projection(object):
         self._connection_delay = None
         self._connector = None
 
+        # Storage format
+        self._storage_format = "lil"
+
         # If a single weight value is used
         self._single_constant_weight = False
 

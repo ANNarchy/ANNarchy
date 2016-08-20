@@ -50,7 +50,7 @@ class test_CSRConnectivity(unittest.TestCase):
         """
         self.test_net = Network()
         self.test_net.add([pop1, pop2, proj])
-        self.test_net.compile(silent=True, debug_build=True)
+        self.test_net.compile(silent=True, debug_build=True, clean=True)
 
     def setUp(self):
         """

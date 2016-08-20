@@ -98,11 +98,13 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
 
     # Store the connectivity
     if ("lil" == storage_format):
-        self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections), delays, storage_format)
+        connector = Connector.all_to_all
     elif ("csr" == storage_format):
-        self._store_connectivity(Connector.all_to_all_csrc, (weights, delays, allow_self_connections), delays, storage_format)
+        connector = Connector.all_to_all_csrc
     else:
         Global._error("Invalid connectivity format '" + storage_format + "' provided to all_to_all connector")
+    self._store_connectivity(connector, (weights, delays, allow_self_connections), delays, storage_format)
+
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
