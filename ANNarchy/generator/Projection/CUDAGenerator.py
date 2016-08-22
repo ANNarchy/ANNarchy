@@ -293,6 +293,17 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         """
         Generate code for the spike propagation.
         """
+        if 'header' in proj._specific_template.keys() and \
+           'body' in proj._specific_template.keys() and \
+           'call' in proj._specific_template.keys():
+            try:
+                header = proj._specific_template['header']
+                body = proj._specific_template['body']
+                call = proj._specific_template['call']
+            except KeyError:
+                Global._error('header, body and call should be overwritten')
+            return header, body, call
+
         updated_variables_list = []
         deps = [] # list of dependencies for this kernel
 
@@ -406,7 +417,7 @@ if(%(condition)s){
 
             # event-driven requires last event
             kernel_args += ", long* _last_event"
-            kernel_args_call += ", proj%(id_proj)s.gpu_last_event"  % {'id_proj': proj.id}
+            kernel_args_call += ", proj%(id_proj)s._gpu_last_event"  % {'id_proj': proj.id}
 
         # Generate code for pre-spike variables
         pre_code = ""
@@ -424,8 +435,10 @@ if(%(condition)s){
         deps = list(set(deps))
 
         # remove pre defined variables
-        deps.remove('w')
-        deps.remove('g_target')
+        if 'w' in deps:
+            deps.remove('w')
+        if 'g_target' in deps:
+            deps.remove('g_target')
 
         for var in deps:
             attr = self._get_attr(proj, var)
@@ -443,9 +456,9 @@ if(%(condition)s){
 """
             row_desc = "syn_idx < col_ptr[pre_idx+1]"
         elif proj._storage_format == "csr":
-            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* post_ranks, double* w"
-            conn_header = "int* row_ptr, int* post_ranks, double *w"
+            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s._gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            conn_body = "int* row_ptr, int* post_ranks, int* indices, double* w"
+            conn_header = "int* row_ptr, int* post_ranks, int* indices, double *w"
             prefix = """
     int pre_idx = spiked[blockIdx.x];
     int syn_idx = row_ptr[pre_idx]+threadIdx.x;
@@ -560,7 +573,8 @@ if(%(condition)s){
         if proj.synapse_type.description['post_spike'] == []:
             return "", "", ""
 
-        ids = {
+        if proj._storage_format == "lil":
+            ids = {
                 'id_proj' : proj.id,
                 'target': proj.target,
                 'id_post': proj.post.id,
@@ -571,7 +585,22 @@ if(%(condition)s){
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                 'post_prefix': 'pop'+ str(proj.post.id) + '.'
-        }
+            }
+        elif proj._storage_format == "csr":
+            ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': "[col_idx[j]]",
+                'global_index': '[i]',
+                'pre_index': '[pre_rank[j]]',
+                'post_index': '[post_rank[i]]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+            }
+        else:
+            raise NotImplementedError
 
         add_args_header = ""
         add_args_call = ""
@@ -588,7 +617,7 @@ if(%(condition)s){
         if has_event_driven:
             # event-driven rely on last pre-synaptic event
             add_args_header += ", long* _last_event"
-            add_args_call += ", proj%(id_proj)s.gpu_last_event" % {'id_proj': proj.id}
+            add_args_call += ", proj%(id_proj)s._gpu_last_event" % {'id_proj': proj.id}
 
             for var in proj.synapse_type.description['variables']:
                 if var['method'] == 'event-driven':
@@ -629,22 +658,37 @@ if(%(condition)s){
             add_args_header += ', %(type)s* %(name)s' % {'type': attr['ctype'], 'name': attr['name']}
             add_args_call +=  ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
 
-        postevent_header = CUDATemplates.cuda_spike_postevent['header'] % {'id_proj': proj.id,
-                                                                           'add_args': add_args_header
-                                                                         }
+        if proj._storage_format == "lil":
+            conn_header = "int* row_ptr, int* pre_ranks,"
+            conn_call = ", proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank"
+        elif proj._storage_format == "csr":
+            conn_header = "int* row_ptr, int *col_idx, "
+            conn_call = ", proj%(id_proj)s._gpu_row_ptr,  proj%(id_proj)s._gpu_col_idx"
+        else:
+            raise NotImplementedError
 
-        postevent_body = CUDATemplates.cuda_spike_postevent['body'] % {'id_proj': proj.id,
-                                                                       'add_args': add_args_header,
-                                                                       'event_driven': event_driven_code,
-                                                                       'post_code': post_code
-                                                                     }
+        postevent_header = CUDATemplates.cuda_spike_postevent['header'] % {
+            'id_proj': proj.id,
+            'conn_args': conn_header,
+            'add_args': add_args_header
+        }
 
-        postevent_call = CUDATemplates.cuda_spike_postevent['call'] % {'id_proj': proj.id,
-                                                                       'id_pre': proj.pre.id,
-                                                                       'id_post': proj.post.id,
-                                                                       'target': proj.target,
-                                                                       'add_args': add_args_call
-                                                                     }
+        postevent_body = CUDATemplates.cuda_spike_postevent['body'] % {
+            'id_proj': proj.id,
+            'conn_args': conn_header,
+            'add_args': add_args_header,
+            'event_driven': event_driven_code,
+            'post_code': post_code
+        }
+
+        postevent_call = CUDATemplates.cuda_spike_postevent['call'] % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'target': proj.target,
+            'conn_args': conn_call % ids,
+            'add_args': add_args_call
+        }
 
         return postevent_body, postevent_header, postevent_call
 

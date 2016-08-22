@@ -20,17 +20,7 @@ omp_header_template = """#ifndef __ANNARCHY_H__
  * Built-in functions
  *
  */
-#define positive(x) (x>0.0? x : 0.0)
-#define negative(x) (x<0.0? x : 0.0)
-#define clip(x, a, b) (x<a? a : (x>b? b :x))
-#define modulo(a, b) long(a) %% long(b)
-#define Equality(a, b) a == b
-#define Eq(a, b) a == b
-#define And(a, b) a && b
-#define Or(a, b) a || b
-#define Not(a) !a
-#define Ne(a, b) a != b
-#define ite(a, b, c) (a?b:c)
+%(built_in)s
 
 /*
  * Custom functions
@@ -504,10 +494,7 @@ extern __device__ double atomicAdd(double* address, double val);
 /****************************************
  * inline functions                     *
  ****************************************/
-__device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
-__device__ __forceinline__ double negative( double x ) { return x<0.0? x : 0.0; }
-__device__ __forceinline__ double clip(double x, double a, double b) { return x<a? a : (x>b? b :x); }
-__device__ __forceinline__ long modulo(long a, long b) { return a %% b; }
+%(built_in)s
 
 /****************************************
  * custom functions                     *
@@ -855,4 +842,18 @@ cuda_initialize_template = """
 
     // create streams
     stream_setup();
+"""
+
+built_in_functions = """
+#define positive(x) (x>0.0? x : 0.0)
+#define negative(x) (x<0.0? x : 0.0)
+#define clip(x, a, b) (x<a? a : (x>b? b :x))
+#define modulo(a, b) long(a) %% long(b)
+#define Equality(a, b) a == b
+#define Eq(a, b) a == b
+#define And(a, b) a && b
+#define Or(a, b) a || b
+#define Not(a) !a
+#define Ne(a, b) a != b
+#define ite(a, b, c) (a?b:c)
 """

@@ -367,7 +367,7 @@ cuda_synapse_kernel_call =\
 ######################################
 cuda_spike_postevent = {
     'body': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s ) {
     int i = spiked[blockIdx.x];                // post-synaptic
     int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
 
@@ -379,7 +379,7 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* sp
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, int* row_ptr, int* pre_ranks, double* w %(add_args)s );
+    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s );
 """,
     'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
@@ -387,7 +387,7 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* sp
             cuProj%(id_proj)s_postevent<<< pop%(id_post)s.num_events, __pop%(id_pre)s_pop%(id_post)s_%(target)s__ >>>(
                 dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
                 /* connectivity */
-                , proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_row_ptr
+                %(conn_args)s
                 /* weights */
                 , proj%(id_proj)s.gpu_w
                 /* other variables */

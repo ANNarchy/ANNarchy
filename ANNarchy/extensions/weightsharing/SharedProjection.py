@@ -62,19 +62,19 @@ class SharedProjection(Projection):
             Global._error('SharedProjection: Weight sharing is only implemented for rate-coded populations.')
 
     def _create(self):
-        # create fake CSR object, just for compilation.
+        # create fake LIL object, just for compilation.
         try:
-            from ANNarchy.core.cython_ext.Connector import CSR
+            from ANNarchy.core.cython_ext.Connector import LIL
         except Exception as e:
             Global._print(e)
             Global._error('ANNarchy was not successfully installed.')
 
-        csr = CSR()
-        csr.max_delay = self.delays
-        csr.uniform_delay = self.delays
+        lil = LIL()
+        lil.max_delay = self.delays
+        lil.uniform_delay = self.delays
         self.connector_name = "Shared weights"
         self.connector_description = "Shared weights"
-        self._store_connectivity(self._load_from_csr, (csr, ), self.delays)
+        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
 
 
     def _connect(self, module):

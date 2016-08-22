@@ -274,7 +274,7 @@ def connect_with_func(self, method, **args):
     else:
         d = Uniform(0., synapses.max_delay * Global.config['dt']) # Just to trick _store_connectivity(), the real delays are in the CSR
 
-    self._store_connectivity(self._load_from_csr, (synapses, ), d)
+    self._store_connectivity(self._load_from_lil, (synapses, ), d)
 
     self.connector_name = "User-defined"
     self.connector_description = "Created by the method " + method.__name__
@@ -314,7 +314,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
     return self
 
 def _load_from_matrix(self, pre, post, weights, delays, pre_post):
-    csr = Connector.LIL()
+    lil = Connector.LIL()
 
     uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
@@ -363,9 +363,9 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
         if uniform_delay:
             d.append(delays)
         if len(r) > 0:
-            csr.add(rk_post, r, w, d)
+            lil.add(rk_post, r, w, d)
 
-    return csr
+    return lil
 
 def connect_from_sparse(self, weights, delays=0.0):
     """

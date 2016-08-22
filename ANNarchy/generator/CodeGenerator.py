@@ -235,13 +235,14 @@ class CodeGenerator(object):
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
         if Global.config['paradigm'] == "openmp":
-            from .Template.BaseTemplate import omp_header_template
+            from .Template.BaseTemplate import omp_header_template, built_in_functions
             return omp_header_template % {
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
+                'built_in': built_in_functions,
                 'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
@@ -469,7 +470,7 @@ class CodeGenerator(object):
             # ANNarchyHost and only the computation kernels are placed in
             # ANNarchyDevice. If we decide to use SDK8 as lowest requirement,
             # one can move this kernel too.
-            from Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template
+            from Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions
             device_code = cuda_device_kernel_template % {
                 #device stuff
                 'pop_kernel': pop_kernel,
@@ -478,6 +479,7 @@ class CodeGenerator(object):
                 'glob_ops_kernel': glob_ops_body,
                 'postevent_kernel': postevent_kernel,
                 'custom_func': "", #custom_func
+                'built_in': built_in_functions
             }
 
             base_dict = {
@@ -779,6 +781,7 @@ class CodeGenerator(object):
             for pop in populations:
                 if pop.neuron_type.description['type'] == "spike":
                     Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
+                    break;
 
             for proj in projections:
                 if proj._storage_format == "csr":

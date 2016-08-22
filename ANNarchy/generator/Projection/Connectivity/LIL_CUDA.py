@@ -381,11 +381,11 @@ delay = {
 event_driven = {
     'declare': """
     std::vector<std::vector<long> > _last_event;
-    long* gpu_last_event;
+    long* _gpu_last_event;
     void update_gpu_last_event() {
         std::vector<long> tmp =flattenArray<long>(_last_event);
-        cudaMalloc((void**)&gpu_last_event, sizeof(long)*tmp.size());
-        cudaMemcpy(gpu_last_event, tmp.data(), sizeof(long)*tmp.size(), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&_gpu_last_event, sizeof(long)*tmp.size());
+        cudaMemcpy(_gpu_last_event, tmp.data(), sizeof(long)*tmp.size(), cudaMemcpyHostToDevice);
         tmp.clear();
     }
 """,

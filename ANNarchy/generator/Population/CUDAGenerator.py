@@ -337,6 +337,31 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         # TODO:
         return "", ""
 
+    def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
+        """
+        we replace the rand_%(id)s by the corresponding curand... term
+        """
+        for rd in random_distributions:
+            if rd['dist'] == "Uniform":
+                term = """( curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """( curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            elif rd['dist'] == "Normal":
+                term = """( curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """( curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            elif rd['dist'] == "LogNormal":
+                term = """( curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                term = """( curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name'], term)
+            else:
+                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        return loc_eqs, glob_eqs
+
     def _stop_condition(self, pop):
         """
         Simulation can either end after a fixed point in time or
@@ -559,31 +584,6 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         return body, header, call
 
-    def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
-        """
-        we replace the rand_%(id)s by the corresponding curand... term
-        """
-        for rd in random_distributions:
-            if rd['dist'] == "Uniform":
-                term = """( curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            elif rd['dist'] == "Normal":
-                term = """( curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            elif rd['dist'] == "LogNormal":
-                term = """( curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
-            else:
-                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
-
-        return loc_eqs, glob_eqs
-
     def _update_spiking_neuron(self, pop):
         """
         Generate the neural update code for GPU devices. We split up the
@@ -687,9 +687,13 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         #
         # create kernel prototypes
-        header += """
-__global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
-""" % {'id': pop.id, 'default': "double dt", 'refrac': refrac_header, 'var': var, 'par': par}
+        header += CUDATemplates.population_update_header % {
+            'id': pop.id,
+            'default': "double dt",
+            'refrac': refrac_header,
+            'var': var,
+            'par': par
+        }
 
         #
         #    for calling entites we need to determine again all members
@@ -776,24 +780,23 @@ __global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
         body += CUDATemplates.spike_gather_kernel % {
             'id': pop.id,
             'pop_size': str(pop.size),
-            'default': 'unsigned int* num_events, int* spiked, long int* last_spike',
+            'default': 'double dt, unsigned int* num_events, int* spiked, long int* last_spike',
             'refrac': refrac_header,
             'args': body_args,
             'spike_gather': spike_gather
         }
 
-        header += """
-__global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s );
-""" % {'id': pop.id,
-       'default': "unsigned int * num_events, int* spiked, long int* last_spike",
-       'refrac': refrac_header,
-       'args': header_args
+        header += CUDATemplates.spike_gather_header % {
+            'id': pop.id,
+           'default': "double dt, unsigned int * num_events, int* spiked, long int* last_spike",
+           'refrac': refrac_header,
+           'args': header_args
         }
 
         if pop.max_delay > 1:
-            default_args = 'pop%(id)s.gpu_delayed_num_events.front(), pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 'dt, pop%(id)s.gpu_delayed_num_events.front(), pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
         else: # no_delay
-            default_args = 'pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 'dt, pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
 
         spike_gather = CUDATemplates.spike_gather_call % {
             'id': pop.id,

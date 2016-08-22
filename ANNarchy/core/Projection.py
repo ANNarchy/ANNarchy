@@ -181,7 +181,7 @@ class Projection(object):
     connect_from_sparse = ConnectorMethods.connect_from_sparse
     _load_from_sparse = ConnectorMethods._load_from_sparse
     connect_from_file = ConnectorMethods.connect_from_file
-    _load_from_csr = ConnectorMethods._load_from_lil
+    _load_from_lil = ConnectorMethods._load_from_lil
 
     def _generate(self):
         "Overriden by specific projections to generate the code"

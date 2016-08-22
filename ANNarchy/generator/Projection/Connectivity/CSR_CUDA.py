@@ -83,7 +83,7 @@ weight_matrix = {
     'declare': """
     std::vector<double> w;
     double *gpu_w;
-    bool w_dirty=true;
+    bool w_dirty = true;
 """,
     'accessor': """
     void set_w_csr(std::vector<double> w) {
@@ -228,8 +228,15 @@ inverse_connectivity_matrix = {
         }
     #endif
 
-        // TODO: memcpy host to device
+        // transfer host to device
+        cudaMalloc((void**)&_gpu_col_ptr, sizeof(int) * _col_ptr.size());
+        cudaMemcpy( _gpu_col_ptr, _col_ptr.data(), sizeof(int) * _col_ptr.size(), cudaMemcpyHostToDevice);
 
+        cudaMalloc((void**)&_gpu_row_idx, sizeof(int) * _row_idx.size());
+        cudaMemcpy( _gpu_row_idx, _row_idx.data(), sizeof(int) * _row_idx.size(), cudaMemcpyHostToDevice);
+
+        cudaMalloc((void**)&_gpu_inv_idx, sizeof(int) * _inv_idx.size());
+        cudaMemcpy( _gpu_inv_idx, _inv_idx.data(), sizeof(int) * _inv_idx.size(), cudaMemcpyHostToDevice);
         _inv_computed = true;
 """
 }
@@ -240,12 +247,14 @@ attribute_decl = {
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s *gpu_%(name)s;
+    bool %(name)s_dirty;
 """,
     'global':
 """
     // Global %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s;
     %(type)s *gpu_%(name)s;
+    bool %(name)s_dirty;
 """
 }
 
@@ -280,8 +289,8 @@ attribute_acc = {
     // Global %(attr_type)s %(name)s
     std::vector<%(type)s> get_%(name)s() { return %(name)s; }
     %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
-    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
+    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; %(name)s_dirty = true; }
+    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; %(name)s_dirty = true; }
 """
 }
 
@@ -322,7 +331,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_ranks().size * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_ranks.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_dirty = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -341,9 +350,9 @@ attribute_device_to_host = {
         #endif
             cudaMemcpy( %(name)s.data(), gpu_%(name)s, _nb_synapses * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
-            cudaError_t err = cudaGetLastError();
-            if ( err!= cudaSuccess )
-                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+            cudaError_t err_%(name)s = cudaGetLastError();
+            if ( err_%(name)s != cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
 """,
     'global': """
@@ -353,9 +362,9 @@ attribute_device_to_host = {
         #endif
             cudaMemcpy( %(name)s.data(), gpu_%(name)s, post_ranks.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
-            cudaError_t err = cudaGetLastError();
-            if ( err!= cudaSuccess )
-                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+            cudaError_t err_%(name)s = cudaGetLastError();
+            if ( err_%(name)s != cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
 """
 }

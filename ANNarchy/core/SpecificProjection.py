@@ -76,11 +76,12 @@ class DecodingProjection(Projection):
     std::deque< std::vector< double > > rates_history ;
 """ % { 'window': int(self.window/Global.config['dt']) }
 
-        self._specific_template['init_additional'] = """
+        if Global.config['paradigm'] == "openmp":
+            self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector<double> >(%(window)s, std::vector<double>(%(post_size)s, 0.0));
 """ % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size }
 
-        self._specific_template['psp_code'] = """
+            self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active){
             std::vector< std::pair<int, int> > inv_post;
             std::vector<double> rates = std::vector<double>(%(post_size)s, 0.0);
@@ -113,7 +114,16 @@ class DecodingProjection(Projection):
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
         'post_size': self.post.size}
 
-        self._specific_template['psp_prefix'] = """
+            self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         double sum;
 """
+        elif Global.config['paradigm'] == "cuda":
+            self._specific_template['init_additional'] = ""
+            self._specific_template['header'] = ""
+            self._specific_template['body'] = ""
+            self._specific_template['call'] = ""
+
+            Global._error('DeocidingProjection is not available on CUDA devices.')
+        else:
+            raise NotImplementedError

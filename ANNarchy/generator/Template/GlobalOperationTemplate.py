@@ -305,7 +305,7 @@ __global__ void cuNorm2(double* result, double *gpu_array, int N)
 
     while(i < N)
     {
-        localSum += pow(gpu_array[i], 2);
+        localSum += pow(gpu_array[i], 2.0);
         i+= blockDim.x;
     }
 
