@@ -23,22 +23,26 @@ connect_all_to_all
 
 .. code-block:: python
 
-    proj.connect_all_to_all( weights = 1.0, delays = 2.0, allow_self_connections = False ) 
+    proj.connect_all_to_all(weights=1.0, delays=2.0, allow_self_connections=False) 
     
 The ``weights`` and ``delays`` arguments accept both single float values (all synapses will take this initial value), as well as random objects allowing to randomly select the initial values for different synapses:
   
 .. code-block:: python
 
-    proj.connect_all_to_all( weights = Uniform(0.0, 0.5) ) 
+    proj.connect_all_to_all(weights=Uniform(0.0, 0.5)) 
 
 connect_one_to_one
 ------------------------
 
-A neuron of the post-synaptic population forms a connection with only *one* neuron of the pre-synaptic population, the one having exactly the same rank. The two populations must have the same geometry:
+A neuron of the post-synaptic population forms a connection with only *one* neuron of the pre-synaptic population. The order depends on the ranks: neuron 0 is connected with neuron 0 and so on. It is advised that the pre- and post-populations have the same size/geometry, especially when using population views.
 
 .. code-block:: python
 
-    proj.connect_one_to_one( weights = 1.0 ) 
+    pop1 = Population((20, 20), Neuron(parameters="r=0.0"))
+    pop2 = Population((10, 10), Neuron(equations="r=sum(exc)"))
+
+    proj = Projection(pop1[5:15, 5:15], pop2, 'exc')
+    proj.connect_one_to_one(weights=1.0) 
 
 Weights and delays also accept random distributions.
 

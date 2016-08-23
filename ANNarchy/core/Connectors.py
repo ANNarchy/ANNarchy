@@ -50,16 +50,12 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
 
         * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
         * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-        * **shift**: specifies if the ranks of the presynaptic population should be shifted to match the start of the post-synaptic population ranks. Particularly useful for PopulationViews. Does not work yet for populations with geometry. Default: if the two populations have the same number of neurons, it is set to True. If not, it is set to False (only the ranks count).
+        * **shift**: obsolete, do not use.
         * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
-    if not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
-        shift=False # no need
-    elif not shift:
-        if self.pre.size == self.post.size:
-            shift = True
-        else:
-            shift = False
+    if self.pre.size != self.post.size: 
+        Global._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
+        Global._print("\t the two populations have different sizes, please check the connection pattern is what you expect.")
 
     self.connector_name = "One-to-One"
     self.connector_description = "One-to-One, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
@@ -67,7 +63,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.one_to_one, (weights, delays, shift), delays)
+    self._store_connectivity(Connector.one_to_one, (weights, delays), delays)
     return self
 
 def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):

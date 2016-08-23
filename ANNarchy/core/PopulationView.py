@@ -39,6 +39,7 @@ class PopulationView(object):
         self.population = population
         self.ranks = ranks
         self.size = len(self.ranks)
+
         # For people using Individual neuron
         if self.size == 1:
             self.rank = self.ranks[0]
@@ -52,14 +53,56 @@ class PopulationView(object):
         self.variables = population.variables
         self.attributes = population.attributes
 
-    # targets must match the population, both in read and write
+    ################################
+    # Indexing
+    ################################
+
+    def __len__(self):
+        """
+        Number of neurons in the population view.
+        """
+        return self.size
+
+    def rank_from_coordinates(self, coord):
+        """
+        Returns the rank of a neuron based on coordinates.
+
+        Warning: the rank and coordinates are relative to the ORIGINAL population, not the PopulationView.
+
+        *Parameter*:
+
+        * **coord**: coordinate tuple, can be multidimensional.
+        """
+        return self.population.rank_from_coordinates(coord)
+
+    def coordinates_from_rank(self, rank):
+        """
+        Returns the coordinates of a neuron based on its rank.
+
+        Warning: the rank and coordinates are relative to the ORIGINAL population, not the PopulationView.
+
+        *Parameter*:
+
+        * **rank**: rank of the neuron.
+        """
+        return self.population.coordinates_from_rank(rank)
+
+
+    ################################
+    # Targets must match the population, both in read and write
+    ################################
     @property
     def targets(self):
+        "List of targets connected to the population."
         return self.population.targets
 
     @targets.setter
     def targets(self, value):
         self.population.targets.append(value)
+
+    ################################
+    ## Access to attributes
+    ################################
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
@@ -189,6 +232,10 @@ class PopulationView(object):
         """
         return self.population.sum(target)[self.ranks]
 
+    ################################
+    ## Composition
+    ################################
+
     def __add__(self, other):
         """Allows to join two PopulationViews if they have the same population."""
         from ANNarchy.core.Neuron import IndividualNeuron
@@ -199,11 +246,6 @@ class PopulationView(object):
                 return PopulationView(self.population, list(set(self.ranks + other.ranks)))
         else:
             Global._error("can only add two PopulationViews of the same population.")
-            return None
-
-    ################################
-    ## Composition
-    ################################
 
     def __repr__(self):
         """Defines the printing behaviour."""

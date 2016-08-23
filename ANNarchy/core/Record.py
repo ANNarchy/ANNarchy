@@ -77,7 +77,7 @@ class Monitor(object):
         self._start = start
         self._recorded_variables = {}
 
-        # Add the population to the global variable
+        # Add the monitor to the global variable
         self.id = len(Global._network[self.net_id]['monitors'])
         Global._network[self.net_id]['monitors'].append(self)
         if Global._network[self.net_id]['compiled']: # Already compiled
@@ -192,6 +192,8 @@ class Monitor(object):
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
+                if var in self.object.proj.parameters:
+                    Global._print('\t', var, 'is a parameter, its value is constant')
 
     def resume(self):
         "Resumes the recordings."

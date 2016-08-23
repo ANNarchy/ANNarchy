@@ -202,12 +202,12 @@ def all_to_all(pre, post, weights, delays, allow_self_connections):
 
     return projection
 
-def one_to_one(pre, post, weights, delays, shift):
+def one_to_one(pre, post, weights, delays):
     """ Cython implementation of the one-to-one pattern."""
 
     cdef CSR projection
     cdef double weight
-    cdef int r_post, offset
+    cdef int idx, r_post
     cdef list tmp, post_ranks, pre_ranks
     cdef vector[int] r
     cdef vector[double] w, d
@@ -217,37 +217,16 @@ def one_to_one(pre, post, weights, delays, shift):
 
     # Retríeve ranks
     post_ranks = post.ranks
+    pre_ranks = pre.ranks
 
-    if shift:
-        pre_ranks = pre.ranks
-        offset = min(post_ranks) - min(pre_ranks)
-    else:
-        offset = 0
-
-
-    if shift:
-        for r_post in post_ranks:
-            # List of pre ranks
-            if not r_post - offset in pre_ranks:
-                continue
-            r = vector[int](1, r_post - offset)
-            # Get the weights and delays
-            w, d = _get_weights_delays(1, weights, delays)
-            # Create the dendrite
-            projection.push_back(r_post, r, w, d)
-
-    else:
-        for r_post in post_ranks:
-            if r_post >= pre.size:
-                break
-            # List of pre ranks
-            r = vector[int](1, r_post)
-            # Get the weights and delays
-            w, d = _get_weights_delays(1, weights, delays)
-            # Create the dendrite
-            projection.push_back(r_post, r, w, d)
-
-
+    for idx in range(len(post_ranks)):
+        if idx >= pre.size:
+            break
+        r = vector[int](1, pre_ranks[idx])
+        # Get the weights and delays
+        w, d = _get_weights_delays(1, weights, delays)
+        # Create the dendrite
+        projection.push_back(post_ranks[idx], r, w, d)
 
     return projection
 
