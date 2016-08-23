@@ -82,7 +82,7 @@ dependencies = [
     'sympy'
 ]
 
-release = '4.5.7'
+release = '4.6.0'
 
 setup(  name='ANNarchy',
         version=release,
