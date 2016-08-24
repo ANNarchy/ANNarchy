@@ -371,9 +371,9 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
         steady = self.c_code(steadystate)
         if steady == '0':
-            code = variable_name + '*= exp(dt*(_last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+            code = variable_name + '*= exp(dt*(_last_event%(local_index)s - (t))/(' + self.c_code(real_tau) + '));'
         else:
-            code = variable_name + ' = ' + steady + ' + (' + variable_name + ' - ' + steady + ')*exp(dt*(_last_event[i][j] - (t))/(' + self.c_code(real_tau) + '));'
+            code = variable_name + ' = ' + steady + ' + (' + variable_name + ' - ' + steady + ')*exp(dt*(_last_event%(local_index)s - (t))/(' + self.c_code(real_tau) + '));'
         return code
 
     def standardize_ODE(self, expression):

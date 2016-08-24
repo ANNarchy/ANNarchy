@@ -1,1 +1,2 @@
-from .SingleAnalysis import analyse_neuron, analyse_synapse
+from .AnalyseNeuron import analyse_neuron
+from .AnalyseSynapse import analyse_synapse

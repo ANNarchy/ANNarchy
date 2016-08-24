@@ -1,31 +1,37 @@
-"""
-
-    PyxGenerator.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     PyxGenerator.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 from ANNarchy.core import Global
 
-import ANNarchy.generator.Template.PopulationTemplate as PopTemplate
-import ANNarchy.generator.Template.ProjectionTemplate as ProjTemplate
 import ANNarchy.generator.Template.PyxTemplate as PyxTemplate
+
+import ANNarchy.generator.Population.OpenMPTemplates as omp_templates
+import ANNarchy.generator.Population.CUDATemplates as cuda_templates
+
+import ANNarchy.generator.Projection.OpenMPTemplates as proj_omp_templates
+
+from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP, CSR_OpenMP
+from ANNarchy.generator.Projection.Connectivity import LIL_CUDA, CSR_CUDA
 
 class PyxGenerator(object):
     """
@@ -122,8 +128,34 @@ class PyxGenerator(object):
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
             'pop_class' : pop_class, 'proj_class': proj_class,
-            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class
+            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class,
+            'device_specific_export': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['export'],
+            'device_specific_wrapper': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['wrapper'],
         }
+
+    @staticmethod
+    def _get_proj_template(proj):
+        # choose the correct template collection dependent on
+        # target platform and storage formate
+        if Global.config['paradigm'] == "openmp":
+            if proj._storage_format == "lil":
+                return LIL_OpenMP.conn_templates
+            elif proj._storage_format == "csr":
+                return CSR_OpenMP.conn_templates
+            else:
+                raise NotImplementedError
+
+        elif Global.config['paradigm'] == "cuda":
+            # LIL is internally transformed to CSR
+            if proj._storage_format == "lil":
+                return LIL_CUDA.conn_templates
+            elif proj._storage_format == "csr":
+                return CSR_CUDA.conn_templates
+            else:
+                raise NotImplementedError
+
+        else:
+            raise NotImplementedError
 
 #######################################################################
 ############## Population #############################################
@@ -138,15 +170,22 @@ class PyxGenerator(object):
         export_refractory = ""
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
-                export_refractory = """
+                if Global.config['paradigm'] == "openmp":
+                    export_refractory = """
         vector[int] refractory
 """
+                else:
+                    export_refractory = """
+        vector[int] refractory
+        bool refractory_dirty
+"""
+
         # Parameters and variables
         export_parameters_variables = ""
         for var in pop.neuron_type.description['parameters']:
-            export_parameters_variables += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            export_parameters_variables += PyxTemplate.pop_attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         for var in pop.neuron_type.description['variables']:
-            export_parameters_variables += PopTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            export_parameters_variables += PyxTemplate.pop_attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
         if 'export_parameters_variables' in pop._specific_template.keys():
             export_parameters_variables = pop._specific_template['export_parameters_variables']
 
@@ -193,19 +232,19 @@ class PyxGenerator(object):
         # Spiking neurons have aditional data
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
-                wrapper_access_refractory += """
-    # Refractory period
-    cpdef np.ndarray get_refractory(self):
-        return pop%(id)s.refractory
-    cpdef set_refractory(self, np.ndarray value):
-        pop%(id)s.refractory = value
-""" % {'id': pop.id}
+                if Global.config['paradigm'] == "openmp":
+                    wrapper_access_refractory += omp_templates.spike_specific['pyx_wrapper'] % {'id': pop.id}
+                elif Global.config['paradigm'] == "cuda":
+                    wrapper_access_refractory += cuda_templates.spike_specific['pyx_wrapper'] % {'id': pop.id}
+                else:
+                    raise NotImplementedError
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            wrapper_access_parameters_variables += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
+            wrapper_access_parameters_variables += PyxTemplate.pop_attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
+
         for var in pop.neuron_type.description['variables']:
-            wrapper_access_parameters_variables += PopTemplate.attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
+            wrapper_access_parameters_variables += PyxTemplate.pop_attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
         # Arrays for the presynaptic sums of rate-coded neurons
         if pop.neuron_type.type == 'rate':
@@ -269,30 +308,48 @@ class PyxGenerator(object):
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
-        # Import templates
-        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_connectivity_matrix_cuda
+        # get the base templates
+        template_dict = PyxGenerator._get_proj_template(proj)
 
-        weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
+        # connectivity and weight definition
+        connectivity_tpl = template_dict['connectivity_matrix']
+        weight_tpl = template_dict['weight_matrix']
 
-        sp_tpl = ProjTemplate.structural_plasticity['pyx_struct']
+        if Global.config['paradigm'] == "openmp":
+            sp_tpl = proj_omp_templates.structural_plasticity['pyx_struct']
+        else:
+            sp_tpl = {}
 
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.single_weight_matrix_omp
+            if Global.config['paradigm'] == "openmp":
+                weight_tpl = template_dict['single_weight_matrix']
+            else:
+                raise NotImplementedError
 
         # Export connectivity matrix
         export_connectivity_matrix = connectivity_tpl['pyx_struct']
         export_connectivity_matrix += weight_tpl['pyx_struct']
 
         # Delay
-        export_delay=""
+        export_delay = ""
         if has_delay:
-            export_delay = ProjTemplate.delay['pyx_struct'] % {'id': proj.id}
+            if Global.config['paradigm'] == "openmp":
+                export_delay = template_dict['delay']['pyx_struct'] % {'id': proj.id}
+            elif Global.config['paradigm'] == "cuda":
+                export_delay = template_dict['delay']['pyx_struct'] % {'id': proj.id}
+            else:
+                raise NotImplementedError
 
         # Event-driven
         export_event_driven = ""
         if has_event_driven:
-            export_event_driven = ProjTemplate.event_driven['pyx_struct']
+            if Global.config['paradigm'] == "openmp":
+                export_event_driven = template_dict['event_driven']['pyx_struct']
+            elif Global.config['paradigm'] == "cuda":
+                export_event_driven = template_dict['event_driven']['pyx_struct']
+            else:
+                raise NotImplementedError
 
         # Determine all export methods
         export_parameters_variables = ""
@@ -300,12 +357,12 @@ class PyxGenerator(object):
         for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
-            export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            export_parameters_variables += PyxTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
         # Variables
         for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
                 continue
-            export_parameters_variables += ProjTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+            export_parameters_variables += PyxTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Structural plasticity
         structural_plasticity = ""
@@ -372,19 +429,22 @@ class PyxGenerator(object):
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
         # Import attributes templates
-        pyx_acc_tpl = ProjTemplate.attribute_pyx_wrapper
+        pyx_acc_tpl = PyxTemplate.attribute_pyx_wrapper
 
-        # Import connectivity matrix template
-        connectivity_tpl = ProjTemplate.lil_connectivity_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_connectivity_matrix_cuda
+        # select the base template
+        template_dict = PyxGenerator._get_proj_template(proj)
 
-        # Import weight array template
-        weight_tpl = ProjTemplate.lil_weight_matrix_omp if Global.config['paradigm'] == "openmp" else ProjTemplate.csr_weight_matrix_cuda
+        connectivity_tpl = template_dict['connectivity_matrix']
+        weight_tpl = template_dict['weight_matrix']
 
         # Special case for single weights
         if proj._has_single_weight():
-            weight_tpl = ProjTemplate.single_weight_matrix_omp
+            weight_tpl = template_dict['single_weight_matrix']
 
-        sp_tpl = ProjTemplate.structural_plasticity['pyx_wrapper']
+        if Global.config['paradigm'] == "openmp":
+            sp_tpl = proj_omp_templates.structural_plasticity['pyx_wrapper']
+        else:
+            sp_tpl = {}
 
         # Arguments to the wrapper (default: synapses)
         wrapper_args = connectivity_tpl['pyx_wrapper_args']
@@ -399,17 +459,25 @@ class PyxGenerator(object):
         wrapper_access_connectivity += weight_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
 
         # Delays
-        wrapper_init_delay = ""; wrapper_access_delay=""
-        if has_delay:
-            # Initialize the wrapper
-            wrapper_init_delay = ProjTemplate.delay['pyx_wrapper_init'] % {'id_proj': proj.id}
-            # Access in wrapper
-            wrapper_access_delay = ProjTemplate.delay['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+        if not has_delay:
+            wrapper_init_delay = ""
+            wrapper_access_delay = ""
+        else:
+            try:
+                # Initialize the wrapper
+                wrapper_init_delay = template_dict['delay']['pyx_wrapper_init'] % {'id_proj': proj.id}
+                # Access in wrapper
+                wrapper_access_delay = template_dict['delay']['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+            except KeyError:
+                raise NotImplementedError
 
         # Event-driven
         wrapper_init_event_driven = ""
         if has_event_driven:
-            wrapper_init_event_driven = ProjTemplate.event_driven['pyx_wrapper_init'] % {'id_proj': proj.id}
+            try:
+                wrapper_init_event_driven = template_dict['event_driven']['pyx_wrapper_init'] % {'id_proj': proj.id}
+            except KeyError:
+                raise NotImplementedError
 
         # Determine all accessor methods
         wrapper_access_parameters_variables = ""

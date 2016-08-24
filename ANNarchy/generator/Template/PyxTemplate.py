@@ -7,7 +7,7 @@ import numpy as np
 cimport numpy as np
 
 import ANNarchy
-from ANNarchy.core.cython_ext.Connector cimport CSR as CSR
+from ANNarchy.core.cython_ext.Connector cimport LIL, CSR
 
 cdef extern from "ANNarchy.h":
 
@@ -44,9 +44,7 @@ cdef extern from "ANNarchy.h":
     double getDt()
     void setDt(double dt_)
 
-    # Number of threads
-    void setNumberThreads(int)
-
+%(device_specific_export)s
 
 # Population wrappers
 %(pop_class)s
@@ -119,14 +117,94 @@ def set_dt(double dt):
 def get_dt():
     return getDt()
 
-# Set number of threads
-def set_number_threads(int n):
-    setNumberThreads(n)
+%(device_specific_wrapper)s
 
 # Set seed
 def set_seed(long seed):
     setSeed(seed)
 '''
+
+pyx_device_specific={
+    'openmp': {
+        'wrapper': """
+# Set number of threads
+def set_number_threads(int n):
+    setNumberThreads(n)
+""",
+        'export': """
+    # Number of threads
+    void setNumberThreads(int)
+"""
+    },
+    'cuda': {
+        'wrapper': """
+# Set GPU device
+def set_device(int device_id):
+    setDevice(device_id)
+""",
+        'export': """
+    # GPU device
+    void setDevice(int)
+"""
+    }
+}
+# export of accessors for parameter members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
+#    attr_type: either 'variable' or 'parameter'
+pop_attribute_cpp_export = {
+    'local':
+"""
+        # Local %(attr_type)s %(name)s
+        vector[%(type)s] get_%(name)s()
+        %(type)s get_single_%(name)s(int rk)
+        void set_%(name)s(vector[%(type)s])
+        void set_single_%(name)s(int, %(type)s)
+""",
+    'global':
+"""
+        # Global %(attr_type)s %(name)s
+        %(type)s  get_%(name)s()
+        void set_%(name)s(%(type)s)
+"""
+}
+# export of accessors for parameter members towards python, whereas 'local' is used if values can vary
+# across neurons, consequently 'global' is used if values are common to all neurons. Functions marked as cpdef
+# can be accessed from python as well as cython. Local parameters allows access to single as well as all values.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
+#    attr_type: either 'variable' or 'parameter'
+pop_attribute_pyx_wrapper = {
+    'local':
+"""
+    # Local %(attr_type)s %(name)s
+    cpdef np.ndarray get_%(name)s(self):
+        return np.array(pop%(id)s.get_%(name)s())
+    cpdef set_%(name)s(self, np.ndarray value):
+        pop%(id)s.set_%(name)s( value )
+    cpdef %(type)s get_single_%(name)s(self, int rank):
+        return pop%(id)s.get_single_%(name)s(rank)
+    cpdef set_single_%(name)s(self, int rank, value):
+        pop%(id)s.set_single_%(name)s(rank, value)
+""",
+    'global':
+"""
+    # Global %(attr_type)s %(name)s
+    cpdef %(type)s get_%(name)s(self):
+        return pop%(id)s.get_%(name)s()
+    cpdef set_%(name)s(self, %(type)s value):
+        pop%(id)s.set_%(name)s(value)
+"""
+}
 
 # Export for populations
 pop_pyx_struct = """
@@ -164,6 +242,68 @@ cdef class pop%(id)s_wrapper :
 %(wrapper_access_additional)s
 
 """
+
+# export of accessors for synaptic attributes towards python, whereas 'local' is used if values can vary
+# across synapses within a dendrite, consequently 'global' is used if values are common to all synapses within
+# a single dendrite.
+#
+# Parameters:
+#
+#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#          used types ( e. g. vector[bool] would not work properly... )
+#    name: name of the variable
+#    attr_type: either 'variable' or 'parameter'
+attribute_cpp_export = {
+    'local':
+"""
+        # Local %(attr_type)s %(name)s
+        vector[vector[%(type)s]] get_%(name)s()
+        vector[%(type)s] get_dendrite_%(name)s(int)
+        %(type)s get_synapse_%(name)s(int, int)
+        void set_%(name)s(vector[vector[%(type)s]])
+        void set_dendrite_%(name)s(int, vector[%(type)s])
+        void set_synapse_%(name)s(int, int, %(type)s)
+""",
+    'global':
+"""
+        # Global %(attr_type)s %(name)s
+        vector[%(type)s] get_%(name)s()
+        %(type)s get_dendrite_%(name)s(int)
+        void set_%(name)s(vector[%(type)s])
+        void set_dendrite_%(name)s(int, %(type)s)
+"""
+}
+
+attribute_pyx_wrapper = {
+    'local':
+"""
+    # Local %(attr_type)s %(name)s
+    def get_%(name)s(self):
+        return proj%(id)s.get_%(name)s()
+    def set_%(name)s(self, value):
+        proj%(id)s.set_%(name)s( value )
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.get_dendrite_%(name)s(rank)
+    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
+        proj%(id)s.set_dendrite_%(name)s(rank, value)
+    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
+        return proj%(id)s.get_synapse_%(name)s(rank_post, rank_pre)
+    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
+        proj%(id)s.set_synapse_%(name)s(rank_post, rank_pre, value)
+""",
+    'global':
+"""
+    # Global %(attr_type)s %(name)s
+    def get_%(name)s(self):
+        return proj%(id)s.get_%(name)s()
+    def set_%(name)s(self, value):
+        proj%(id)s.set_%(name)s(value)
+    def get_dendrite_%(name)s(self, int rank):
+        return proj%(id)s.get_dendrite_%(name)s(rank)
+    def set_dendrite_%(name)s(self, int rank, %(type)s value):
+        proj%(id)s.set_dendrite_%(name)s(rank, value)
+"""
+}
 
 # Export for projections
 proj_pyx_struct = """

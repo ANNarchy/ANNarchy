@@ -22,7 +22,7 @@
 
 """
 from ANNarchy.core.Global import _error, _warning, _network, _objects
-from ANNarchy.parser.SingleAnalysis import analyse_synapse
+from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
         
 class Synapse(object):

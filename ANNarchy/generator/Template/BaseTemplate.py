@@ -20,17 +20,7 @@ omp_header_template = """#ifndef __ANNARCHY_H__
  * Built-in functions
  *
  */
-#define positive(x) (x>0.0? x : 0.0)
-#define negative(x) (x<0.0? x : 0.0)
-#define clip(x, a, b) (x<a? a : (x>b? b :x))
-#define modulo(a, b) long(a) %% long(b)
-#define Equality(a, b) a == b
-#define Eq(a, b) a == b
-#define And(a, b) a && b
-#define Or(a, b) a || b
-#define Not(a) !a
-#define Ne(a, b) a != b
-#define ite(a, b, c) (a?b:c)
+%(built_in)s
 
 /*
  * Custom functions
@@ -461,15 +451,17 @@ void initialize(double _dt, long seed) ;
 
 void run(int nbSteps);
 
-inline int run_until(int steps, std::vector<int> populations, bool or_and) {
-    printf("NOT IMPLEMENTED ...");
-    return 0;
-}
+int run_until(int steps, std::vector<int> populations, bool or_and);
 
 void step();
 
-inline void setNumberThreads(int) {
-    // Dummy function
+inline void setDevice(int device_id) {
+#ifdef _DEBUG
+    std::cout << "Setting device " << device_id << " as compute device ..." << std::endl;
+#endif
+    cudaError_t err = cudaSetDevice(device_id);
+    if ( err != cudaSuccess )
+        std::cerr << "Set device " << device_id << ": " << cudaGetErrorString(err) << std::endl;
 }
 
 /*
@@ -491,41 +483,18 @@ inline void setSeed(long int seed){ printf("Setting seed not implemented on CUDA
 #endif
 """
 
-cuda_body_template = """
-#ifdef __CUDA_ARCH__
-/***********************************************************************************/
-/*                                                                                 */
-/*                                                                                 */
-/*          DEVICE - code                                                          */
-/*                                                                                 */
-/*                                                                                 */
-/***********************************************************************************/
-#include <curand_kernel.h>
-#include <float.h>
-
-// global time step
-__constant__ long int t;
-
+cuda_device_kernel_template = """
 /****************************************
- * init random states                   *
+ * Global Symbols (ANNarchyHost.cu)     *
  ****************************************/
-__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed )
-{
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if( tid < N )
-    {
-        curand_init( seed, tid, 0, &states[ tid ] );
-    }
-}
+#include <curand_kernel.h>
+extern __device__ long int t;
+extern __device__ double atomicAdd(double* address, double val);
 
 /****************************************
  * inline functions                     *
  ****************************************/
-__device__ __forceinline__ double positive( double x ) { return (x>0) ? x : 0; }
-__device__ __forceinline__ double negative( double x ) { return x<0.0? x : 0.0; }
-__device__ __forceinline__ double clip(double x, double a, double b) { return x<a? a : (x>b? b :x); }
-__device__ __forceinline__ long modulo(long a, long b) { return a %% b; }
+%(built_in)s
 
 /****************************************
  * custom functions                     *
@@ -552,15 +521,73 @@ __device__ __forceinline__ long modulo(long a, long b) { return a %% b; }
  ****************************************/
 %(glob_ops_kernel)s
 
-#else
-#include "ANNarchy.h"
-#include <math.h>
+/****************************************
+ * postevent kernel                     *
+ ****************************************/
+%(postevent_kernel)s
+"""
 
-// cuda specific header
+cuda_host_body_template =\
+"""
+#ifdef __CUDA_ARCH__
+/***********************************************************************************/
+/*                                                                                 */
+/*                                                                                 */
+/*          DEVICE - code                                                          */
+/*                                                                                 */
+/*                                                                                 */
+/***********************************************************************************/
 #include <cuda_runtime_api.h>
-#include <curand.h>
+#include <curand_kernel.h>
 #include <float.h>
 
+/****************************************
+ * atomicAdd for non-Pascal             *
+ ****************************************/
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+    __device__ double atomicAdd(double* address, double val)
+    {
+        unsigned long long int* address_as_ull = (unsigned long long int*)address;
+        unsigned long long int old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            old = atomicCAS(address_as_ull, assumed,
+                            __double_as_longlong(val +
+                            __longlong_as_double(assumed)));
+        } while (assumed != old);
+        return __longlong_as_double(old);
+    }
+#endif
+
+/****************************************
+ * init random states                   *
+ ****************************************/
+/*
+ *  Each thread gets an unique sequence number (i) and all use the same seed. As highlightet
+ *  in section 3.1.1. of the curand documentation this should be enough to get good random numbers
+ */
+__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed )
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    while( i < N )
+    {
+        curand_init( seed, i, 0, &states[ i ] );
+        i += blockDim.x * gridDim.x;
+    }
+}
+
+// global time step
+__device__ long int t;
+__global__ void update_t(int t_host) {
+    t = t_host;
+}
+
+// Computation Kernel
+#include "ANNarchyDevice.cu"
+
+#else
 /***********************************************************************************/
 /*                                                                                 */
 /*                                                                                 */
@@ -568,8 +595,21 @@ __device__ __forceinline__ long modulo(long a, long b) { return a %% b; }
 /*                                                                                 */
 /*                                                                                 */
 /***********************************************************************************/
+#include "ANNarchy.h"
+%(prof_include)s
+#include <math.h>
+
+// cuda specific header
+#include <cuda_runtime_api.h>
+#include <curand.h>
+#include <float.h>
+
 // kernel config
 %(kernel_config)s
+
+// Kernel definitions
+__global__ void update_t(int t_host);
+%(kernel_def)s
 
 // RNG
 __global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed );
@@ -579,6 +619,12 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
     int numBlocks = ceil (double(N) / double(numThreads));
 
     rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
+
+#ifdef _DEBUG
+    cudaError_t err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cout << "init_curand_state: " << cudaGetErrorString(err) << std::endl;
+#endif
 }
 
 /*
@@ -643,19 +689,27 @@ void run(int nbSteps) {
 
     stream_assign();
 
+%(prof_run_pre)s
     // simulation loop
     for(int i=0; i<nbSteps; i++) {
         single_step();
         //progress(i, nbSteps);
     }
+%(prof_run_post)s
 
     //std::cout << std::endl;
 %(device_host_transfer)s
 }
 
+int run_until(int steps, std::vector<int> populations, bool or_and) {
+%(run_until)s
+}
+
 void step() {
 %(host_device_transfer)s
+%(prof_run_pre)s
     single_step();
+%(prof_run_post)s
 %(device_host_transfer)s
 }
 
@@ -663,8 +717,6 @@ void step() {
 void initialize(double _dt, long _seed) {
 %(initialize)s
 }
-
-%(kernel_def)s
 
 // Step method. Generated by ANNarchy. (analog to step() in OMP)
 void single_step()
@@ -674,6 +726,7 @@ void single_step()
     // Presynaptic events
     ////////////////////////////////
 %(compute_sums)s
+
     cudaDeviceSynchronize();
 
     ////////////////////////////////
@@ -684,6 +737,8 @@ void single_step()
     // Update neural variables
     ////////////////////////////////
 %(update_neuron)s
+
+    cudaDeviceSynchronize();
 
     ////////////////////////////////
     // Delay outputs
@@ -702,9 +757,14 @@ void single_step()
     ////////////////////////////////
 %(update_synapse)s
 
+    cudaDeviceSynchronize();
+
     ////////////////////////////////
     // Postsynaptic events
     ////////////////////////////////
+%(post_event)s
+
+    cudaDeviceSynchronize();
 
     ////////////////////////////////
     // Recording
@@ -720,6 +780,7 @@ void single_step()
     // note: the first parameter is the name of the device variable
     //       for earlier releases before CUDA4.1 this was a const char*
     cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
+    //update_t<<<1,1>>>(t);
 }
 
 
@@ -728,7 +789,7 @@ void single_step()
  *
 */
 long int getTime() {return t;}
-void setTime(long int t_) { t=t_;}
+void setTime(long int t_) { t=t_; cudaMemcpyToSymbol(t, &t, sizeof(long int)); }
 double getDt() { return dt;}
 void setDt(double dt_) { dt=dt_;}
 #endif
@@ -769,7 +830,8 @@ void stream_destroy()
 cuda_initialize_template = """
     dt = _dt;
     t = (long int)(0);
-    cudaMemcpyToSymbol(t, &t, sizeof(long int));
+    cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
+    //update_t<<<1,1>>>(t);
 
     // seed
     seed = _seed;
@@ -780,4 +842,18 @@ cuda_initialize_template = """
 
     // create streams
     stream_setup();
+"""
+
+built_in_functions = """
+#define positive(x) (x>0.0? x : 0.0)
+#define negative(x) (x<0.0? x : 0.0)
+#define clip(x, a, b) (x<a? a : (x>b? b :x))
+#define modulo(a, b) long(a) %% long(b)
+#define Equality(a, b) a == b
+#define Eq(a, b) a == b
+#define And(a, b) a && b
+#define Or(a, b) a || b
+#define Not(a) !a
+#define Ne(a, b) a != b
+#define ite(a, b, c) (a?b:c)
 """

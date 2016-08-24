@@ -107,6 +107,10 @@ public:
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
             cudaMemcpy(pop%(id)s.%(name)s.data(), pop%(id)s.gpu_%(name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+        #ifdef _DEBUG
+            std::cout << "record %(name)s."<< std::endl;
+            std::cout << "  [min, max]: " << *std::min_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << ", " << *std::max_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << std::endl;
+        #endif
             if(!this->partial)
                 this->%(name)s.push_back(pop%(id)s.%(name)s); 
             else{
@@ -131,4 +135,88 @@ public:
             this->%(name)s.push_back(pop%(id)s.%(name)s); 
         } """    
     }
+}
+
+omp_projection = {
+    'struct': """
+class ProjRecorder%(id)s : public Monitor
+{
+public:
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
+        : Monitor(ranks, period, offset)
+    {
+%(init_code)s
+    };
+    virtual void record() {
+%(recording_code)s
+    };
+%(struct_code)s
+};
+""",
+    'local': {
+        'struct': """
+    // Local variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+        }
+"""
+    },
+    'global': {
+        'struct': """
+    // Global variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< %(type)s >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+        }
+"""
+    }
+}
+
+recording_spike_tpl= {
+    'openmp' : """
+        if(this->record_spike){
+            for(int i=0; i<pop%(id)s.spiked.size(); i++){
+                if(!this->partial){
+                    this->spike[pop%(id)s.spiked[i]].push_back(t);
+                }
+                else{
+                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
+                        this->spike[pop%(id)s.spiked[i]].push_back(t);
+                    }
+                }
+            }
+        } """,
+    'cuda' : """
+        if(this->record_spike){
+            if (pop%(id)s.num_events > 0) {
+                pop%(id)s.spiked = std::vector<int>(pop%(id)s.num_events, 0);
+                cudaMemcpy(pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.num_events*sizeof(int), cudaMemcpyDeviceToHost);
+
+                for(int i=0; i<pop%(id)s.spiked.size(); i++){
+                    if(!this->partial){
+                        this->spike[pop%(id)s.spiked[i]].push_back(t);
+                    }
+                    else{
+                        if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
+                            this->spike[pop%(id)s.spiked[i]].push_back(t);
+                        }
+                    }
+                }
+            }
+        } """
 }

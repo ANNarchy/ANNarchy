@@ -1,6 +1,6 @@
 from ANNarchy.core.Global import _network, _objects, _warning, _error, _print
 from ANNarchy.core.Random import RandomDistribution
-from .Extraction import *
+from ..Extraction import *
 from ANNarchy.core.Synapse import Synapse
 
 from sympy import *

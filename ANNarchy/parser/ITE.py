@@ -28,7 +28,7 @@ from ANNarchy.parser.StringManipulation import *
 from pprint import pprint
 import re
 
-def translate_ITE(name, eq, condition, description, untouched, split=True):
+def translate_ITE(name, eq, condition, description, untouched):
     " Recursively processes the different parts of an ITE statement"
     def process_condition(condition):
         if_statement = condition[0]
@@ -54,13 +54,11 @@ def translate_ITE(name, eq, condition, description, untouched, split=True):
         code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
         return code
 
-    if split:
-        # Main equation, where the right part is __conditional__
-        translator = Equation(name, eq, description,
-                              untouched = untouched.keys())
-        code = translator.parse()
-    else:
-        code = eq
+    # Main equation, where the right part is __conditional__
+    translator = Equation(name, eq, description,
+                          untouched = untouched.keys())
+    code = translator.parse()
+    deps = translator.dependencies()
 
     # Process the (possibly multiple) ITE
     for i in range(len(condition)):
@@ -71,7 +69,7 @@ def translate_ITE(name, eq, condition, description, untouched, split=True):
         else:
             code[0] = code[0].replace('__conditional__'+str(i), itecode)
 
-    return code
+    return code, deps
 
 
 def extract_ite(name, eq, description, split=True):

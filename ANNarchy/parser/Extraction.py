@@ -366,7 +366,7 @@ def extract_functions(description, local_global=False):
             parsed_content = parser.parse()
         else:
             parser = FunctionParser(content, arguments)
-            parsed_content = translate_ITE("", eq2, condition, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, {}, split=False)
+            parsed_content, deps = translate_ITE("", eq2, condition, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, {})
 
         # Create the one-liner
         fdict = {'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}
@@ -500,7 +500,10 @@ def extract_stop_condition(pop):
                           pop,
                           type = 'cond')
     code = translator.parse()
+    deps = translator.dependencies()
+
     pop['stop_condition']['cpp'] = '(' + code + ')'
+    pop['stop_condition']['dependencies'] = deps
 
 def extract_structural_plasticity(statement, description):
     # Extract flags

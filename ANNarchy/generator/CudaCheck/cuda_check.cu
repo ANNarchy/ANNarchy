@@ -25,6 +25,11 @@ void get_properties() {
     }
 }
 
+int num_devices() {
+	get_properties();
+	return nb_devices;
+}
+
 int get_major_version(int device) {
     get_properties();
 
@@ -40,6 +45,32 @@ int get_minor_version(int device) {
 
     if ( device < nb_devices ) {
         return prop[device].minor; 
+    }
+
+    return -1;
+}
+
+int get_runtime_version() {
+	int version = 0;
+	cudaRuntimeGetVersion(&version);
+	return version;
+}
+
+int get_max_threads_per_block(int device) {
+    get_properties();
+
+    if ( device < nb_devices ) {
+        return prop[device].maxThreadsPerBlock;
+    }
+
+    return -1;
+}
+
+int get_warp_size(int device) {
+    get_properties();
+
+    if ( device < nb_devices ) {
+        return prop[device].warpSize;
     }
 
     return -1;

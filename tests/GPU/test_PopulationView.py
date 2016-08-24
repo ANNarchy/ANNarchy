@@ -34,32 +34,36 @@ neuron = Neuron(
 
 pop1 = Population((8, 8), neuron)
 
-compile(clean=True)
-
-
 class test_PopulationView(unittest.TestCase):
     """
     This class tests the functionality of the *PopulationView* object, which hold references to different neurons of the same *Population*.
     """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([pop1])
+        self.test_net.compile(silent=True)
+
+        self.net_pop1 = self.test_net.get(pop1)
 
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network before every test.
         """
-        reset()
+        self.test_net.reset()
 
     def test_get_r(self):
         """
         Tests the direct access of the variable *r* of a *PopulationView* object.
         """
-        
-        self.assertTrue(numpy.allclose((pop1[2, 2] + pop1[3,3] + pop1[4,4]).r, [0.0, 0.0, 0.0]))
+        self.assertTrue(numpy.allclose((self.net_pop1[2, 2] + self.net_pop1[3, 3] + self.net_pop1[4, 4]).r, [0.0, 0.0, 0.0]))
 
     def test_set_r(self):
         """
         Tests the setting of *r* through direct access.
         """
-        (pop1[2, 2] + pop1[3,3] + pop1[4,4]).r = 1.0
-        self.assertTrue(numpy.allclose((pop1[2, 2] + pop1[3,3] + pop1[4,4]).r, [1.0, 1.0, 1.0]))
-
-
+        (self.net_pop1[2, 2] + self.net_pop1[3, 3] + self.net_pop1[4, 4]).r = 1.0
+        self.assertTrue(numpy.allclose((self.net_pop1[2, 2] + self.net_pop1[3, 3] + self.net_pop1[4, 4]).r, [1.0, 1.0, 1.0]))

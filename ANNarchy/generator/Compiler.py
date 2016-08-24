@@ -1,26 +1,26 @@
-"""
-
-    Compiler.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     Compiler.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 import os, sys, imp
 import subprocess
 import shutil
@@ -35,8 +35,6 @@ from .Template.MakefileTemplate import *
 
 from optparse import OptionParser
 from optparse import OptionGroup
-
-from distutils.sysconfig import get_python_inc, get_python_lib
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -76,7 +74,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Save current ANNarchy version
     with open(annarchy_dir+'/release', 'w') as f:
-        f.write(ANNarchy.__release__)
+        f.write(Global.config['paradigm']+', '+ANNarchy.__release__)
 
     sys.path.append(annarchy_dir)
 
@@ -111,7 +109,7 @@ def compile(    directory='annarchy',
                 projections=None,
                 compiler="default",
                 compiler_flags="-march=native -O2",
-                cuda_config={'device': 0},
+                cuda_config=None,
                 silent=False,
                 debug_build=False,
                 profile_enabled = False,
@@ -147,7 +145,9 @@ def compile(    directory='annarchy',
         profile_enabled = options.profile
         Global.config['profiling']= options.profile
 
-    debug_build = options.debug # debug build
+    if not debug_build:
+        debug_build = options.debug # debug build
+
     clean = options.clean # enforce rebuild
 
     if populations is None: # Default network
@@ -169,9 +169,25 @@ def compile(    directory='annarchy',
     if os.path.isfile(annarchy_dir+'/release'):
         with open(annarchy_dir+'/release', 'r') as f:
             prev_release = f.read().strip()
+            prev_paradigm = ''
+
+            # HD (03.08.2016):
+            # in ANNarchy 4.5.7b I added also the paradigm to the release tag.
+            # This if clause can be removed in later releases (TODO)
+            if prev_release.find(',') != -1:
+                prev_paradigm, prev_release = prev_release.split(', ')
+            else:
+                # old release tag
+                clean = True
+
             if parse_version(prev_release) < parse_version(ANNarchy.__release__):
                 Global._print('ANNarchy has been updated, recompiling...')
                 clean = True
+
+            if prev_paradigm != Global.config['paradigm']:
+                Global._print('Parallel framework has been changed, recompiling...')
+                clean = True
+
     else:
         clean = True
 
@@ -233,7 +249,7 @@ class Compiler(object):
         Global._network[self.net_id]['compiled'] = True
 
         # Create the Python objects
-        _instantiate(self.net_id)
+        _instantiate(self.net_id, cuda_config=self.cuda_config)
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -349,11 +365,8 @@ class Compiler(object):
         gpu_flags = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
             from .CudaCheck import CudaCheck
-            cu_version = CudaCheck().version()
-            if cu_version >= (3,0):
-                cuda_gen = "-gencode arch=compute_35,code=compute_35"
-            else:
-                cuda_gen = "-gencode arch=compute_20,code=compute_20"
+            cu_version = CudaCheck().version_str()
+            cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
 
@@ -395,6 +408,10 @@ class Compiler(object):
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
+        
+        # the connector module needs to reload some header files,
+        # ANNarchy.__path__ provides the installation directory
+        path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
 
         # Gather all Makefile flags
         makefile_flags = {
@@ -409,7 +426,8 @@ class Compiler(object):
             'python_include': python_include,
             'python_lib': python_lib,
             'numpy_include': numpy_include,
-            'net_id': self.net_id
+            'net_id': self.net_id,
+            'cython_ext': path_to_cython_ext
         }
 
         # Create Makefiles depending on the target platform and parallel framework
@@ -434,7 +452,7 @@ class Compiler(object):
     def code_generation(self):
         """ Code generation dependent on paradigm """
         from .CodeGenerator import CodeGenerator
-        generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id)
+        generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
         generator.generate()
 
     def check_structure(self):
@@ -487,7 +505,7 @@ class Compiler(object):
                     Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
 
 
-def _instantiate(net_id, import_id=-1):
+def _instantiate(net_id, import_id=-1, cuda_config=None):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
 
@@ -505,6 +523,10 @@ def _instantiate(net_id, import_id=-1):
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
 
     Global._network[net_id]['instance'] = cython_module
+
+    if cuda_config:
+        print 'setting device', cuda_config['device']
+        cython_module.set_device(cuda_config['device'])
 
     # Bind the py extensions to the corresponding python objects
     for pop in Global._network[net_id]['populations']:

@@ -1,8 +1,9 @@
 # distutils: language = c++
 from libcpp.vector cimport vector
 from libcpp cimport bool
+from sympy.mpmath.matrices.matrices import _matrix
 
-cdef class CSR:
+cdef class LIL:
     """
     Container for the ranks, weights and delays of a projection.
     """
@@ -27,5 +28,39 @@ cdef class CSR:
     cpdef int get_max_delay(self)
     cpdef int get_uniform_delay(self)
 
-    # Method to clean a CSR object
+    # Method to clean a LIL object
     cpdef validate(self)
+
+    # pre-defined pattern
+    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections)
+    cpdef one_to_one(self, pre, post, weights, delays)
+    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections)
+    cpdef fixed_number_pre(self, pre, post, int number, weights, delays, allow_self_connections)
+    cpdef fixed_number_post(self, pre, post, int number, weights, delays, allow_self_connections)
+    cpdef gaussian(self, pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections)
+    cpdef dog(self, pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections)
+
+cdef extern from "CSRMatrix.hpp":
+    cdef cppclass CSRMatrix:
+        CSRMatrix(const unsigned int, const unsigned int)
+
+        void push_back(int, vector[int], vector[double], vector[int])
+        vector[int] row_begin()
+        vector[int] column_indices()
+        vector[double] values()
+
+        int num_elements()
+
+cdef class CSR:
+    """
+    Container for the ranks, weights and delays of a projection.
+    """
+    cdef CSRMatrix* _matrix
+
+    # Insert methods
+    cpdef add(self, int pre_rank, post_rank, w, d)
+    cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d)
+    
+    # pre-defined pattern
+    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections)
+    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections)

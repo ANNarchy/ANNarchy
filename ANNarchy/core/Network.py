@@ -155,7 +155,7 @@ class Network(object):
             proj.name = obj.name
             proj.init = obj.init
             # Copy the synapses if they are already created
-            proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay)
+            proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay, obj._storage_format)
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
             self.projections.append(proj)
@@ -208,15 +208,20 @@ class Network(object):
                     return m
         Global._error('The network has no such object:', obj.name, obj)
 
-    def compile(self, directory='annarchy', silent=False):
+    def compile(self, directory='annarchy', silent=False, debug_build=False, clean=False):
         """ Compiles the network.
 
         *Parameters*:
 
         * **directory**: name of the subdirectory where the code will be generated and compiled.
         * **silent**: defines if the "Compiling... OK" should be printed.
+
+        The following arguments are for internal development use only:
+
+        * **clean**: enforces recompilation of the ANNarchy library.
+        * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
         """
-        Compiler.compile(directory=directory, silent=silent, net_id=self.id)
+        Compiler.compile(directory=directory, silent=silent, debug_build=debug_build, clean=clean, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
         """
@@ -425,9 +430,16 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
     if measure_time:
         ts = time()
 
-    # Number of processes to create
+    # Number of processes to create depends on number of
+    # available CPUs or GPUs
     if max_processes < 0:
-        max_processes = min(len(networks), multiprocessing.cpu_count())
+        if Global.config['paradigm'] == "openmp":
+            max_processes = min(len(networks), multiprocessing.cpu_count())
+        elif Global.config['paradigm'] == "cuda":
+            from ANNarchy.generator.CudaCheck import CudaCheck
+            max_processes = min(len(networks), CudaCheck().gpu_count())
+        else:
+            raise NotImplementedError
 
     # Number of networks
     number = len(networks)
