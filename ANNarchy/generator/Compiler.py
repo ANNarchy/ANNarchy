@@ -525,7 +525,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
     Global._network[net_id]['instance'] = cython_module
 
     if cuda_config:
-        print 'setting device', cuda_config['device']
+        Global._print('setting device', cuda_config['device'])
         cython_module.set_device(cuda_config['device'])
 
     # Bind the py extensions to the corresponding python objects
