@@ -70,7 +70,7 @@ package_data = [
                 ]
 
 extensions = [
-    Extension("ANNarchy.core.cython_ext.Connector", ["ANNarchy/core/cython_ext/Connector.pyx"], include_dirs=[np.get_include()], extra_compile_args=["-g","-O2","-std=c++11"]),
+    Extension("ANNarchy.core.cython_ext.Connector", ["ANNarchy/core/cython_ext/Connector.pyx"], include_dirs=[np.get_include()], extra_compile_args=["-O2","-std=c++11"]),
     Extension("ANNarchy.core.cython_ext.Coordinates", ["ANNarchy/core/cython_ext/Coordinates.pyx"], include_dirs=[np.get_include()]),
     Extension("ANNarchy.core.cython_ext.Transformations", ["ANNarchy/core/cython_ext/Transformations.pyx"], include_dirs=[np.get_include()]),
 ]
