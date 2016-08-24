@@ -23,8 +23,8 @@
 #===============================================================================
 from ANNarchy.core import Global
 
-from ProfileGenerator import ProfileGenerator
-from ProfileTemplate import papi_profile_template, papi_profile_header
+from .ProfileGenerator import ProfileGenerator
+from .ProfileTemplate import papi_profile_template, papi_profile_header
 
 class PAPIProfile(ProfileGenerator):
     """
