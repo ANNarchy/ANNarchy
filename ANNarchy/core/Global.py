@@ -336,7 +336,6 @@ def start_record(to_record, period = {}):
         # get name and object
         pop_obj = pop if not isinstance(pop, str) else get_population(pop)
         pop_name = pop if isinstance(pop, str) else pop.name
-        print period
         try: # key == obj
             period = period[pop_obj]
         except:
