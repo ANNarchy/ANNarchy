@@ -899,7 +899,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             return eqs
 
         if Global.config['verbose']:
-            print 'occurance of pow() and SDK below 7.5 detected, apply fix.'
+            Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
 
         # detect all pow statements
         pow_occur = re.findall(r"pow\([^\(]*\)", eqs)

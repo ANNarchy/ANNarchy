@@ -762,7 +762,7 @@ class CodeGenerator(object):
                 break
 
         if Global.config['verbose']:
-            print 'population', pop.id, ' - kernel size:', guess
+            Global._print('population', pop.id, ' - kernel size:', guess)
 
         return guess
 
