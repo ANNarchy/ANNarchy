@@ -1,26 +1,26 @@
-"""
-
-    Population.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     Population.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 import ANNarchy.core.Global as Global
 
 from .PopulationView import PopulationView
@@ -446,7 +446,7 @@ class Population(object):
         * **window**: window in ms over which the spikes will be counted.
         """
         if self.neuron_type.type == 'rate':
-            _warning('compute_firing_rate(): the neuron is already rate-coded...')
+            Global._warning('compute_firing_rate(): the neuron is already rate-coded...')
         else:
             self._compute_mean_fr = float(window)
 

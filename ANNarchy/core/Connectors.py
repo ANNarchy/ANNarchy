@@ -1,34 +1,30 @@
-"""
-
-    Connectors.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     Connectors.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 import numpy as np
-import math
-import copy, inspect
 
 from ANNarchy.core import Global
-from ANNarchy.core.Random import RandomDistribution, Uniform
-from ANNarchy.core.Synapse import Synapse
-from ANNarchy.core.Dendrite import Dendrite
+from ANNarchy.core.Random import Uniform
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.Report import _process_random
 
@@ -41,7 +37,6 @@ except Exception as e:
 ################################
 ## Connector methods
 ################################
-
 def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple_weights=False):
     """
     Builds a one-to-one connection pattern between the two populations.

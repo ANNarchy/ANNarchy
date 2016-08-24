@@ -61,8 +61,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         # Update the random distributions
         init_rng = self._init_random_distributions(proj)
-        update_rng = self._update_random_distributions(proj)
 
+        # Post event
         post_event_body, post_event_header, post_event_call = self._post_event(proj)
 
         # Compute sum is the trickiest part
@@ -733,12 +733,6 @@ if(%(condition)s){
             proc_attr.append(attr['name'])
 
         return host_device_transfer, device_host_transfer
-
-    def _update_random_distributions(self, proj):
-        if proj.synapse_type.description['random_distributions'] != []:
-            raise NotImplementedError
-
-        return ""
 
     def _update_synapse(self, proj):
         # Global variables

@@ -1,28 +1,27 @@
-"""
-
-    Global.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
-import sys, os
-import time
+#===============================================================================
+#
+#     Global.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
+import sys
 import traceback
 import numpy as np
 
@@ -337,12 +336,12 @@ def start_record(to_record, period = {}):
         # get name and object
         pop_obj = pop if not isinstance(pop, str) else get_population(pop)
         pop_name = pop if isinstance(pop, str) else pop.name
-
+        print period
         try: # key == obj
-            period = record_period[pop_obj]
+            period = period[pop_obj]
         except:
             try: # key == name
-                period = record_period[pop_name]
+                period = period[pop_name]
             except: # nothing set
                 period = config['dt']
 
