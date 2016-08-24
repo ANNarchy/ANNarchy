@@ -23,8 +23,8 @@
 #===============================================================================
 from ANNarchy.core import Global
 
-from ProfileGenerator import ProfileGenerator
-from ProfileTemplate import cuda_profile_template, cuda_profile_header
+from .ProfileGenerator import ProfileGenerator
+from .ProfileTemplate import cuda_profile_template, cuda_profile_header
 
 class CUDAProfile(ProfileGenerator):
 
