@@ -22,7 +22,7 @@
 #
 #===============================================================================
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
-import CUDATemplates
+from .CUDATemplates import cuda_templates, cuda_flattening
 from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
@@ -35,7 +35,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
     Generate the header for a Population object to run either on a Nvidia
     GPU using Nvidia SDK > 5.0 and CC > 2.0
     """
-    _templates = CUDATemplates.cuda_templates
+    _templates = cuda_templates
 
     def __init__(self, profile_generator, net_id):
         # The super here calls all the base classes, so first ProjectionGenerator
@@ -52,7 +52,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         decl, accessor = self._declaration_accessors(proj)
 
         # concurrent streams
-        decl['cuda_stream'] = CUDATemplates.cuda_templates['cuda_stream']
+        decl['cuda_stream'] = cuda_templates['cuda_stream']
 
         # Initiliaze the projection
         init_parameters_variables = self._init_parameters_variables(proj)
@@ -114,7 +114,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         }
 
         if proj._storage_format == "lil":
-            cuda_flattening = CUDATemplates.cuda_flattening % {'id_post':proj.post.id}
+            cuda_flattening = cuda_flattening % {'id_post':proj.post.id}
         else:
             cuda_flattening = ""
 
@@ -184,7 +184,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
     def _declaration_accessors(self, proj):
         declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
 
-        declaration['cuda_stream'] = CUDATemplates.cuda_templates['cuda_stream']
+        declaration['cuda_stream'] = cuda_templates['cuda_stream']
         return declaration, accessor
 
     def _computesum_rate(self, proj):

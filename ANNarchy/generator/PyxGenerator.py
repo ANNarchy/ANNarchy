@@ -23,12 +23,12 @@
 #===============================================================================
 from ANNarchy.core import Global
 
-import ANNarchy.generator.Template.PyxTemplate as PyxTemplate
+from ANNarchy.generator.Template import PyxTemplate
 
-import ANNarchy.generator.Population.OpenMPTemplates as omp_templates
-import ANNarchy.generator.Population.CUDATemplates as cuda_templates
+from ANNarchy.generator.Population import OpenMPTemplates as omp_templates
+from ANNarchy.generator.Population import CUDATemplates as cuda_templates
 
-import ANNarchy.generator.Projection.OpenMPTemplates as proj_omp_templates
+from ANNarchy.generator.Projection import OpenMPTemplates as proj_omp_templates
 
 from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP, CSR_OpenMP
 from ANNarchy.generator.Projection.Connectivity import LIL_CUDA, CSR_CUDA

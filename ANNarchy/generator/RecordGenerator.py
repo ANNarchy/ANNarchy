@@ -22,7 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
-import ANNarchy.generator.Template.RecordTemplate as RecTemplate
+from ANNarchy.generator.Template import RecordTemplate as RecTemplate
 
 class RecordGenerator(object):
     """
