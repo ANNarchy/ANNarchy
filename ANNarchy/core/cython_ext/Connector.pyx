@@ -20,7 +20,6 @@ cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 ###################################################
 ########## LIL object to hold synapses ############
 ###################################################
-
 cdef class LIL:
 
     def __cinit__(self):
@@ -135,6 +134,349 @@ cdef class LIL:
             self.w.push_back(weights)
             self.delay.push_back(delays)
 
+    #####################################################
+    # Connector method implementations for list-of-list #
+    #####################################################
+    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections):
+        " Implementation of the all-to-all pattern "
+        cdef double weight
+        cdef int r_post, size_pre, i
+        cdef list tmp, post_ranks, pre_ranks
+        cdef vector[int] r
+        cdef vector[double] w, d
+
+        # Retríeve ranks
+        post_ranks = post.ranks
+        pre_ranks = pre.ranks
+
+        for r_post in post_ranks:
+            # List of pre ranks
+            tmp = [i for i  in pre_ranks]
+            if not allow_self_connections:
+                try:
+                    tmp.remove(r_post)
+                except: # was not in the list
+                    pass
+            r = tmp
+            size_pre = len(tmp)
+            # Weights
+            if isinstance(weights, (int, float)):
+                weight = weights
+                w = vector[double](1, weight)
+            elif isinstance(weights, RandomDistribution):
+                w = weights.get_list_values(size_pre)
+            # Delays
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(size_pre)
+
+            # Create the dendrite
+            self.push_back(r_post, r, w, d)
+
+    cpdef one_to_one(self, pre, post, weights, delays, shift):
+        " Implementation of the one-to-one pattern "
+        cdef double weight
+        cdef int r_post, offset
+        cdef list tmp, post_ranks, pre_ranks
+        cdef vector[int] r
+        cdef vector[double] w, d
+
+        # Retríeve ranks
+        post_ranks = post.ranks
+
+        if shift:
+            pre_ranks = pre.ranks
+            offset = min(post_ranks) - min(pre_ranks)
+        else:
+            offset = 0
+
+        if shift:
+            for r_post in post_ranks:
+                # List of pre ranks
+                if not r_post - offset in pre_ranks:
+                    continue
+                r = vector[int](1, r_post - offset)
+                # Get the weights and delays
+                w, d = _get_weights_delays(1, weights, delays)
+                # Create the dendrite
+                self.push_back(r_post, r, w, d)
+
+        else:
+            for r_post in post_ranks:
+                if r_post >= pre.size:
+                    break
+                # List of pre ranks
+                r = vector[int](1, r_post)
+                # Get the weights and delays
+                w, d = _get_weights_delays(1, weights, delays)
+                # Create the dendrite
+                self.push_back(r_post, r, w, d)
+
+    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections):
+        " Implementation of the fixed-probability pattern "
+        cdef double weight
+        cdef int r_post, r_pre, size_pre, max_size_pre
+        cdef list post_ranks
+        cdef vector[int] r
+        cdef vector[double] w, d
+        cdef np.ndarray random_values, tmp, pre_ranks
+
+        # Retríeve ranks
+        post_ranks = post.ranks
+
+        pre_ranks = np.array(pre.ranks)
+        max_size_pre = len(pre.ranks)
+
+        for r_post in post_ranks:
+            # List of pre ranks
+            random_values = np.random.random(max_size_pre)
+            tmp = pre_ranks[random_values < probability]
+            if not allow_self_connections:
+                tmp = tmp[tmp != r_post]
+            r = tmp
+            size_pre = tmp.size
+            if size_pre == 0:
+                continue
+            # Weights
+            if isinstance(weights, (int, float)):
+                weight = weights
+                w = vector[double](1, weight)
+            elif isinstance(weights, RandomDistribution):
+                w = weights.get_list_values(size_pre)
+            # Delays
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(size_pre)
+            # Create the dendrite
+            self.push_back(r_post, r, w, d)
+
+    cpdef fixed_number_pre(self, pre, post, int number, weights, delays, allow_self_connections):
+        cdef double weight
+        cdef int r_post, r_pre, size_pre
+        cdef list pre_ranks, post_ranks
+        cdef vector[int] r
+        cdef vector[double] w, d
+
+        # Retríeve ranks
+        post_ranks = post.ranks
+        pre_ranks = pre.ranks
+
+        for r_post in post_ranks:
+            # List of pre ranks
+            r = random.sample(pre_ranks, number)
+            if len(r) == 0:
+                continue
+            if not allow_self_connections:
+                while r_post in list(r): # the post index is in the list
+                    r = random.sample(pre_ranks, number)
+            # Weights
+            if isinstance(weights, (int, float)):
+                weight = weights
+                w = vector[double](1, weight)
+            elif isinstance(weights, RandomDistribution):
+                w = weights.get_list_values(number)
+            # Delays
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(number)
+            # Create the dendrite
+            self.push_back(r_post, r, w, d)
+
+    cpdef fixed_number_post(self, pre, post, int number, weights, delays, allow_self_connections):
+        cdef double weight
+        cdef int r_post, r_pre, size_pre
+        cdef list pre_ranks, post_ranks
+        cdef list pre_r, tmp
+        cdef dict rk_mat
+        cdef vector[int] r
+        cdef vector[double] w, d
+
+        # Retríeve ranks
+        post_ranks = post.ranks
+        pre_ranks = pre.ranks
+
+        # Build the backward matrix
+        rk_mat = {i: [] for i in post_ranks}
+        for r_pre in pre_ranks:
+            if number >= len(post_ranks):
+                tmp = post_ranks
+            else:
+                tmp = random.sample(post_ranks, number)
+                if not allow_self_connections:
+                    while r_pre in tmp: # the post index is in the list
+                        tmp = random.sample(post_ranks, number)
+            for i in tmp:
+                rk_mat[i].append(r_pre)
+
+        # Create the dendrites
+        for r_post in post_ranks:
+            # List of pre ranks
+            r = rk_mat[r_post]
+            size_pre = len(r)
+            if size_pre == 0:
+                continue
+            # Weights
+            if isinstance(weights, (int, float)):
+                weight = weights
+                w = vector[double](1, weight)
+            elif isinstance(weights, RandomDistribution):
+                w = weights.get_list_values(size_pre)
+            # Delays
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(size_pre)
+            # Create the dendrite
+            self.push_back(r_post, r, w, d)
+
+    cpdef gaussian(self, pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections):
+        cdef float distance, value
+        cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
+        cdef tuple pre_coord, post_coord
+        cdef tuple pre_geometry, post_geometry
+        cdef list ranks, values
+
+        cdef vector[int] r
+        cdef vector[double] w, d
+
+        # Retrieve simulation time step
+        dt = Global.config['dt']
+
+        # Population sizes
+        pre_geometry = pre_pop.geometry
+        post_geometry = post_pop.geometry
+        if isinstance(pre_geometry, int):
+            pre_size = pre_geometry
+            pre_dim = 1
+        else:
+            pre_dim = len(pre_geometry)
+            pre_size = 1
+            for c in pre_geometry:
+                pre_size  = pre_size * c
+        if isinstance(post_geometry, int):
+            post_size = post_geometry
+            post_dim = 1
+        else:
+            post_dim = len(post_geometry)
+            post_size = 1
+            for c in post_geometry:
+                post_size  = post_size * c
+
+        # Create the projection data
+        for post in list(range(post_size)):
+            ranks = []
+            values = []
+            if post_dim == 1:
+                post_coord = (post/float(post_size-1), )
+            elif post_dim == 2:
+                post_coord = Coordinates.get_normalized_2d_coord(post, post_geometry)
+            elif post_dim == 3:
+                post_coord = Coordinates.get_normalized_3d_coord(post, post_geometry)
+            else:
+                post_coord = Coordinates.get_normalized_coord(post, post_geometry)
+            for pre in list(range(pre_size)):
+                if not allow_self_connections and pre==post:
+                    continue
+                if pre_dim == 1:
+                    pre_coord = (pre/float(pre_size-1), )
+                    distance = Coordinates.comp_dist1D(pre_coord, post_coord)
+                elif pre_dim == 2:
+                    pre_coord = Coordinates.get_normalized_2d_coord(pre, pre_geometry)
+                    distance = Coordinates.comp_dist2D(pre_coord, post_coord)
+                elif pre_dim == 3:
+                    pre_coord = Coordinates.get_normalized_3d_coord(pre, pre_geometry)
+                    distance = Coordinates.comp_dist3D(pre_coord, post_coord)
+                else:
+                    pre_coord = Coordinates.get_normalized_coord(pre, pre_geometry)
+                    distance = Coordinates.comp_distND(pre_coord, post_coord)
+                value = amp * exp(-distance/(2.0*sigma**2))
+                if value > limit * amp:
+                    ranks.append(pre)
+                    values.append(value)
+            nb_synapses = len(ranks)
+            r = ranks
+            w = values
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(nb_synapses)
+            # Create the dendrite
+            self.push_back(post, r, w, d)
+
+    cpdef dog(self, pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections):
+        cdef float distance, value
+        cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
+        cdef tuple pre_coord, post_coord
+        cdef tuple pre_geometry, post_geometry
+        cdef list ranks, values
+
+        cdef vector[int] r
+        cdef vector[double] w, d
+
+        # Population sizes
+        pre_geometry = pre_pop.geometry
+        post_geometry = post_pop.geometry
+        if isinstance(pre_geometry, int):
+            pre_size = pre_geometry
+            pre_dim = 1
+        else:
+            pre_dim = len(pre_geometry)
+            pre_size = 1
+            for c in pre_geometry:
+                pre_size  = pre_size * c
+        if isinstance(post_geometry, int):
+            post_size = post_geometry
+            post_dim = 1
+        else:
+            post_dim = len(post_geometry)
+            post_size = 1
+            for c in post_geometry:
+                post_size  = post_size * c
+
+        # Create the projection data as LIL
+        for post in list(range(post_size)):
+            ranks = []
+            values = []
+            if post_dim == 1:
+                post_coord = (post/float(post_size-1), )
+            elif post_dim == 2:
+                post_coord = Coordinates.get_normalized_2d_coord(post, post_geometry)
+            elif post_dim == 3:
+                post_coord = Coordinates.get_normalized_3d_coord(post, post_geometry)
+            else:
+                post_coord = Coordinates.get_normalized_coord(post, post_geometry)
+            for pre in list(range(pre_size)):
+                if not allow_self_connections and pre==post:
+                    continue
+                if pre_dim == 1:
+                    pre_coord = (pre/float(pre_size-1), )
+                    distance = Coordinates.comp_dist1D(pre_coord, post_coord)
+                elif pre_dim == 2:
+                    pre_coord = Coordinates.get_normalized_2d_coord(pre, pre_geometry)
+                    distance = Coordinates.comp_dist2D(pre_coord, post_coord)
+                elif pre_dim == 3:
+                    pre_coord = Coordinates.get_normalized_3d_coord(pre, pre_geometry)
+                    distance = Coordinates.comp_dist3D(pre_coord, post_coord)
+                else:
+                    pre_coord = Coordinates.get_normalized_coord(pre, pre_geometry)
+                    distance = Coordinates.comp_distND(pre_coord, post_coord)
+                value = amp_pos * exp(-distance/(2.0*sigma_pos**2)) - amp_neg * exp(-distance/(2.0*sigma_neg**2))
+                if fabs(value) > limit * fabs(amp_pos - amp_neg):
+                    ranks.append(pre)
+                    values.append(value)
+            nb_synapses = len(ranks)
+            r = ranks
+            w = values
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(nb_synapses)
+
+            # Create the dendrite
+            self.push_back(post, r, w, d)
 
 cdef _get_weights_delays(int size, weights, delays):
 
@@ -253,428 +595,103 @@ cdef class CSR:
 #################################
 #### Connector methods ##########
 #################################
-def all_to_all(pre, post, weights, delays, allow_self_connections):
+def all_to_all(pre, post, weights, delays, allow_self_connections, storage_format):
     """ Cython implementation of the all-to-all pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LIL()
+    elif storage_format == "csr":
+        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
+        size_post = post.size if isinstance(post, Population) else post.population.size
 
-    cdef LIL projection
-    cdef double weight
-    cdef int r_post, size_pre, i
-    cdef list tmp, post_ranks, pre_ranks
-    cdef vector[int] r
-    cdef vector[double] w, d
-
-    # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
-
-    # Create the projection data as LIL
-    projection = LIL()
-
-    for r_post in post_ranks:
-        # List of pre ranks
-        tmp = [i for i  in pre_ranks]
-        if not allow_self_connections:
-            try:
-                tmp.remove(r_post)
-            except: # was not in the list
-                pass
-        r = tmp
-        size_pre = len(tmp)
-        # Weights
-        if isinstance(weights, (int, float)):
-            weight = weights
-            w = vector[double](1, weight)
-        elif isinstance(weights, RandomDistribution):
-            w = weights.get_list_values(size_pre)
-        # Delays
-        if isinstance(delays, (float, int)):
-            d = vector[double](1, delays)
-        elif isinstance(delays, RandomDistribution):
-            d = delays.get_list_values(size_pre)
-        # Create the dendrite
-        projection.push_back(r_post, r, w, d)
-
-    return projection
-
-def all_to_all_csrc(pre, post, weights, delays, allow_self_connections):
-    """ Cython implementation of the all-to-all pattern, stored as CSRC and pre1st ordering. """
-    cdef CSR projection
-
-    size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-    size_post = post.size if isinstance(post, Population) else post.population.size
-    
-    # Create the projection data as CSRC
-    projection = CSR(size_pre, size_post)
+        projection = CSR(size_pre, size_post)
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for all-to-all pattern')
 
     # instantiate pattern
     projection.all_to_all(pre, post, weights, delays, allow_self_connections)
 
     return projection
 
-def one_to_one(pre, post, weights, delays, shift):
+def one_to_one(pre, post, weights, delays, shift, storage_format):
     """ Cython implementation of the one-to-one pattern."""
-
-    cdef LIL projection
-    cdef double weight
-    cdef int r_post, offset
-    cdef list tmp, post_ranks, pre_ranks
-    cdef vector[int] r
-    cdef vector[double] w, d
-
-    # Create the projection data as LIL
-    projection = LIL()
-
-    # Retríeve ranks
-    post_ranks = post.ranks
-
-    if shift:
-        pre_ranks = pre.ranks
-        offset = min(post_ranks) - min(pre_ranks)
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LIL()
     else:
-        offset = 0
+        Global._error('storage_format == '+storage_format+' is not allowed for one-to-one pattern')
 
-
-    if shift:
-        for r_post in post_ranks:
-            # List of pre ranks
-            if not r_post - offset in pre_ranks:
-                continue
-            r = vector[int](1, r_post - offset)
-            # Get the weights and delays
-            w, d = _get_weights_delays(1, weights, delays)
-            # Create the dendrite
-            projection.push_back(r_post, r, w, d)
-
-    else:
-        for r_post in post_ranks:
-            if r_post >= pre.size:
-                break
-            # List of pre ranks
-            r = vector[int](1, r_post)
-            # Get the weights and delays
-            w, d = _get_weights_delays(1, weights, delays)
-            # Create the dendrite
-            projection.push_back(r_post, r, w, d)
-
-
+    # instantiate pattern
+    projection.one_to_one(pre, post, weights, delays, shift)
 
     return projection
 
-
-
-def fixed_probability(pre, post, probability, weights, delays, allow_self_connections):
+def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format):
     """ Cython implementation of the fixed_probability pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LIL()
+    elif storage_format == "csr":
+        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
+        size_post = post.size if isinstance(post, Population) else post.population.size
 
-    cdef LIL projection
-    cdef double weight
-    cdef int r_post, r_pre, size_pre, max_size_pre
-    cdef list post_ranks
-    cdef vector[int] r
-    cdef vector[double] w, d
-    cdef np.ndarray random_values, tmp, pre_ranks
-
-    # Retríeve ranks
-    post_ranks = post.ranks
-
-    pre_ranks = np.array(pre.ranks)
-    max_size_pre = len(pre.ranks)
-
-    # Create the projection data as LIL
-    projection = LIL()
-
-    for r_post in post_ranks:
-        # List of pre ranks
-        random_values = np.random.random(max_size_pre)
-        tmp = pre_ranks[random_values < probability]
-        if not allow_self_connections:
-            tmp = tmp[tmp != r_post]
-        r = tmp
-        size_pre = tmp.size
-        if size_pre == 0:
-            continue
-        # Weights
-        if isinstance(weights, (int, float)):
-            weight = weights
-            w = vector[double](1, weight)
-        elif isinstance(weights, RandomDistribution):
-            w = weights.get_list_values(size_pre)
-        # Delays
-        if isinstance(delays, (float, int)):
-            d = vector[double](1, delays)
-        elif isinstance(delays, RandomDistribution):
-            d = delays.get_list_values(size_pre)
-        # Create the dendrite
-        projection.push_back(r_post, r, w, d)
-
-    return projection
-
-def fixed_probability_csr(pre, post, probability, weights, delays, allow_self_connections):
-    """ Cython implementation of the fixed_probability pattern, stored as CSRC and pre1st ordering. """
-    cdef CSR projection
-
-    size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-    size_post = post.size if isinstance(post, Population) else post.population.size
-
-    # Create the projection data as CSRC
-    projection = CSR(size_pre, size_post)
+        projection = CSR(size_pre, size_post)
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_probability pattern')
 
     # instantiate pattern
     projection.fixed_probability(pre, post, probability, weights, delays, allow_self_connections)
 
     return projection
 
-def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections):
+def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format):
     """ Cython implementation of the fixed_number_pre pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LIL()
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_pre pattern')
 
-    cdef LIL projection
-    cdef double weight
-    cdef int r_post, r_pre, size_pre
-    cdef list pre_ranks, post_ranks
-    cdef vector[int] r
-    cdef vector[double] w, d
-
-    # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
-
-    # Create the projection data as LIL
-    projection = LIL()
-
-    for r_post in post_ranks:
-        # List of pre ranks
-        r = random.sample(pre_ranks, number)
-        if len(r) == 0:
-            continue
-        if not allow_self_connections:
-            while r_post in list(r): # the post index is in the list
-                r = random.sample(pre_ranks, number)
-        # Weights
-        if isinstance(weights, (int, float)):
-            weight = weights
-            w = vector[double](1, weight)
-        elif isinstance(weights, RandomDistribution):
-            w = weights.get_list_values(number)
-        # Delays
-        if isinstance(delays, (float, int)):
-            d = vector[double](1, delays)
-        elif isinstance(delays, RandomDistribution):
-            d = delays.get_list_values(number)
-        # Create the dendrite
-        projection.push_back(r_post, r, w, d)
+    # instantiate pattern
+    projection.fixed_number_pre(pre, post, number, weights, delays, allow_self_connections)
 
     return projection
 
-def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections):
+def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format):
     """ Cython implementation of the fixed_number_post pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LIL()
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
 
-    cdef LIL projection
-    cdef double weight
-    cdef int r_post, r_pre, size_pre
-    cdef list pre_ranks, post_ranks
-    cdef list pre_r, tmp
-    cdef dict rk_mat
-    cdef vector[int] r
-    cdef vector[double] w, d
-
-    # Retríeve ranks
-    post_ranks = post.ranks
-    pre_ranks = pre.ranks
-
-    # Create the projection data as LIL
-    projection = LIL()
-
-
-    # Build the backward matrix
-    rk_mat = {i: [] for i in post_ranks}
-    for r_pre in pre_ranks:
-        if number >= len(post_ranks):
-            tmp = post_ranks
-        else:
-            tmp = random.sample(post_ranks, number)
-            if not allow_self_connections:
-                while r_pre in tmp: # the post index is in the list
-                    tmp = random.sample(post_ranks, number)
-        for i in tmp:
-            rk_mat[i].append(r_pre)
-
-    # Create the dendrites
-    for r_post in post_ranks:
-        # List of pre ranks
-        r = rk_mat[r_post]
-        size_pre = len(r)
-        if size_pre == 0:
-            continue
-        # Weights
-        if isinstance(weights, (int, float)):
-            weight = weights
-            w = vector[double](1, weight)
-        elif isinstance(weights, RandomDistribution):
-            w = weights.get_list_values(size_pre)
-        # Delays
-        if isinstance(delays, (float, int)):
-            d = vector[double](1, delays)
-        elif isinstance(delays, RandomDistribution):
-            d = delays.get_list_values(size_pre)
-        # Create the dendrite
-        projection.push_back(r_post, r, w, d)
+    # instantiate pattern
+    projection.fixed_number_post(pre, post, number, weights, delays, allow_self_connections)
 
     return projection
 
-def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections):
+def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format):
     """ Cython implementation of the fixed_number_post pattern."""
-
-    cdef LIL projection
-    cdef float distance, value
-    cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
-    cdef tuple pre_coord, post_coord
-    cdef tuple pre_geometry, post_geometry
-    cdef list ranks, values
-
-    cdef vector[int] r
-    cdef vector[double] w, d
-
-
-    # Retrieve simulation time step
-    dt = Global.config['dt']
-
-    # Population sizes
-    pre_geometry = pre_pop.geometry
-    post_geometry = post_pop.geometry
-    if isinstance(pre_geometry, int):
-        pre_size = pre_geometry
-        pre_dim = 1
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LIL()
     else:
-        pre_dim = len(pre_geometry)
-        pre_size = 1
-        for c in pre_geometry:
-            pre_size  = pre_size * c
-    if isinstance(post_geometry, int):
-        post_size = post_geometry
-        post_dim = 1
-    else:
-        post_dim = len(post_geometry)
-        post_size = 1
-        for c in post_geometry:
-            post_size  = post_size * c
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
 
-    # Create the projection data as LIL
-    projection = LIL()
-    for post in list(range(post_size)):
-        ranks = []
-        values = []
-        if post_dim == 1:
-            post_coord = (post/float(post_size-1), )
-        elif post_dim == 2:
-            post_coord = Coordinates.get_normalized_2d_coord(post, post_geometry)
-        elif post_dim == 3:
-            post_coord = Coordinates.get_normalized_3d_coord(post, post_geometry)
-        else:
-            post_coord = Coordinates.get_normalized_coord(post, post_geometry)
-        for pre in list(range(pre_size)):
-            if not allow_self_connections and pre==post:
-                continue
-            if pre_dim == 1:
-                pre_coord = (pre/float(pre_size-1), )
-                distance = Coordinates.comp_dist1D(pre_coord, post_coord)
-            elif pre_dim == 2:
-                pre_coord = Coordinates.get_normalized_2d_coord(pre, pre_geometry)
-                distance = Coordinates.comp_dist2D(pre_coord, post_coord)
-            elif pre_dim == 3:
-                pre_coord = Coordinates.get_normalized_3d_coord(pre, pre_geometry)
-                distance = Coordinates.comp_dist3D(pre_coord, post_coord)
-            else:
-                pre_coord = Coordinates.get_normalized_coord(pre, pre_geometry)
-                distance = Coordinates.comp_distND(pre_coord, post_coord)
-            value = amp * exp(-distance/(2.0*sigma**2))
-            if value > limit * amp:
-                ranks.append(pre)
-                values.append(value)
-        nb_synapses = len(ranks)
-        r = ranks
-        w = values
-        if isinstance(delays, (float, int)):
-            d = vector[double](1, delays)
-        elif isinstance(delays, RandomDistribution):
-            d = delays.get_list_values(nb_synapses)
-        # Create the dendrite
-        projection.push_back(post, r, w, d)
+    # instantiate pattern
+    projection.gaussian(pre_pop, post_pop, amp, sigma, delays, limit, allow_self_connections)
 
     return projection
 
-def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections):
+def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format):
     """ Cython implementation of the fixed_number_post pattern."""
-
-    cdef LIL projection
-    cdef float distance, value
-    cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
-    cdef tuple pre_coord, post_coord
-    cdef tuple pre_geometry, post_geometry
-    cdef list ranks, values
-
-    cdef vector[int] r
-    cdef vector[double] w, d
-
-    # Population sizes
-    pre_geometry = pre_pop.geometry
-    post_geometry = post_pop.geometry
-    if isinstance(pre_geometry, int):
-        pre_size = pre_geometry
-        pre_dim = 1
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LIL()
     else:
-        pre_dim = len(pre_geometry)
-        pre_size = 1
-        for c in pre_geometry:
-            pre_size  = pre_size * c
-    if isinstance(post_geometry, int):
-        post_size = post_geometry
-        post_dim = 1
-    else:
-        post_dim = len(post_geometry)
-        post_size = 1
-        for c in post_geometry:
-            post_size  = post_size * c
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
 
-    # Create the projection data as LIL
-    projection = LIL()
-    for post in list(range(post_size)):
-        ranks = []
-        values = []
-        if post_dim == 1:
-            post_coord = (post/float(post_size-1), )
-        elif post_dim == 2:
-            post_coord = Coordinates.get_normalized_2d_coord(post, post_geometry)
-        elif post_dim == 3:
-            post_coord = Coordinates.get_normalized_3d_coord(post, post_geometry)
-        else:
-            post_coord = Coordinates.get_normalized_coord(post, post_geometry)
-        for pre in list(range(pre_size)):
-            if not allow_self_connections and pre==post:
-                continue
-            if pre_dim == 1:
-                pre_coord = (pre/float(pre_size-1), )
-                distance = Coordinates.comp_dist1D(pre_coord, post_coord)
-            elif pre_dim == 2:
-                pre_coord = Coordinates.get_normalized_2d_coord(pre, pre_geometry)
-                distance = Coordinates.comp_dist2D(pre_coord, post_coord)
-            elif pre_dim == 3:
-                pre_coord = Coordinates.get_normalized_3d_coord(pre, pre_geometry)
-                distance = Coordinates.comp_dist3D(pre_coord, post_coord)
-            else:
-                pre_coord = Coordinates.get_normalized_coord(pre, pre_geometry)
-                distance = Coordinates.comp_distND(pre_coord, post_coord)
-            value = amp_pos * exp(-distance/(2.0*sigma_pos**2)) - amp_neg * exp(-distance/(2.0*sigma_neg**2))
-            if fabs(value) > limit * fabs(amp_pos - amp_neg):
-                ranks.append(pre)
-                values.append(value)
-        nb_synapses = len(ranks)
-        r = ranks
-        w = values
-        if isinstance(delays, (float, int)):
-            d = vector[double](1, delays)
-        elif isinstance(delays, RandomDistribution):
-            d = delays.get_list_values(nb_synapses)
-
-        # Create the dendrite
-        projection.push_back(post, r, w, d)
+    # instantiate pattern
+    projection.dog(pre_pop, post_pop, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
 
     return projection

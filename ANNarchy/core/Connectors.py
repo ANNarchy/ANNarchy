@@ -67,7 +67,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.one_to_one, (weights, delays, shift), delays)
+    self._store_connectivity(Connector.one_to_one, (weights, delays, shift, "lil"), delays)
     return self
 
 def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -97,14 +97,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         self._dense_matrix = True
 
     # Store the connectivity
-    if ("lil" == storage_format):
-        connector = Connector.all_to_all
-    elif ("csr" == storage_format):
-        connector = Connector.all_to_all_csrc
-    else:
-        Global._error("Invalid connectivity format '" + storage_format + "' provided to all_to_all connector")
-    self._store_connectivity(connector, (weights, delays, allow_self_connections), delays, storage_format)
-
+    self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -131,7 +124,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     self.connector_name = "Gaussian"
     self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
-    self._store_connectivity(Connector.gaussian, (amp, sigma, delays, limit, allow_self_connections), delays)
+    self._store_connectivity(Connector.gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil"), delays)
     return self
 
 def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -160,7 +153,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self.connector_name = "Difference-of-Gaussian"
     self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
 
-    self._store_connectivity(Connector.dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections), delays)
+    self._store_connectivity(Connector.dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil"), delays, "lil")
     return self
 
 def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -187,13 +180,7 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    if "lil" == storage_format:
-        self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections), delays, storage_format)
-    elif "csr" == storage_format:
-        self._store_connectivity(Connector.fixed_probability_csr, (probability, weights, delays, allow_self_connections), delays, storage_format)
-    else:
-        Global._error("Invalid connectivity format '" + storage_format + "' provided to all_to_all connector")
-
+    self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
 def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
@@ -222,8 +209,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections), delays)
-
+    self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
     return self
 
 def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
@@ -252,7 +238,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections), delays)
+    self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
     return self
 
 def connect_with_func(self, method, **args):
@@ -278,7 +264,6 @@ def connect_with_func(self, method, **args):
 
     self.connector_name = "User-defined"
     self.connector_description = "Created by the method " + method.__name__
-
     return self
 
 def _load_from_lil(self, pre, post, synapses):
