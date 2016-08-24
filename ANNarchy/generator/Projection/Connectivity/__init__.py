@@ -9,4 +9,4 @@ contained classes:
 * CUDAConnectivity: should extend the CUDAGenerator
 
 """
-from Connectivity import OpenMPConnectivity, CUDAConnectivity
+from .Connectivity import OpenMPConnectivity, CUDAConnectivity
