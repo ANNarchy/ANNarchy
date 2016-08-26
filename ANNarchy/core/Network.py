@@ -29,6 +29,7 @@ import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.generator.Compiler as Compiler
 import numpy as np
+import os
 
 class Network(object):
     """
