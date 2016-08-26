@@ -104,7 +104,8 @@ class Network(object):
             'projections': [],
             'monitors': [],
             'instance': None,
-            'compiled': False
+            'compiled': False,
+            'directory': os.getcwd() + "/annarchy/"
             }
         )
         Simulate._callbacks.append([])
@@ -522,7 +523,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
 
     # Make sure the magic network is compiled
     if not Global._network[0]['compiled']:
-        Global._warning('parallel_run(): the magic network is not compiled yet, doing it...')
+        Global._warning('parallel_run(): the network is not compiled yet, doing it now...')
         Compiler.compile()
 
     # Number of processes to create
@@ -585,12 +586,17 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     return results
 
 def _create_and_run_method(args):
-    "method called to wrap the user-defined method"
+    """
+    Method called to wrap the user-defined method when different networks are created.
+    """
+    # Get arguments
     n = args[0]
     method = args[1]
     seed = args[-1]
+    # Create and instantiate the network 0, not compile it!
     net = Network(True)
     Compiler._instantiate(net.id, 0)
+    # Check the seed
     if seed == -1:
         net.set_seed(seed)
         np.random.seed() # Would set -1 otherwise
@@ -605,7 +611,9 @@ def _create_and_run_method(args):
     return res
 
 def _only_run_method(args):
-    "method called to wrap the user-defined method"
+    """
+    Method called to wrap the user-defined method when a single network is already instantiated.
+    """
     method = args[0]
     arguments = args[1:]
     res = method(*arguments)

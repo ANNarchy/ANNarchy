@@ -39,7 +39,8 @@ _network = [
     'projections': [],
     'monitors': [],
     'instance': None,
-    'compiled': False
+    'compiled': False,
+    'directory': os.getcwd() + "/annarchy/"
     }
 ]
 
