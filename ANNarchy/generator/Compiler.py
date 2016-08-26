@@ -121,7 +121,7 @@ def compile(    directory='annarchy',
 
     *Parameters*:
 
-    * **directory**: name of the subdirectory where the code will be generated and compiled. Must be a relative path.
+    * **directory**: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
     * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
     * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
@@ -158,6 +158,9 @@ def compile(    directory='annarchy',
 
     # Compiling directory
     annarchy_dir = os.getcwd() + '/' + directory
+    if not annarchy_dir.endswith('/'):
+        annarchy_dir += '/'
+    Global._network[net_id]['directory'] = annarchy_dir
 
     # Turn OMP off for MacOS
     if (Global.config['paradigm']=="openmp" and Global.config['num_threads']>1 and sys.platform == "darwin"):
@@ -227,7 +230,7 @@ class Compiler(object):
         changed = self.copy_files()
 
         # Perform compilation if something has changed
-        if changed or not os.path.isfile(self.annarchy_dir+'/ANNarchyCore'+str(self.net_id)+'.so'):
+        if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
             self.compilation()
 
         Global._network[self.net_id]['compiled'] = True
@@ -491,15 +494,22 @@ def _instantiate(net_id, import_id=-1):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
 
+    # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled 
     if import_id < 0:
         import_id = net_id
+
+    # subdirectory where the library lies
+    annarchy_dir = Global._network[import_id]['directory']
 
     if Global.config['verbose']:
         Global._print('Building network ...')
 
     # Import the Cython library
     try:
-        cython_module = imp.load_dynamic('ANNarchyCore'+str(import_id), 'annarchy/ANNarchyCore'+str(import_id)+'.so')
+        cython_module = imp.load_dynamic(
+            'ANNarchyCore' + str(import_id), # Name of the network
+            annarchy_dir + '/ANNarchyCore' + str(import_id) + '.so' # Path to the library
+        )
     except Exception as e:
         Global._print(e)
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
