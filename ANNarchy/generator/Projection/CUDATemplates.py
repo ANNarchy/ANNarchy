@@ -223,6 +223,18 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 
 }
 """,
+    'one2one': """
+// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+    int syn_idx = spiked[blockIdx.x]; // one2one: syn_idx = n_idx
+
+    if(threadIdx.x == 0) {
+        g_target[syn_idx] += w[syn_idx];
+        if ( g_target[syn_idx] > max_trans[syn_idx] )
+            g_target[syn_idx] = max_trans[syn_idx];
+    }
+}
+""",
     'header': """__global__ void cu_proj%(id)s_psp( %(conn_args)s%(add_args)s, double* %(target_arg)s );
 """,
     'call': """
@@ -242,21 +254,8 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 
 }
 
-cuda_spike_psp_kernel_one2one = \
-"""// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
-    int syn_idx = spiked[blockIdx.x]; // one2one: syn_idx = n_idx
-
-    if(threadIdx.x == 0) {
-        g_target[syn_idx] += w[syn_idx];
-        if ( g_target[syn_idx] > max_trans[syn_idx] )
-            g_target[syn_idx] = max_trans[syn_idx];
-    }
-}
-"""
-
-cuda_spike_psp_kernel = \
-"""// gpu device kernel for projection %(id)s
+cuda_spike_psp_kernel = {
+    'body': """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
 
 %(prefix)s
@@ -270,13 +269,10 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         syn_idx += blockDim.x;
     }
 }
-"""
-
-cuda_spike_psp_kernel_header = \
-"""__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );\n"""
-
-cuda_spike_psp_kernel_call = \
-"""
+""",
+    'header': """__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );
+""",
+    'call': """
     if ( pop%(id_pre)s._active) {
         int num_events = pop%(id_pre)s.num_events;
         int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s__;
@@ -299,12 +295,13 @@ cuda_spike_psp_kernel_call = \
         }
     }
 """
+}
 
 ######################################
 ### Update synaptic variables CUDA
 ######################################
-cuda_synapse_kernel = \
-"""
+cuda_synapse_kernel = {
+    'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_step( /* default params */
                               %(default_args)s
@@ -333,14 +330,10 @@ __global__ void cuProj%(id)s_step( /* default params */
         j += blockDim.x;
     }
 }
-"""
-
-cuda_synapse_kernel_header = \
-"""__global__ void cuProj%(id)s_step( %(default_args)s%(kernel_args)s, bool plasticity);
-"""
-
-cuda_synapse_kernel_call =\
-"""
+""",
+    'header': """__global__ void cuProj%(id)s_step( %(default_args)s%(kernel_args)s, bool plasticity);
+""",
+    'call': """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity ) {
         cuProj%(id_proj)s_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
@@ -361,11 +354,12 @@ cuda_synapse_kernel_call =\
     #endif
     }
 """
+}
 
 ######################################
 ### post-event update CUDA
 ######################################
-cuda_spike_postevent = {
+cuda_spike_postevent_kernel = {
     'body': """// Projection %(id_proj)s: post-synaptic events
 __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s ) {
     int i = spiked[blockIdx.x];                // post-synaptic
@@ -406,6 +400,14 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* sp
 }
 
 cuda_templates = {
+    # base stuff
     'projection_header': projection_header,
-    'cuda_stream': cuda_stream
+    'cuda_stream': cuda_stream,
+    'flattening': cuda_flattening,
+
+    # operations
+    'computesum_rate': cuda_psp_kernel,
+    'computesum_spiking': cuda_spike_psp_kernel,
+    'post_event': cuda_spike_postevent_kernel,
+    'synapse_update': cuda_synapse_kernel
 }
