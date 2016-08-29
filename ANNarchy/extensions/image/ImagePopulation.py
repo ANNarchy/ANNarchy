@@ -141,9 +141,9 @@ public:
         width_ = width;
         height_ = height;
         depth_ = depth;      
-        img_ = vector<double>(width*height*depth, 0.0);
+        img_ = std::vector<double>(width*height*depth, 0.0);
     }
-    vector<double> GrabImage(){
+    std::vector<double> GrabImage(){
         if(isOpened()){
             // Read a new frame from the video
             Mat frame;
@@ -179,7 +179,7 @@ protected:
     // Width and height of the image, depth_ is 1 (grayscale) or 3 (RGB)
     int width_, height_, depth_;
     // Vector of floats for the returned image
-    vector<double> img_;
+    std::vector<double> img_;
 };
 """
 
