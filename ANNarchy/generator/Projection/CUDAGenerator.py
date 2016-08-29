@@ -22,7 +22,7 @@
 #
 #===============================================================================
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
-from .CUDATemplates import cuda_templates, cuda_flattening
+from .CUDATemplates import cuda_templates
 from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
@@ -114,7 +114,9 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         }
 
         if proj._storage_format == "lil":
-            cuda_flattening = cuda_flattening % {'id_post':proj.post.id}
+            cuda_flattening = self._templates['flattening'] % {
+                'id_post':proj.post.id
+            }
         else:
             cuda_flattening = ""
 
@@ -253,7 +255,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         # finish the kernel etc.
         psp = proj.synapse_type.description['psp']['cpp'] % ids
 
-        body_code = CUDATemplates.cuda_psp_kernel['body'] % {
+        body_code = self._templates['computesum_rate']['body'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
@@ -261,14 +263,14 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'psp': psp
         }
 
-        header_code = CUDATemplates.cuda_psp_kernel['header'] % {
+        header_code = self._templates['computesum_rate']['header'] % {
             'id': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
             'add_args': add_args_header
         }
 
-        call_code = CUDATemplates.cuda_psp_kernel['call'] % {
+        call_code = self._templates['computesum_rate']['call'] % {
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
@@ -467,7 +469,7 @@ if(%(condition)s){
         else:
             raise NotImplementedError
 
-        call = CUDATemplates.cuda_spike_psp_kernel_call % {
+        call = self._templates['computesum_spiking']['call'] % {
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
@@ -476,7 +478,7 @@ if(%(condition)s){
             'conn_args': conn_call
         }
 
-        body = CUDATemplates.cuda_spike_psp_kernel % {
+        body = self._templates['computesum_spiking']['body'] % {
             'id': proj.id,
             'conn_arg': conn_body,
             'prefix': prefix,
@@ -487,7 +489,7 @@ if(%(condition)s){
             'pre_event': pre_code
         }
 
-        header = CUDATemplates.cuda_spike_psp_kernel_header % {
+        header = self._templates['computesum_spiking']['header'] % {
             'id': proj.id,
             'conn_header': conn_header,
             'kernel_args': kernel_args
@@ -532,7 +534,7 @@ if(%(condition)s){
             conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
 
             # build up kernel
-            body = CUDATemplates.cuda_psp_kernel['body'] % {
+            body = self._templates['computesum_rate']['body'] % {
                 'id_proj': proj.id,
                 'conn_args': conn_body,
                 'target_arg': 'g_'+proj.target,
@@ -540,14 +542,14 @@ if(%(condition)s){
                 'psp': psp,
             }
 
-            header = CUDATemplates.cuda_psp_kernel['header'] % {
+            header = self._templates['computesum_rate']['header'] % {
                 'id': proj.id,
                 'conn_args': conn_header,
                 'add_args': add_args_header,
                 'target_arg': 'g_'+proj.target,
             }
 
-            call = CUDATemplates.cuda_psp_kernel['call'] % {
+            call = self._templates['computesum_rate']['call'] % {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
@@ -667,13 +669,13 @@ if(%(condition)s){
         else:
             raise NotImplementedError
 
-        postevent_header = CUDATemplates.cuda_spike_postevent['header'] % {
+        postevent_header = self._templates['post_event']['header'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header
         }
 
-        postevent_body = CUDATemplates.cuda_spike_postevent['body'] % {
+        postevent_body = self._templates['post_event']['body'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
@@ -681,7 +683,7 @@ if(%(condition)s){
             'post_code': post_code
         }
 
-        postevent_call = CUDATemplates.cuda_spike_postevent['call'] % {
+        postevent_call = self._templates['post_event']['call'] % {
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
@@ -816,7 +818,7 @@ if(%(condition)s){
             'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
-        body = CUDATemplates.cuda_synapse_kernel % {
+        body = self._templates['synapse_update']['body'] % {
             'id': proj.id,
             'default_args': default_args,
             'kernel_args': kernel_args,
@@ -827,14 +829,14 @@ if(%(condition)s){
             'post': proj.post.id,
         }
 
-        header = CUDATemplates.cuda_synapse_kernel_header % {
+        header = self._templates['synapse_update']['header'] % {
             'id': proj.id,
             'default_args': default_args,
             'kernel_args': kernel_args
         }
 
                 # generate code
-        call = CUDATemplates.cuda_synapse_kernel_call % {
+        call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,
             'post': proj.post.id,
             'pre': proj.pre.id,
