@@ -34,12 +34,12 @@ distributions_arguments = {
 }
 
 distributions_equivalents = {
-    'Uniform' : 'std::uniform_real_distribution<double>',
+    'Uniform' : 'std::uniform_real_distribution< %(float_type)s >',
     'DiscreteUniform': 'std::uniform_int_distribution<int>',
-    'Normal' : 'std::normal_distribution<double>',
-    'LogNormal': 'std::lognormal_distribution<double>',
-    'Exponential': 'std::exponential_distribution<double>',
-    'Gamma': 'std::gamma_distribution<double>'
+    'Normal' : 'std::normal_distribution< %(float_type)s >',
+    'LogNormal': 'std::lognormal_distribution< %(float_type)s >',
+    'Exponential': 'std::exponential_distribution< %(float_type)s >',
+    'Gamma': 'std::gamma_distribution< %(float_type)s >'
 }
 
 # List of available distributions

@@ -237,6 +237,7 @@ class CodeGenerator(object):
         if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_header_template, built_in_functions
             return omp_header_template % {
+                'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
@@ -248,6 +249,7 @@ class CodeGenerator(object):
         elif Global.config['paradigm'] == "cuda":
             from Template.BaseTemplate import cuda_header_template
             return cuda_header_template % {
+                'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
@@ -359,6 +361,7 @@ class CodeGenerator(object):
         if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_body_template
             base_dict = {
+                'float_prec': Global.config['precision'],
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
@@ -484,6 +487,7 @@ class CodeGenerator(object):
 
             base_dict = {
                 # network definitions
+                'float_prec': Global.config['precision'],
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,

@@ -1,27 +1,27 @@
-"""
-
-    Equation.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
-from ANNarchy.core.Global import _warning, _error, _print
+#===============================================================================
+#
+#     Equation.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
+from ANNarchy.core.Global import _warning, _error, _print, config
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
@@ -218,7 +218,7 @@ class Equation(object):
 
         equation = simplify(solve(analysed, new_var, check=False)[0], ratio=1.0)
 
-        explicit_code = 'double _' + self.name + ' = ' + self.c_code(equation) + ';'
+        explicit_code = config['precision'] + ' _' + self.name + ' = ' + self.c_code(equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
@@ -243,7 +243,7 @@ class Equation(object):
 
         equation = simplify(collect( solve(analysed, new_var, check=False)[0], self.local_dict['dt']))
 
-        explicit_code =  'double _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
+        explicit_code = config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
         tmp_dict = self.local_dict
@@ -253,7 +253,7 @@ class Equation(object):
         )
         tmp_equation = solve(tmp_analysed, new_var)[0]
 
-        explicit_code += '\n    double _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n    ' + config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
@@ -294,7 +294,7 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
 
 
-        explicit_code = 'double _' + self.name + ' = '\
+        explicit_code = config['precision'] + ' _' + self.name + ' = '\
                         +  self.c_code(equation) + ';'
         switch = variable_name + ' = _' + self.name + ' ;'
 
@@ -314,7 +314,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'double _' + self.name + ' = ('\
+        explicit_code = config['precision'] + ' _' + self.name + ' = ('\
                         +  self.c_code(instepsize) + ')*(' \
                         + self.c_code(steadystate)+ ' - ' + variable_name +');'
         switch = variable_name + ' += _' + self.name + ' ;'

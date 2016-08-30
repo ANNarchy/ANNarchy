@@ -209,18 +209,18 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         # Dictionary of keywords to transform the parsed equations
         ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': "[j]",
-                'global_index': '[i]',
-                'pre_index': '[rank_pre[j]]',
-                'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pre_',
-                'post_prefix': 'post_',
-                'delay_nu' : '[delay[j]-1]', # non-uniform delay
-                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+            'id_proj' : proj.id,
+            'target': proj.target,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+            'local_index': "[j]",
+            'global_index': '[i]',
+            'pre_index': '[rank_pre[j]]',
+            'post_index': '[post_rank[i]]',
+            'pre_prefix': 'pre_',
+            'post_prefix': 'post_',
+            'delay_nu' : '[delay[j]-1]', # non-uniform delay
+            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
         #
@@ -248,7 +248,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             )
 
         # connectivity, yet only CSR
-        conn_header = "int* rank_pre, int *row_ptr, double *pre_r, double* w"
+        conn_header = "int* rank_pre, int *row_ptr, %(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
         conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
 
         #
@@ -256,6 +256,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         psp = proj.synapse_type.description['psp']['cpp'] % ids
 
         body_code = self._templates['computesum_rate']['body'] % {
+            'float_prec': Global.config['precision'],
             'id_proj': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
@@ -264,6 +265,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         }
 
         header_code = self._templates['computesum_rate']['header'] % {
+            'float_prec': Global.config['precision'],
             'id': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,

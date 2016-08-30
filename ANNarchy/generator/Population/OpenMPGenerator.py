@@ -156,6 +156,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Fill the template
         code = self._templates['population_header'] % {
+            'float_prec': Global.config['precision'],
             'id': pop.id,
             'name': pop.name,
             'size': pop.size,
@@ -223,10 +224,11 @@ class OpenMPGenerator(PopulationGenerator):
         """
         code = ""
         for target in sorted(pop.targets):
-            code += """
-    if (pop%(id)s._active)
-        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(double));
-""" % {'id': pop.id, 'target': target}
+            code += self._templates['rate_psp']['reset'] % {
+                'id': pop.id,
+                'target': target,
+                'float_prec': Global.config['precision']
+            }
 
         return code
 
@@ -253,12 +255,15 @@ class OpenMPGenerator(PopulationGenerator):
 
         if pop.neuron_type.type == "rate":
             for var in pop.delayed_variables:
-                if var in pop.neuron_type.description['local']:
+                attr = self._get_attr(pop, var)
+                attr_dict = {'name': attr['name'], 'type': attr['ctype']}
+
+                if attr['locality'] == "local":
                     declare_code += """
-    std::deque< std::vector<double> > _delayed_%(var)s; """ % {'var': var}
+    std::deque< std::vector< %(type)s > > _delayed_%(name)s; """ % attr_dict 
                 else:
                     declare_code += """
-    std::deque< double > _delayed_%(var)s; """ % {'var': var}
+    std::deque< %(type)s > _delayed_%(name)s; """ % attr_dict
         else:
             # Spiking networks should only exchange spikes
             declare_code += """
@@ -266,31 +271,34 @@ class OpenMPGenerator(PopulationGenerator):
     std::deque< std::vector<int> > _delayed_spike;
 """
             for var in pop.delayed_variables:
-                if var in pop.neuron_type.description['local']:
+                attr = self._get_attr(pop, var)
+                attr_dict = {'name': attr['name'], 'type': attr['ctype']}
+
+                if attr['locality'] == "local":
                     declare_code += """
-    std::deque< std::vector<double> > _delayed_%(var)s; """ % {'var': var}
+    std::deque< std::vector< %(type)s > > _delayed_%(name)s; """ % attr_dict
                 else:
                     declare_code += """
-    std::deque< double > _delayed_%(var)s; """ % {'var': var}
+    std::deque< %(type)s > _delayed_%(name)s; """ % attr_dict
 
         # Initialization
         init_code = """
         // Delayed variables"""
         for var in pop.delayed_variables:
-            locality = "local" if var in pop.neuron_type.description['local'] else "global"
-            init_code += delay_tpl[locality] % {'delay': pop.max_delay, 'var': var}
+            attr = self._get_attr(pop, var)
+            init_code += delay_tpl[attr['locality']] % {'name': attr['name'], 'type': attr['ctype'], 'delay': pop.max_delay} 
 
         # Update and Reset
         update_code = ""
         reset_code = ""
         for var in pop.delayed_variables:
             update_code += """
-        _delayed_%(var)s.push_front(%(var)s);
-        _delayed_%(var)s.pop_back();
-""" % {'var' : var}
+        _delayed_%(name)s.push_front(%(name)s);
+        _delayed_%(name)s.pop_back();
+""" % {'name' : var}
 
             # reset
-            reset_code += delay_tpl['reset'] % {'id': pop.id, 'var' : var}
+            reset_code += delay_tpl['reset'] % {'id': pop.id, 'name' : var}
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
@@ -389,7 +397,7 @@ class OpenMPGenerator(PopulationGenerator):
             while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - %(window)s)){
                 _spike_history[i].pop(); // Suppress spikes outside the window
             }
-            r[i] = %(freq)s * double(_spike_history[i].size());
+            r[i] = %(freq)s * float(_spike_history[i].size());
             """ % {'window': str(window_int), 'freq': str(1000.0/window)}
 
         return mean_FR_push, mean_FR_update

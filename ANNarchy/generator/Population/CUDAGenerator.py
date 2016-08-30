@@ -164,6 +164,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Fill the template
         code = self._templates['population_header'] % {
+            'float_prec': Global.config['precision'],
             'id': pop.id,
             'name': pop.name,
             'size': pop.size,
@@ -253,7 +254,7 @@ class CUDAGenerator(PopulationGenerator):
             for var in pop.delayed_variables:
                 if var in pop.neuron_type.description['local']:
                     declare_code += """
-std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': var}
+std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': var, 'type': self._get_attr(pop, var)['ctype']}
                 else:
                     # TODO:
                     Global._warning('Delay is not implemented for post-synaptic variables ...')
@@ -277,21 +278,22 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         update_code = ""
         reset_code = ""
         for var in pop.delayed_variables:
+            attr = self._get_attr(pop, var)
             update_code += """
-        double* last_%(var)s = gpu_delayed_%(var)s.back();
-        gpu_delayed_%(var)s.pop_back();
-        gpu_delayed_%(var)s.push_front(last_%(var)s);
-        std::vector<double> tmp_%(var)s = std::vector<double>( size, 0.0);
-        cudaMemcpy( last_%(var)s, gpu_%(var)s, sizeof(double) * size, cudaMemcpyDeviceToDevice );
+        %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
+        gpu_delayed_%(name)s.pop_back();
+        gpu_delayed_%(name)s.push_front(last_%(name)s);
+        std::vector<%(type)s> tmp_%(name)s = std::vector<%(type)s>( size, 0.0);
+        cudaMemcpy( last_%(name)s, gpu_%(name)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
     #ifdef _DEBUG
-        cudaError_t err_%(var)s = cudaGetLastError();
-        if (err_%(var)s != cudaSuccess)
-            std::cout << "pop%(id)s - delay %(var)s: " << cudaGetErrorString(err_%(var)s) << std::endl;
+        cudaError_t err_%(name)s = cudaGetLastError();
+        if (err_%(name)s != cudaSuccess)
+            std::cout << "pop%(id)s - delay %(name)s: " << cudaGetErrorString(err_%(name)s) << std::endl;
     #endif
-""" % {'id': pop.id, 'var': var}
+""" % {'id': pop.id, 'name': attr['name'], 'type': attr['ctype']}
 
             # reset
-            reset_code += delay_tpl['reset'] % {'id': pop.id, 'var' : var}
+            reset_code += delay_tpl['reset'] % {'id': pop.id, 'var' : attr['name'], 'type': attr['ctype']}
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
@@ -341,21 +343,27 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         """
         we replace the rand_%(id)s by the corresponding curand... term
         """
+        # double precision methods have a postfix 
+        prec_extension = "" if Global.config['precision'] == "float" else "_double"
+
         for rd in random_distributions:
             if rd['dist'] == "Uniform":
-                term = """( curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                term = """( curand_uniform%(postfix)s( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "Normal":
-                term = """( curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                term = """( curand_normal%(postfix)s( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             elif rd['dist'] == "LogNormal":
-                term = """( curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 glob_eqs = glob_eqs.replace(rd['name'], term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
@@ -462,12 +470,19 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
                 * header:  kernel prototypes
                 * call:    kernel call
 
-        TODO:
-            * refactoring: get rid of this tar, par, var stuff as done in spiking related codes ...
         """
+        # TODO: get rid of this tar, par, var stuff as done in spiking related codes ...
+
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
             return "", "", ""
+
+        # some defaults
+        ids = {
+            'id': pop.id,
+            'local_index': "[i]",
+            'global_index': ''
+        }
 
         # Neural update
         header = ""
@@ -490,15 +505,20 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 
         # global operations
         for op in pop.global_operations:
-            par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
+            par += """, %(type)s _%(op)s_%(var)s """ % {
+                'op': op['function'], 'var': op['variable'],
+                'type': Global.config['precision']
+            }
 
         # targets
         for target in sorted(pop.neuron_type.description['targets']):
-            tar += """, double* _sum_%(target)s""" % {'target' : target}
+            tar += """, %(type)s* _sum_%(target)s""" % {
+                'target' : target, 'type': Global.config['precision']
+            }
 
         #Global variables
         glob_eqs = ""
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % ids
         if eqs.strip() != "":
             glob_eqs = """
     if ( threadIdx.x == 0)
@@ -509,7 +529,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             #glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
 
         # Local variables
-        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % ids
 
         # we replace the random distributions
         loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
@@ -534,7 +554,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
             'local_eqs': loc_eqs,
             'global_eqs': glob_eqs,
             'pop_size': str(pop.size),
-            'default': 'double dt',
+            'default': Global.config['precision']+' dt',
             'refrac': "",
             'tar': tar,
             'tar2': tar_wo_types,
@@ -546,9 +566,14 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 
         #
         # create kernel prototypes
-        header += """
-__global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
-""" % {'id': pop.id, 'default': 'double dt', 'tar': tar, 'var': var, 'par': par}
+        header += CUDATemplates.population_update_header % {
+            'id': pop.id,
+            'default': Global.config['precision'] + ' dt',
+            'refrac': "",
+            'tar': tar,
+            'var': var,
+            'par': par
+        }
 
         #
         #    for calling entites we need to determine again all members
@@ -596,6 +621,13 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         if len(pop.neuron_type.description['variables']) == 0:
             return "", "", ""
 
+        # some defaults
+        ids = {
+            'id': pop.id,
+            'local_index': "[i]",
+            'global_index': ''
+        }
+
         # Neural update
         header = ""
         body = ""
@@ -615,10 +647,13 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         # global operations
         for op in pop.global_operations:
-            par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
+            par += """, %(type)s _%(op)s_%(var)s """ % {
+                'op': op['function'], 'var': op['variable'],
+                'type': Global.config['precision']
+            }
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % ids
         if eqs.strip() == "":
             glob_eqs = ""
         else:
@@ -646,7 +681,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
-            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % ids
             refrac_inc = "refractory_remaining[i] = refractory[i];"
 
             loc_eqs = """
@@ -676,7 +711,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'local_eqs': loc_eqs,
             'global_eqs': glob_eqs,
             'pop_size': str(pop.size),
-            'default': "double dt",
+            'default': Global.config['precision'] + " dt",
             'refrac': refrac_header,
             'tar': "",
             'var': var,
@@ -689,7 +724,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # create kernel prototypes
         header += CUDATemplates.population_update_header % {
             'id': pop.id,
-            'default': "double dt",
+            'default': Global.config['precision'] + " dt",
             'refrac': refrac_header,
             'var': var,
             'par': par
@@ -728,12 +763,12 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         #
         # Process the spike condition and generate 2nd set of kernels
         #
-        cond = pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        cond = pop.neuron_type.description['spike']['spike_cond'] % ids
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
             %(reset)s
-""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
+""" % {'reset': eq['cpp'] % ids}
 
         # arguments
         body_args = ""
@@ -780,7 +815,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         body += CUDATemplates.spike_gather_kernel % {
             'id': pop.id,
             'pop_size': str(pop.size),
-            'default': 'double dt, unsigned int* num_events, int* spiked, long int* last_spike',
+            'default': Global.config['precision'] + ' dt, unsigned int* num_events, int* spiked, long int* last_spike',
             'refrac': refrac_header,
             'args': body_args,
             'spike_gather': spike_gather
@@ -788,7 +823,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         header += CUDATemplates.spike_gather_header % {
             'id': pop.id,
-           'default': "double dt, unsigned int * num_events, int* spiked, long int* last_spike",
+           'default': Global.config['precision'] + ' dt, unsigned int * num_events, int* spiked, long int* last_spike',
            'refrac': refrac_header,
            'args': header_args
         }
@@ -802,7 +837,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'id': pop.id,
             'default': default_args,
             'refrac': refrac_body,
-            'args': call_args % {'id': pop.id}
+            'args': call_args % ids
         }
 
         if self._prof_gen:
@@ -904,6 +939,11 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # detect all pow statements
         pow_occur = re.findall(r"pow\([^\(]*\)", eqs)
         for term in pow_occur:
-            eqs = eqs.replace(term, term.replace(',', ',(double)'))
+            if Global.config['precision'] == "double":
+                eqs = eqs.replace(term, term.replace(',', ',(double)'))
+            else:
+                # HD: need to test, if there is a problem in
+                # this case.
+                raise NotImplementedError
 
         return eqs

@@ -1,26 +1,26 @@
-"""
-
-    Extraction.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     Extraction.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 from ANNarchy.core.Global import _error, _warning, _print, config
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
@@ -283,7 +283,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         elif 'bool' in flags:
             ctype = 'bool'
         else:
-            ctype = 'double'
+            ctype = config['precision']
 
         # Get the init value if declared
         if 'init' in bounds.keys():
@@ -321,7 +321,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                 init = False
             elif ctype == 'int':
                 init = 0
-            elif ctype == 'double':
+            elif ctype == 'double' or ctype == 'float':
                 init = 0.0
         return bounds, flags, ctype, init
 
@@ -344,8 +344,8 @@ def extract_functions(description, local_global=False):
         # Extract their types
         types = f['constraint']
         if types == '':
-            return_type = 'double'
-            arg_types = ['double' for a in arguments]
+            return_type = config['precision']
+            arg_types = [config['precision'] for a in arguments]
         else:
             types = types.split(',')
             return_type = types[0].strip()

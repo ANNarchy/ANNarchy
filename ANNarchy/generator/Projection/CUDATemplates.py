@@ -180,12 +180,12 @@ cuda_flattening = """
 # doesn't reorder stores to it and induce incorrect behavior.
 cuda_psp_kernel = {
     'body': """
-__global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int j = tid+row_ptr[blockIdx.x];
 
-    extern double __shared__ sdata[];
-    double localSum = 0.0;
+    extern %(float_prec)s __shared__ sdata[];
+    %(float_prec)s localSum = 0.0;
 
     while(j < row_ptr[blockIdx.x+1])
     {
@@ -204,7 +204,7 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 
     if (tid < 32)
     {
-        volatile double* smem = sdata;
+        volatile %(float_prec)s* smem = sdata;
 
         if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
         if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
@@ -225,7 +225,7 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
 """,
     'one2one': """
 // gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
     int syn_idx = spiked[blockIdx.x]; // one2one: syn_idx = n_idx
 
     if(threadIdx.x == 0) {
@@ -235,7 +235,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( %(conn_args)s%(add_args)s, double* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp( %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
@@ -256,7 +256,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
 
 cuda_spike_psp_kernel = {
     'body': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
 
 %(prefix)s
 
@@ -270,7 +270,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );
+    'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );
 """,
     'call': """
     if ( pop%(id_pre)s._active) {
@@ -361,7 +361,7 @@ __global__ void cuProj%(id)s_step( /* default params */
 ######################################
 cuda_spike_postevent_kernel = {
     'body': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
     int i = spiked[blockIdx.x];                // post-synaptic
     int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
 
@@ -373,7 +373,7 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* sp
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s );
+    'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
     'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {

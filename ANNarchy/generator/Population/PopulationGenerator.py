@@ -103,7 +103,7 @@ class PopulationGenerator(object):
     // Targets
 """
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                declaration += self._templates['rate_psp']['decl'] % {'target': target}
+                declaration += self._templates['rate_psp']['decl'] % {'target': target, 'float_prec': Global.config['precision']}
 
         # Global operations
         declaration += """
@@ -164,8 +164,8 @@ class PopulationGenerator(object):
 """ % {'op': op['function'], 'var': op['variable']}
             elif Global.config['paradigm'] == "cuda":
                 code += """    _%(op)s_%(var)s = 0.0;
-    cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(double));
-""" % {'op': op['function'], 'var': op['variable']}
+    cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
+""" % {'op': op['function'], 'var': op['variable'], 'type': Global.config['precision']}
             else:
                 raise NotImplementedError
 
@@ -180,13 +180,11 @@ class PopulationGenerator(object):
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
+            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': var['init'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
+            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': var['init'], 'attr_type': 'variable'}
 
         # Random numbers
         if len(pop.neuron_type.description['random_distributions']) > 0:
@@ -201,7 +199,7 @@ class PopulationGenerator(object):
         # Targets, only if rate-code
         if pop.neuron_type.type == 'rate':
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                code += self._templates['rate_psp']['init'] % {'id': pop.id, 'target': target}
+                code += self._templates['rate_psp']['init'] % {'id': pop.id, 'target': target, 'float_prec': Global.config['precision']}
 
         return code
 

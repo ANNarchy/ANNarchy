@@ -99,7 +99,7 @@ class RecordGenerator(object):
         wsums_list = []
         if pop.neuron_type.type == 'rate':
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                wsums_list.append({'ctype': 'double', 'name': '_sum_'+target, 'locality': 'local'})
+                wsums_list.append({'ctype': Global.config['precision'], 'name': '_sum_'+target, 'locality': 'local'})
 
         for var in pop.neuron_type.description['variables'] + wsums_list:
             struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}

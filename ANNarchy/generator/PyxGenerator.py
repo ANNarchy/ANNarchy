@@ -125,6 +125,7 @@ class PyxGenerator(object):
 
         from .Template.PyxTemplate import pyx_template
         return pyx_template % {
+            'float_prec': Global.config['precision'],
             'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
             'pop_class' : pop_class, 'proj_class': proj_class,
@@ -196,7 +197,7 @@ class PyxGenerator(object):
         # Targets"""
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 export_targets += """
-        vector[double] _sum_%(target)s""" % {'target' : target}
+        vector[%(float_prec)s] _sum_%(target)s""" % {'target' : target, 'float_prec': Global.config['precision']}
         if 'export_targets' in pop._specific_template.keys():
             export_targets = pop._specific_template['export_targets']
 
@@ -584,9 +585,9 @@ class PyxGenerator(object):
         # Targets"""
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 tpl_code += """
-        vector[vector[double]] _sum_%(target)s
+        vector[vector[%(float_prec)s]] _sum_%(target)s
         bool record__sum_%(target)s
-""" % {'target': target}
+""" % {'target': target, 'float_prec': Global.config['precision']}
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
 

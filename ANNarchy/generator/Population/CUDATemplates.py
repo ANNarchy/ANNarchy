@@ -22,7 +22,7 @@
 #
 #===============================================================================
 population_header = """#pragma once
-extern double dt;
+extern %(float_prec)s dt;
 extern long int t;
 
 // RNG - defined in ANNarchy.cu
@@ -170,8 +170,8 @@ attribute_cpp_init = {
 """
         // Local %(attr_type)s %(name)s
         %(name)s = std::vector<%(type)s>(size, %(init)s);
-        cudaMalloc(&gpu_%(name)s, size * sizeof(double));
-        cudaMemcpy(gpu_%(name)s, %(name)s.data(), size * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMalloc(&gpu_%(name)s, size * sizeof(%(type)s));
+        cudaMemcpy(gpu_%(name)s, %(name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
 """,
     'global':
 """
@@ -182,14 +182,14 @@ attribute_cpp_init = {
 
 attribute_delayed = {
    'local': """
-    gpu_delayed_%(var)s = std::deque< double* >(%(delay)s, NULL);
+    gpu_delayed_%(var)s = std::deque< %(type)s* >(%(delay)s, NULL);
     for ( int i = 0; i < %(delay)s; i++ )
-        cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(double) * size);
+        cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(%(type)s) * size);
 """,
     'global': "//TODO: implement code template",
     'reset' : """
     for ( int i = 0; i < gpu_delayed_%(var)s.size(); i++ ) {
-        cudaMemcpy( gpu_delayed_%(var)s[i], gpu_%(var)s, sizeof(double) * size, cudaMemcpyDeviceToDevice );
+        cudaMemcpy( gpu_delayed_%(var)s[i], gpu_%(var)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
     }
 """
 }
@@ -228,14 +228,14 @@ curand = {
 
 rate_psp = {
    'decl': """
-    std::vector<double> _sum_%(target)s;
-    double* gpu__sum_%(target)s;
+    std::vector<%(float_prec)s> _sum_%(target)s;
+    %(float_prec)s* gpu__sum_%(target)s;
 """,
    'init': """
         // Post-synaptic potential
-        _sum_%(target)s = std::vector<double>(size, 0.0);
-        cudaMalloc((void**)&gpu__sum_%(target)s, size * sizeof(double));
-        cudaMemcpy(gpu__sum_%(target)s, _sum_%(target)s.data(), size * sizeof(double), cudaMemcpyHostToDevice);
+        _sum_%(target)s = std::vector<%(float_prec)s>(size, 0.0);
+        cudaMalloc((void**)&gpu__sum_%(target)s, size * sizeof(%(float_prec)s));
+        cudaMemcpy(gpu__sum_%(target)s, _sum_%(target)s.data(), size * sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
 """
 }
 
@@ -323,14 +323,14 @@ __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 """
 
 population_update_header = """
-__global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(var)s%(par)s );
+__global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
 """
 
 population_update_call = \
 """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
-        int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
+        int nb = int( ceil ( float( pop%(id)s.size ) / (float)__pop%(id)s__ ) );
 
         cuPop%(id)s_step<<< nb, __pop%(id)s__ >>>(
               /* default arguments */
