@@ -22,6 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global as Global
+from .Random import RandomDistribution
 import numpy as np
 
 class PopulationView(object):
@@ -180,6 +181,8 @@ class PopulationView(object):
         for val_key in value.keys():
             if hasattr(self.population, val_key):
                 # Check the value
+                if isinstance(value[val_key], RandomDistribution): # Make sure it is generated only once
+                        value[val_key] = np.array(value[val_key].get_values(self.size))
                 if isinstance(value[val_key], np.ndarray): # np.array
                     if value[val_key].ndim >1 or len(value[val_key]) != self.size:
                         Global._error("You can only provide an array of the same size as the PopulationView", self.size)
