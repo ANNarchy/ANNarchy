@@ -567,8 +567,59 @@ cdef class CSR:
             elif isinstance(delays, RandomDistribution):
                 d = delays.get_list_values(size_post)
             d_int = np.array(d) / Global.config['dt']
+
             # Create the dendrite
             self._matrix.push_back(r_pre, r, w, d_int)
+
+    cpdef fixed_number_pre(self, pre, post, int number, weights, delays, allow_self_connections):
+        cdef double weight
+        cdef int r_post, r_pre, size_pre
+        cdef list pre_ranks, post_ranks
+        cdef vector[vector[int]] ranks
+        cdef vector[int] r
+        cdef vector[double] w, d
+
+        # Retríeve ranks
+        post_ranks = post.ranks
+        pre_ranks = pre.ranks
+
+        nb_pre = pre.size if isinstance(pre, Population) else pre.population.size
+        ranks = vector[vector[int]]( nb_pre, vector[int]())
+
+        # draw the ranks from post-view
+        for r_post in post_ranks:
+            # List of pre ranks
+            r = random.sample(pre_ranks, number)
+            if len(r) == 0:
+                continue
+            if not allow_self_connections:
+                while r_post in list(r): # the post index is in the list
+                    r = random.sample(pre_ranks, number)
+
+            # sort into pre-to-post view
+            for rk in r:
+                ranks[rk].push_back(r_post)
+
+        for r_pre in pre_ranks:
+            number = ranks[r_pre].size()
+            if number == 0:
+                continue
+
+            # Weights
+            if isinstance(weights, (int, float)):
+                weight = weights
+                w = vector[double](1, weight)
+            elif isinstance(weights, RandomDistribution):
+                w = weights.get_list_values(number)
+            # Delays
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(number)
+            d_int = np.array(d) / Global.config['dt']
+
+            # Create the dendrite
+            self._matrix.push_back(r_pre, ranks[r_pre], w, d_int)
 
 #################################
 #### Connector methods ##########
@@ -627,6 +678,11 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     # instanciate connector class based on storage_format
     if storage_format == "lil":
         projection = LIL()
+    elif storage_format == "csr":
+        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
+        size_post = post.size if isinstance(post, Population) else post.population.size
+
+        projection = CSR(size_pre, size_post)
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_pre pattern')
 

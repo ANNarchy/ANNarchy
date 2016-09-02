@@ -174,7 +174,7 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
-def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
+def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
     """
     Builds a connection pattern between the two populations with a fixed number of pre-synaptic neurons.
 
@@ -200,7 +200,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
+    self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
 def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
