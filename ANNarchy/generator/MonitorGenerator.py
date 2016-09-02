@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     RecordGenerator.py
+#     MonitorGenerator.py
 #
 #     This file is part of ANNarchy.
 #
@@ -22,9 +22,9 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
-from ANNarchy.generator.Template import RecordTemplate as RecTemplate
+from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 
-class RecordGenerator(object):
+class MonitorGenerator(object):
     """
     Creates the required codes for recording population
     and projection data
@@ -43,6 +43,12 @@ class RecordGenerator(object):
             * *net_id*: unique id for the current network
 
         """
+        print '\n'
+        print '\n'
+        import pprint
+        pprint.pprint(populations)
+        pprint.pprint(projections)
+        
         self._annarchy_dir = annarchy_dir
         self._populations = populations
         self._projections = projections

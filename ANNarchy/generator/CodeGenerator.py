@@ -24,7 +24,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from .PyxGenerator import PyxGenerator
-from .RecordGenerator import RecordGenerator
+from .MonitorGenerator import MonitorGenerator
 
 from .Population import OpenMPGenerator, CUDAGenerator
 from .Projection import OpenMPProjectionGenerator, CUDAProjectionGenerator
@@ -90,7 +90,7 @@ class CodeGenerator(object):
             Global._error("No PopulationGenerator for " + Global.config['paradigm'])
 
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
-        self._recordgen = RecordGenerator(annarchy_dir, populations, projections, net_id)
+        self._recordgen = MonitorGenerator(annarchy_dir, populations, projections, net_id)
 
         self._pop_desc = []
         self._proj_desc = []
