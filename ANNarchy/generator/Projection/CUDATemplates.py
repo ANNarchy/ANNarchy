@@ -249,6 +249,11 @@ __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spik
                        %(add_args)s
                        /* result */
                        %(target_arg)s );
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString(err) << std::endl;
+    #endif
     }
 """
 

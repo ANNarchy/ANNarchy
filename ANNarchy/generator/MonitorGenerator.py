@@ -43,12 +43,6 @@ class MonitorGenerator(object):
             * *net_id*: unique id for the current network
 
         """
-        print '\n'
-        print '\n'
-        import pprint
-        pprint.pprint(populations)
-        pprint.pprint(projections)
-        
         self._annarchy_dir = annarchy_dir
         self._populations = populations
         self._projections = projections

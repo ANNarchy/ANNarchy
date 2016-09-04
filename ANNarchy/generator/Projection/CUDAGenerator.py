@@ -452,8 +452,8 @@ if(%(condition)s){
 
         if proj._storage_format == "lil":
             conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
-            conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
+            conn_body = "int* col_ptr, int* post_ranks, int* indices, %(float_prec)s* w" % {'float_prec':Global.config['precision']}
+            conn_header = "int* col_ptr, int* post_ranks, int* indices, %(float_prec)s *w" % {'float_prec':Global.config['precision']}
             prefix = """
     int pre_idx = spiked[blockIdx.x];
     int syn_idx = col_ptr[pre_idx]+threadIdx.x;
@@ -461,8 +461,8 @@ if(%(condition)s){
             row_desc = "syn_idx < col_ptr[pre_idx+1]"
         elif proj._storage_format == "csr":
             conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s._gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* post_ranks, int* indices, double* w"
-            conn_header = "int* row_ptr, int* post_ranks, int* indices, double *w"
+            conn_body = "int* row_ptr, int* post_ranks, int* indices, %(float_prec)s* w" % {'float_prec':Global.config['precision']}
+            conn_header = "int* row_ptr, int* post_ranks, int* indices, %(float_prec)s *w" % {'float_prec':Global.config['precision']}
             prefix = """
     int pre_idx = spiked[blockIdx.x];
     int syn_idx = row_ptr[pre_idx]+threadIdx.x;
@@ -482,6 +482,7 @@ if(%(condition)s){
 
         body = self._templates['computesum_spiking']['body'] % {
             'id': proj.id,
+            'float_prec': Global.config['precision'],
             'conn_arg': conn_body,
             'prefix': prefix,
             'row_desc': row_desc,
@@ -493,6 +494,7 @@ if(%(condition)s){
 
         header = self._templates['computesum_spiking']['header'] % {
             'id': proj.id,
+            'float_prec': Global.config['precision'],
             'conn_header': conn_header,
             'kernel_args': kernel_args
         }

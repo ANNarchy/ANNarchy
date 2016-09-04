@@ -60,7 +60,7 @@ class OpenMPGenerator(PopulationGenerator):
         # Declare global operations as extern at the beginning of the file
         extern_global_operations = ""
         for op in pop.global_operations:
-            extern_global_operations += global_op_extern_dict[op['function']]
+            extern_global_operations += global_op_extern_dict[op['function']] % {'type': Global.config['precision']}
 
         # Initialize parameters and variables
         init_parameters_variables = self._init_population(pop)
@@ -284,21 +284,13 @@ class OpenMPGenerator(PopulationGenerator):
         # Initialization
         init_code = """
         // Delayed variables"""
-        for var in pop.delayed_variables:
-            attr = self._get_attr(pop, var)
-            init_code += delay_tpl[attr['locality']] % {'name': attr['name'], 'type': attr['ctype'], 'delay': pop.max_delay} 
-
-        # Update and Reset
         update_code = ""
         reset_code = ""
         for var in pop.delayed_variables:
-            update_code += """
-        _delayed_%(name)s.push_front(%(name)s);
-        _delayed_%(name)s.pop_back();
-""" % {'name' : var}
-
-            # reset
-            reset_code += delay_tpl['reset'] % {'id': pop.id, 'name' : var}
+            attr = self._get_attr(pop, var)
+            init_code += delay_tpl[attr['locality']]['init'] % {'name': attr['name'], 'type': attr['ctype'], 'delay': pop.max_delay} 
+            update_code += delay_tpl[attr['locality']]['update'] % {'name' : var}
+            reset_code += delay_tpl[attr['locality']]['reset'] % {'id': pop.id, 'name' : var}
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':

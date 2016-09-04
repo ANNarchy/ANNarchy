@@ -110,13 +110,14 @@ class PopulationGenerator(object):
     // Global operations
 """
         for op in pop.global_operations:
+            op_dict = {'type': Global.config['precision'], 'op': op['function'], 'var': op['variable']} 
             if Global.config['paradigm'] == "openmp":
-                declaration += """    double _%(op)s_%(var)s;
-""" % {'op': op['function'], 'var': op['variable']}
+                declaration += """    %(type)s _%(op)s_%(var)s;
+""" % op_dict
             elif Global.config['paradigm'] == "cuda":
-                declaration += """    double _%(op)s_%(var)s;
-    double *_gpu_%(op)s_%(var)s;
-""" % {'op': op['function'], 'var': op['variable']}
+                declaration += """    %(type)s _%(op)s_%(var)s;
+    %(type)s *_gpu_%(op)s_%(var)s;
+""" % op_dict
             else:
                 Global._error("Internal: acc/decl of global operations are not implemented for: " + Global.config['paradigm'])
 
@@ -180,18 +181,35 @@ class PopulationGenerator(object):
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': var['init'], 'attr_type': 'parameter'}
+            var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
+                       'init': var['init'], 'attr_type': 'parameter'}
+            code += attr_tpl[var['locality']] % var_ids
 
         # Variables
         for var in pop.neuron_type.description['variables']:
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': var['init'], 'attr_type': 'variable'}
+            var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
+                       'init': var['init'], 'attr_type': 'variable'}
+            code += attr_tpl[var['locality']] % var_ids
 
         # Random numbers
         if len(pop.neuron_type.description['random_distributions']) > 0:
             code += """
         // Random numbers"""
             for rd in pop.neuron_type.description['random_distributions']:
-                code += self._templates['rng'][rd['locality']]['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+                # in principal only important for openmp
+                rng_def = {
+                    'id': pop.id,
+                    'float_prec':Global.config['precision']
+                }
+                # RNG declaration, only for openmp
+                rng_ids = {
+                    'id': pop.id,
+                    'rd_name': rd['name'],
+                    'type': rd['dist'],
+                    'rd_init': rd['definition'] % rng_def
+                }
+                print self._templates['rng'][rd['locality']]['init']
+                code += self._templates['rng'][rd['locality']]['init'] % rng_ids
 
         # Global operations
         code += self._init_globalops(pop)

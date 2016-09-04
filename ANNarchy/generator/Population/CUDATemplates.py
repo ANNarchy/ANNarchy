@@ -172,6 +172,11 @@ attribute_cpp_init = {
         %(name)s = std::vector<%(type)s>(size, %(init)s);
         cudaMalloc(&gpu_%(name)s, size * sizeof(%(type)s));
         cudaMemcpy(gpu_%(name)s, %(name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+    #ifdef _DEBUG
+        cudaError_t err_%(name)s = cudaGetLastError();
+        if ( err_%(name)s != cudaSuccess )
+            std::cout << "    allocation of %(name)s failed: " << cudaGetErrorString(err_%(name)s) << std::endl;
+    #endif
 """,
     'global':
 """
@@ -181,18 +186,47 @@ attribute_cpp_init = {
 }
 
 attribute_delayed = {
-   'local': """
-    gpu_delayed_%(var)s = std::deque< %(type)s* >(%(delay)s, NULL);
-    for ( int i = 0; i < %(delay)s; i++ )
-        cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(%(type)s) * size);
+    'local': {
+        'declare': """
+    std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""",
+        'init': """
+        gpu_delayed_%(name)s = std::deque< %(type)s* >(%(delay)s, NULL);
+        for ( int i = 0; i < %(delay)s; i++ )
+            cudaMalloc( (void**)& gpu_delayed_%(name)s[i], sizeof(%(type)s) * size);
 """,
-    'global': "//TODO: implement code template",
-    'reset' : """
-    for ( int i = 0; i < gpu_delayed_%(var)s.size(); i++ ) {
-        cudaMemcpy( gpu_delayed_%(var)s[i], gpu_%(var)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
-    }
+        'update': """
+        %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
+        gpu_delayed_%(name)s.pop_back();
+        gpu_delayed_%(name)s.push_front(last_%(name)s);
+        std::vector<%(type)s> tmp_%(name)s = std::vector<%(type)s>( size, 0.0);
+        cudaMemcpy( last_%(name)s, gpu_%(name)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
+    #ifdef _DEBUG
+        cudaError_t err_%(name)s = cudaGetLastError();
+        if (err_%(name)s != cudaSuccess)
+            std::cout << "pop%(id)s - delay %(name)s: " << cudaGetErrorString(err_%(name)s) << std::endl;
+    #endif
+""",
+        # Implementation notice:
+        #    to ensure correctness of results, we need transfer from host here. The corresponding
+        #    gpu arrays gpu_%(name)s are not resetted at this point of time (they will be resetted
+        #    if simulate() invoked.
+        'reset' : """
+        // reset %(name)s
+        for ( int i = 0; i < gpu_delayed_%(name)s.size(); i++ ) {
+            cudaMemcpy( gpu_delayed_%(name)s[i], %(name)s.data(), sizeof(%(type)s) * size, cudaMemcpyHostToDevice );
+        }
+    #ifdef _DEBUG
+        cudaError_t err_%(name)s = cudaGetLastError();
+        if ( err_%(name)s != cudaSuccess )
+            std::cout << "pop%(id)s - reset delayed %(name)s failed: " << cudaGetErrorString(err_%(name)s) << std::endl;
+    #endif
 """
+    },
+    'global': {
+        #TODO
+    }
 }
+
 # Definition for the usage of CUDA device random
 # number generators
 #
@@ -305,7 +339,7 @@ spike_specific = {
 population_update_kernel = \
 """
 // gpu device kernel for population %(id)s
-__global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
+__global__ void cuPop%(id)s_step( %(add_args)s )
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
 
@@ -323,7 +357,7 @@ __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 """
 
 population_update_header = """
-__global__ void cuPop%(id)s_step( %(default)s%(refrac)s%(tar)s%(var)s%(par)s );
+__global__ void cuPop%(id)s_step( %(add_args)s );
 """
 
 population_update_call = \
@@ -332,24 +366,14 @@ population_update_call = \
     if ( pop%(id)s._active ) {
         int nb = int( ceil ( float( pop%(id)s.size ) / (float)__pop%(id)s__ ) );
 
-        cuPop%(id)s_step<<< nb, __pop%(id)s__ >>>(
-              /* default arguments */
-              %(default)s
-              /* refractoriness (only spike) */
-              %(refrac)s
-              /* targets (only rate) */
-              %(tar)s
-              /* kernel gpu arrays */
-              %(var)s
-              /* kernel constants */
-              %(par)s );
-    }
+        cuPop%(id)s_step<<< nb, __pop%(id)s__ >>>( %(add_args)s );
 
-#ifdef _DEBUG
-    cudaError_t err_pop_step_%(id)s = cudaGetLastError();
-    if(err_pop_step_%(id)s != cudaSuccess)
-        std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
-#endif
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if( err != cudaSuccess )
+            std::cout << "pop%(id)s_step: " << cudaGetErrorString(err) << std::endl;
+    #endif
+    }
 """
 
 spike_gather_kernel = \
@@ -386,16 +410,16 @@ spike_gather_call = \
               %(refrac)s
               /* other variables */
               %(args)s );
+
+        // update event counter
+        cudaMemcpy(&pop%(id)s.num_events, pop%(id)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
+
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if( err != cudaSuccess )
+            std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err) << std::endl;
+    #endif
     }
-
-    // update event counter
-    cudaMemcpy(&pop%(id)s.num_events, pop%(id)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
-
-#ifdef _DEBUG
-    cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
-    if(err_pop_spike_gather_%(id)s != cudaSuccess)
-        std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
-#endif
 """
 
 #

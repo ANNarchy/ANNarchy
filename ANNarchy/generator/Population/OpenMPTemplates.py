@@ -294,15 +294,32 @@ attribute_cpp_init = {
 }
 
 attribute_delayed = {
-    'local': """
+    'local': {
+        'init': """
         _delayed_%(name)s = std::deque< std::vector< %(type)s > >(%(delay)s, std::vector< %(type)s >(size, 0.0));""",
-    'global': """
-        _delayed_%(name)s = std::deque< %(type)s >(%(delay)s, 0.0);""",
-    'reset' : """
-        for ( int i = 0; i < _delayed_%(var)s.size(); i++ ) {
-            _delayed_%(var)s[i] = %(name)s;
+        'update': """
+        _delayed_%(name)s.push_front(%(name)s);
+        _delayed_%(name)s.pop_back();
+""",
+        'reset' : """
+        for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
+            _delayed_%(name)s[i] = %(name)s;
         }
-    """
+"""
+    },
+    'global':{
+        'init': """
+        _delayed_%(name)s = std::deque< %(type)s >(%(delay)s, 0.0);""",
+        'update': """
+        _delayed_%(name)s.push_front(%(name)s);
+        _delayed_%(name)s.pop_back();
+""",
+        'reset' : """
+        for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
+            _delayed_%(name)s[i] = %(name)s;
+        }
+"""
+    }
 }
 # Definition for the usage of C++11 STL template random
 # number generators

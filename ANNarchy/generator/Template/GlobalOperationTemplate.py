@@ -1,9 +1,9 @@
 global_operation_templates_openmp = {
     'max' : """
 // Computes the maximum value of an array
-double max_value(const double* array, int n)
+%(type)s max_value(const %(type)s* array, int n)
 {
-    double max = array[0];
+    %(type)s max = array[0];
     for(int i=0; i<n; i++)
     {
         if(array[i] > max)
@@ -15,9 +15,9 @@ double max_value(const double* array, int n)
     """,
     'min' : """
 // Computes the minimum value of an array
-double min_value(const double* array, int n)
+%(type)s min_value(const %(type)s* array, int n)
 {
-    double min = array[0];
+    %(type)s min = array[0];
     for(int i=0; i<n; i++)
     {
         if(array[i] < min)
@@ -29,22 +29,22 @@ double min_value(const double* array, int n)
     """,
     'mean' : """
 // Computes the mean value of an array
-double mean_value(const double* array, int n)
+%(type)s mean_value(const %(type)s* array, int n)
 {
-    double sum = 0.0;
+    %(type)s sum = 0.0;
     %(omp)s#pragma omp parallel for reduction(+:sum)
     for(int i=0; i<n; i++)
     {
         sum += array[i];
     }
-    return sum/(double)n;
+    return sum/(%(type)s)n;
 }
     """,
     'norm1' : """
 // Computes the L1-norm of an array
-double norm1_value(const double* array, int n)
+%(type)s norm1_value(const %(type)s* array, int n)
 {
-    double sum = 0.0;
+    %(type)s sum = 0.0;
     %(omp)s#pragma omp parallel for reduction(+:sum)
     for(int i=0; i<n; i++)
     {
@@ -56,9 +56,9 @@ double norm1_value(const double* array, int n)
     """,
     'norm2' : """
 // Computes the L2-norm (Euclidian) of an array
-double norm2_value(const double* array, int n)
+%(type)s norm2_value(const %(type)s* array, int n)
 {
-    double sum = 0.0;
+    %(type)s sum = 0.0;
     %(omp)s#pragma omp parallel for reduction(+:sum)
     for(int i=0; i<n; i++)
     {
@@ -71,11 +71,11 @@ double norm2_value(const double* array, int n)
 }
 
 global_operation_templates_extern = {
-    'max': "extern double max_value(const double*, int);\n",
-    'min': "extern double min_value(const double*, int);\n",
-    'mean': "extern double mean_value(const double*, int);\n",
-    'norm1': "extern double norm1_value(const double*, int);\n",
-    'norm2': "extern double norm2_value(const double*, int);\n"
+    'max': "extern %(type)s max_value(const %(type)s*, int);\n",
+    'min': "extern %(type)s min_value(const %(type)s*, int);\n",
+    'mean': "extern %(type)s mean_value(const %(type)s*, int);\n",
+    'norm1': "extern %(type)s norm1_value(const %(type)s*, int);\n",
+    'norm2': "extern %(type)s norm2_value(const %(type)s*, int);\n"
 }
 
 #
@@ -83,15 +83,15 @@ global_operation_templates_extern = {
 #
 global_operation_templates_cuda = {
    'max' : {
-        'header' : """__global__ void cuMaxValue(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the maximum value of an array
-__global__ void cuMaxValue(double* result, double *gpu_array, int N)
+__global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
     unsigned int i = tid;
 
-    extern double __shared__ sdata[];
-    double localMax = FLT_MIN;
+    extern %(type)s __shared__ sdata[];
+    %(type)s localMax = FLT_MIN;
 
     while(i < N)
     {
@@ -109,7 +109,7 @@ __global__ void cuMaxValue(double* result, double *gpu_array, int N)
 
     if (tid < 32)
     {
-        volatile double* smem = sdata;
+        volatile %(type)s* smem = sdata;
 
         if (blockDim.x >=  64) { smem[tid] = localMax = fmaxf(localMax, smem[tid + 32]); }
         if (blockDim.x >=  32) { smem[tid] = localMax = fmaxf(localMax, smem[tid + 16]); }
@@ -129,21 +129,21 @@ __global__ void cuMaxValue(double* result, double *gpu_array, int N)
         'call' : """
     if ( pop%(id)s._active ) {
         cuMaxValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._max_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&pop%(id)s._max_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
 
     'min' : {
-        'header' : """__global__ void cuMinValue(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuMinValue(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the minimum value of an array
-__global__ void cuMinValue(double* result, double *gpu_array, int N)
+__global__ void cuMinValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
     unsigned int i = tid;
 
-    extern double __shared__ sdata[];
-    double localMin = FLT_MAX;
+    extern %(type)s __shared__ sdata[];
+    %(type)s localMin = FLT_MAX;
 
     while(i < N)
     {
@@ -161,7 +161,7 @@ __global__ void cuMinValue(double* result, double *gpu_array, int N)
 
     if (tid < 32)
     {
-        volatile double* smem = sdata;
+        volatile %(type)s* smem = sdata;
 
         if (blockDim.x >=  64) { smem[tid] = localMin = fminf(localMin, smem[tid + 32]); }
         if (blockDim.x >=  32) { smem[tid] = localMin = fminf(localMin, smem[tid + 16]); }
@@ -181,21 +181,21 @@ __global__ void cuMinValue(double* result, double *gpu_array, int N)
         'call' : """
     if ( pop%(id)s._active ) {
         cuMinValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._min_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&pop%(id)s._min_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
 
     'mean' : {
-        'header' : """__global__ void cuMeanValue(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the mean value of an array
-__global__ void cuMeanValue(double* result, double *gpu_array, int N)
+__global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
     unsigned int i = tid;
 
-    extern double __shared__ sdata[];
-    double localSum = 0.0;
+    extern %(type)s __shared__ sdata[];
+    %(type)s localSum = 0.0;
 
     while(i < N)
     {
@@ -213,7 +213,7 @@ __global__ void cuMeanValue(double* result, double *gpu_array, int N)
 
     if (tid < 32)
     {
-        volatile double* smem = sdata;
+        volatile %(type)s* smem = sdata;
 
         if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
         if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
@@ -226,29 +226,29 @@ __global__ void cuMeanValue(double* result, double *gpu_array, int N)
     // write result for this block to global mem
     if (tid == 0)
     {
-        *result = sdata[0] / (double)N;
+        *result = sdata[0] / (%(type)s)N;
     }
 }
 """,
     'call' : """
     if ( pop%(id)s._active ) {
         cuMeanValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
 
     # Computes the L1-norm of an array
     'norm1' : {
-        'header' : """__global__ void cuNorm1(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the L1-norm value of an array
-__global__ void cuNorm1(double* result, double *gpu_array, int N)
+__global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
     unsigned int i = tid;
 
-    extern double __shared__ sdata[];
-    double localSum = 0.0;
+    extern %(type)s __shared__ sdata[];
+    %(type)s localSum = 0.0;
 
     while(i < N)
     {
@@ -266,7 +266,7 @@ __global__ void cuNorm1(double* result, double *gpu_array, int N)
 
     if (tid < 32)
     {
-        volatile double* smem = sdata;
+        volatile %(type)s* smem = sdata;
 
         if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
         if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
@@ -286,26 +286,26 @@ __global__ void cuNorm1(double* result, double *gpu_array, int N)
     'call' : """
     if ( pop%(id)s._active ) {
         cuNorm1 <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
 
     # Computes the L2-norm (Euclidian) of an array
     'norm2' : {
-        'header' : """__global__ void cuNorm2(double* result, double *gpu_array, int N);""",
+        'header' : """__global__ void cuNorm2(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the L2-norm value of an array
-__global__ void cuNorm2(double* result, double *gpu_array, int N)
+__global__ void cuNorm2(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
     unsigned int i = tid;
 
-    extern double __shared__ sdata[];
-    double localSum = 0.0;
+    extern %(type)s __shared__ sdata[];
+    %(type)s localSum = 0.0;
 
     while(i < N)
     {
-        localSum += pow(gpu_array[i], 2.0);
+        localSum += gpu_array[i]*gpu_array[i];
         i+= blockDim.x;
     }
 
@@ -319,7 +319,7 @@ __global__ void cuNorm2(double* result, double *gpu_array, int N)
 
     if (tid < 32)
     {
-        volatile double* smem = sdata;
+        volatile %(type)s* smem = sdata;
 
         if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
         if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
@@ -339,7 +339,7 @@ __global__ void cuNorm2(double* result, double *gpu_array, int N)
     'call' : """
     if ( pop%(id)s._active ) {
         cuNorm2 <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     }

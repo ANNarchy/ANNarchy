@@ -614,10 +614,13 @@ class CodeGenerator(object):
             from .Template.GlobalOperationTemplate import global_operation_templates_openmp as omp_template
             code = ""
             for op in list(set(ops)):
-                code += omp_template[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
+                code += omp_template[op] % {
+                    'type': Global.config['precision'],
+                    'omp': '' if Global.config['num_threads'] > 1 else "//"
+                }
 
             return code
-        else:
+        elif Global.config['paradigm'] == "cuda":
             if ops == []:
                 return "", ""
 
@@ -626,10 +629,12 @@ class CodeGenerator(object):
 
             from .Template.GlobalOperationTemplate import global_operation_templates_cuda as cuda_template
             for op in list(set(ops)):
-                header += cuda_template[op]['header']
-                body += cuda_template[op]['body']
+                header += cuda_template[op]['header'] % {'type': Global.config['precision']}
+                body += cuda_template[op]['body'] % {'type': Global.config['precision']}
 
             return header, body
+        else:
+            raise NotImplementedError
 
     def _body_run_until(self):
         """
