@@ -42,3 +42,21 @@ clean:
 \trm -rf *.o
 \trm -rf *.so
 """
+
+# CudaCheck module, build during setup process
+cuda_check = """all: cuda_check.so
+
+cuda_check_cu.o:
+\tnvcc -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
+
+cuda_check.cpp:
+\tcython --cplus cuda_check.pyx
+
+cuda_check.so: cuda_check_cu.o cuda_check.cpp
+\tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so
+
+clean:
+\trm -f cuda_check_cu.o
+\trm -f cuda_check.cpp
+\trm -f cuda_check.so
+"""

@@ -211,6 +211,43 @@ def compile(    directory='annarchy',
                             net_id=net_id  )
     compiler.generate()
 
+def python_environment():
+    """
+    Python environment configuration, required by Compiler.generate_makefile and setup.py
+    """
+    # Python version
+    py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
+                                           'minor': sys.version_info[1] }
+    py_major = str(sys.version_info[0])
+
+    # Python includes and libs
+    # non-standard python installs need to tell the location of libpythonx.y.so/dylib
+    # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
+    # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
+    py_prefix = sys.prefix
+    if py_major=='2':
+        major='2'
+        test = subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True)
+        if test.wait()!=0:
+            major=""
+    else:
+        major='3'
+        test = subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True)
+        if test.wait()!=0:
+            major=""
+
+    # Test that it exists (virtualenv)
+    test = subprocess.Popen("%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null" % {'major': major, 'py_prefix': py_prefix}, shell=True)
+    if test.wait()!=0:
+        Global._warning("can not find python-config in the same directory as python, trying with the default path...")
+        python_include = "`python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
+        python_lib = "`python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
+    else:
+        python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
+        python_lib = "`%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}    
+
+    return py_version, py_major, python_include, python_lib
+
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
@@ -378,36 +415,8 @@ class Compiler(object):
         for l in extra_libs:
             libs += str(l) + ' '
 
-        # Python version
-        py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
-                                               'minor': sys.version_info[1] }
-        py_major = str(sys.version_info[0])
-
-        # Python includes and libs
-        # non-standard python installs need to tell the location of libpythonx.y.so/dylib
-        # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
-        # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
-        py_prefix = sys.prefix
-        if py_major=='2':
-            major='2'
-            test = subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True)
-            if test.wait()!=0:
-                major=""
-        else:
-            major='3'
-            test = subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True)
-            if test.wait()!=0:
-                major=""
-
-        # Test that it exists (virtualenv)
-        test = subprocess.Popen("%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null" % {'major': major, 'py_prefix': py_prefix}, shell=True)
-        if test.wait()!=0:
-            Global._warning("can not find python-config in the same directory as python, trying with the default path...")
-            python_include = "`python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-            python_lib = "`python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
-        else:
-            python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-            python_lib = "`%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
+        # Python environment
+        py_version, py_major, python_include, python_lib = python_environment()
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()

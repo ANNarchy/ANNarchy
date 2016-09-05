@@ -4,6 +4,8 @@
 # Check if the required packages are installed
 ################################################
 from pkg_resources import parse_version
+from ANNarchy.generator.Compiler import python_environment
+from ANNarchy.generator.Template.MakefileTemplate import cuda_check
 
 # check python version
 import sys, os
@@ -49,7 +51,12 @@ if os.system("nvcc --version 2> /dev/null") == 0:
     cwd = os.getcwd()
     print('Checking for CUDA... OK')
     os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
-    os.system("make clean && make")
+
+    # Write the Makefile to the disk
+    with open('Makefile', 'w') as wfile:
+        wfile.write(cuda_check % {'py_include': python_environment()[2]})
+
+    os.system("make")
     os.chdir(cwd)
 else:
     print('Checking for CUDA... NO')

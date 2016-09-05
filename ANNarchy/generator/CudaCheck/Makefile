@@ -7,7 +7,7 @@ cuda_check.cpp:
 	cython --cplus cuda_check.pyx
 
 cuda_check.so: cuda_check_cu.o cuda_check.cpp
-	g++ cuda_check.cpp -fPIC -shared -g -I. -I/usr/include/python2.7 cuda_check_cu.o -lcudart -o cuda_check.so
+	g++ cuda_check.cpp -fPIC -shared -g -I. `/usr/bin/python3-config --includes` cuda_check_cu.o -lcudart -o cuda_check.so
 
 clean:
 	rm -f cuda_check_cu.o
