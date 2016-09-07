@@ -53,7 +53,7 @@ cuda_check.cpp:
 \tcython --cplus cuda_check.pyx
 
 cuda_check.so: cuda_check_cu.o cuda_check.cpp
-\tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so
+\tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so %(py_lib)s
 
 clean:
 \trm -f cuda_check_cu.o

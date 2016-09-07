@@ -719,7 +719,8 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'refrac': refrac_body,
             'tar': "",
             'var': var.replace("double*", "").replace("int*", ""),
-            'par': par.replace("double", "").replace("int", "")
+            'par': par.replace("double", "").replace("int", ""),
+            'stream_id': pop.id
         }
 
         if self._prof_gen:
@@ -802,7 +803,8 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'id': pop.id,
             'default': default_args,
             'refrac': refrac_body,
-            'args': call_args % {'id': pop.id}
+            'args': call_args % {'id': pop.id},
+            'stream_id': pop.id,
         }
 
         if self._prof_gen:

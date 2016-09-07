@@ -281,7 +281,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         std::cout << t << ": " << num_events << " event(s)." << std::endl;
     #endif
         if ( num_events > 0 ) {
-            cu_proj%(id_proj)s_psp<<< num_events, tpb >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+            cu_proj%(id_proj)s_psp<<< num_events, tpb, 0, streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
         #ifdef _DEBUG
             cudaDeviceSynchronize();

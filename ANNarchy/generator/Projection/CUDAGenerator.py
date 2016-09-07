@@ -475,7 +475,8 @@ if(%(condition)s){
             'id_post': proj.post.id,
             'target': proj.target,
             'kernel_args': kernel_args_call,
-            'conn_args': conn_call
+            'conn_args': conn_call,
+            'stream_id': proj.id
         }
 
         body = self._templates['computesum_spiking']['body'] % {

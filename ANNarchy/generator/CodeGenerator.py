@@ -444,8 +444,13 @@ class CodeGenerator(object):
             glob_ops_header, glob_ops_body = self._body_def_glops()
             kernel_def += glob_ops_header
 
-            # determine number of threads per kernel and concurrent kernel execution
-            threads_per_kernel, stream_setup = self._cuda_kernel_config()
+            # determine number of threads per kernel
+            threads_per_kernel = self._cuda_kernel_config()
+
+            #  concurrent kernel execution
+            stream_setup = self._cuda_stream_config()
+
+            # memory transfers
             host_device_transfer, device_host_transfer = "", ""
             for pop in self._pop_desc + self._proj_desc:
                 host_device_transfer += pop['host_to_device']
@@ -654,37 +659,32 @@ class CodeGenerator(object):
 #######################################################################
     def _cuda_kernel_config(self):
         """
-        Generates a kernel config and stream setup (if a device with compute
-        compability > 2.x available. The kernel configuration is needed for
-        the device code, to have number of threads and blocks for calling
-        device functions. Stream setup is for the concurrent kernel
-        execution. Please note, that these parameter must be modified
-        through Global.cuda_config dictionary, otherwise default values (see
-        below) are used.
+        Each GPU kernel requires a launch configuration, established in
+        the ANNarchyHost.cu code, minimum number of threads and blocks
+        for calling the device functions.
 
         The default configuration is:
 
-        * no stream
         * 192 threads for psp and synapse update
-        * or guessed amount of threads for neurons, based on population size
+        * guessed amount of threads for neurons, based on population size
           (see _guess_pop_kernel_config)
 
         Notice:
 
             Only related to the CUDA implementation
         """
-        code = "// Population config\n"
+        conifuration = "// Population config\n"
         for pop in self._populations:
             num_threads = self._guess_pop_kernel_config(pop)
             if self._cuda_config:
                 if pop in self._cuda_config.keys():
                     num_threads = self._cuda_config[pop]['num_threads']
 
-            code += """#define __pop%(id)s__ %(nr)s\n""" % {
+            conifuration += """#define __pop%(id)s__ %(nr)s\n""" % {
                 'id': pop.id, 'nr': num_threads
             }
 
-        code += "\n// Projection config\n"
+        conifuration += "\n// Projection config\n"
         for proj in self._projections:
             num_threads = 192
             if self._cuda_config:
@@ -692,10 +692,23 @@ class CodeGenerator(object):
                     num_threads = self._cuda_config[proj]['num_threads']
 
             cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n"""
-            code += cfg % {
+            conifuration += cfg % {
                 'pre': proj.pre.id, 'post': proj.post.id,
                 'target': proj.target, 'nr': num_threads
             }
+
+        return conifuration
+
+    def _cuda_stream_config(self):
+        """
+        With Fermi Nvidia introduced multiple streams respectively concurrent
+        kernel execution (requires device with compute compability > 2.x).
+
+        Notice:
+
+            Only related to the CUDA implementation
+        """
+        max_number_streams = max(len(self._populations), len(self._projections))
 
         # HD:
         # the try-except blocks here are a REALLY lazy method.
@@ -709,8 +722,8 @@ class CodeGenerator(object):
             except:
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
-                pop_assign += """    pop%(pid)s.stream = 0;
-""" % {'pid': pop.id}
+                pop_assign += """    pop%(pid)s.stream = %(sid)s;
+""" % {'pid': pop.id, 'sid': pop.id}
 
         proj_assign = "    // populations\n"
         for proj in self._projections:
@@ -726,12 +739,12 @@ class CodeGenerator(object):
 
         from Template.BaseTemplate import cuda_stream_setup
         stream_config = cuda_stream_setup % {
-            'nbStreams': 2,
+            'nbStreams': max_number_streams,
             'pop_assign': pop_assign,
             'proj_assign': proj_assign
         }
 
-        return code, stream_config
+        return stream_config
 
     def _guess_pop_kernel_config(self, pop):
         """

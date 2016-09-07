@@ -258,9 +258,9 @@ spike_specific = {
         cudaMalloc((void**)&gpu_last_spike, size * sizeof(long int));
         cudaMemcpy(gpu_last_spike, last_spike.data(), size * sizeof(long int), cudaMemcpyHostToDevice);
 
-        cudaMalloc((void**)&gpu_num_events, sizeof(unsigned int));
+        cudaMallocHost((void**)&gpu_num_events, sizeof(unsigned int));
         num_events = 0;
-        cudaMemcpy(gpu_num_events, &num_events, sizeof(unsigned int), cudaMemcpyHostToDevice);
+        cudaMemcpyAsync(gpu_num_events, &num_events, sizeof(unsigned int), cudaMemcpyHostToDevice, 0); // stream 0 -> will be synced
 """,
     'declare_refractory': """
     // Refractory period
@@ -332,7 +332,7 @@ population_update_call = \
     if ( pop%(id)s._active ) {
         int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
 
-        cuPop%(id)s_step<<< nb, __pop%(id)s__ >>>(
+        cuPop%(id)s_step<<< nb, __pop%(id)s__, 0, streams[%(stream_id)s] >>>(
               /* default arguments */
               %(default)s
               /* refractoriness (only spike) */
@@ -379,7 +379,7 @@ spike_gather_call = \
 """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
-        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s__ >>>(
+        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s__, 0, streams[%(stream_id)s] >>>(
               /* default arguments */
               %(default)s
               /* refractoriness */
@@ -389,7 +389,7 @@ spike_gather_call = \
     }
 
     // update event counter
-    cudaMemcpy(&pop%(id)s.num_events, pop%(id)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(&pop%(id)s.num_events, pop%(id)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
 
 #ifdef _DEBUG
     cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
