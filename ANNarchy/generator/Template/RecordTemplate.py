@@ -203,18 +203,16 @@ recording_spike_tpl= {
         } """,
     'cuda' : """
         if(this->record_spike){
-            if (pop%(id)s.num_events > 0) {
-                pop%(id)s.spiked = std::vector<int>(pop%(id)s.num_events, 0);
-                cudaMemcpy(pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.num_events*sizeof(int), cudaMemcpyDeviceToHost);
+            for(int i=0; i<pop%(id)s.spiked.size(); i++){
+                if ( pop%(id)s.spiked[i] == 0 )
+                    continue;
 
-                for(int i=0; i<pop%(id)s.spiked.size(); i++){
-                    if(!this->partial){
-                        this->spike[pop%(id)s.spiked[i]].push_back(t);
-                    }
-                    else{
-                        if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                            this->spike[pop%(id)s.spiked[i]].push_back(t);
-                        }
+                if(!this->partial){
+                    this->spike[i].push_back(t);
+                }
+                else{
+                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
+                        this->spike[i].push_back(t);
                     }
                 }
             }

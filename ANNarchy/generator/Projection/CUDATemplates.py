@@ -251,22 +251,96 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
                        %(target_arg)s );
     }
 """
-
 }
 
 cuda_spike_psp_kernel = {
     'body': """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+    int post_idx = blockIdx.x;
+    int tid = threadIdx.x;
+    int syn_idx = row_ptr[post_idx] + tid;
+    
+    extern double __shared__ sdata[];
+    double localSum = 0.0;
+    while( syn_idx < row_ptr[post_idx+1] ) {
+        double _w = w[syn_idx];
+        int _pr = pre_ranks[syn_idx];
+        
+        localSum += _w * spiked[_pr];
+        syn_idx += blockDim.x;
+    }
+    
+    sdata[tid] = localSum;
+    __syncthreads();
 
-%(prefix)s
+    // do reduction in shared mem
+    if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+    if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+    if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
 
-    // over all afferent connections
-    while( %(row_desc)s ) {
+    if (tid < 32)
+    {
+        volatile double* smem = sdata;
+
+        if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
+        if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
+        if (blockDim.x >=  16) { smem[tid] = localSum = localSum + smem[tid +  8]; }
+        if (blockDim.x >=   8) { smem[tid] = localSum = localSum + smem[tid +  4]; }
+        if (blockDim.x >=   4) { smem[tid] = localSum = localSum + smem[tid +  2]; }
+        if (blockDim.x >=   2) { smem[tid] = localSum = localSum + smem[tid +  1]; }
+
+    }
+
+    // write result for this block to global mem
+    if (tid == 0)
+    {
+        g_target[post_idx] = sdata[0];
+    }    
+}
+""",
+    'header': """__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );
+""",
+    'call': """
+    if ( pop%(id_pre)s._active) {
+        int tpb = 256;
+        int nbBlocks = pop%(id_post)s.size;
+        
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(double), streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
+        }
+    #endif
+    }
+"""
+}
+
+cuda_spike_psp_kernel_pre_post = {
+    'body': """// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+    int pre_idx = blockIdx.x;
+    int syn_idx = -1;
+    
+    while ( pre_idx < %(pre_size)s ) { 
+        if ( 1 == spiked[pre_idx] ) {
+            %(prefix)s
+    
+            // over all afferent connections
+            while( %(row_desc)s ) {
 %(event_driven)s
 %(psp)s
 %(pre_event)s
+            
+                syn_idx += blockDim.x;
+            }
 
-        syn_idx += blockDim.x;
+        }
+        
+        pre_idx += gridDim.x;
     }
 }
 """,
@@ -274,25 +348,19 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
 """,
     'call': """
     if ( pop%(id_pre)s._active) {
-        int num_events = pop%(id_pre)s.num_events;
         int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s__;
+        int nbBlocks = pop%(id_pre)s.size;
+        
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
     #ifdef _DEBUG
-        std::cout << t << ": " << num_events << " event(s)." << std::endl;
-    #endif
-        if ( num_events > 0 ) {
-            cu_proj%(id_proj)s_psp<<< num_events, tpb, 0, streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
-
-        #ifdef _DEBUG
-            cudaDeviceSynchronize();
-            cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
-            if( err_psp_proj%(id_proj)s != cudaSuccess) {
-                std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
-                std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
-                std::cout << "   kernel_config: " << num_events << ", " << tpb << std::endl;
-            }
-        #endif
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
         }
+    #endif
     }
 """
 }

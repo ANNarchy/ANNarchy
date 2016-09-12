@@ -246,21 +246,16 @@ spike_specific = {
     long int* gpu_last_spike;
     std::vector<int> spiked;
     int* gpu_spiked;
-    unsigned int num_events;
-    unsigned int* gpu_num_events;
 """,
     'init_spike': """
         // Spiking variables
-        spiked = std::vector<int>();
-        cudaMalloc((void**)&gpu_spiked, size * sizeof(int)); // we can't reallocate dynamically on the device, therefore we allocate max. possible request
+        spiked = std::vector<int>(size, 0);
+        cudaMallocHost((void**)&gpu_spiked, size * sizeof(int));
+        cudaMemcpyAsync(gpu_spiked, spiked.data(), size * sizeof(int), cudaMemcpyHostToDevice, 0);
 
         last_spike = std::vector<long int>(size, -10000L);
         cudaMalloc((void**)&gpu_last_spike, size * sizeof(long int));
         cudaMemcpy(gpu_last_spike, last_spike.data(), size * sizeof(long int), cudaMemcpyHostToDevice);
-
-        cudaMallocHost((void**)&gpu_num_events, sizeof(unsigned int));
-        num_events = 0;
-        cudaMemcpyAsync(gpu_num_events, &num_events, sizeof(unsigned int), cudaMemcpyHostToDevice, 0); // stream 0 -> will be synced
 """,
     'declare_refractory': """
     // Refractory period
@@ -283,7 +278,7 @@ spike_specific = {
         last_spike = std::vector<long int>(size, -10000L);
 """,
     'reset_spike': """
-        spiked.clear();
+        spiked = std::vector<int>(size, 0);
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
 """,
@@ -357,16 +352,14 @@ spike_gather_kernel = \
 // gpu device kernel for population %(id)s
 __global__ void cuPop%(id)s_spike_gather( %(default)s%(refrac)s%(args)s )
 {
-    int i = threadIdx.x;
-    *num_events = 0;
-    __syncthreads();
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
 
-    // Updating local variables of population %(id)s
+    // Determine if neuron i emited a spike 
     while ( i < %(pop_size)s )
     {
 %(spike_gather)s
 
-        i += blockDim.x;
+        i += gridDim.x * blockDim.x;
     }
 }
 """
@@ -379,7 +372,9 @@ spike_gather_call = \
 """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
-        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s__, 0, streams[%(stream_id)s] >>>(
+        int tpb = 128;
+        int nbBlocks = ceil(float(pop%(id)s.size)/float(tpb)); 
+        cuPop%(id)s_spike_gather<<< nbBlocks, tpb, 0, streams[%(stream_id)s] >>>(
               /* default arguments */
               %(default)s
               /* refractoriness */
@@ -387,14 +382,18 @@ spike_gather_call = \
               /* other variables */
               %(args)s );
     }
-
-    // update event counter
-    cudaMemcpyAsync(&pop%(id)s.num_events, pop%(id)s.gpu_num_events, sizeof(int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
-
 #ifdef _DEBUG
     cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
     if(err_pop_spike_gather_%(id)s != cudaSuccess)
         std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
+#endif
+
+    // transfer back the spiked array (needed by record)
+    cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.size*sizeof(int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
+#ifdef _DEBUG
+    cudaError_t err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;
 #endif
 """
 

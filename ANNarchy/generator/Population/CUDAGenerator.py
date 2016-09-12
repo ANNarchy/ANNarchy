@@ -769,19 +769,20 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             %(reset)s
 
             // store spike event
-            int pos = atomicAdd( &num_events[0], 1);
-            spiked[pos] = i;
+            spiked[i] = 1;
             last_spike[i] = t;
 
             // refractory
             %(refrac_inc)s
+        }else{
+            spiked[i] = 0;
         }
 """ % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
 
         body += CUDATemplates.spike_gather_kernel % {
             'id': pop.id,
             'pop_size': str(pop.size),
-            'default': 'double dt, unsigned int* num_events, int* spiked, long int* last_spike',
+            'default': 'double dt, int* spiked, long int* last_spike',
             'refrac': refrac_header,
             'args': body_args,
             'spike_gather': spike_gather
@@ -789,15 +790,15 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         header += CUDATemplates.spike_gather_header % {
             'id': pop.id,
-           'default': "double dt, unsigned int * num_events, int* spiked, long int* last_spike",
+           'default': "double dt, int* spiked, long int* last_spike",
            'refrac': refrac_header,
            'args': header_args
         }
 
         if pop.max_delay > 1:
-            default_args = 'dt, pop%(id)s.gpu_delayed_num_events.front(), pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 'dt, pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
         else: # no_delay
-            default_args = 'dt, pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 'dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
 
         spike_gather = CUDATemplates.spike_gather_call % {
             'id': pop.id,

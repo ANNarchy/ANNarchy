@@ -26,6 +26,7 @@ from .CUDATemplates import cuda_templates
 from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
+from ANNarchy.core.Population import Population
 from ANNarchy.generator.Utils import generate_equation_code, tabify
 
 import re
@@ -343,8 +344,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 # The temporary variable (_tmp_) is not absolutely essential,
                 # but it might be better, as the psp term can be complex.
                 eq_code += """
-        double _tmp_ = %(psp)s
-        atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code }
+            double _tmp_ = %(psp)s
+            atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code }
 
                 # Determine bounds
                 for key, val in eq['bounds'].items():
@@ -449,22 +450,16 @@ if(%(condition)s){
             kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'name': attr['name']}
 
         if proj._storage_format == "lil":
-            conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
-            conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
-            prefix = """
-    int pre_idx = spiked[blockIdx.x];
-    int syn_idx = col_ptr[pre_idx]+threadIdx.x;
-"""
-            row_desc = "syn_idx < col_ptr[pre_idx+1]"
+            conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            conn_body = "int* row_ptr, int* pre_ranks, double* w"
+            conn_header = "int* row_ptr, int* pre_ranks, double *w"
+            prefix = ""
+            row_desc = ""
         elif proj._storage_format == "csr":
             conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s._gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
             conn_body = "int* row_ptr, int* post_ranks, int* indices, double* w"
             conn_header = "int* row_ptr, int* post_ranks, int* indices, double *w"
-            prefix = """
-    int pre_idx = spiked[blockIdx.x];
-    int syn_idx = row_ptr[pre_idx]+threadIdx.x;
-"""
+            prefix = "syn_idx = row_ptr[pre_idx]+threadIdx.x;"
             row_desc = "syn_idx < row_ptr[pre_idx+1]"
         else:
             raise NotImplementedError
@@ -479,6 +474,8 @@ if(%(condition)s){
             'stream_id': proj.id
         }
 
+        pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
+        post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
         body = self._templates['computesum_spiking']['body'] % {
             'id': proj.id,
             'conn_arg': conn_body,
@@ -487,7 +484,9 @@ if(%(condition)s){
             'kernel_args': kernel_args,
             'event_driven': event_driven_code,
             'psp':  eq_code,
-            'pre_event': pre_code
+            'pre_event': pre_code,
+            'pre_size': pre_size,
+            'post_size': post_size,
         }
 
         header = self._templates['computesum_spiking']['header'] % {
