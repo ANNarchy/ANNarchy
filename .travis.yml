@@ -27,7 +27,7 @@ before_install:
   - conda info -a
 
 install:
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy nose sympy cython
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy nose sympy cython matplotlib
   - source activate test-environment
   - python setup.py install
 # command to run tests
