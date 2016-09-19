@@ -25,13 +25,10 @@ before_install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
-  # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION dep1 dep2 ...
-  - source activate test-environment
-
 
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION pip numpy scipy nose sympy cython
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy nose sympy cython
+  - source activate test-environment
   - python setup.py install
 # command to run tests
 script: python tests/test_CPU.py
