@@ -20,10 +20,9 @@ cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 ###################################################
 ########## LIL object to hold synapses ############
 ###################################################
-cdef class LIL:
+cdef class LILConnectivity:
 
     def __cinit__(self):
-
         self.max_delay = 0
         self.size = 0
         self.nb_synapses = 0
@@ -481,7 +480,7 @@ cdef _get_weights_delays(int size, weights, delays):
 ###################################################
 ########## CSRC object to hold synapses ###########
 ###################################################
-cdef class CSR:
+cdef class CSRConnectivity:
     """
     Compressed sparse row (CSR) data structure inspired by Brette et al.(2011)
     
@@ -628,12 +627,12 @@ def all_to_all(pre, post, weights, delays, allow_self_connections, storage_forma
     """ Cython implementation of the all-to-all pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LIL()
+        projection = LILConnectivity()
     elif storage_format == "csr":
         size_pre = pre.size if isinstance(pre, Population) else pre.population.size
         size_post = post.size if isinstance(post, Population) else post.population.size
 
-        projection = CSR(size_pre, size_post)
+        projection = CSRConnectivity(size_pre, size_post)
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for all-to-all pattern')
 
@@ -646,7 +645,7 @@ def one_to_one(pre, post, weights, delays, storage_format):
     """ Cython implementation of the one-to-one pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LIL()
+        projection = LILConnectivity()
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for one-to-one pattern')
 
@@ -659,12 +658,12 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
     """ Cython implementation of the fixed_probability pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LIL()
+        projection = LILConnectivity()
     elif storage_format == "csr":
         size_pre = pre.size if isinstance(pre, Population) else pre.population.size
         size_post = post.size if isinstance(post, Population) else post.population.size
 
-        projection = CSR(size_pre, size_post)
+        projection = CSRConnectivity(size_pre, size_post)
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_probability pattern')
 
@@ -677,12 +676,12 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
     """ Cython implementation of the fixed_number_pre pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LIL()
+        projection = LILConnectivity()
     elif storage_format == "csr":
         size_pre = pre.size if isinstance(pre, Population) else pre.population.size
         size_post = post.size if isinstance(post, Population) else post.population.size
 
-        projection = CSR(size_pre, size_post)
+        projection = CSRConnectivity(size_pre, size_post)
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_pre pattern')
 
@@ -695,7 +694,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     """ Cython implementation of the fixed_number_post pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LIL()
+        projection = LILConnectivity()
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
 
@@ -708,7 +707,7 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
     """ Cython implementation of the fixed_number_post pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LIL()
+        projection = LILConnectivity()
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
 
@@ -721,7 +720,7 @@ def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float 
     """ Cython implementation of the fixed_number_post pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LIL()
+        projection = LILConnectivity()
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
 

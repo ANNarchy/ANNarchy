@@ -24,7 +24,7 @@ from .extensions import *
 
 # Cython modules
 try:
-    from .core.cython_ext.Connector import LIL
+    from .core.cython_ext.Connector import LILConnectivity as CSR
 except Exception as e:
     core.Global._print(e)
     core.Global._print('Error: Could not import Cython modules. Try reinstalling ANNarchy.')

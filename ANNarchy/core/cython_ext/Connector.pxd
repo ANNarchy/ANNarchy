@@ -3,7 +3,7 @@ from libcpp.vector cimport vector
 from libcpp cimport bool
 from sympy.mpmath.matrices.matrices import _matrix
 
-cdef class LIL:
+cdef class LILConnectivity:
     """
     Container for the ranks, weights and delays of a projection.
     """
@@ -51,7 +51,7 @@ cdef extern from "CSRMatrix.hpp":
 
         int num_elements()
 
-cdef class CSR:
+cdef class CSRConnectivity:
     """
     Container for the ranks, weights and delays of a projection.
     """
