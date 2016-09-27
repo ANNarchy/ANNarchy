@@ -56,7 +56,8 @@ config = dict(
     'method': "explicit",
     'seed': -1,
     'structural_plasticity': False,
-    'profiling': False
+    'profiling': False,
+    'profile_out': None
    }
 )
 

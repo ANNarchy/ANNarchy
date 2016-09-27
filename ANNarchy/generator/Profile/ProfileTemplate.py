@@ -137,7 +137,7 @@ class Profiling {
             exit(1);
 
         _profiler_start = PAPI_get_real_usec();
-        _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
+        _out_file.open("%(result_file)s", std::ofstream::out | std::ofstream::trunc);
         _out_file << "<root>" << std::endl;
 
         %(config_xml)s
