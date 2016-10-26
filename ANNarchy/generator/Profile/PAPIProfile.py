@@ -176,6 +176,6 @@ class PAPIProfile(ProfileGenerator):
         }
         config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
         return papi_profile_header % {
-            'config': config,
+            'result_file': "results_%(config)s.xml" % {'config':config} if Global.config['profile_out'] == None else Global.config['profile_out'],
             'config_xml': config_xml
         }

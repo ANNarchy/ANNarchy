@@ -99,6 +99,7 @@ def setup_parser():
 
     group = OptionGroup(parser, "others")
     group.add_option("--profile", help="enable profiling", action="store_true", default=None, dest="profile")
+    group.add_option("--profile_out", help="target file for profiling data", action="store", type="string", default=None, dest="profile_out")
     parser.add_option_group(group)
 
     return parser
@@ -143,7 +144,8 @@ def compile(    directory='annarchy',
         Global.config['verbose'] = options.verbose
     if options.profile != None:
         profile_enabled = options.profile
-        Global.config['profiling']= options.profile
+        Global.config['profiling'] = options.profile
+        Global.config['profile_out'] = options.profile_out
 
     if not debug_build:
         debug_build = options.debug # debug build
