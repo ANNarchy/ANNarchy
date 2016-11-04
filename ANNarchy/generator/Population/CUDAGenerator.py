@@ -252,8 +252,12 @@ class CUDAGenerator(PopulationGenerator):
         if pop.neuron_type.type == "rate":
             for var in pop.delayed_variables:
                 if var in pop.neuron_type.description['local']:
+                    var_type = self._get_attr(pop, var)['ctype']
                     declare_code += """
-std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': var}
+std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
+                        'var': var,
+                        'type': var_type
+                    }
                 else:
                     # TODO:
                     Global._warning('Delay is not implemented for post-synaptic variables ...')
@@ -478,7 +482,15 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
         var = ""
         par = ""
         tar = ""
-        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+        # variables
+        for attr in pop.neuron_type.description['variables']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
+            else:
+                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
+
+        # parameters
+        for attr in pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
                 var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
             else:
@@ -498,7 +510,7 @@ std::deque< double* > gpu_delayed_%(var)s; // list of gpu arrays""" % {'var': va
 
         #Global variables
         glob_eqs = ""
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': '[0]'}
         if eqs.strip() != "":
             glob_eqs = """
     if ( threadIdx.x == 0)
@@ -555,7 +567,12 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         var = ""
         par = ""
         tar = ""
-        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+        # variables
+        for attr in pop.neuron_type.description['variables']:
+            var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
+
+        # parameters
+        for attr in pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
                 var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
             else:
@@ -571,6 +588,9 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         # global operations
         for op in pop.global_operations:
+            # Implementation Note:
+            # assigning to parameters is correct here, as the result of the global
+            # operation kernel is transferred to host after computation. 
             par += """, pop%(id)s._%(op)s_%(var)s""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
 
         call += CUDATemplates.population_update_call % {
@@ -579,7 +599,8 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'refrac': "",
             'tar': tar.replace("double*", "").replace("int*", ""),
             'var': var.replace("double*", "").replace("int*", ""),
-            'par': par.replace("double", "").replace("int", "")
+            'par': par.replace("double*", "").replace("int*", ""),
+            'stream_id': 'pop%(id)s.stream' % {'id':pop.id}
         }
 
         return body, header, call
@@ -603,7 +624,15 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         # determine variables and attributes
         var = ""
         par = ""
-        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+        # variables
+        for attr in pop.neuron_type.description['variables']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
+            else:
+                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
+
+        # parameters
+        for attr in pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
                 var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
             else:
@@ -618,7 +647,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': '[0]'}
         if eqs.strip() == "":
             glob_eqs = ""
         else:
@@ -699,7 +728,12 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         #    for calling entites we need to determine again all members
         var = ""
         par = ""
-        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+        # variables
+        for attr in pop.neuron_type.description['variables']:
+            var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
+
+        # parameters
+        for attr in pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
                 var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
             else:
@@ -720,7 +754,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'tar': "",
             'var': var.replace("double*", "").replace("int*", ""),
             'par': par.replace("double", "").replace("int", ""),
-            'stream_id': pop.id
+            'stream_id': 'pop%(id)s.stream' % {'id':pop.id}
         }
 
         if self._prof_gen:
@@ -832,25 +866,16 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         host_device_transfer += """
     // host to device transfers for %(name)s""" % {'name': pop.name}
-        for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
+        for attr in pop.neuron_type.description['variables']:
+            ids = {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
             if attr['name'] in pop.neuron_type.description['local']:
-                host_device_transfer += """
-        // %(attr_name)s: local
-        if( %(attr_name)s_dirty )
-        {
-        #ifdef _DEBUG
-            std::cout << "HtoD %(attr_name)s ( pop%(id)s )" << std::endl;
-        #endif
-            cudaMemcpy( gpu_%(attr_name)s, %(attr_name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            %(attr_name)s_dirty = false;
-
-        #ifdef _DEBUG
-            cudaError_t err = cudaGetLastError();
-            if ( err!= cudaSuccess )
-                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
-        #endif
-        }
-""" % {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
+                host_device_transfer += self._templates['attribute_transfer']['HtoD_local'] % ids
+            else:
+                host_device_transfer += self._templates['attribute_transfer']['HtoD_global'] % ids
+        for attr in pop.neuron_type.description['parameters']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                ids = {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
+                host_device_transfer += self._templates['attribute_transfer']['HtoD_local'] % ids
 
         if pop.neuron_type.type == "spike":
             if pop.neuron_type.refractory or pop.refractory:
@@ -874,11 +899,16 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         device_host_transfer += """
     // device to host transfers for %(name)s\n""" % {'name': pop.name}
-        for attr in pop.neuron_type.description['parameters']+pop.neuron_type.description['variables']:
+        for attr in pop.neuron_type.description['variables']:
+            ids = {'attr_name': attr['name'], 'type': attr['ctype']}
             if attr['name'] in pop.neuron_type.description['local']:
-                device_host_transfer += """
-    cudaMemcpy( %(attr_name)s.data(),  gpu_%(attr_name)s, size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % {'attr_name': attr['name'], 'type': attr['ctype']}
+                device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
+            else:
+                device_host_transfer += self._templates['attribute_transfer']['DtoH_global'] % ids
+        for attr in pop.neuron_type.description['parameters']:
+            if attr['name'] in pop.neuron_type.description['local']:
+                ids = {'attr_name': attr['name'], 'type': attr['ctype']}
+                device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
 
         return host_device_transfer, device_host_transfer
 

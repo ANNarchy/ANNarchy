@@ -722,7 +722,7 @@ class CodeGenerator(object):
             except:
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
-                pop_assign += """    pop%(pid)s.stream = %(sid)s;
+                pop_assign += """    pop%(pid)s.stream = 0;
 """ % {'pid': pop.id, 'sid': pop.id}
 
         proj_assign = "    // populations\n"
