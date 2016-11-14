@@ -146,11 +146,11 @@ The online version of STDP requires two synaptic traces, which are increased whe
         """,
         pre_spike = """
             g_target += w
-            Apre += cApre 
+            Apre += cApre * wmax
             w = clip(w - Apost, 0.0 , wmax)
         """,                  
         post_spike = """
-            Apost += cApost
+            Apost += cApost * wmax
             w = clip(w + Apre, 0.0 , wmax)
         """      
     ) 
