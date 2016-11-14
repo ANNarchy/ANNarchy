@@ -29,10 +29,9 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.Report import _process_random
 
 try:
-    import ANNarchy.core.cython_ext.Connector as Connector
+    from ANNarchy.core.cython_ext import *
 except Exception as e:
     Global._print(e)
-
 
 ################################
 ## Connector methods
@@ -58,7 +57,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.one_to_one, (weights, delays, "lil"), delays, storage_format="lil")
+    self._store_connectivity( one_to_one, (weights, delays, "lil"), delays, storage_format="lil" )
     return self
 
 def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -88,7 +87,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         self._dense_matrix = True
 
     # Store the connectivity
-    self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( all_to_all, (weights, delays, allow_self_connections, storage_format), delays, storage_format )
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -115,7 +114,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     self.connector_name = "Gaussian"
     self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
-    self._store_connectivity(Connector.gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil"), delays)
+    self._store_connectivity( gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil"), delays)
     return self
 
 def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -144,7 +143,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self.connector_name = "Difference-of-Gaussian"
     self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
 
-    self._store_connectivity(Connector.dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil"), delays, "lil")
+    self._store_connectivity( dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil"), delays, "lil")
     return self
 
 def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -171,7 +170,7 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( fixed_probability, (probability, weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
 def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -200,7 +199,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
 def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
@@ -229,7 +228,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
+    self._store_connectivity( fixed_number_post, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
     return self
 
 def connect_with_func(self, method, **args):
@@ -290,7 +289,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
     return self
 
 def _load_from_matrix(self, pre, post, weights, delays, pre_post):
-    lil = Connector.LILConnectivity()
+    lil = LILConnectivity()
 
     uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
@@ -379,7 +378,7 @@ def connect_from_sparse(self, weights, delays=0.0):
 
 def _load_from_sparse(self, pre, post, weights, delays):
     # Create an empty LIL object
-    lil = Connector.LIL()
+    lil = LILConnectivity()
 
     # Find offsets
     if isinstance(self.pre, PopulationView):
@@ -424,7 +423,7 @@ def connect_from_file(self, filename):
         Only the ranks, weights and delays are loaded, not the other variables.
     """
     # Create an empty LIL object
-    lil = Connector.LIL()
+    lil = LILConnectivity()
 
     # Load the data
     from ANNarchy.core.IO import _load_data

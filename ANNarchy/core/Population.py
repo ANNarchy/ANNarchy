@@ -136,7 +136,7 @@ class Population(object):
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions.
-        import ANNarchy.core.cython_ext.Coordinates as Coordinates
+        from ANNarchy.core.cython_ext import Coordinates
         if self.dimension==1:
             self._rank_from_coord = Coordinates.get_rank_from_1d_coord
             self._coord_from_rank = Coordinates.get_1d_coord
@@ -822,16 +822,14 @@ class Population(object):
                 try:
                     self.neuron_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
-                    if has_key(self.neuron_type.description['variables'][rk_var]['bounds'], key):
-                        self.neuron_type.description['variables'][rk_var]['bounds'].pop(key)
+                    if self.neuron_type.description['variables'][rk_var]['bounds'].has_key(key):
+                        self.neuron_type.description['variables'][rk_var]['bounds'].remove(key)
             else: # new value for init, min, max...
                 if key == 'init':
                     self.neuron_type.description['variables'][rk_var]['init'] = val
                     self.init[name] = val
                 else:
                     self.neuron_type.description['variables'][rk_var]['bounds'][key] = val
-
-
 
     def set_variable_equation(self, name, equation):
         """ Changes the equation of a variable for the population.

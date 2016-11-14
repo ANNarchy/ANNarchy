@@ -26,10 +26,11 @@ from .extensions import *
 try:
     # HD: until version 4.6 the connectivity class wasn't named properly. To ensure backward compability
     #     we rename the LILConnectivity to CSR
-    from .core.cython_ext.Connector import LILConnectivity as CSR
+    from .core.cython_ext import LILConnectivity as CSR
 except Exception as e:
-    core.Global._print(e)
-    core.Global._print('Error: Could not import Cython modules. Try reinstalling ANNarchy.')
+    from .core.Global import _print
+    _print(e)
+    _print('Error: Could not import Cython modules. Try reinstalling ANNarchy.')
 
 # ANNarchy compilation
 from .generator import compile
@@ -38,4 +39,4 @@ from .generator import compile
 __version__ = '4.6'
 __release__ = '4.6.0b'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
-                   ') on ' + sys.platform + ' (' + os.name + ').' )
+                    ') on ' + sys.platform + ' (' + os.name + ').' )

@@ -29,7 +29,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
-import ANNarchy.core.Connectors as ConnectorMethods
+from ANNarchy.core import ConnectorMethods
 
 
 class Projection(object):
@@ -570,16 +570,14 @@ class Projection(object):
                 try:
                     self.synapse_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
-                    if has_key(self.synapse_type.description['variables'][rk_var]['bounds'], key):
-                        self.synapse_type.description['variables'][rk_var]['bounds'].pop(key)
+                    if self.synapse_type.description['variables'][rk_var]['bounds'].has_key(key):
+                        self.synapse_type.description['variables'][rk_var]['bounds'].remove(key)
             else: # new value for init, min, max...
                 if key == 'init':
                     self.synapse_type.description['variables'][rk_var]['init'] = val
                     self.init[name] = val
                 else:
                     self.synapse_type.description['variables'][rk_var]['bounds'][key] = val
-
-
 
     def set_variable_equation(self, name, equation):
         """ Changes the equation of a variable for the projection.
@@ -680,7 +678,7 @@ class Projection(object):
                 self.cyInstance._set_update(False)
             else:
                 self.cyInstance._set_plasticity(False)
-        except Exception as e:
+        except:
             Global._warning('disabling learning is only possible after compile().')
 
 
@@ -857,7 +855,7 @@ class Projection(object):
         for var in attributes:
             try:
                 desc[var] = getattr(self.cyInstance, 'get_'+var)()
-            except Exception as e:
+            except:
                 Global._warning('Can not save the attribute ' + var + ' in the projection.')
 
         return desc
