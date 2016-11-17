@@ -195,15 +195,15 @@ class TimedArray(Population):
         *geometry*: population geometry
         *schedule*: either a scalar or a set of time points where inputs should be set.
         *values*: inputs to be set.
+        *periodic*: if the simulation time exceeds the last point of the schedule plan, the state of firing rates need to be defined.
+        By default, the last set firing rate will remain. If periodic is set to true, the schedule will be applied from the beginning
+        again. The same applies for the values.
 
     * Note *:
 
-        If the simulation time exceeds the last point of the schedule plan, the schedule will be
-        applied from the beginning again. The same applies for the values.
-
         Until now, this specific population is not available for CUDA ( will be changed soon ).
     """
-    def __init__(self, geometry, schedule, values, name=None):
+    def __init__(self, geometry, schedule, values, periodic=False, name=None):
         neuron = Neuron(
             parameters=" r ",
             equations="",
@@ -221,6 +221,7 @@ class TimedArray(Population):
 
         self.init['schedule'] = schedule
         self.init['values'] = values
+        self.init['periodic'] = periodic
 
     def _generate(self):
         " adjust code templates for the specific population "
@@ -228,6 +229,7 @@ class TimedArray(Population):
     // Custom local parameter timed array
     std::vector< int > _schedule;
     std::vector< std::vector< double > > _buffer;
+    bool _periodic;
     int _curr_slice;
     int _curr_cnt;
 """
@@ -237,11 +239,14 @@ class TimedArray(Population):
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< double > > buffer) { _buffer = buffer; r = _buffer[0]; }
     std::vector< std::vector< double > > get_buffer() { return _buffer; }
+    void set_periodic(bool periodic) { _periodic = periodic; }
+    bool get_periodic() { return _periodic; }
 """
         self._specific_template['init_additional'] = """
         // counters
         _curr_slice = 0;
         _curr_cnt = 1;
+        _periodic = false;
 """
         self._specific_template['export_additional'] = """
         # Custom local parameters timed array
@@ -249,6 +254,8 @@ class TimedArray(Population):
         vector[int] get_schedule()
         void set_buffer(vector[vector[double]])
         vector[vector[double]] get_buffer()
+        void set_periodic(bool)
+        bool get_periodic()
 """
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
@@ -261,13 +268,26 @@ class TimedArray(Population):
         pop%(id)s.set_buffer( buffer )
     cpdef np.ndarray get_values( self ):
         return np.array(pop%(id)s.get_buffer( ))
+
+    cpdef set_periodic( self, periodic ):
+        pop%(id)s.set_periodic(periodic)
+    cpdef bool get_periodic(self):
+        return pop%(id)s.get_periodic()
 """ % { 'id': self.id }
         self._specific_template['update_variables'] = """
+        if ( _curr_slice == -1 )
+            return;
+
         if ( _curr_cnt < _schedule[_curr_slice] ) {
             _curr_cnt++;
         } else {
             if ( ++_curr_slice == _schedule.size() ) {
-                _curr_slice = 0;
+                if ( _periodic ) {
+                    _curr_slice = 0;
+                } else {
+                    _curr_slice = -1;
+                    return;
+                }
             }
             _curr_cnt=1;
             r = _buffer[_curr_slice];
@@ -296,6 +316,11 @@ class TimedArray(Population):
                     self.cyInstance.set_values( value )
             else:
                 self.init['values'] = value
+        elif name == "periodic":
+            if self.initialized:
+                self.cyInstance.set_periodic( value )
+            else:
+                self.init['periodic'] = value
         else:
             Population.__setattr__(self, name, value)
 
@@ -318,6 +343,11 @@ class TimedArray(Population):
                     return self.cyInstance.get_values()
             else:
                 return self.init['values']
+        elif name == 'periodic':
+            if self.initialized:
+                return self.cyInstance.get_periodic()
+            else:
+                return self.init['periodic']
         else:
             return Population.__getattribute__(self, name)
 
