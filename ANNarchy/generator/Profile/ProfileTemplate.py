@@ -44,7 +44,7 @@ papi_profile_header = """
 class Measurement{
     std::string _type;
     std::vector<double> _raw_data;
-    std::vector<long long> _start_data;
+
     double _mean;
     double _std;
     long_long _start;
@@ -59,18 +59,15 @@ public:
         _start = 0.0;
         _stop = 0.0;
         _raw_data = std::vector<double>();
-        _start_data = std::vector<long long>();
     }
 
     ~Measurement() {
         debug_cout("Destroy Measurement object");
         _raw_data.clear();
-        _start_data.clear();
     }
 
     inline void start_wall_time() {
         _start = PAPI_get_real_usec();
-        _start_data.push_back(_start);
     }
 
     inline void stop_wall_time() {
@@ -81,7 +78,6 @@ public:
     void reset() {
         debug_cout("Reset Measurement object");
         _raw_data.clear();
-        _start_data.clear();
         _mean = 0.0;
         _std = 0.0;
     }
@@ -242,11 +238,6 @@ public:
             _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
             _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
 
-            _out_file << "    <raw_start>";
-            for(auto it2 = _datasets[it->second]->_start_data.begin(); it2 != _datasets[it->second]->_start_data.end(); it2++)
-                _out_file << std::fixed << std::setprecision(4) << *it2 - _profiler_start << " ";
-            _out_file << "</raw_start>" << std::endl;
-
             _out_file << "    <raw_data>";
             for(auto it2 = _datasets[it->second]->_raw_data.begin(); it2 != _datasets[it->second]->_raw_data.end(); it2++)
                 _out_file << std::fixed << std::setprecision(4) << *it2 << " ";
@@ -371,7 +362,7 @@ cuda_profile_header = \
 class Measurement{
     std::string _type;
     std::vector<double> _raw_data;
-    std::vector<cudaEvent_t> _start_data;
+
     double _mean;
     double _std;
     cudaEvent_t _start;
@@ -399,7 +390,6 @@ public:
 
     inline void start_wall_time() {
         cudaEventRecord(_start);
-        _start_data.push_back(_start);
     }
 
     inline void stop_wall_time() {
@@ -409,7 +399,7 @@ public:
         float milliseconds = 0;
         cudaEventElapsedTime(&milliseconds, _start, _stop);
 
-        _raw_data.push_back(double(milliseconds));
+        _raw_data.push_back(double(milliseconds*1000.0)); // storage in us
     }
 
     void reset() {
@@ -572,14 +562,6 @@ public:
             _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
             _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
             _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
-
-            _out_file << "    <raw_start>";
-            float milliseconds = 0;
-            for(auto it2 = _datasets[it->second]->_start_data.begin(); it2 != _datasets[it->second]->_start_data.end(); it2++) {
-                cudaEventElapsedTime(&milliseconds, _profiler_start, *it2);
-                _out_file << std::fixed << std::setprecision(4) << milliseconds << " ";
-            }
-            _out_file << "</raw_start>" << std::endl;
 
             _out_file << "    <raw_data>";
             for(auto it2 = _datasets[it->second]->_raw_data.begin(); it2 != _datasets[it->second]->_raw_data.end(); it2++)

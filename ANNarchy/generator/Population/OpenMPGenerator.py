@@ -52,6 +52,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Additional includes and structures
         include_additional = ""
+        access_additional = ""
         struct_additional = ""
         declare_additional = ""
         init_additional = ""
@@ -129,6 +130,8 @@ class OpenMPGenerator(PopulationGenerator):
             declare_delay = pop._specific_template['declare_delay']
         if 'access_parameters_variables' in pop._specific_template.keys():
             access_parameters_variables = pop._specific_template['access_parameters_variables']
+        if 'access_additional' in pop._specific_template.keys():
+            access_additional = pop._specific_template['access_additional']
         if 'init_parameters_variables' in pop._specific_template.keys():
             init_parameters_variables = pop._specific_template['init_parameters_variables']
         if 'init_spike' in pop._specific_template.keys():
@@ -170,6 +173,7 @@ class OpenMPGenerator(PopulationGenerator):
             'declare_FR': declare_FR,
             'declare_profile': declare_profile,
             'access_parameters_variables': access_parameters_variables,
+            'access_additional': access_additional,
             'init_parameters_variables': init_parameters_variables,
             'init_spike': init_spike,
             'init_delay': init_delay,

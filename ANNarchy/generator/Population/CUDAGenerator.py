@@ -603,6 +603,10 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'stream_id': 'pop%(id)s.stream' % {'id':pop.id}
         }
 
+        # if profiling enabled, annotate with profiling code
+        if self._prof_gen:
+            call = self._prof_gen.annotate_update_neuron(pop, call)
+
         return body, header, call
 
     def _update_spiking_neuron(self, pop):

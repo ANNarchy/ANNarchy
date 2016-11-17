@@ -10,7 +10,7 @@ from .core.Neuron import Neuron, RateNeuron, SpikeNeuron
 from .core.Synapse import Synapse, RateSynapse, SpikeSynapse
 from .core.Population import Population
 from .core.Projection import Projection
-from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, HomogeneousCorrelatedSpikeTrains
+from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains
 from .core.SpecificProjection import DecodingProjection
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential

@@ -289,6 +289,10 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 # TODO: replace by regex
                 call_code = call_code.replace("gpu_r,", "gpu_delayed_r["+str(proj.max_delay-1)+"],")
 
+        # Profiling
+        if self._prof_gen:
+            call_code = self._prof_gen.annotate_computesum_rate(proj, call_code)
+
         return header_code, body_code, call_code
 
     def _computesum_spiking(self, proj):
@@ -845,5 +849,9 @@ if(%(condition)s){
             'default_args_call': default_args_call,
             'kernel_args_call': kernel_args_call
         }
+
+        # Profiling
+        if self._prof_gen:
+            call = self._prof_gen.annotate_update_synapse(proj, call)
 
         return body, header, call

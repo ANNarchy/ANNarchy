@@ -22,7 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core.Population import Population
-from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.Neuron import Neuron, RateNeuron
 import ANNarchy.core.Global as Global
 
 import numpy as np
@@ -186,6 +186,142 @@ class PoissonPopulation(Population):
         if isinstance(rates, np.ndarray):
             self.rates = rates
 
+class TimedArray(Population):
+    """
+    Timed array source setting provided firing rates at the times given in the schedule array.
+
+    * Parameters *:
+
+        *geometry*: population geometry
+        *schedule*: either a scalar or a set of time points where inputs should be set.
+        *values*: inputs to be set.
+
+    * Note *:
+
+        If the simulation time exceeds the last point of the schedule plan, the schedule will be
+        applied from the beginning again. The same applies for the values.
+
+        Until now, this specific population is not available for CUDA ( will be changed soon ).
+    """
+    def __init__(self, geometry, schedule, values, name=None):
+        neuron = Neuron(
+            parameters=" r ",
+            equations="",
+            name="Timed Array",
+            description="Timed array source."
+        )
+
+        if isinstance(schedule, (int, float)):
+            schedule = [ schedule for i in xrange(values.shape[0])]
+
+        if len(schedule) != values.shape[0]:
+            Global._error('TimedArray: length of schedule parameter and 1st dimension of values parameter should be the same')
+
+        Population.__init__(self, geometry=geometry, name=name, neuron=neuron)
+
+        self.init['schedule'] = schedule
+        self.init['values'] = values
+
+    def _generate(self):
+        " adjust code templates for the specific population "
+        self._specific_template['declare_additional'] = """
+    // Custom local parameter timed array
+    std::vector< int > _schedule;
+    std::vector< std::vector< double > > _buffer;
+    int _curr_slice;
+    int _curr_cnt;
+"""
+        self._specific_template['access_additional'] = """
+    // Custom local parameter timed array
+    void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
+    std::vector<int> get_schedule() { return _schedule; }
+    void set_buffer(std::vector< std::vector< double > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    std::vector< std::vector< double > > get_buffer() { return _buffer; }
+"""
+        self._specific_template['init_additional'] = """
+        // counters
+        _curr_slice = 0;
+        _curr_cnt = 1;
+"""
+        self._specific_template['export_additional'] = """
+        # Custom local parameters timed array
+        void set_schedule(vector[int])
+        vector[int] get_schedule()
+        void set_buffer(vector[vector[double]])
+        vector[vector[double]] get_buffer()
+"""
+        self._specific_template['wrapper_access_additional'] = """
+    # Custom local parameters timed array
+    cpdef set_schedule( self, schedule ):
+        pop%(id)s.set_schedule( schedule )
+    cpdef np.ndarray get_schedule( self ):
+        return np.array(pop%(id)s.get_schedule( ))
+
+    cpdef set_values( self, buffer ):
+        pop%(id)s.set_buffer( buffer )
+    cpdef np.ndarray get_values( self ):
+        return np.array(pop%(id)s.get_buffer( ))
+""" % { 'id': self.id }
+        self._specific_template['update_variables'] = """
+        if ( _curr_cnt < _schedule[_curr_slice] ) {
+            _curr_cnt++;
+        } else {
+            if ( ++_curr_slice == _schedule.size() ) {
+                _curr_slice = 0;
+            }
+            _curr_cnt=1;
+            r = _buffer[_curr_slice];
+        }
+"""
+
+    def _instantiate(self, module):
+        # Create the Cython instance
+        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
+
+    def __setattr__(self, name, value):
+        if name == 'schedule':
+            if self.initialized:
+                print 'set_schedule', np.array(value) / Global.config['dt']
+                self.cyInstance.set_schedule( np.array(value) / Global.config['dt'] )
+            else:
+                self.init['schedule'] = value
+        elif name == 'values':
+            if self.initialized:
+                if len(value.shape) > 2:
+                    # we need to flatten the provided data
+                    flat_values = np.zeros( (value.shape[0], self.size) )
+                    for x in xrange(value.shape[0]):
+                        flat_values[x] = np.reshape( value[x], self.size )
+                    self.cyInstance.set_values( flat_values )
+                else:
+                    self.cyInstance.set_values( value )
+            else:
+                self.init['values'] = value
+        else:
+            Population.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        if name == 'schedule':
+            if self.initialized:
+                return Global.config['dt'] * self.cyInstance.get_schedule()
+            else:
+                return self.init['schedule']
+        elif name == 'values':
+            if self.initialized:
+                if len(self.geometry) > 1:
+                    # unflatten the data
+                    flat_values = self.cyInstance.get_values()
+                    values = np.zeros( tuple( [len(self.schedule)] + list(self.geometry) ) )
+                    for x in range(len(self.schedule)):
+                        values[x] = np.reshape( flat_values[x], self.geometry)
+                    return values
+                else:
+                    return self.cyInstance.get_values()
+            else:
+                return self.init['values']
+        else:
+            return Population.__getattribute__(self, name)
+
 class SpikeSourceArray(Population):
     """
     Spike source generating spikes at the times given in the spike_times array.
@@ -229,7 +365,6 @@ class SpikeSourceArray(Population):
         Population.__init__(self, geometry=nb_neurons, neuron=neuron, name=name)
 
         self.init['spike_times'] = spike_times
-
 
     def _sort_spikes(self, spike_times):
         "Sort, unify the spikes and transform them intosteps."
