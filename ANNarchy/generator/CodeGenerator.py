@@ -67,8 +67,11 @@ class CodeGenerator(object):
 
         if Global.config['profiling']:
             if Global.config['paradigm'] == "openmp":
-                from .Profile import PAPIProfile
-                self._profgen = PAPIProfile(self._annarchy_dir, net_id)
+                #from .Profile import PAPIProfile
+                #self._profgen = PAPIProfile(self._annarchy_dir, net_id)
+                #self._profgen.generate()
+                from .Profile import CPP11Profile
+                self._profgen = CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             elif Global.config['paradigm'] == "cuda":
                 from .Profile import CUDAProfile
