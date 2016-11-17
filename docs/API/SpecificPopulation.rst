@@ -20,6 +20,13 @@ Class SpikeSourceArray
 
 
 
+Class TimedArray
+=======================
+
+.. autoclass:: ANNarchy.TimedArray
+   :members:
+
+
 Class HomogeneousCorrelatedSpikeTrains
 ========================================
 

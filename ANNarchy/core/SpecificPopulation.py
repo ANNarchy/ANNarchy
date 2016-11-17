@@ -229,18 +229,19 @@ class TimedArray(SpecificPopulation):
     """
     Timed array source setting provided firing rates at the times given in the schedule array.
 
-    * Parameters *:
+    *Parameters*:
 
-        *geometry*: population geometry
-        *schedule*: either a scalar or a set of time points where inputs should be set.
-        *values*: inputs to be set.
-        *periodic*: if the simulation time exceeds the last point of the schedule plan, the state of firing rates need to be defined.
-        By default, the last set firing rate will remain. If periodic is set to true, the schedule will be applied from the beginning
-        again. The same applies for the values.
+    * *geometry*: population geometry
+    * *schedule*: either a scalar or a set of time points where inputs should be set.
+    * *values*: inputs to be set.
+    * *periodic*: if the simulation time exceeds the last point of the schedule plan, the state of firing rates need to be defined.
+    
+    By default, the last set firing rate will remain. If periodic is set to true, the schedule will be applied from the beginning again. The same applies for the values.
 
-    * Note *:
+    .. note:
 
         Until now, this specific population is not available for CUDA ( will be changed soon ).
+    
     """
     def __init__(self, geometry, schedule, values, periodic=False, name=None):
         neuron = Neuron(
@@ -398,11 +399,38 @@ class SpikeSourceArray(SpecificPopulation):
 
     *Parameters*:
 
-    * **spike_times** : a list of absolute times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise. 
+    * **spike_times** : a list of times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise. 
     Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+
     * **name**: optional name for the population.
 
-    You can later modify the spike_times attribute of the population, but it must have the same size as the initial one::
+    You can later modify the spike_times attribute of the population, but it must have the same number of neurons as the initial one.
+
+    The spike times are by default relative to the start of a simulation (``ANNarchy.get_time()`` is 0.0). 
+    If you call the ``reset()`` method of a ``SpikeSourceArray``, this will set the spike times relative to the current time. 
+    You can then repeat a stimulation many times.
+
+
+    .. code-block:: python
+
+        # 2 neurons firing at 100Hz with a 1 ms delay
+        times = [
+            [ 10, 20, 30, 40],
+            [ 11, 21, 31, 41]
+        ]
+        inp = SpikeSourceArray(spike_times=times)
+
+        compile()
+
+        # Spikes at 10/11, 20/21, etc
+        simulate(50)
+
+        # Reset the internal time of the SpikeSourceArray
+        inp.reset()
+
+        # Spikes at 60/61, 70/71, etc
+        simulate(50)
+
     """
     def __init__(self, spike_times, name=None):
 
@@ -445,6 +473,7 @@ class SpikeSourceArray(SpecificPopulation):
     std::vector< std::vector< long int > > spike_times ;
     std::vector< long int >  next_spike ;
     std::vector< int > idx_next_spike;
+    long int _t;
 """
         self._specific_template['declare_additional'] = """
     // Recompute the spike times
@@ -455,7 +484,7 @@ class SpikeSourceArray(SpecificPopulation):
             if(!spike_times[i].empty()){
                 int idx = 0;
                 // Find the first spike time which is not in the past
-                while(spike_times[i][idx] < t){
+                while(spike_times[i][idx] < _t){
                     idx++;
                 }
                 // Set the next spike
@@ -470,6 +499,7 @@ class SpikeSourceArray(SpecificPopulation):
         self._specific_template['access_parameters_variables'] = ""
 
         self._specific_template['init_parameters_variables'] ="""
+        _t = 0;
         r = std::vector<double>(size, 0.0);
         next_spike = std::vector<long int>(size, -10000);
         idx_next_spike = std::vector<int>(size, 0);
@@ -477,6 +507,7 @@ class SpikeSourceArray(SpecificPopulation):
 """
 
         self._specific_template['reset_additional'] ="""
+        _t = 0;
         this->recompute_spike_times();
 """
 
@@ -485,11 +516,11 @@ class SpikeSourceArray(SpecificPopulation):
             spiked.clear();
             for(int i = 0; i < %(size)s; i++){
                 // Emit spike
-                if( t == next_spike[i] ){
-                    last_spike[i] = t;
+                if( _t == next_spike[i] ){
+                    last_spike[i] = _t;
                     /* 
                     while(++idx_next_spike[i]< spike_times[i].size()){
-                        if(spike_times[i][idx_next_spike[i]] > t)
+                        if(spike_times[i][idx_next_spike[i]] > _t)
                             break;
                     }
                     */
@@ -500,6 +531,7 @@ class SpikeSourceArray(SpecificPopulation):
                     spiked.push_back(i);
                 }
             }
+            _t++;
         }
 """ % {'size': self.size}
 

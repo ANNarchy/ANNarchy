@@ -146,7 +146,7 @@ class OpenMPGenerator(PopulationGenerator):
             reset_spike = pop._specific_template['reset_spike']
         if 'reset_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             reset_delay = pop._specific_template['reset_delay']
-        if 'reset_additional' in pop._specific_template.keys() and pop.max_delay > 1:
+        if 'reset_additional' in pop._specific_template.keys():
             reset_additional = pop._specific_template['reset_additional']
         if 'update_variables' in pop._specific_template.keys():
             update_variables = pop._specific_template['update_variables']
