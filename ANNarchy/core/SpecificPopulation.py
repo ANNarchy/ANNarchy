@@ -29,7 +29,38 @@ import numpy as np
 from scipy.special import erf
 from scipy.optimize import newton
 
-class PoissonPopulation(Population):
+class SpecificPopulation(Population):
+    """
+    Interface class for user-defined definition of Population objects. An inheriting
+    class need to override the implementator functions _generate_[paradigm], otherwise
+    a NotImplementedError exception will be thrown.
+
+    *Parameters*:
+
+        * geometry *:
+        * neuron *:
+        * name *:
+    """
+    def __init__(self, geometry, neuron, name=None):
+        Population.__init__(self, geometry, neuron, name)
+
+    def _generate(self):
+        if Global.config['paradigm'] == "openmp":
+            self._generate_omp()
+        elif Global.config['paradigm'] == "cuda":
+            self._generate_cuda()
+        else:
+            raise NotImplementedError
+
+    def _generate_omp(self):
+        " Overridden by child class "
+        raise NotImplementedError
+
+    def _generate_cuda(self):
+        " Overridden by child class "
+        raise NotImplementedError
+
+class PoissonPopulation(SpecificPopulation):
     """ 
     Population of spiking neurons following a Poisson distribution.
 
@@ -181,12 +212,20 @@ class PoissonPopulation(Population):
                 name="Poisson",
                 description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
-        Population.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
         
         if isinstance(rates, np.ndarray):
             self.rates = rates
 
-class TimedArray(Population):
+    def _generate_omp(self):
+        " Nothing special to do here. "
+        pass
+
+    def _generate_cuda(self):
+        " Nothing special to do here. "
+        pass
+
+class TimedArray(SpecificPopulation):
     """
     Timed array source setting provided firing rates at the times given in the schedule array.
 
@@ -217,13 +256,13 @@ class TimedArray(Population):
         if len(schedule) != values.shape[0]:
             Global._error('TimedArray: length of schedule parameter and 1st dimension of values parameter should be the same')
 
-        Population.__init__(self, geometry=geometry, name=name, neuron=neuron)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name)
 
         self.init['schedule'] = schedule
         self.init['values'] = values
         self.init['periodic'] = periodic
 
-    def _generate(self):
+    def _generate_omp(self):
         " adjust code templates for the specific population "
         self._specific_template['declare_additional'] = """
     // Custom local parameter timed array
@@ -351,7 +390,7 @@ class TimedArray(Population):
         else:
             return Population.__getattribute__(self, name)
 
-class SpikeSourceArray(Population):
+class SpikeSourceArray(SpecificPopulation):
     """
     Spike source generating spikes at the times given in the spike_times array.
 
@@ -364,8 +403,6 @@ class SpikeSourceArray(Population):
     * **name**: optional name for the population.
 
     You can later modify the spike_times attribute of the population, but it must have the same size as the initial one::
-
-
     """
     def __init__(self, spike_times, name=None):
 
@@ -399,8 +436,7 @@ class SpikeSourceArray(Population):
         "Sort, unify the spikes and transform them intosteps."
         return [sorted(list(set([round(t/Global.config['dt']) for t in neur_times]))) for neur_times in spike_times]
 
-
-    def _generate(self):
+    def _generate_omp(self):
         "Code generation"
         # Do not generate default parameters and variables
         self._specific_template['declare_parameters_variables'] = """
@@ -519,7 +555,7 @@ class SpikeSourceArray(Population):
             return Population.__getattribute__(self, name)
             
 
-class HomogeneousCorrelatedSpikeTrains(Population):
+class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     """ 
     Population of spiking neurons following a homogeneous distribution with correlated spike trains.
 
@@ -613,7 +649,6 @@ class HomogeneousCorrelatedSpikeTrains(Population):
             # Correction of mu and sigma everytime r, c or tau is changed
             self.mu, self.sigma = self._rectify(self.rates, self.corr, self.tau)
 
-
     def _rectify(self, mu, corr, tau):
         """
         Rectifies mu and sigma to ensure the rates are positive.
@@ -646,3 +681,11 @@ class HomogeneousCorrelatedSpikeTrains(Population):
         new_sigma = mur / (np.exp(-0.5 * y ** 2) / ((2. * np.pi) ** .5) + .5 * y * (1. + erf(y * (2 ** (-.5)))))
         new_mu = y * new_sigma
         return (new_mu, new_sigma)
+
+    def _generate_omp(self):
+        " Nothing special to do here. "
+        pass
+
+    def _generate_cuda(self):
+        " Nothing special to do here. "
+        pass
