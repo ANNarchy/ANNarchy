@@ -243,10 +243,6 @@ class TimedArray(SpecificPopulation):
         *periodic*: if the simulation time exceeds the last point of the schedule plan, the state of firing rates need to be defined.
         By default, the last set firing rate will remain. If periodic is set to true, the schedule will be applied from the beginning
         again. The same applies for the values.
-
-    * Note *:
-
-        Until now, this specific population is not available for CUDA ( will be changed soon ).
     """
     def __init__(self, geometry, schedule, values, periodic=False, name=None):
         neuron = Neuron(
@@ -344,6 +340,121 @@ class TimedArray(SpecificPopulation):
             }
             _curr_cnt=1;
             r = _buffer[_curr_slice];
+        }
+"""
+
+    def _generate_cuda(self):
+        """
+        adjust code templates for the specific population for single thread and CUDA.
+        """
+        # HD (18. Nov 2016)
+        # I suppress the code generation for allocating the variable r on gpu, as
+        # well as memory transfer codes. This is only possible as no other variables
+        # allowed in TimedArray.
+        self._specific_template['init_parameters_variables'] = ""
+        self._specific_template['host_device_transfer'] = ""
+        self._specific_template['device_host_transfer'] = ""
+
+        #
+        # Code for handling the buffer and schedule parameters
+        self._specific_template['declare_additional'] = """
+    // Custom local parameter timed array
+    std::vector< int > _schedule;
+    std::vector< double* > gpu_buffer;
+    bool _periodic;
+    int _curr_slice;
+    int _curr_cnt;
+"""
+        self._specific_template['access_additional'] = """
+    // Custom local parameter timed array
+    void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
+    std::vector<int> get_schedule() { return _schedule; }
+    void set_buffer(std::vector< std::vector< double > > buffer) {
+        if ( gpu_buffer.empty() ) {
+            gpu_buffer = std::vector< double* >(buffer.size(), nullptr);
+            // allocate gpu arrays
+            for(int i = 0; i < buffer.size(); i++) {
+                cudaMalloc((void**)&gpu_buffer[i], buffer[i].size()*sizeof(double));
+            }
+        }
+
+        auto host_it = buffer.begin();
+        auto dev_it = gpu_buffer.begin();
+        for(host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++) {
+            cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(double), cudaMemcpyHostToDevice);
+        }
+
+        gpu_r = gpu_buffer[0];
+    }
+    std::vector< std::vector< double > > get_buffer() {
+        std::vector< std::vector< double > > buffer = std::vector< std::vector< double > >( gpu_buffer.size(), std::vector<double>(size,0.0) );
+
+        auto host_it = buffer.begin();
+        auto dev_it = gpu_buffer.begin();
+        for( host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++ ) {
+            cudaMemcpy( host_it->data(), *dev_it, size*sizeof(double), cudaMemcpyDeviceToHost );
+        }
+
+        return buffer;
+    }
+    void set_periodic(bool periodic) { _periodic = periodic; }
+    bool get_periodic() { return _periodic; }
+"""
+        self._specific_template['init_additional'] = """
+        // counters
+        _curr_slice = 0;
+        _curr_cnt = 1;
+        _periodic = false;
+"""
+        self._specific_template['reset_additional'] = """
+        // counters
+        _curr_slice = 0;
+        _curr_cnt = 1;
+        gpu_r = gpu_buffer[0];
+"""
+        self._specific_template['export_additional'] = """
+        # Custom local parameters timed array
+        void set_schedule(vector[int])
+        vector[int] get_schedule()
+        void set_buffer(vector[vector[double]])
+        vector[vector[double]] get_buffer()
+        void set_periodic(bool)
+        bool get_periodic()
+"""
+        self._specific_template['wrapper_access_additional'] = """
+    # Custom local parameters timed array
+    cpdef set_schedule( self, schedule ):
+        pop%(id)s.set_schedule( schedule )
+    cpdef np.ndarray get_schedule( self ):
+        return np.array(pop%(id)s.get_schedule( ))
+
+    cpdef set_values( self, buffer ):
+        pop%(id)s.set_buffer( buffer )
+    cpdef np.ndarray get_values( self ):
+        return np.array(pop%(id)s.get_buffer( ))
+
+    cpdef set_periodic( self, periodic ):
+        pop%(id)s.set_periodic(periodic)
+    cpdef bool get_periodic(self):
+        return pop%(id)s.get_periodic()
+""" % { 'id': self.id }
+        self._specific_template['update_variables'] = """
+        if ( _curr_slice == -1 )
+            return;
+
+        if ( _curr_cnt < _schedule[_curr_slice] ) {
+            _curr_cnt++;
+        } else {
+            if ( ++_curr_slice == _schedule.size() ) {
+                if ( _periodic ) {
+                    _curr_slice = 0;
+                } else {
+                    _curr_slice = -1;
+                    return;
+                }
+            }
+            _curr_cnt=1;
+            gpu_r = gpu_buffer[_curr_slice];
         }
 """
 

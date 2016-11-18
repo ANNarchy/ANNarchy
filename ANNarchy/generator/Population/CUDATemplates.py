@@ -58,6 +58,7 @@ struct PopStruct%(id)s{
 
     // Access methods to the parameters and variables
 %(access_parameters_variables)s
+%(access_additional)s
 
     // Method called to initialize the data structures
     void init_population() {
