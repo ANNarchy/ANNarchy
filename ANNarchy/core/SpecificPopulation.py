@@ -22,7 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core.Population import Population
-from ANNarchy.core.Neuron import Neuron, RateNeuron
+from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 
 import numpy as np
@@ -32,19 +32,21 @@ from scipy.optimize import newton
 class SpecificPopulation(Population):
     """
     Interface class for user-defined definition of Population objects. An inheriting
-    class need to override the implementator functions _generate_[paradigm], otherwise
+    class need to override the implementor functions _generate_[paradigm], otherwise
     a NotImplementedError exception will be thrown.
-
-    *Parameters*:
-
-        * geometry *:
-        * neuron *:
-        * name *:
     """
     def __init__(self, geometry, neuron, name=None):
+        """
+        Initialization, receive default arguments of Population objects.
+        """
         Population.__init__(self, geometry, neuron, name)
 
     def _generate(self):
+        """
+        Overridden method of Population, called during the code generation process.
+        This function selects dependent on the chosen paradigm the correct implementor
+        functions defined by the user.
+        """
         if Global.config['paradigm'] == "openmp":
             self._generate_omp()
         elif Global.config['paradigm'] == "cuda":
@@ -53,11 +55,15 @@ class SpecificPopulation(Population):
             raise NotImplementedError
 
     def _generate_omp(self):
-        " Overridden by child class "
+        """
+        Intended to be overridden by child class. Implememt code adjustments intended for single thread and openMP paradigm.
+        """
         raise NotImplementedError
 
     def _generate_cuda(self):
-        " Overridden by child class "
+        """
+        Intended to be overridden by child class. Implememt code adjustments intended for single thread and openMP paradigm.
+        """
         raise NotImplementedError
 
 class PoissonPopulation(SpecificPopulation):
@@ -251,7 +257,7 @@ class TimedArray(SpecificPopulation):
         )
 
         if isinstance(schedule, (int, float)):
-            schedule = [ schedule for i in xrange(values.shape[0])]
+            schedule = [ schedule ] * values.shape[0]
 
         if len(schedule) != values.shape[0]:
             Global._error('TimedArray: length of schedule parameter and 1st dimension of values parameter should be the same')
@@ -263,7 +269,9 @@ class TimedArray(SpecificPopulation):
         self.init['periodic'] = periodic
 
     def _generate_omp(self):
-        " adjust code templates for the specific population "
+        """
+        adjust code templates for the specific population for single thread and openMP.
+        """
         self._specific_template['declare_additional'] = """
     // Custom local parameter timed array
     std::vector< int > _schedule;
@@ -286,6 +294,12 @@ class TimedArray(SpecificPopulation):
         _curr_slice = 0;
         _curr_cnt = 1;
         _periodic = false;
+"""
+        self._specific_template['reset_additional'] = """
+        // counters
+        _curr_slice = 0;
+        _curr_cnt = 1;
+        r = _buffer[0];
 """
         self._specific_template['export_additional'] = """
         # Custom local parameters timed array

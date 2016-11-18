@@ -32,7 +32,7 @@ pop3 = Population(geometry=1000, neuron =simple_neuron)
 proj = DecodingProjection(pop2, pop3, 'exc', window=10.0)
 def diagonal(pre, post, weights):
     "Simple connector pattern to progressively connect each post-synaptic neuron to a growing number of pre-synaptic neurons"
-    lil = LIL()
+    lil = CSR()
     for rk_post in range(post.size):
         lil.add(rk_post, range((rk_post+1)), [weights], [0] )
     return lil
