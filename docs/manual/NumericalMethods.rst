@@ -207,11 +207,11 @@ The value of ``Apost`` and ``Apre`` is only needed when a pre- or post-synaptic 
 
     \tau  \frac{dv}{dt} = E - v
 
-If :math:`v` has the value :math:`V_0` at time :math:`t`,, its value at time :math:`t + \Delta t` is given by:
+If :math:`v` has the value :math:`V_0` at time :math:`t`, its value at time :math:`t + \Delta t` is given by:
 
 .. math::
 
-    v(t + \Delta t) = V_0 \cdot \exp(-\frac{\Delta t}\tau}) 
+    v(t + \Delta t) = V_0 \cdot \exp(-\frac{\Delta t}{\tau}) 
 
 
 .. note::

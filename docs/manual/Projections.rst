@@ -26,10 +26,12 @@ Once the populations are created, one can connect them by creating ``Projection`
 
     The post-synaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
 
-* ``synapse`` is an optional argument requiring a *Synapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
+* ``synapse`` is an optional argument requiring a *Synapse* instance. 
 
-    * the default rate-coded synapse defines ``psp = w * pre.r``,
-    * the default spiking synapse defines ``g_target += w``.
+If the ``synapse`` argument is omitted, the default synapse will be used:
+    
+* the default rate-coded synapse defines ``psp = w * pre.r``,
+* the default spiking synapse defines ``g_target += w``.
 
 Building the projections
 ===========================

@@ -78,7 +78,7 @@ class PoissonPopulation(SpecificPopulation):
 
     It is also possible to define a temporal equation for the rates, by passing a string to the argument::
 
-        pop = PoissonPopulation(geometry=100, rates="100.0 * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0")
+        pop = PoissonPopulation(geometry=100, rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0")
 
     The syntax of this equation follows the same structure as neural variables.
 
@@ -227,110 +227,196 @@ class PoissonPopulation(SpecificPopulation):
 
 class TimedArray(SpecificPopulation):
     """
-    Timed array source setting provided firing rates at the times given in the schedule array.
+    Data structure holding sequential inputs for a rate-coded network.
 
     *Parameters*:
 
-    * *geometry*: population geometry
-    * *schedule*: either a scalar or a set of time points where inputs should be set.
-    * *values*: inputs to be set.
-    * *periodic*: if the simulation time exceeds the last point of the schedule plan, the state of firing rates need to be defined.
+    * **rates**: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
+    * **schedule**: either a single value or a list of time points where inputs should be set. Default: every timestep.
+    * **period**: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
     
-    By default, the last set firing rate will remain. If periodic is set to true, the schedule will be applied from the beginning again. The same applies for the values.
+    The input values are stored in the (recordable) attribute ``r``, without any further processing. You will need to connect this population to another one using the ``connect_one_to_one()`` method. 
 
-    .. note:
+    By default, the firing rate of this population will iterate over the different values step by step:
 
-        Until now, this specific population is not available for CUDA ( will be changed soon ).
+    .. code-block:: python
+
+        inputs = np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+            ]
+        ) 
+
+        inp = TimedArray(rates=inputs)
+
+        pop = Population(10, ...)
+
+        proj = Projection(inp, pop, 'exc')
+        proj.connect_one_to_one(1.0)
+
+        compile()
+
+        simulate(10.)
+
+    This creates a population of 10 neurons whose activity will change during the first 10*dt milliseconds of the simulation. After that delay, the last input will be kept (i.e. 1 for the last neuron).
+
+    If you want the TimedArray to "loop" over the different input vectors, you can specify a period for the inputs:
+
+    .. code-block:: python
+
+        inp = TimedArray(rates=inputs, period=10.)
+
+    If the period is smaller than the length of the rates, the last inputs will not be set.
+
+    If you do not want the inputs to be set at every step, but every 10 ms for example, youcan use the ``schedule`` argument:
+
+    .. code-block:: python
+
+        inp = TimedArray(rates=inputs, schedule=10.)
+
+    The input [1, 0, 0,...] will stay for 10 ms, then[0, 1, 0, ...] for the next 10 ms, etc...
+
+    If you need a less regular schedule, you can specify it as a list of times: 
+
+    .. code-block:: python
+
+        inp = TimedArray(rates=inputs, schedule=[10., 20., 50., 60., 100., 110.])
+
+    The first input is set at t = 10 ms (r = 0.0 in the first 10 ms), the second at t = 20 ms, the third at t = 50 ms, etc.
+
+    If you specify less times than in the array of rates, the last ones will be ignored. 
+
+    Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray, times becoming relative to that call:
+
+
+    .. code-block:: python
+
+        simulate(100.) # ten inputs are shown with a schedule of 10 ms
+        inp.reset()
+        simulate(100.) # the same ten inputs are presented again.
+
     
     """
-    def __init__(self, geometry, schedule, values, periodic=False, name=None):
+    def __init__(self, rates, schedule=0., period= -1., name=None):
         neuron = Neuron(
-            parameters=" r ",
-            equations="",
+            parameters="",
+            equations=" r = 0.0",
             name="Timed Array",
             description="Timed array source."
         )
+        # Geometry of the population
+        geometry = rates.shape[1:]
 
+        # Check the schedule
         if isinstance(schedule, (int, float)):
-            schedule = [ schedule for i in xrange(values.shape[0])]
+            if float(schedule) <= 0.0:
+                schedule = Global.config['dt']
+            schedule = [ float(schedule*i) for i in range(rates.shape[0])]
 
-        if len(schedule) != values.shape[0]:
-            Global._error('TimedArray: length of schedule parameter and 1st dimension of values parameter should be the same')
+        if len(schedule) > rates.shape[0]:
+            Global._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
+
+        if len(schedule) < rates.shape[0]:
+            Global._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
 
         SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name)
 
         self.init['schedule'] = schedule
-        self.init['values'] = values
-        self.init['periodic'] = periodic
+        self.init['rates'] = rates
+        self.init['period'] = period
 
     def _generate_omp(self):
         " adjust code templates for the specific population "
         self._specific_template['declare_additional'] = """
-    // Custom local parameter timed array
-    std::vector< int > _schedule;
-    std::vector< std::vector< double > > _buffer;
-    bool _periodic;
-    int _curr_slice;
-    int _curr_cnt;
+    // Custom local parameters of a TimedArray
+    std::vector< int > _schedule; // List of times where new inputs should be set
+    std::vector< std::vector< double > > _buffer; // buffer holding the data
+    int _period; // Period of cycling
+    long int _t; // Internal time
+    int _block; // Internal block when inputs are set not at each step
 """
         self._specific_template['access_additional'] = """
-    // Custom local parameter timed array
+    // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< double > > buffer) { _buffer = buffer; r = _buffer[0]; }
     std::vector< std::vector< double > > get_buffer() { return _buffer; }
-    void set_periodic(bool periodic) { _periodic = periodic; }
-    bool get_periodic() { return _periodic; }
+    void set_period(int period) { _period = period; }
+    int get_period() { return _period; }
 """
         self._specific_template['init_additional'] = """
-        // counters
-        _curr_slice = 0;
-        _curr_cnt = 1;
-        _periodic = false;
+        // Initialize counters
+        _t = 0;
+        _block = 0;
+        _period = -1;
 """
         self._specific_template['export_additional'] = """
-        # Custom local parameters timed array
+        # Custom local parameters of a TimedArray
         void set_schedule(vector[int])
         vector[int] get_schedule()
         void set_buffer(vector[vector[double]])
         vector[vector[double]] get_buffer()
-        void set_periodic(bool)
-        bool get_periodic()
+        void set_period(int)
+        int get_period()
 """
+
+        self._specific_template['reset_additional'] ="""
+        _t = 0;
+        _block = 0;
+"""
+
         self._specific_template['wrapper_access_additional'] = """
-    # Custom local parameters timed array
+    # Custom local parameters of a TimedArray
     cpdef set_schedule( self, schedule ):
         pop%(id)s.set_schedule( schedule )
     cpdef np.ndarray get_schedule( self ):
         return np.array(pop%(id)s.get_schedule( ))
 
-    cpdef set_values( self, buffer ):
+    cpdef set_rates( self, buffer ):
         pop%(id)s.set_buffer( buffer )
-    cpdef np.ndarray get_values( self ):
+    cpdef np.ndarray get_rates( self ):
         return np.array(pop%(id)s.get_buffer( ))
 
-    cpdef set_periodic( self, periodic ):
-        pop%(id)s.set_periodic(periodic)
-    cpdef bool get_periodic(self):
-        return pop%(id)s.get_periodic()
+    cpdef set_period( self, period ):
+        pop%(id)s.set_period(period)
+    cpdef int get_period(self):
+        return pop%(id)s.get_period()
 """ % { 'id': self.id }
-        self._specific_template['update_variables'] = """
-        if ( _curr_slice == -1 )
-            return;
 
-        if ( _curr_cnt < _schedule[_curr_slice] ) {
-            _curr_cnt++;
-        } else {
-            if ( ++_curr_slice == _schedule.size() ) {
-                if ( _periodic ) {
-                    _curr_slice = 0;
-                } else {
-                    _curr_slice = -1;
-                    return;
-                }
+        self._specific_template['update_variables'] = """
+        if(_active){
+            // std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+            // Check if it is time to set the input
+            if(_t == _schedule[_block]){
+                // Set the data
+                r = _buffer[_block];   
+                // Move to the next block
+                _block++; 
+                // If was the last block, go back to the first block 
+                if (_block == _schedule.size()){
+                    _block = 0;
+                }      
             }
-            _curr_cnt=1;
-            r = _buffer[_curr_slice];
+            // If the timedarray is periodic, check if we arrive at that point
+            if(_period > -1 && (_t == _period-1)){
+                // Reset the counters
+                _block=0;
+                _t = -1;
+                // Reset the data if the first input is not set at t=0
+                r.clear();
+                r = std::vector<double>(size, 0.0);
+            }
+            // Always increment the internal time
+            _t++;
         }
 """
 
@@ -344,23 +430,21 @@ class TimedArray(SpecificPopulation):
                 self.cyInstance.set_schedule( np.array(value) / Global.config['dt'] )
             else:
                 self.init['schedule'] = value
-        elif name == 'values':
+        elif name == 'rates':
             if self.initialized:
                 if len(value.shape) > 2:
                     # we need to flatten the provided data
-                    flat_values = np.zeros( (value.shape[0], self.size) )
-                    for x in xrange(value.shape[0]):
-                        flat_values[x] = np.reshape( value[x], self.size )
-                    self.cyInstance.set_values( flat_values )
+                    flat_values = value.reshape( (value.shape[0], self.size) )
+                    self.cyInstance.set_rates( flat_values )
                 else:
-                    self.cyInstance.set_values( value )
+                    self.cyInstance.set_rates( value )
             else:
-                self.init['values'] = value
-        elif name == "periodic":
+                self.init['rates'] = value
+        elif name == "period":
             if self.initialized:
-                self.cyInstance.set_periodic( value )
+                self.cyInstance.set_period(int(value /Global.config['dt']))
             else:
-                self.init['periodic'] = value
+                self.init['period'] = value
         else:
             Population.__setattr__(self, name, value)
 
@@ -370,7 +454,7 @@ class TimedArray(SpecificPopulation):
                 return Global.config['dt'] * self.cyInstance.get_schedule()
             else:
                 return self.init['schedule']
-        elif name == 'values':
+        elif name == 'rates':
             if self.initialized:
                 if len(self.geometry) > 1:
                     # unflatten the data
@@ -380,14 +464,14 @@ class TimedArray(SpecificPopulation):
                         values[x] = np.reshape( flat_values[x], self.geometry)
                     return values
                 else:
-                    return self.cyInstance.get_values()
+                    return self.cyInstance.get_rates()
             else:
-                return self.init['values']
-        elif name == 'periodic':
+                return self.init['rates']
+        elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_periodic()
+                return self.cyInstance.get_period() * Global.config['dt']
             else:
-                return self.init['periodic']
+                return self.init['period']
         else:
             return Population.__getattribute__(self, name)
 
@@ -399,8 +483,7 @@ class SpikeSourceArray(SpecificPopulation):
 
     *Parameters*:
 
-    * **spike_times** : a list of times at which a spike should be emitted if the population has 1 neuron, a list of lists otherwise. 
-    Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+    * **spike_times** : a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
 
     * **name**: optional name for the population.
 
@@ -609,7 +692,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     To avoid that x becomes negative, the values of mu and sigma are computed from a rectified Gaussian distribution, parameterized by the desired population rate **rates**, the desired correlation strength **corr** and the time constant **tau**. See Brette's paper for details.
 
-    In short, you should only define the parameters ``rates``, ``corr` and ``tau``, and let the class compute mu and sigma for you. Changing ``rates``, ``corr` or ``tau`` after initialization automatically recomputes mu and sigma.
+    In short, you should only define the parameters ``rates``, ``corr`` and ``tau``, and let the class compute mu and sigma for you. Changing ``rates``, ``corr`` or ``tau`` after initialization automatically recomputes mu and sigma.
 
     Example:
 

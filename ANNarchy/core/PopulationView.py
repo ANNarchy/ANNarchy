@@ -144,16 +144,17 @@ class PopulationView(object):
             Global._error("Population does not have a parameter/variable called " + name + ".")
 
     def set(self, value):
-        """ Updates neuron variable/parameter definition.
+        """ 
+        Updates the neurons' variable/parameter values.
 
         Parameters:
 
-            * *value*: dictionary of parameters/variables to be updated for the corresponding subset of neurons. It can be a single value or a list/1D array of the same size as the PopulationView.
+        * *value*: dictionary of parameters/variables to be updated for the corresponding subset of neurons. It can be a single value or a list/1D array of the same size as the PopulationView.
 
-                .. code-block:: python
+        .. code-block:: python
 
-                    >>> subpop = pop[0:5]
-                    >>> subpop.set( {'tau' : 20, 'r'= np.random.rand(subpop.size) } )
+            >>> subpop = pop[0:5]
+            >>> subpop.set( {'tau' : 20, 'r'= np.random.rand(subpop.size) } )
 
         .. warning::
 

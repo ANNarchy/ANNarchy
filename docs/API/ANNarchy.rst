@@ -23,7 +23,6 @@ The goal of this function is to generate all needed classes, compile all C++ sou
 
 .. autofunction:: ANNarchy.compile
     
-.. warning:: the `cpp_stand_alone` argument is an experimental feature, mainly used for internal debugging.
 
 Simulation
 ================================================

@@ -41,11 +41,11 @@ class Projection(object):
         """
         *Parameters*:
 
-            * **pre**: pre-synaptic population (either its name or a ``Population`` object).
-            * **post**: post-synaptic population (either its name or a ``Population`` object).
-            * **target**: type of the connection.
-            * **synapse**: a ``Synapse`` instance.
-            * **name**: unique name of the projection (optional).
+        * **pre**: pre-synaptic population (either its name or a ``Population`` object).
+        * **post**: post-synaptic population (either its name or a ``Population`` object).
+        * **target**: type of the connection.
+        * **synapse**: a ``Synapse`` instance.
+        * **name**: unique name of the projection (optional).
 
         By default, the synapse only ensures linear synaptic transmission:
 
@@ -347,8 +347,8 @@ class Projection(object):
 
         *Parameters*:
 
-            * **pre**: rank of the pre-synaptic neuron.
-            * **post**: rank of the post-synaptic neuron.
+        * **pre**: rank of the pre-synaptic neuron.
+        * **post**: rank of the post-synaptic neuron.
         """
         if not isinstance(pre, int) or not isinstance(post, int):
             Global._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
@@ -399,19 +399,20 @@ class Projection(object):
         return self.__getattr__(name)
 
     def set(self, value):
-        """ Sets the parameters/variables values for each dendrite in the projection.
+        """ 
+        Sets the parameters/variables values for each dendrite in the projection.
 
         For parameters, you can provide:
 
-            * a single value, which will be the same for all dendrites.
+        * a single value, which will be the same for all dendrites.
 
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
+        * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
 
         For variables, you can provide:
 
-            * a single value, which will be the same for all synapses of all dendrites.
+        * a single value, which will be the same for all synapses of all dendrites.
 
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will take the same value.
+        * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will take the same value.
 
         .. warning::
 
@@ -420,7 +421,7 @@ class Projection(object):
                 for dendrite in proj.dendrites:
                     dendrite.w = np.ones(dendrite.size)
 
-        *Parameters*:
+        *Parameter*:
 
         * **value**: a dictionary with the name of the parameter/variable as key.
 
@@ -468,7 +469,7 @@ class Projection(object):
         Returns the value of the given attribute for all neurons in the population,
         as a list of lists having the same geometry as the population if it is local.
 
-        Parameter:
+        *Parameter:*
 
         * *attribute*: should be a string representing the variables's name.
 
@@ -480,7 +481,7 @@ class Projection(object):
         Sets the value of the given attribute for all post-synaptic neurons in the projection,
         as a NumPy array having the same geometry as the population if it is local.
 
-        Parameter:
+        *Parameter:*
 
         * *attribute*: should be a string representing the variables's name.
 
@@ -527,7 +528,8 @@ class Projection(object):
     ## Variable flags
     ################################
     def set_variable_flags(self, name, value):
-        """ Sets the flags of a variable for the projection.
+        """ 
+        Sets the flags of a variable for the projection.
 
         If the variable ``r`` is defined in the Synapse description through:
 
@@ -580,7 +582,8 @@ class Projection(object):
                     self.synapse_type.description['variables'][rk_var]['bounds'][key] = val
 
     def set_variable_equation(self, name, equation):
-        """ Changes the equation of a variable for the projection.
+        """ 
+        Changes the equation of a variable for the projection.
 
         If the variable ``w`` is defined in the Synapse description through:
 
@@ -908,9 +911,9 @@ class Projection(object):
 
         * **filename**: filename, may contain relative or absolute path.
 
-            .. warning::
+        .. warning::
 
-                The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+            The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
         Example::
 

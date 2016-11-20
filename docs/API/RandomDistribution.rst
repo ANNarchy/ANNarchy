@@ -46,15 +46,18 @@ as well as in a mathematical expression::
 
     tau * dv/dt + v = g_exc + Normal(0.0, 20.0, 497536526)
 
-Implmentation details
-==================================
+----------------------------------
+Implementation details
+----------------------------------
 
-In the following section are some informations provided towards drawing of random numbers in ANNarchy, for who it's of interest. In ANNarchy we use default implementations for random number generation: STL methods of C++11 for OpenMP and the device API of the curand library for CUDA. As engines we use mt19937 on openMP side and XORWOW on GPU side. Latter is a subject of change in future releases.
+ANNarchy uses default implementations for random number generation: STL methods of C++11 for OpenMP and the device API of the curand library for CUDA. 
 
-It may important to know, that the drawing mechanisms differ between openMP and CUDA slightly:
+As engines we use mt19937 on openMP side and XORWOW on CUDA. The latter is subject to changes in future releases.
 
-    * openMP: all distribution objects draw the numbers from one source in a single threaded way.
-    * CUDA: each distribution object has it own source, the random numbers are drawn in a parallel way.
+It may be important to know that the drawing mechanisms differ between openMP and CUDA slightly:
+
+* openMP: all distribution objects draw the numbers from one source in a single threaded way.
+* CUDA: each distribution object has it own source, the random numbers are drawn in a parallel way.
 
 For further details on random numbers on GPUs please refer to the curand documentation: http://docs.nvidia.com/cuda/curand/device-api-overview.html#device-api-overview
 

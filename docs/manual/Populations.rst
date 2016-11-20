@@ -146,13 +146,13 @@ Setting their value is also simple:
             
 For population-wide attributes, you can only specify a single value (float, int or bool depending on the type of the parameter/variable). For neuron-specific attributes, you can provide either:
 
-    * a single value which will be applied to all neurons of the population.
-    
-    * a list or a one-dimensional Numpy array of the same length as the number of neurons in the population. This information is provided by ``pop1.size``.
-    
-    * a Numpy array of the same shape as the geometry of the population. This information is provided by ``pop1.geometry``.
-    
-    * a random number generator object (Uniform, Normal...).
+* a single value which will be applied to all neurons of the population.
+
+* a list or a one-dimensional Numpy array of the same length as the number of neurons in the population. This information is provided by ``pop1.size``.
+
+* a Numpy array of the same shape as the geometry of the population. This information is provided by ``pop1.geometry``.
+
+* a random number generator object (Uniform, Normal...).
     
 .. note::
 

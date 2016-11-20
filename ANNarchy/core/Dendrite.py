@@ -85,7 +85,7 @@ class Dendrite(object):
 
         *Parameters*:
 
-            * **pos**: can be either the rank or the coordinates of the presynaptic neuron
+        * **pos**: can be either the rank or the coordinates of the presynaptic neuron
         """
         if isinstance(pos, int):
             rank = pos
@@ -159,9 +159,9 @@ class Dendrite(object):
 
         *Parameter*:
 
-            * **value**: a dictionary containing the parameter/variable names as keys::
+        * **value**: a dictionary containing the parameter/variable names as keys::
 
-                dendrite.set( 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
+            dendrite.set( 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
         """
         for val_key in value.keys():
             if hasattr(self.proj.cy_instance, val_key):
@@ -181,9 +181,9 @@ class Dendrite(object):
 
         *Parameter*:
 
-            * *name*: name of the parameter/variable::
+        * *name*: name of the parameter/variable::
 
-                dendrite.get('w')
+            dendrite.get('w')
         """
         if name == 'rank':
             return self.proj.cyInstance.pre_rank(self.idx)
@@ -202,7 +202,7 @@ class Dendrite(object):
 
         A Numpy array of the same geometry as the pre-synaptic population is returned. Non-existing synapses are replaced by zeros (or the value ``fill``).
 
-        *Parameter*:
+        *Parameters*:
 
         * **variable**: name of the variable (default = 'w')
         * **fill**: value to use when a synapse does not exist (default: 0.0).
@@ -282,7 +282,6 @@ class Dendrite(object):
         *Parameter*:
 
         * **variable**: single variable name or list of variable names.
-
         * **period**:  period of recording in milliseconds.
         """
         Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")

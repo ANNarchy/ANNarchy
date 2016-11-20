@@ -16,6 +16,7 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/Populations.rst
     manual/Projections.rst
     manual/Connector.rst
+    manual/Inputs.rst
     manual/Simulation.rst
     manual/Configuration.rst
     manual/NumericalMethods.rst

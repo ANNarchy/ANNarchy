@@ -7,6 +7,11 @@ ANNarchy provides standard spiking neuron models, similar to the ones defined in
 .. contents::
    :local:
 
+LeakyIntegrator
+================
+
+.. autodata:: ANNarchy.models.LeakyIntegrator
+
 Izhikevich
 ================
 

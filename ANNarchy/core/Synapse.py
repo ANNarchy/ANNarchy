@@ -35,15 +35,15 @@ class Synapse(object):
         """ 
         *Parameters*:
         
-            * **parameters**: parameters of the neuron and their initial value.
-            * **equations**: equations defining the temporal evolution of variables.
-            * **psp**: influence of a single synapse on the post-synaptic neuron (default for rate-coded: w*pre.r).
-            * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
-            * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
-            * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
-            * **functions**: additional functions used in the equations.
-            * **name**: name of the synapse type (used for reporting only).
-            * **description**: short description of the synapse type (used for reporting).
+        * **parameters**: parameters of the neuron and their initial value.
+        * **equations**: equations defining the temporal evolution of variables.
+        * **psp**: influence of a single synapse on the post-synaptic neuron (default for rate-coded: w*pre.r).
+        * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
+        * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
+        * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
+        * **functions**: additional functions used in the equations.
+        * **name**: name of the synapse type (used for reporting only).
+        * **description**: short description of the synapse type (used for reporting).
 
         """  
         
@@ -116,10 +116,10 @@ class RateSynapse(Synapse):
         """ 
         *Parameters*:
         
-            * **parameters**: parameters of the neuron and their initial value.
-            * **equations**: equations defining the temporal evolution of variables.
-            * **psp**: post-synaptic potential summed by the post-synaptic neuron.
-            * **functions**: additional functions used in the variables' equations.
+        * **parameters**: parameters of the neuron and their initial value.
+        * **equations**: equations defining the temporal evolution of variables.
+        * **psp**: post-synaptic potential summed by the post-synaptic neuron.
+        * **functions**: additional functions used in the variables' equations.
 
         """         
         _warning("The use of RateSynapse or SpikeSynapse is deprecated, use Synapse instead.")
@@ -134,12 +134,12 @@ class SpikeSynapse(Synapse):
         """ 
         *Parameters*:
         
-            * **parameters**: parameters of the neuron and their initial value.
-            * **equations**: equations defining the temporal evolution of variables.
-            * **psp**: post-synaptic potential summed by the post-synaptic neuron.
-            * **pre_spike**: updating of variables when a pre-synaptic spike is received.
-            * **post_spike**: updating of variables when a post-synaptic spike is emitted.
-            * **functions**: additional functions used in the variables' equations.
+        * **parameters**: parameters of the neuron and their initial value.
+        * **equations**: equations defining the temporal evolution of variables.
+        * **psp**: post-synaptic potential summed by the post-synaptic neuron.
+        * **pre_spike**: updating of variables when a pre-synaptic spike is received.
+        * **post_spike**: updating of variables when a post-synaptic spike is emitted.
+        * **functions**: additional functions used in the variables' equations.
 
         """  
         _warning("The use of RateSynapse or SpikeSynapse is deprecated, use Synapse instead.")

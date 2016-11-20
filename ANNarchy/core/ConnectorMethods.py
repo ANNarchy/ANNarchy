@@ -42,10 +42,10 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
 
     *Parameters*:
 
-        * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
-        * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-        * **shift**: obsolete, do not use.
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
+    * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
+    * **shift**: obsolete, do not use.
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre.size != self.post.size: 
         Global._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
@@ -66,11 +66,11 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
 
     *Parameters*:
 
-        * **weights**: synaptic values, either a single value or a random distribution object.
-        * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-        * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    * **weights**: synaptic values, either a single value or a random distribution object.
+    * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
+    * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -99,11 +99,11 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
 
     *Parameters*:
 
-        * **amp**: amplitude of the Gaussian function
-        * **sigma**: width of the Gaussian function
-        * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
-        * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
-        * **allow_self_connections**: allows connections between a neuron and itself.
+    * **amp**: amplitude of the Gaussian function
+    * **sigma**: width of the Gaussian function
+    * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
+    * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
+    * **allow_self_connections**: allows connections between a neuron and itself.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -126,13 +126,13 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
 
     *Parameters*:
 
-        * **amp_pos**: amplitude of the positive Gaussian function
-        * **sigma_pos**: width of the positive Gaussian function
-        * **amp_neg**: amplitude of the negative Gaussian function
-        * **sigma_neg**: width of the negative Gaussian function
-        * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
-        * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
-        * **allow_self_connections**: allows connections between a neuron and itself.
+    * **amp_pos**: amplitude of the positive Gaussian function
+    * **sigma_pos**: width of the positive Gaussian function
+    * **amp_neg**: amplitude of the negative Gaussian function
+    * **sigma_neg**: width of the negative Gaussian function
+    * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
+    * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
+    * **allow_self_connections**: allows connections between a neuron and itself.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -154,12 +154,12 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
 
     *Parameters*:
 
-        * **probability**: probability that a synapse is created.
-        * **weights**: either a single value for all synapses or a RandomDistribution object.
-        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-        * **allow_self_connections** : defines if self-connections are allowed (default=False).
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    * **probability**: probability that a synapse is created.
+    * **weights**: either a single value for all synapses or a RandomDistribution object.
+    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+    * **allow_self_connections** : defines if self-connections are allowed (default=False).
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -181,11 +181,11 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
 
     *Parameters*:
 
-        * **number**: number of synapses per postsynaptic neuron.
-        * **weights**: either a single value for all synapses or a RandomDistribution object.
-        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-        * **allow_self_connections** : defines if self-connections are allowed (default=False).
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **number**: number of synapses per postsynaptic neuron.
+    * **weights**: either a single value for all synapses or a RandomDistribution object.
+    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+    * **allow_self_connections** : defines if self-connections are allowed (default=False).
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -210,11 +210,11 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
 
     *Parameters*:
 
-        * **number**: number of synapses per pre-synaptic neuron.
-        * **weights**: either a single value for all synapses or a RandomDistribution object.
-        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-        * **allow_self_connections** : defines if self-connections are allowed (default=False)
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **number**: number of synapses per pre-synaptic neuron.
+    * **weights**: either a single value for all synapses or a RandomDistribution object.
+    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+    * **allow_self_connections** : defines if self-connections are allowed (default=False)
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True

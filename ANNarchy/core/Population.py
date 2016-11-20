@@ -39,13 +39,10 @@ class Population(object):
         """
         *Parameters*:
 
-            * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
-
-            * **neuron**: instance of ``ANNarchy.Neuron``
-
-            * **name**: unique name of the population (optional).
-
-            * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
+        * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
+        * **neuron**: instance of ``ANNarchy.Neuron``
+        * **name**: unique name of the population (optional).
+        * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
 
         """
         # Store the provided geometry
@@ -578,7 +575,7 @@ class Population(object):
 
         *Parameter*:
 
-            * **coord**: coordinate tuple, can be multidimensional.
+        * **coord**: coordinate tuple, can be multidimensional.
         """
         try:
             rank = self._rank_from_coord( coord, self.geometry )
@@ -596,7 +593,7 @@ class Population(object):
 
         *Parameter*:
 
-            * **rank**: rank of the neuron.
+        * **rank**: rank of the neuron.
         """
         # Check the rank
         if not rank < self.size:
@@ -645,11 +642,11 @@ class Population(object):
 
         Parameter:
 
-            * **variable**: single variable name or list of variable names.
+        * **variable**: single variable name or list of variable names.
 
-            * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable.
+        * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable.
 
-            * **ranks**: list of ranks of the neurons to record (default: 'all').
+        * **ranks**: list of ranks of the neurons to record (default: 'all').
 
         Example::
 
@@ -707,7 +704,7 @@ class Population(object):
 
         *Parameter*:
 
-            * **variable**: single variable name or list of variable names.
+        * **variable**: single variable name or list of variable names.
 
         Example::
 
@@ -787,7 +784,8 @@ class Population(object):
     ## Modification of the variables
     ################################
     def set_variable_flags(self, name, value):
-        """ Sets the flags of a variable for the population.
+        """ 
+        Sets the flags of a variable for the population.
 
         If the variable ``r`` is defined in the Neuron description through::
 
@@ -832,7 +830,8 @@ class Population(object):
                     self.neuron_type.description['variables'][rk_var]['bounds'][key] = val
 
     def set_variable_equation(self, name, equation):
-        """ Changes the equation of a variable for the population.
+        """ 
+        Changes the equation of a variable for the population.
 
         If the variable ``r`` is defined in the Neuron description through::
 
@@ -899,9 +898,9 @@ class Population(object):
 
         * **filename**: filename, may contain relative or absolute path.
 
-            .. warning::
+        .. warning::
 
-                The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+            The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
         Example::
 

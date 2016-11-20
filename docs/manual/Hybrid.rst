@@ -4,12 +4,12 @@ Hybrid networks
 
 ANNarchy has the possibility to simulate either rate-coded or spiking networks. It is therefore possible to define hybrid networks mixing rate-coded and spiking populations.
 
-A typical application would be to define a rate-coded network to process visual inputs, which is used to feed a spiking network for action selection. A dummy exmaple is provided in ``examples/hybrid``.
+A typical application would be to define a rate-coded network to process visual inputs, which is used to feed a spiking network for action selection. A dummy example is provided in ``examples/hybrid``.
 
 Rate-coded to Spike
 ====================
 
-Converting a rate-coded population to a spiking network is straightforward. The ``PoissonPopulation`` (see :doc:`../API/SpecificPopulation`) defines a population od spiking neurons emitting spikes following a Poisson distribution::
+Converting a rate-coded population to a spiking network is straightforward. The ``PoissonPopulation`` (see :doc:`../API/SpecificPopulation`) defines a population of spiking neurons emitting spikes following a Poisson distribution::
 
     pop = PoissonPopulation(1000, rates=50.)
 

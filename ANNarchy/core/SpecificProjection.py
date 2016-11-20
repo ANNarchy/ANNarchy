@@ -49,10 +49,10 @@ class DecodingProjection(Projection):
         """
         *Parameters*:
                 
-            * **pre**: pre-synaptic population.
-            * **post**: post-synaptic population.
-            * **target**: type of the connection.
-            * **window**: duration of the time window to collect spikes (default: dt).
+        * **pre**: pre-synaptic population.
+        * **post**: post-synaptic population.
+        * **target**: type of the connection.
+        * **window**: duration of the time window to collect spikes (default: dt).
         """
         Projection.__init__(self, pre, post, target, None)
         # Check populations

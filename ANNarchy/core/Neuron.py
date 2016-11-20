@@ -34,14 +34,14 @@ class Neuron(object):
         """
         *Parameters*:
 
-            * **parameters**: parameters of the neuron and their initial value.
-            * **equations**: equations defining the temporal evolution of variables.
-            * **functions**: additional functions used in the variables' equations.
-            * **spike**: condition to emit a spike (only for spiking neurons).
-            * **reset**: changes to the variables after a spike (only for spiking neurons).
-            * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
-            * **name**: name of the neuron type (used for reporting only).
-            * **description**: short description of the neuron type (used for reporting).
+        * **parameters**: parameters of the neuron and their initial value.
+        * **equations**: equations defining the temporal evolution of variables.
+        * **functions**: additional functions used in the variables' equations.
+        * **spike**: condition to emit a spike (only for spiking neurons).
+        * **reset**: changes to the variables after a spike (only for spiking neurons).
+        * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
+        * **name**: name of the neuron type (used for reporting only).
+        * **description**: short description of the neuron type (used for reporting).
 
         """
 

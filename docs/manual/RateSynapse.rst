@@ -139,9 +139,9 @@ where ``pre.r`` is the pre-synaptic firing rate, but you may want to override th
 
 For example, you may want to model a non-linear synapse with a logarithmic term:
 
-    .. math::
-    
-        r_{i} = \sum_j log \left( \frac {( r_{j} * w_{ij} ) + 1 } { ( r_{j} * w_{ij} ) - 1 } \right)
+.. math::
+
+    r_{i} = \sum_j log \left( \frac {( r_{j} * w_{ij} ) + 1 } { ( r_{j} * w_{ij} ) - 1 } \right)
 
 In this case, you can just modify the ``psp`` argument of the synapse:
 
