@@ -22,7 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core.Population import Population
-from ANNarchy.core.Neuron import Neuron, RateNeuron
+from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 
 import numpy as np
@@ -32,19 +32,21 @@ from scipy.optimize import newton
 class SpecificPopulation(Population):
     """
     Interface class for user-defined definition of Population objects. An inheriting
-    class need to override the implementator functions _generate_[paradigm], otherwise
+    class need to override the implementor functions _generate_[paradigm], otherwise
     a NotImplementedError exception will be thrown.
-
-    *Parameters*:
-
-        * geometry *:
-        * neuron *:
-        * name *:
     """
     def __init__(self, geometry, neuron, name=None):
+        """
+        Initialization, receive default arguments of Population objects.
+        """
         Population.__init__(self, geometry, neuron, name)
 
     def _generate(self):
+        """
+        Overridden method of Population, called during the code generation process.
+        This function selects dependent on the chosen paradigm the correct implementor
+        functions defined by the user.
+        """
         if Global.config['paradigm'] == "openmp":
             self._generate_omp()
         elif Global.config['paradigm'] == "cuda":
@@ -53,11 +55,15 @@ class SpecificPopulation(Population):
             raise NotImplementedError
 
     def _generate_omp(self):
-        " Overridden by child class "
+        """
+        Intended to be overridden by child class. Implememt code adjustments intended for single thread and openMP paradigm.
+        """
         raise NotImplementedError
 
     def _generate_cuda(self):
-        " Overridden by child class "
+        """
+        Intended to be overridden by child class. Implememt code adjustments intended for single thread and openMP paradigm.
+        """
         raise NotImplementedError
 
 class PoissonPopulation(SpecificPopulation):
@@ -297,14 +303,12 @@ class TimedArray(SpecificPopulation):
 
     Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray, times becoming relative to that call:
 
-
     .. code-block:: python
 
         simulate(100.) # ten inputs are shown with a schedule of 10 ms
         inp.reset()
         simulate(100.) # the same ten inputs are presented again.
 
-    
     """
     def __init__(self, rates, schedule=0., period= -1., name=None):
         neuron = Neuron(
@@ -335,7 +339,9 @@ class TimedArray(SpecificPopulation):
         self.init['period'] = period
 
     def _generate_omp(self):
-        " adjust code templates for the specific population "
+        """
+        adjust code templates for the specific population for single thread and openMP.
+        """
         self._specific_template['declare_additional'] = """
     // Custom local parameters of a TimedArray
     std::vector< int > _schedule; // List of times where new inputs should be set
@@ -358,6 +364,12 @@ class TimedArray(SpecificPopulation):
         _t = 0;
         _block = 0;
         _period = -1;
+"""
+        self._specific_template['reset_additional'] = """
+        // counters
+        _curr_slice = 0;
+        _curr_cnt = 1;
+        r = _buffer[0];
 """
         self._specific_template['export_additional'] = """
         # Custom local parameters of a TimedArray
@@ -417,6 +429,122 @@ class TimedArray(SpecificPopulation):
             }
             // Always increment the internal time
             _t++;
+        }
+"""
+
+    def _generate_cuda(self):
+        """
+        adjust code templates for the specific population for single thread and CUDA.
+        """
+        # HD (18. Nov 2016)
+        # I suppress the code generation for allocating the variable r on gpu, as
+        # well as memory transfer codes. This is only possible as no other variables
+        # allowed in TimedArray.
+        self._specific_template['init_parameters_variables'] = ""
+        self._specific_template['host_device_transfer'] = ""
+        self._specific_template['device_host_transfer'] = ""
+
+        #
+        # Code for handling the buffer and schedule parameters
+        self._specific_template['declare_additional'] = """
+    // Custom local parameter timed array
+    std::vector< int > _schedule;
+    std::vector< double* > gpu_buffer;
+    bool _periodic;
+    int _curr_slice;
+    int _curr_cnt;
+"""
+        self._specific_template['access_additional'] = """
+    // Custom local parameter timed array
+    void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
+    std::vector<int> get_schedule() { return _schedule; }
+    void set_buffer(std::vector< std::vector< double > > buffer) {
+        if ( gpu_buffer.empty() ) {
+            gpu_buffer = std::vector< double* >(buffer.size(), nullptr);
+            // allocate gpu arrays
+            for(int i = 0; i < buffer.size(); i++) {
+                cudaMalloc((void**)&gpu_buffer[i], buffer[i].size()*sizeof(double));
+            }
+        }
+
+        auto host_it = buffer.begin();
+        auto dev_it = gpu_buffer.begin();
+        for(host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++) {
+            cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(double), cudaMemcpyHostToDevice);
+        }
+
+        gpu_r = gpu_buffer[0];
+    }
+    std::vector< std::vector< double > > get_buffer() {
+        std::vector< std::vector< double > > buffer = std::vector< std::vector< double > >( gpu_buffer.size(), std::vector<double>(size,0.0) );
+
+        auto host_it = buffer.begin();
+        auto dev_it = gpu_buffer.begin();
+        for( host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++ ) {
+            cudaMemcpy( host_it->data(), *dev_it, size*sizeof(double), cudaMemcpyDeviceToHost );
+        }
+
+        return buffer;
+    }
+    void set_periodic(bool periodic) { _periodic = periodic; }
+    bool get_periodic() { return _periodic; }
+"""
+        self._specific_template['init_additional'] = """
+        // counters
+        _curr_slice = 0;
+        _curr_cnt = 1;
+        _periodic = false;
+"""
+        self._specific_template['reset_additional'] = """
+        // counters
+        _curr_slice = 0;
+        _curr_cnt = 1;
+        gpu_r = gpu_buffer[0];
+"""
+        self._specific_template['export_additional'] = """
+        # Custom local parameters timed array
+        void set_schedule(vector[int])
+        vector[int] get_schedule()
+        void set_buffer(vector[vector[double]])
+        vector[vector[double]] get_buffer()
+        void set_periodic(bool)
+        bool get_periodic()
+"""
+        self._specific_template['wrapper_access_additional'] = """
+    # Custom local parameters timed array
+    cpdef set_schedule( self, schedule ):
+        pop%(id)s.set_schedule( schedule )
+    cpdef np.ndarray get_schedule( self ):
+        return np.array(pop%(id)s.get_schedule( ))
+
+    cpdef set_values( self, buffer ):
+        pop%(id)s.set_buffer( buffer )
+    cpdef np.ndarray get_values( self ):
+        return np.array(pop%(id)s.get_buffer( ))
+
+    cpdef set_periodic( self, periodic ):
+        pop%(id)s.set_periodic(periodic)
+    cpdef bool get_periodic(self):
+        return pop%(id)s.get_periodic()
+""" % { 'id': self.id }
+
+        self._specific_template['update_variables'] = """
+        if ( _curr_slice == -1 )
+            return;
+
+        if ( _curr_cnt < _schedule[_curr_slice] ) {
+            _curr_cnt++;
+        } else {
+            if ( ++_curr_slice == _schedule.size() ) {
+                if ( _periodic ) {
+                    _curr_slice = 0;
+                } else {
+                    _curr_slice = -1;
+                    return;
+                }
+            }
+            _curr_cnt=1;
+            gpu_r = gpu_buffer[_curr_slice];
         }
 """
 

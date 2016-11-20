@@ -24,7 +24,51 @@
 from ANNarchy.core.Projection import Projection
 import ANNarchy.core.Global as Global
 
-class DecodingProjection(Projection):
+class SpecificProjection(Projection):
+    """
+    Interface class for user-defined definition of Projection objects. An inheriting
+    class need to override the implementor functions _generate_[paradigm], otherwise
+    a NotImplementedError exception will be thrown.
+    """
+    def __init__(self, pre, post, target, synapse=None, name=None):
+        """
+        Initialization, receive parameters of Projection objects.
+
+        *Parameters*:
+
+            * **pre**: pre-synaptic population.
+            * **post**: post-synaptic population.
+            * **target**: type of the connection.
+            * **window**: duration of the time window to collect spikes (default: dt).
+        """
+        Projection.__init__(self, pre, post, target, synapse, name)
+
+    def _generate(self):
+        """
+        Overridden method of Population, called during the code generation process.
+        This function selects dependent on the chosen paradigm the correct implementor
+        functions defined by the user.
+        """
+        if Global.config['paradigm'] == "openmp":
+            self._generate_omp()
+        elif Global.config['paradigm'] == "cuda":
+            self._generate_cuda()
+        else:
+            raise NotImplementedError
+
+    def _generate_omp(self):
+        """
+        Intended to be overridden by child class. Implememt code adjustments intended for single thread and openMP paradigm.
+        """
+        raise NotImplementedError
+
+    def _generate_cuda(self):
+        """
+        Intended to be overridden by child class. Implememt code adjustments intended for CUDA paradigm.
+        """
+        raise NotImplementedError
+
+class DecodingProjection(SpecificProjection):
     """ 
     Decoding projection to transform spike trains into firing rates.
 
@@ -61,14 +105,13 @@ class DecodingProjection(Projection):
             
         if not self.post.neuron_type.type == 'rate':
             Global._error('The post-synaptic population of a DecodingProjection must be rate-coded.')
-            
 
         # Process window argument
         if window == 0.0:
             window = Global.config['dt']
         self.window = window
 
-    def _generate(self):
+    def _generate_omp(self):
         # Generate the code
         self._specific_template['declare_additional'] = """
     // Window
@@ -76,12 +119,11 @@ class DecodingProjection(Projection):
     std::deque< std::vector< double > > rates_history ;
 """ % { 'window': int(self.window/Global.config['dt']) }
 
-        if Global.config['paradigm'] == "openmp":
-            self._specific_template['init_additional'] = """
+        self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector<double> >(%(window)s, std::vector<double>(%(post_size)s, 0.0));
 """ % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size }
 
-            self._specific_template['psp_code'] = """
+        self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active){
             std::vector< std::pair<int, int> > inv_post;
             std::vector<double> rates = std::vector<double>(%(post_size)s, 0.0);
@@ -114,16 +156,7 @@ class DecodingProjection(Projection):
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
         'post_size': self.post.size}
 
-            self._specific_template['psp_prefix'] = """
+        self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         double sum;
 """
-        elif Global.config['paradigm'] == "cuda":
-            self._specific_template['init_additional'] = ""
-            self._specific_template['header'] = ""
-            self._specific_template['body'] = ""
-            self._specific_template['call'] = ""
-
-            Global._error('DeocidingProjection is not available on CUDA devices.')
-        else:
-            raise NotImplementedError

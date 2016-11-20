@@ -57,6 +57,7 @@ class CUDAGenerator(PopulationGenerator):
         declare_additional = ""
         init_additional = ""
         reset_additional = ""
+        access_additional = ""
 
         # Declare global operations as extern at the beginning of the file
         extern_global_operations = ""
@@ -137,6 +138,8 @@ class CUDAGenerator(PopulationGenerator):
             declare_delay = pop._specific_template['declare_delay']
         if 'access_parameters_variables' in pop._specific_template.keys():
             access_parameters_variables = pop._specific_template['access_parameters_variables']
+        if 'access_additional' in pop._specific_template.keys():
+            access_additional = pop._specific_template['access_additional']
         if 'init_parameters_variables' in pop._specific_template.keys():
             init_parameters_variables = pop._specific_template['init_parameters_variables']
         if 'init_spike' in pop._specific_template.keys():
@@ -151,7 +154,7 @@ class CUDAGenerator(PopulationGenerator):
             reset_spike = pop._specific_template['reset_spike']
         if 'reset_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             reset_delay = pop._specific_template['reset_delay']
-        if 'reset_additional' in pop._specific_template.keys() and pop.max_delay > 1:
+        if 'reset_additional' in pop._specific_template.keys():
             reset_additional = pop._specific_template['reset_additional']
         if 'update_variables' in pop._specific_template.keys():
             update_variables = pop._specific_template['update_variables']
@@ -178,6 +181,7 @@ class CUDAGenerator(PopulationGenerator):
             'declare_FR': declare_FR,
             'declare_profile': declare_profile,
             'access_parameters_variables': access_parameters_variables,
+            'access_additional': access_additional,
             'init_parameters_variables': init_parameters_variables,
             'init_spike': init_spike,
             'init_delay': init_delay,
@@ -469,6 +473,18 @@ std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
         TODO:
             * refactoring: get rid of this tar, par, var stuff as done in spiking related codes ...
         """
+        # HD ( 18. Nov. 2016 )
+        #
+        # In some user-defined cases the host and device side need something to do to
+        # in order to realize specific functionality. Yet I simply add a update()
+        # call, if update_variables was set.
+        if 'update_variables' in pop._specific_template.keys():
+            call = """
+        // host side update of neurons
+        pop%(id)s.update();
+""" % { 'id': pop.id }
+            return "", "", call
+
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
             return "", "", ""
@@ -593,6 +609,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             # operation kernel is transferred to host after computation. 
             par += """, pop%(id)s._%(op)s_%(var)s""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
 
+
         call += CUDATemplates.population_update_call % {
             'id': pop.id,
             'default': 'dt',
@@ -600,7 +617,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'tar': tar.replace("double*", "").replace("int*", ""),
             'var': var.replace("double*", "").replace("int*", ""),
             'par': par.replace("double*", "").replace("int*", ""),
-            'stream_id': 'pop%(id)s.stream' % {'id':pop.id}
+            'stream_id': 'pop%(id)s.stream' % {'id':pop.id},
         }
 
         # if profiling enabled, annotate with profiling code
@@ -913,6 +930,11 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             if attr['name'] in pop.neuron_type.description['local']:
                 ids = {'attr_name': attr['name'], 'type': attr['ctype']}
                 device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
+
+        if 'host_device_transfer' in pop._specific_template.keys():
+            host_device_transfer = pop._specific_template['host_device_transfer']
+        if 'device_host_transfer' in pop._specific_template.keys():
+            device_host_transfer = pop._specific_template['device_host_transfer']
 
         return host_device_transfer, device_host_transfer
 

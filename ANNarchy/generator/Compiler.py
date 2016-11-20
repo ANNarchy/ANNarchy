@@ -392,7 +392,7 @@ class Compiler(object):
 
         if self.profile_enabled:
             cpu_flags += " -g"
-            extra_libs.append("-lpapi")
+            #extra_libs.append("-lpapi")
 
         # OpenMP flag
         omp_flag = ""
@@ -481,7 +481,6 @@ class Compiler(object):
                     Global._print(pop.neuron_type.parameters)
                     Global._print(pop.neuron_type.equations)
                     Global._error(term + ' is a reserved variable name')
-
 
         # Check projections
         for proj in self.projections:
