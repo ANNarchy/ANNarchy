@@ -410,13 +410,13 @@ class TimedArray(SpecificPopulation):
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
                 // Set the data
-                r = _buffer[_block];   
+                r = _buffer[_block];
                 // Move to the next block
-                _block++; 
+                _block++;
                 // If was the last block, go back to the first block 
                 if (_block == _schedule.size()){
                     _block = 0;
-                }      
+                }
             }
             // If the timedarray is periodic, check if we arrive at that point
             if(_period > -1 && (_t == _period-1)){
@@ -450,9 +450,9 @@ class TimedArray(SpecificPopulation):
     // Custom local parameter timed array
     std::vector< int > _schedule;
     std::vector< double* > gpu_buffer;
-    bool _periodic;
-    int _curr_slice;
-    int _curr_cnt;
+    int _period; // Period of cycling
+    long int _t; // Internal time
+    int _block; // Internal block when inputs are set not at each step
 """
         self._specific_template['access_additional'] = """
     // Custom local parameter timed array
@@ -486,19 +486,19 @@ class TimedArray(SpecificPopulation):
 
         return buffer;
     }
-    void set_periodic(bool periodic) { _periodic = periodic; }
-    bool get_periodic() { return _periodic; }
+    void set_period(int period) { _period = period; }
+    int get_period() { return _period; }
 """
         self._specific_template['init_additional'] = """
         // counters
-        _curr_slice = 0;
-        _curr_cnt = 1;
-        _periodic = false;
+        _t = 0;
+        _block = 0;
+        _period = -1;
 """
         self._specific_template['reset_additional'] = """
         // counters
-        _curr_slice = 0;
-        _curr_cnt = 1;
+        _t = 0;
+        _block = 0;
         gpu_r = gpu_buffer[0];
 """
         self._specific_template['export_additional'] = """
@@ -507,8 +507,8 @@ class TimedArray(SpecificPopulation):
         vector[int] get_schedule()
         void set_buffer(vector[vector[double]])
         vector[vector[double]] get_buffer()
-        void set_periodic(bool)
-        bool get_periodic()
+        void set_period(int)
+        int get_period()
 """
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
@@ -517,34 +517,43 @@ class TimedArray(SpecificPopulation):
     cpdef np.ndarray get_schedule( self ):
         return np.array(pop%(id)s.get_schedule( ))
 
-    cpdef set_values( self, buffer ):
+    cpdef set_rates( self, buffer ):
         pop%(id)s.set_buffer( buffer )
-    cpdef np.ndarray get_values( self ):
+    cpdef np.ndarray get_rates( self ):
         return np.array(pop%(id)s.get_buffer( ))
 
-    cpdef set_periodic( self, periodic ):
-        pop%(id)s.set_periodic(periodic)
-    cpdef bool get_periodic(self):
-        return pop%(id)s.get_periodic()
+    cpdef set_period( self, period ):
+        pop%(id)s.set_period(period)
+    cpdef int get_periodic(self):
+        return pop%(id)s.get_period()
 """ % { 'id': self.id }
 
         self._specific_template['update_variables'] = """
-        if ( _curr_slice == -1 )
-            return;
-
-        if ( _curr_cnt < _schedule[_curr_slice] ) {
-            _curr_cnt++;
-        } else {
-            if ( ++_curr_slice == _schedule.size() ) {
-                if ( _periodic ) {
-                    _curr_slice = 0;
-                } else {
-                    _curr_slice = -1;
-                    return;
+        if(_active) {
+            // std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+            // Check if it is time to set the input
+            if(_t == _schedule[_block]){
+                // Set the data
+                gpu_r = gpu_buffer[_block];
+                // Move to the next block
+                _block++;
+                // If was the last block, go back to the first block 
+                if ( _block == _schedule.size() ) {
+                    _block = 0;
                 }
             }
-            _curr_cnt=1;
-            gpu_r = gpu_buffer[_curr_slice];
+            // If the timedarray is periodic, check if we arrive at that point
+            if( (_period > -1) && (_t == _period-1) ) {
+                // Reset the counters
+                _block=0;
+                _t = -1;
+                // Reset the data if the first input is not set at t=0
+                auto tmp = std::vector<double>(size, 0.0);
+                cudaMemcpy( gpu_r, tmp.data(), size*sizeof(double), cudaMemcpyHostToDevice );
+                tmp.clear();
+            }
+            // Always increment the internal time
+            _t++;
         }
 """
 
@@ -586,7 +595,7 @@ class TimedArray(SpecificPopulation):
             if self.initialized:
                 if len(self.geometry) > 1:
                     # unflatten the data
-                    flat_values = self.cyInstance.get_values()
+                    flat_values = self.cyInstance.get_rates()
                     values = np.zeros( tuple( [len(self.schedule)] + list(self.geometry) ) )
                     for x in range(len(self.schedule)):
                         values[x] = np.reshape( flat_values[x], self.geometry)
