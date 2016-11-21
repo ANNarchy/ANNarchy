@@ -171,7 +171,7 @@ class PyxGenerator(object):
 #######################################################################
     def _custom_functions(self):
         if len(Global._objects['functions']) == 0:
-            return ""
+            return "", ""
         from ANNarchy.parser.Extraction import extract_functions
 
         export = ""
