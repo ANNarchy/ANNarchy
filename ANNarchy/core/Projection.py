@@ -121,6 +121,9 @@ class Projection(object):
 
         self.attributes = self.parameters + self.variables
 
+        # Get a list of user-defined functions
+        self.functions = [func['name'] for func in self.synapse_type.description['functions']]
+
         # Add the population to the global network
         Global._network[0]['projections'].append(self)
 
@@ -442,6 +445,8 @@ class Projection(object):
                     return self.init[name]
                 else:
                     return self._get_cython_attribute( name )
+            elif name in self.functions:
+                return self._function(name)
             else:
                 return object.__getattribute__(self, name)
         return object.__getattribute__(self, name)
@@ -524,6 +529,19 @@ class Projection(object):
         "flags such as learning, transmission"
         getattr(self.cyInstance, '_set_'+attribute)(value)
 
+
+
+    ################################
+    ## Access to functions
+    ################################
+    def _function(self, func):
+        "Access a user defined function"
+        if not self.initialized:
+            Global._error('the network is not compiled yet, cannot access the function ' + func)
+
+        return getattr(self.cyInstance, func)
+
+        
     ################################
     ## Variable flags
     ################################

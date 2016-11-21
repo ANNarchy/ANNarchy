@@ -55,6 +55,13 @@ Access to populations
 
 .. autofunction:: ANNarchy.get_population
 
+Functions
+=====================
+
+.. autofunction:: ANNarchy.add_function
+
+.. autofunction:: ANNarchy.functions
+
 Learning
 =====================
 

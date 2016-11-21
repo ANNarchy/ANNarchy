@@ -12,6 +12,9 @@ from ANNarchy.core.cython_ext.Connector cimport CSRConnectivity as CSR
 
 cdef extern from "ANNarchy.h":
 
+    # User-defined functions
+%(custom_functions_export)s
+
     # Data structures
 %(pop_struct)s
 %(proj_struct)s
@@ -74,6 +77,9 @@ def remove_recorder(Monitor_wrapper recorder):
     removeRecorder(recorder.thisptr)
 
 %(monitor_wrapper)s
+
+# User-defined functions
+%(functions_wrapper)s
 
 # Initialize the network
 def pyx_create(double dt, long seed):
@@ -327,6 +333,7 @@ proj_pyx_struct = """
 %(export_delay)s
 %(export_event_driven)s
 %(export_parameters_variables)s
+%(export_functions)s
 %(export_structural_plasticity)s
 %(export_additional)s
 """
@@ -381,6 +388,7 @@ cdef class proj%(id_proj)s_wrapper :
 %(wrapper_access_connectivity)s
 %(wrapper_access_delay)s
 %(wrapper_access_parameters_variables)s
+%(wrapper_access_functions)s
 %(wrapper_access_structural_plasticity)s
 %(wrapper_access_additional)s
 

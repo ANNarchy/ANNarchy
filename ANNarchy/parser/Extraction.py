@@ -327,10 +327,13 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
 
 def extract_functions(description, local_global=False):
     """ Extracts all functions from a multiline description."""
+
     if not description:
         return []
+    
     # Split the multilines into individual lines
     function_list = process_equations(description)
+    
     # Process each function
     functions = []
     for f in function_list:

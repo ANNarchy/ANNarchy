@@ -270,7 +270,7 @@ class CodeGenerator(object):
 
         code = ""
         from ANNarchy.parser.Extraction import extract_functions
-        for func in Global._objects['functions']:
+        for name, func in Global._objects['functions']:
             code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
 
         return code
