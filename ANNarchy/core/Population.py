@@ -107,6 +107,9 @@ class Population(object):
             self.variables.append(var['name'])
         self.attributes = self.parameters + self.variables
 
+        # Get a list of user-defined functions
+        self.functions = [func['name'] for func in self.neuron_type.description['functions']]
+
         # Store initial values
         self.init = {}
         for param in self.neuron_type.description['parameters']:
@@ -258,6 +261,8 @@ class Population(object):
                             return np.array([self.init[name]] * self.size).reshape(self.geometry)
                     else:
                         return self.init[name]
+            elif name in self.functions:
+                return self._function(name)
             else:
                 return object.__getattribute__(self, name)
         return object.__getattribute__(self, name)
@@ -358,6 +363,16 @@ class Population(object):
         return self.__getattr__(name)
 
 
+
+    ################################
+    ## Access to functions
+    ################################
+    def _function(self, func):
+        "Access a user defined function"
+        if not self.initialized:
+            Global._error('the network is not compiled yet, cannot access the function ' + func)
+
+        return getattr(self.cyInstance, func)
 
     ################################
     ## Access to weighted sums

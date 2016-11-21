@@ -35,7 +35,7 @@ The only required variable is ``r``, which represents the instantaneous firing r
 Custom functions
 -----------------
 
-Custom functions can also be passed when creating the Neuron type:
+Custom functions can also be defined when creating the Neuron type and used inside the ``equations`` field:
 
 .. code-block:: python
 
@@ -52,6 +52,8 @@ Custom functions can also be passed when creating the Neuron type:
             sigmoid(x) = 1.0 / (1.0 + exp(-x))
         """
     )
+
+Make sure that the name of the function does not overlap with existing mathematical functions (cos, exp), existing variables (tau, r) or built-in functions (pos, t, dt).
 
 Predefined attributes
 ----------------------

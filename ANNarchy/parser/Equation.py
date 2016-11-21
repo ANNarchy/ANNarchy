@@ -31,9 +31,13 @@ class Equation(object):
     '''
     Class to analyse one equation.
     '''
-    def __init__(self, name, expression, description,
+    def __init__(self, 
+                 name, 
+                 expression, 
+                 description,
                  untouched = [],
-                 method='explicit', type=None):
+                 method='explicit', 
+                 type=None):
         '''
         Parameters:
 

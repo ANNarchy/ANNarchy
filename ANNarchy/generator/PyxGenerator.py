@@ -200,6 +200,20 @@ class PyxGenerator(object):
         if 'export_targets' in pop._specific_template.keys():
             export_targets = pop._specific_template['export_targets']
 
+        # Local functions
+        export_functions = ""
+        if len(pop.neuron_type.description['functions']) > 0:
+            export_functions += """
+        # Local functions
+"""
+            for func in pop.neuron_type.description['functions']:
+                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '(' 
+                for idx, arg in enumerate(func['arg_types']):
+                    export_functions += arg
+                    if idx < len(func['arg_types']) - 1:
+                        export_functions += ', '
+                export_functions += ')' + '\n'
+
         # Additional exports
         export_additional = ""
         if 'export_additional' in pop._specific_template.keys():
@@ -210,6 +224,7 @@ class PyxGenerator(object):
             'id': pop.id, 'name': pop.name,
             'export_refractory': export_refractory,
             'export_parameters_variables': export_parameters_variables,
+            'export_functions': export_functions,
             'export_targets': export_targets,
             'export_additional': export_additional,
         }
@@ -255,6 +270,29 @@ class PyxGenerator(object):
     cpdef np.ndarray get_sum_%(target)s(self):
         return np.array(pop%(id)s._sum_%(target)s)""" % {'id': pop.id, 'target' : target}
 
+        # Local functions
+        wrapper_access_functions = ""
+        if len(pop.neuron_type.description['functions']) > 0:
+            wrapper_access_functions += """
+        # Local functions
+"""
+            for func in pop.neuron_type.description['functions']:
+                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, ' 
+                arguments = ""
+                for idx, arg in enumerate(func['args']):
+                    # Function call
+                    wrapper_access_functions += arg
+                    if idx < len(func['args']) - 1:
+                        wrapper_access_functions += ', '
+                    # Element access
+                    arguments += arg + "[i]"
+                    if idx < len(func['args']) - 1:
+                        arguments += ', '
+                wrapper_access_functions += '):'
+                wrapper_access_functions += """
+        return np.array([pop%(id)s.%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
+""" % {'id': pop.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
+
 
         # Specific populations can overwrite
         if 'wrapper_args' in pop._specific_template.keys():
@@ -277,6 +315,7 @@ class PyxGenerator(object):
             'wrapper_init' : wrapper_init,
             'wrapper_access_parameters_variables' : wrapper_access_parameters_variables,
             'wrapper_access_targets' : wrapper_access_targets,
+            'wrapper_access_functions' : wrapper_access_functions,
             'wrapper_access_refractory' : wrapper_access_refractory,
             'wrapper_access_additional' : wrapper_access_additional,
         }

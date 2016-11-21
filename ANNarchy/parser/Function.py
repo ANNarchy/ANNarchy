@@ -31,9 +31,28 @@ class FunctionParser(object):
     '''
     Class to analyse one equation.
     '''
-    def __init__(self, eq, args):
-        self.args = args
-        self.eq = eq
+    def __init__(self, 
+                 name, 
+                 expression, 
+                 description,
+                 untouched = [],
+                 method='explicit', 
+                 type=None):
+        '''
+        Parameters:
+
+        * name : The name of the variable
+        * expression: The expression as a string
+        * variables: a list of all the variables in the neuron/synapse
+        * local_variables: a list of the local variables
+        * global_variables: a list of the global variables
+        * method: the numerical method to use for ODEs
+        * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
+        * untouched: list of terms which should not be modified
+        '''
+
+        self.args = description
+        self.eq = expression
         self.local_dict = {
             'pos': Function('positive'),
             'positive': Function('positive'),
@@ -75,3 +94,8 @@ class FunctionParser(object):
             transformations = (standard_transformations + (convert_xor,))
         )
         return ccode(eq, precision=8)
+
+    def dependencies(self):
+        "For compatibility with Equation."
+        return []
+

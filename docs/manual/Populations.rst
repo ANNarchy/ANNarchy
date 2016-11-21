@@ -287,4 +287,38 @@ or:
     Contrary to the equivalent in PyNN, PopulationViews in ANNarchy can only group neurons from the same population.
 
 
+Functions
+==========
 
+If you have defined a function inside a ``Neuron`` definition:
+
+.. code-block:: python
+
+    LeakyIntegratorNeuron = Neuron(
+        parameters="""   
+            tau = 10.0
+            slope = 1.0
+            baseline = -0.2
+        """,
+        equations = """
+            tau * dmp/dt + mp = baseline + sum(exc)
+            r = sigmoid(mp, slope)
+        """,
+        functions == """
+            sigmoid(x, k) = 1.0 / (1.0 + exp(-x*k))
+        """
+    )
+
+you can use this function in Python as if it were a method of the corresponding object:
+
+.. code-block:: python
+
+    pop = Population(1000, LeakyIntegratorNeuron)
+
+    x = np.linspace(-1., 1., 100)
+    k = np.ones(100)
+    r = pop.sigmoid(x, k)
+
+You can pass either a list or a 1D Numpy array to each argument (**not a single value, nor a multidimensional array!**). 
+
+The size of the arrays passed for each argument is arbitrary (it must not match the population's size) but you have to make sure that they all have the same size. Errors are not catched, so be careful.

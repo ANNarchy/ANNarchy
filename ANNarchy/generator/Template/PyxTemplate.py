@@ -217,6 +217,7 @@ pop_pyx_struct = """
         void reset()
 %(export_refractory)s
 %(export_parameters_variables)s
+%(export_functions)s
 %(export_targets)s
 %(export_additional)s
 """
@@ -239,6 +240,7 @@ cdef class pop%(id)s_wrapper :
 
 %(wrapper_access_parameters_variables)s
 %(wrapper_access_targets)s
+%(wrapper_access_functions)s
 %(wrapper_access_refractory)s
 %(wrapper_access_additional)s
 
