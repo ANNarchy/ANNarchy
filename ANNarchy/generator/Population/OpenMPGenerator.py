@@ -93,6 +93,9 @@ class OpenMPGenerator(PopulationGenerator):
         # Update global operations
         update_global_ops = self._update_globalops(pop)
 
+        # Defintion of local functions
+        declaration_parameters_variables += self._local_functions(pop)
+
         # Update the neural variables
         if pop.neuron_type.type == 'rate':
             update_variables = self._update_rate_neuron(pop)
@@ -327,6 +330,24 @@ class OpenMPGenerator(PopulationGenerator):
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());"""
         return declare_FR, init_FR
+
+    def _local_functions(self, pop):
+        """
+        Definition of user-defined local functions attached to
+        a neuron. These functions will take place in the
+        population header.
+        """
+        # Local functions
+        if len(pop.neuron_type.description['functions']) == 0:
+            return ""
+
+        declaration = """
+    // Local functions
+"""
+        for func in pop.neuron_type.description['functions']:
+            declaration += ' '*4 + func['cpp'] + '\n'
+
+        return declaration
 
     def _stop_condition(self, pop):
         """

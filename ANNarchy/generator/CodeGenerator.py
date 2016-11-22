@@ -358,7 +358,6 @@ class CodeGenerator(object):
         # greatly. For further information take a look into the corresponding
         # branches.
         #
-
         if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_body_template
             base_dict = {
@@ -404,6 +403,10 @@ class CodeGenerator(object):
             psp_call = ""
             for proj in self._proj_desc:
                 psp_call += proj['psp_call']
+
+            custom_func = ""
+            for pop in self._pop_desc:
+                custom_func += pop['custom_func']
 
             pop_kernel = ""
             for pop in self._pop_desc:
@@ -486,7 +489,7 @@ class CodeGenerator(object):
                 'syn_kernel': syn_kernel,
                 'glob_ops_kernel': glob_ops_body,
                 'postevent_kernel': postevent_kernel,
-                'custom_func': "", #custom_func
+                'custom_func': custom_func,
                 'built_in': built_in_functions
             }
 

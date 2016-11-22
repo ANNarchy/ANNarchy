@@ -110,6 +110,10 @@ class CUDAGenerator(PopulationGenerator):
         # Stop condition
         stop_condition = self._stop_condition(pop)
 
+        # Local functions
+        host_local_func, device_local_func = self._local_functions(pop)
+        declaration_parameters_variables += host_local_func
+
         # Profiling
         if self._prof_gen:
             include_profile = """#include "Profiling.h"\n"""
@@ -212,6 +216,7 @@ class CUDAGenerator(PopulationGenerator):
             'init': """    pop%(id)s.init_population();\n""" % {'id': pop.id}
         }
 
+        pop_desc['custom_func'] = device_local_func
         pop_desc['update'] = update_call
         pop_desc['update_body'] = body
         pop_desc['update_header'] = header
@@ -258,7 +263,7 @@ class CUDAGenerator(PopulationGenerator):
                 if var in pop.neuron_type.description['local']:
                     var_type = self._get_attr(pop, var)['ctype']
                     declare_code += """
-std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
+    std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
                         'var': var,
                         'type': var_type
                     }
@@ -281,25 +286,24 @@ std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
         init_code = """
         // Delayed variables"""
 
-        # Update and Reset
+        # Update and Reset for delayed variables
         update_code = ""
         reset_code = ""
         for var in pop.delayed_variables:
-            update_code += """
-        double* last_%(var)s = gpu_delayed_%(var)s.back();
-        gpu_delayed_%(var)s.pop_back();
-        gpu_delayed_%(var)s.push_front(last_%(var)s);
-        std::vector<double> tmp_%(var)s = std::vector<double>( size, 0.0);
-        cudaMemcpy( last_%(var)s, gpu_%(var)s, sizeof(double) * size, cudaMemcpyDeviceToDevice );
-    #ifdef _DEBUG
-        cudaError_t err_%(var)s = cudaGetLastError();
-        if (err_%(var)s != cudaSuccess)
-            std::cout << "pop%(id)s - delay %(var)s: " << cudaGetErrorString(err_%(var)s) << std::endl;
-    #endif
-""" % {'id': pop.id, 'var': var}
-
-            # reset
-            reset_code += delay_tpl['reset'] % {'id': pop.id, 'var' : var}
+            attr = self._get_attr(pop, var)
+            ids = {
+                'id': pop.id,
+                'var' : attr['name'],
+                'type': attr['ctype'],
+                'delay': pop.max_delay,
+                'init': attr['init']
+            }
+            if var in pop.neuron_type.description['local']:
+                init_code += delay_tpl['local'] % ids
+                update_code += delay_tpl['update'] % ids
+                reset_code += delay_tpl['reset'] % ids
+            else:
+                raise NotImplementedError
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
@@ -344,6 +348,52 @@ std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
     def _init_fr(self, pop):
         # TODO:
         return "", ""
+
+    def _local_functions(self, pop):
+        """
+        Definition of user-defined local functions attached to
+        a neuron. These functions will take place in the
+        ANNarchyDevice.cu file.
+
+        As the local functions can be occur repeatadly in the same file,
+        there are modified with pop[id]_ to unique them.
+
+        Return:
+
+            * host_define, device_define
+        """
+        # Local functions
+        if len(pop.neuron_type.description['functions']) == 0:
+            return "", ""
+
+        host_code = ""
+        device_code = ""
+        for func in pop.neuron_type.description['functions']:
+            cpp_func = func['cpp'] + '\n'
+
+            host_code += cpp_func
+            device_code += cpp_func.replace('double '+func['name'], '__device__ double pop%(id)s_%(func)s'%{'id': pop.id, 'func':func['name']})
+
+        return host_code, self._check_and_apply_pow_fix(device_code)
+
+    def _replace_local_funcs(self, pop, glob_eqs, loc_eqs):
+        """
+        As the local functions can be occur repeatadly in the same file,
+        there are modified with pop[id]_ to unique them. Now we need
+        to adjust the call accordingly.
+        """
+        for func in pop.neuron_type.description['functions']:
+            search_term = "%(name)s\([^\(]*\)" % {'name': func['name']}
+
+            func_occur = re.findall(search_term, glob_eqs)
+            for term in func_occur:
+                glob_eqs = loc_eqs.replace(term, term.replace(func['name'], 'pop'+str(pop.id)+'_'+func['name']))
+
+            func_occur = re.findall(search_term, loc_eqs)
+            for term in func_occur:
+                loc_eqs = loc_eqs.replace(term, term.replace(func['name'], 'pop'+str(pop.id)+'_'+func['name']))
+
+        return glob_eqs, loc_eqs
 
     def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
         """
@@ -555,6 +605,10 @@ std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
         loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
         glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
 
+        # replace local function calls
+        if len(pop.neuron_type.description['functions']) > 0:
+            glob_eqs, loc_eqs = self._replace_local_funcs(pop, glob_eqs, loc_eqs)
+
         #
         # create kernel prototypes
         body += CUDATemplates.population_update_kernel % {
@@ -718,6 +772,10 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
 
         loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
         glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
+
+        # replace local function calls
+        if len(pop.neuron_type.description['functions']) > 0:
+            glob_eqs, loc_eqs = self._replace_local_funcs(pop, glob_eqs, loc_eqs)
 
         #
         # create kernel prototypes

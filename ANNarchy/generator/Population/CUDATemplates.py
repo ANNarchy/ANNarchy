@@ -185,17 +185,37 @@ attribute_cpp_init = {
 """
 }
 
+# We need to initialize the queue directly with the
+# values (init) as the data arrays for the variables are
+# only updated in front of a simulate call.
 attribute_delayed = {
    'local': """
-    gpu_delayed_%(var)s = std::deque< %(type)s* >(%(delay)s, NULL);
-    for ( int i = 0; i < %(delay)s; i++ )
-        cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(%(type)s) * size);
+        gpu_delayed_%(var)s = std::deque< %(type)s* >(%(delay)s, NULL);
+        std::vector< %(type)s > tmp = std::vector< %(type)s >( size, %(init)s );
+        for ( int i = 0; i < %(delay)s; i++ ) {
+            cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(%(type)s) * size);
+            cudaMemcpy( gpu_delayed_%(var)s[i], tmp.data(), sizeof(%(type)s) * size, cudaMemcpyHostToDevice );
+        }
+        tmp.clear();
 """,
     'global': "//TODO: implement code template",
+    'update': """
+            %(type)s* last_%(var)s = gpu_delayed_%(var)s.back();
+            gpu_delayed_%(var)s.pop_back();
+            gpu_delayed_%(var)s.push_front(last_%(var)s);
+            cudaMemcpy( last_%(var)s, gpu_%(var)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
+        #ifdef _DEBUG
+            cudaError_t err_%(var)s = cudaGetLastError();
+            if (err_%(var)s != cudaSuccess)
+                std::cout << "pop%(id)s - delay %(var)s: " << cudaGetErrorString(err_%(var)s) << std::endl;
+        #endif
+""",
     'reset' : """
-    for ( int i = 0; i < gpu_delayed_%(var)s.size(); i++ ) {
-        cudaMemcpy( gpu_delayed_%(var)s[i], gpu_%(var)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
-    }
+        std::vector< %(type)s > tmp = std::vector< %(type)s >( size, %(init)s );
+        for ( int i = 0; i < gpu_delayed_%(var)s.size(); i++ ) {
+            cudaMemcpy( gpu_delayed_%(var)s[i], tmp.data(), sizeof(%(type)s) * size, cudaMemcpyHostToDevice );
+        }
+        tmp.clear();
 """
 }
 
