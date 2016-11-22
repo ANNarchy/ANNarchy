@@ -327,10 +327,13 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
 
 def extract_functions(description, local_global=False):
     """ Extracts all functions from a multiline description."""
+
     if not description:
         return []
+    
     # Split the multilines into individual lines
     function_list = process_equations(description)
+    
     # Process each function
     functions = []
     for f in function_list:
@@ -362,11 +365,11 @@ def extract_functions(description, local_global=False):
         # Process the content
         eq2, condition = extract_ite('', content, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, split=False)
         if condition == []:
-            parser = FunctionParser(content, arguments)
+            parser = FunctionParser('', content, arguments)
             parsed_content = parser.parse()
         else:
-            parser = FunctionParser(content, arguments)
-            parsed_content, deps = translate_ITE("", eq2, condition, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, {})
+            parser = FunctionParser('', content, arguments)
+            parsed_content, deps = translate_ITE("", eq2, condition, {'attributes': [], 'local':[], 'global': [], 'variables': [], 'parameters': []}, {}, function=True)
 
         # Create the one-liner
         fdict = {'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}
@@ -378,6 +381,7 @@ def extract_functions(description, local_global=False):
 """ % fdict
         fdict['cpp'] = oneliner
         functions.append(fdict)
+
     return functions
 
 

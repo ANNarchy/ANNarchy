@@ -52,6 +52,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Additional includes and structures
         include_additional = ""
+        access_additional = ""
         struct_additional = ""
         declare_additional = ""
         init_additional = ""
@@ -92,6 +93,9 @@ class OpenMPGenerator(PopulationGenerator):
         # Update global operations
         update_global_ops = self._update_globalops(pop)
 
+        # Defintion of local functions
+        declaration_parameters_variables += self._local_functions(pop)
+
         # Update the neural variables
         if pop.neuron_type.type == 'rate':
             update_variables = self._update_rate_neuron(pop)
@@ -129,6 +133,8 @@ class OpenMPGenerator(PopulationGenerator):
             declare_delay = pop._specific_template['declare_delay']
         if 'access_parameters_variables' in pop._specific_template.keys():
             access_parameters_variables = pop._specific_template['access_parameters_variables']
+        if 'access_additional' in pop._specific_template.keys():
+            access_additional = pop._specific_template['access_additional']
         if 'init_parameters_variables' in pop._specific_template.keys():
             init_parameters_variables = pop._specific_template['init_parameters_variables']
         if 'init_spike' in pop._specific_template.keys():
@@ -143,7 +149,7 @@ class OpenMPGenerator(PopulationGenerator):
             reset_spike = pop._specific_template['reset_spike']
         if 'reset_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             reset_delay = pop._specific_template['reset_delay']
-        if 'reset_additional' in pop._specific_template.keys() and pop.max_delay > 1:
+        if 'reset_additional' in pop._specific_template.keys():
             reset_additional = pop._specific_template['reset_additional']
         if 'update_variables' in pop._specific_template.keys():
             update_variables = pop._specific_template['update_variables']
@@ -170,6 +176,7 @@ class OpenMPGenerator(PopulationGenerator):
             'declare_FR': declare_FR,
             'declare_profile': declare_profile,
             'access_parameters_variables': access_parameters_variables,
+            'access_additional': access_additional,
             'init_parameters_variables': init_parameters_variables,
             'init_spike': init_spike,
             'init_delay': init_delay,
@@ -323,6 +330,24 @@ class OpenMPGenerator(PopulationGenerator):
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());"""
         return declare_FR, init_FR
+
+    def _local_functions(self, pop):
+        """
+        Definition of user-defined local functions attached to
+        a neuron. These functions will take place in the
+        population header.
+        """
+        # Local functions
+        if len(pop.neuron_type.description['functions']) == 0:
+            return ""
+
+        declaration = """
+    // Local functions
+"""
+        for func in pop.neuron_type.description['functions']:
+            declaration += ' '*4 + func['cpp'] + '\n'
+
+        return declaration
 
     def _stop_condition(self, pop):
         """

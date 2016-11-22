@@ -393,7 +393,11 @@ With this declaration, ``sigmoid()`` can be used in the declaration of any varia
 
 .. code-block:: python
 
-    rate = sigmoid(mp)
+    neuron = Neuron(
+        equations = """
+            r = sigmoid(sum(exc))
+        """
+    )
 
 Functions must be one-liners, i.e. they should have only one return value. They can use as many arguments as needed, but are totally unaware of the context: all the needed information should be passed as an argument.
 
@@ -403,6 +407,19 @@ The types of the arguments (including the return value) are by default floating-
 
     add_function('conditional_increment(c, v, t) = if v > t : c + 1 else: c : int, int, float, float')
 
+
+**After compilation**, the function can be called using arbitrary list of values for the arguments using the ``functions()`` method and the name of the function:
+
+.. code-block:: python
+
+    add_function('sigmoid(x) = 1.0 / (1.0 + exp(-x))')
+
+    compile()
+
+    x = np.linspace(-10., 10., 1000)
+    y = functions('sigmoid')(x)
+
+You can pass a list or a 1D Numpy array as argument, but not a single value or a multidimensional array. When several arguemnts are passed, they **must** have the same size.
 
 Local functions are specific to a Neuron or Synapse class and can only be used within this context (if they have the same name as global variables, they will override them). They can be passed as a multi-line argument to the constructor of a neuron or synapse (see later):
 

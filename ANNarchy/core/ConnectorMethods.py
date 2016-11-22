@@ -29,10 +29,9 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.Report import _process_random
 
 try:
-    import ANNarchy.core.cython_ext.Connector as Connector
+    from ANNarchy.core.cython_ext import *
 except Exception as e:
     Global._print(e)
-
 
 ################################
 ## Connector methods
@@ -43,10 +42,10 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
 
     *Parameters*:
 
-        * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
-        * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-        * **shift**: obsolete, do not use.
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
+    * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
+    * **shift**: obsolete, do not use.
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre.size != self.post.size: 
         Global._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
@@ -58,7 +57,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.one_to_one, (weights, delays, "lil"), delays, storage_format="lil")
+    self._store_connectivity( one_to_one, (weights, delays, "lil"), delays, storage_format="lil" )
     return self
 
 def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -67,11 +66,11 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
 
     *Parameters*:
 
-        * **weights**: synaptic values, either a single value or a random distribution object.
-        * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-        * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    * **weights**: synaptic values, either a single value or a random distribution object.
+    * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
+    * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -88,7 +87,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         self._dense_matrix = True
 
     # Store the connectivity
-    self._store_connectivity(Connector.all_to_all, (weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( all_to_all, (weights, delays, allow_self_connections, storage_format), delays, storage_format )
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -100,11 +99,11 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
 
     *Parameters*:
 
-        * **amp**: amplitude of the Gaussian function
-        * **sigma**: width of the Gaussian function
-        * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
-        * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
-        * **allow_self_connections**: allows connections between a neuron and itself.
+    * **amp**: amplitude of the Gaussian function
+    * **sigma**: width of the Gaussian function
+    * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
+    * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
+    * **allow_self_connections**: allows connections between a neuron and itself.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -115,7 +114,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     self.connector_name = "Gaussian"
     self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
-    self._store_connectivity(Connector.gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil"), delays)
+    self._store_connectivity( gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil"), delays)
     return self
 
 def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -127,13 +126,13 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
 
     *Parameters*:
 
-        * **amp_pos**: amplitude of the positive Gaussian function
-        * **sigma_pos**: width of the positive Gaussian function
-        * **amp_neg**: amplitude of the negative Gaussian function
-        * **sigma_neg**: width of the negative Gaussian function
-        * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
-        * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
-        * **allow_self_connections**: allows connections between a neuron and itself.
+    * **amp_pos**: amplitude of the positive Gaussian function
+    * **sigma_pos**: width of the positive Gaussian function
+    * **amp_neg**: amplitude of the negative Gaussian function
+    * **sigma_neg**: width of the negative Gaussian function
+    * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
+    * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
+    * **allow_self_connections**: allows connections between a neuron and itself.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -144,7 +143,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self.connector_name = "Difference-of-Gaussian"
     self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
 
-    self._store_connectivity(Connector.dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil"), delays, "lil")
+    self._store_connectivity( dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil"), delays, "lil")
     return self
 
 def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -155,12 +154,12 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
 
     *Parameters*:
 
-        * **probability**: probability that a synapse is created.
-        * **weights**: either a single value for all synapses or a RandomDistribution object.
-        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-        * **allow_self_connections** : defines if self-connections are allowed (default=False).
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-        * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    * **probability**: probability that a synapse is created.
+    * **weights**: either a single value for all synapses or a RandomDistribution object.
+    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+    * **allow_self_connections** : defines if self-connections are allowed (default=False).
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -171,7 +170,7 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_probability, (probability, weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( fixed_probability, (probability, weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
 def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
@@ -182,11 +181,11 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
 
     *Parameters*:
 
-        * **number**: number of synapses per postsynaptic neuron.
-        * **weights**: either a single value for all synapses or a RandomDistribution object.
-        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-        * **allow_self_connections** : defines if self-connections are allowed (default=False).
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **number**: number of synapses per postsynaptic neuron.
+    * **weights**: either a single value for all synapses or a RandomDistribution object.
+    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+    * **allow_self_connections** : defines if self-connections are allowed (default=False).
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -200,7 +199,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format), delays, storage_format)
     return self
 
 def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
@@ -211,11 +210,11 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
 
     *Parameters*:
 
-        * **number**: number of synapses per pre-synaptic neuron.
-        * **weights**: either a single value for all synapses or a RandomDistribution object.
-        * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-        * **allow_self_connections** : defines if self-connections are allowed (default=False)
-        * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    * **number**: number of synapses per pre-synaptic neuron.
+    * **weights**: either a single value for all synapses or a RandomDistribution object.
+    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
+    * **allow_self_connections** : defines if self-connections are allowed (default=False)
+    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -229,7 +228,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity(Connector.fixed_number_post, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
+    self._store_connectivity( fixed_number_post, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
     return self
 
 def connect_with_func(self, method, **args):
@@ -290,7 +289,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
     return self
 
 def _load_from_matrix(self, pre, post, weights, delays, pre_post):
-    lil = Connector.LIL()
+    lil = LILConnectivity()
 
     uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
@@ -379,7 +378,7 @@ def connect_from_sparse(self, weights, delays=0.0):
 
 def _load_from_sparse(self, pre, post, weights, delays):
     # Create an empty LIL object
-    lil = Connector.LIL()
+    lil = LILConnectivity()
 
     # Find offsets
     if isinstance(self.pre, PopulationView):
@@ -424,7 +423,7 @@ def connect_from_file(self, filename):
         Only the ranks, weights and delays are loaded, not the other variables.
     """
     # Create an empty LIL object
-    lil = Connector.LIL()
+    lil = LILConnectivity()
 
     # Load the data
     from ANNarchy.core.IO import _load_data

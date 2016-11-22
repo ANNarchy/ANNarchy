@@ -67,8 +67,11 @@ class CodeGenerator(object):
 
         if Global.config['profiling']:
             if Global.config['paradigm'] == "openmp":
-                from .Profile import PAPIProfile
-                self._profgen = PAPIProfile(self._annarchy_dir, net_id)
+                #from .Profile import PAPIProfile
+                #self._profgen = PAPIProfile(self._annarchy_dir, net_id)
+                #self._profgen.generate()
+                from .Profile import CPP11Profile
+                self._profgen = CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             elif Global.config['paradigm'] == "cuda":
                 from .Profile import CUDAProfile
@@ -267,7 +270,7 @@ class CodeGenerator(object):
 
         code = ""
         from ANNarchy.parser.Extraction import extract_functions
-        for func in Global._objects['functions']:
+        for name, func in Global._objects['functions']:
             code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
 
         return code
@@ -355,7 +358,6 @@ class CodeGenerator(object):
         # greatly. For further information take a look into the corresponding
         # branches.
         #
-
         if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_body_template
             base_dict = {
@@ -401,6 +403,10 @@ class CodeGenerator(object):
             psp_call = ""
             for proj in self._proj_desc:
                 psp_call += proj['psp_call']
+
+            custom_func = ""
+            for pop in self._pop_desc:
+                custom_func += pop['custom_func']
 
             pop_kernel = ""
             for pop in self._pop_desc:
@@ -483,7 +489,7 @@ class CodeGenerator(object):
                 'syn_kernel': syn_kernel,
                 'glob_ops_kernel': glob_ops_body,
                 'postevent_kernel': postevent_kernel,
-                'custom_func': "", #custom_func
+                'custom_func': custom_func,
                 'built_in': built_in_functions
             }
 
@@ -722,7 +728,7 @@ class CodeGenerator(object):
             except:
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
-                pop_assign += """    pop%(pid)s.stream = %(sid)s;
+                pop_assign += """    pop%(pid)s.stream = 0;
 """ % {'pid': pop.id, 'sid': pop.id}
 
         proj_assign = "    // populations\n"

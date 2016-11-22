@@ -203,6 +203,8 @@ def add_function(function):
 
     Examples of valid functions:
 
+    .. code-block:: python
+
         logistic(x) = 1 / (1 + exp(-x))
 
         piecewise(x, a, b) =    if x < a:
@@ -215,8 +217,34 @@ def add_function(function):
 
     Please refer to the manual to know the allowed mathematical functions.
     """
-    _objects['functions'].append(function)
+    name = function.split('(')[0]
+    _objects['functions'].append( (name, function))
 
+def functions(name, net_id=0):
+    """
+    Allows to access a global function defined with ``add_function`` and use it from Python using arrays **after compilation**.
+
+    The name of the function is not added to the global namespace to avoid overloading.
+
+    .. code-block:: python
+    
+        add_function("logistic(x) = 1. / (1. + exp(-x))") 
+
+        compile()  
+
+        result = functions('logistic')([0., 1., 2., 3., 4.])
+ 
+    Only lists or 1D Numpy arrays can be passed as arguments, not single values nor multidimensional arrays.
+
+    When passing several arguments, make sure they have the same size.
+
+    """
+    try:
+        func = getattr(_network[net_id]['instance'], 'func_' + name)
+    except:
+        _error('call to', name, ': the function is not compiled yet.')
+
+    return func
 
 ################################
 ## Learning flags

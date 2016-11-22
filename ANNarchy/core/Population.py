@@ -39,13 +39,10 @@ class Population(object):
         """
         *Parameters*:
 
-            * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
-
-            * **neuron**: instance of ``ANNarchy.Neuron``
-
-            * **name**: unique name of the population (optional).
-
-            * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
+        * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
+        * **neuron**: instance of ``ANNarchy.Neuron``
+        * **name**: unique name of the population (optional).
+        * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
 
         """
         # Store the provided geometry
@@ -110,6 +107,9 @@ class Population(object):
             self.variables.append(var['name'])
         self.attributes = self.parameters + self.variables
 
+        # Get a list of user-defined functions
+        self.functions = [func['name'] for func in self.neuron_type.description['functions']]
+
         # Store initial values
         self.init = {}
         for param in self.neuron_type.description['parameters']:
@@ -136,7 +136,7 @@ class Population(object):
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions.
-        import ANNarchy.core.cython_ext.Coordinates as Coordinates
+        from ANNarchy.core.cython_ext import Coordinates
         if self.dimension==1:
             self._rank_from_coord = Coordinates.get_rank_from_1d_coord
             self._coord_from_rank = Coordinates.get_1d_coord
@@ -261,6 +261,8 @@ class Population(object):
                             return np.array([self.init[name]] * self.size).reshape(self.geometry)
                     else:
                         return self.init[name]
+            elif name in self.functions:
+                return self._function(name)
             else:
                 return object.__getattribute__(self, name)
         return object.__getattribute__(self, name)
@@ -361,6 +363,16 @@ class Population(object):
         return self.__getattr__(name)
 
 
+
+    ################################
+    ## Access to functions
+    ################################
+    def _function(self, func):
+        "Access a user defined function"
+        if not self.initialized:
+            Global._error('the network is not compiled yet, cannot access the function ' + func)
+
+        return getattr(self.cyInstance, func)
 
     ################################
     ## Access to weighted sums
@@ -578,7 +590,7 @@ class Population(object):
 
         *Parameter*:
 
-            * **coord**: coordinate tuple, can be multidimensional.
+        * **coord**: coordinate tuple, can be multidimensional.
         """
         try:
             rank = self._rank_from_coord( coord, self.geometry )
@@ -596,7 +608,7 @@ class Population(object):
 
         *Parameter*:
 
-            * **rank**: rank of the neuron.
+        * **rank**: rank of the neuron.
         """
         # Check the rank
         if not rank < self.size:
@@ -645,11 +657,11 @@ class Population(object):
 
         Parameter:
 
-            * **variable**: single variable name or list of variable names.
+        * **variable**: single variable name or list of variable names.
 
-            * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable.
+        * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable.
 
-            * **ranks**: list of ranks of the neurons to record (default: 'all').
+        * **ranks**: list of ranks of the neurons to record (default: 'all').
 
         Example::
 
@@ -707,7 +719,7 @@ class Population(object):
 
         *Parameter*:
 
-            * **variable**: single variable name or list of variable names.
+        * **variable**: single variable name or list of variable names.
 
         Example::
 
@@ -787,7 +799,8 @@ class Population(object):
     ## Modification of the variables
     ################################
     def set_variable_flags(self, name, value):
-        """ Sets the flags of a variable for the population.
+        """ 
+        Sets the flags of a variable for the population.
 
         If the variable ``r`` is defined in the Neuron description through::
 
@@ -822,8 +835,8 @@ class Population(object):
                 try:
                     self.neuron_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
-                    if has_key(self.neuron_type.description['variables'][rk_var]['bounds'], key):
-                        self.neuron_type.description['variables'][rk_var]['bounds'].pop(key)
+                    if self.neuron_type.description['variables'][rk_var]['bounds'].has_key(key):
+                        self.neuron_type.description['variables'][rk_var]['bounds'].remove(key)
             else: # new value for init, min, max...
                 if key == 'init':
                     self.neuron_type.description['variables'][rk_var]['init'] = val
@@ -831,10 +844,9 @@ class Population(object):
                 else:
                     self.neuron_type.description['variables'][rk_var]['bounds'][key] = val
 
-
-
     def set_variable_equation(self, name, equation):
-        """ Changes the equation of a variable for the population.
+        """ 
+        Changes the equation of a variable for the population.
 
         If the variable ``r`` is defined in the Neuron description through::
 
@@ -901,9 +913,9 @@ class Population(object):
 
         * **filename**: filename, may contain relative or absolute path.
 
-            .. warning::
+        .. warning::
 
-                The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+            The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
         Example::
 

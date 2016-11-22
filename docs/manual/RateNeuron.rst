@@ -35,7 +35,7 @@ The only required variable is ``r``, which represents the instantaneous firing r
 Custom functions
 -----------------
 
-Custom functions can also be passed when creating the Neuron type:
+Custom functions can also be defined when creating the Neuron type and used inside the ``equations`` field:
 
 .. code-block:: python
 
@@ -53,14 +53,16 @@ Custom functions can also be passed when creating the Neuron type:
         """
     )
 
+Make sure that the name of the function does not overlap with existing mathematical functions (cos, exp), existing variables (tau, r) or built-in functions (pos, t, dt).
+
 Predefined attributes
 ----------------------
 
 The ODE can depend on other parameters of the neuron (e.g. ``r`` depends on ``mp``), but not on unknown names. ANNarchy already defines the following variables and parameters for a neuron:
     
-    * variable *t*: time in milliseconds elapsed since the creation of the network.
-    
-    * parameter *dt*: the discretization step, default is 1 ms. 
+* variable *t*: time in milliseconds elapsed since the creation of the network.
+
+* parameter *dt*: the discretization step, default is 1 ms. 
     
 Weighted sum of inputs
 -----------------------

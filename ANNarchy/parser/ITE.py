@@ -23,31 +23,40 @@
 """
 from ANNarchy.core.Global import _error, _warning
 from ANNarchy.parser.Equation import Equation
+from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 
 from pprint import pprint
 import re
 
-def translate_ITE(name, eq, condition, description, untouched):
+def translate_ITE(name, eq, condition, description, untouched, function=False):
     " Recursively processes the different parts of an ITE statement"
+
+    if function:
+        solver = FunctionParser
+    else:
+        solver = Equation
+
     def process_condition(condition):
         if_statement = condition[0]
         then_statement = condition[1]
         else_statement = condition[2]
 
-        if_code = Equation(name, if_statement, description,
+        if_code = solver(name, if_statement, description,
                           untouched = untouched.keys(),
                           type='cond').parse()
+
         if isinstance(then_statement, list): # nested conditional
             then_code =  process_condition(then_statement)
         else:
-            then_code = Equation(name, then_statement, description,
+            then_code = solver(name, then_statement, description,
                           untouched = untouched.keys(),
                           type='return').parse().split(';')[0]
+        
         if isinstance(else_statement, list): # nested conditional
             else_code =  process_condition(else_statement)
         else:
-            else_code = Equation(name, else_statement, description,
+            else_code = solver(name, else_statement, description,
                           untouched = untouched.keys(),
                           type='return').parse().split(';')[0]
 
@@ -55,7 +64,7 @@ def translate_ITE(name, eq, condition, description, untouched):
         return code
 
     # Main equation, where the right part is __conditional__
-    translator = Equation(name, eq, description,
+    translator = solver(name, eq, description,
                           untouched = untouched.keys())
     code = translator.parse()
     deps = translator.dependencies()

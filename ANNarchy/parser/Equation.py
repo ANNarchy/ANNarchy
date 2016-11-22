@@ -31,9 +31,13 @@ class Equation(object):
     '''
     Class to analyse one equation.
     '''
-    def __init__(self, name, expression, description,
+    def __init__(self, 
+                 name, 
+                 expression, 
+                 description,
                  untouched = [],
-                 method='explicit', type=None):
+                 method='explicit', 
+                 type=None):
         '''
         Parameters:
 
@@ -53,6 +57,7 @@ class Equation(object):
         self.attributes = self.description['attributes']
         self.local_attributes = self.description['local']
         self.global_attributes = self.description['global']
+        self.local_functions = [func['name'] for func in self.description['functions']]
         self.variables = [var['name'] for var in self.description['variables']]
         self.untouched = untouched
         self.method = method
@@ -87,6 +92,18 @@ class Equation(object):
                 self.local_dict[var] = Symbol(var + '%(local_index)s')
             elif var in self.global_attributes:
                 self.local_dict[var] = Symbol(var + '%(global_index)s')
+
+        self.user_functions = {
+                'pos': 'positive',
+                'positive': 'positive',
+                'neg': 'negative',
+                'negative': 'negative',
+                'modulo': 'modulo',
+                'clip': 'clip',
+                'ite': 'ite'
+            }
+        for var in self.local_functions: # Add each user-defined function to avoid "not supported in C"
+            self.user_functions[var] = var
 
         for var in self.untouched: # Add each untouched variable
             self.local_dict[var] = Symbol(var)
@@ -148,15 +165,7 @@ class Equation(object):
         return ccode(
             equation,
             precision=8,
-            user_functions={
-                'pos': 'positive',
-                'positive': 'positive',
-                'neg': 'negative',
-                'negative': 'negative',
-                'modulo': 'modulo',
-                'clip': 'clip',
-                'ite': 'ite'
-            }
+            user_functions=self.user_functions
         )
 
     def latex_code(self, equation):

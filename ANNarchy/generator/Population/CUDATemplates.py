@@ -58,6 +58,7 @@ struct PopStruct%(id)s{
 
     // Access methods to the parameters and variables
 %(access_parameters_variables)s
+%(access_additional)s
 
     // Method called to initialize the data structures
     void init_population() {
@@ -126,7 +127,9 @@ attribute_decl = {
 """,
     'global': """
     // Global parameter %(name)s
-    %(type)s  %(name)s ;
+    %(type)s %(name)s;
+    %(type)s *gpu_%(name)s;
+    bool %(name)s_dirty;    
 """
 }
 
@@ -154,7 +157,7 @@ attribute_acc = {
 """
     // Global %(attr_type)s %(name)s
     %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s(%(type)s val) { %(name)s = val; }
+    void set_%(name)s(%(type)s val) { %(name)s = val; %(name)s_dirty = true; }
 """
 }
 
@@ -170,29 +173,100 @@ attribute_cpp_init = {
 """
         // Local %(attr_type)s %(name)s
         %(name)s = std::vector<%(type)s>(size, %(init)s);
-        cudaMalloc(&gpu_%(name)s, size * sizeof(double));
-        cudaMemcpy(gpu_%(name)s, %(name)s.data(), size * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMalloc(&gpu_%(name)s, size * sizeof(%(type)s));
+        cudaMemcpy(gpu_%(name)s, %(name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
 """,
     'global':
 """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
+        cudaMalloc(&gpu_%(name)s, sizeof(%(type)s));
+        cudaMemcpy(gpu_%(name)s, &%(name)s, sizeof(%(type)s), cudaMemcpyHostToDevice);
 """
 }
 
+# We need to initialize the queue directly with the
+# values (init) as the data arrays for the variables are
+# only updated in front of a simulate call.
 attribute_delayed = {
    'local': """
-    gpu_delayed_%(var)s = std::deque< double* >(%(delay)s, NULL);
-    for ( int i = 0; i < %(delay)s; i++ )
-        cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(double) * size);
+        gpu_delayed_%(var)s = std::deque< %(type)s* >(%(delay)s, NULL);
+        std::vector< %(type)s > tmp = std::vector< %(type)s >( size, %(init)s );
+        for ( int i = 0; i < %(delay)s; i++ ) {
+            cudaMalloc( (void**)& gpu_delayed_%(var)s[i], sizeof(%(type)s) * size);
+            cudaMemcpy( gpu_delayed_%(var)s[i], tmp.data(), sizeof(%(type)s) * size, cudaMemcpyHostToDevice );
+        }
+        tmp.clear();
 """,
     'global': "//TODO: implement code template",
+    'update': """
+            %(type)s* last_%(var)s = gpu_delayed_%(var)s.back();
+            gpu_delayed_%(var)s.pop_back();
+            gpu_delayed_%(var)s.push_front(last_%(var)s);
+            cudaMemcpy( last_%(var)s, gpu_%(var)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
+        #ifdef _DEBUG
+            cudaError_t err_%(var)s = cudaGetLastError();
+            if (err_%(var)s != cudaSuccess)
+                std::cout << "pop%(id)s - delay %(var)s: " << cudaGetErrorString(err_%(var)s) << std::endl;
+        #endif
+""",
     'reset' : """
-    for ( int i = 0; i < gpu_delayed_%(var)s.size(); i++ ) {
-        cudaMemcpy( gpu_delayed_%(var)s[i], gpu_%(var)s, sizeof(double) * size, cudaMemcpyDeviceToDevice );
-    }
+        std::vector< %(type)s > tmp = std::vector< %(type)s >( size, %(init)s );
+        for ( int i = 0; i < gpu_delayed_%(var)s.size(); i++ ) {
+            cudaMemcpy( gpu_delayed_%(var)s[i], tmp.data(), sizeof(%(type)s) * size, cudaMemcpyHostToDevice );
+        }
+        tmp.clear();
 """
 }
+
+# Transfer of variables before and after a simulation
+#
+# Parameters:
+attribute_transfer = {
+    'HtoD_local': """
+        // %(attr_name)s: local
+        if( %(attr_name)s_dirty )
+        {
+        #ifdef _DEBUG
+            std::cout << "HtoD %(attr_name)s ( pop%(id)s )" << std::endl;
+        #endif
+            cudaMemcpy( gpu_%(attr_name)s, %(attr_name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
+            %(attr_name)s_dirty = false;
+
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
+    """,
+    'HtoD_global': """
+        // %(attr_name)s: global
+        if( %(attr_name)s_dirty )
+        {
+        #ifdef _DEBUG
+            std::cout << "HtoD %(attr_name)s ( pop%(id)s )" << std::endl;
+        #endif
+            cudaMemcpy( gpu_%(attr_name)s, &%(attr_name)s, sizeof(%(type)s), cudaMemcpyHostToDevice);
+            %(attr_name)s_dirty = false;
+
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
+    """,
+    'DtoH_local':"""
+    // %(attr_name)s: local
+    cudaMemcpy( %(attr_name)s.data(),  gpu_%(attr_name)s, size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    """,
+    'DtoH_global':"""
+    // %(attr_name)s: global
+    cudaMemcpy( &%(attr_name)s,  gpu_%(attr_name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    """
+}
+
 # Definition for the usage of CUDA device random
 # number generators
 #
@@ -327,14 +401,14 @@ population_update_call = \
     if ( pop%(id)s._active ) {
         int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
 
-        cuPop%(id)s_step<<< nb, __pop%(id)s__, 0, streams[%(stream_id)s] >>>(
+        cuPop%(id)s_step<<< nb, __pop%(id)s__, 0, %(stream_id)s >>>(
               /* default arguments */
               %(default)s
               /* refractoriness (only spike) */
               %(refrac)s
-              /* targets (only rate) */
+              /* targets (only rate-code) */
               %(tar)s
-              /* kernel gpu arrays */
+              /* kernel variables */
               %(var)s
               /* kernel constants */
               %(par)s );
@@ -405,6 +479,7 @@ cuda_templates = {
     'attr_acc': attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_delayed': attribute_delayed,
+    'attribute_transfer': attribute_transfer,
     'rng': curand,
 
     'rate_psp': rate_psp,

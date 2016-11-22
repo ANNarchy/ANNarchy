@@ -127,14 +127,6 @@ class PopulationGenerator(object):
         for rd in pop.neuron_type.description['random_distributions']:
             declaration += self._templates['rng'][rd['locality']]['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
 
-        # Local functions
-        if len(pop.neuron_type.description['functions']) > 0:
-            declaration += """
-    // Local functions
-"""
-            for func in pop.neuron_type.description['functions']:
-                declaration += ' '*4 + func['cpp'] + '\n'
-
         return declaration, accessors
 
     def _get_attr(self, pop, name):
@@ -204,6 +196,10 @@ class PopulationGenerator(object):
                 code += self._templates['rate_psp']['init'] % {'id': pop.id, 'target': target}
 
         return code
+
+    def _local_functions(self, pop):
+        "Implemented by child class"
+        raise NotImplementedError
 
     def _stop_condition(self, pop):
         "Implemented by child class"

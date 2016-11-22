@@ -17,6 +17,116 @@ from ANNarchy.core.Population import Population
 
 cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 
+##################################################
+### Connector methods, these functions are    ####
+### exported towards ConnectorMethods         ####
+##################################################
+def all_to_all(pre, post, weights, delays, allow_self_connections, storage_format):
+    """ Cython implementation of the all-to-all pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LILConnectivity()
+    elif storage_format == "csr":
+        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
+        size_post = post.size if isinstance(post, Population) else post.population.size
+
+        projection = CSRConnectivity(size_pre, size_post)
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for all-to-all pattern')
+
+    # instantiate pattern
+    projection.all_to_all(pre, post, weights, delays, allow_self_connections)
+
+    return projection
+
+def one_to_one(pre, post, weights, delays, storage_format):
+    """ Cython implementation of the one-to-one pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LILConnectivity()
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for one-to-one pattern')
+
+    # instantiate pattern
+    projection.one_to_one(pre, post, weights, delays)
+
+    return projection
+
+def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format):
+    """ Cython implementation of the fixed_probability pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LILConnectivity()
+    elif storage_format == "csr":
+        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
+        size_post = post.size if isinstance(post, Population) else post.population.size
+
+        projection = CSRConnectivity(size_pre, size_post)
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_probability pattern')
+
+    # instantiate pattern
+    projection.fixed_probability(pre, post, probability, weights, delays, allow_self_connections)
+
+    return projection
+
+def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format):
+    """ Cython implementation of the fixed_number_pre pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LILConnectivity()
+    elif storage_format == "csr":
+        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
+        size_post = post.size if isinstance(post, Population) else post.population.size
+
+        projection = CSRConnectivity(size_pre, size_post)
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_pre pattern')
+
+    # instantiate pattern
+    projection.fixed_number_pre(pre, post, number, weights, delays, allow_self_connections)
+
+    return projection
+
+def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format):
+    """ Cython implementation of the fixed_number_post pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LILConnectivity()
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
+
+    # instantiate pattern
+    projection.fixed_number_post(pre, post, number, weights, delays, allow_self_connections)
+
+    return projection
+
+def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format):
+    """ Cython implementation of the fixed_number_post pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LILConnectivity()
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
+
+    # instantiate pattern
+    projection.gaussian(pre_pop, post_pop, amp, sigma, delays, limit, allow_self_connections)
+
+    return projection
+
+def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format):
+    """ Cython implementation of the fixed_number_post pattern."""
+    # instanciate connector class based on storage_format
+    if storage_format == "lil":
+        projection = LILConnectivity()
+    else:
+        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
+
+    # instantiate pattern
+    projection.dog(pre_pop, post_pop, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
+
+    return projection
+
 ###################################################
 ########## LIL object to hold synapses ############
 ###################################################
@@ -619,112 +729,3 @@ cdef class CSRConnectivity:
 
             # Create the dendrite
             self._matrix.push_back(r_pre, ranks[r_pre], w, d_int)
-
-#################################
-#### Connector methods ##########
-#################################
-def all_to_all(pre, post, weights, delays, allow_self_connections, storage_format):
-    """ Cython implementation of the all-to-all pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    elif storage_format == "csr":
-        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-        size_post = post.size if isinstance(post, Population) else post.population.size
-
-        projection = CSRConnectivity(size_pre, size_post)
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for all-to-all pattern')
-
-    # instantiate pattern
-    projection.all_to_all(pre, post, weights, delays, allow_self_connections)
-
-    return projection
-
-def one_to_one(pre, post, weights, delays, storage_format):
-    """ Cython implementation of the one-to-one pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for one-to-one pattern')
-
-    # instantiate pattern
-    projection.one_to_one(pre, post, weights, delays)
-
-    return projection
-
-def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format):
-    """ Cython implementation of the fixed_probability pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    elif storage_format == "csr":
-        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-        size_post = post.size if isinstance(post, Population) else post.population.size
-
-        projection = CSRConnectivity(size_pre, size_post)
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_probability pattern')
-
-    # instantiate pattern
-    projection.fixed_probability(pre, post, probability, weights, delays, allow_self_connections)
-
-    return projection
-
-def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format):
-    """ Cython implementation of the fixed_number_pre pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    elif storage_format == "csr":
-        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-        size_post = post.size if isinstance(post, Population) else post.population.size
-
-        projection = CSRConnectivity(size_pre, size_post)
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_pre pattern')
-
-    # instantiate pattern
-    projection.fixed_number_pre(pre, post, number, weights, delays, allow_self_connections)
-
-    return projection
-
-def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format):
-    """ Cython implementation of the fixed_number_post pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
-
-    # instantiate pattern
-    projection.fixed_number_post(pre, post, number, weights, delays, allow_self_connections)
-
-    return projection
-
-def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format):
-    """ Cython implementation of the fixed_number_post pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
-
-    # instantiate pattern
-    projection.gaussian(pre_pop, post_pop, amp, sigma, delays, limit, allow_self_connections)
-
-    return projection
-
-def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format):
-    """ Cython implementation of the fixed_number_post pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
-
-    # instantiate pattern
-    projection.dog(pre_pop, post_pop, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
-
-    return projection

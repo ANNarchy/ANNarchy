@@ -74,6 +74,9 @@ class PyxGenerator(object):
         """
         Perform code generation.
         """
+        # CUstom user-defined function (add-function())
+        custom_functions_export, functions_wrapper = self._custom_functions()
+
         # struct declaration for each population
         pop_struct = ""
         pop_ptr = ""
@@ -125,10 +128,16 @@ class PyxGenerator(object):
 
         from .Template.PyxTemplate import pyx_template
         return pyx_template % {
-            'pop_struct': pop_struct, 'pop_ptr': pop_ptr,
-            'proj_struct': proj_struct, 'proj_ptr': proj_ptr,
-            'pop_class' : pop_class, 'proj_class': proj_class,
-            'monitor_struct': monitor_struct, 'monitor_wrapper': monitor_class,
+            'custom_functions_export': custom_functions_export,
+            'pop_struct': pop_struct, 
+            'pop_ptr': pop_ptr,
+            'proj_struct': proj_struct, 
+            'proj_ptr': proj_ptr,
+            'pop_class' : pop_class, 
+            'proj_class': proj_class,
+            'monitor_struct': monitor_struct, 
+            'monitor_wrapper': monitor_class,
+            'functions_wrapper': functions_wrapper,
             'device_specific_export': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['export'],
             'device_specific_wrapper': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['wrapper'],
         }
@@ -156,6 +165,46 @@ class PyxGenerator(object):
 
         else:
             raise NotImplementedError
+
+#######################################################################
+############## Functions #############################################
+#######################################################################
+    def _custom_functions(self):
+        if len(Global._objects['functions']) == 0:
+            return "", ""
+        from ANNarchy.parser.Extraction import extract_functions
+
+        export = ""
+        wrapper = ""
+        for name, func in Global._objects['functions']:
+            desc = extract_functions(func, local_global=True)[0]
+            # Export
+            export += ' '*4 + desc['return_type'] + " " + desc['name'] + '('
+            for idx, arg in enumerate(desc['arg_types']):
+                export += arg
+                if idx < len(desc['arg_types']) - 1:
+                    export += ', '
+            export += ')' + '\n'
+
+            # Wrapper
+            arguments=""
+            wrapper += "cpdef np.ndarray func_" + desc['name'] + '('
+            for idx, arg in enumerate(desc['args']):
+                # Function call
+                wrapper += arg
+                if idx < len(desc['args']) - 1:
+                    wrapper += ', ' 
+                # Element access
+                arguments += arg + "[i]"
+                if idx < len(desc['args']) - 1:
+                    arguments += ', '
+            wrapper += '):' 
+            wrapper += """
+    return np.array([%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
+""" % {'funcname': desc['name'], 'first_arg' : desc['args'][0], 'args': arguments}
+
+        return export, wrapper
+
 
 #######################################################################
 ############## Population #############################################
@@ -200,6 +249,20 @@ class PyxGenerator(object):
         if 'export_targets' in pop._specific_template.keys():
             export_targets = pop._specific_template['export_targets']
 
+        # Local functions
+        export_functions = ""
+        if len(pop.neuron_type.description['functions']) > 0:
+            export_functions += """
+        # Local functions
+"""
+            for func in pop.neuron_type.description['functions']:
+                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '(' 
+                for idx, arg in enumerate(func['arg_types']):
+                    export_functions += arg
+                    if idx < len(func['arg_types']) - 1:
+                        export_functions += ', '
+                export_functions += ')' + '\n'
+
         # Additional exports
         export_additional = ""
         if 'export_additional' in pop._specific_template.keys():
@@ -210,6 +273,7 @@ class PyxGenerator(object):
             'id': pop.id, 'name': pop.name,
             'export_refractory': export_refractory,
             'export_parameters_variables': export_parameters_variables,
+            'export_functions': export_functions,
             'export_targets': export_targets,
             'export_additional': export_additional,
         }
@@ -255,6 +319,29 @@ class PyxGenerator(object):
     cpdef np.ndarray get_sum_%(target)s(self):
         return np.array(pop%(id)s._sum_%(target)s)""" % {'id': pop.id, 'target' : target}
 
+        # Local functions
+        wrapper_access_functions = ""
+        if len(pop.neuron_type.description['functions']) > 0:
+            wrapper_access_functions += """
+    # Local functions
+"""
+            for func in pop.neuron_type.description['functions']:
+                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, ' 
+                arguments = ""
+                for idx, arg in enumerate(func['args']):
+                    # Function call
+                    wrapper_access_functions += arg
+                    if idx < len(func['args']) - 1:
+                        wrapper_access_functions += ', '
+                    # Element access
+                    arguments += arg + "[i]"
+                    if idx < len(func['args']) - 1:
+                        arguments += ', '
+                wrapper_access_functions += '):'
+                wrapper_access_functions += """
+        return np.array([pop%(id)s.%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
+""" % {'id': pop.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
+
 
         # Specific populations can overwrite
         if 'wrapper_args' in pop._specific_template.keys():
@@ -277,6 +364,7 @@ class PyxGenerator(object):
             'wrapper_init' : wrapper_init,
             'wrapper_access_parameters_variables' : wrapper_access_parameters_variables,
             'wrapper_access_targets' : wrapper_access_targets,
+            'wrapper_access_functions' : wrapper_access_functions,
             'wrapper_access_refractory' : wrapper_access_refractory,
             'wrapper_access_additional' : wrapper_access_additional,
         }
@@ -364,6 +452,20 @@ class PyxGenerator(object):
                 continue
             export_parameters_variables += PyxTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
+        # Local functions
+        export_functions = ""
+        if len(proj.synapse_type.description['functions']) > 0:
+            export_functions += """
+        # Local functions
+"""
+            for func in proj.synapse_type.description['functions']:
+                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '(' 
+                for idx, arg in enumerate(func['arg_types']):
+                    export_functions += arg
+                    if idx < len(func['arg_types']) - 1:
+                        export_functions += ', '
+                export_functions += ')' + '\n'
+
         # Structural plasticity
         structural_plasticity = ""
         if Global.config['structural_plasticity']:
@@ -398,6 +500,7 @@ class PyxGenerator(object):
             'export_delay': export_delay,
             'export_event_driven': export_event_driven,
             'export_parameters_variables': export_parameters_variables,
+            'export_functions': export_functions,
             'export_structural_plasticity': structural_plasticity,
             'export_additional': proj._specific_template['export_additional'] if 'export_additional' in proj._specific_template.keys() else ""
         }
@@ -490,6 +593,30 @@ class PyxGenerator(object):
                 continue
             wrapper_access_parameters_variables += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
+        # Local functions
+        wrapper_access_functions = ""
+        if len(proj.synapse_type.description['functions']) > 0:
+            wrapper_access_functions += """
+    # Local functions
+"""
+            for func in proj.synapse_type.description['functions']:
+                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, ' 
+                arguments = ""
+                for idx, arg in enumerate(func['args']):
+                    # Function call
+                    wrapper_access_functions += arg
+                    if idx < len(func['args']) - 1:
+                        wrapper_access_functions += ', '
+                    # Element access
+                    arguments += arg + "[i]"
+                    if idx < len(func['args']) - 1:
+                        arguments += ', '
+                wrapper_access_functions += '):'
+                wrapper_access_functions += """
+        return np.array([proj%(id)s.%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
+""" % {'id': proj.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
+
+
         # Additional declarations
         additional_declarations = ""
 
@@ -542,6 +669,7 @@ class PyxGenerator(object):
             'wrapper_access_connectivity': wrapper_access_connectivity,
             'wrapper_access_delay': wrapper_access_delay,
             'wrapper_access_parameters_variables': wrapper_access_parameters_variables,
+            'wrapper_access_functions': wrapper_access_functions,
             'wrapper_access_structural_plasticity': structural_plasticity,
             'wrapper_access_additional': additional_declarations
         }

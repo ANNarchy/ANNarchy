@@ -18,29 +18,35 @@ class ImagePopulation(Population):
     
     Usage:
     
-    >>> from ANNarchy import *
-    >>> from ANNarchy.extensions.image import ImagePopulation
-    >>> pop = ImagePopulation(name='Input', geometry=(480, 640))
-    >>> pop.set_image('image.jpg')
+    .. code-block:: python
+ 
+        from ANNarchy import *
+        from ANNarchy.extensions.image import ImagePopulation
+
+        pop = ImagePopulation(geometry=(480, 640))
+        pop.set_image('image.jpg')
     """
     
     def __init__(self, geometry, name=None):
         """        
         *Parameters*:
-        
-            * *geometry*: population geometry as tuple. It must correspond to the image size and be fixed through the whole simulation.
-            
-                * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
-            
-                * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
-                
-                If the third dimension is 3, each will correspond to the RGB values of the pixels.
-                
-                .. warning::
-                
-                    Due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
+    
+        * *geometry*: population geometry as tuple. It must correspond to the image size and be fixed through the whole simulation.
 
-            * *name*: unique name of the population (optional).
+        * *name*: unique name of the population (optional).
+        
+        About the geometry:
+        
+        * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
+    
+        * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
+        
+        If the third dimension is 3, each will correspond to the RGB values of the pixels.
+        
+        .. warning::
+        
+            Due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
+
         
         """   
         # Check geometry
@@ -91,33 +97,41 @@ class VideoPopulation(ImagePopulation):
     
     Usage :
     
-    >>> from ANNarchy import *
-    >>> from ANNarchy.extensions.image import VideoPopulation
-    >>> pop = VideoPopulation(name='Input', geometry=(480, 640))
-    >>> compile()
-    >>> pop.start_camera(0)
-    >>> while(True):
-    ...   pop.grab_image()
-    ...   simulate(10.0)
+    .. code-block:: python
+
+        from ANNarchy import *
+        from ANNarchy.extensions.image import VideoPopulation
+        
+        pop = VideoPopulation(geometry=(480, 640))
+        
+        compile()
+        
+        pop.start_camera(0)
+        
+        while(True):
+          pop.grab_image()
+          simulate(10.0)
     """
     
     def __init__(self, geometry, name=None):
         """        
         *Parameters*:
         
-            * *geometry*: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
-            
-                * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
-            
-                * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
-                
-                If the third dimension is 3, each will correspond to the RGB values of the pixels.
-                
-                .. warning::
-                
-                    Due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
+        * *geometry*: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
 
-            * *name*: unique name of the population (optional).
+        * *name*: unique name of the population (optional).
+
+        About the geometry:
+        
+        * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
+    
+        * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
+        
+        If the third dimension is 3, each will correspond to the RGB values of the pixels.
+        
+        .. warning::
+        
+            Due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
         
         """         
         # Create the population     

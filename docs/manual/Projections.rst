@@ -26,10 +26,12 @@ Once the populations are created, one can connect them by creating ``Projection`
 
     The post-synaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
 
-* ``synapse`` is an optional argument requiring a *Synapse* instance. If the ``synapse`` argument is omitted, the default synapse will be used:
+* ``synapse`` is an optional argument requiring a *Synapse* instance. 
 
-    * the default rate-coded synapse defines ``psp = w * pre.r``,
-    * the default spiking synapse defines ``g_target += w``.
+If the ``synapse`` argument is omitted, the default synapse will be used:
+    
+* the default rate-coded synapse defines ``psp = w * pre.r``,
+* the default spiking synapse defines ``g_target += w``.
 
 Building the projections
 ===========================
@@ -189,6 +191,43 @@ or its coordinates:
 .. warning::
 
     You should make sure that the dendrite actually exists before accessing it through its rank, because it is otherwise a ``None`` object.
+
+Functions
+---------
+
+If you have defined a function inside a ``Synapse`` definition:
+
+.. code-block:: python
+
+    Oja = Synapse(
+        parameters= """
+            tau = 5000.0 : post-synaptic
+            alpha = 8.0 : post-synaptic
+        """,
+        equations = """
+            tau * dw/dt = OjaRule(pre.r, post.r, w, alpha)
+        """,
+        functions = """
+            OjaRule(pre, post, w, alpha) = pre * post - alpha * post^2 * w
+        """
+    )
+
+you can use this function in Python as if it were a method of the corresponding object:
+
+.. code-block:: python
+
+    proj = Projection(pop1, pop2, 'exc', Oja).connect_xxx()
+
+    pre = np.linspace(0., 1., 100)
+    post = np.linspace(0., 1., 100)
+    w = 0.01 * np.ones(100)
+    alpha = 0.1 * np.ones(100)
+
+    weight_change = proj.OjaRule(pre, post, w, alpha)
+
+You can pass either a list or a 1D Numpy array to each argument (**not a single value, nor a multidimensional array!**). 
+
+The size of the arrays passed for each argument is arbitrary (it must not match the projection's size) but you have to make sure that they all have the same size. Errors are not catched, so be careful.
 
 Connecting population views
 ============================

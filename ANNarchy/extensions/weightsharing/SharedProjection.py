@@ -39,11 +39,11 @@ class SharedProjection(Projection):
 
         *Parameters*:
 
-            * **pre**: pre-synaptic population (either its name or a ``Population`` object).
-            * **post**: post-synaptic population (either its name or a ``Population`` object).
-            * **target**: type of the connection.
-            * **psp**: function to be summed. By default: ``w * pre.r``
-            * **operation**: function applied on ``psp`` ("sum", "max", "min", "mean"). "sum" is the default.
+        * **pre**: pre-synaptic population (either its name or a ``Population`` object).
+        * **post**: post-synaptic population (either its name or a ``Population`` object).
+        * **target**: type of the connection.
+        * **psp**: function to be summed. By default: ``w * pre.r``
+        * **operation**: function applied on ``psp`` ("sum", "max", "min", "mean"). "sum" is the default.
         """
         # Create the description, but it will not be used for generation
         Projection.__init__(
@@ -64,12 +64,12 @@ class SharedProjection(Projection):
     def _create(self):
         # create fake LIL object, just for compilation.
         try:
-            from ANNarchy.core.cython_ext.Connector import LIL
+            from ANNarchy.core.cython_ext.Connector import LILConnectivity
         except Exception as e:
             Global._print(e)
             Global._error('ANNarchy was not successfully installed.')
 
-        lil = LIL()
+        lil = LILConnectivity()
         lil.max_delay = self.delays
         lil.uniform_delay = self.delays
         self.connector_name = "Shared weights"
@@ -146,19 +146,19 @@ class SharedProjection(Projection):
 
         *Parameters*:
 
-            * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
+        * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
 
-            * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
+        * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
 
-            * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
+        * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
 
-            * **keep_last_dimension**: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
+        * **keep_last_dimension**: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
 
-            * **multiple**: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
+        * **multiple**: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
 
-            * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
+        * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
 
-            * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. dDfault: None.
+        * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
         """
         self._operation_type = 'convolve'
         self.method = method
@@ -239,11 +239,11 @@ class SharedProjection(Projection):
 
         *Parameters*:
 
-            * **delays**: delays (in ms) in synaptic transmission. Must be a single value for all neurons.
+        * **delays**: delays (in ms) in synaptic transmission. Must be a single value for all neurons.
 
-            * **extent**: Extent of the pooling area expressed in the geometry of the pre-synaptic population. In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons.
+        * **extent**: Extent of the pooling area expressed in the geometry of the pre-synaptic population. In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons.
 
-            * **overlap**: TODO, not implemented yet.
+        * **overlap**: TODO, not implemented yet.
         """
         self._operation_type = 'pooling'
         self.weights = []
@@ -293,15 +293,15 @@ class SharedProjection(Projection):
 
     def copy(self, projection):
         """
-            Creates a virtual connection pattern reusing the weights and delays of an already-defined projection.
+        Creates a virtual connection pattern reusing the weights and delays of an already-defined projection.
 
-            Although the original projection can be learnable, this one can not. Changes in the original weights will be reflected in this projection. The only possible modifications are ``psp`` and ``operation``.
+        Although the original projection can be learnable, this one can not. Changes in the original weights will be reflected in this projection. The only possible modifications are ``psp`` and ``operation``.
 
-            The pre- and post-synaptic populations of each projection must have the same geometry.
+        The pre- and post-synaptic populations of each projection must have the same geometry.
 
-            *Parameters*:
+        *Parameters*:
 
-            * **projection**: the projection to reuse.
+        * **projection**: the projection to reuse.
         """
         self._operation_type = 'copy'
         self.projection = projection

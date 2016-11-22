@@ -29,7 +29,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
-import ANNarchy.core.Connectors as ConnectorMethods
+from ANNarchy.core import ConnectorMethods
 
 
 class Projection(object):
@@ -41,11 +41,11 @@ class Projection(object):
         """
         *Parameters*:
 
-            * **pre**: pre-synaptic population (either its name or a ``Population`` object).
-            * **post**: post-synaptic population (either its name or a ``Population`` object).
-            * **target**: type of the connection.
-            * **synapse**: a ``Synapse`` instance.
-            * **name**: unique name of the projection (optional).
+        * **pre**: pre-synaptic population (either its name or a ``Population`` object).
+        * **post**: post-synaptic population (either its name or a ``Population`` object).
+        * **target**: type of the connection.
+        * **synapse**: a ``Synapse`` instance.
+        * **name**: unique name of the projection (optional).
 
         By default, the synapse only ensures linear synaptic transmission:
 
@@ -120,6 +120,9 @@ class Projection(object):
             self.init[var['name']] = var['init']
 
         self.attributes = self.parameters + self.variables
+
+        # Get a list of user-defined functions
+        self.functions = [func['name'] for func in self.synapse_type.description['functions']]
 
         # Add the population to the global network
         Global._network[0]['projections'].append(self)
@@ -347,8 +350,8 @@ class Projection(object):
 
         *Parameters*:
 
-            * **pre**: rank of the pre-synaptic neuron.
-            * **post**: rank of the post-synaptic neuron.
+        * **pre**: rank of the pre-synaptic neuron.
+        * **post**: rank of the post-synaptic neuron.
         """
         if not isinstance(pre, int) or not isinstance(post, int):
             Global._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
@@ -399,19 +402,20 @@ class Projection(object):
         return self.__getattr__(name)
 
     def set(self, value):
-        """ Sets the parameters/variables values for each dendrite in the projection.
+        """ 
+        Sets the parameters/variables values for each dendrite in the projection.
 
         For parameters, you can provide:
 
-            * a single value, which will be the same for all dendrites.
+        * a single value, which will be the same for all dendrites.
 
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
+        * a list or 1D numpy array of the same length as the number of actual dendrites (self.size).
 
         For variables, you can provide:
 
-            * a single value, which will be the same for all synapses of all dendrites.
+        * a single value, which will be the same for all synapses of all dendrites.
 
-            * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will take the same value.
+        * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will take the same value.
 
         .. warning::
 
@@ -420,7 +424,7 @@ class Projection(object):
                 for dendrite in proj.dendrites:
                     dendrite.w = np.ones(dendrite.size)
 
-        *Parameters*:
+        *Parameter*:
 
         * **value**: a dictionary with the name of the parameter/variable as key.
 
@@ -441,6 +445,8 @@ class Projection(object):
                     return self.init[name]
                 else:
                     return self._get_cython_attribute( name )
+            elif name in self.functions:
+                return self._function(name)
             else:
                 return object.__getattribute__(self, name)
         return object.__getattribute__(self, name)
@@ -468,7 +474,7 @@ class Projection(object):
         Returns the value of the given attribute for all neurons in the population,
         as a list of lists having the same geometry as the population if it is local.
 
-        Parameter:
+        *Parameter:*
 
         * *attribute*: should be a string representing the variables's name.
 
@@ -480,7 +486,7 @@ class Projection(object):
         Sets the value of the given attribute for all post-synaptic neurons in the projection,
         as a NumPy array having the same geometry as the population if it is local.
 
-        Parameter:
+        *Parameter:*
 
         * *attribute*: should be a string representing the variables's name.
 
@@ -523,11 +529,25 @@ class Projection(object):
         "flags such as learning, transmission"
         getattr(self.cyInstance, '_set_'+attribute)(value)
 
+
+
+    ################################
+    ## Access to functions
+    ################################
+    def _function(self, func):
+        "Access a user defined function"
+        if not self.initialized:
+            Global._error('the network is not compiled yet, cannot access the function ' + func)
+
+        return getattr(self.cyInstance, func)
+
+        
     ################################
     ## Variable flags
     ################################
     def set_variable_flags(self, name, value):
-        """ Sets the flags of a variable for the projection.
+        """ 
+        Sets the flags of a variable for the projection.
 
         If the variable ``r`` is defined in the Synapse description through:
 
@@ -570,8 +590,8 @@ class Projection(object):
                 try:
                     self.synapse_type.description['variables'][rk_var]['flags'].remove(key)
                 except: # the flag did not exist, check if it is a bound
-                    if has_key(self.synapse_type.description['variables'][rk_var]['bounds'], key):
-                        self.synapse_type.description['variables'][rk_var]['bounds'].pop(key)
+                    if self.synapse_type.description['variables'][rk_var]['bounds'].has_key(key):
+                        self.synapse_type.description['variables'][rk_var]['bounds'].remove(key)
             else: # new value for init, min, max...
                 if key == 'init':
                     self.synapse_type.description['variables'][rk_var]['init'] = val
@@ -579,10 +599,9 @@ class Projection(object):
                 else:
                     self.synapse_type.description['variables'][rk_var]['bounds'][key] = val
 
-
-
     def set_variable_equation(self, name, equation):
-        """ Changes the equation of a variable for the projection.
+        """ 
+        Changes the equation of a variable for the projection.
 
         If the variable ``w`` is defined in the Synapse description through:
 
@@ -680,7 +699,7 @@ class Projection(object):
                 self.cyInstance._set_update(False)
             else:
                 self.cyInstance._set_plasticity(False)
-        except Exception as e:
+        except:
             Global._warning('disabling learning is only possible after compile().')
 
 
@@ -857,7 +876,7 @@ class Projection(object):
         for var in attributes:
             try:
                 desc[var] = getattr(self.cyInstance, 'get_'+var)()
-            except Exception as e:
+            except:
                 Global._warning('Can not save the attribute ' + var + ' in the projection.')
 
         return desc
@@ -910,9 +929,9 @@ class Projection(object):
 
         * **filename**: filename, may contain relative or absolute path.
 
-            .. warning::
+        .. warning::
 
-                The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+            The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
         Example::
 
