@@ -29,6 +29,7 @@ from ANNarchy.core import Global
 from ANNarchy.generator.Utils import generate_equation_code, tabify
 
 import re
+from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 
 class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
     """
@@ -760,11 +761,11 @@ if(%(condition)s){
 
         deps = []
         # dependencies consists of several componentes:
-        # - acces to pre- or post-population
+        # - access to pre- or post-population
         # - variables / parameters of the projection
         # - pre- or post-spike event
         pop_deps = list(set(proj.synapse_type.description['dependencies']['pre'] +
-                            proj.synapse_type.description['dependencies']['post']))
+                            proj.synapse_type.description['dependencies']['post'] ))
 
         for attr in ( proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters'] ):
             deps.append(attr['name'])
@@ -778,28 +779,32 @@ if(%(condition)s){
         kernel_args_call = ""
         for dep in deps:
             if dep in pop_deps:
-                # Attention: a variable can occur in pre and post,
-                # consequently the two independent if cases
                 if proj.pre.id != proj.post.id:
+                    # Attention: a variable can occur in pre and post,
+                    # consequently the two independent if cases
                     if dep in proj.synapse_type.description['dependencies']['pre']:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.pre.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.pre.id, 'name': dep}
+                        attr = PopulationGenerator._get_attr(proj.pre, dep)
+                        ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
                     if dep in proj.synapse_type.description['dependencies']['post']:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.post.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.post.id, 'name': dep}
+                        attr = PopulationGenerator._get_attr(proj.post, dep)
+                        ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
                 else:
                     if dep in proj.synapse_type.description['dependencies']['pre']:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.pre.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.pre.id, 'name': dep}
+                        attr = PopulationGenerator._get_attr(proj.pre, dep)
+                        ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
                     else:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.post.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.post.id, 'name': dep}
+                        attr = PopulationGenerator._get_attr(proj.post, dep)
+                        ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
             else:
                 attr = self._get_attr(proj, dep)
@@ -807,6 +812,31 @@ if(%(condition)s){
                 kernel_args += ", %(type)s* %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
                 kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
 
+        #
+        # global operations related to pre- and post-synaptic operations
+        for glop in proj.synapse_type.description['pre_global_operations']:
+            attr = PopulationGenerator._get_attr(proj.pre, glop['variable'])
+            ids = {
+                'id': proj.pre.id,
+                'name': glop['variable'],
+                'type': attr['ctype'],
+                'func': glop['function']
+            }
+            kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+            kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+
+        for glop in proj.synapse_type.description['post_global_operations']:
+            attr = PopulationGenerator._get_attr(proj.post, glop['variable'])
+            ids = {
+                'id': proj.post.id,
+                'name': glop['variable'],
+                'type': attr['ctype'],
+                'func': glop['function']
+            }
+            kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+            kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+
+        #
         # Dictionary of pre/suffixes
         ids = {
             'id_proj' : proj.id,

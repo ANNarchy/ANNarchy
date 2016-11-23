@@ -249,18 +249,21 @@ def functions(name, net_id=0):
 ################################
 ## Learning flags
 ################################
-def enable_learning(projections=None, net_id=0):
+def enable_learning(projections=None, period=None, offset=None, net_id=0):
     """
-    Enables learning for all projections.
+    Enables learning for all projections. Optionally *period* and *offset* can be changed for all projections.
 
     *Parameter*:
 
     * **projections**: the projections whose learning should be enabled. By default, all the existing projections are enabled.
+    * **period** determines how often the synaptic variables will be updated.
+    * **offset** determines the offset at which the synaptic variables will be updated relative to the current time.
+
     """
     if not projections:
         projections = _network[net_id]['projections']
     for proj in projections:
-        proj.enable_learning()
+        proj.enable_learning(period, offset)
 
 def disable_learning(projections=None, net_id=0):
     """

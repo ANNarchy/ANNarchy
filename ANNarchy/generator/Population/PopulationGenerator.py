@@ -129,7 +129,8 @@ class PopulationGenerator(object):
 
         return declaration, accessors
 
-    def _get_attr(self, pop, name):
+    @staticmethod
+    def _get_attr(pop, name):
         """
         Small helper function, used for instance in self.update_spike_neuron_cuda
         """
