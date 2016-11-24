@@ -376,6 +376,7 @@ class Compiler(object):
 
     def generate_makefile(self):
         "Generate the Makefile."
+
         # Compiler
         if sys.platform.startswith('linux'): # Linux systems
             if self.compiler == "default":
@@ -386,7 +387,7 @@ class Compiler(object):
 
         # flags are common to all platforms
         if not self.debug_build:
-            cpu_flags = "-march=native -O2"
+            cpu_flags = self.compiler_flags
         else:
             cpu_flags = "-O0 -g -D_DEBUG"
 
