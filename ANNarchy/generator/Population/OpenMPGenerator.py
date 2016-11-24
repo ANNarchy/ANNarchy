@@ -405,7 +405,7 @@ class OpenMPGenerator(PopulationGenerator):
         mean_FR_push = ""; mean_FR_update = ""
         if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
             window = pop._compute_mean_fr
-            window_int = long(window/Global.config['dt'])
+            window_int = int(window/Global.config['dt'])
             mean_FR_push = """
                 // Update the mean firing rate
                 _spike_history[i].push(t);
