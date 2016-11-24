@@ -189,7 +189,7 @@ def compile(    directory='annarchy',
                 Global._print('ANNarchy has been updated, recompiling...')
                 clean = True
 
-            if prev_paradigm != Global.config['paradigm']:
+            elif prev_paradigm != Global.config['paradigm']:
                 Global._print('Parallel framework has been changed, recompiling...')
                 clean = True
 
