@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core.Global import _error, _warning, _objects
+import ANNarchy.core.Global as Global
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
 class Synapse(object):
@@ -64,20 +64,22 @@ class Synapse(object):
 
         # Check the operation
         if self.type == 'spike' and self.operation != 'sum':
-            _error('Spiking synapses can only perform a sum of presynaptic potentials.')
+            Global._error('Spiking synapses can only perform a sum of presynaptic potentials.')
+
+        if Global._check_paradigm('cuda') and self.operation != 'sum':
+            Global._error('Non-linear summation is not available on CUDA yet.')
             
         if not self.operation in ['sum', 'min', 'max', 'mean']:
-            _error('The only operations permitted are: sum (default), min, max, mean.')
+            Global._error('The only operations permitted are: sum (default), min, max, mean.')
             
-
         # Description
         self.description = None
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
-            _objects['synapses'].append(self)
+            Global._objects['synapses'].append(self)
         elif len(self._instantiated) == 0: # First instantiated of the class
-            _objects['synapses'].append(self)
+            Global._objects['synapses'].append(self)
 
         if name:
             self.name = name
@@ -98,50 +100,10 @@ class Synapse(object):
             self.description = analyse_synapse(self)
 
     def __add__(self, synapse):  
-        _error('adding synapse models is not implemented yet.')
+        Global._error('adding synapse models is not implemented yet.')
               
         #self._variables.update(synapse.variables) 
 
     def __str__(self):
         import pprint
         return pprint.pformat( self, depth=4 ) #TODO
-
-
-class RateSynapse(Synapse):
-    """
-    Base class to define a rate-coded synapse.
-    """
-    
-    def __init__(self, parameters="", equations="", psp=None, functions=None, name=None, description=None, extra_values={}):
-        """ 
-        *Parameters*:
-        
-        * **parameters**: parameters of the neuron and their initial value.
-        * **equations**: equations defining the temporal evolution of variables.
-        * **psp**: post-synaptic potential summed by the post-synaptic neuron.
-        * **functions**: additional functions used in the variables' equations.
-
-        """         
-        _warning("The use of RateSynapse or SpikeSynapse is deprecated, use Synapse instead.")
-        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, functions=functions, name=name, description=description, extra_values=extra_values)
-        
-class SpikeSynapse(Synapse):
-    """
-    Bae class to define a spiking synapse.
-    """
-
-    def __init__(self, parameters="", equations="", psp=None, pre_spike=None, post_spike=None, functions=None, name=None, description=None, extra_values={}):
-        """ 
-        *Parameters*:
-        
-        * **parameters**: parameters of the neuron and their initial value.
-        * **equations**: equations defining the temporal evolution of variables.
-        * **psp**: post-synaptic potential summed by the post-synaptic neuron.
-        * **pre_spike**: updating of variables when a pre-synaptic spike is received.
-        * **post_spike**: updating of variables when a post-synaptic spike is emitted.
-        * **functions**: additional functions used in the variables' equations.
-
-        """  
-        _warning("The use of RateSynapse or SpikeSynapse is deprecated, use Synapse instead.")
-        Synapse.__init__(self, parameters=parameters, equations=equations, psp=psp, pre_spike=pre_spike, post_spike=post_spike, functions=functions, name=name, description=description, extra_values=extra_values)
-

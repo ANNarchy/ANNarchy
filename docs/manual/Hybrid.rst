@@ -43,3 +43,7 @@ The ``window`` argument defines the duration in milliseconds of the sliding temp
 The weights of the projection define the scaling of the decoded firing rate. If one wants a firing rate of 100 Hz to be represented by ``r=1.0``, the weights should be set to 0.01.
 
 No ``Synapse`` model can be used in a ``DecodingProjection``.
+
+.. warning::
+
+    ``DecodingProjection`` is not implemented on CUDA yet.

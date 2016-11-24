@@ -22,6 +22,9 @@ One would like to compare the firing patterns in ``pop2`` when:
 * The Poisson input is at 10 Hz.
 * The Poisson input is at 20 Hz.
 
+.. warning::
+
+    Running multiple networks in parallel is not supported on CUDA.
 
 Multiple networks
 ===================

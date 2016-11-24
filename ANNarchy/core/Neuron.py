@@ -105,42 +105,6 @@ Reset after a spike:
         return text
 
 
-
-class RateNeuron(Neuron):
-    """
-    Base class to define a rate-coded neuron.
-    """
-    def __init__(self, parameters="", equations="", functions=None, name="", description="", extra_values={}):
-        """
-        *Parameters*:
-
-            * **parameters**: parameters of the neuron and their initial value.
-            * **equations**: equations defining the temporal evolution of variables.
-            * **functions**: additional functions used in the variables' equations.
-
-        """
-        _warning("The use of RateNeuron or SpikeNeuron is deprecated, use Neuron instead.")
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, name=name, description=description, extra_values=extra_values)
-
-class SpikeNeuron(Neuron):
-    """
-    Base class to define a spiking neuron.
-    """
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
-        """
-        *Parameters*:
-
-            * **parameters**: parameters of the neuron and their initial value.
-            * **equations**: equations defining the temporal evolution of variables.
-            * **functions**: additional functions used in the variables' equations.
-            * **spike**: condition to emit a spike.
-            * **reset**: changes to the variables after a spike
-            * **refractory**: refractory period of a neuron after a spike.
-
-        """
-        _warning("The use of RateNeuron or SpikeNeuron is deprecated, use Neuron instead.")
-        Neuron.__init__(self, parameters=parameters, equations=equations, functions=functions, spike=spike, reset=reset, refractory=refractory, name=name, description=description, extra_values=extra_values)
-
 class IndividualNeuron(object):
     """
     Neuron object returned by the Population.neuron(rank) method.

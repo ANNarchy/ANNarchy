@@ -275,13 +275,15 @@ In order to take longer propagation times into account in the transmission of in
 
 If the delay is not a multiple of the simulation time step (``dt = 1.0`` by default), it will be rounded to the closest multiple. The same is true for the values returned by a random number generator.
 
-.. hint::
-
-    Per design, the minimal possible delay is equal to ``dt``: values smaller than ``dt`` will be replaced by ``dt``. Negative values do not make any sense and are ignored.
+**Note:** Per design, the minimal possible delay is equal to ``dt``: values smaller than ``dt`` will be replaced by ``dt``. Negative values do not make any sense and are ignored.
 
 .. warning::
 
-    Spiking projections do not accept non-uniform delays yet.
+    Spiking projections accept non-uniform delays, but it is extremely slow (factor 100 at least).
+
+.. warning::
+
+    Non-uniform delays are not available on CUDA.
 
 Controlling projections
 ===================================
@@ -351,4 +353,12 @@ For spiking neurons, it may be desirable that a single synapses activates differ
 
 However, ``g_ampa`` and ``g_nmda`` collect by default spikes from different projections, so the weights will not be shared between the "ampa" projection and the "nmda" one. It is therefore possible to specify a list of targets when building a projection, meaning that a single pre-synaptic spike will increase both ``g_ampa`` and ``g_nmda`` from the same weight::
 
-    proj = Projection(pop1, pop2, ['ampa', 'nmda'], STDP)
+    proj = Projection(pop1, pop2, ['ampa', 'nmda'], STDP
+
+
+An example is provided in ``examples/homeostatic_stdp/Ramp.py``.
+
+
+.. warning::
+
+    Multiple targets are not available on CUDA yet.

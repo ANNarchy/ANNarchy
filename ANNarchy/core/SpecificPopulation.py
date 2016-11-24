@@ -656,6 +656,9 @@ class SpikeSourceArray(SpecificPopulation):
 
         if not isinstance(spike_times, list):
             Global._error('In a SpikeSourceArray, spike_times must be a Python list.')
+
+        if Global._check_paradigm('cuda'):
+            Global._error('SpikeSourceArrays are not implemented on CUDA yet.')
             
 
         if isinstance(spike_times[0], list): # several neurons

@@ -10,7 +10,7 @@ Projections use by default a set of weights per post-synaptic neuron. Some netwo
 
 .. warning::
 
-    As of version 4.3.1, weight-sharing is only implemented for rate-coded networks. The only possible backend is OpenMP, CUDA will be implemented later.
+    Weight-sharing is only implemented for rate-coded networks. The only possible backend is currently OpenMP, CUDA will be implemented later.
 
 
 Simple convolutions

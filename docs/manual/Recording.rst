@@ -223,5 +223,7 @@ The ``Monitor`` object has the same ``start()``, ``pause()``, ``resume()`` and `
         for monitor in monitors:
             data.append(monitor.get('w'))
 
+.. warning::
 
+    Recording synaptic variables with CUDA is not available.
 
