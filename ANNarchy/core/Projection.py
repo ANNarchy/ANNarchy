@@ -697,16 +697,16 @@ class Projection(object):
 
         def get_rf(rank): # TODO: IMPROVE
             res = np.zeros( self.pre.size )
-            for n in xrange(len(self.post_ranks)):
+            for n in range(len(self.post_ranks)):
                 if self.post_ranks[n] == n:
                     pre_ranks = self.cyInstance.pre_rank(n)
                     data = getattr(self.cyInstance, 'get_dendrite_'+variable)(rank)
-                    for j in xrange(len(pre_ranks)):
+                    for j in range(len(pre_ranks)):
                         res[pre_ranks[j]] = data[j]
             return res.reshape(self.pre.geometry)
 
         res = np.zeros((1, x_size*self.pre.geometry[1]))
-        for y in xrange ( y_size ):
+        for y in range ( y_size ):
             row = np.concatenate(  [ get_rf(self.post.rank_from_coordinates( (y, x) ) ) for x in range ( x_size ) ], axis = 1)
             res = np.concatenate((res, row))
 
