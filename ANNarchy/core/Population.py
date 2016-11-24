@@ -457,8 +457,10 @@ class Population(object):
 
         * **window**: window in ms over which the spikes will be counted.
         """
+        if Global._check_paradigm('cuda'):
+            Global._error('compute_firing_rate() is not supported on CUDA yet.')
         if self.neuron_type.type == 'rate':
-            Global._warning('compute_firing_rate(): the neuron is already rate-coded...')
+            Global._error('compute_firing_rate(): the neuron is already rate-coded...')
         else:
             self._compute_mean_fr = float(window)
 

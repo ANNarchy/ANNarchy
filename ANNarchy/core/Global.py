@@ -476,6 +476,24 @@ def resume_record(to_record=None):
             get_population(pop).resume_record(variables)
 
 ################################
+## Paradigm
+################################
+def _check_paradigm(paradigm):
+    """
+    Returns True when the provided paradigm is currently used.
+
+    Possible values:
+
+    1. "openmp"
+    2. "cuda"
+    """
+    try:
+        return paradigm == config['paradigm']
+    except KeyError:
+        _error("Unknown paradigm")
+
+
+################################
 ## Printing
 ################################
 
