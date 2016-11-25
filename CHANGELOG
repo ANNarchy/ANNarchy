@@ -1,3 +1,8 @@
+**4.6.0**
+
+* CUDA now supports now the simulation of spiking neurons (please refer the documentation to discover limitations)
+* Issue 38: custom functions are now available in user space
+
 **4.5.7**
 
 * Sympy 1.0 introduced a regression to the != operator.
