@@ -1009,24 +1009,26 @@ if(_transmission && pop%(id_post)s._active){
     }
 """
         return code
+
     def _update_synapse(self, proj):
         prefix = """
-        int rk_post, rk_pre;"""
+        int rk_post, rk_pre;
+        double _dt = dt * _update_period;"""
 
         # Dictionary of pre/suffixes
         ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': '[i][j]',
-                'global_index': '[i]',
-                'pre_index': '[rk_pre]',
-                'post_index': '[rk_post]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+            'id_proj' : proj.id,
+            'target': proj.target,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+            'local_index': '[i][j]',
+            'global_index': '[i]',
+            'pre_index': '[rk_pre]',
+            'post_index': '[rk_post]',
+            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+            'post_prefix': 'pop'+ str(proj.post.id) + '.',
+            'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
         # Global variables
@@ -1034,6 +1036,11 @@ if(_transmission && pop%(id_post)s._active){
 
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
+
+        # adjust dt dependent on the _update_period, this covers only
+        # the switch statements
+        global_eq = global_eq.replace(" dt*", " _dt*")
+        local_eq = local_eq.replace(" dt*", " _dt*")
 
         # Skip generation if
         if local_eq.strip() == '' and global_eq.strip() == '':

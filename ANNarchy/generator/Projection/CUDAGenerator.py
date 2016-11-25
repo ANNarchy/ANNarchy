@@ -803,12 +803,14 @@ if(%(condition)s){
         if global_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
 
+        #
+        # ATTENTION: the _dt is equal to dt * _update_period
         if proj.synapse_type.type == "rate":
             default_args = "int* pre_rank, int *row_ptr, double dt"
-            default_args_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, dt" % {'id_proj': proj.id}
+            default_args_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt" % {'id_proj': proj.id}
         else:
             default_args = "int *pre_rank, int *row_ptr, double dt"
-            default_args_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, dt" % {'id_proj': proj.id}
+            default_args_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt" % {'id_proj': proj.id}
 
         deps = []
         # dependencies consists of several componentes:

@@ -319,6 +319,7 @@ __global__ void cuProj%(id)s_step( /* default params */
     {
 %(global_eqs)s
     }
+    __syncthreads();
 
     // Updating local variables of projection %(id)s
     while ( j < C )
@@ -336,6 +337,7 @@ __global__ void cuProj%(id)s_step( /* default params */
     'call': """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
+        double _dt = dt * proj%(id_proj)s._update_period;
         cuProj%(id_proj)s_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
             /* default args*/
             %(default_args_call)s

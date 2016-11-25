@@ -545,7 +545,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
 
     Global._network[net_id]['instance'] = cython_module
 
-    if cuda_config:
+    if cuda_config and Global._check_paradigm("cuda"):
         Global._print('setting device', cuda_config['device'])
         cython_module.set_device(cuda_config['device'])
 

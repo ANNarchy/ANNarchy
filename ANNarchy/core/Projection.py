@@ -576,7 +576,7 @@ class Projection(object):
                 period = Global.config['dt']
             if offset != None:
                 relative_offset = Global.get_time() % period + offset
-                self.cyInstance._set_update_offset(int(relative_offset%period))
+                self.cyInstance._set_update_offset(int(int(relative_offset%period)/Global.config['dt']))
             else:
                 self.cyInstance._set_update_offset(int(0))
         except:

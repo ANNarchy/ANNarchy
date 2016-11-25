@@ -385,6 +385,7 @@ __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 
     // Updating global variables of population %(id)s
 %(global_eqs)s
+    __syncthreads();
 
     // Updating local variables of population %(id)s
     while ( i < %(pop_size)s )
