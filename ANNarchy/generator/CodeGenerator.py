@@ -407,6 +407,8 @@ class CodeGenerator(object):
             custom_func = ""
             for pop in self._pop_desc:
                 custom_func += pop['custom_func']
+            for proj in self._proj_desc:
+                custom_func += proj['custom_func']
 
             pop_kernel = ""
             for pop in self._pop_desc:

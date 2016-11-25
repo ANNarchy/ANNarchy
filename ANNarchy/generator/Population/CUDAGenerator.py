@@ -29,7 +29,7 @@ from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 
-from ANNarchy.generator.Utils import generate_equation_code, tabify
+from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
 import re
 from math import ceil
@@ -374,7 +374,7 @@ class CUDAGenerator(PopulationGenerator):
             host_code += cpp_func
             device_code += cpp_func.replace('double '+func['name'], '__device__ double pop%(id)s_%(func)s'%{'id': pop.id, 'func':func['name']})
 
-        return host_code, self._check_and_apply_pow_fix(device_code)
+        return host_code, check_and_apply_pow_fix(device_code)
 
     def _replace_local_funcs(self, pop, glob_eqs, loc_eqs):
         """
@@ -602,8 +602,8 @@ class CUDAGenerator(PopulationGenerator):
             var_wo_types = var_wo_types.replace(attr_type, "")
             par_wo_types = par_wo_types.replace(attr_type, "")
 
-        loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
-        glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
+        loc_eqs = check_and_apply_pow_fix(loc_eqs)
+        glob_eqs = check_and_apply_pow_fix(glob_eqs)
 
         # replace local function calls
         if len(pop.neuron_type.description['functions']) > 0:
@@ -995,31 +995,3 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             device_host_transfer = pop._specific_template['device_host_transfer']
 
         return host_device_transfer, device_host_transfer
-
-    def _check_and_apply_pow_fix(self, eqs):
-        """
-        CUDA SDKs before 7.5 had an error if std=c++11 is enabled related
-        to pow(double, int). Only pow(double, double) was detected as
-        device function, the pow(double, int) will be detected as host
-        function. (This was fixed within SDK 7.5)
-
-        To support also earlier versions, we simply add a double type cast.
-        """
-        from ANNarchy.generator.CudaCheck import CudaCheck
-        if eqs.strip() == "":
-            # nothing to do
-            return eqs
-
-        if CudaCheck().runtime_version() > 7000:
-            # nothing to do, is working in higher SDKs
-            return eqs
-
-        if Global.config['verbose']:
-            Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
-
-        # detect all pow statements
-        pow_occur = re.findall(r"pow\([^\(]*\)", eqs)
-        for term in pow_occur:
-            eqs = eqs.replace(term, term.replace(',', ',(double)'))
-
-        return eqs

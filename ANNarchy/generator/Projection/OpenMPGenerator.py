@@ -92,6 +92,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         # Connectivity matrix
         connectivity_matrix = self._connectivity(proj)
 
+        # local functions
+        decl['parameters_variables'] += self._local_functions(proj)
+
         # Profiling
         if self._prof_gen:
             include_profile = """#include "Profiling.h"\n"""
@@ -834,6 +837,18 @@ if (%(condition)s) {
     dist_%(rd_name)s = %(rd_init)s;
 """ % {'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': proj.id}}
         return code
+
+    def _local_functions(self, proj):
+        " Local functions "
+        local_func = ""
+        if len(proj.synapse_type.description['functions']) > 0:
+            local_func += """
+    // Local functions
+"""
+            for func in proj.synapse_type.description['functions']:
+                local_func += ' '*4 + func['cpp'] + '\n'
+
+        return local_func
 
     def _post_event(self, proj):
         if proj.synapse_type.type == "rate":

@@ -26,10 +26,10 @@ from .CUDATemplates import cuda_templates
 from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
-from ANNarchy.generator.Utils import generate_equation_code, tabify
+from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
-import re
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
+import re
 
 class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
     """
@@ -83,6 +83,10 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         # Memory transfers
         host_device_transfer, device_host_transfer = self._memory_transfers(proj)
+
+        # Local functions
+        host_local_func, device_local_func = self._local_functions(proj)
+        decl['parameters_variables'] += host_local_func
 
         # Profiling
         if self._prof_gen:
@@ -170,6 +174,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         proj_desc['psp_header'] = psp_header
         proj_desc['psp_body'] = psp_body
         proj_desc['psp_call'] = psp_call
+        proj_desc['custom_func'] = device_local_func
 
         proj_desc['update_synapse_header'] = update_variables_header
         proj_desc['update_synapse_body'] = update_variables_body
@@ -571,6 +576,52 @@ if(%(condition)s){
 
         return header, body, call
 
+    def _local_functions(self, proj):
+        """
+        Definition of user-defined local functions attached to
+        a neuron. These functions will take place in the
+        ANNarchyDevice.cu file.
+
+        As the local functions can be occur repeatadly in the same file,
+        there are modified with pop[id]_ to unique them.
+
+        Return:
+
+            * host_define, device_define
+        """
+        # Local functions
+        if len(proj.synapse_type.description['functions']) == 0:
+            return "", ""
+
+        host_code = ""
+        device_code = ""
+        for func in proj.synapse_type.description['functions']:
+            cpp_func = func['cpp'] + '\n'
+
+            host_code += cpp_func
+            device_code += cpp_func.replace('double '+func['name'], '__device__ double proj%(id)s_%(func)s'%{'id': proj.id, 'func':func['name']})
+
+        return host_code, check_and_apply_pow_fix(device_code)
+
+    def _replace_local_funcs(self, proj, glob_eqs, loc_eqs):
+        """
+        As the local functions can be occur repeatadly in the same file,
+        there are modified with proj[id]_ to unique them. Now we need
+        to adjust the call accordingly.
+        """
+        for func in proj.synapse_type.description['functions']:
+            search_term = "%(name)s\([^\(]*\)" % {'name': func['name']}
+
+            func_occur = re.findall(search_term, glob_eqs)
+            for term in func_occur:
+                glob_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
+
+            func_occur = re.findall(search_term, loc_eqs)
+            for term in func_occur:
+                loc_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
+
+        return glob_eqs, loc_eqs
+
     def _post_event(self, proj):
         """
         Post-synaptic event kernel for CUDA devices
@@ -853,12 +904,20 @@ if(%(condition)s){
             'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
+        # fill code templates
+        global_eq = global_eq % ids
+        local_eq = local_eq % ids
+
+        # replace local function calls
+        if len(proj.synapse_type.description['functions']) > 0:
+            global_eq, local_eq = self._replace_local_funcs(proj, global_eq, local_eq)
+
         body = self._templates['synapse_update']['body'] % {
             'id': proj.id,
             'default_args': default_args,
             'kernel_args': kernel_args,
-            'global_eqs': global_eq % ids,
-            'local_eqs': local_eq % ids,
+            'global_eqs': global_eq,
+            'local_eqs': local_eq,
             'target': proj.target,
             'pre': proj.pre.id,
             'post': proj.post.id,
