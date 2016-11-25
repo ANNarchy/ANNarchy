@@ -247,6 +247,10 @@ def load(filename, populations=True, projections=True, net_id=0):
     desc = _load_data(filename)
     if desc is None:
         return
+
+    if 'time_step' in desc.keys():
+        Global.set_current_step(desc['time_step'], net_id)
+
     if populations:
         # Over all populations
         for pop in Global._network[net_id]['populations']:  
@@ -269,6 +273,7 @@ def _net_description(populations, projections, net_id=0):
         * *projections*: if *True* the projection data will be saved
     """
     network_desc = {}   
+    network_desc['time_step'] = Global.get_current_step(net_id)
     
     if populations:
         for pop in Global._network[net_id]['populations']:             

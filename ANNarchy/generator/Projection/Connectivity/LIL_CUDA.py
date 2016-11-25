@@ -52,21 +52,36 @@ connectivity_matrix = {
     int nb_synapses(int n) { return pre_rank[n].size(); }
 """,
    'init': """
-        // row_ptr and overallSynapses
+        // compute row_ptr and overallSynapses
         genRowPtr();
+
     #ifdef _DEBUG_CONN
-        std::cout << "Post to Pre:" << std::endl;
+        std::cout << "pop%(id_pre)s->pop%(id_post)s ( %(target)s )" << std::endl;
+        std::cout << "  Post to Pre:" << std::endl;
         for(int i = 0; i < pop%(id_post)s.size; i++) {
-            std::cout << i << ": " << row_ptr[i] << " -> "<< row_ptr[i+1] << std::endl;
+            std::cout << "    " << i << ": " << row_ptr[i] << " -> "<< row_ptr[i+1] << std::endl;
         }
+        std::cout << "  contains " << overallSynapses << " synapses." << std::endl;
     #endif
+
+        // transfer row pointer
         cudaMalloc((void**)&gpu_row_ptr, row_ptr.size()*sizeof(int));
         cudaMemcpy(gpu_row_ptr, row_ptr.data(), row_ptr.size()*sizeof(int), cudaMemcpyHostToDevice);
+    #ifdef _DEBUG
+        cudaError_t err_row_ptr = cudaGetLastError();
+        if ( err_row_ptr != cudaSuccess )
+            std::cout << "HtoD: row_ptr (proj%(id_proj)s) " << cudaGetErrorString(err_row_ptr) << std::endl;
+    #endif
 
-        // pre ranks
+        // transfer pre ranks
         std::vector<int> flat_pre_rank = flattenArray<int>(pre_rank);
         cudaMalloc((void**)&gpu_pre_rank, flat_pre_rank.size()*sizeof(int));
         cudaMemcpy(gpu_pre_rank, flat_pre_rank.data(), flat_pre_rank.size()*sizeof(int), cudaMemcpyHostToDevice);
+    #ifdef _DEBUG
+        cudaError_t err_pre_rank = cudaGetLastError();
+        if ( err_pre_rank != cudaSuccess )
+            std::cout << "HtoD: err_pre_rank (proj%(id_proj)s) " << cudaGetErrorString(err_pre_rank) << std::endl;
+    #endif
 """,
     'pyx_struct': """
         vector[int] get_post_rank()
@@ -336,9 +351,9 @@ attribute_device_to_host = {
             cudaMemcpy(flat_%(name)s.data(), gpu_%(name)s, flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
             %(name)s = deFlattenArray< %(type)s >( flat_%(name)s );
         #ifdef _DEBUG
-            cudaError_t err = cudaGetLastError();
-            if ( err!= cudaSuccess )
-                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+            cudaError_t err_%(name)s = cudaGetLastError();
+            if ( err_%(name)s != cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
 """,
     'global': """
@@ -348,9 +363,9 @@ attribute_device_to_host = {
         #endif
             cudaMemcpy( %(name)s.data(), gpu_%(name)s,  post_rank.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
-            cudaError_t err = cudaGetLastError();
-            if ( err!= cudaSuccess )
-                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+            cudaError_t err_%(name)s = cudaGetLastError();
+            if ( err_%(name)s != cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
 """
 }
