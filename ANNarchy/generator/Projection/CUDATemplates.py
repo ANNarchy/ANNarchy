@@ -218,7 +218,7 @@ __global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(tar
     // write result for this block to global mem
     if (tid == 0)
     {
-        %(target_arg)s[blockIdx.x] = sdata[0];
+        %(target_arg)s[blockIdx.x] += sdata[0];
     }
 
 }
@@ -249,6 +249,13 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
                        %(add_args)s
                        /* result */
                        %(target_arg)s );
+
+    #ifdef _DEBUG
+        auto err = cudaGetLastError();
+        if ( err != cudaSuccess ) {
+            std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
+        }
+    #endif
     }
 """
 
@@ -301,9 +308,28 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
 ### Update synaptic variables CUDA
 ######################################
 cuda_synapse_kernel = {
-    'body': """
+    'body_global': """
 // gpu device kernel for projection %(id)s
-__global__ void cuProj%(id)s_step( /* default params */
+__global__ void cuProj%(id)s_global_step( int post_size, 
+                              /* default params */
+                              %(default_args)s
+                              /* additional params */
+                              %(kernel_args)s,
+                              /* plasticity enabled */
+                              bool plasticity )
+{
+    int rk_post = threadIdx.x + blockIdx.x*blockDim.x;
+
+    while ( rk_post < post_size ) {
+%(global_eqs)s
+
+        rk_post += gridDim.x * blockDim.x;
+    }
+}
+""",
+    'body_local': """
+// gpu device kernel for projection %(id)s
+__global__ void cuProj%(id)s_local_step( /* default params */
                               %(default_args)s
                               /* additional params */
                               %(kernel_args)s,
@@ -313,13 +339,6 @@ __global__ void cuProj%(id)s_step( /* default params */
     int rk_post = blockIdx.x;
     int j = row_ptr[rk_post] + threadIdx.x;
     int C = row_ptr[rk_post+1];
-
-    // Updating global variables of projection %(id)s
-    if ( threadIdx.x == 0)
-    {
-%(global_eqs)s
-    }
-    __syncthreads();
 
     // Updating local variables of projection %(id)s
     while ( j < C )
@@ -332,13 +351,19 @@ __global__ void cuProj%(id)s_step( /* default params */
     }
 }
 """,
-    'header': """__global__ void cuProj%(id)s_step( %(default_args)s%(kernel_args)s, bool plasticity);
+
+    'header': """__global__ void cuProj%(id)s_global_step( int post_size, %(default_args)s%(kernel_args)s, bool plasticity);
+    __global__ void cuProj%(id)s_local_step( %(default_args)s%(kernel_args)s, bool plasticity);
 """,
     'call': """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
         double _dt = dt * proj%(id_proj)s._update_period;
-        cuProj%(id_proj)s_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
+        
+        // global update
+        int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s__));
+        cuProj%(id_proj)s_global_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
+            proj%(id_proj)s.post_rank.size(),
             /* default args*/
             %(default_args_call)s
             /* kernel args */
@@ -349,9 +374,27 @@ __global__ void cuProj%(id)s_step( /* default params */
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
-        cudaError_t proj%(id_proj)s_step = cudaGetLastError();
-        if (proj%(id_proj)s_step != cudaSuccess) {
-            std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString(proj%(id_proj)s_step) << std::endl;
+        cudaError_t global_step = cudaGetLastError();
+        if ( global_step != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString( global_step ) << std::endl;
+        }
+    #endif
+        
+        // local update
+        cuProj%(id_proj)s_local_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
+            /* default args*/
+            %(default_args_call)s
+            /* kernel args */
+            %(kernel_args_call)s
+            /* synaptic plasticity */
+            , proj%(id_proj)s._plasticity
+        );
+
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t local_step = cudaGetLastError();
+        if ( local_step != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString( local_step) << std::endl;
         }
     #endif
     }

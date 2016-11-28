@@ -798,7 +798,7 @@ if(%(condition)s){
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="plasticity")
+        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=2, wrap_w="plasticity")
 
         if global_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
@@ -914,16 +914,24 @@ if(%(condition)s){
         if len(proj.synapse_type.description['functions']) > 0:
             global_eq, local_eq = self._replace_local_funcs(proj, global_eq, local_eq)
 
-        body = self._templates['synapse_update']['body'] % {
+        body = self._templates['synapse_update']['body_global'] % {
             'id': proj.id,
             'default_args': default_args,
             'kernel_args': kernel_args,
             'global_eqs': global_eq,
-            'local_eqs': local_eq,
             'target': proj.target,
             'pre': proj.pre.id,
             'post': proj.post.id,
         }
+        body += self._templates['synapse_update']['body_local'] % {
+            'id': proj.id,
+            'default_args': default_args,
+            'kernel_args': kernel_args,
+            'local_eqs': local_eq,
+            'target': proj.target,
+            'pre': proj.pre.id,
+            'post': proj.post.id,
+        } 
 
         header = self._templates['synapse_update']['header'] % {
             'id': proj.id,

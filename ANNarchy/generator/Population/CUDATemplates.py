@@ -418,13 +418,13 @@ population_update_call = \
               %(var)s
               /* kernel constants */
               %(par)s );
-    }
 
-#ifdef _DEBUG
-    cudaError_t err_pop_step_%(id)s = cudaGetLastError();
-    if(err_pop_step_%(id)s != cudaSuccess)
-        std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
-#endif
+    #ifdef _DEBUG
+        cudaError_t err_pop_step_%(id)s = cudaGetLastError();
+        if(err_pop_step_%(id)s != cudaSuccess)
+            std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
+    #endif
+    }
 """
 
 spike_gather_kernel = \

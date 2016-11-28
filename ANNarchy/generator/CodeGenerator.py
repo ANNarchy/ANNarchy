@@ -448,6 +448,8 @@ class CodeGenerator(object):
             for proj in self._proj_desc:
                 postevent_call += proj['postevent_call']
 
+            clear_sums = self._body_resetcomputesum_pop()
+            
             # global operations
             glob_ops_header, glob_ops_body = self._body_def_glops()
             kernel_def += glob_ops_header
@@ -500,6 +502,7 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,
+                'clear_sums': clear_sums,
                 'compute_sums' : psp_call,
                 'update_neuron' : update_neuron,
                 'update_globalops' : update_globalops,

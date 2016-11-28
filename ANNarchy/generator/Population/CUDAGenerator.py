@@ -231,8 +231,24 @@ class CUDAGenerator(PopulationGenerator):
         return pop_desc
 
     def reset_computesum(self, pop):
-        # TODO: I think its not necessary to do anything here.
-        return ""
+        code = ""
+
+        for target in sorted(pop.neuron_type.description['targets']):
+            if pop.neuron_type.type == 'rate':
+                code += """ 
+    if ( pop%(id)s._active ) {
+        int tpb = __pop%(id)s__;
+        int nb_blocks = ceil ( double( pop%(id)s.size ) / double( tpb ) );
+        clear_sum <<< nb_blocks, tpb >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+    #ifdef _DEBUG
+        auto err = cudaGetLastError();
+        if ( err != cudaSuccess ) {
+            std::cout << "clear_sum: " << cudaGetErrorString(err) << std::endl;
+        }
+    #endif
+    }
+""" % {'id': pop.id, 'target': target}
+        return code
 
     def _delay_code(self, pop):
         """
