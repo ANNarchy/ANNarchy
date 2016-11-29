@@ -239,6 +239,7 @@ def analyse_synapse(synapse):
         method = find_method(variable)
 
         # Process the bounds
+        bound_dependencies = []
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
                 translator = Equation(variable['name'], variable['bounds']['min'],
@@ -246,6 +247,7 @@ def analyse_synapse(synapse):
                                       type = 'return',
                                       untouched = untouched.keys())
                 variable['bounds']['min'] = translator.parse().replace(';', '')
+                bound_dependencies += translator.dependencies()
 
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
@@ -254,6 +256,7 @@ def analyse_synapse(synapse):
                                       type = 'return',
                                       untouched = untouched.keys())
                 variable['bounds']['max'] = translator.parse().replace(';', '')
+                bound_dependencies += translator.dependencies()
 
         # Analyse the equation
         if condition == []: # Call Equation
@@ -288,7 +291,7 @@ def analyse_synapse(synapse):
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
-        variable['dependencies'] = dependencies # may be needed later
+        variable['dependencies'] = dependencies + bound_dependencies # may be needed later
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
         if method in ['implicit', 'midpoint']:

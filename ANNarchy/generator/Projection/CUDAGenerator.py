@@ -836,9 +836,6 @@ if(%(condition)s){
                     for dep in var['dependencies']:
                         deps.append(dep)
 
-                    for bound in var['bounds']:
-                        deps.append(bound+'_'+var['name'])
-
             deps = list(set(deps))
             return pop_deps, deps
 
@@ -849,6 +846,7 @@ if(%(condition)s){
             """
             kernel_args = ""
             kernel_args_call = ""
+
             for dep in deps:
                 if dep in pop_deps:
                     if proj.pre.id != proj.post.id:
