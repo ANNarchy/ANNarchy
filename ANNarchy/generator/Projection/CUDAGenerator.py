@@ -816,6 +816,11 @@ if(%(condition)s){
             * access to pre- or post-population
             * variables / parameters of the projection
             * pre- or post-spike event
+
+            Return:
+
+            * pop_deps     list of dependencies part of populations
+            * deps         list of all dependencies
             """
             deps = []
 
@@ -837,7 +842,7 @@ if(%(condition)s){
             deps = list(set(deps))
             return pop_deps, deps
 
-        def _gen_kernel_args(proj, (pop_deps, deps)):
+        def _gen_kernel_args(proj, pop_deps, deps):
             """
             The header and function definitions as well as the call statement need
             to be extended with the additional variables.
@@ -937,10 +942,12 @@ if(%(condition)s){
         global_call = ""
 
         # fill code templates
-        kernel_args_global, kernel_args_call_global = _gen_kernel_args(proj, _select_deps(proj, 'global'))
+        global_pop_deps, global_pop = _select_deps(proj, 'global')
+        kernel_args_global, kernel_args_call_global = _gen_kernel_args(proj, global_pop_deps, global_pop)
         global_eq = global_eq % ids
 
-        kernel_args_local, kernel_args_call_local = _gen_kernel_args(proj, _select_deps(proj, 'local'))
+        local_pop_deps, local_pop = _select_deps(proj, 'local')
+        kernel_args_local, kernel_args_call_local = _gen_kernel_args(proj, local_pop_deps, local_pop)
         local_eq = local_eq % ids
 
         # replace local function calls
