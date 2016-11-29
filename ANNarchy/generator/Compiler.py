@@ -85,7 +85,7 @@ def setup_parser():
         def error(self, msg):
             pass
 
-    parser = MyOptionParser ("usage: python %prog [options]")
+    parser = MyOptionParser("usage: python %prog [options]")
 
     group = OptionGroup(parser, "general")
     group.add_option("-c", "--clean", help="enforce complete recompile", action="store_true", default=False, dest="clean")
@@ -165,7 +165,7 @@ def compile(    directory='annarchy',
     Global._network[net_id]['directory'] = annarchy_dir
 
     # Turn OMP off for MacOS
-    if (Global.config['paradigm']=="openmp" and Global.config['num_threads']>1 and sys.platform == "darwin"):
+    if (Global._check_paradigm("openmp") and Global.config['num_threads']>1 and sys.platform == "darwin"):
         Global._warning("OpenMP is not supported on Mac OS yet")
         Global.config['num_threads'] = 1
 

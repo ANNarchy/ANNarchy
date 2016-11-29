@@ -143,8 +143,11 @@ class CodeGenerator(object):
         for proj in self._projections:
             self._proj_desc.append(self._projgen.header_struct(proj, self._annarchy_dir))
 
+        # where all source files should take place
+        source_dest = self._annarchy_dir+'/generate/net'+str(self._net_id)+'/'
+
         # Generate header code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy.h', 'w') as ofile:
+        with open(source_dest+'ANNarchy.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
         # Generate monitor code for the analysed pops and projs
@@ -152,21 +155,21 @@ class CodeGenerator(object):
 
         # Generate cpp code for the analysed pops and projs
         if Global.config['paradigm'] == "openmp":
-            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy.cpp', 'w') as ofile:
+            with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
                 ofile.write(self._generate_body())
 
         elif Global.config['paradigm'] == "cuda":
             device_code, host_code = self._generate_body()
-            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyHost.cu', 'w') as ofile:
+            with open(source_dest+'ANNarchyHost.cu', 'w') as ofile:
                 ofile.write(host_code)
-            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyDevice.cu', 'w') as ofile:
+            with open(source_dest+'ANNarchyDevice.cu', 'w') as ofile:
                 ofile.write(device_code)
 
         else:
             raise NotImplementedError
 
         # Generate cython code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
+        with open(source_dest+'ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
             ofile.write(self._pyxgen.generate())
 
     def _propagate_global_ops(self):
@@ -249,7 +252,7 @@ class CodeGenerator(object):
                 'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
-            from Template.BaseTemplate import cuda_header_template
+            from .Template.BaseTemplate import cuda_header_template
             return cuda_header_template % {
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
@@ -449,7 +452,7 @@ class CodeGenerator(object):
                 postevent_call += proj['postevent_call']
 
             clear_sums = self._body_resetcomputesum_pop()
-            
+
             # global operations
             glob_ops_header, glob_ops_body = self._body_def_glops()
             kernel_def += glob_ops_header
@@ -485,7 +488,7 @@ class CodeGenerator(object):
             # ANNarchyHost and only the computation kernels are placed in
             # ANNarchyDevice. If we decide to use SDK8 as lowest requirement,
             # one can move this kernel too.
-            from Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions
+            from .Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions
             device_code = cuda_device_kernel_template % {
                 #device stuff
                 'pop_kernel': pop_kernel,
@@ -734,7 +737,7 @@ class CodeGenerator(object):
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
                 pop_assign += """    pop%(pid)s.stream = 0;
-""" % {'pid': pop.id, 'sid': pop.id}
+""" % {'pid': pop.id}
 
         proj_assign = "    // populations\n"
         for proj in self._projections:
@@ -748,7 +751,7 @@ class CodeGenerator(object):
                 proj_assign += """    proj%(pid)s.stream = 0;
 """ % {'pid': proj.id}
 
-        from Template.BaseTemplate import cuda_stream_setup
+        from .Template.BaseTemplate import cuda_stream_setup
         stream_config = cuda_stream_setup % {
             'nbStreams': max_number_streams,
             'pop_assign': pop_assign,

@@ -786,8 +786,8 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             refrac_header = ""
             refrac_body = ""
 
-        loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
-        glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
+        loc_eqs = check_and_apply_pow_fix(loc_eqs)
+        glob_eqs = check_and_apply_pow_fix(glob_eqs)
 
         # replace local function calls
         if len(pop.neuron_type.description['functions']) > 0:
@@ -807,7 +807,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'var2': var_wo_types,
             'par': par,
             'par2': par_wo_types
-         }
+        }
 
         #
         # create kernel prototypes

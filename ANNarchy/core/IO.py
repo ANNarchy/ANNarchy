@@ -274,15 +274,25 @@ def _net_description(populations, projections, net_id=0):
     """
     network_desc = {}   
     network_desc['time_step'] = Global.get_current_step(net_id)
+    network_desc['net_id'] = net_id
     
+    pop_names = []
+    proj_names = []
+
     if populations:
         for pop in Global._network[net_id]['populations']:             
-            network_desc[pop.name] = pop._data() 
+            network_desc[pop.name] = pop._data()
+            pop_names.append(pop.name)
 
     if projections:
         for proj in Global._network[net_id]['projections']:  
-            network_desc[proj.name] = proj._data() 
+            network_desc[proj.name] = proj._data()
+            proj_names.append(proj.name)
 
+    network_desc['obj_names'] = {
+        'populations': pop_names,
+        'projections': proj_names,
+    }
 
     return network_desc
             
